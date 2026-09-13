@@ -258,7 +258,7 @@ const char *DesfireAuthErrorToStr(int error) {
         case 6:
             return "mbedtls_aes_setkey_enc failed";
         case 7:
-            return "Sending auth command failed";
+            return "Sending auth response (2nd frame) failed";
         case 8:
             return "Authentication failed. Card timeout.";
         case 9:
@@ -302,6 +302,13 @@ const char *DesfireAuthErrorToStr(int error) {
         default:
             break;
     }
+
+    // the select / auth helpers hand PM3_E* codes straight back to the caller,
+    // so translate those here instead of returning an empty string
+    if (error < 0) {
+        return DesfireGetErrorString(error, NULL);
+    }
+
     return "";
 }
 
@@ -327,7 +334,7 @@ char *DesfireWayIDStr(DesfireISOSelectWay way, uint32_t id) {
     if (way == ISWMF || way == ISWDFName)
         snprintf(str, sizeof(str), "%s", DesfireSelectWayToStr(way));
     else
-        snprintf(str, sizeof(str), "%s %0*x", DesfireSelectWayToStr(way), (way == ISW6bAID) ? 6 : 4, id);
+        snprintf(str, sizeof(str), "%s %0*X", DesfireSelectWayToStr(way), (way == ISW6bAID) ? 6 : 4, id);
 
     return str;
 }
@@ -1132,7 +1139,7 @@ int DesfireSelectAndAuthenticateEx(DesfireContext_t *dctx, DesfireSecureChannel 
     if (aid == 0x000000) {
         res = DesfireAnticollision(verbose);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire anticollision " _RED_("fail"));
+            PrintAndLogEx(FAILED, "Desfire anticollision " _RED_("failed"));
             return 200;
         }
 
@@ -1143,7 +1150,7 @@ int DesfireSelectAndAuthenticateEx(DesfireContext_t *dctx, DesfireSecureChannel 
     } else {
         res = DesfireSelectAIDHex(dctx, aid, false, 0);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("fail"));
+            PrintAndLogEx(FAILED, "Desfire %s select " _RED_("failed"), DesfireWayIDStr(ISW6bAID, aid));
             return 200;
         }
 
@@ -1160,15 +1167,16 @@ int DesfireSelectAndAuthenticateEx(DesfireContext_t *dctx, DesfireSecureChannel 
 
         res = DesfireAuthenticate(dctx, secureChannel, verbose);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire authenticate " _RED_("fail") ". Result: [%d] %s", res, DesfireAuthErrorToStr(res));
+            PrintAndLogEx(FAILED, "Desfire %s authentication " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(ISW6bAID, aid), res, DesfireAuthErrorToStr(res));
             return res;
         }
 
         if (DesfireIsAuthenticated(dctx)) {
             if (verbose) {
-                PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
+                PrintAndLogEx(INFO, "Desfire " _GREEN_("authenticated"));
             }
         } else {
+            PrintAndLogEx(FAILED, "Desfire %s authentication " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(ISW6bAID, aid), 201, DesfireAuthErrorToStr(201));
             return 201;
         }
     }
@@ -1195,7 +1203,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
 
         res = DesfireISOSelect(dctx, ISSDFName, dctx->selectedDFName, dctx->selectedDFNameLen, resp, &resplen);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire DF name select " _RED_("error"));
+            PrintAndLogEx(FAILED, "Desfire DF name select " _RED_("failed"));
             if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
                 return res;
             }
@@ -1216,7 +1224,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
 
                 res = DesfireSelectAIDHex(dctx, id, false, 0);
                 if (res != PM3_SUCCESS) {
-                    PrintAndLogEx(ERR, "Desfire select " _RED_("error"));
+                    PrintAndLogEx(FAILED, "Desfire %s select " _RED_("failed"), DesfireWayIDStr(ISW6bAID, id));
                     if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
                         return res;
                     }
@@ -1232,7 +1240,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
             } else {
                 res = DesfireSelectEx(dctx, false, way, id, NULL);
                 if (res != PM3_SUCCESS) {
-                    PrintAndLogEx(ERR, "Desfire %s select " _RED_("error"), DesfireSelectWayToStr(way));
+                    PrintAndLogEx(FAILED, "Desfire %s select " _RED_("failed"), DesfireWayIDStr(way, id));
                     if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
                         return res;
                     }
@@ -1247,7 +1255,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
             // Also select by ISO ID if specified
             res = DesfireSelectEx(dctx, false, way, id, NULL);
             if (res != PM3_SUCCESS) {
-                PrintAndLogEx(ERR, "Desfire %s select " _RED_("error"), DesfireSelectWayToStr(way));
+                PrintAndLogEx(FAILED, "Desfire %s select " _RED_("failed"), DesfireWayIDStr(way, id));
                 if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
                     return res;
                 }
@@ -1266,7 +1274,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
 
         res = DesfireSelectAIDHex(dctx, id, false, 0);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("error"));
+            PrintAndLogEx(FAILED, "Desfire %s select " _RED_("failed"), DesfireWayIDStr(ISW6bAID, id));
             if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
                 return res;
             }
@@ -1282,7 +1290,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
     } else {
         res = DesfireSelectEx(dctx, true, way, id, NULL);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire %s select " _RED_("error"), DesfireSelectWayToStr(way));
+            PrintAndLogEx(FAILED, "Desfire %s select " _RED_("failed"), DesfireWayIDStr(way, id));
             if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
                 return res;
             }
@@ -1296,7 +1304,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
     if (selectfile) {
         res = DesfireSelectEx(dctx, false, ISWIsoID, isofileid, NULL);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire iso file select " _RED_("error"));
+            PrintAndLogEx(FAILED, "Desfire %s iso file %04x select " _RED_("failed"), DesfireWayIDStr(way, id), isofileid);
             if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
                 return res;
             }
@@ -1311,15 +1319,16 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
     if (noauth == false) {
         res = DesfireAuthenticate(dctx, secureChannel, verbose);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: [%d] %s", res, DesfireAuthErrorToStr(res));
+            PrintAndLogEx(FAILED, "Desfire %s authentication " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(way, id), res, DesfireAuthErrorToStr(res));
             return res;
         }
 
         if (DesfireIsAuthenticated(dctx)) {
             if (verbose) {
-                PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
+                PrintAndLogEx(INFO, "Desfire " _GREEN_("authenticated"));
             }
         } else {
+            PrintAndLogEx(FAILED, "Desfire %s authentication " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(way, id), 201, DesfireAuthErrorToStr(201));
             return 201;
         }
     }

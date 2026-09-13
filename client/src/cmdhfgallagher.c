@@ -161,7 +161,7 @@ static int authenticate(DesfireContext_t *ctx, bool verbose) {
 
     int res = DesfireAuthenticate(ctx, DACEV1, false);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: [%d] %s",
+        PrintAndLogEx(FAILED, "Desfire authentication " _RED_("failed") ". Result [%d] %s",
                       res,
                       DesfireAuthErrorToStr(res)
                      );
@@ -426,7 +426,7 @@ static int hfgal_create_creds_app(DesfireContext_t *ctx, uint8_t *site_key, uint
         DesfireSetKeyNoClear(ctx, 0, T_AES, blank_key);
         DesfireSetKdf(ctx, MFDES_KDF_ALGO_NONE, NULL, 0);
         res = authenticate(ctx, verbose);
-        PM3_RET_IF_ERR_WITH_MSG(res, "Desfire authenticate error. Result: [%d] %s", res, DesfireAuthErrorToStr(res));
+        PM3_RET_IF_ERR(res);   // authenticate() already reported the reason
 
         // Change key
         DesfireSetCommMode(ctx, DCMEncryptedPlain);
