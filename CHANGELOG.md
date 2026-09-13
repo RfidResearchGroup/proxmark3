@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mfdes` - select / authenticate failures are now reported once, naming the AID and the failing step (@iceman1001)
 - Fixed `-f <fn>` - a filename given with its own extension is now used as-is on both load and save (@iceman1001)
 - Fixed `hf mf view` - VIGIK signature verification now recovers the ISO 9796-1 message and checks it against the card (@iceman1001)
 - Added `hf mf view --selftest` - recovers and checks the signature of a known good expired VIGIK card (@iceman1001)
