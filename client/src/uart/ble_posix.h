@@ -39,6 +39,16 @@ typedef struct {
     size_t   leftover_len;
 } ble_conn_t;
 
+// Default time budget for a name -> address scan.
+#define BLE_SCAN_TIMEOUT_MS  8000
+
+// Resolve an advertised device name to its LE address via an active HCI scan.
+// Matches the Complete (0x09) or Shortened (0x08) Local Name, case-insensitively.
+// On success writes "XX:XX:XX:XX:XX:XX" into out_mac (needs >= 18 bytes) and
+// returns 0; returns negative on error or if no such device is seen in time.
+// Needs CAP_NET_RAW+CAP_NET_ADMIN (raw HCI), i.e. more privilege than connect.
+int ble_resolve_name(const char *name, char *out_mac, size_t out_mac_sz, int timeout_ms);
+
 // Connect to `mac` (LE public), discover the SPP char, subscribe to notifications.
 // `chr_uuid16` selects the data characteristic (pass BLE_SPP_CHR_UUID16).
 // Returns 0 on success (conn filled), negative on error. On error conn->fd == -1.
