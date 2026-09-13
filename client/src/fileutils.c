@@ -261,6 +261,35 @@ void path_basename_without_ext(const char *path, char *out, size_t out_len) {
     }
 }
 
+// the extension of the last path component, leading dot included, or NULL when
+// there is none.   "dumps/vg20180106.mfd" -> ".mfd",   "dumps/vg20180106" -> NULL
+static const char *path_extension(const char *path) {
+    const char *base = path_basename(path);
+    const char *dot = strrchr(base, '.');
+    if ((dot == NULL) || (dot == base) || (dot[1] == '\0')) {
+        return NULL;
+    }
+    return dot;
+}
+
+static bool path_has_extension(const char *path) {
+    return (path_extension(path) != NULL);
+}
+
+// true when two extensions denote the same kind of file, ie ".mfd" and ".bin"
+// are both binary.  Classified with get_filetype() so the save path and the
+// load path can never drift apart.
+static bool same_filetype(const char *ext_a, const char *ext_b) {
+    if (ext_a == NULL || ext_b == NULL) {
+        return false;
+    }
+    char a[64] = {0};
+    char b[64] = {0};
+    snprintf(a, sizeof(a), "dump%s", ext_a);
+    snprintf(b, sizeof(b), "dump%s", ext_b);
+    return (get_filetype(a) == get_filetype(b));
+}
+
 static int qsort_path_cmp(const void *a, const void *b) {
     const char *pa = (const char *)a;
     const char *pb = (const char *)b;
@@ -462,26 +491,30 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
         }
     }
 
-    // remove file extension if exist in name
+    // strip the extension the name came with, if any, and decide which one to write.
+    // An extension of the same kind as the file we are about to write is the user's
+    // choice, keep it,  `-f card.mfd` saves the binary as card.mfd.
+    // Any other is swapped for ours, so the same `-f card.mfd` saves the json as
+    // card.json instead of card.mfd.json
     size_t p_namelen = strlen(expanded);
-    if (str_endswith(expanded, suffix)) {
-        p_namelen -= strlen(suffix);
+    const char *ext = suffix;
+
+    const char *p_ext = path_extension(expanded);
+    if (p_ext != NULL) {
+        if (same_filetype(p_ext, suffix)) {
+            ext = p_ext;
+        }
+        p_namelen -= strlen(p_ext);
     }
 
-    len -= strlen(suffix) + 1;
-    len -= p_namelen;
-
-    // modify filename
-    snprintf(pfn, len, "%.*s%s", (int)p_namelen, expanded, suffix);
-
-    // "-001"
-    len -= 4;
+    // modify filename.  len is what is left of fileName from pfn onwards
+    snprintf(pfn, len, "%.*s%s", (int)p_namelen, expanded, ext);
 
     int num = 1;
     // check complete path/filename if exists
     while (fileExists(fileName)) {
         // modify filename
-        snprintf(pfn, len, "%.*s-%03d%s", (int)p_namelen, expanded, num, suffix);
+        snprintf(pfn, len, "%.*s-%03d%s", (int)p_namelen, expanded, num, ext);
         num++;
     }
 
@@ -3941,12 +3974,42 @@ int searchFile(char **foundpath, const char *pm3dir, const char *searchname, con
         return PM3_EINVARG;
     }
 
-    int res = searchFinalFile(foundpath, pm3dir, filename, silent);
-    if (res != PM3_SUCCESS) {
-        if ((res == PM3_EFILE) && (!silent)) {
-            PrintAndLogEx(FAILED, "Error - can't find `" _YELLOW_("%s") "`", filename);
+    // the given name already carries an extension of its own, ie `-f dump.mfd`
+    // while the caller asks for ".bin".  Honour what the user typed before
+    // falling back to dump.mfd.bin
+    int res = PM3_EFILE;
+    char *asis = NULL;
+    if (path_has_extension(searchname) && (str_endswith(searchname, suffix) == false)) {
+
+        asis = filenamemcopy(searchname, "");
+        if (asis == NULL) {
+            free(filename);
+            return PM3_EMALLOC;
+        }
+
+        if ((strlen(asis) == 0) || path_is_directory(asis)) {
+            free(asis);
+            asis = NULL;
+        } else {
+            res = searchFinalFile(foundpath, pm3dir, asis, silent);
         }
     }
+
+    if (res != PM3_SUCCESS) {
+        res = searchFinalFile(foundpath, pm3dir, filename, silent);
+    }
+
+    if (res != PM3_SUCCESS) {
+        if ((res == PM3_EFILE) && (!silent)) {
+            if (asis != NULL) {
+                PrintAndLogEx(FAILED, "Error - can't find `" _YELLOW_("%s") "` nor `" _YELLOW_("%s") "`", asis, filename);
+            } else {
+                PrintAndLogEx(FAILED, "Error - can't find `" _YELLOW_("%s") "`", filename);
+            }
+        }
+    }
+
+    free(asis);
     free(filename);
     return res;
 }
