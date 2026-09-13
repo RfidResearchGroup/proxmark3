@@ -17,13 +17,17 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>   // strcasecmp
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
+#include <time.h>
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/l2cap.h>
+#include <bluetooth/hci.h>
+#include <bluetooth/hci_lib.h>
 
 #include "ui.h"        // PrintAndLogEx
 #include "pm3_cmd.h"   // PM3_* (only for messaging parity; returns are 0/neg here)
@@ -183,14 +187,168 @@ static int att_subscribe(int fd, uint16_t cccd_handle) {
     return (n >= 1) ? 0 : -1;
 }
 
-int ble_connect(const char *mac, uint16_t chr_uuid16, ble_conn_t *conn) {
-    memset(conn, 0, sizeof(*conn));
-    conn->fd = -1;
+// ---- name -> address resolution (active LE scan over raw HCI) ----
 
+// AD types carrying the device name (Core Spec, Supplement, Part A).
+#define BLE_ADV_NAME_SHORT   0x08
+#define BLE_ADV_NAME_FULL    0x09
+
+static long ble_now_ms(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec * 1000L + ts.tv_nsec / 1000000L;
+}
+
+// Walk the AD structures of one advertising/scan-response report, looking for a
+// Local Name (complete or shortened) that equals `want` (case-insensitive).
+// Copies whatever name it finds into `found` for logging. Returns 1 on match.
+static int ble_ad_name_matches(const char *want, const uint8_t *ad, size_t adlen,
+                               char *found, size_t foundsz) {
+    size_t i = 0;
+    while (i < adlen) {
+        uint8_t flen = ad[i];               // length byte counts the type + value
+        if (flen == 0) break;               // padding -> end of meaningful data
+        if (i + 1 + flen > adlen) break;    // truncated field -> stop, don't overrun
+        uint8_t type = ad[i + 1];
+        if (type == BLE_ADV_NAME_FULL || type == BLE_ADV_NAME_SHORT) {
+            size_t nlen = flen - 1;
+            if (nlen >= foundsz) nlen = foundsz - 1;
+            memcpy(found, &ad[i + 2], nlen);
+            found[nlen] = 0;
+            if (strcasecmp(found, want) == 0) return 1;
+        }
+        i += flen + 1;
+    }
+    return 0;
+}
+
+// Print an exact, copy-pasteable command to grant the capabilities the LE scan
+// needs, using the running binary's own path so it survives rebuilds/renames.
+// Also points at the no-privilege alternative (connect by address).
+static void ble_print_caps_hint(void) {
+    char exe[4096];
+    ssize_t n = readlink("/proc/self/exe", exe, sizeof(exe) - 1);
+    if (n > 0) {
+        exe[n] = 0;
+        PrintAndLogEx(INFO, "BLE: scanning by name needs extra privileges. Grant them once with:");
+        PrintAndLogEx(INFO, "     " _YELLOW_("sudo setcap 'cap_net_raw,cap_net_admin+eip' %s"), exe);
+    } else {
+        PrintAndLogEx(INFO, "BLE: scanning by name needs " _YELLOW_("CAP_NET_RAW+CAP_NET_ADMIN")
+                      " on the client binary (or run with sudo)");
+    }
+    PrintAndLogEx(INFO, "     or connect by address instead: " _YELLOW_("-p ble:<MAC>") " (no extra privileges)");
+}
+
+int ble_resolve_name(const char *name, char *out_mac, size_t out_mac_sz, int timeout_ms) {
+    if (name == NULL || out_mac == NULL || out_mac_sz < 18) return -1;
+    out_mac[0] = 0;
+
+    int dev_id = hci_get_route(NULL);
+    if (dev_id < 0) {
+        PrintAndLogEx(ERR, "BLE: no local Bluetooth adapter found (%s)", strerror(errno));
+        return -1;
+    }
+    int dd = hci_open_dev(dev_id);
+    if (dd < 0) {
+        PrintAndLogEx(ERR, "BLE: cannot open hci%d (%s)", dev_id, strerror(errno));
+        if (errno == EPERM || errno == EACCES)
+            ble_print_caps_hint();
+        return -1;
+    }
+
+    // BlueZ's hci_le_set_scan_* take the open descriptor (dd), not dev_id,
+    // despite the arg name - passing dev_id silently fails.
+    // Active scan (0x01) so SCAN_RSP (where the BWM puts its name) is seen.
+    if (hci_le_set_scan_parameters(dd, 0x01, htobs(0x0010), htobs(0x0010), 0x00, 0x00, 1000) < 0)
+        PrintAndLogEx(INFO, "BLE: set scan parameters failed (%s), continuing", strerror(errno));
+
+    // A scan already left enabled makes the enable below return EIO; clear it first.
+    hci_le_set_scan_enable(dd, 0x00, 0x00, 1000);
+    if (hci_le_set_scan_enable(dd, 0x01, 0x00, 1000) < 0) {   // filter_dup off: names may only be in SCAN_RSP
+        PrintAndLogEx(ERR, "BLE: cannot start LE scan (%s)", strerror(errno));
+        if (errno == EPERM || errno == EACCES)
+            ble_print_caps_hint();
+        hci_close_dev(dd);
+        return -1;
+    }
+
+    // Receive only HCI event packets carrying LE meta events; save/restore the
+    // socket's previous filter so we leave the handle as we found it.
+    struct hci_filter of, nf;
+    socklen_t olen = sizeof(of);
+    int have_of = (getsockopt(dd, SOL_HCI, HCI_FILTER, &of, &olen) == 0);
+    hci_filter_clear(&nf);
+    hci_filter_set_ptype(HCI_EVENT_PKT, &nf);
+    hci_filter_set_event(EVT_LE_META_EVENT, &nf);
+    setsockopt(dd, SOL_HCI, HCI_FILTER, &nf, sizeof(nf));
+
+    PrintAndLogEx(INFO, "BLE: scanning up to " _YELLOW_("%d") " ms for " _YELLOW_("%s") " ...", timeout_ms, name);
+
+    int rc = -1;
+    char nm[64];
+    long deadline = ble_now_ms() + timeout_ms;
+    uint8_t buf[HCI_MAX_EVENT_SIZE];
+
+    while (ble_now_ms() < deadline) {
+        long rem = deadline - ble_now_ms();
+        if (rem <= 0) break;
+        struct timeval tv = { .tv_sec = rem / 1000, .tv_usec = (rem % 1000) * 1000 };
+        fd_set rs;
+        FD_ZERO(&rs);
+        FD_SET(dd, &rs);
+        int s = select(dd + 1, &rs, NULL, NULL, &tv);
+        if (s < 0) { if (errno == EINTR) break; break; }   // Ctrl-C or error -> give up cleanly
+        if (s == 0) break;                                  // timeout
+
+        int n = read(dd, buf, sizeof(buf));
+        if (n < (int)(1 + HCI_EVENT_HDR_SIZE + 1)) continue;
+        uint8_t *pkt_end = buf + n;
+
+        // layout: [0]=HCI_EVENT_PKT, [1..2]=hci_event_hdr, then evt_le_meta_event
+        evt_le_meta_event *meta = (evt_le_meta_event *)(buf + 1 + HCI_EVENT_HDR_SIZE);
+        if ((uint8_t *)meta->data > pkt_end) continue;
+        if (meta->subevent != EVT_LE_ADVERTISING_REPORT) continue;
+
+        uint8_t *p = meta->data;
+        uint8_t num = *p++;                                 // number of reports in this event
+        for (uint8_t r = 0; r < num; r++) {
+            if (p + LE_ADVERTISING_INFO_SIZE > pkt_end) break;
+            le_advertising_info *info = (le_advertising_info *)p;
+            uint8_t *next = p + LE_ADVERTISING_INFO_SIZE + info->length + 1;  // +1 trailing RSSI
+            if (next > pkt_end) break;                      // malformed / truncated report
+            if (ble_ad_name_matches(name, info->data, info->length, nm, sizeof(nm))) {
+                ba2str(&info->bdaddr, out_mac);
+                PrintAndLogEx(SUCCESS, "BLE: found " _GREEN_("%s") " at " _GREEN_("%s"), nm, out_mac);
+                rc = 0;
+                break;
+            }
+            p = next;
+        }
+        if (rc == 0) break;
+    }
+
+    hci_le_set_scan_enable(dd, 0x00, 0x00, 1000);
+    if (have_of) setsockopt(dd, SOL_HCI, HCI_FILTER, &of, sizeof(of));
+    hci_close_dev(dd);
+
+    if (rc != 0)
+        PrintAndLogEx(ERR, "BLE: no advertising device named " _YELLOW_("%s") " seen within %d ms", name, timeout_ms);
+    return rc;
+}
+
+// Retry the L2CAP connect briefly: a create-connection issued as an LE scan
+// tears down can be refused, and the peer may be between advertising events.
+#define BLE_CONNECT_TRIES        6
+#define BLE_CONNECT_BACKOFF_MS   150
+
+// Open an L2CAP/ATT socket and connect to `mac`. Returns the fd on success,
+// -1 on a retryable connect failure (errno set to the connect error), or
+// -2 on a hard setup failure (socket/bind), which is already logged.
+static int ble_l2cap_connect(const char *mac) {
     int fd = socket(AF_BLUETOOTH, SOCK_SEQPACKET, BTPROTO_L2CAP);
     if (fd < 0) {
         PrintAndLogEx(ERR, "BLE: cannot create L2CAP socket (%s)", strerror(errno));
-        return -1;
+        return -2;
     }
 
     // Enlarge the kernel RX buffer so bursts of notifications queue instead of
@@ -206,7 +364,7 @@ int ble_connect(const char *mac, uint16_t chr_uuid16, ble_conn_t *conn) {
     if (bind(fd, (struct sockaddr *)&src, sizeof(src)) < 0) {
         PrintAndLogEx(ERR, "BLE: bind failed (%s)", strerror(errno));
         close(fd);
-        return -1;
+        return -2;
     }
 
     struct sockaddr_l2 dst = {0};
@@ -215,8 +373,31 @@ int ble_connect(const char *mac, uint16_t chr_uuid16, ble_conn_t *conn) {
     str2ba(mac, &dst.l2_bdaddr);
     dst.l2_cid = htobs(ATT_CID);
     if (connect(fd, (struct sockaddr *)&dst, sizeof(dst)) < 0) {
-        PrintAndLogEx(ERR, "BLE: cannot connect to " _YELLOW_("%s") " (%s)", mac, strerror(errno));
+        int e = errno;          // close() may clobber errno; preserve it for the caller
         close(fd);
+        errno = e;
+        return -1;
+    }
+    return fd;
+}
+
+int ble_connect(const char *mac, uint16_t chr_uuid16, ble_conn_t *conn) {
+    memset(conn, 0, sizeof(*conn));
+    conn->fd = -1;
+
+    int fd = -1;
+    int last_errno = 0;
+    for (int attempt = 1; attempt <= BLE_CONNECT_TRIES; attempt++) {
+        fd = ble_l2cap_connect(mac);
+        if (fd >= 0) break;
+        if (fd == -2) return -1;              // hard setup failure, already logged
+        last_errno = errno;                   // retryable connect failure
+        if (attempt < BLE_CONNECT_TRIES) {
+            usleep(BLE_CONNECT_BACKOFF_MS * 1000);
+        }
+    }
+    if (fd < 0) {
+        PrintAndLogEx(ERR, "BLE: cannot connect to " _YELLOW_("%s") " (%s)", mac, strerror(last_errno));
         return -1;
     }
 

@@ -39,18 +39,30 @@ typedef struct {
     size_t   leftover_len;
 } ble_conn_t;
 
+// Default time budget for a name -> address scan.
+#define BLE_SCAN_TIMEOUT_MS  8000
+
+// Resolve an advertised device name to its LE address via an active HCI scan.
+// Matches the Complete (0x09) or Shortened (0x08) Local Name, case-insensitively.
+// On success writes "XX:XX:XX:XX:XX:XX" into out_mac (needs >= 18 bytes) and
+// returns PM3_SUCCESS; returns PM3_EINVARG on bad arguments, PM3_EIO on a
+// local adapter/scan failure, or PM3_ETIMEOUT if no such device is seen in time.
+// Needs CAP_NET_RAW+CAP_NET_ADMIN (raw HCI), i.e. more privilege than connect.
+int ble_resolve_name(const char *name, char *out_mac, size_t out_mac_sz, int timeout_ms);
+
 // Connect to `mac` (LE public), discover the SPP char, subscribe to notifications.
 // `chr_uuid16` selects the data characteristic (pass BLE_SPP_CHR_UUID16).
-// Returns 0 on success (conn filled), negative on error. On error conn->fd == -1.
+// Returns PM3_SUCCESS (conn filled) or PM3_EIO on error. On error conn->fd == -1.
 int ble_connect(const char *mac, uint16_t chr_uuid16, ble_conn_t *conn);
 
 // Send len bytes to the device, chunked to (mtu-3) as ATT Write Commands.
-// Returns 0 on success, negative on error.
+// Returns PM3_SUCCESS, PM3_ENOTTY if not connected, or PM3_EIO on write error.
 int ble_send(ble_conn_t *conn, const uint8_t *data, size_t len);
 
 // Receive up to maxlen payload bytes (drains leftover first, then waits up to
-// timeout_ms for notifications). *out_len set to bytes copied. Returns 0 on
-// success (including 0 bytes on timeout), negative on error/disconnect.
+// timeout_ms for notifications). *out_len set to bytes copied. Returns
+// PM3_SUCCESS on success (including 0 bytes on timeout), PM3_ENOTTY if not
+// connected, or PM3_EIO on error/disconnect.
 int ble_recv(ble_conn_t *conn, uint8_t *buf, size_t maxlen, size_t *out_len, int timeout_ms);
 
 void ble_close(ble_conn_t *conn);

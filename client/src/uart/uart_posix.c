@@ -39,6 +39,7 @@
 #include <pthread.h>
 
 #ifdef HAVE_BLUEZ
+#include <ctype.h>   // isxdigit (ble: name vs address check)
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/rfcomm.h>
 #include "ble_posix.h"
@@ -114,6 +115,22 @@ int uart_reconfigure_timeouts(uint32_t value) {
 uint32_t uart_get_timeouts(void) {
     return newtimeout_value;
 }
+
+#ifdef HAVE_BLUEZ
+// True if `s` is a plain 6-octet BD address "XX:XX:XX:XX:XX:XX" (hex, colon-sep).
+// Used to tell a literal address from a device name after the "ble:" prefix.
+static bool uart_is_bdaddr(const char *s) {
+    if (s == NULL || strlen(s) != 17) return false;
+    for (int i = 0; i < 17; i++) {
+        if ((i % 3) == 2) {
+            if (s[i] != ':') return false;
+        } else if (isxdigit((unsigned char)s[i]) == 0) {
+            return false;
+        }
+    }
+    return true;
+}
+#endif // HAVE_BLUEZ
 
 serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
     serial_port_unix_t_t *sp = calloc(sizeof(serial_port_unix_t_t), sizeof(uint8_t));
@@ -416,8 +433,22 @@ serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
             free(sp);
             return INVALID_SERIAL_PORT;
         }
-        // pcPortName is "ble:<MAC>"
-        if (ble_connect(pcPortName + 4, BLE_SPP_CHR_UUID16, bc) != 0) {
+
+        // pcPortName is "ble:<address-or-name>". If the part after the prefix is
+        // a literal BD address use it as-is; otherwise treat it as an advertised
+        // device name and resolve it to an address via an active LE scan.
+        const char *ble_arg = pcPortName + 4;
+        char resolved[18];
+        if (uart_is_bdaddr(ble_arg) == false) {
+            if (ble_resolve_name(ble_arg, resolved, sizeof(resolved), BLE_SCAN_TIMEOUT_MS) != 0) {
+                free(bc);
+                free(sp);
+                return INVALID_SERIAL_PORT;
+            }
+            ble_arg = resolved;
+        }
+
+        if (ble_connect(ble_arg, BLE_SPP_CHR_UUID16, bc) != 0) {
             free(bc);
             free(sp);
             return INVALID_SERIAL_PORT;
