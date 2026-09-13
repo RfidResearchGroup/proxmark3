@@ -222,6 +222,23 @@ static int ble_ad_name_matches(const char *want, const uint8_t *ad, size_t adlen
     return 0;
 }
 
+// Print an exact, copy-pasteable command to grant the capabilities the LE scan
+// needs, using the running binary's own path so it survives rebuilds/renames.
+// Also points at the no-privilege alternative (connect by address).
+static void ble_print_caps_hint(void) {
+    char exe[4096];
+    ssize_t n = readlink("/proc/self/exe", exe, sizeof(exe) - 1);
+    if (n > 0) {
+        exe[n] = 0;
+        PrintAndLogEx(INFO, "BLE: scanning by name needs extra privileges. Grant them once with:");
+        PrintAndLogEx(INFO, "     " _YELLOW_("sudo setcap 'cap_net_raw,cap_net_admin+eip' %s"), exe);
+    } else {
+        PrintAndLogEx(INFO, "BLE: scanning by name needs " _YELLOW_("CAP_NET_RAW+CAP_NET_ADMIN")
+                      " on the client binary (or run with sudo)");
+    }
+    PrintAndLogEx(INFO, "     or connect by address instead: " _YELLOW_("-p ble:<MAC>") " (no extra privileges)");
+}
+
 int ble_resolve_name(const char *name, char *out_mac, size_t out_mac_sz, int timeout_ms) {
     if (name == NULL || out_mac == NULL || out_mac_sz < 18) return -1;
     out_mac[0] = 0;
@@ -235,8 +252,7 @@ int ble_resolve_name(const char *name, char *out_mac, size_t out_mac_sz, int tim
     if (dd < 0) {
         PrintAndLogEx(ERR, "BLE: cannot open hci%d (%s)", dev_id, strerror(errno));
         if (errno == EPERM || errno == EACCES)
-            PrintAndLogEx(INFO, "BLE: scanning by name needs privileges - run with sudo, or grant the client "
-                          _YELLOW_("CAP_NET_RAW+CAP_NET_ADMIN"));
+            ble_print_caps_hint();
         return -1;
     }
 
@@ -253,8 +269,7 @@ int ble_resolve_name(const char *name, char *out_mac, size_t out_mac_sz, int tim
     if (hci_le_set_scan_enable(dd, 0x01, 0x00, 1000) < 0) {   // filter_dup off: names may only be in SCAN_RSP
         PrintAndLogEx(ERR, "BLE: cannot start LE scan (%s)", strerror(errno));
         if (errno == EPERM || errno == EACCES)
-            PrintAndLogEx(INFO, "BLE: scanning by name needs privileges - run with sudo, or grant the client "
-                          _YELLOW_("CAP_NET_RAW+CAP_NET_ADMIN"));
+            ble_print_caps_hint();
         hci_close_dev(dd);
         return -1;
     }
@@ -323,14 +338,22 @@ int ble_resolve_name(const char *name, char *out_mac, size_t out_mac_sz, int tim
     return rc;
 }
 
-int ble_connect(const char *mac, uint16_t chr_uuid16, ble_conn_t *conn) {
-    memset(conn, 0, sizeof(*conn));
-    conn->fd = -1;
+// How hard to try the L2CAP connect before giving up. A create-connection
+// issued in the instant an LE scan tears down (the name path) can be refused by
+// the controller, and a peripheral may momentarily be between advertising
+// events; both clear within a few tens of ms. The connect-by-address path
+// normally succeeds on the first attempt, so this adds no delay there.
+#define BLE_CONNECT_TRIES        6
+#define BLE_CONNECT_BACKOFF_MS   150
 
+// Open an L2CAP/ATT socket and connect to `mac`. Returns the fd on success,
+// -1 on a retryable connect failure (errno set to the connect error), or
+// -2 on a hard setup failure (socket/bind), which is already logged.
+static int ble_l2cap_connect(const char *mac) {
     int fd = socket(AF_BLUETOOTH, SOCK_SEQPACKET, BTPROTO_L2CAP);
     if (fd < 0) {
         PrintAndLogEx(ERR, "BLE: cannot create L2CAP socket (%s)", strerror(errno));
-        return -1;
+        return -2;
     }
 
     // Enlarge the kernel RX buffer so bursts of notifications queue instead of
@@ -346,7 +369,7 @@ int ble_connect(const char *mac, uint16_t chr_uuid16, ble_conn_t *conn) {
     if (bind(fd, (struct sockaddr *)&src, sizeof(src)) < 0) {
         PrintAndLogEx(ERR, "BLE: bind failed (%s)", strerror(errno));
         close(fd);
-        return -1;
+        return -2;
     }
 
     struct sockaddr_l2 dst = {0};
@@ -355,8 +378,31 @@ int ble_connect(const char *mac, uint16_t chr_uuid16, ble_conn_t *conn) {
     str2ba(mac, &dst.l2_bdaddr);
     dst.l2_cid = htobs(ATT_CID);
     if (connect(fd, (struct sockaddr *)&dst, sizeof(dst)) < 0) {
-        PrintAndLogEx(ERR, "BLE: cannot connect to " _YELLOW_("%s") " (%s)", mac, strerror(errno));
+        int e = errno;          // close() may clobber errno; preserve it for the caller
         close(fd);
+        errno = e;
+        return -1;
+    }
+    return fd;
+}
+
+int ble_connect(const char *mac, uint16_t chr_uuid16, ble_conn_t *conn) {
+    memset(conn, 0, sizeof(*conn));
+    conn->fd = -1;
+
+    int fd = -1;
+    int last_errno = 0;
+    for (int attempt = 1; attempt <= BLE_CONNECT_TRIES; attempt++) {
+        fd = ble_l2cap_connect(mac);
+        if (fd >= 0) break;
+        if (fd == -2) return -1;              // hard setup failure, already logged
+        last_errno = errno;                   // retryable connect failure
+        if (attempt < BLE_CONNECT_TRIES) {
+            usleep(BLE_CONNECT_BACKOFF_MS * 1000);
+        }
+    }
+    if (fd < 0) {
+        PrintAndLogEx(ERR, "BLE: cannot connect to " _YELLOW_("%s") " (%s)", mac, strerror(last_errno));
         return -1;
     }
 
