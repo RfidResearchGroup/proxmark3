@@ -43,6 +43,8 @@
 #include "proxendian.h"
 #include "preferences.h"
 #include "mifare/gen4.h"
+#include "parsers/parsehid.h"
+#include "parsers/parsevigik.h"
 #include "generator.h"              // keygens.
 #include "fpga.h"
 #include "mifare/mifarehost.h"
@@ -875,51 +877,14 @@ static int mf_view_dump(uint8_t *dump, size_t bytes_read, uint16_t block_cnt, bo
         mf_save_keys_from_arr(block_cnt, dump);
     }
 
-    const mad1_sector_t *vigik_s0 = (bytes_read >= sizeof(mad1_sector_t)) ? (const mad1_sector_t *)dump : NULL;
-
-    int sector = vigik_s0 ? DetectHID(vigik_s0, 0x4910) : -1;
-    if (sector < 0) {
-        return PM3_SUCCESS;
+    if (is_valid_hid_card(dump, bytes_read)) {
+        (void)hid_parser_parse(dump, bytes_read);
     }
 
-    // decode it
-    PrintAndLogEx(INFO, "");
-    PrintAndLogEx(INFO, _CYAN_("VIGIK PACS detected"));
-
-    mad_entry_list_t mad_list = {0};
-    int res = MADDecode(vigik_s0, NULL, &mad_list, false, true);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "can't decode MAD");
-        return res;
+    if (is_valid_vigik_card(dump, bytes_read)) {
+        (void)vigik_parser_parse(dump, bytes_read);
     }
 
-    typedef union UDATA {
-        uint8_t *bytes;
-        mfc_vigik_t *vigik;
-    } UDATA;
-    UDATA d;
-    d.bytes = calloc(bytes_read, sizeof(uint8_t));
-    if (d.bytes == NULL) {
-        PrintAndLogEx(WARNING, "Failed to allocate memory");
-        return PM3_EMALLOC;
-    }
-    uint16_t dlen = 0;
-
-    // vigik structure sector 0
-    memcpy(d.bytes + dlen, dump, MFBLOCK_SIZE * 3);
-    dlen += MFBLOCK_SIZE * 3;
-
-    for (size_t i = 0; i < mad_list.len; i++) {
-        if (0x4910 == mad_list.entries[i].aid || 0x4916 == mad_list.entries[i].aid) {
-            uint8_t sno = mad_list.entries[i].sector;
-            uint32_t offset = sno * MFBLOCK_SIZE * 4;
-            memcpy(d.bytes + dlen, dump + offset, MFBLOCK_SIZE * 3);
-            dlen += MFBLOCK_SIZE * 3;
-        }
-    }
-
-    vigik_annotate(d.vigik);
-    free(d.bytes);
     return PM3_SUCCESS;
 }
 
@@ -6922,41 +6887,11 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         bool haveMAD2 = false;
         MAD1DecodeAndPrint(s0, swapmad, verbose, &haveMAD2);
 
-        int sector = DetectHID(s0, 0x484d);
-        if (sector > -1) {
-
-            // decode it
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(INFO, "------------------------- " _CYAN_("Wiegand") " ---------------------------");
-            PrintAndLogEx(INFO, _CYAN_("HID PACS detected"));
-
-            size_t pacs_off = mfFirstBlockOfSector(sector) * MFBLOCK_SIZE;
-            uint8_t pacs_sector[MFBLOCK_SIZE * 3] = {0};
-            if (pacs_off + sizeof(pacs_sector) <= bytes_read) {
-                memcpy(pacs_sector, dump + pacs_off, sizeof(pacs_sector));
-            }
-
-            if (pacs_sector[16] == 0x02) {
-
-                PrintAndLogEx(SUCCESS, "Raw...... " _GREEN_("%s"), sprint_hex_inrow(pacs_sector + 24, 8));
-
-                //todo:  remove preamble/sentinel
-                uint32_t top = 0, mid = 0, bot = 0;
-                char hexstr[16 + 1] = {0};
-                hex_to_buffer((uint8_t *)hexstr, pacs_sector + 24, 8, sizeof(hexstr) - 1, 0, 0, true);
-                hexstring_to_u96(&top, &mid, &bot, hexstr);
-
-                char binstr[64 + 1];
-                hextobinstring(binstr, hexstr);
-                char *pbin = binstr;
-                while (strlen(pbin) && *(++pbin) == '0');
-
-                PrintAndLogEx(SUCCESS, "Binary... " _GREEN_("%s"), pbin);
-
-                decode_wiegand(top, mid, bot, 0);
-            }
+        if (is_valid_hid_card(dump, bytes_read)) {
+            (void)hid_parser_parse(dump, bytes_read);
         }
 
+        int sector = -1;
         sector = DetectHID(s0, 0x4910);
         if (sector > -1) {
             // decode it

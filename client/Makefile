@@ -905,6 +905,8 @@ SRCS =  mifare/aiddesfire.c \
         mifare/gen4.c \
         nfc/ndef.c \
         parsers/parsehrt.c \
+        parsers/parsehid.c \
+        parsers/parsevigik.c \
         parsers/hrtparser/hrtparser.c \
         pm3.c \
         pm3_binlib.c \
