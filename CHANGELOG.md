@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `fpga_compress -d` - a single bitstream archive was unpacked 2384 bytes short, the trailing partial interleave chunk was dropped (@iceman1001)
 - Fixed `fpga_compress` - a build with only one FPGA bitstream (`SKIP_LF`, `SKIP_FELICA`, `SKIP_ISO15693`) packed it as a single 1 MB block the ARM could not decompress, `inflate returned: -13247` (@iceman1001)
 - Fixed `FpgaDownloadAndGo` - a failed FPGA decompress leaked the ring buffer, leaving BigBuf 16 kB short for the rest of the session (@iceman1001)
 - Added `hf mf dump --sk` - save extracted keys to binary file (@iceman1001)

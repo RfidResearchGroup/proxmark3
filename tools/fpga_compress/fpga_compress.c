@@ -71,13 +71,23 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, boo
             return (EXIT_FAILURE);
         }
 
+        // Pad a bitstream that ran out mid chunk with zeroes, so total_size stays a
+        // whole number of FPGA_INTERLEAVE_SIZE chunks.  zlib_decompress() walks the
+        // output in whole chunks and drops a trailing partial one, so an unpadded
+        // stream comes back short - 42172 bytes of fpga_pm3_hf.bit returned as 39788.
+        //
+        // Not for "-s".  That is the .data section, and start.c sizes the
+        // decompression with __data_end__ - __data_start__.  Rounding .data up to a
+        // chunk boundary makes LZ4_decompress_safe() overrun that and return an
+        // error, which drops the firmware into the LED panic loop in
+        // uncompress_data_section().
         for (uint16_t j = 0; j < num_infiles; j++) {
             for (uint16_t k = 0; k < FPGA_INTERLEAVE_SIZE; k++) {
                 uint8_t c = (uint8_t)fgetc(infile[j]);
 
                 if (!feof(infile[j])) {
                     fpga_config[total_size++] = c;
-                } else if (num_infiles > 1) {
+                } else if (single_block == false) {
                     fpga_config[total_size++] = '\0';
                 }
             }
