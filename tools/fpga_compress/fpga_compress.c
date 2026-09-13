@@ -32,6 +32,8 @@ int fileno(FILE *);
 static void usage(void) {
     fprintf(stdout, "Usage: fpga_compress <infile1> <infile2> ... <infile_n> <outfile>\n");
     fprintf(stdout, "          Combine n FPGA bitstream files and compress them into one.\n\n");
+    fprintf(stdout, "       fpga_compress -s <infile> <outfile>\n");
+    fprintf(stdout, "          Compress <infile> into ONE single LZ4 block. Used for the ARM .data section\n\n");
     fprintf(stdout, "       fpga_compress -v <infile1> <infile2> ... <infile_n> <outfile>\n");
     fprintf(stdout, "          Extract Version Information from FPGA bitstream files and write it to <outfile>\n\n");
     fprintf(stdout, "       fpga_compress -d <infile> <outfile(s)>\n");
@@ -47,7 +49,7 @@ static bool all_feof(FILE *infile[], uint8_t num_infiles) {
     return true;
 }
 
-static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile) {
+static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, bool single_block) {
 
     uint8_t *fpga_config = calloc(num_infiles * FPGA_CONFIG_SIZE, sizeof(uint8_t));
     if (fpga_config == NULL) {
@@ -83,22 +85,25 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile) {
 
     } while (all_feof(infile, num_infiles) == false);
 
-    // Block size for the LZ4 stream.  Two very different consumers:
+    // Block size for the LZ4 stream.  Two very different consumers, told apart by the
+    // caller with "-s",  never by counting input files:
     //
-    //  - many infiles: the interleaved FPGA bitstreams.  armsrc decompresses them
-    //    one block at a time into a FPGA_RING_BUFFER_BYTES buffer taken from BigBuf
+    //  - default: the interleaved FPGA bitstreams.  armsrc decompresses them one
+    //    block at a time into a FPGA_RING_BUFFER_BYTES buffer taken from BigBuf
     //    (see get_from_fpga_combined_stream()), so the block size must match.
+    //    This holds for a single bitstream too.  A HF-only build ( SKIP_LF,
+    //    SKIP_FELICA, SKIP_ISO15693 ) hands us just fpga_pm3_hf.bit and it still
+    //    has to come out in ring buffer sized blocks.
     //
-    //  - one infile: the firmware's .data section.  start.c's
-    //    uncompress_data_section() reads ONE 4-byte length and does ONE
-    //    LZ4_decompress_safe(), so this must come out as a SINGLE block - it has no
-    //    loop over blocks, and a short result is not treated as an error, so a
-    //    second block would silently leave the tail of .data uninitialized.
-    //    That is why it gets its own, much larger, block size and must not be
-    //    tied to FPGA_RING_BUFFER_BYTES.
+    //  - "-s": the firmware's .data section.  start.c's uncompress_data_section()
+    //    reads ONE 4-byte length and does ONE LZ4_decompress_safe(), so this must
+    //    come out as a SINGLE block - it has no loop over blocks, and a short
+    //    result is not treated as an error, so a second block would silently leave
+    //    the tail of .data uninitialized.  That is why it gets its own, much
+    //    larger, block size and must not be tied to FPGA_RING_BUFFER_BYTES.
     uint32_t buffer_size = FPGA_RING_BUFFER_BYTES;
 
-    if (num_infiles == 1) {
+    if (single_block) {
         // 1M bytes for now
         buffer_size = 1024 * 1024;
     }
@@ -123,11 +128,11 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile) {
     LZ4_streamHC_t *lz4_streamhc = LZ4_createStreamHC();
     LZ4_resetStreamHC_fast(lz4_streamhc, LZ4HC_CLEVEL_MAX);
 
-    if (num_infiles == 1 && total_size > buffer_size) {
+    if (single_block && total_size > buffer_size) {
         fprintf(stderr, "error: %u bytes does not fit in a single %u byte block, and start.c only decompresses one\n"
                 , total_size
                 , buffer_size
-            );
+               );
         free(ring_buffer);
         free(outbuf);
         free(fpga_config);
@@ -547,12 +552,30 @@ int main(int argc, char **argv) {
     } else { // Compress or generate version info
 
         bool generate_version_file = false;
+        bool single_block = false;
         uint8_t num_input_files = 0;
+        uint8_t first_input_file = 1;
+
         if (!strcmp(argv[1], "-v")) {  // generate version info
             generate_version_file = true;
+            first_input_file = 2;
+            num_input_files = argc - 3;
+        } else if (!strcmp(argv[1], "-s")) {  // compress one file into a single block
+            single_block = true;
+            first_input_file = 2;
             num_input_files = argc - 3;
         } else {  // compress 1..n fpga files
             num_input_files = argc - 2;
+        }
+
+        if (num_input_files == 0) {
+            usage();
+            return (EXIT_FAILURE);
+        }
+
+        if (single_block && num_input_files != 1) {
+            fprintf(stderr, "Error. -s takes exactly one input file\n\n");
+            return (EXIT_FAILURE);
         }
 
         FILE **infiles = calloc(num_input_files, sizeof(FILE *));
@@ -564,7 +587,7 @@ int main(int argc, char **argv) {
             return (EXIT_FAILURE);
         }
         for (uint8_t i = 0; i < num_input_files; i++) {
-            infile_names[i] = argv[i + (generate_version_file ? 2 : 1)];
+            infile_names[i] = argv[i + first_input_file];
             infiles[i] = fopen(infile_names[i], "rb");
             if (infiles[i] == NULL) {
                 fprintf(stderr, "Error. Cannot open input file %s\n\n", infile_names[i]);
@@ -592,7 +615,7 @@ int main(int argc, char **argv) {
         if (generate_version_file) {
             ret = generate_fpga_version_info(infiles, infile_names, num_input_files, outfile);
         } else {
-            ret = zlib_compress(infiles, num_input_files, outfile);
+            ret = zlib_compress(infiles, num_input_files, outfile, single_block);
         }
 
         // close file handlers

@@ -319,9 +319,9 @@ $(OBJDIR)/fullimage.data.bin: $(OBJDIR)/fullimage.stage1.elf
 $(OBJDIR)/fullimage.data.bin.z: $(OBJDIR)/fullimage.data.bin $(FPGA_COMPRESSOR)
 	$(info [-] GEN $@)
 ifeq ($(Q),@)
-	@$(FPGA_COMPRESSOR) $(filter %.bin,$^) $@ >/dev/null
+	@$(FPGA_COMPRESSOR) -s $(filter %.bin,$^) $@ >/dev/null
 else
-	$(FPGA_COMPRESSOR) $(filter %.bin,$^) $@
+	$(FPGA_COMPRESSOR) -s $(filter %.bin,$^) $@
 endif
 
 $(OBJDIR)/fullimage.elf: $(OBJDIR)/fullimage.stage1.elf $(OBJDIR)/fullimage.data.bin.z
