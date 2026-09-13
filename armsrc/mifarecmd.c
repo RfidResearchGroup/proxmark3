@@ -1730,6 +1730,16 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
             auth2_time = auth1_time + delta_time;
 
             len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + (targetKeyType & 0xF), targetBlockNo, receivedAnswer, sizeof(receivedAnswer), par, &auth2_time);
+
+            // a NAK is the tag refusing this block,  not a glitch.  re-sending the
+            // identical frame only ever gets the identical answer back,  so give up
+            // here instead of spinning until the client times us out
+            if (len == 1) {
+                if (g_dbglevel >= DBG_INFO) Dbprintf("Nested: Auth2 NAK, tag refused block " _YELLOW_("%d"), targetBlockNo);
+                isOK = PM3_EWRONGANSWER;
+                break;
+            }
+
             if (len != 4) {
                 if (g_dbglevel >= DBG_INFO) Dbprintf("Nested: Auth2 error len=%d", len);
                 continue;
