@@ -52,6 +52,34 @@ test):
    `tools/pm3_tests.sh` coverage if you're adding a new command/module that
    can be exercised offline.
 
+### Never `rm -rf` an `obj/` directory
+
+The ARM-side build has no `mkdir` for its object directories — only the host
+build creates its own. `armsrc/obj/`, `armsrc/obj/Standalone/` and
+`bootrom/obj/` exist because each is held open in git by a tracked `.dummy`
+file, and `make clean` deliberately deletes only the files *inside* them:
+
+```
+clean:
+	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.o
+	...
+```
+
+Delete such a directory and nothing recreates it. Every subsequent build dies
+with messages that give no hint a tracked file went missing:
+
+```
+Error. Cannot open output file obj/fpga_all.bit.z
+Fatal error: can't create obj/start.o: No such file or directory
+```
+
+`git checkout -- armsrc/obj/.dummy armsrc/obj/Standalone/.dummy bootrom/obj/.dummy`
+puts it back. `git status` showing a deleted `.dummy` is the tell.
+
+If you script a build matrix, switch `PLATFORM=` / `STANDALONE=` and let make
+decide what to rebuild — changing those changes the defines, which is enough to
+force the recompile you want.
+
 ## Code style
 
 - Respect the style used in this project: trailing
@@ -134,3 +162,5 @@ Don't omit this to make a PR look purely human-written.
 - Don't introduce a dependency in one client build file without mirroring it
   in the other two.
 - Don't submit ARM-side changes only test-built for one platform target.
+- Don't `rm -rf` any `obj/` directory to force a rebuild — it deletes tracked
+  `.dummy` files and breaks the build until they are restored. Use `make clean`.
