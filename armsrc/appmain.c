@@ -1827,11 +1827,13 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_LF_EM4X50_SIM: {
             //-----------------------------------------------------------------------------
-            // Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_LF) here although FPGA is not
-            // involved in dealing with emulator memory. But if it is called later, it might
-            // destroy the Emulator Memory.
+            // The FPGA is not involved in dealing with emulator memory, but loading a
+            // bitstream later would wipe it, so the load is brought forward to here.
+            // It has to be the _keep_EM variant: FpgaDownloadAndGo() frees and clears
+            // the whole of BigBuf to make room to decompress, emulator memory included,
+            // which is the very thing this is here to preserve.
             //-----------------------------------------------------------------------------
-            FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+            FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_LF);
             em4x50_sim((const uint32_t *)packet->data.asBytes, true);
             break;
         }
@@ -1841,11 +1843,13 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_LF_EM4X50_ESET: {
             //-----------------------------------------------------------------------------
-            // Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_LF) here although FPGA is not
-            // involved in dealing with emulator memory. But if it is called later, it might
-            // destroy the Emulator Memory.
+            // The FPGA is not involved in dealing with emulator memory, but loading a
+            // bitstream later would wipe it, so the load is brought forward to here.
+            // It has to be the _keep_EM variant: FpgaDownloadAndGo() frees and clears
+            // the whole of BigBuf to make room to decompress, emulator memory included,
+            // which is the very thing this is here to preserve.
             //-----------------------------------------------------------------------------
-            FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+            FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_LF);
 
             if (packet->length < sizeof(em4x50_eset_t)) {
                 reply_ng(CMD_LF_EM4X50_ESET, PM3_EINVARG, NULL, 0);
@@ -1958,11 +1962,13 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_ISO15693_EML_SETMEM: {
             //-----------------------------------------------------------------------------
-            // Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15) here although FPGA is not
-            // involved in dealing with emulator memory. But if it is called later, it might
-            // destroy the Emulator Memory.
+            // The FPGA is not involved in dealing with emulator memory, but loading a
+            // bitstream later would wipe it, so the load is brought forward to here.
+            // It has to be the _keep_EM variant: FpgaDownloadAndGo() frees and clears
+            // the whole of BigBuf to make room to decompress, emulator memory included,
+            // which is the very thing this is here to preserve.
             //-----------------------------------------------------------------------------
-            FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
+            FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF_15);
             struct p {
                 uint32_t offset;
                 uint16_t count;
@@ -1973,7 +1979,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ISO15693_EML_GETMEM: {
-            FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
+            // keep the Emulator Memory, we are about to read it back
+            FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF_15);
             struct p {
                 uint32_t offset;
                 uint16_t length;
@@ -2129,12 +2136,14 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_LEGIC_ESET: {
-            //-----------------------------------------------------------------------------
-            // Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_HF) here although FPGA is not
-            // involved in dealing with emulator memory. But if it is called later, it might
-            // destroy the Emulator Memory.
-            //-----------------------------------------------------------------------------
-            FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+            // No FPGA work here on purpose.  An upload arrives as a burst of
+            // back-to-back packets, and a bitstream download in the first one takes
+            // long enough that the device stops servicing USB and the packets behind
+            // it are lost -- `hf legic eload` after a command that left a different
+            // bitstream loaded used to write only its first 619 bytes.
+            // init_tag() in legicrfsim.c loads the bitstream when the simulation
+            // actually starts, and does it with the _keep_EM variant so the content
+            // uploaded here survives.
             legic_packet_t *payload = (legic_packet_t *) packet->data.asBytes;
             emlSet(payload->data, payload->offset, payload->len);
             break;
@@ -2540,11 +2549,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             //-----------------------------------------------------------------------------
             // Work with emulator memory
             //
-            // Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_HF) here although FPGA is not
-            // involved in dealing with emulator memory. But if it is called later, it might
-            // destroy the Emulator Memory.
+            // The FPGA is not involved here, but loading a bitstream later would wipe
+            // emulator memory, so the load is brought forward. _keep_EM because
+            // FpgaDownloadAndGo() frees and clears all of BigBuf to decompress into,
+            // which would drop the allocation emlClearMem() is about to fill in.
             //-----------------------------------------------------------------------------
-            FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+            FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF);
 
             // Not only clears the emulator memory,
             // also sets default MIFARE values for sector trailers.
