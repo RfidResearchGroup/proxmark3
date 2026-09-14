@@ -32,6 +32,7 @@
 #include "mifare/mifaredefault.h"  // MIFARE_KEY_SIZE
 #include "mbedtls/bignum.h"
 
+#define VIGIK_BLOCK0_SAK   0x88    // 24 of the 25 known family cards carry it
 #define VIGIK_SIG_LEN      128     // RSA 1024, the signature on the card
 #define VIGIK_SIGNED        "( " _GREEN_("signed") " )"
 #define VIGIK_MSG_SLOTS     64     // message byte slots in an ISO 9796-1 block
@@ -50,18 +51,35 @@ static const vigik_pk_t vigik_rsa_pk[] = {
 
     {"EDF-GDF", 0x07AD, "C44DBCD92F9DCF42F4902A87335DBB35D2FF530CDB09814CFA1F4B95A1BD018D099BC6AB69F667B4922AE1ED826E72951AA3E0EAAA7D49A695F04F8CDAAE2D18D10D25BD529CBB05ABF070DC7C041EC35C2BA7F58CC4C349983CC6E11A5CBE828FB8ECBC26F08E1094A6B44C8953C8E1BAFD214DF3E69F430A98CCC75C03669D"},
     {"EDF-GDF", 0x07AD, "9d66035cc7cc980a439fe6f34d21fdbae1c853894cb4a694108ef026bcecb88f82be5c1ae1c63c9849c3c48cf5a72b5cc31e047cdc70f0ab05bb9c52bd250dd1182daeda8c4ff095a6497daaeae0a31a95726e82ede12a92b467f669abc69b098d01bda1954b1ffa4c8109db0c53ffd235bb5d33872a90f442cf9d2fd9bc4dc4"},
+
+    {"VIGIK service 0x07B5", 0x07B5, "EF8DC002C694B0C77F0F3B4DE59EC06724ECB92365F0562AA09220DBDFA79CE50D6A6403D051938B63C867E3BA1B8DD37C537DA49CBFF265A069519C02E735A3479637869D8F979B67F0A6A819E73047D16C365738A747DEA8F84399C891576CDC1AE35DAF821D10CC7041693573910B2FE1ABB7868081F6FB1B96E609B3E4E5"},
+    {"VIGIK service 0x07B5", 0x07B5, "e5e4b309e6961bfbf6818086b7abe12f0b917335694170cc101d82af5de31adc6c5791c89943f8a8de47a73857366cd14730e719a8a6f0679b978f9d86379647a335e7029c5169a065f2bf9ca47d537cd38d1bbae367c8638b9351d003646a0de59ca7dfdb2092a02a56f06523b9ec2467c09ee54d3b0f7fc7b094c602c08def"},
     {NULL, 0, NULL}
 };
 
-const char *vigik_get_service(uint16_t service_code) {
-    for (int i = 0; i < ARRAYLEN(vigik_rsa_pk); ++i)
-        if (service_code == vigik_rsa_pk[i].code)
-            return vigik_rsa_pk[i].desc;
+// Moduli this repository recovered from cards rather than took from a published
+// source. Two cards is the minimum the GCD attack needs, so a third is worth
+// asking for: it confirms the key and may name the operator.
+static const uint16_t vigik_pk_recovered[] = { 0x07B5 };
 
-    // the table ends with a NULL sentinel, so an unmatched code has no name
-    return "unknown service";
+static bool vigik_pk_is_recovered(uint16_t service_code) {
+    for (size_t i = 0; i < ARRAYLEN(vigik_pk_recovered); i++) {
+        if (service_code == vigik_pk_recovered[i]) {
+            return true;
+        }
+    }
+    return false;
 }
 
+const char *vigik_get_service(uint16_t service_code) {
+    for (int i = 0; i < ARRAYLEN(vigik_rsa_pk); ++i) {
+        if (service_code == vigik_rsa_pk[i].code) {
+            return vigik_rsa_pk[i].desc;
+        }
+    }
+
+    return "unknown service";
+}
 
 // ISO 9796-1 shadow permutation. Each message byte is stored next to its shadow,
 static const uint8_t vigik_iso9796_pi[16] = {
@@ -74,8 +92,8 @@ static uint8_t vigik_shadow(uint8_t b) {
 }
 
 // Recover the message an ISO 9796-1 signature carries, checking the redundancy on
-// the way. `sig` is the signature as it sits on the card, `modulus` the public key
-// to try. On success msg holds msglen bytes.
+// the way. `sig` is the signature as it sits on the card, `modulus` the public key to try. 
+// On success msg holds msglen bytes.
 static int vigik_iso9796_recover(const uint8_t *sig, const char *modulus, uint8_t *msg, size_t *msglen) {
 
     uint8_t n[VIGIK_SIG_LEN] = {0};
@@ -197,8 +215,15 @@ static void vigik_print_date(const char *label, const uint8_t *v, const char *su
 
     if (sane) {
         PrintAndLogEx(INFO, "%s %s ( " _YELLOW_("%04u-%02u-%02u %02u:%02u") " )%s",
-                      label, sprint_hex_inrow(v, 5),
-                      1900 + v[0], v[1], v[2], v[3], v[4], suffix);
+                    label,
+                    sprint_hex_inrow(v, 5),
+                    1900 + v[0], 
+                    v[1], 
+                    v[2], 
+                    v[3], 
+                    v[4], 
+                    suffix
+                );
     } else {
         PrintAndLogEx(INFO, "%s %s" "%s", label, sprint_hex_inrow(v, 5), suffix);
     }
@@ -276,6 +301,12 @@ int vigik_verify(mfc_vigik_t *d) {
         }
 
         PrintAndLogEx(SUCCESS, "Signature verification: " _GREEN_("successful"));
+
+        if (vigik_pk_is_recovered(vigik_rsa_pk[i].code)) {
+            PrintAndLogEx(HINT, "Hint: this key was recovered from two cards, not published,");
+            PrintAndLogEx(HINT, "      and its operator is unknown. " _RED_("Report to Iceman!"));
+        }
+
         return PM3_SUCCESS;
     }
 
@@ -676,6 +707,11 @@ int vigik_parser_parse(const uint8_t *dump, size_t dumplen) {
         PrintAndLogEx(SUCCESS, "System............. " _YELLOW_("%s"), schema);
     }
 
+    if (dumplen > 5 && dump[5] == VIGIK_BLOCK0_SAK) {
+        PrintAndLogEx(INFO, "Block 0 SAK........ 0x%02X  ( " _YELLOW_("anti clone marker") " )", dump[5]);
+        PrintAndLogEx(INFO, "                    the tag answers 0x08, a clone written with this block 0 answers 0x88");
+    }
+
     if (DetectHID(s0, VIGIK_MAD_AID) < 0) {
         const vigik_schema_t *entry = vigik_detect_schema_entry(dump, dumplen);
         if (entry != NULL && entry->decode != NULL) {
@@ -736,9 +772,11 @@ int vigik_parser_parse(const uint8_t *dump, size_t dumplen) {
             }
         }
 
-        PrintAndLogEx(INFO, "Signature.......... %zu of %u bytes, %s", have, VIGIK_SIG_LEN,
-                      rest_blank ? _YELLOW_("and every later sector is factory blank")
-                                 : _YELLOW_("sectors missing from the dump"));
+        const char *why = _YELLOW_("sectors missing from the dump");
+        if (rest_blank) {
+            why = _YELLOW_("and every later sector is factory blank");
+        }
+        PrintAndLogEx(INFO, "Signature.......... %zu of %u bytes, %s", have, VIGIK_SIG_LEN, why);
     }
 
     vigik_annotate(d.vigik);
