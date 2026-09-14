@@ -1819,7 +1819,7 @@ typedef struct {
 } mfu_otp_identify_t;
 
 static mfu_otp_identify_t mfu_otp_ident_table[] = {
-    { "SALTO Systems card", 12, 4, "534C544F", ul_c_otpgenA, "report to iceman!" },
+    { "SALTO Systems card", 12, 4, "534C544F", ul_c_otpgenA, NULL },
     { NULL, 0, 0, NULL, NULL, NULL}   // must be the last item
 };
 
