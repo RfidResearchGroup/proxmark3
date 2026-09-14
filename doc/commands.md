@@ -818,6 +818,9 @@ Check column "offline" for their availability.
 |`hf mfdes lsfiles       `|N       |`Show all files list`
 |`hf mfdes dump          `|N       |`Dump all files`
 |`hf mfdes view          `|Y       |`Display content from tag dump file`
+|`hf mfdes eload         `|N       |`Upload file into emulator memory`
+|`hf mfdes esave         `|N       |`Save emulator memory to file`
+|`hf mfdes eview         `|N       |`View emulator memory`
 |`hf mfdes createfile    `|N       |`Create Standard/Backup File`
 |`hf mfdes createvaluefile`|N       |`Create Value File`
 |`hf mfdes createrecordfile`|N       |`Create Linear/Cyclic Record File`

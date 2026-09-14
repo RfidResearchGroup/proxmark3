@@ -52,6 +52,7 @@
 #include "generator.h"
 #include "mifare/aiddesfire.h"
 #include "mifare/prime.h"
+#include "mifare/desfireem.h"   // emulator memory card image
 #include "util.h"
 #include "crypto/originality.h"
 
@@ -9042,6 +9043,224 @@ static void DesfireViewPrintApp(const desfire_dump_app_t *app) {
     }
 }
 
+static int CmdHF14ADesELoad(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes eload",
+                  "Load a DESFire card dump into emulator memory.\n"
+                  "The dump is packed into the on-device card image, see doc/mfdes_dump_format.md",
+                  "hf mfdes eload -f hf-mfdes-01020304050607-dump.json");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<fn>", "Filename of dump"),
+        arg_lit0("v", "verbose", "Verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    bool verbose = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    desfire_dump_t *dump = calloc(1, sizeof(desfire_dump_t));
+    if (dump == NULL) {
+        PrintAndLogEx(ERR, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    size_t dlen = 0;
+    int res = loadFileJSON(filename, dump, sizeof(desfire_dump_t), &dlen, NULL);
+    if (res != PM3_SUCCESS) {
+        free(dump);
+        return res;
+    }
+
+    if (dlen != sizeof(desfire_dump_t)) {
+        PrintAndLogEx(ERR, "`" _YELLOW_("%s") "` is not a DESFire card dump", filename);
+        desfire_dump_free(dump);
+        free(dump);
+        return PM3_EINVARG;
+    }
+
+    // the device tells us how much emulator memory it has, so a platform with
+    // more of it holds a bigger card with no change here
+    size_t emsize = g_conn.em_size;
+    if (emsize == 0) {
+        PrintAndLogEx(ERR, "Device did not report an emulator memory size");
+        desfire_dump_free(dump);
+        free(dump);
+        return PM3_EDEVNOTSUPP;
+    }
+
+    uint8_t *img = calloc(emsize, sizeof(uint8_t));
+    if (img == NULL) {
+        PrintAndLogEx(ERR, "Failed to allocate memory");
+        desfire_dump_free(dump);
+        free(dump);
+        return PM3_EMALLOC;
+    }
+
+    size_t used = 0;
+    res = desfire_em_pack(dump, img, emsize, &used);
+    desfire_dump_free(dump);
+    free(dump);
+
+    if (res != PM3_SUCCESS) {
+        free(img);
+        return res;
+    }
+
+    if (verbose) {
+        desfire_em_print(img, emsize);
+    }
+
+    res = desfire_em_upload(img, emsize);
+    free(img);
+
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    PrintAndLogEx(SUCCESS, "Done!");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfdes eview`") " to verify");
+    return PM3_SUCCESS;
+}
+
+static int CmdHF14ADesESave(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes esave",
+                  "Save the card image in emulator memory to a dump file.\n"
+                  "Shows what a reader left behind if one has been talking to the simulation",
+                  "hf mfdes esave -f myfile");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<fn>", "Filename, if no <fn> UID will be used as filename"),
+        arg_lit0("v", "verbose", "Verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    bool verbose = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    size_t emsize = g_conn.em_size;
+    if (emsize == 0) {
+        PrintAndLogEx(ERR, "Device did not report an emulator memory size");
+        return PM3_EDEVNOTSUPP;
+    }
+
+    uint8_t *img = calloc(emsize, sizeof(uint8_t));
+    if (img == NULL) {
+        PrintAndLogEx(ERR, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    int res = desfire_em_download(img, emsize);
+    if (res != PM3_SUCCESS) {
+        free(img);
+        return res;
+    }
+
+    if (verbose) {
+        desfire_em_print(img, emsize);
+    }
+
+    desfire_dump_t *dump = calloc(1, sizeof(desfire_dump_t));
+    if (dump == NULL) {
+        PrintAndLogEx(ERR, "Failed to allocate memory");
+        free(img);
+        return PM3_EMALLOC;
+    }
+
+    res = desfire_em_unpack(img, emsize, dump);
+    free(img);
+
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(HINT, "Hint: emulator memory holds no DESFire card image, try " _YELLOW_("`hf mfdes eload`"));
+        free(dump);
+        return res;
+    }
+
+    if (fnlen < 1) {
+        if (dump->card_info.uidlen == 0) {
+            PrintAndLogEx(WARNING, "No UID to build a filename from, use " _YELLOW_("-f <fn>"));
+            desfire_dump_free(dump);
+            free(dump);
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(INFO, "Using UID as filename");
+        strcat(filename, "hf-mfdes-");
+        FillFileNameByUID(filename, dump->card_info.uid, "-dump", dump->card_info.uidlen);
+    }
+
+    pm3_save_dump_json(filename, (uint8_t *)dump, sizeof(desfire_dump_t), jsfMfDesfire_v1);
+
+    desfire_dump_free(dump);
+    free(dump);
+    return PM3_SUCCESS;
+}
+
+static int CmdHF14ADesEView(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes eview",
+                  "Show the DESFire card image currently in emulator memory",
+                  "hf mfdes eview");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("v", "verbose", "Also print every application and file"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool verbose = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    size_t emsize = g_conn.em_size;
+    if (emsize == 0) {
+        PrintAndLogEx(ERR, "Device did not report an emulator memory size");
+        return PM3_EDEVNOTSUPP;
+    }
+
+    uint8_t *img = calloc(emsize, sizeof(uint8_t));
+    if (img == NULL) {
+        PrintAndLogEx(ERR, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    int res = desfire_em_download(img, emsize);
+    if (res != PM3_SUCCESS) {
+        free(img);
+        return res;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    desfire_em_print(img, emsize);
+
+    if (verbose) {
+        desfire_dump_t *dump = calloc(1, sizeof(desfire_dump_t));
+        if (dump != NULL) {
+            if (desfire_em_unpack(img, emsize, dump) == PM3_SUCCESS) {
+                DesfireViewPrintApp(&dump->picc);
+                for (uint8_t i = 0; i < dump->appcount && i < DESFIRE_MAX_APP_COUNT; i++) {
+                    DesfireViewPrintApp(&dump->app[i]);
+                }
+            }
+            desfire_dump_free(dump);
+            free(dump);
+        }
+    }
+
+    free(img);
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14ADesView(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes view",
@@ -10796,6 +11015,9 @@ static command_t CommandTable[] = {
     {"lsfiles",          CmdHF14ADesLsFiles,          IfPm3Iso14443a,  "Show all files list"},
     {"dump",             CmdHF14ADesDump,             IfPm3Iso14443a,  "Dump all files"},
     {"view",             CmdHF14ADesView,             AlwaysAvailable, "Display content from tag dump file"},
+    {"eload",            CmdHF14ADesELoad,            IfPm3Iso14443a,  "Upload file into emulator memory"},
+    {"esave",            CmdHF14ADesESave,            IfPm3Iso14443a,  "Save emulator memory to file"},
+    {"eview",            CmdHF14ADesEView,            IfPm3Iso14443a,  "View emulator memory"},
     {"createfile",       CmdHF14ADesCreateFile,       IfPm3Iso14443a,  "Create Standard/Backup File"},
     {"createvaluefile",  CmdHF14ADesCreateValueFile,  IfPm3Iso14443a,  "Create Value File"},
     {"createrecordfile", CmdHF14ADesCreateRecordFile, IfPm3Iso14443a,  "Create Linear/Cyclic Record File"},

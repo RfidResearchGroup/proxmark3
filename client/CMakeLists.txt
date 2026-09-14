@@ -381,6 +381,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/mifare/gen4.c
         ${PM3_ROOT}/client/src/mifare/lrpcrypto.c
         ${PM3_ROOT}/client/src/mifare/desfirecrypto.c
+        ${PM3_ROOT}/client/src/mifare/desfireem.c
         ${PM3_ROOT}/client/src/mifare/desfiresecurechan.c
         ${PM3_ROOT}/client/src/mifare/desfirecore.c
         ${PM3_ROOT}/client/src/mifare/desfiretest.c

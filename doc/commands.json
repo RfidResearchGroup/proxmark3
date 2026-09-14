@@ -7887,6 +7887,47 @@
             ],
             "usage": "hf mfdes dump [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--aid <hex>] [--isoid <hex>] [--dfname <hex>] [-l <hex>] [--no-auth] [-f <fn>] [--keys <fn>] [--ns]"
         },
+        "hf mfdes eload": {
+            "command": "hf mfdes eload",
+            "description": "Load a DESFire card dump into emulator memory. The dump is packed into the on-device card image, see doc/mfdes_dump_format.md",
+            "notes": [
+                "hf mfdes eload -f hf-mfdes-01020304050607-dump.json"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> Filename of dump",
+                "-v, --verbose Verbose output"
+            ],
+            "usage": "hf mfdes eload [-hv] -f <fn>"
+        },
+        "hf mfdes esave": {
+            "command": "hf mfdes esave",
+            "description": "Save the card image in emulator memory to a dump file. Shows what a reader left behind if one has been talking to the simulation",
+            "notes": [
+                "hf mfdes esave -f myfile"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> Filename, if no <fn> UID will be used as filename",
+                "-v, --verbose Verbose output"
+            ],
+            "usage": "hf mfdes esave [-hv] [-f <fn>]"
+        },
+        "hf mfdes eview": {
+            "command": "hf mfdes eview",
+            "description": "Show the DESFire card image currently in emulator memory",
+            "notes": [
+                "hf mfdes eview"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-v, --verbose Also print every application and file"
+            ],
+            "usage": "hf mfdes eview [-hv]"
+        },
         "hf mfdes formatpicc": {
             "command": "hf mfdes formatpicc",
             "description": "Format card. Can be done only if enabled in the configuration. Master key needs to be provided.",
@@ -16561,8 +16602,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 921,
+        "commands_extracted": 924,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-09-14T06:50:14+00:00"
+        "extracted_on": "2026-09-14T17:45:11+00:00"
     }
 }

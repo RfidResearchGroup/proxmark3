@@ -890,11 +890,12 @@ SRCS =  mifare/aiddesfire.c \
         lua_bitlib.c \
         mifare/lrpcrypto.c \
         mifare/desfirecrypto.c \
+        mifare/desfireem.c \
         mifare/desfirecore.c \
         mifare/desfiresecurechan.c \
         mifare/desfiretest.c \
         mifare/gallaghercore.c \
-		mifare/gallaghertest.c \
+        mifare/gallaghertest.c \
         mifare/mad.c \
         mifare/mad_test.c \
         mifare/mfkey.c \
