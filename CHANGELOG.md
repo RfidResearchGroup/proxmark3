@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf mf view --selftest` - now also checks the Hexact payload decoder, both ways (@iceman1001)
+- Changed `hf mf view` - Hexact sector 9,11 payload is now decoded and cross checked against sector 0,15 and UID (@iceman1001)
 - Added `hf mfdes dump` - now walks the whole PICC and saves a `hf-mfdes-<UID>-dump.json` card image, picking up `hf-mfdes-<UID>-keys.json` on its own (@iceman1001)
 - Added `hf mfdes view` - print a DESFire card dump file, no device needed (@iceman1001)
 - Fixed `sprint_hex` - a buffer twice the old size, so printing a long block no longer runs off the end of the static buffer (@iceman1001)
