@@ -187,7 +187,7 @@ static int att_subscribe(int fd, uint16_t cccd_handle) {
     return (n >= 1) ? 0 : -1;
 }
 
-// ---- name -> address resolution (active LE scan over raw HCI) ----
+// ---- name -> address resolution (LE discovery via the BlueZ mgmt API) ----
 
 // AD types carrying the device name (Core Spec, Supplement, Part A).
 #define BLE_ADV_NAME_SHORT   0x08
@@ -239,55 +239,93 @@ static void ble_print_caps_hint(void) {
     PrintAndLogEx(INFO, "     or connect by address instead: " _YELLOW_("-p ble:<MAC>") " (no extra privileges)");
 }
 
+// ---- BlueZ management (mgmt) API ----
+// The legacy hci_le_set_scan_* path is deprecated and returns EIO on many current
+// controllers/kernels; discovery now goes through the mgmt control channel (the
+// same interface btmgmt and bluetoothd use). mgmt.h isn't shipped by
+// libbluetooth-dev, so the small slice of ABI we need is defined here. Still needs
+// CAP_NET_RAW (socket) + CAP_NET_ADMIN (discovery) - same as before.
+#define MGMT_OP_SET_POWERED           0x0005
+#define MGMT_OP_START_DISCOVERY       0x0023
+#define MGMT_OP_STOP_DISCOVERY        0x0024
+#define MGMT_EV_CMD_COMPLETE          0x0001
+#define MGMT_EV_CMD_STATUS            0x0002
+#define MGMT_EV_DEVICE_FOUND          0x0012
+#define MGMT_ADDR_LE                  0x06   // (1<<1)|(1<<2): LE public + LE random
+#define MGMT_STATUS_NOT_POWERED       0x11
+#define MGMT_STATUS_PERMISSION_DENIED 0x14
+
+struct mgmt_hdr {
+    uint16_t opcode;
+    uint16_t index;
+    uint16_t len;
+} __attribute__((packed));
+
+struct mgmt_ev_device_found {
+    bdaddr_t bdaddr;
+    uint8_t  addr_type;
+    int8_t   rssi;
+    uint32_t flags;
+    uint16_t eir_len;
+    uint8_t  eir[0];
+} __attribute__((packed));
+
+// Send one mgmt command (header + up to 8 bytes of parameters). Returns 0 on success.
+static int mgmt_send_cmd(int fd, uint16_t opcode, uint16_t index, const void *param, uint16_t plen) {
+    uint8_t buf[sizeof(struct mgmt_hdr) + 8];
+    if (plen > 8) return -1;
+    struct mgmt_hdr *h = (struct mgmt_hdr *)buf;
+    h->opcode = htobs(opcode);
+    h->index  = htobs(index);
+    h->len    = htobs(plen);
+    if (plen && param) memcpy(buf + sizeof(*h), param, plen);
+    ssize_t w = write(fd, buf, sizeof(*h) + plen);
+    return (w == (ssize_t)(sizeof(*h) + plen)) ? 0 : -1;
+}
+
 int ble_resolve_name(const char *name, char *out_mac, size_t out_mac_sz, int timeout_ms) {
     if (name == NULL || out_mac == NULL || out_mac_sz < 18) return -1;
     out_mac[0] = 0;
 
-    int dev_id = hci_get_route(NULL);
-    if (dev_id < 0) {
-        PrintAndLogEx(ERR, "BLE: no local Bluetooth adapter found (%s)", strerror(errno));
-        return -1;
-    }
-    int dd = hci_open_dev(dev_id);
-    if (dd < 0) {
-        PrintAndLogEx(ERR, "BLE: cannot open hci%d (%s)", dev_id, strerror(errno));
-        if (errno == EPERM || errno == EACCES)
-            ble_print_caps_hint();
+    int index = hci_get_route(NULL);
+    if (index < 0) index = 0;                       // default to hci0 if none is "up"
+
+    int fd = socket(AF_BLUETOOTH, SOCK_RAW | SOCK_CLOEXEC, BTPROTO_HCI);
+    if (fd < 0) {
+        PrintAndLogEx(ERR, "BLE: cannot open mgmt socket (%s)", strerror(errno));
+        if (errno == EPERM || errno == EACCES) ble_print_caps_hint();
         return -1;
     }
 
-    // BlueZ's hci_le_set_scan_* take the open descriptor (dd), not dev_id,
-    // despite the arg name - passing dev_id silently fails.
-    // Active scan (0x01) so SCAN_RSP (where the BWM puts its name) is seen.
-    if (hci_le_set_scan_parameters(dd, 0x01, htobs(0x0010), htobs(0x0010), 0x00, 0x00, 1000) < 0)
-        PrintAndLogEx(INFO, "BLE: set scan parameters failed (%s), continuing", strerror(errno));
-
-    // A scan already left enabled makes the enable below return EIO; clear it first.
-    hci_le_set_scan_enable(dd, 0x00, 0x00, 1000);
-    if (hci_le_set_scan_enable(dd, 0x01, 0x00, 1000) < 0) {   // filter_dup off: names may only be in SCAN_RSP
-        PrintAndLogEx(ERR, "BLE: cannot start LE scan (%s)", strerror(errno));
-        if (errno == EPERM || errno == EACCES)
-            ble_print_caps_hint();
-        hci_close_dev(dd);
+    struct sockaddr_hci sa = {0};
+    sa.hci_family  = AF_BLUETOOTH;
+    sa.hci_dev     = HCI_DEV_NONE;
+    sa.hci_channel = HCI_CHANNEL_CONTROL;
+    if (bind(fd, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
+        PrintAndLogEx(ERR, "BLE: cannot bind mgmt control channel (%s)", strerror(errno));
+        if (errno == EPERM || errno == EACCES) ble_print_caps_hint();
+        close(fd);
         return -1;
     }
 
-    // Receive only HCI event packets carrying LE meta events; save/restore the
-    // socket's previous filter so we leave the handle as we found it.
-    struct hci_filter of, nf;
-    socklen_t olen = sizeof(of);
-    int have_of = (getsockopt(dd, SOL_HCI, HCI_FILTER, &of, &olen) == 0);
-    hci_filter_clear(&nf);
-    hci_filter_set_ptype(HCI_EVENT_PKT, &nf);
-    hci_filter_set_event(EVT_LE_META_EVENT, &nf);
-    setsockopt(dd, SOL_HCI, HCI_FILTER, &nf, sizeof(nf));
+    // Power the controller on (idempotent) so discovery works even when bluetoothd
+    // is stopped and the adapter was left down.
+    uint8_t on = 0x01;
+    mgmt_send_cmd(fd, MGMT_OP_SET_POWERED, (uint16_t)index, &on, 1);
+
+    uint8_t scan_type = MGMT_ADDR_LE;
+    if (mgmt_send_cmd(fd, MGMT_OP_START_DISCOVERY, (uint16_t)index, &scan_type, 1) != 0) {
+        PrintAndLogEx(ERR, "BLE: cannot start LE discovery (%s)", strerror(errno));
+        close(fd);
+        return -1;
+    }
 
     PrintAndLogEx(INFO, "BLE: scanning up to " _YELLOW_("%d") " ms for " _YELLOW_("%s") " ...", timeout_ms, name);
 
     int rc = -1;
     char nm[64];
     long deadline = ble_now_ms() + timeout_ms;
-    uint8_t buf[HCI_MAX_EVENT_SIZE];
+    uint8_t buf[512];
 
     while (ble_now_ms() < deadline) {
         long rem = deadline - ble_now_ms();
@@ -295,41 +333,52 @@ int ble_resolve_name(const char *name, char *out_mac, size_t out_mac_sz, int tim
         struct timeval tv = { .tv_sec = rem / 1000, .tv_usec = (rem % 1000) * 1000 };
         fd_set rs;
         FD_ZERO(&rs);
-        FD_SET(dd, &rs);
-        int s = select(dd + 1, &rs, NULL, NULL, &tv);
-        if (s < 0) { if (errno == EINTR) break; break; }   // Ctrl-C or error -> give up cleanly
-        if (s == 0) break;                                  // timeout
+        FD_SET(fd, &rs);
+        int s = select(fd + 1, &rs, NULL, NULL, &tv);
+        if (s < 0) { if (errno == EINTR) break; break; }
+        if (s == 0) break;
 
-        int n = read(dd, buf, sizeof(buf));
-        if (n < (int)(1 + HCI_EVENT_HDR_SIZE + 1)) continue;
-        uint8_t *pkt_end = buf + n;
+        ssize_t n = read(fd, buf, sizeof(buf));
+        if (n < (ssize_t)sizeof(struct mgmt_hdr)) continue;
+        struct mgmt_hdr *h = (struct mgmt_hdr *)buf;
+        uint16_t ev  = btohs(h->opcode);
+        uint16_t idx = btohs(h->index);
+        uint16_t len = btohs(h->len);
+        if ((size_t)n < sizeof(*h) + len) continue;
+        if (idx != (uint16_t)index) continue;           // event for a different controller
+        uint8_t *pl = buf + sizeof(*h);
 
-        // layout: [0]=HCI_EVENT_PKT, [1..2]=hci_event_hdr, then evt_le_meta_event
-        evt_le_meta_event *meta = (evt_le_meta_event *)(buf + 1 + HCI_EVENT_HDR_SIZE);
-        if ((uint8_t *)meta->data > pkt_end) continue;
-        if (meta->subevent != EVT_LE_ADVERTISING_REPORT) continue;
-
-        uint8_t *p = meta->data;
-        uint8_t num = *p++;                                 // number of reports in this event
-        for (uint8_t r = 0; r < num; r++) {
-            if (p + LE_ADVERTISING_INFO_SIZE > pkt_end) break;
-            le_advertising_info *info = (le_advertising_info *)p;
-            uint8_t *next = p + LE_ADVERTISING_INFO_SIZE + info->length + 1;  // +1 trailing RSSI
-            if (next > pkt_end) break;                      // malformed / truncated report
-            if (ble_ad_name_matches(name, info->data, info->length, nm, sizeof(nm))) {
-                ba2str(&info->bdaddr, out_mac);
+        if (ev == MGMT_EV_DEVICE_FOUND) {
+            if (len < sizeof(struct mgmt_ev_device_found)) continue;
+            struct mgmt_ev_device_found *df = (struct mgmt_ev_device_found *)pl;
+            uint16_t eir_len = btohs(df->eir_len);
+            if (sizeof(*df) + eir_len > len) eir_len = (uint16_t)(len - sizeof(*df));
+            if (ble_ad_name_matches(name, df->eir, eir_len, nm, sizeof(nm))) {
+                ba2str(&df->bdaddr, out_mac);
                 PrintAndLogEx(SUCCESS, "BLE: found " _GREEN_("%s") " at " _GREEN_("%s"), nm, out_mac);
                 rc = 0;
                 break;
             }
-            p = next;
+        } else if ((ev == MGMT_EV_CMD_STATUS || ev == MGMT_EV_CMD_COMPLETE) && len >= 3) {
+            uint16_t cmd = get16(pl);                    // originating command opcode
+            uint8_t status = pl[2];
+            if (cmd == MGMT_OP_START_DISCOVERY && status != 0) {
+                if (status == MGMT_STATUS_PERMISSION_DENIED) {
+                    ble_print_caps_hint();
+                    break;
+                } else if (status == MGMT_STATUS_NOT_POWERED) {
+                    PrintAndLogEx(ERR, "BLE: adapter not powered (check " _YELLOW_("rfkill") " / bluetooth service)");
+                    break;
+                }
+                // Busy (0x0A) or similar: a scan may already be running - keep listening.
+                PrintAndLogEx(INFO, "BLE: start-discovery returned mgmt status 0x%02x, listening anyway", status);
+            }
         }
-        if (rc == 0) break;
     }
 
-    hci_le_set_scan_enable(dd, 0x00, 0x00, 1000);
-    if (have_of) setsockopt(dd, SOL_HCI, HCI_FILTER, &of, sizeof(of));
-    hci_close_dev(dd);
+    uint8_t st = MGMT_ADDR_LE;
+    mgmt_send_cmd(fd, MGMT_OP_STOP_DISCOVERY, (uint16_t)index, &st, 1);
+    close(fd);
 
     if (rc != 0)
         PrintAndLogEx(ERR, "BLE: no advertising device named " _YELLOW_("%s") " seen within %d ms", name, timeout_ms);
