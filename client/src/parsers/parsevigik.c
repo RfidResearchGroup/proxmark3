@@ -32,6 +32,7 @@
 #include "mbedtls/bignum.h"
 
 #define VIGIK_SIG_LEN      128     // RSA 1024, the signature on the card
+#define VIGIK_SIGNED        "( " _GREEN_("signed") " )"
 #define VIGIK_MSG_SLOTS     64     // message byte slots in an ISO 9796-1 block
 #define VIGIK_MSG_PAD        8     // leading zero bytes of the signed message
 
@@ -62,7 +63,6 @@ const char *vigik_get_service(uint16_t service_code) {
 
 
 // ISO 9796-1 shadow permutation. Each message byte is stored next to its shadow,
-// which is what gives the scheme its redundancy.
 static const uint8_t vigik_iso9796_pi[16] = {
     0x0E, 0x03, 0x05, 0x08, 0x09, 0x04, 0x02, 0x0F,
     0x00, 0x0D, 0x0B, 0x06, 0x07, 0x0A, 0x0C, 0x01
@@ -75,10 +75,6 @@ static uint8_t vigik_shadow(uint8_t b) {
 // Recover the message an ISO 9796-1 signature carries, checking the redundancy on
 // the way. `sig` is the signature as it sits on the card, `modulus` the public key
 // to try. On success msg holds msglen bytes.
-//
-// Rabin, so v = 2 and squaring the signature gives the block back. Which of the
-// four candidates is the block is decided by the format itself: an ISO 9796-1
-// block always ends in the nibble 6.
 static int vigik_iso9796_recover(const uint8_t *sig, const char *modulus, uint8_t *msg, size_t *msglen) {
 
     uint8_t n[VIGIK_SIG_LEN] = {0};
@@ -158,9 +154,6 @@ static int vigik_iso9796_recover(const uint8_t *sig, const char *modulus, uint8_
         return PM3_ESOFT;
     }
 
-    // Every byte pair has to be a message byte next to its shadow. Exactly three
-    // are allowed not to be: the leading pair carries the bit that keeps the block
-    // below n, one marks how long the message is, and the last holds the forced 6.
     size_t broken[4] = {0};
     size_t brokencnt = 0;
     for (size_t i = 0; i < VIGIK_SIG_LEN; i += 2) {
@@ -186,9 +179,6 @@ static int vigik_iso9796_recover(const uint8_t *sig, const char *modulus, uint8_
         stream[i / 2] = f[i + 1];
     }
 
-    // The message is repeated to fill the block, the first slot belonging to the
-    // truncated tail of the run before it. Where a second copy fits, it has to
-    // agree with the first.
     if (((1 + (2 * z)) <= VIGIK_MSG_SLOTS) && (memcmp(stream + 1, stream + 1 + z, z) != 0)) {
         return PM3_ESOFT;
     }
@@ -198,26 +188,21 @@ static int vigik_iso9796_recover(const uint8_t *sig, const char *modulus, uint8_
     return PM3_SUCCESS;
 }
 
-// The five byte dates are year since 1900, then month, day, hour, minute.
-// Print the raw bytes with the date spelled out beside them, and leave the
-// decoded form off when the bytes cannot be a date at all.
-static void vigik_print_date(const char *label, const uint8_t *v) {
+static void vigik_print_date(const char *label, const uint8_t *v, const char *suffix) {
 
     bool sane = ((v[1] >= 1) && (v[1] <= 12) &&
                  (v[2] >= 1) && (v[2] <= 31) &&
                  (v[3] <= 23) && (v[4] <= 59));
 
     if (sane) {
-        PrintAndLogEx(INFO, "%s %s ( " _YELLOW_("%04u-%02u-%02u %02u:%02u") " )",
+        PrintAndLogEx(INFO, "%s %s ( " _YELLOW_("%04u-%02u-%02u %02u:%02u") " )%s",
                       label, sprint_hex_inrow(v, 5),
-                      1900 + v[0], v[1], v[2], v[3], v[4]);
+                      1900 + v[0], v[1], v[2], v[3], v[4], suffix);
     } else {
-        PrintAndLogEx(INFO, "%s %s", label, sprint_hex_inrow(v, 5));
+        PrintAndLogEx(INFO, "%s %s" "%s", label, sprint_hex_inrow(v, 5), suffix);
     }
 }
 
-// What a VIGIK signature covers: the UID the card has to keep, the service it
-// belongs to, and the window it is good for.
 static size_t vigik_expected_msg(const mfc_vigik_t *d, uint8_t *out) {
 
     size_t len = 0;
@@ -277,16 +262,16 @@ int vigik_verify(mfc_vigik_t *d) {
         PrintAndLogEx(INFO, "  Service code..... 0x%04X", (uint16_t)d->service_code);
         PrintAndLogEx(INFO, "  Key version...... %u", d->key_version);
         PrintAndLogEx(INFO, "  Services counter. %u", d->services_counter);
-        vigik_print_date("  Access date......", d->slot_access_date);
+        vigik_print_date("  Access date......", d->slot_access_date, "");
         PrintAndLogEx(INFO, "  DST duration..... %u", d->slot_dst_duration);
 
-        // The service code on the card says which service issued it, so it should
-        // name the key that just verified. Where it does not, the table pairs a
-        // description with the wrong modulus - say so rather than quietly
-        // reporting the wrong issuer.
+        // The service code on the card says which service issued it, so it should name the key
         if (vigik_rsa_pk[i].code != (uint16_t)d->service_code) {
             PrintAndLogEx(WARNING, "Card says service 0x%04X but the key that verified is listed as 0x%04X ( %s )",
-                          (uint16_t)d->service_code, vigik_rsa_pk[i].code, vigik_rsa_pk[i].desc);
+                          (uint16_t)d->service_code, 
+                          vigik_rsa_pk[i].code, 
+                          vigik_rsa_pk[i].desc
+                    );
         }
 
         PrintAndLogEx(SUCCESS, "Signature verification: " _GREEN_("successful"));
@@ -377,17 +362,21 @@ int vigik_annotate(mfc_vigik_t *d) {
     PrintAndLogEx(INFO, "MAD................. %s", sprint_hex_inrow(d->mad, sizeof(d->mad)));
     PrintAndLogEx(INFO, "Counters............ %u", d->counters);
     PrintAndLogEx(INFO, "rtf................. %s", sprint_hex_inrow(d->rtf, sizeof(d->rtf)));
-    PrintAndLogEx(INFO, "Service code........ 0x%08x / %u  - " _YELLOW_("%s"), d->service_code, d->service_code, vigik_get_service(d->service_code));
+    PrintAndLogEx(INFO, "Service code........ 0x%08x / %u  - " _YELLOW_("%s") "  " VIGIK_SIGNED, d->service_code, d->service_code, vigik_get_service(d->service_code));
     PrintAndLogEx(INFO, "Info flag........... %u -", d->info_flag); // ,  sprint_bin(d->info_flag, 1));
-    PrintAndLogEx(INFO, "Key version......... %u", d->key_version);
+    PrintAndLogEx(INFO, "Key version......... %u  " VIGIK_SIGNED, d->key_version);
     PrintAndLogEx(INFO, "PTR Counter......... %u", d->ptr_counter);
     PrintAndLogEx(INFO, "Counter num......... %u", d->counter_num);
-    vigik_print_date("Slot access date....", d->slot_access_date);
-    PrintAndLogEx(INFO, "Slot dst duration... %u", d->slot_dst_duration);
+    vigik_print_date("Slot access date....", d->slot_access_date, "  " VIGIK_SIGNED);
+    PrintAndLogEx(INFO, "Slot dst duration... %u  " VIGIK_SIGNED, d->slot_dst_duration);
     PrintAndLogEx(INFO, "Other Slots......... %s", sprint_hex_inrow(d->other_slots, sizeof(d->other_slots)));
-    PrintAndLogEx(INFO, "Services counter.... %u", d->services_counter);
-    vigik_print_date("Loading date........", d->loading_date);
+    PrintAndLogEx(INFO, "Services counter.... %u  " VIGIK_SIGNED, d->services_counter);
+    vigik_print_date("Loading date........", d->loading_date, "");
     PrintAndLogEx(INFO, "Reserved null....... %u", d->reserved_null);
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, "Unmarked fields are outside the signature, %d of the %d service record",
+                  35, 48);
+    PrintAndLogEx(INFO, "bytes, and every one of them is writable with a published key");
     PrintAndLogEx(INFO, "----------------------------------------------------------------");
     PrintAndLogEx(INFO, "");
     vigik_verify(d);

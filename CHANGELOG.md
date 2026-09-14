@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf mf view` - now show which VIGIK fields are RSA signed (@iceman1001)
 - Changed `hw status` - now reports EMULATOR memory (@iceman1001)
 - Changed `hf mf view` - Urmet Captiv cards now decode their number field and data regions (@iceman1001)
 - Changed `hf mf view --selftest` - now also checks the Hexact payload decoder, both ways (@iceman1001)
