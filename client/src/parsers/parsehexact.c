@@ -70,7 +70,6 @@ static const hexact_check_t hexact_checks[] = {
     {1, 15, HX_ID_UID, 7, 0x00},
     {2,  0, HX_ID,     0, 0x00}, {2,  1, HX_ID,     1, 0x00},
     {2,  4, HX_ID,     4, 0x00}, {2,  7, HX_ID,     7, 0x00},
-    {3,  0, HX_ID,     0, 0x36}, {3,  1, HX_ID,     1, 0x80},
     {3,  7, HX_ID_UID, 7, 0x00}, {3, 13, HX_ID,     5, 0x00},
     {4,  1, HX_ID,     1, 0x00}, {4, 13, HX_ID,     5, 0x00},
     {4, 15, HX_ID_UID, 7, 0x00},
@@ -109,16 +108,80 @@ static uint8_t hexact_expect(const hexact_check_t *c, const uint8_t *idn,
 }
 
 
+// Per installation offsets: the XOR of two positions holding the same class, so
+// the mask cancels and what is left identifies the installation. The first seven
+// need only sector 9, the last three sector 11 block 0.
+#define HEXACT_SITE_NOPOS   0xFF
+
+static const struct {
+    uint8_t a_rec, a_pos;
+    uint8_t b_rec, b_pos;       // b_rec HEXACT_SITE_NOPOS for none
+    bool fold_uid1;
+    int8_t idn;                 // identifier byte to fold, -1 for none
+} hexact_site[] = {
+    {0,  2, 2,  2, false, -1},
+    {0,  3, 1,  3, false, -1},
+    {0,  5, 1,  5, false, -1},
+    {0, 12, 1, 12, false, -1},
+    {0, 13, 1, 13, false, -1},
+    {0, 14, 1, 14, false, -1},
+    {0, 15, 1,  7, true,  -1},
+    {3,  0, HEXACT_SITE_NOPOS, 0, false,  0},
+    {3,  1, HEXACT_SITE_NOPOS, 0, false,  1},
+    {3, 15, 0, 15, false, -1},
+};
+#define HEXACT_SITE_BYTES   ARRAYLEN(hexact_site)
+#define HEXACT_SITE_S9      7       // how many of them sector 9 alone gives
+
+// Installations already in the research corpus. Row 0 has four cards, the rest
+// one each, so anything that is not row 0 is a card worth having.
+static const uint8_t hexact_known_site[][HEXACT_SITE_S9] = {
+    {0x9D, 0xFF, 0x00, 0x99, 0xCC, 0x20, 0xD0},
+    {0x2C, 0x2F, 0x70, 0x21, 0xB5, 0x7F, 0x45},
+    {0xE1, 0x50, 0x00, 0xEC, 0x1D, 0x00, 0xF4},
+    {0xAF, 0xB3, 0x00, 0xEC, 0x1D, 0x00, 0x03},
+    {0xD4, 0x58, 0x7F, 0xA5, 0x67, 0xD4, 0x0D},
+};
+
+// A blank block decrypts to the bare keystream, so a site byte is produced only
+// when every block it reads was written.
+static bool hexact_site_read(const uint8_t rec[][MFBLOCK_SIZE], const uint8_t *idn,
+                             const uint8_t *uid, const bool *written, size_t i,
+                             uint8_t *out) {
+    if (written[hexact_site[i].a_rec] == false) {
+        return false;
+    }
+    uint8_t v = rec[hexact_site[i].a_rec][hexact_site[i].a_pos];
+
+    if (hexact_site[i].b_rec != HEXACT_SITE_NOPOS) {
+        if (written[hexact_site[i].b_rec] == false) {
+            return false;
+        }
+        v ^= rec[hexact_site[i].b_rec][hexact_site[i].b_pos];
+    }
+    if (hexact_site[i].fold_uid1) {
+        v ^= uid[1];
+    }
+    if (hexact_site[i].idn >= 0) {
+        v ^= idn[hexact_site[i].idn];
+    }
+    *out = v;
+    return true;
+}
+
 #define HEXACT_MAX_SHOWN    5
 
 static uint8_t hexact_cross_check(const uint8_t rec[][MFBLOCK_SIZE], const uint8_t *idn,
                                   const uint8_t *uid, const uint8_t *ser,
-                                  uint8_t *total, bool verbose) {
+                                  const bool *written, uint8_t *total, bool verbose) {
     uint8_t pass = 0, shown = 0;
     *total = 0;
 
     for (size_t i = 0; i < ARRAYLEN(hexact_checks); i++) {
         const hexact_check_t *c = &hexact_checks[i];
+        if (written[c->rec] == false) {
+            continue;
+        }
         uint8_t want = hexact_expect(c, idn, uid, ser);
         (*total)++;
         if (rec[c->rec][c->pos] == want) {
@@ -130,24 +193,14 @@ static uint8_t hexact_cross_check(const uint8_t rec[][MFBLOCK_SIZE], const uint8
         }
     }
 
-    const uint8_t tie_got[3]  = { rec[2][15], rec[0][15], rec[3][15] };
-    const uint8_t tie_want[3] = { 
-            rec[1][7],
-            (uint8_t)(rec[1][7] ^ uid[1] ^ 0xD0),
-            (uint8_t)(rec[0][15] ^ 0xB1) 
-        };
-
-        for (size_t i = 0; i < ARRAYLEN(tie_got); i++) {
+    // the same byte is repeated in two records on every card seen so far
+    if (written[1] && written[2]) {
         (*total)++;
-
-        if (tie_got[i] == tie_want[i]) {
+        if (rec[2][15] == rec[1][7]) {
             pass++;
         } else if (verbose && shown++ < HEXACT_MAX_SHOWN) {
-            PrintAndLogEx(INFO, "  mismatch......... record tie %zu is %02X, expected %02X",
-                        i, 
-                        tie_got[i],
-                        tie_want[i]
-                    );
+            PrintAndLogEx(INFO, "  mismatch......... record tie is %02X, expected %02X",
+                          rec[2][15], rec[1][7]);
         }
     }
 
@@ -271,12 +324,21 @@ int hexact_parser_parse(const uint8_t *dump, size_t dumplen) {
     }
 
     uint8_t rec[HEXACT_PAYLOAD_BLOCKS][MFBLOCK_SIZE];
+    bool written[HEXACT_PAYLOAD_BLOCKS] = {false};
     for (uint8_t i = 0; i < HEXACT_PAYLOAD_BLOCKS; i++) {
         const uint8_t *p = hexact_sector(dump, dumplen, hexact_payload[i].sector, hexact_payload[i].blk);
         if (p == NULL) {
             return PM3_SUCCESS;
         }
         hexact_decrypt(p, hexact_payload[i].sector, hexact_payload[i].blk, rec[i]);
+
+        // an unwritten block decrypts to the bare keystream, not card data
+        for (uint8_t k = 0; k < MFBLOCK_SIZE; k++) {
+            if (p[k] != 0x00 && p[k] != 0xFF) {
+                written[i] = true;
+                break;
+            }
+        }
     }
 
     bool all_zero = true, all_ff = true;
@@ -313,8 +375,8 @@ int hexact_parser_parse(const uint8_t *dump, size_t dumplen) {
         str_append(line, sizeof(line), "%s  ", sprint_hex_inrow(rec[i], 8));
         str_append(line, sizeof(line), "%s", sprint_hex_inrow(rec[i] + 8, 8));
         PrintAndLogEx(INFO, "  sector %2u blk %u.. %s",
-                    hexact_payload[i].sector, 
-                    hexact_payload[i].blk, 
+                    hexact_payload[i].sector,
+                    hexact_payload[i].blk,
                     line
                 );
     }
@@ -332,32 +394,129 @@ int hexact_parser_parse(const uint8_t *dump, size_t dumplen) {
             break;
         }
     }
+    uint8_t idn[8] = {0};
+    memcpy(idn, s0b2, sizeof(idn));
+
     if (wiped) {
+        idn[0] = rec[2][0];
+        idn[1] = rec[2][1];
+        idn[4] = rec[2][4];
+        idn[7] = rec[2][7];
+
         PrintAndLogEx(INFO, "Identifier......... " _YELLOW_("wiped") ", recovered from the payload:");
         PrintAndLogEx(INFO, "                    %02X %02X .. .. %02X .. .. %02X%s",
-                      rec[2][0], rec[2][1], rec[2][4], rec[2][7],
+                      idn[0], idn[1], idn[4], idn[7],
                       (rec[1][1] == rec[2][1] && rec[1][4] == rec[2][4])
                       ? "   ( two sources agree )" : "   ( sources DISAGREE )");
-        return PM3_SUCCESS;
     }
 
     uint8_t total = 0;
-    uint8_t pass = hexact_cross_check(rec, s0b2, uid, ser, &total, true);
+    uint8_t pass = 0;
+    if (wiped == false) {
+        pass = hexact_cross_check(rec, idn, uid, ser, written, &total, true);
+    }
 
     if (spare_used) {
         uint8_t pt[MFBLOCK_SIZE];
         hexact_decrypt(spare, HEXACT_DATA_SECTOR_B, 2, pt);
         PrintAndLogEx(INFO, "  sector %2u blk 2.. %s  " _YELLOW_("( other generation )"),
-                    HEXACT_DATA_SECTOR_B, 
+                    HEXACT_DATA_SECTOR_B,
                     sprint_hex_inrow(pt, MFBLOCK_SIZE)
                 );
     }
 
-    PrintAndLogEx(INFO, "Cross checks....... %u / %u  ( %s )", pass, total,
-                  (pass == total) ? _GREEN_("bound bytes agree with sector 0, 15 and the UID")
-                                  : _RED_("bound bytes disagree, see above")
-            );
-    PrintAndLogEx(INFO, "                    %u of 80 payload bytes are issuer data and unchecked", 80 - 22);
+    if (wiped == false) {
+        PrintAndLogEx(INFO, "Cross checks....... %u / %u  ( %s )", pass, total,
+                      (pass == total) ? _GREEN_("bound bytes agree with sector 0, 15 and the UID")
+                                      : _RED_("bound bytes disagree, see above")
+                );
+    }
+
+    // two badges of one building carry the same row, two buildings never do
+    char s9line[(3 * HEXACT_SITE_BYTES) + 1] = {0};
+    char s11line[(3 * HEXACT_SITE_BYTES) + 1] = {0};
+    uint16_t touched[HEXACT_PAYLOAD_BLOCKS] = {0};
+    uint8_t srow[HEXACT_SITE_S9] = {0};
+    uint8_t nrow = 0;
+
+    for (size_t i = 0; i < HEXACT_SITE_BYTES; i++) {
+        uint8_t v = 0;
+        if (hexact_site_read(rec, idn, uid, written, i, &v) == false) {
+            continue;
+        }
+        touched[hexact_site[i].a_rec] |= (1 << hexact_site[i].a_pos);
+        if (hexact_site[i].b_rec != HEXACT_SITE_NOPOS) {
+            touched[hexact_site[i].b_rec] |= (1 << hexact_site[i].b_pos);
+        }
+        if (i < HEXACT_SITE_S9) {
+            srow[i] = v;
+            nrow++;
+        }
+        str_append((i < HEXACT_SITE_S9) ? s9line : s11line,
+                   (3 * HEXACT_SITE_BYTES) + 1, "%02X ", v);
+    }
+
+    if (s9line[0]) {
+        PrintAndLogEx(INFO, "Site constants..... %s ( " _YELLOW_("shared by every badge of one installation") " )", s9line);
+    }
+    if (s11line[0]) {
+        PrintAndLogEx(INFO, "                    %s ( from sector %u block 0 )", s11line, HEXACT_DATA_SECTOR_B);
+    }
+
+    int inst = -1;
+    if (nrow == HEXACT_SITE_S9) {
+        for (size_t i = 0; i < ARRAYLEN(hexact_known_site); i++) {
+            if (memcmp(srow, hexact_known_site[i], HEXACT_SITE_S9) == 0) {
+                inst = (int)i;
+                break;
+            }
+        }
+    }
+
+    const char *want = NULL;
+    if (nrow == HEXACT_SITE_S9 && inst < 0) {
+        want = "from an installation never seen before";
+    } else if (inst > 0) {
+        want = "from an installation with only one card on record";
+    } else if (spare_used) {
+        want = "using sector 11 block 2, which almost none do";
+    }
+
+    if (want != NULL) {
+        PrintAndLogEx(HINT, "Hint: this card is " _YELLOW_("%s"), want);
+        PrintAndLogEx(HINT, "      a dump of it moves the Hexact research on, " _RED_("report to iceman!"));
+    }
+
+    if (wiped) {
+        return PM3_SUCCESS;
+    }
+
+    for (size_t i = 0; i < ARRAYLEN(hexact_checks); i++) {
+        if (written[hexact_checks[i].rec]) {
+            touched[hexact_checks[i].rec] |= (1 << hexact_checks[i].pos);
+        }
+    }
+    if (written[1] && written[2]) {
+        touched[1] |= (1 << 7);
+        touched[2] |= (1 << 15);
+    }
+
+    uint8_t nread = 0, npayload = 0;
+    for (uint8_t i = 0; i < HEXACT_PAYLOAD_BLOCKS; i++) {
+        if (written[i] == false) {
+            continue;
+        }
+        npayload += MFBLOCK_SIZE;
+        for (uint8_t k = 0; k < MFBLOCK_SIZE; k++) {
+            if (touched[i] & (1 << k)) {
+                nread++;
+            }
+        }
+    }
+
+    PrintAndLogEx(INFO, "                    %u of %u payload bytes are issuer data, read by nothing",
+                  npayload - nread, npayload);
+
     return PM3_SUCCESS;
 }
 
@@ -426,16 +585,20 @@ int hexact_selftest(void) {
                 );
     }
 
+    bool written[HEXACT_PAYLOAD_BLOCKS];
+    memset(written, true, sizeof(written));
+
     uint8_t total = 0;
     uint8_t pass = hexact_cross_check(
                         rec,
                         dump + (2 * MFBLOCK_SIZE),
                         dump,
                         dump + (mfFirstBlockOfSector(HEXACT_ID_SECTOR) + 2) * MFBLOCK_SIZE,
+                        written,
                         &total,
                         false
                     );
- 
+
     PrintAndLogEx(INFO, "  intact card........ %u / %u  ( %s )",
                 pass,
                 total,
@@ -452,6 +615,7 @@ int hexact_selftest(void) {
                         dump + (2 * MFBLOCK_SIZE),
                         dump,
                         dump + (mfFirstBlockOfSector(HEXACT_ID_SECTOR) + 2) * MFBLOCK_SIZE,
+                        written,
                         &total,
                         false
                 );
@@ -463,6 +627,20 @@ int hexact_selftest(void) {
                 );
 
     if (broken != total - 4) {
+        return PM3_ESOFT;
+    }
+
+    dump[0] ^= 0x01;
+
+    // the two offsets the builder knows, read back through the table
+    uint8_t v3 = 0, v4 = 0;
+    bool ok = hexact_site_read(rec, dump + (2 * MFBLOCK_SIZE), dump, written, 6, &v3);
+    ok &= hexact_site_read(rec, dump + (2 * MFBLOCK_SIZE), dump, written, 9, &v4);
+
+    PrintAndLogEx(INFO, "  site constants..... %02X %02X  ( %s )", v3, v4,
+                  (ok && v3 == 0xD0 && v4 == 0xB1) ? _GREEN_("ok") : _RED_("fail"));
+
+    if (ok == false || v3 != 0xD0 || v4 != 0xB1) {
         return PM3_ESOFT;
     }
 

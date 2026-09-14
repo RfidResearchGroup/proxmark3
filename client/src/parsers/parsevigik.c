@@ -463,10 +463,12 @@ static const vigik_schema_t vigik_schemas[] = {
         vigik_print_urmet_captiv
     },
     {
+        // MAD key on sector 0 and the VIGIK key on sectors 1-3. How many further
+        // sectors the badge personalises varies, so those are left open
         "VIGIK service badge",
         {
             0xa0a1a2a3a4a5ULL, 0x314b49474956ULL, 0x314b49474956ULL, 0x314b49474956ULL,
-            0x314b49474956ULL, VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY,
+            VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY,
             VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY,
             VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY
         },
