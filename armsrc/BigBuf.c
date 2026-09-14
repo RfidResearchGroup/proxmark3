@@ -151,10 +151,16 @@ void BigBuf_Clear_keep_EM(void) {
 
 // allocate a chunk of memory from BigBuf. We allocate high memory first. The unallocated memory
 // at the beginning of BigBuf is always for traces/samples
-uint8_t *BigBuf_malloc(uint16_t chunksize) {
+//
+// chunksize is a uint32_t on purpose. It used to be a uint16_t, which silently
+// wrapped anything from 64 kbyte up -- a request for exactly 65536 came through
+// as 0 -- and on a PM5, where BigBuf is several hundred kbyte, that is a size a
+// caller can reasonably ask for. Oversized requests now fail the check below and
+// return NULL like any other allocation that does not fit.
+uint8_t *BigBuf_malloc(uint32_t chunksize) {
     chunksize = (chunksize + BIGBUF_ALIGN_BYTES - 1) & BIGBUF_ALIGN_MASK; // round up to next multiple of 4
 
-    if (s_bigbuf_hi - s_trace_len < chunksize || chunksize == 0) {
+    if (chunksize == 0 || chunksize > s_bigbuf_hi || s_bigbuf_hi - s_trace_len < chunksize) {
         // no memory left or chunksize too large
         return NULL;
     }
@@ -165,7 +171,7 @@ uint8_t *BigBuf_malloc(uint16_t chunksize) {
 
 // allocate a chunk of memory from BigBuf, and returns a pointer to it.
 // sets the memory to zero
-uint8_t *BigBuf_calloc(uint16_t chunksize) {
+uint8_t *BigBuf_calloc(uint32_t chunksize) {
     uint8_t *mem = BigBuf_malloc(chunksize);
     if (mem != NULL) {
         memset(mem, 0x00, ((chunksize + BIGBUF_ALIGN_BYTES - 1) & BIGBUF_ALIGN_MASK)); // round up to next multiple of 4
@@ -229,7 +235,11 @@ void BigBuf_print_status(void) {
 }
 
 // return the maximum trace length (i.e. the unallocated size of BigBuf)
-uint16_t BigBuf_max_traceLen(void) {
+// Room left for traces and samples, ie everything below the lowest allocation.
+// s_bigbuf_hi is a uint32_t and on a PM5 BigBuf is several hundred kbyte, so this
+// must not be narrowed -- truncating it to 16 bits would silently hand LF
+// sampling a fraction of the buffer it actually has
+uint32_t BigBuf_max_traceLen(void) {
     return s_bigbuf_hi & BIGBUF_ALIGN_MASK;
 }
 

@@ -3441,8 +3441,9 @@ static void PacketReceived(PacketCommandNG *packet) {
             if (g_dbglevel >= DBG_DEBUG) Dbprintf("Filename received for spiffs dump : %s", filename);
 
             // a file can be bigger than BigBuf, so it is streamed out one frame at a
-            // time.  Reading it into BigBuf first wrapped the uint16_t BigBuf_calloc()
-            // takes at 64KB and then read the whole file into the short buffer
+            // time.  Reading it into BigBuf first used to wrap at 64KB, back when
+            // BigBuf_calloc() took a uint16_t, and read the whole file into the
+            // short buffer that produced
             const uint16_t dl_chunk = reply_ng_max_data_size() - sizeof(download_chunk_t);
             uint8_t *chunkbuf = BigBuf_calloc(dl_chunk);
             if (chunkbuf == NULL) {

@@ -448,9 +448,9 @@ static void copy_in_spiffs(const char *src, const char *dst) {
 
     spiffs_close_cached();
 
-    // no BigBuf_calloc(filesize) here: a file can be bigger than BigBuf, and bigger
-    // than the uint16_t BigBuf_calloc() takes.  Copy it in SPIFFS_WRITE_CHUNK_SIZE
-    // chunks instead, which is also what rdv40_spiffs_write() writes in
+    // no BigBuf_calloc(filesize) here: a file can be bigger than BigBuf.  Copy it
+    // in SPIFFS_WRITE_CHUNK_SIZE chunks instead, which is also what
+    // rdv40_spiffs_write() writes in
     uint8_t *mem = BigBuf_calloc(SPIFFS_WRITE_CHUNK_SIZE);
     if (mem == NULL) {
         Dbprintf("error, cannot allocate copy buffer");
@@ -854,10 +854,10 @@ static int stream_from_spiffs(const char *filename, uint32_t offset, uint32_t si
 // Stream `size` bytes from `offset` of a file, one `chunklen` chunk at a time.
 //
 // The download path used to read the whole file into BigBuf first.  That caps a
-// download at what BigBuf holds and, since BigBuf_calloc() takes a uint16_t, the
-// request wrapped for files >= 64KB: a short buffer, then a full size read run
-// straight past the end of it.  Here the file is opened once and only one chunk
-// is ever buffered, so file size no longer enters into it.
+// download at what BigBuf holds, and back when BigBuf_calloc() took a uint16_t
+// the request wrapped for files >= 64KB: a short buffer, then a full size read
+// run straight past the end of it.  Here the file is opened once and only one
+// chunk is ever buffered, so file size no longer enters into it.
 //
 // Returns the number of bytes streamed, or a negative PM3_E* on failure.
 //
