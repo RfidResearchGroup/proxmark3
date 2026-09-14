@@ -113,11 +113,18 @@ uint32_t BigBuf_get_hi(void) {
     return s_bigbuf_hi;
 }
 
-/*
+// how much emulator memory a card image may use.  Reported to the client in
+// capabilities_t so it sizes eload / esave from what the device actually has,
+// instead of hardcoding a copy of CARD_MEMORY_SIZE
 uint32_t BigBuf_get_EM_size(void) {
     return CARD_MEMORY_SIZE;
 }
-*/
+
+// has the emulator memory been handed out yet?  It is allocated lazily on the
+// first BigBuf_get_EM_addr(), so "not allocated" means no card image is loaded
+bool BigBuf_is_EM_allocated(void) {
+    return (s_emulator_memory != NULL);
+}
 
 // clear ALL of BigBuf
 void BigBuf_Clear(void) {
@@ -192,6 +199,10 @@ void BigBuf_print_status(void) {
     DbpString(_CYAN_("Memory"));
     Dbprintf("  BigBuf_size............. %d", s_bigbuf_size);
     Dbprintf("  Available memory........ %d", s_bigbuf_hi);
+    Dbprintf("  Emulator memory......... %d ( %s )"
+             , CARD_MEMORY_SIZE
+             , (s_emulator_memory != NULL) ? "in use" : "not allocated"
+            );
     DbpString(_CYAN_("Tracing"));
     Dbprintf("  tracing ................ %d", s_tracing);
     Dbprintf("  traceLen ............... %d", s_trace_len);

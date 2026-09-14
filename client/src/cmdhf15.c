@@ -49,7 +49,6 @@
 #define Logic0                  Iso15693Logic0
 #define Logic1                  Iso15693Logic1
 #define FrameEOF                Iso15693FrameEOF
-#define CARD_MEMORY_SIZE        4096
 
 #ifndef ISO15_ERROR_HANDLING_RESPONSE
 #define ISO15_ERROR_HANDLING_RESPONSE { \

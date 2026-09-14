@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hw status` - now reports EMULATOR memory (@iceman1001)
 - Changed `hf mf view` - Urmet Captiv cards now decode their number field and data regions (@iceman1001)
 - Changed `hf mf view --selftest` - now also checks the Hexact payload decoder, both ways (@iceman1001)
 - Changed `hf mf view` - Hexact sector 9,11 payload is now decoded and cross checked against sector 0,15 and UID (@iceman1001)

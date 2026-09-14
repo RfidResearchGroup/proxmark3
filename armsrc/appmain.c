@@ -712,6 +712,8 @@ static void SendCapabilities(void) {
     capabilities.via_fpc = g_reply_via_fpc;
     capabilities.via_usb = g_reply_via_usb;
     capabilities.bigbuf_size = BigBuf_get_size();
+    capabilities.em_size = BigBuf_get_EM_size();
+    capabilities.em_allocated = BigBuf_is_EM_allocated();
     capabilities.baudrate = 0; // no real baudrate for USB-CDC
 #ifdef WITH_FPC_USART
     if (g_reply_via_fpc)

@@ -42,6 +42,8 @@
 uint8_t *BigBuf_get_addr(void);
 uint32_t BigBuf_get_size(void);
 uint8_t *BigBuf_get_EM_addr(void);
+uint32_t BigBuf_get_EM_size(void);
+bool BigBuf_is_EM_allocated(void);
 uint16_t BigBuf_max_traceLen(void);
 uint32_t BigBuf_get_hi(void);
 

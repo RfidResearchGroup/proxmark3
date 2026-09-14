@@ -276,11 +276,20 @@ typedef struct {
     // the client accepts a shorter struct from older firmware
     // PM5 can use this to inform which size they support oo.
     uint16_t max_cmd_data_size;     // device side PM3_CMD_DATA_SIZE
+
+    // Appended in version 11.
+    // How much emulator memory a card image may use, device side
+    // CARD_MEMORY_SIZE. The client sizes eload / esave from this instead of
+    // carrying its own copy of the constant, so a PM5 reporting a larger
+    // emulator memory needs no client change.
+    uint16_t em_size;
+    bool em_allocated : 1;          // is a card image resident right now
 } PACKED capabilities_t;
 // Bump this whenever a command payload changes shape, so a mismatched client and
 // firmware refuse to talk instead of misparsing each other.
 //   10: CMD_HF_MIFARE_EML_MEMSET gained a flags byte
-#define CAPABILITIES_VERSION 10
+//   11: capabilities_t gained em_size / em_allocated
+#define CAPABILITIES_VERSION 11
 // what a pre-v9 device would have used, it could not tell us
 #define CAPABILITIES_LEGACY_CMD_DATA_SIZE 512
 extern capabilities_t g_pm3_capabilities;
