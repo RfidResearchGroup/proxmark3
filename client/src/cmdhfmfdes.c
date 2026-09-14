@@ -8730,9 +8730,29 @@ static int CmdHF14ADesDump(const char *Cmd) {
 
     if (DesfireAnticollision(verbose) == PM3_SUCCESS) {
 
-        if (DesfireGetVersion(&plainctx, buf, &buflen) == PM3_SUCCESS && buflen <= sizeof(dump->version)) {
-            memcpy(dump->version, buf, buflen);
-            dump->versionlen = buflen;
+        // GetVersion answers 7 + 7 + 14 bytes over three chained frames. Split
+        // them here rather than storing one blob: the third frame is not the
+        // same shape across generations, and HW major/minor is what identifies
+        // which generation we are impersonating
+        if (DesfireGetVersion(&plainctx, buf, &buflen) == PM3_SUCCESS) {
+
+            size_t off = 0;
+            struct {
+                uint8_t *dst;
+                uint8_t *dstlen;
+                size_t   want;
+            } part[] = {
+                { dump->versionhw,   &dump->versionhwlen,   sizeof(dump->versionhw)   },
+                { dump->versionsw,   &dump->versionswlen,   sizeof(dump->versionsw)   },
+                { dump->versionprod, &dump->versionprodlen, sizeof(dump->versionprod) },
+            };
+
+            for (size_t i = 0; i < ARRAYLEN(part) && off < buflen; i++) {
+                size_t n = MIN(part[i].want, buflen - off);
+                memcpy(part[i].dst, buf + off, n);
+                *part[i].dstlen = n;
+                off += n;
+            }
         }
 
         buflen = 0;
@@ -9075,8 +9095,22 @@ static int CmdHF14ADesView(const char *Cmd) {
         }
     }
 
-    if (dump->versionlen > 0) {
-        PrintAndLogEx(SUCCESS, "Version.......... %s", sprint_hex_inrow(dump->version, dump->versionlen));
+    if (dump->versionhwlen > 0) {
+        PrintAndLogEx(SUCCESS, "Version HW....... %s", sprint_hex_inrow(dump->versionhw, dump->versionhwlen));
+        if (dump->versionhwlen >= 5) {
+            PrintAndLogEx(SUCCESS, "                  %s", mifare_prime_get_version_str(dump->versionhw[1], dump->versionhw[3], dump->versionhw[4]));
+        }
+        if (dump->versionhwlen >= 6) {
+            PrintAndLogEx(SUCCESS, "  Storage size... %s", mifare_prime_get_card_size_str(dump->versionhw[5]));
+        }
+    }
+
+    if (dump->versionswlen > 0) {
+        PrintAndLogEx(SUCCESS, "Version SW....... %s", sprint_hex_inrow(dump->versionsw, dump->versionswlen));
+    }
+
+    if (dump->versionprodlen > 0) {
+        PrintAndLogEx(SUCCESS, "Production....... %s", sprint_hex_inrow(dump->versionprod, dump->versionprodlen));
     }
 
     if (dump->signaturelen > 0) {

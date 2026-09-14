@@ -1581,8 +1581,16 @@ int prepareJSON(json_t *root, JSONFileType ftype, uint8_t *data, size_t datalen,
                 }
             }
 
-            if (dump->versionlen > 0) {
-                JsonSaveBufAsHexCompact(root, "$.Card.Version", (uint8_t *)dump->version, dump->versionlen);
+            if (dump->versionhwlen > 0) {
+                JsonSaveBufAsHexCompact(root, "$.Card.VersionHW", (uint8_t *)dump->versionhw, dump->versionhwlen);
+            }
+
+            if (dump->versionswlen > 0) {
+                JsonSaveBufAsHexCompact(root, "$.Card.VersionSW", (uint8_t *)dump->versionsw, dump->versionswlen);
+            }
+
+            if (dump->versionprodlen > 0) {
+                JsonSaveBufAsHexCompact(root, "$.Card.VersionProd", (uint8_t *)dump->versionprod, dump->versionprodlen);
             }
 
             if (dump->signaturelen > 0) {
@@ -3346,8 +3354,16 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         dump->card_info.ats_len = len;
 
         len = 0;
-        JsonLoadBufAsHex(root, "$.Card.Version", dump->version, sizeof(dump->version), &len);
-        dump->versionlen = len;
+        JsonLoadBufAsHex(root, "$.Card.VersionHW", dump->versionhw, sizeof(dump->versionhw), &len);
+        dump->versionhwlen = len;
+
+        len = 0;
+        JsonLoadBufAsHex(root, "$.Card.VersionSW", dump->versionsw, sizeof(dump->versionsw), &len);
+        dump->versionswlen = len;
+
+        len = 0;
+        JsonLoadBufAsHex(root, "$.Card.VersionProd", dump->versionprod, sizeof(dump->versionprod), &len);
+        dump->versionprodlen = len;
 
         len = 0;
         JsonLoadBufAsHex(root, "$.Card.Signature", dump->signature, sizeof(dump->signature), &len);

@@ -119,8 +119,18 @@ typedef struct {
     // card identity only.  Anything key related belongs to an application
     iso14a_card_select_t card_info;
 
-    uint8_t version[28];        // raw GetVersion answer
-    uint8_t versionlen;
+    // GetVersion answers in three frames and the frames are not the same shape
+    // across generations -- D40 and EV1 close with UID||BatchNo[5]||CW||Year
+    // while EV3 re-cuts it as UID||BatchNo[3]||TypeID[2]||CW||Year -- so each is
+    // kept raw and separate rather than parsed into fields.
+    // HW/SW frames 7 bytes each: vendor, type, subtype, major, minor, storage,
+    // protocol.  Major+minor identify the generation, see prime.c
+    uint8_t versionhw[7];
+    uint8_t versionhwlen;
+    uint8_t versionsw[7];
+    uint8_t versionswlen;
+    uint8_t versionprod[14];    // UID and production details
+    uint8_t versionprodlen;
     uint8_t signature[56];      // NXP originality signature
     uint8_t signaturelen;
 
