@@ -96,8 +96,10 @@ void gpio_fpga_download_setup(void) {
 }
 
 void gpio_fpga_on_setup(void) {
+#ifdef GPIO_FPGA_ON
     AT91C_BASE_PIOA->PIO_OER = GPIO_FPGA_ON;
     AT91C_BASE_PIOA->PIO_PER = GPIO_FPGA_ON;
+#endif
 }
 
 void gpio_fpga_mod_feedback_setup(void) {

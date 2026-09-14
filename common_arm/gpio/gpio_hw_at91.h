@@ -73,12 +73,19 @@ STATIC_FORCE_INLINE void Gpio_LED_D_Inv(void) {
     INVBIT(GPIO_LED_D);
 }
 
+// ICopyX(XC3) has no FPGA power switch -- PA26 is GPIO_FPGA_SWITCH there, see
+// config_gpio_proxmark3.h -- so these are no-ops on that board, the same way the
+// AT32 port stubs them. Guarded like Gpio_FPGA_SWITCH_*() below.
 STATIC_FORCE_INLINE void Gpio_FPGA_ON_High(void) {
+#ifdef GPIO_FPGA_ON
     HIGH(GPIO_FPGA_ON);
+#endif
 }
 
 STATIC_FORCE_INLINE void Gpio_FPGA_ON_Low(void) {
+#ifdef GPIO_FPGA_ON
     LOW(GPIO_FPGA_ON);
+#endif
 }
 
 STATIC_FORCE_INLINE void Gpio_SSC_DOUT_High(void) {

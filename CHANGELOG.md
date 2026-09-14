@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Fixed `PLATFORM=PM3ICOPYX` - builds again, it has no FPGA power switch and the AT91 GPIO layer used the pin unconditionally (@iceman1001)
 - Fixed `fpga_compress` - PM3ULTIMATE builds again, its bitstreams are an exact multiple of the interleave size (@iceman1001)
 - Fixed `hf legic eload` - an upload after a command that left a different FPGA bitstream loaded now writes the whole image (@iceman1001)
 - Fixed `hf legic sim` - no longer wipes the emulator memory that `hf legic eload` just filled (@iceman1001)
