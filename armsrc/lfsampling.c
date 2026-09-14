@@ -604,7 +604,8 @@ void doT55x7Acquisition(size_t sample_size, bool ledcontrol) {
         bufsize = sample_size;
 
     uint8_t lastSample = 0;
-    uint16_t i = 0, skipCnt = 0;
+    uint32_t i = 0;
+    uint16_t skipCnt = 0;
     bool startFound = false;
     bool highFound = false;
     bool lowFound = false;
@@ -691,7 +692,8 @@ void doCotagAcquisition(void) {
     dest[0] = 0;
 
     bool firsthigh = false, firstlow = false;
-    uint16_t i = 0, noise_counter = 0;
+    uint32_t i = 0;
+    uint16_t noise_counter = 0;
 
     uint16_t checker = 0;
 
