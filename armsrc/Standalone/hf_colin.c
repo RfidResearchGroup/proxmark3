@@ -961,7 +961,7 @@ static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, const 
     if (workFlags & 0x08) {
         iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
         //  clear_trace();
-        set_tracing(FALSE);
+        set_tracing(false);
     }
 
     while (true) {

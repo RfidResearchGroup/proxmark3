@@ -19,10 +19,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#ifndef FALSE
-#define FALSE 0
-#endif
-
 #ifndef __HF_COLIN_H
 #define __HF_COLIN_H
 
