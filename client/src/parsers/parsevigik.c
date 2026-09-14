@@ -62,6 +62,10 @@ static const vigik_pk_t vigik_rsa_pk[] = {
 // asking for: it confirms the key and may name the operator.
 static const uint16_t vigik_pk_recovered[] = { 0x07B5 };
 
+// No public key, and a 96 byte signature that fits no layout we can build. A
+// third card would say whether it is a signature at all
+#define VIGIK_SERVICE_UNSOLVED  0x2B89
+
 static bool vigik_pk_is_recovered(uint16_t service_code) {
     for (size_t i = 0; i < ARRAYLEN(vigik_pk_recovered); i++) {
         if (service_code == vigik_pk_recovered[i]) {
@@ -310,6 +314,11 @@ int vigik_verify(mfc_vigik_t *d) {
     }
 
     PrintAndLogEx(FAILED, "Signature verification: " _RED_("no public key recovered a valid block"));
+
+    if ((uint16_t)d->service_code == VIGIK_SERVICE_UNSOLVED) {
+        PrintAndLogEx(HINT, "Hint: " _RED_("Report to Iceman!"));
+    }
+
     return PM3_ESOFT;
 }
 
