@@ -3299,9 +3299,32 @@ static void PacketReceived(PacketCommandNG *packet) {
             if (packet->length < sizeof(download_req_t)) {
                 break;
             }
+
+            if (mem == NULL) {
+                reply_download_done(CMD_DOWNLOAD_EML_BIGBUF, 0, 0);
+                LED_B_OFF();
+                break;
+            }
+
             const download_req_t *dreq = (const download_req_t *)packet->data.asBytes;
             uint32_t startidx = dreq->start_index;
             uint32_t numofbytes = dreq->bytes;
+
+            // We report the emulator memory size in capabilities_t, so honour it
+            // here as well. Without this a client asking for more than the
+            // emulator holds reads on past it into the rest of BigBuf
+            uint32_t em_size = BigBuf_get_EM_size();
+            if (startidx >= em_size) {
+                Dbprintf("Emulator memory download starts past the end, %u >= %u", startidx, em_size);
+                reply_download_done(CMD_DOWNLOAD_EML_BIGBUF, 0, 0);
+                LED_B_OFF();
+                break;
+            }
+
+            if (startidx + numofbytes > em_size) {
+                Dbprintf("Emulator memory is %u bytes, truncating download of %u to %u", em_size, numofbytes, em_size - startidx);
+                numofbytes = em_size - startidx;
+            }
 
             // arg0 = startindex
             // arg1 = length bytes to transfer
