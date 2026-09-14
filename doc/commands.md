@@ -817,6 +817,7 @@ Check column "offline" for their availability.
 |`hf mfdes getfileisoids `|N       |`Get File ISO IDs list`
 |`hf mfdes lsfiles       `|N       |`Show all files list`
 |`hf mfdes dump          `|N       |`Dump all files`
+|`hf mfdes view          `|Y       |`Display content from tag dump file`
 |`hf mfdes createfile    `|N       |`Create Standard/Backup File`
 |`hf mfdes createvaluefile`|N       |`Create Value File`
 |`hf mfdes createrecordfile`|N       |`Create Linear/Cyclic Record File`

@@ -637,6 +637,503 @@ static void json15_save_tag(json_t *root, const iso15_tag_t *tag, size_t pagesco
     }
 }
 
+//-----------------------------------------------------------------------------
+// DESFire card image (jsfMfDesfire_v1) helpers.
+// Token spellings match what the `hf mfdes` CLI already accepts, so a value
+// read out of a dump file can be handed straight back to a command.
+//-----------------------------------------------------------------------------
+static const char *desfire_algo_name(uint8_t algo) {
+    static const char *tbl[] = {"des", "2tdea", "3tdea", "aes"};
+    return (algo < ARRAYLEN(tbl)) ? tbl[algo] : "unknown";
+}
+
+static const char *desfire_comm_mode_name(uint8_t mode) {
+    static const char *tbl[] = {"plain", "mac", "plain_rfu", "encrypt"};
+    return (mode < ARRAYLEN(tbl)) ? tbl[mode] : "unknown";
+}
+
+static const char *desfire_file_type_name(uint8_t type) {
+    static const char *tbl[] = {
+        "standard", "backup", "value", "linear_record", "cyclic_record", "transaction_mac"
+    };
+    return (type < ARRAYLEN(tbl)) ? tbl[type] : "unknown";
+}
+
+// JsonSaveBufAsHexCompact() runs through sprint_hex_inrow(), which silently
+// truncates past ~4 kbyte.  File contents get that big,  so build the hex
+// string in a right-sized heap buffer instead
+static int desfire_json_save_hex(json_t *root, const char *path, const uint8_t *data, size_t datalen) {
+
+    if (data == NULL || datalen == 0) {
+        return PM3_EINVARG;
+    }
+
+    char *hex = calloc((datalen * 2) + 1, sizeof(uint8_t));
+    if (hex == NULL) {
+        return PM3_EMALLOC;
+    }
+
+    for (size_t i = 0; i < datalen; i++) {
+        snprintf(hex + (i * 2), 3, "%02X", data[i]);
+    }
+
+    int res = JsonSaveStr(root, path, hex);
+    free(hex);
+    return res;
+}
+
+// JsonSaveHex() goes through JsonSaveBufAsHex(),  which space-separates the
+// bytes.  Everything else in this format is compact,  so keep 2-byte fields that
+// way too
+static int desfire_json_save_u16(json_t *root, const char *path, uint16_t value) {
+    uint8_t b[2] = { value >> 8, value & 0xFF };
+    return JsonSaveBufAsHexCompact(root, path, b, sizeof(b));
+}
+
+static uint8_t desfire_algo_keylen(uint8_t algo) {
+    switch (algo) {
+        case T_DES:
+            return DES_KEY_LEN;
+        case T_3DES:
+            return T2DES_KEY_LEN;
+        case T_3K3DES:
+            return T3DES_KEY_LEN;
+        case T_AES:
+            return AES_KEY_LEN;
+        default:
+            return 0;
+    }
+}
+
+// A key entry exists as soon as we know anything about the key.  "Version"
+// without "Key" is the normal shape for a key we saw but could not recover --
+// a missing "Key" never means the key is all zeros
+static void desfire_json_save_keys(json_t *root, const char *prefix, uint8_t algo, const desfire_dump_keys_t *keys) {
+
+    char path[PATH_MAX_LENGTH] = {0};
+    uint8_t keylen = desfire_algo_keylen(algo);
+
+    for (uint8_t keyno = 0; keyno < DESFIRE_MAX_KEY_COUNT; keyno++) {
+
+        if (keys->versionknown[keyno]) {
+            snprintf(path, sizeof(path), "%s.Keys.%u.Version", prefix, keyno);
+            JsonSaveBufAsHexCompact(root, path, (uint8_t *)&keys->version[keyno], 1);
+        }
+
+        if (keys->present[keyno] && keylen) {
+            snprintf(path, sizeof(path), "%s.Keys.%u.Key", prefix, keyno);
+            JsonSaveBufAsHexCompact(root, path, (uint8_t *)keys->key[keyno], keylen);
+        }
+    }
+}
+
+// The PICC level is application 000000 and takes the same path through here
+static void desfire_json_save_app(json_t *root, char *path, size_t pathlen, const desfire_dump_app_t *app) {
+
+    char apath[PATH_MAX_LENGTH] = {0};
+    snprintf(apath, sizeof(apath), "$.Applications.%06X", app->aid);
+
+    if (app->isofid != 0) {
+        snprintf(path, pathlen, "%s.ISOFileID", apath);
+        desfire_json_save_u16(root, path, app->isofid);
+    }
+
+    if (app->dfnamelen > 0) {
+        snprintf(path, pathlen, "%s.DFName", apath);
+        JsonSaveBufAsHexCompact(root, path, (uint8_t *)app->dfname, app->dfnamelen);
+    }
+
+    if (app->settings_ok) {
+        snprintf(path, pathlen, "%s.KeySettings", apath);
+        JsonSaveBufAsHexCompact(root, path, (uint8_t *)&app->keysettings, 1);
+        snprintf(path, pathlen, "%s.NumKeysRaw", apath);
+        JsonSaveBufAsHexCompact(root, path, (uint8_t *)&app->numkeysraw, 1);
+        snprintf(path, pathlen, "%s.NumKeys", apath);
+        JsonSaveInt(root, path, app->numkeys);
+        snprintf(path, pathlen, "%s.KeyType", apath);
+        JsonSaveStr(root, path, desfire_algo_name(app->keytype));
+    }
+
+    snprintf(path, pathlen, "%s.Authenticated", apath);
+    JsonSaveBoolean(root, path, app->auth_ok);
+
+    desfire_json_save_keys(root, apath, app->keytype, &app->keys);
+
+    uint8_t filecount = app->filecount;
+    if (filecount > DESFIRE_MAX_FILE_COUNT) {
+        filecount = DESFIRE_MAX_FILE_COUNT;
+    }
+
+    for (uint8_t n = 0; n < filecount; n++) {
+
+        const desfire_dump_file_t *f = &app->files[n];
+        char fpath[PATH_MAX_LENGTH] = {0};
+        snprintf(fpath, sizeof(fpath), "%s.Files.%02X", apath, f->num);
+
+        if (f->settings_ok) {
+            snprintf(path, pathlen, "%s.Type", fpath);
+            JsonSaveStr(root, path, desfire_file_type_name(f->type));
+            snprintf(path, pathlen, "%s.TypeRaw", fpath);
+            JsonSaveBufAsHexCompact(root, path, (uint8_t *)&f->type, 1);
+            snprintf(path, pathlen, "%s.CommMode", fpath);
+            JsonSaveStr(root, path, desfire_comm_mode_name(f->commmode));
+            snprintf(path, pathlen, "%s.AccessRights", fpath);
+            desfire_json_save_u16(root, path, f->accessrights);
+
+            for (uint8_t a = 0; a < f->addrights_len && a < ARRAYLEN(f->addrights); a++) {
+                snprintf(path, pathlen, "%s.AdditionalAccessRights.%u", fpath, a);
+                desfire_json_save_u16(root, path, f->addrights[a]);
+            }
+        }
+
+        if (f->isofid != 0) {
+            snprintf(path, pathlen, "%s.ISOFileID", fpath);
+            desfire_json_save_u16(root, path, f->isofid);
+        }
+
+        switch (f->type) {
+            case 0x00:
+            case 0x01: {
+                snprintf(path, pathlen, "%s.FileSize", fpath);
+                JsonSaveInt(root, path, f->size);
+                break;
+            }
+            case 0x02: {
+                snprintf(path, pathlen, "%s.LowerLimit", fpath);
+                JsonSaveInt(root, path, f->lowerlimit);
+                snprintf(path, pathlen, "%s.UpperLimit", fpath);
+                JsonSaveInt(root, path, f->upperlimit);
+                snprintf(path, pathlen, "%s.LimitedCredit", fpath);
+                JsonSaveBufAsHexCompact(root, path, (uint8_t *)&f->limitedcredit, 1);
+                if (f->read_ok) {
+                    snprintf(path, pathlen, "%s.Value", fpath);
+                    JsonSaveInt(root, path, f->value);
+                }
+                break;
+            }
+            case 0x03:
+            case 0x04: {
+                snprintf(path, pathlen, "%s.RecordSize", fpath);
+                JsonSaveInt(root, path, f->recordsize);
+                snprintf(path, pathlen, "%s.MaxRecords", fpath);
+                JsonSaveInt(root, path, f->maxrecords);
+                snprintf(path, pathlen, "%s.CurRecords", fpath);
+                JsonSaveInt(root, path, f->currecords);
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+
+        // "Read" says whether we got the contents.  A reader must not
+        // treat a missing "Data" as an empty file
+        snprintf(path, pathlen, "%s.Read", fpath);
+        JsonSaveBoolean(root, path, f->read_ok);
+
+        if (f->read_ok == false || f->data == NULL || f->datalen == 0) {
+            continue;
+        }
+
+        if (f->type == 0x03 || f->type == 0x04) {
+            // record files are stored one hex string per record
+            uint32_t reclen = f->recordsize;
+            if (reclen == 0 || (f->datalen % reclen) != 0) {
+                snprintf(path, pathlen, "%s.Data", fpath);
+                desfire_json_save_hex(root, path, f->data, f->datalen);
+            } else {
+                for (uint32_t r = 0; r < f->datalen / reclen; r++) {
+                    snprintf(path, pathlen, "%s.Records.%u", fpath, r);
+                    desfire_json_save_hex(root, path, f->data + (r * reclen), reclen);
+                }
+            }
+        } else if (f->type != 0x02) {
+            snprintf(path, pathlen, "%s.Data", fpath);
+            desfire_json_save_hex(root, path, f->data, f->datalen);
+        }
+    }
+}
+
+static uint8_t desfire_algo_from_name(const char *name) {
+    if (name == NULL) {
+        return T_DES;
+    }
+    for (uint8_t i = 0; i < DESFIRE_MAX_ALGO_COUNT; i++) {
+        if (strcmp(name, desfire_algo_name(i)) == 0) {
+            return i;
+        }
+    }
+    return T_DES;
+}
+
+static uint8_t desfire_comm_mode_from_name(const char *name) {
+    if (name == NULL) {
+        return 0;
+    }
+    for (uint8_t i = 0; i < 4; i++) {
+        if (strcmp(name, desfire_comm_mode_name(i)) == 0) {
+            return i;
+        }
+    }
+    return 0;
+}
+
+static uint32_t json_load_int(json_t *root, const char *path, uint32_t def) {
+    json_t *elm = json_path_get((const json_t *)root, path);
+    if (json_is_integer(elm) == false) {
+        return def;
+    }
+    return (uint32_t)json_integer_value(elm);
+}
+
+static const char *json_load_str(json_t *root, const char *path) {
+    json_t *elm = json_path_get((const json_t *)root, path);
+    if (json_is_string(elm) == false) {
+        return NULL;
+    }
+    return json_string_value(elm);
+}
+
+// read a hex string of unknown length into a freshly allocated buffer.
+// *dst stays NULL when the element is missing or empty
+static int desfire_json_load_hex_alloc(json_t *root, const char *path, uint8_t **dst, uint32_t *dstlen) {
+
+    *dst = NULL;
+    *dstlen = 0;
+
+    const char *hex = json_load_str(root, path);
+    if (hex == NULL) {
+        return PM3_SUCCESS;
+    }
+
+    size_t n = strlen(hex) / 2;
+    if (n == 0) {
+        return PM3_SUCCESS;
+    }
+
+    uint8_t *buf = calloc(n, sizeof(uint8_t));
+    if (buf == NULL) {
+        PrintAndLogEx(ERR, "loadFileJSONex: failed to allocate %zu bytes for `%s`", n, path);
+        return PM3_EMALLOC;
+    }
+
+    size_t len = 0;
+    if (JsonLoadBufAsHex(root, path, buf, n, &len) != 0) {
+        free(buf);
+        return PM3_SUCCESS;
+    }
+
+    *dst = buf;
+    *dstlen = len;
+    return PM3_SUCCESS;
+}
+
+// record files are stored one hex string per record.  Concatenate them back
+// into the flat buffer the rest of the client works with
+static int desfire_json_load_records(json_t *root, desfire_dump_file_t *f) {
+
+    char path[PATH_MAX_LENGTH] = {0};
+
+    // a record file we could not split stays a flat "Data" blob
+    json_t *recs = json_path_get((const json_t *)root, "$.Records");
+    if (json_is_object(recs) == false && json_is_array(recs) == false) {
+        return desfire_json_load_hex_alloc(root, "$.Data", &f->data, &f->datalen);
+    }
+
+    // a record file cannot hold more records than the PICC has bytes,  so the
+    // container size is the bound.  Records must be contiguous from 0
+    size_t bound = json_is_array(recs) ? json_array_size(recs) : json_object_size(recs);
+
+    uint32_t count = 0;
+    uint32_t reclen = 0;
+    for (uint32_t r = 0; r < bound; r++) {
+        snprintf(path, sizeof(path), "$.Records.%u", r);
+        const char *hex = json_load_str(root, path);
+        if (hex == NULL) {
+            break;
+        }
+        if (r == 0) {
+            reclen = strlen(hex) / 2;
+        }
+        count++;
+    }
+
+    if (count == 0 || reclen == 0) {
+        return PM3_SUCCESS;
+    }
+
+    uint8_t *buf = calloc((size_t)count * reclen, sizeof(uint8_t));
+    if (buf == NULL) {
+        PrintAndLogEx(ERR, "loadFileJSONex: failed to allocate %u bytes of record data", count * reclen);
+        return PM3_EMALLOC;
+    }
+
+    for (uint32_t r = 0; r < count; r++) {
+        snprintf(path, sizeof(path), "$.Records.%u", r);
+        size_t len = 0;
+        JsonLoadBufAsHex(root, path, buf + ((size_t)r * reclen), reclen, &len);
+    }
+
+    f->data = buf;
+    f->datalen = count * reclen;
+    if (f->recordsize == 0) {
+        f->recordsize = reclen;
+    }
+    return PM3_SUCCESS;
+}
+
+static void desfire_json_load_keys(json_t *root, uint8_t algo, desfire_dump_keys_t *keys) {
+
+    char path[PATH_MAX_LENGTH] = {0};
+    uint8_t keylen = desfire_algo_keylen(algo);
+
+    for (uint8_t keyno = 0; keyno < DESFIRE_MAX_KEY_COUNT; keyno++) {
+
+        size_t len = 0;
+        snprintf(path, sizeof(path), "$.Keys.%u.Version", keyno);
+        if (JsonLoadBufAsHex(root, path, &keys->version[keyno], 1, &len) == 0 && len == 1) {
+            keys->versionknown[keyno] = 1;
+        }
+
+        if (keylen == 0) {
+            continue;
+        }
+
+        len = 0;
+        snprintf(path, sizeof(path), "$.Keys.%u.Key", keyno);
+        if (JsonLoadBufAsHex(root, path, keys->key[keyno], keylen, &len) == 0 && len == keylen) {
+            keys->present[keyno] = 1;
+        }
+    }
+}
+
+// read one application, PICC included, out of the Applications object
+static int desfire_json_load_app(json_t *japp, const char *aidstr, desfire_dump_app_t *app) {
+
+    char path[PATH_MAX_LENGTH] = {0};
+    uint8_t tmp[2] = {0};
+    size_t len = 0;
+
+    app->aid = strtoul(aidstr, NULL, 16) & 0xFFFFFF;
+
+    JsonLoadBufAsHex(japp, "$.ISOFileID", tmp, sizeof(tmp), &len);
+    if (len == 2) {
+        app->isofid = (tmp[0] << 8) | tmp[1];
+    }
+
+    len = 0;
+    JsonLoadBufAsHex(japp, "$.DFName", app->dfname, sizeof(app->dfname), &len);
+    app->dfnamelen = len;
+
+    len = 0;
+    JsonLoadBufAsHex(japp, "$.KeySettings", &app->keysettings, 1, &len);
+    app->settings_ok = (len == 1);
+    JsonLoadBufAsHex(japp, "$.NumKeysRaw", &app->numkeysraw, 1, &len);
+    app->numkeys = json_load_int(japp, "$.NumKeys", 0);
+    app->keytype = desfire_algo_from_name(json_load_str(japp, "$.KeyType"));
+    app->auth_ok = json_is_true(json_path_get((const json_t *)japp, "$.Authenticated"));
+
+    desfire_json_load_keys(japp, app->keytype, &app->keys);
+
+    json_t *files = json_object_get(japp, "Files");
+    if (json_is_object(files) == false) {
+        return PM3_SUCCESS;
+    }
+
+    const char *fidstr = NULL;
+    json_t *jfile = NULL;
+
+    json_object_foreach(files, fidstr, jfile) {
+
+        if (app->filecount >= DESFIRE_MAX_FILE_COUNT) {
+            PrintAndLogEx(WARNING, "loadFileJSONex: more than %d files in application %06X, ignoring the rest", DESFIRE_MAX_FILE_COUNT, app->aid);
+            break;
+        }
+
+        desfire_dump_file_t *f = &app->files[app->filecount];
+        f->num = strtoul(fidstr, NULL, 16) & 0xFF;
+
+        len = 0;
+        JsonLoadBufAsHex(jfile, "$.TypeRaw", &f->type, 1, &len);
+        f->settings_ok = (len == 1);
+
+        f->commmode = desfire_comm_mode_from_name(json_load_str(jfile, "$.CommMode"));
+
+        len = 0;
+        JsonLoadBufAsHex(jfile, "$.AccessRights", tmp, sizeof(tmp), &len);
+        if (len == 2) {
+            f->accessrights = (tmp[0] << 8) | tmp[1];
+        }
+
+        len = 0;
+        JsonLoadBufAsHex(jfile, "$.ISOFileID", tmp, sizeof(tmp), &len);
+        if (len == 2) {
+            f->isofid = (tmp[0] << 8) | tmp[1];
+        }
+
+        for (uint8_t a = 0; a < ARRAYLEN(f->addrights); a++) {
+            snprintf(path, sizeof(path), "$.AdditionalAccessRights.%u", a);
+            len = 0;
+            JsonLoadBufAsHex(jfile, path, tmp, sizeof(tmp), &len);
+            if (len != 2) {
+                break;
+            }
+            f->addrights[a] = (tmp[0] << 8) | tmp[1];
+            f->addrights_len = a + 1;
+        }
+
+        f->size = json_load_int(jfile, "$.FileSize", 0);
+        f->lowerlimit = json_load_int(jfile, "$.LowerLimit", 0);
+        f->upperlimit = json_load_int(jfile, "$.UpperLimit", 0);
+        f->value = json_load_int(jfile, "$.Value", 0);
+        f->recordsize = json_load_int(jfile, "$.RecordSize", 0);
+        f->maxrecords = json_load_int(jfile, "$.MaxRecords", 0);
+        f->currecords = json_load_int(jfile, "$.CurRecords", 0);
+        JsonLoadBufAsHex(jfile, "$.LimitedCredit", &f->limitedcredit, 1, &len);
+
+        f->read_ok = json_is_true(json_path_get((const json_t *)jfile, "$.Read"));
+
+        app->filecount++;
+
+        if (f->read_ok == false) {
+            continue;
+        }
+
+        // value files carry their payload in "Value", nothing else to load
+        if (f->type == 0x02) {
+            continue;
+        }
+
+        if (f->type == 0x03 || f->type == 0x04) {
+            if (desfire_json_load_records(jfile, f) != PM3_SUCCESS) {
+                return PM3_EMALLOC;
+            }
+            continue;
+        }
+
+        if (desfire_json_load_hex_alloc(jfile, "$.Data", &f->data, &f->datalen) != PM3_SUCCESS) {
+            return PM3_EMALLOC;
+        }
+    }
+
+    return PM3_SUCCESS;
+}
+
+void desfire_dump_free(desfire_dump_t *dump) {
+
+    if (dump == NULL) {
+        return;
+    }
+
+    for (uint8_t i = 0; i < DESFIRE_MAX_APP_COUNT; i++) {
+        for (uint8_t n = 0; n < DESFIRE_MAX_FILE_COUNT; n++) {
+            free(dump->app[i].files[n].data);
+            dump->app[i].files[n].data = NULL;
+            dump->app[i].files[n].datalen = 0;
+        }
+    }
+}
+
 int prepareJSON(json_t *root, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *)) {
     if (ftype != jsfCustom) {
         if (data == NULL || datalen == 0) {
@@ -1059,6 +1556,52 @@ int prepareJSON(json_t *root, JSONFileType ftype, uint8_t *data, size_t datalen,
                         JsonSaveBufAsHexCompact(root, path, &app->keys[algo][keyno][1], algo_keylen[algo]);
                     }
                 }
+            }
+            break;
+        }
+        case jsfMfDesfire_v1: {
+
+            if (datalen != sizeof(desfire_dump_t)) {
+                return PM3_EINVARG;
+            }
+
+            const desfire_dump_t *dump = (const desfire_dump_t *)(const void *)data;
+
+            JsonSaveStr(root, "FileType", "mfdes v1");
+            JsonSaveInt(root, "$.Version", 1);
+
+            // $.Card is card identity only.  Key settings and keys belong to an
+            // application, and the PICC level is application 000000
+            if (dump->card_info.uidlen > 0) {
+                JsonSaveBufAsHexCompact(root, "$.Card.UID", (uint8_t *)dump->card_info.uid, dump->card_info.uidlen);
+                JsonSaveBufAsHexCompact(root, "$.Card.ATQA", (uint8_t *)dump->card_info.atqa, 2);
+                JsonSaveBufAsHexCompact(root, "$.Card.SAK", (uint8_t *)&dump->card_info.sak, 1);
+                if (dump->card_info.ats_len > 0) {
+                    JsonSaveBufAsHexCompact(root, "$.Card.ATS", (uint8_t *)dump->card_info.ats, dump->card_info.ats_len);
+                }
+            }
+
+            if (dump->versionlen > 0) {
+                JsonSaveBufAsHexCompact(root, "$.Card.Version", (uint8_t *)dump->version, dump->versionlen);
+            }
+
+            if (dump->signaturelen > 0) {
+                JsonSaveBufAsHexCompact(root, "$.Card.Signature", (uint8_t *)dump->signature, dump->signaturelen);
+            }
+
+            if (dump->freemem_ok) {
+                JsonSaveInt(root, "$.Card.FreeMem", dump->freemem);
+            }
+
+            desfire_json_save_app(root, path, sizeof(path), &dump->picc);
+
+            uint8_t appcount = dump->appcount;
+            if (appcount > DESFIRE_MAX_APP_COUNT) {
+                appcount = DESFIRE_MAX_APP_COUNT;
+            }
+
+            for (uint8_t i = 0; i < appcount; i++) {
+                desfire_json_save_app(root, path, sizeof(path), &dump->app[i]);
             }
             break;
         }
@@ -2777,6 +3320,80 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         */
 //        memcpy(&data[14 + atslen], dvdata, 4 * 0xE * (24 + 1));
 
+        goto out;
+    }
+
+    if (!strcmp(ctype, "mfdes v1")) {
+
+        if (maxdatalen < sizeof(desfire_dump_t)) {
+            PrintAndLogEx(ERR, "loadFileJSONex: buffer too small for a DESFire card image. %zu < %zu", maxdatalen, sizeof(desfire_dump_t));
+            retval = PM3_EMALLOC;
+            goto out;
+        }
+
+        desfire_dump_t *dump = udata.mfdesdump;
+        memset(dump, 0, sizeof(desfire_dump_t));
+
+        len = 0;
+        JsonLoadBufAsHex(root, "$.Card.UID", dump->card_info.uid, sizeof(dump->card_info.uid), &len);
+        dump->card_info.uidlen = len;
+
+        JsonLoadBufAsHex(root, "$.Card.ATQA", dump->card_info.atqa, sizeof(dump->card_info.atqa), &len);
+        JsonLoadBufAsHex(root, "$.Card.SAK", &dump->card_info.sak, 1, &len);
+
+        len = 0;
+        JsonLoadBufAsHex(root, "$.Card.ATS", dump->card_info.ats, sizeof(dump->card_info.ats), &len);
+        dump->card_info.ats_len = len;
+
+        len = 0;
+        JsonLoadBufAsHex(root, "$.Card.Version", dump->version, sizeof(dump->version), &len);
+        dump->versionlen = len;
+
+        len = 0;
+        JsonLoadBufAsHex(root, "$.Card.Signature", dump->signature, sizeof(dump->signature), &len);
+        dump->signaturelen = len;
+
+        json_t *jfree = json_path_get(root, "$.Card.FreeMem");
+        if (json_is_integer(jfree)) {
+            dump->freemem = json_integer_value(jfree);
+            dump->freemem_ok = true;
+        }
+
+        dump->picc.aid = 0x000000;
+
+        json_t *apps = json_object_get(root, "Applications");
+        if (json_is_object(apps) == false) {
+            *datalen = sizeof(desfire_dump_t);
+            goto out;
+        }
+
+        const char *aidstr = NULL;
+        json_t *japp = NULL;
+
+        json_object_foreach(apps, aidstr, japp) {
+
+            // AID 000000 is the PICC level, it is not one of the applications
+            uint32_t aid = strtoul(aidstr, NULL, 16) & 0xFFFFFF;
+            desfire_dump_app_t *app = NULL;
+
+            if (aid == 0x000000) {
+                app = &dump->picc;
+            } else {
+                if (dump->appcount >= DESFIRE_MAX_APP_COUNT) {
+                    PrintAndLogEx(WARNING, "loadFileJSONex: more than %d applications in file, ignoring the rest", DESFIRE_MAX_APP_COUNT);
+                    break;
+                }
+                app = &dump->app[dump->appcount];
+                dump->appcount++;
+            }
+
+            if (desfire_json_load_app(japp, aidstr, app) != PM3_SUCCESS) {
+                retval = PM3_EMALLOC;
+                goto out;
+            }
+        }
+
+        *datalen = sizeof(desfire_dump_t);
         goto out;
     }
 

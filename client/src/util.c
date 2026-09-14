@@ -36,7 +36,7 @@
 #include "comms.h"  // SendCommandNG / WaitForResponseTimeout (set_rgb)
 #include "pm3_cmd.h" // CMD_PM5_RGB_SET
 
-#define UTIL_BUFFER_SIZE_SPRINT 8196
+#define UTIL_BUFFER_SIZE_SPRINT 16384
 // global client debug variable
 uint8_t g_debugMode = 0;
 // global client enable/disable printing/logging/grabbing variable

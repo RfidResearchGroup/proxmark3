@@ -8543,7 +8543,11 @@ static int CmdHF14AMfView(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (selftest) {
-        return vigik_selftest();
+        int res = vigik_selftest();
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+        return hexact_selftest();
     }
 
     if (fnlen == 0) {

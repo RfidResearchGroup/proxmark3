@@ -33,6 +33,7 @@ typedef enum {
 #define DESFIRE_MAX_ALGO_COUNT  4       // T_DES ... T_AES
 #define DESFIRE_MAX_KEY_COUNT   0x0E    // key numbers 0x00 ... 0x0D
 #define DESFIRE_MAX_APP_COUNT   64      // applications we keep track of per PICC
+#define DESFIRE_MAX_FILE_COUNT  32      // file numbers 0x00 ... 0x1F
 
 // Keys recovered for one application.
 // keys[algo][keyno][0] is the found flag,  keys[algo][keyno][1..] the key itself.

@@ -27,4 +27,7 @@ bool is_valid_hexact_card(const uint8_t *dump, size_t dumplen);
 // Print what is known about the layout of a Hexact card
 int hexact_parser_parse(const uint8_t *dump, size_t dumplen);
 
+// Decode a card built from the model and check the decoder agrees, both ways
+int hexact_selftest(void);
+
 #endif
