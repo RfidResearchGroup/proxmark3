@@ -917,7 +917,6 @@ static bool DesfirePrintVersionInfo(const mfdes_info_res_t *info, nxp_cardtype_t
     if (local_cardtype == NXP_UNKNOWN && prodtype == DESFIRE_UNKNOWN_PROD) {
         PrintAndLogEx(INFO, "HW Version.. %s", sprint_hex_inrow(info->versionHW, sizeof(info->versionHW)));
         PrintAndLogEx(INFO, "SW Version.. %s", sprint_hex_inrow(info->versionSW, sizeof(info->versionSW)));
-        PrintAndLogEx(INFO, "Version data identification failed. Report to Iceman!");
         return false;
     }
 
