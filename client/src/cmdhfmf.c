@@ -46,6 +46,7 @@
 #include "parsers/parsehid.h"
 #include "parsers/parsevigik.h"
 #include "parsers/parsehexact.h"
+#include "parsers/parseproac.h"
 #include "generator.h"              // keygens.
 #include "fpga.h"
 #include "mifare/mifarehost.h"
@@ -888,6 +889,10 @@ static int mf_view_dump(uint8_t *dump, size_t bytes_read, uint16_t block_cnt, bo
 
     if (is_valid_hexact_card(dump, bytes_read)) {
         (void)hexact_parser_parse(dump, bytes_read);
+    }
+
+    if (is_valid_proac_card(dump, bytes_read)) {
+        (void)proac_parser_parse(dump, bytes_read);
     }
 
     return PM3_SUCCESS;

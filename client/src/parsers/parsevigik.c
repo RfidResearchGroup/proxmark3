@@ -19,6 +19,7 @@
 #include "parsevigik.h"
 
 #include <stdlib.h>
+#include <ctype.h>              // isdigit
 #include <string.h>
 
 #include "commonutil.h"
@@ -396,15 +397,14 @@ int vigik_annotate(mfc_vigik_t *d) {
 
 }
 
-// Key layouts of the VIGIK family building access systems. Every one of these
-// ships the same keys on every card, so matching the whole set identifies the
-// system outright - no guessing from the payload. Sourced from the schemas in
-// armsrc/Standalone/hf_colin.c. Hexact is not here; it has its own parser.
-typedef struct {
+typedef struct vigik_schema_s {
     const char *name;
     uint64_t key_a[16];
     uint64_t key_b[16];
+    int (*decode)(const uint8_t *dump, size_t dumplen);
 } vigik_schema_t;
+
+static int vigik_print_urmet_captiv(const uint8_t *dump, size_t dumplen);
 
 static const vigik_schema_t vigik_schemas[] = {
     {
@@ -420,7 +420,8 @@ static const vigik_schema_t vigik_schemas[] = {
             0x424c41524f4eULL, 0x424c41524f4eULL, 0x424c41524f4eULL, 0x424c41524f4eULL,
             0x424c41524f4eULL, 0x424c41524f4eULL, 0x424c41524f4eULL, 0x424c41524f4eULL,
             0x424c41524f4eULL, 0x424c41524f4eULL, 0x424c41524f4eULL, 0x424c41524f4eULL
-        }
+        },
+        NULL
     },
     {
         "Urmet Captiv",
@@ -435,7 +436,8 @@ static const vigik_schema_t vigik_schemas[] = {
             0x8829da9daf76ULL, 0x8829da9daf76ULL, 0x8829da9daf76ULL, 0x8829da9daf76ULL,
             0x8829da9daf76ULL, 0x8829da9daf76ULL, 0x8829da9daf76ULL, 0x8829da9daf76ULL,
             0x8829da9daf76ULL, 0x8829da9daf76ULL, 0x8829da9daf76ULL, 0x8829da9daf76ULL
-        }
+        },
+        vigik_print_urmet_captiv
     },
     {
         "VIGIK service badge",
@@ -450,7 +452,8 @@ static const vigik_schema_t vigik_schemas[] = {
             VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY,
             VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY,
             VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY
-        }
+        },
+        NULL
     },
 };
 
@@ -468,7 +471,7 @@ static uint64_t vigik_sector_key(const uint8_t *dump, size_t dumplen, uint8_t se
     return key;
 }
 
-const char *vigik_detect_schema(const uint8_t *dump, size_t dumplen) {
+static const vigik_schema_t *vigik_detect_schema_entry(const uint8_t *dump, size_t dumplen) {
 
     if (dump == NULL) {
         return NULL;
@@ -481,22 +484,96 @@ const char *vigik_detect_schema(const uint8_t *dump, size_t dumplen) {
 
         for (uint8_t s = 0; s < 16 && match; s++) {
 
-            if (schema->key_a[s] != VIGIK_KEY_ANY &&
-                    schema->key_a[s] != vigik_sector_key(dump, dumplen, s, false)) {
+            if ((schema->key_a[s] != VIGIK_KEY_ANY) && (schema->key_a[s] != vigik_sector_key(dump, dumplen, s, false))) {
                 match = false;
             }
 
-            if (schema->key_b[s] != VIGIK_KEY_ANY &&
-                    schema->key_b[s] != vigik_sector_key(dump, dumplen, s, true)) {
+            if ((schema->key_b[s] != VIGIK_KEY_ANY) && (schema->key_b[s] != vigik_sector_key(dump, dumplen, s, true))) {
                 match = false;
             }
         }
 
         if (match) {
-            return schema->name;
+            return schema;
         }
     }
     return NULL;
+}
+
+const char *vigik_detect_schema(const uint8_t *dump, size_t dumplen) {
+    const vigik_schema_t *schema = vigik_detect_schema_entry(dump, dumplen);
+    return (schema != NULL) ? schema->name : NULL;
+}
+
+// --------------------------------------------------------------- Urmet Captiv
+#define URMET_DIGITS_OFF    5
+#define URMET_DIGITS_LEN    11
+
+static bool urmet_all_digits(const uint8_t *p, size_t len) {
+    for (size_t i = 0; i < len; i++) {
+        if (isdigit(p[i]) == 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static int vigik_print_urmet_captiv(const uint8_t *dump, size_t dumplen) {
+
+    if (dumplen < MFBLOCK_SIZE * 3) {
+        return PM3_EINVARG;
+    }
+
+    const uint8_t *b1 = dump + MFBLOCK_SIZE;
+    const uint8_t *b2 = dump + (2 * MFBLOCK_SIZE);
+
+    PrintAndLogEx(INFO, "Header............. %s", sprint_hex_inrow(b1, URMET_DIGITS_OFF));
+
+    if (urmet_all_digits(b1 + URMET_DIGITS_OFF, URMET_DIGITS_LEN)) {
+        char num[URMET_DIGITS_LEN + 1] = {0};
+        memcpy(num, b1 + URMET_DIGITS_OFF, URMET_DIGITS_LEN);
+        PrintAndLogEx(INFO, "Number............. " _YELLOW_("%s") "%s"
+                    , num
+                    , (strspn(num, "0") == URMET_DIGITS_LEN) ? "  ( all zero, unset )" : ""
+                );
+    } else {
+        PrintAndLogEx(INFO, "Number............. %s  ( not ASCII digits )", sprint_hex_inrow(b1 + URMET_DIGITS_OFF, URMET_DIGITS_LEN));
+    }
+
+    PrintAndLogEx(INFO, "Marker............. %s", sprint_hex_inrow(b2, 2));
+    PrintAndLogEx(INFO, "Data............... layout " _YELLOW_("not decoded"));
+
+    int shown = 0;
+    for (uint8_t s = 1; s < 16; s++) {
+
+        for (uint8_t b = 0; b < 3; b++) {
+
+            size_t off = (mfFirstBlockOfSector(s) + b) * MFBLOCK_SIZE;
+            if (off + MFBLOCK_SIZE > dumplen) {
+                continue;
+            }
+
+            const uint8_t *p = dump + off;
+            bool empty = true;
+            for (uint8_t k = 0; k < MFBLOCK_SIZE; k++) {
+                if (p[k]) {
+                    empty = false;
+                    break;
+                }
+            }
+            if (empty == false) {
+                PrintAndLogEx(INFO, "  sector %2u blk %u.. %s", s, b, sprint_hex_inrow(p, MFBLOCK_SIZE));
+                shown++;
+            }
+        }
+    }
+
+    if (shown == 0) {
+        PrintAndLogEx(INFO, "  every sector past 0 is empty, card not personalised");
+    }
+
+    PrintAndLogEx(INFO, "Keys............... one key r/w every block");
+    return PM3_SUCCESS;
 }
 
 bool is_valid_vigik_card(const uint8_t *dump, size_t dumplen) {
@@ -525,10 +602,11 @@ int vigik_parser_parse(const uint8_t *dump, size_t dumplen) {
         PrintAndLogEx(SUCCESS, "System............. " _YELLOW_("%s"), schema);
     }
 
-    // Only the deployments that publish a MAD can be taken apart any further.
-    // The others keep the same structure somewhere else on the card, and where
-    // that is has not been worked out, so say so instead of printing nonsense.
     if (DetectHID(s0, VIGIK_MAD_AID) < 0) {
+        const vigik_schema_t *entry = vigik_detect_schema_entry(dump, dumplen);
+        if (entry != NULL && entry->decode != NULL) {
+            return entry->decode(dump, dumplen);
+        }
         PrintAndLogEx(INFO, "No MAD on this card, structure " _YELLOW_("not decoded"));
         return PM3_SUCCESS;
     }
@@ -540,8 +618,6 @@ int vigik_parser_parse(const uint8_t *dump, size_t dumplen) {
         return res;
     }
 
-    // The VIGIK structure is the data blocks of sector 0 followed by the data
-    // blocks of every sector the MAD hands to the VIGIK application.
     union {
         uint8_t *bytes;
         mfc_vigik_t *vigik;
@@ -558,8 +634,11 @@ int vigik_parser_parse(const uint8_t *dump, size_t dumplen) {
     dlen += MFBLOCK_SIZE * 3;
 
     for (size_t i = 0; i < mad_list.len; i++) {
+
         if (VIGIK_MAD_AID == mad_list.entries[i].aid || VIGIK_MAD_AID_ALT == mad_list.entries[i].aid) {
+
             uint32_t offset = mad_list.entries[i].sector * MFBLOCK_SIZE * 4;
+
             if (offset + (MFBLOCK_SIZE * 3) > dumplen) {
                 continue;
             }
