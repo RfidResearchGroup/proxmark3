@@ -697,11 +697,64 @@ static int CmdBwmName(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdBwmPowerSave(const char *Cmd) {
+    // Positional sub-action (no dashes): hw bwm powersave [on | off]; no verb shows the state
+    char verb[16] = {0};
+    sscanf(Cmd, "%15s", verb);
+    bool on   = (strcmp(verb, "on")  == 0);
+    bool off  = (strcmp(verb, "off") == 0);
+    bool show = (verb[0] == 0);
+
+    if (!on && !off && !show) {
+        // Not a recognised sub-action: render help (also serves -h), or error on
+        // a stray token, then stop.
+        CLIParserContext *ctx;
+        CLIParserInit(&ctx, "hw bwm powersave",
+                      "Show or set the BWM (ESP32) power-save switch, stored on the BWM in NVS.\n"
+                      "Default is " _GREEN_("on") ": the ESP scales its clock down, light-sleeps between\n"
+                      "link traffic, and after 30 s of fast advertising (boot, disconnect) advertises\n"
+                      "once a second. " _YELLOW_("off") " pins it at full clock, no sleep, fast advertising\n"
+                      "throughout. Applies at once and survives reboots. PM5 only.",
+                      "hw bwm powersave        --> show the current state\n"
+                      "hw bwm powersave off    --> stock always-on behaviour\n"
+                      "hw bwm powersave on     --> re-enable power saving");
+        void *argtable[] = {
+            arg_param_begin,
+            arg_param_end
+        };
+        CLIExecWithReturn(ctx, Cmd, argtable, true);
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "specify " _YELLOW_("on") ", " _YELLOW_("off") " or nothing to show the state");
+        return PM3_EINVARG;
+    }
+
+    uint8_t payload[2] = { show ? BWM_POWERSAVE_ACTION_GET : BWM_POWERSAVE_ACTION_SET, on ? 1 : 0 };
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_POWERSAVE, payload, show ? 1 : 2);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_PM5_BWM_POWERSAVE, &resp, 5000) == false) {
+        PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a responsive BWM?)");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status == PM3_ENOTIMPL) {
+        PrintAndLogEx(WARNING, "firmware built without BWM link support");
+        return resp.status;
+    }
+    if (resp.status != PM3_SUCCESS || resp.length < 1) {
+        PrintAndLogEx(FAILED, "BWM did not answer the power-save command (BWM firmware too old?)");
+        return (resp.status != PM3_SUCCESS) ? resp.status : PM3_EFAILED;
+    }
+    bool state = (resp.data.asBytes[0] != 0);
+    PrintAndLogEx(SUCCESS, "BWM power save..... %s", state ? _GREEN_("on") : _YELLOW_("off"));
+    return PM3_SUCCESS;
+}
+
 static command_t BwmCommandTable[] = {
-    {"help",     CmdHelpBwm,    IfBwm, "This help"},
+    {"help",     CmdHelpBwm,    AlwaysAvailable, "This help"},
     {"autooff",  CmdBwmAutoOff, IfBwm, "Toggle auto power-off on USB unplug"},
     {"charge",   CmdBwmCharge,  IfBwm, "Enable/disable battery charging (one-shot)"},
     {"name",     CmdBwmName,    IfBwm, "Get/set the BWM BLE advertising name"},
+    {"powersave", CmdBwmPowerSave, IfBwm, "Show/set the BWM power-save switch (DFS, light sleep, slow adv)"},
     {"setcap",   CmdBwmSetCap,  IfBwm, "Set fuel-gauge design capacity (run once after battery change)"},
     {"upgrade",  CmdBWMUpgrade, IfBwm, "Reflash BWM (ESP32) firmware over the BWM link, no header"},
     {"vchg",     CmdBwmVchg,    IfBwm, "Set charger charge-voltage target (default 4100 mV)"},

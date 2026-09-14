@@ -926,6 +926,11 @@ typedef struct {
 #define BWM_BLE_NAME_MAX_LEN    15    // usable chars; ESP name buffer is 16 incl NUL
 // PM5, toggle the power-save idle (48 MHz + WFI when idle). Used by `hw powersave`.
 #define CMD_PM5_POWERSAVE    0x0180
+// PM5, BWM power-save switch on the ESP (DFS, light sleep, low-duty advertising;
+// persisted on the BWM). Used by `hw bwm powersave`.
+#define CMD_PM5_BWM_POWERSAVE 0x0181  // payload: [action:u8][state:u8 if SET]; resp: u8 applied state
+#define BWM_POWERSAVE_ACTION_GET 0x00
+#define BWM_POWERSAVE_ACTION_SET 0x01
 #define BWM_OTA_ACTION_BEGIN 0x00
 #define BWM_OTA_ACTION_WRITE 0x01
 #define BWM_OTA_ACTION_END   0x02

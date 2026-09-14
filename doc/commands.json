@@ -11045,12 +11045,12 @@
         },
         "hw bwm help": {
             "command": "hw bwm help",
-            "description": "--------------------------------------------------------------------------------------- hw bwm autooff available offline: no Toggle automatic power-off when the PM5 is unplugged from USB (BWM only). Default is on. When on, the board powers itself down ~10s after USB is removed, so a BWM-equipped PM5 doesn't silently drain the battery. Button power-on is unaffected. Disable for standalone/BLE use on battery. Runtime only: resets to on at each boot.",
+            "description": "help This help --------------------------------------------------------------------------------------- hw bwm autooff available offline: no Toggle automatic power-off when the PM5 is unplugged from USB (BWM only). Default is on. When on, the board powers itself down ~10s after USB is removed, so a BWM-equipped PM5 doesn't silently drain the battery. Button power-on is unaffected. Disable for standalone/BLE use on battery. Runtime only: resets to on at each boot.",
             "notes": [
                 "hw bwm autooff off -> disable auto power-off",
                 "hw bwm autooff on -> re-enable auto power-off"
             ],
-            "offline": false,
+            "offline": true,
             "options": [
                 "-h, --help This help"
             ],
@@ -11069,6 +11069,20 @@
                 "--set <name> new BLE name (1-31 chars); omit to read current name"
             ],
             "usage": "hw bwm name [-h] [--set <name>]"
+        },
+        "hw bwm powersave": {
+            "command": "hw bwm powersave",
+            "description": "Show or set the BWM (ESP32) power-save switch, stored on the BWM in NVS. Default is on: the ESP scales its clock down, light-sleeps between link traffic, and after 30 s of fast advertising (boot, disconnect) advertises once a second. off pins it at full clock, no sleep, fast advertising throughout. Applies at once and survives reboots. PM5 only.",
+            "notes": [
+                "hw bwm powersave -> show the current state",
+                "hw bwm powersave off -> stock always-on behaviour",
+                "hw bwm powersave on -> re-enable power saving"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hw bwm powersave [-h]"
         },
         "hw bwm setcap": {
             "command": "hw bwm setcap",
@@ -16664,8 +16678,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 927,
+        "commands_extracted": 928,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-09-24T08:29:44+00:00"
+        "extracted_on": "2026-09-24T08:30:13+00:00"
     }
 }
