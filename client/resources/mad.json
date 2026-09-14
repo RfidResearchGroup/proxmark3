@@ -6225,6 +6225,13 @@
         "system_integrator": "NORALSY"
     },
     {
+        "application": "(access control and security) VIGIK",
+        "company": "PROAC",
+        "mad": "0x4982",
+        "service_provider": "PROAC",
+        "system_integrator": "PROAC"
+    },
+    {
         "application": "Card Administration, cardholder administration, access control & security, company services, miscellaneous applications",
         "company": "Ministry of Defense",
         "mad": "0x4A01",
