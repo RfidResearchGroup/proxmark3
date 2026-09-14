@@ -597,11 +597,23 @@ static void SendStatus(uint32_t wait) {
     {
         // Read the ESP firmware version so hw status shows what the BWM runs
         // (and lets you confirm an OTA took: the string flips after a reflash).
+        // Keep the wait short: the client gives hw status about 2 s in total. One
+        // retry - a slow light-sleep wake eats the first frame but leaves the module up.
         uint8_t bwm_ver[64] = {0};
         uint16_t bwm_ver_len = sizeof(bwm_ver) - 1;
-        if (bwm_esp_get_version(bwm_ver, &bwm_ver_len) == PM3_SUCCESS) {
+        int vres = bwm_esp_get_version(bwm_ver, &bwm_ver_len, 800);
+        if (vres == PM3_ETIMEOUT) {
+            bwm_ver_len = sizeof(bwm_ver) - 1;
+            vres = bwm_esp_get_version(bwm_ver, &bwm_ver_len, 800);
+        }
+        if (vres == PM3_SUCCESS) {
             bwm_ver[bwm_ver_len] = 0x00;
             Dbprintf("  BWM fw version...... " _YELLOW_("%s"), bwm_ver);
+            // Only once the ESP answered; older fw lacks these, so keep the wait short.
+            uint8_t ps = 0;
+            if (bwm_esp_get_power_save(&ps, 300) == PM3_SUCCESS) {
+                Dbprintf("  BWM power save...... " _YELLOW_("%s"), ps ? "on" : "off");
+            }
         } else {
             Dbprintf("  BWM fw version...... " _YELLOW_("%s"), "unknown");
         }
@@ -4192,7 +4204,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                     // ack is lost). Replies here with a payload, unlike the others.
                     uint8_t ver[64];
                     uint16_t vlen = sizeof(ver);
-                    res = bwm_esp_get_version(ver, &vlen);
+                    res = bwm_esp_get_version(ver, &vlen, 3000);
                     reply_ng(CMD_PM5_BWM_ESP_OTA, res, ver, (res == PM3_SUCCESS) ? vlen : 0);
                     replied = true;
                     break;
@@ -4276,6 +4288,30 @@ static void PacketReceived(PacketCommandNG *packet) {
             }
 #else
             reply_ng(CMD_PM5_BWM_BLE_NAME, PM3_ENOTIMPL, NULL, 0);
+#endif
+            break;
+        }
+        case CMD_PM5_BWM_POWERSAVE: {
+#ifdef WITH_BWM_FORWARD
+            // Payload / reply layout: pm3_cmd.h. The ESP persists it; nothing kept here.
+            if (packet->length < 1) {
+                reply_ng(CMD_PM5_BWM_POWERSAVE, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            uint8_t action = packet->data.asBytes[0];
+            uint8_t state = 0;
+            int res;
+            if (action == BWM_POWERSAVE_ACTION_GET) {
+                res = bwm_esp_get_power_save(&state, 3000);
+            } else if (action == BWM_POWERSAVE_ACTION_SET && packet->length >= 2) {
+                res = bwm_esp_set_power_save(packet->data.asBytes[1] != 0, &state);
+            } else {
+                reply_ng(CMD_PM5_BWM_POWERSAVE, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            reply_ng(CMD_PM5_BWM_POWERSAVE, res, &state, (res == PM3_SUCCESS) ? 1 : 0);
+#else
+            reply_ng(CMD_PM5_BWM_POWERSAVE, PM3_ENOTIMPL, NULL, 0);
 #endif
             break;
         }
