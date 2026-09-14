@@ -14,70 +14,30 @@
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 // Hexact / COGELEC / Intratone parser for MIFARE Classic dumps
-//
-// A VIGIK based residential access system, but one that carries no MAD, so the
-// VIGIK structure parser cannot find anything on it. What the layout is, as far
-// as it has been worked out against cards:
-//
-//   sector 0  block 2   8 byte per card identifier, then a constant tail
-//   sector 9            48 bytes, differs completely between cards
-//   sector 11           32 bytes, differs completely between cards
-//   sector 15           the system text, the same on every card, and in block 2
-//                       the number printed on the fob, little endian
-//   sector 16, 17       MIFARE Classic EV1 signature, not application data
-//
-// The sector 9 and 11 payload is XORed with an estate wide keystream that is
-// one seed byte per block rotated left by the byte index,
-//
-//     mask[k] = rotl(seed, k mod 8)       seed = base ^ (2 * block in sector)
-//     base = 0xB3 for sector 9, 0x5C for sector 11
-//
-// so the whole eighty byte keystream comes from two bytes. Removing it leaves
-// ten eight byte records. Eighteen of their eighty bytes are XOR combinations
-// of data that is readable elsewhere on the card, and three more are fixed
-// relations between the records themselves, which together make a consistency
-// check: a card assembled from parts, or a payload copied onto a different
-// UID, fails it. The other bytes are keyed issuer data and stay unexplained,
-// so they are printed and not interpreted.
 //-----------------------------------------------------------------------------
 
 #include "parsehexact.h"
-
 #include <string.h>
-#include <ctype.h>                // tolower
-
+#include <ctype.h>                  // tolower
 #include "commonutil.h"
-#include "ui.h"                 // PrintAndLogEx
-#include "util.h"               // sprint_hex
+#include "ui.h"                     // PrintAndLogEx
+#include "util.h"                   // sprint_hex
 #include "mifare/mifaredefault.h"   // MFBLOCK_SIZE
-#include "mifare/mifare4.h"     // mfFirstBlockOfSector
+#include "mifare/mifare4.h"         // mfFirstBlockOfSector
 
 #define HEXACT_ID_SECTOR        15
 #define HEXACT_DATA_SECTOR_A     9
 #define HEXACT_DATA_SECTOR_B    11
 
-// Sector 15 block 0 spells the system out. The text is the same on every card
-// but the case is not: factory blanks of an older generation carry
-// "HEXACT - COGELEC" and the personalised fobs carry "hExact - COGELEC", so the
-// compare has to ignore case or it misses half the cards. Sector 15 is written
-// at the factory and then locked read only, which is why one card cannot have
-// both spellings.
 static const uint8_t hexact_marker[] = {
     'h', 'e', 'x', 'a', 'c', 't', ' ', '-', ' ', 'c', 'o', 'g', 'e', 'l', 'e', 'c'
 };
 
-// Block 0 of these cards advertises SAK 0x88 while the tag itself answers 0x08.
-// A magic card written with that block 0 answers 0x88 in anticollision too,
-// which is how the readers spot a clone.
 #define HEXACT_BLOCK0_SAK       0x88
 
-// The payload keystream. One seed byte per block, rotated left by the byte
-// index, so it repeats every eight bytes and the whole eighty byte stream comes
-// from the two base values below.
 #define HEXACT_SEED_BASE_A      0xB3
 #define HEXACT_SEED_BASE_B      0x5C
 
-// The five payload blocks, in the order the cross checks below index them
 static const struct {
     uint8_t sector;
     uint8_t blk;
@@ -87,9 +47,6 @@ static const struct {
 };
 #define HEXACT_PAYLOAD_BLOCKS   ARRAYLEN(hexact_payload)
 
-// Where a recovered byte has to come from. idx picks the identifier byte, and
-// for HX_ID_SER the serial byte at the same index. The record adds a fixed
-// constant on top, which is why xr is there.
 typedef enum {
     HX_ID,          // identifier[idx]
     HX_ID_SER,      // identifier[idx] ^ serial[idx]
@@ -150,8 +107,6 @@ static uint8_t hexact_expect(const hexact_check_t *c, const uint8_t *idn,
 }
 
 
-// Run the 21 checks. Eighteen tie a record byte to card data held elsewhere,
-// three tie the records to each other. Returns how many passed.
 #define HEXACT_MAX_SHOWN    5
 
 static uint8_t hexact_cross_check(const uint8_t rec[][MFBLOCK_SIZE], const uint8_t *idn,
@@ -173,20 +128,24 @@ static uint8_t hexact_cross_check(const uint8_t rec[][MFBLOCK_SIZE], const uint8
         }
     }
 
-    // byte 7 of the records is a lag two sliding window over two seeds, one of
-    // them idn[7]; these three ties are what is left of it after the card data
-    // checks above have taken the rest
     const uint8_t tie_got[3]  = { rec[2][15], rec[0][15], rec[3][15] };
-    const uint8_t tie_want[3] = { rec[1][7],
-                                  (uint8_t)(rec[1][7] ^ uid[1] ^ 0xD0),
-                                  (uint8_t)(rec[0][15] ^ 0xB1) };
-    for (size_t i = 0; i < ARRAYLEN(tie_got); i++) {
+    const uint8_t tie_want[3] = { 
+            rec[1][7],
+            (uint8_t)(rec[1][7] ^ uid[1] ^ 0xD0),
+            (uint8_t)(rec[0][15] ^ 0xB1) 
+        };
+
+        for (size_t i = 0; i < ARRAYLEN(tie_got); i++) {
         (*total)++;
+
         if (tie_got[i] == tie_want[i]) {
             pass++;
         } else if (verbose && shown++ < HEXACT_MAX_SHOWN) {
             PrintAndLogEx(INFO, "  mismatch......... record tie %zu is %02X, expected %02X",
-                          i, tie_got[i], tie_want[i]);
+                        i, 
+                        tie_got[i],
+                        tie_want[i]
+                    );
         }
     }
 
@@ -218,6 +177,7 @@ bool is_valid_hexact_card(const uint8_t *dump, size_t dumplen) {
     if (p == NULL) {
         return false;
     }
+
     for (size_t i = 0; i < sizeof(hexact_marker); i++) {
         if (tolower(p[i]) != hexact_marker[i]) {
             return false;
@@ -239,9 +199,6 @@ int hexact_parser_parse(const uint8_t *dump, size_t dumplen) {
     const uint8_t *id1 = hexact_sector(dump, dumplen, HEXACT_ID_SECTOR, 1);
     const uint8_t *id2 = hexact_sector(dump, dumplen, HEXACT_ID_SECTOR, 2);
 
-    // The sector spells the system out across its three blocks and it reads as
-    // one line, so join them. Each block pads its text with spaces, and the
-    // last one keeps four bytes of its own before the text starts.
     char system[16 + 16 + 16 + 3] = {0};
     str_append(system, sizeof(system), "%.16s", (const char *)id0);
     str_trim(system);
@@ -251,11 +208,6 @@ int hexact_parser_parse(const uint8_t *dump, size_t dumplen) {
         str_trim(system);
     }
 
-    // Sector 15 block 2 holds the number engraved on the fob, little endian,
-    // in front of the INTRATONE text. Checked against the engraving on four
-    // fobs, all four matched. A card that was never personalised carries text
-    // all the way across instead, and reading its first four bytes as a number
-    // gives nonsense, so let the data say which shape this is.
     bool has_serial = (id2 != NULL) && (hexact_all_printable(id2, 4) == false);
 
     if (id2) {
@@ -273,16 +225,9 @@ int hexact_parser_parse(const uint8_t *dump, size_t dumplen) {
         PrintAndLogEx(INFO, "Printed serial..... " _YELLOW_("%u"), MemLeToUint4byte(id2));
     }
 
-    // sector 0 block 2 holds a per card value followed by a tail that is the
-    // same on every card
     const uint8_t *s0b2 = hexact_sector(dump, dumplen, 0, 2);
     if (s0b2) {
         PrintAndLogEx(INFO, "Card identifier.... %s", sprint_hex_inrow(s0b2, 8));
-    }
-
-    if (dumplen > 5 && dump[5] == HEXACT_BLOCK0_SAK) {
-        PrintAndLogEx(INFO, "Block 0 SAK........ 0x%02X  ( " _YELLOW_("anti clone marker") " )", dump[5]);
-        PrintAndLogEx(INFO, "                    the tag answers 0x08, a clone written with this block 0 answers 0x88");
     }
 
     if (s0b2 == NULL || id2 == NULL) {
@@ -298,46 +243,46 @@ int hexact_parser_parse(const uint8_t *dump, size_t dumplen) {
         hexact_decrypt(p, hexact_payload[i].sector, hexact_payload[i].blk, rec[i]);
     }
 
-    // Two states are not a payload at all and decrypting them just prints the
-    // keystream back with every check failing. All zero means the dump never
-    // read those sectors. All FF means the card was never personalised: a
-    // factory blank has its payload erased, and sector 15 block 2 says so.
     bool all_zero = true, all_ff = true;
     for (uint8_t i = 0; i < HEXACT_PAYLOAD_BLOCKS; i++) {
+
         const uint8_t *p = hexact_sector(dump, dumplen, hexact_payload[i].sector, hexact_payload[i].blk);
+
         for (uint8_t k = 0; k < MFBLOCK_SIZE; k++) {
             if (p[k] != 0x00) {
                 all_zero = false;
             }
+
             if (p[k] != 0xFF) {
                 all_ff = false;
             }
         }
     }
+
     if (all_zero || all_ff) {
         PrintAndLogEx(INFO, "Payload............ sector %u and %u, " _YELLOW_("%s"),
                       HEXACT_DATA_SECTOR_A, HEXACT_DATA_SECTOR_B,
-                      all_ff ? "erased, card not personalised" : "not read");
+                      all_ff ? "erased, card not personalised" : "not read"
+                );
         return PM3_SUCCESS;
     }
 
     PrintAndLogEx(INFO, "Payload............ sector %u and %u, " _YELLOW_("mask removed"),
-                  HEXACT_DATA_SECTOR_A, HEXACT_DATA_SECTOR_B);
+            HEXACT_DATA_SECTOR_A,
+            HEXACT_DATA_SECTOR_B
+        );
+
     for (uint8_t i = 0; i < HEXACT_PAYLOAD_BLOCKS; i++) {
-        // the two eight byte records of the block, kept apart on the line.
-        // sprint_hex_inrow hands back one static buffer, so the first half has
-        // to be copied out before the second call overwrites it
         char line[(2 * 16) + 4] = {0};
         str_append(line, sizeof(line), "%s  ", sprint_hex_inrow(rec[i], 8));
         str_append(line, sizeof(line), "%s", sprint_hex_inrow(rec[i] + 8, 8));
         PrintAndLogEx(INFO, "  sector %2u blk %u.. %s",
-                      hexact_payload[i].sector, hexact_payload[i].blk, line);
+                    hexact_payload[i].sector, 
+                    hexact_payload[i].blk, 
+                    line
+                );
     }
 
-    // Eighteen of those bytes have to equal card data held in sector 0 and
-    // sector 15, and three more tie the records to each other. Together they
-    // say whether the payload was issued for this fob: a payload copied onto
-    // another UID breaks the uid terms, a rewritten sector 0 breaks the rest.
     const uint8_t *uid = dump;
     uint8_t ser[4];
     memcpy(ser, id2, sizeof(ser));
@@ -345,24 +290,14 @@ int hexact_parser_parse(const uint8_t *dump, size_t dumplen) {
     uint8_t total = 0;
     uint8_t pass = hexact_cross_check(rec, s0b2, uid, ser, &total, true);
 
-    // Say what this does and does not mean. The 21 checks read 22 of the 80
-    // payload bytes, so a random single byte change anywhere in the payload is
-    // caught 27.5% of the time, and a payload assembled from two fobs can pass.
-    // Only uid1 and uid0^uid2 enter, so 2^16 of the 2^32 UIDs accept a copy of
-    // this payload unaltered. It is an integrity check, not an authenticity one.
     PrintAndLogEx(INFO, "Cross checks....... %u / %u  ( %s )", pass, total,
                   (pass == total) ? _GREEN_("bound bytes agree with sector 0, 15 and the UID")
-                                  : _RED_("bound bytes disagree, see above"));
-    PrintAndLogEx(INFO, "                    %u of 80 payload bytes are issuer data and unchecked",
-                  80 - 22);
+                                  : _RED_("bound bytes disagree, see above")
+            );
+    PrintAndLogEx(INFO, "                    %u of 80 payload bytes are issuer data and unchecked", 80 - 22);
     return PM3_SUCCESS;
 }
 
-// Build a card from the model rather than from a real fob: the record bytes
-// that the checks look at are filled in from a made up UID, identifier and
-// serial, the rest with a pattern, and the whole payload is then masked. No
-// resident's credential goes into the tree. This exercises the mask and the
-// cross check; the printing path is covered by running the parser on a dump.
 static void hexact_build_selftest_card(uint8_t *dump, uint8_t v1) {
     static const uint8_t uid[4] = {0x1A, 0x2B, 0x3C, 0x61};
     static const uint8_t idn[8] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
@@ -373,10 +308,8 @@ static void hexact_build_selftest_card(uint8_t *dump, uint8_t v1) {
     dump[5] = HEXACT_BLOCK0_SAK;
     dump[6] = 0x04;
     memcpy(dump + (2 * MFBLOCK_SIZE), idn, sizeof(idn));
-    memcpy(dump + (mfFirstBlockOfSector(HEXACT_ID_SECTOR) * MFBLOCK_SIZE),
-           hexact_marker, sizeof(hexact_marker));
-    memcpy(dump + ((mfFirstBlockOfSector(HEXACT_ID_SECTOR) + 2) * MFBLOCK_SIZE),
-           ser, sizeof(ser));
+    memcpy(dump + (mfFirstBlockOfSector(HEXACT_ID_SECTOR) * MFBLOCK_SIZE), hexact_marker, sizeof(hexact_marker));
+    memcpy(dump + ((mfFirstBlockOfSector(HEXACT_ID_SECTOR) + 2) * MFBLOCK_SIZE), ser, sizeof(ser));
 
     uint8_t v3 = v1 ^ uid[1] ^ 0xD0;
 
@@ -386,10 +319,12 @@ static void hexact_build_selftest_card(uint8_t *dump, uint8_t v1) {
             rec[i][k] = (uint8_t)(0xA0 + (i * MFBLOCK_SIZE) + k);   // filler
         }
     }
+
     for (size_t i = 0; i < ARRAYLEN(hexact_checks); i++) {
         const hexact_check_t *c = &hexact_checks[i];
         rec[c->rec][c->pos] = hexact_expect(c, idn, uid, ser);
     }
+
     rec[1][7]  = v1;
     rec[2][15] = v1;
     rec[4][7]  = v1;
@@ -397,9 +332,10 @@ static void hexact_build_selftest_card(uint8_t *dump, uint8_t v1) {
     rec[3][15] = v3 ^ 0xB1;
 
     for (uint8_t i = 0; i < HEXACT_PAYLOAD_BLOCKS; i++) {
+
         uint8_t seed = hexact_seed(hexact_payload[i].sector, hexact_payload[i].blk);
-        uint8_t *dst = dump + ((mfFirstBlockOfSector(hexact_payload[i].sector)
-                                + hexact_payload[i].blk) * MFBLOCK_SIZE);
+        uint8_t *dst = dump + ((mfFirstBlockOfSector(hexact_payload[i].sector) + hexact_payload[i].blk) * MFBLOCK_SIZE);
+
         for (uint8_t k = 0; k < MFBLOCK_SIZE; k++) {
             dst[k] = rec[i][k] ^ hexact_rotl(seed, k);
         }
@@ -418,34 +354,51 @@ int hexact_selftest(void) {
         return PM3_ESOFT;
     }
 
-    // the decoder has to recover the records the builder put in
     uint8_t rec[HEXACT_PAYLOAD_BLOCKS][MFBLOCK_SIZE];
     for (uint8_t i = 0; i < HEXACT_PAYLOAD_BLOCKS; i++) {
-        hexact_decrypt(dump + ((mfFirstBlockOfSector(hexact_payload[i].sector)
-                                + hexact_payload[i].blk) * MFBLOCK_SIZE),
-                       hexact_payload[i].sector, hexact_payload[i].blk, rec[i]);
+        hexact_decrypt(dump + ((mfFirstBlockOfSector(hexact_payload[i].sector) + hexact_payload[i].blk) * MFBLOCK_SIZE),
+                    hexact_payload[i].sector,
+                    hexact_payload[i].blk,
+                    rec[i]
+                );
     }
 
     uint8_t total = 0;
-    uint8_t pass = hexact_cross_check(rec, dump + (2 * MFBLOCK_SIZE), dump,
-                                      dump + (mfFirstBlockOfSector(HEXACT_ID_SECTOR) + 2) * MFBLOCK_SIZE,
-                                      &total, false);
-    PrintAndLogEx(INFO, "  intact card........ %u / %u  ( %s )", pass, total,
-                  (pass == total) ? _GREEN_("ok") : _RED_("fail"));
+    uint8_t pass = hexact_cross_check(
+                        rec,
+                        dump + (2 * MFBLOCK_SIZE),
+                        dump,
+                        dump + (mfFirstBlockOfSector(HEXACT_ID_SECTOR) + 2) * MFBLOCK_SIZE,
+                        &total,
+                        false
+                    );
+ 
+    PrintAndLogEx(INFO, "  intact card........ %u / %u  ( %s )",
+                pass,
+                total,
+                (pass == total) ? _GREEN_("ok") : _RED_("fail")
+    );
+
     if (pass != total) {
         return PM3_ESOFT;
     }
 
-    // and a negative, so a decoder that always says yes cannot pass this test.
-    // Flipping a bit in uid0 must break exactly the four positions that carry
-    // uid0^uid2. uid1 enters only through a record tie, which reads the card's
-    // own bytes and so is unaffected here.
     dump[0] ^= 0x01;
-    uint8_t broken = hexact_cross_check(rec, dump + (2 * MFBLOCK_SIZE), dump,
-                                        dump + (mfFirstBlockOfSector(HEXACT_ID_SECTOR) + 2) * MFBLOCK_SIZE,
-                                        &total, false);
-    PrintAndLogEx(INFO, "  one UID bit flipped %u / %u  ( %s )", broken, total,
-                  (broken == total - 4) ? _GREEN_("ok") : _RED_("fail"));
+    uint8_t broken = hexact_cross_check(
+                        rec,
+                        dump + (2 * MFBLOCK_SIZE),
+                        dump,
+                        dump + (mfFirstBlockOfSector(HEXACT_ID_SECTOR) + 2) * MFBLOCK_SIZE,
+                        &total,
+                        false
+                );
+
+    PrintAndLogEx(INFO, "  one UID bit flipped %u / %u  ( %s )"
+                        , broken
+                        , total
+                        , (broken == total - 4) ? _GREEN_("ok") : _RED_("fail")
+                );
+
     if (broken != total - 4) {
         return PM3_ESOFT;
     }
