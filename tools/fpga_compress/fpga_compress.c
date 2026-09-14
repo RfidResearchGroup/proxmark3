@@ -40,11 +40,27 @@ static void usage(void) {
     fprintf(stdout, "          Decompress <infile>. Write result to <outfile(s)>\n\n");
 }
 
+// feof() only reports true once a read has already run off the end, so a file
+// whose length is an exact multiple of FPGA_INTERLEAVE_SIZE still looks unfinished
+// after its last whole chunk.  That earned one more interleave round of pure
+// padding, which pushed total_size past the buffer and got the whole set rejected
+// as "too big" -- PM3ULTIMATE's bitstreams are exactly 243 * 288 bytes.
+// Peek one byte instead, so a file that has been read to its last byte counts as
+// finished right away.
 static bool all_feof(FILE *infile[], uint8_t num_infiles) {
     for (uint16_t i = 0; i < num_infiles; i++) {
-        if (!feof(infile[i])) {
-            return false;
+
+        if (feof(infile[i])) {
+            continue;
         }
+
+        int c = fgetc(infile[i]);
+        if (c == EOF) {
+            continue;
+        }
+
+        ungetc(c, infile[i]);
+        return false;
     }
     return true;
 }
@@ -61,9 +77,14 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile, boo
     uint32_t total_size = 0;
     do {
 
-        if (total_size >= num_infiles * FPGA_CONFIG_SIZE) {
+        // Each round writes num_infiles * FPGA_INTERLEAVE_SIZE bytes, so ask whether
+        // that round fits rather than whether we have already filled the buffer.
+        // `>` alone let a round start with the buffer full and overrun it; `>=`
+        // rejected a set that exactly filled it, which is what the bitstreams of a
+        // platform sized to FPGA_CONFIG_SIZE do.
+        if (total_size + (num_infiles * FPGA_INTERLEAVE_SIZE) > num_infiles * FPGA_CONFIG_SIZE) {
             fprintf(stderr,
-                    "Input files too big (total >= %li bytes). These are probably not PM3 FPGA config files.\n"
+                    "Input files too big (total > %li bytes). These are probably not PM3 FPGA config files.\n"
                     , num_infiles * FPGA_CONFIG_SIZE
                    );
 
