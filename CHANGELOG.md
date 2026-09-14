@@ -3,6 +3,12 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 14a sim` - a dynamic response now gets a modulation buffer sized to fit it, instead of one 68 bytes too small (or 1788 too large for ST25TA) (@iceman1001)
+- Fixed `BigBuf_malloc` - takes a uint32_t, so a request of 64KB or more fails instead of wrapping to zero (@iceman1001)
+- Fixed `BigBuf_max_traceLen` - returns a uint32_t, so LF sampling on a device with more than 64KB of BigBuf is not handed a truncated buffer (@iceman1001)
+- Changed `hf mf view` - now show which VIGIK fields are RSA signed (@iceman1001)
+- Changed `hw status` - now reports EMULATOR memory (@iceman1001)
+- Changed `hf mf view` - Urmet Captiv cards now decode their number field and data regions (@iceman1001)
 - Changed `hf mf view --selftest` - now also checks the Hexact payload decoder, both ways (@iceman1001)
 - Changed `hf mf view` - Hexact sector 9,11 payload is now decoded and cross checked against sector 0,15 and UID (@iceman1001)
 - Added `hf mfdes dump` - now walks the whole PICC and saves a `hf-mfdes-<UID>-dump.json` card image, picking up `hf-mfdes-<UID>-keys.json` on its own (@iceman1001)

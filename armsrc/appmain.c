@@ -712,6 +712,8 @@ static void SendCapabilities(void) {
     capabilities.via_fpc = g_reply_via_fpc;
     capabilities.via_usb = g_reply_via_usb;
     capabilities.bigbuf_size = BigBuf_get_size();
+    capabilities.em_size = BigBuf_get_EM_size();
+    capabilities.em_allocated = BigBuf_is_EM_allocated();
     capabilities.baudrate = 0; // no real baudrate for USB-CDC
 #ifdef WITH_FPC_USART
     if (g_reply_via_fpc)
@@ -3297,9 +3299,32 @@ static void PacketReceived(PacketCommandNG *packet) {
             if (packet->length < sizeof(download_req_t)) {
                 break;
             }
+
+            if (mem == NULL) {
+                reply_download_done(CMD_DOWNLOAD_EML_BIGBUF, 0, 0);
+                LED_B_OFF();
+                break;
+            }
+
             const download_req_t *dreq = (const download_req_t *)packet->data.asBytes;
             uint32_t startidx = dreq->start_index;
             uint32_t numofbytes = dreq->bytes;
+
+            // We report the emulator memory size in capabilities_t, so honour it
+            // here as well. Without this a client asking for more than the
+            // emulator holds reads on past it into the rest of BigBuf
+            uint32_t em_size = BigBuf_get_EM_size();
+            if (startidx >= em_size) {
+                Dbprintf("Emulator memory download starts past the end, %u >= %u", startidx, em_size);
+                reply_download_done(CMD_DOWNLOAD_EML_BIGBUF, 0, 0);
+                LED_B_OFF();
+                break;
+            }
+
+            if (startidx + numofbytes > em_size) {
+                Dbprintf("Emulator memory is %u bytes, truncating download of %u to %u", em_size, numofbytes, em_size - startidx);
+                numofbytes = em_size - startidx;
+            }
 
             // arg0 = startindex
             // arg1 = length bytes to transfer
@@ -3416,8 +3441,9 @@ static void PacketReceived(PacketCommandNG *packet) {
             if (g_dbglevel >= DBG_DEBUG) Dbprintf("Filename received for spiffs dump : %s", filename);
 
             // a file can be bigger than BigBuf, so it is streamed out one frame at a
-            // time.  Reading it into BigBuf first wrapped the uint16_t BigBuf_calloc()
-            // takes at 64KB and then read the whole file into the short buffer
+            // time.  Reading it into BigBuf first used to wrap at 64KB, back when
+            // BigBuf_calloc() took a uint16_t, and read the whole file into the
+            // short buffer that produced
             const uint16_t dl_chunk = reply_ng_max_data_size() - sizeof(download_chunk_t);
             uint8_t *chunkbuf = BigBuf_calloc(dl_chunk);
             if (chunkbuf == NULL) {

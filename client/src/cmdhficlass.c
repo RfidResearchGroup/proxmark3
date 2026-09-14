@@ -2017,9 +2017,9 @@ static int CmdHFiClassESave(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     uint16_t bytes = arg_get_int_def(ctx, 2, 256);
 
-    if (bytes > 4096) {
-        PrintAndLogEx(WARNING, "Emulator memory is max 4096bytes. Truncating %u to 4096", bytes);
-        bytes = 4096;
+    if (bytes > g_conn.em_size) {
+        PrintAndLogEx(WARNING, "Emulator memory is max %u bytes. Truncating %u to %u", g_conn.em_size, bytes, g_conn.em_size);
+        bytes = g_conn.em_size;
     }
 
     CLIParserFree(ctx);
@@ -2077,9 +2077,9 @@ static int CmdHFiClassEView(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    if (bytes > 4096) {
-        PrintAndLogEx(WARNING, "Emulator memory is max 4096bytes. Truncating %u to 4096", bytes);
-        bytes = 4096;
+    if (bytes > g_conn.em_size) {
+        PrintAndLogEx(WARNING, "Emulator memory is max %u bytes. Truncating %u to %u", g_conn.em_size, bytes, g_conn.em_size);
+        bytes = g_conn.em_size;
     }
 
     if (bytes % 8 != 0) {

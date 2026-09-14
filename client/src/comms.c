@@ -952,6 +952,7 @@ int TestProxmark(pm3_device_t *dev) {
     g_conn.send_via_fpc_usart = g_pm3_capabilities.via_fpc;
     g_conn.uart_speed = g_pm3_capabilities.baudrate;
     g_conn.max_cmd_data_size = MIN(g_pm3_capabilities.max_cmd_data_size, (uint16_t)PM3_CMD_DATA_SIZE);
+    g_conn.em_size = g_pm3_capabilities.em_size;
 
     bool is_tcp_conn = (g_conn.send_via_ip == PM3_TCPv4 || g_conn.send_via_ip == PM3_TCPv6);
     bool is_bt_conn = (memcmp(g_conn.serial_port_name, "bt:", 3) == 0);
@@ -965,6 +966,9 @@ int TestProxmark(pm3_device_t *dev) {
                  );
     PrintAndLogEx(SUCCESS, "Max frame size: " _GREEN_("%u") " bytes",
                   g_conn.max_cmd_data_size);
+    PrintAndLogEx(SUCCESS, "Emulator memory: " _GREEN_("%u") " bytes%s",
+                  g_conn.em_size,
+                  (g_pm3_capabilities.em_allocated) ? " ( in use )" : "");
     if (g_conn.send_via_fpc_usart) {
         PrintAndLogEx(SUCCESS, "PM3 UART serial baudrate: " _GREEN_("%u") "\n", g_conn.uart_speed);
     } else {

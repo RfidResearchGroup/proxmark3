@@ -1795,17 +1795,27 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
     // pool and BigBuf_malloc() won't hand out memory the trace still occupies.
     clear_trace();
 
-    // Allocate 512 bytes for the dynamic modulation, created when the reader queries for it
+    // Buffers for the dynamic response, created when the reader queries for it.
     // Such a response is less time critical, so we can prepare them on the fly
 #define DYNAMIC_RESPONSE_BUFFER_SIZE 64
-#define DYNAMIC_MODULATION_BUFFER_SIZE 512
 
     uint16_t dynamic_response_buffer_size = DYNAMIC_RESPONSE_BUFFER_SIZE;
-    uint16_t dynamic_modulation_buffer_size = DYNAMIC_MODULATION_BUFFER_SIZE;
     if (tagType == 10) {
         dynamic_response_buffer_size = ST25TA_EML_NDEF_MAX + 4;
-        dynamic_modulation_buffer_size = 4096;
     }
+
+    // prepare_tag_modulation() memcpy's the encoded answer out of the ToSend
+    // buffer, and tosend_stuffbit() hard caps that at TOSEND_BUFFER_SIZE, so the
+    // modulation can never be larger than that however big the response is.
+    // Encoding costs 9 bytes per response byte -- 8 data bits plus a parity bit --
+    // and 4 more for start, stop and the correction bit.
+    //
+    // ST25TA used to ask for a flat 4096 here, 1788 bytes more than ToSend can
+    // ever hand it, which made it the largest single allocation of any tag
+    // simulation. The 512 the other tag types got was 68 bytes short of what a
+    // full 64 byte dynamic response needs, so those were refused at modulation
+    // time with an out-of-bound message
+    uint16_t dynamic_modulation_buffer_size = MIN((9 * dynamic_response_buffer_size) + 4, TOSEND_BUFFER_SIZE);
 
     uint8_t *dynamic_response_buffer = BigBuf_calloc(dynamic_response_buffer_size);
     if (dynamic_response_buffer == NULL) {
@@ -2222,7 +2232,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
             num_to_bytes(nonce, 4, dynamic_response_info.response);
             dynamic_response_info.response_n = 4;
 
-            prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
+            prepare_tag_modulation(&dynamic_response_info, dynamic_modulation_buffer_size);
             p_response = &dynamic_response_info;
             order = ORDER_AUTH;
         } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {    // Received a RATS request
@@ -2260,7 +2270,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
 
             // prepare to send
             dynamic_response_info.response_n = 1 + 8 + 2;
-            prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
+            prepare_tag_modulation(&dynamic_response_info, dynamic_modulation_buffer_size);
             p_response = &dynamic_response_info;
             order = ORDER_AUTH;
 
@@ -2311,7 +2321,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
 
             dynamic_response_info.response_n = 1 + 8 + 2;
 
-            prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
+            prepare_tag_modulation(&dynamic_response_info, dynamic_modulation_buffer_size);
             p_response = &dynamic_response_info;
             order = ORDER_NONE;
 
@@ -2342,7 +2352,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
 
             // prepare to send
             dynamic_response_info.response_n = 1 + 16 + 2;
-            prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
+            prepare_tag_modulation(&dynamic_response_info, dynamic_modulation_buffer_size);
             p_response = &dynamic_response_info;
             order = ORDER_AUTH;
 
@@ -2396,7 +2406,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
 
             dynamic_response_info.response_n = 1 + 16 + 2;
 
-            prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
+            prepare_tag_modulation(&dynamic_response_info, dynamic_modulation_buffer_size);
             p_response = &dynamic_response_info;
             order = ORDER_NONE;
 
@@ -2426,7 +2436,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
                 dynamic_response_info.response[1] = pack_live[1];
                 AddCrc14A(dynamic_response_info.response, 2);
                 dynamic_response_info.response_n = 4; // 2 PACK + 2 CRC
-                prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
+                prepare_tag_modulation(&dynamic_response_info, dynamic_modulation_buffer_size);
                 p_response = &dynamic_response_info;
             } else {
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("Password did not match, NACK_IV.");

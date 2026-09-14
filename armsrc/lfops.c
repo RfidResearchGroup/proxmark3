@@ -536,7 +536,7 @@ void ReadTItag(bool ledcontrol) {
 #define FREQHI 134200
 
     signed char *dest = (signed char *)BigBuf_get_addr();
-    uint16_t n = BigBuf_max_traceLen();
+    uint32_t n = BigBuf_max_traceLen();
     // 128 bit shift register [shift3:shift2:shift1:shift0]
     uint32_t shift3 = 0, shift2 = 0, shift1 = 0, shift0 = 0;
 

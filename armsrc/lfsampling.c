@@ -598,7 +598,7 @@ void doT55x7Acquisition(size_t sample_size, bool ledcontrol) {
 #define T55xx_READ_TOL   5
 
     uint8_t *dest = BigBuf_get_addr();
-    uint16_t bufsize = BigBuf_max_traceLen();
+    uint32_t bufsize = BigBuf_max_traceLen();
 
     if (bufsize > sample_size)
         bufsize = sample_size;
@@ -685,7 +685,7 @@ void doT55x7Acquisition(size_t sample_size, bool ledcontrol) {
 #endif
 void doCotagAcquisition(void) {
 
-    uint16_t bufsize = BigBuf_max_traceLen();
+    uint32_t bufsize = BigBuf_max_traceLen();
     uint8_t *dest = BigBuf_calloc(bufsize);
 
     dest[0] = 0;

@@ -42,7 +42,9 @@
 uint8_t *BigBuf_get_addr(void);
 uint32_t BigBuf_get_size(void);
 uint8_t *BigBuf_get_EM_addr(void);
-uint16_t BigBuf_max_traceLen(void);
+uint32_t BigBuf_get_EM_size(void);
+bool BigBuf_is_EM_allocated(void);
+uint32_t BigBuf_max_traceLen(void);
 uint32_t BigBuf_get_hi(void);
 
 void BigBuf_initialize(void);
@@ -50,8 +52,8 @@ void BigBuf_Clear(void);
 void BigBuf_Clear_ext(bool verbose);
 void BigBuf_Clear_keep_EM(void);
 void BigBuf_Clear_EM(void);
-uint8_t *BigBuf_malloc(uint16_t);
-uint8_t *BigBuf_calloc(uint16_t);
+uint8_t *BigBuf_malloc(uint32_t);
+uint8_t *BigBuf_calloc(uint32_t);
 void BigBuf_free(void);
 void BigBuf_free_keep_EM(void);
 void BigBuf_print_status(void);

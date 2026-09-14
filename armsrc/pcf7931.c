@@ -60,7 +60,7 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
     uint8_t bits[256] = {0x00};
     uint8_t blocks[8][16];
     uint8_t *dest = BigBuf_get_addr();
-    uint16_t g_GraphTraceLen = BigBuf_max_traceLen();
+    uint32_t g_GraphTraceLen = BigBuf_max_traceLen();
     // limit g_GraphTraceLen to a little more than 2 data frames.
     // To make sure a complete dataframe is in the dataset.
     // 1 Frame is 16 Byte -> 128byte. at a T0 of 64 -> 8129 Samples per frame.

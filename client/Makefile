@@ -908,6 +908,7 @@ SRCS =  mifare/aiddesfire.c \
         parsers/parsehid.c \
         parsers/parsevigik.c \
         parsers/parsehexact.c \
+        parsers/parseproac.c \
         parsers/hrtparser/hrtparser.c \
         pm3.c \
         pm3_binlib.c \

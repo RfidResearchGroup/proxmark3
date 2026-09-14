@@ -499,17 +499,35 @@ bool HasMADKey(const mad1_sector_t *s0) {
     return (memcmp(s0->trailer.key_a, g_mifare_mad_key, sizeof(g_mifare_mad_key)) == 0);
 }
 
-int DetectHID(const mad1_sector_t *s0, uint16_t manufacture) {
+int mad_find_aid(const mad1_sector_t *s0, uint16_t aid) {
     if (s0 == NULL) {
         return -1;
     }
 
     for (int i = 0; i < MAD1_NUM_AIDS; i++) {
-        if (madGetAID(s0->mad.aid[i], false) == manufacture) {
+        if (madGetAID(s0->mad.aid[i], false) == aid) {
             return i + 1;
         }
     }
     return -1;
+}
+
+int mad_count_aid(const mad1_sector_t *s0, uint16_t aid) {
+    if (s0 == NULL) {
+        return 0;
+    }
+
+    int n = 0;
+    for (int i = 0; i < MAD1_NUM_AIDS; i++) {
+        if (madGetAID(s0->mad.aid[i], false) == aid) {
+            n++;
+        }
+    }
+    return n;
+}
+
+int DetectHID(const mad1_sector_t *s0, uint16_t manufacture) {
+    return mad_find_aid(s0, manufacture);
 }
 
 int convert_mad_to_arr(const mad1_sector_t *s0, const mad2_sector_t *s16, size_t dump_len, uint8_t *out, size_t omax, size_t *olen, bool override) {
