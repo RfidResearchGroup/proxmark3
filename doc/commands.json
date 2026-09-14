@@ -11033,6 +11033,20 @@
             ],
             "usage": "hw bwm name [-h] [--set <name>]"
         },
+        "hw bwm powersave": {
+            "command": "hw bwm powersave",
+            "description": "Show or set the BWM (ESP32) power-save switch, stored on the BWM in NVS. Default is on: the ESP scales its clock down and light-sleeps between link traffic, and advertises once every 3 s (a phone needs a few seconds to find it). off pins the ESP at full clock, no sleep, fast advertising - the stock behaviour - for A/B power measurements or when chasing a link problem. Applies at once and survives reboots. PM5 only.",
+            "notes": [
+                "hw bwm powersave -> show the current state",
+                "hw bwm powersave off -> stock always-on behaviour",
+                "hw bwm powersave on -> re-enable power saving"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hw bwm powersave [-h]"
+        },
         "hw bwm setcap": {
             "command": "hw bwm setcap",
             "description": "Program the BWM fuel gauge (BQ27427) Design Capacity for the fitted cell. Run ONCE after fitting or replacing the battery. This triggers a gauge config-update; do not run it repeatedly, as that disrupts the Impedance Track learning cycle. PM5 only.",

@@ -1050,6 +1050,7 @@ Check column "offline" for their availability.
 |`hw bwm autooff         `|N       |`Toggle auto power-off on USB unplug`
 |`hw bwm charge          `|N       |`Enable/disable battery charging (one-shot)`
 |`hw bwm name            `|N       |`Get/set the BWM BLE advertising name`
+|`hw bwm powersave       `|N       |`Show/set the BWM power-save switch (DFS, light sleep, slow adv)`
 |`hw bwm setcap          `|N       |`Set fuel-gauge design capacity (run once after battery change)`
 |`hw bwm upgrade         `|N       |`Reflash BWM (ESP32) firmware over the BWM link, no header`
 |`hw bwm vchg            `|N       |`Set charger charge-voltage target (default 4100 mV)`

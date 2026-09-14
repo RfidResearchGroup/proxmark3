@@ -40,9 +40,9 @@ uint32_t bwm_uart_get_baud(void);
 // clock switch (pm5_power.c); the divider set at 288 MHz is 6x off at 48 MHz.
 void bwm_uart_clock_update(void);
 
-// Blocking write of one whole frame. After ~3 s without link traffic it first
-// sends a wake preamble for the ESP's light sleep and waits ~10 ms (see the
-// BWM_ESP_* defines in bwm_uart_at32.c).
+// Blocking write of one whole frame. On the first write, and after ~1 s without
+// a write of our own, it first sends a wake preamble for the ESP's light sleep
+// and waits ~10 ms (see the BWM_ESP_* defines in bwm_uart_at32.c).
 int bwm_uart_write(const uint8_t *data, size_t len);
 
 uint16_t bwm_uart_rx_available(void);

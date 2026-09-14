@@ -313,8 +313,29 @@ int bwm_wifi_forward_down(void) {
 // boot slot, so those get generous timeouts.
 // ---------------------------------------------------------------------------
 // Read the ESP's running firmware version string (APP_CMD_GET_VERSION_INFO).
-int bwm_esp_get_version(uint8_t *buf, uint16_t *buflen) {
-    return bwm_cmd(BWM_CMD_GET_VERSION_INFO, NULL, 0, buf, buflen, 3000);
+int bwm_esp_get_version(uint8_t *buf, uint16_t *buflen, uint32_t timeout_ms) {
+    return bwm_cmd(BWM_CMD_GET_VERSION_INFO, NULL, 0, buf, buflen, timeout_ms);
+}
+
+int bwm_esp_get_power_save(uint8_t *state, uint32_t timeout_ms) {
+    uint16_t len = 1;
+    int r = bwm_cmd(BWM_CMD_GET_SYS_POWER_SAVE, NULL, 0, state, &len, timeout_ms);
+    if (r == PM3_SUCCESS && len < 1) {
+        r = PM3_EFAILED;
+    }
+    return r;
+}
+
+int bwm_esp_set_power_save(bool on, uint8_t *state) {
+    // Applied at once on the ESP (no reboot) and saved to its NVS; the reply
+    // carries the state the ESP ended up in.
+    uint8_t v = on ? 1 : 0;
+    uint16_t len = 1;
+    int r = bwm_cmd(BWM_CMD_SET_SYS_POWER_SAVE, &v, 1, state, &len, 3000);
+    if (r == PM3_SUCCESS && len < 1) {
+        r = PM3_EFAILED;
+    }
+    return r;
 }
 
 int bwm_esp_get_ble_name(uint8_t *buf, uint16_t *buflen) {
