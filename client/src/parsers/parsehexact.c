@@ -323,6 +323,24 @@ int hexact_parser_parse(const uint8_t *dump, size_t dumplen) {
     uint8_t ser[4];
     memcpy(ser, id2, sizeof(ser));
 
+    // A card whose sector 0 block 2 has been wiped still carries identifier
+    // bytes in the payload, so read them back instead of failing 21 checks.
+    bool wiped = true;
+    for (uint8_t k = 0; k < 8; k++) {
+        if (s0b2[k]) {
+            wiped = false;
+            break;
+        }
+    }
+    if (wiped) {
+        PrintAndLogEx(INFO, "Identifier......... " _YELLOW_("wiped") ", recovered from the payload:");
+        PrintAndLogEx(INFO, "                    %02X %02X .. .. %02X .. .. %02X%s",
+                      rec[2][0], rec[2][1], rec[2][4], rec[2][7],
+                      (rec[1][1] == rec[2][1] && rec[1][4] == rec[2][4])
+                      ? "   ( two sources agree )" : "   ( sources DISAGREE )");
+        return PM3_SUCCESS;
+    }
+
     uint8_t total = 0;
     uint8_t pass = hexact_cross_check(rec, s0b2, uid, ser, &total, true);
 
