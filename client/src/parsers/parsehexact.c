@@ -473,18 +473,17 @@ int hexact_parser_parse(const uint8_t *dump, size_t dumplen) {
         }
     }
 
-    const char *want = NULL;
+    bool want = false;
     if (nrow == HEXACT_SITE_S9 && inst < 0) {
-        want = "from an installation never seen before";
+        want = true;
     } else if (inst > 0) {
-        want = "from an installation with only one card on record";
+        want = true;
     } else if (spare_used) {
-        want = "using sector 11 block 2, which almost none do";
+        want = true;
     }
 
-    if (want != NULL) {
-        PrintAndLogEx(HINT, "Hint: this card is " _YELLOW_("%s"), want);
-        PrintAndLogEx(HINT, "      a dump of it moves the Hexact research on, " _RED_("report to iceman!"));
+    if (want) {
+        PrintAndLogEx(HINT, "Hint: " _RED_("Report to Iceman!"));
     }
 
     if (wiped) {

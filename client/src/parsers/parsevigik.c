@@ -303,8 +303,7 @@ int vigik_verify(mfc_vigik_t *d) {
         PrintAndLogEx(SUCCESS, "Signature verification: " _GREEN_("successful"));
 
         if (vigik_pk_is_recovered(vigik_rsa_pk[i].code)) {
-            PrintAndLogEx(HINT, "Hint: this key was recovered from two cards, not published,");
-            PrintAndLogEx(HINT, "      and its operator is unknown. " _RED_("Report to Iceman!"));
+            PrintAndLogEx(HINT, "Hint: " _RED_("Report to Iceman!"));
         }
 
         return PM3_SUCCESS;
