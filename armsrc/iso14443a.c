@@ -2584,6 +2584,13 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
                                                   dynamic_response_info.response + prologue);
                     if (n > 0) {
                         dynamic_response_info.response_n = prologue + n;
+
+                        // count answered DESFire commands, so `-n` can bound a
+                        // simulation the way it does for the other tag types
+                        numReads++;
+                        if (exitAfterNReads > 0 && numReads >= exitAfterNReads) {
+                            finished = true;
+                        }
                     }
                 }
 

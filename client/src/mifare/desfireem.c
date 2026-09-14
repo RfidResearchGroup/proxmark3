@@ -616,7 +616,7 @@ void desfire_em_print(const uint8_t *img, size_t imglen) {
     PrintAndLogEx(SUCCESS, "Tables end at.... %u", hdr->tables_end);
     PrintAndLogEx(SUCCESS, "Data starts at... %u", hdr->data_start);
     PrintAndLogEx(SUCCESS, "Card capacity.... %u bytes, %u spent", hdr->cardsize, hdr->reserved);
-    PrintAndLogEx(SUCCESS, "Free memory...... " _GREEN_("%u") " bytes ( what a reader sees )"
+    PrintAndLogEx(SUCCESS, "Free memory...... " _GREEN_("%u") " bytes"
                   , (hdr->cardsize > hdr->reserved) ? (hdr->cardsize - hdr->reserved) : 0);
     PrintAndLogEx(SUCCESS, "Emulator memory.. %u of %u bytes spare"
                   , (hdr->data_start > hdr->tables_end) ? (hdr->data_start - hdr->tables_end) : 0
