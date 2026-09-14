@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed emulator memory - raised from 4096 to 8192 bytes (@iceman1001)
 - Fixed `hf 14a sim` - a dynamic response now gets a modulation buffer sized to fit it, instead of one 68 bytes too small (or 1788 too large for ST25TA) (@iceman1001)
 - Fixed `BigBuf_malloc` - takes a uint32_t, so a request of 64KB or more fails instead of wrapping to zero (@iceman1001)
 - Fixed `BigBuf_max_traceLen` - returns a uint32_t, so LF sampling on a device with more than 64KB of BigBuf is not handed a truncated buffer (@iceman1001)

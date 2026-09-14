@@ -28,7 +28,19 @@
 #define MAX_PARITY_SIZE         ((MAX_FRAME_SIZE / 8) + 1)
 #define MAX_MIFARE_FRAME_SIZE   19  // biggest Mifare frame is UL AES answer to AUTH (1 + 16 Bytes) + 2 Bytes CRC
 #define MAX_MIFARE_PARITY_SIZE  3   // need 19 parity bits for the 19 Byte above. 3 Bytes are enough to store these
-#define CARD_MEMORY_SIZE        4096
+// How much of BigBuf a card image may use.  A MIFARE Classic 4K fills 4096 of
+// this exactly, so at that size emulator memory was fully committed and nothing
+// larger could be simulated at all.
+//
+// This is carved out of BigBuf, which on AT91 is 33272 bytes, so every byte here
+// is a byte traces and LF samples do not get.  The largest allocation any tag
+// simulation makes alongside it is 10459 bytes total, leaving 18.7 kB of trace
+// at this size.  LF acquisition is unaffected either way -- lfops.c calls
+// BigBuf_free(), which drops emulator memory entirely.
+//
+// The device reports this to the client in capabilities_t, so the client sizes
+// eload / esave from what the device has rather than a copy of this constant.
+#define CARD_MEMORY_SIZE        8192
 // For now we're storing FM11RF08S nonces in the upper 1k of CARD_MEMORY_SIZE
 // but we might have to allocate extra space if one day we've to support sth like a FM11RF32S
 #define CARD_MEMORY_RF08S_OFFSET 1024
