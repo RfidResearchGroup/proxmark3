@@ -25,6 +25,11 @@
 
 #include "common.h"
 
+// ISO 7816 wrapping of the DESFire command set: class byte on the way in,
+// first status byte on the way back.
+#define DESFIRE_SIM_ISO7816_CLA 0x90
+#define DESFIRE_SIM_ISO7816_SW1 0x91
+
 // Largest answer built before the 14443-4 prologue and CRC are added.
 // GetApplicationIDs on a full PICC is 28 * 3 bytes plus a status byte.
 #define DESFIRE_SIM_MAX_RESP    128

@@ -413,6 +413,45 @@ uint16_t desfire_sim_apdu(const uint8_t *in, uint16_t inlen, uint8_t *out) {
         return 0;
     }
 
+    // Two framings carry the same commands and a reader may use either.
+    //
+    //   native        <cmd> <data...>              ->  <status> <data...>
+    //   ISO 7816      90 <cmd> 00 00 Lc <data> Le  ->  <data...> 91 <status>
+    //
+    // The proxmark client defaults to the wrapped form, so a simulation that
+    // only understands the native one answers ILLEGAL_COMMAND_CODE to
+    // everything -- it reads the 0x90 class byte as the command.
+    if (in[0] == DESFIRE_SIM_ISO7816_CLA && inlen >= 5) {
+
+        uint8_t cmd = in[1];
+
+        // 5 bytes is CLA INS P1 P2 Le, no data. Longer means in[4] is Lc and
+        // the data follows, with Le after it.
+        uint8_t lc = 0;
+        const uint8_t *data = NULL;
+        if (inlen > 5) {
+            lc = in[4];
+            data = in + 5;
+            if ((uint16_t)5 + lc > inlen) {
+                lc = inlen - 5;         // truncated frame, use what arrived
+            }
+        }
+
+        uint8_t native[DESFIRE_SIM_MAX_RESP] = {0};
+        uint16_t n = desfire_sim_command(&s_st, cmd, data, lc, native);
+        if (n == 0) {
+            return 0;
+        }
+
+        // status leads in the native answer and trails in the wrapped one
+        if (n > 1) {
+            memcpy(out, native + 1, n - 1);
+        }
+        out[n - 1] = DESFIRE_SIM_ISO7816_SW1;
+        out[n] = native[0];
+        return n + 1;
+    }
+
     return desfire_sim_command(&s_st, in[0], in + 1, inlen - 1, out);
 }
 
