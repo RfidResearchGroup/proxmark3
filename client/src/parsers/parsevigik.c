@@ -430,17 +430,17 @@ static const vigik_schema_t vigik_schemas[] = {
         NULL
     },
     {
-        // KeyB is not known, so it is left open
+        // sectors 0-5 only; 6-15 are left factory default on the card seen
         "Comelit",
         {
             0x4a6352684677ULL, 0x4a6352684677ULL, 0x4a6352684677ULL, 0x4a6352684677ULL,
-            0x4a6352684677ULL, 0x4a6352684677ULL, 0x4a6352684677ULL, 0x4a6352684677ULL,
-            0x4a6352684677ULL, 0x4a6352684677ULL, 0x4a6352684677ULL, 0x4a6352684677ULL,
-            0x4a6352684677ULL, 0x4a6352684677ULL, 0x4a6352684677ULL, 0x4a6352684677ULL
+            0x4a6352684677ULL, 0x4a6352684677ULL, VIGIK_KEY_ANY, VIGIK_KEY_ANY,
+            VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY,
+            VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY
         },
         {
-            VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY,
-            VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY,
+            0x536653644c65ULL, 0x536653644c65ULL, 0x536653644c65ULL, 0x536653644c65ULL,
+            0x536653644c65ULL, 0x536653644c65ULL, VIGIK_KEY_ANY, VIGIK_KEY_ANY,
             VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY,
             VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY, VIGIK_KEY_ANY
         },
@@ -532,6 +532,11 @@ const char *vigik_detect_schema(const uint8_t *dump, size_t dumplen) {
 #define URMET_DIGITS_OFF    5
 #define URMET_DIGITS_LEN    11
 
+static const uint8_t *proac_unused_marker(const uint8_t *dump, size_t dumplen) {
+    size_t off = (mfFirstBlockOfSector(2) + 1) * MFBLOCK_SIZE;
+    return (off + MFBLOCK_SIZE <= dumplen) ? dump + off : NULL;
+}
+
 static bool urmet_all_digits(const uint8_t *p, size_t len) {
     for (size_t i = 0; i < len; i++) {
         if (isdigit(p[i]) == 0) {
@@ -564,6 +569,20 @@ static int vigik_print_urmet_captiv(const uint8_t *dump, size_t dumplen) {
     }
 
     PrintAndLogEx(INFO, "Marker............. %s", sprint_hex_inrow(b2, 2));
+
+    // sector 2 block 1 keeps one three byte value twice over, each copy behind
+    // a byte that differs slightly between the copies. Holds on all three cards
+    // seen; the differing prefix is the shape a use counter takes.
+    const uint8_t *rec = proac_unused_marker(dump, dumplen);
+    if (rec) {
+        if (memcmp(rec + 5, rec + 9, 3) == 0) {
+            PrintAndLogEx(INFO, "Record............. %s  stored twice, prefix %02X / %02X",
+                          sprint_hex_inrow(rec + 5, 3), rec[4], rec[8]);
+        } else {
+            PrintAndLogEx(INFO, "Record............. %s  and %s  ( copies differ )",
+                          sprint_hex_inrow(rec + 5, 3), sprint_hex_inrow(rec + 9, 3));
+        }
+    }
     PrintAndLogEx(INFO, "Data............... layout " _YELLOW_("not decoded"));
 
     int shown = 0;
