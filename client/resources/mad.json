@@ -10012,6 +10012,13 @@
         "system_integrator": "Unisys"
     },
     {
+        "application": "MICROHARD",
+        "company": "MICROHARD SRL",
+        "mad": "0x6938",
+        "service_provider": "MICROHARD SRL",
+        "system_integrator": "MICROHARD SRL"
+    },
+    {
         "application": "Access control, time attendance, bus ticket, hotel room card, VIP card f. club",
         "company": "Giga-TMS Inc",
         "mad": "0x7001",
