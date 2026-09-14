@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf legic eload` - an upload after a command that left a different FPGA bitstream loaded now writes the whole image (@iceman1001)
+- Fixed `hf legic sim` - no longer wipes the emulator memory that `hf legic eload` just filled (@iceman1001)
 - Changed emulator memory - raised from 4096 to 8192 bytes (@iceman1001)
 - Fixed `hf 14a sim` - a dynamic response now gets a modulation buffer sized to fit it, instead of one 68 bytes too small (or 1788 too large for ST25TA) (@iceman1001)
 - Fixed `BigBuf_malloc` - takes a uint32_t, so a request of 64KB or more fails instead of wrapping to zero (@iceman1001)
