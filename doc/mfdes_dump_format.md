@@ -80,12 +80,26 @@ Everything under `$.Card` describes the PICC itself.
 | `ATQA` | hex, 2 bytes | wire order, the same way every other pm3 dump format stores it. `hf 14a info` prints the two bytes the other way round |
 | `SAK` | hex, 1 byte | |
 | `ATS` | hex | answer to RATS, absent when the card gave none |
-| `Version` | hex, 28 bytes | raw `GetVersion` answer, hardware + software + production details concatenated |
+| `VersionHW` | hex, 7 bytes | first `GetVersion` frame: vendor, type, subtype, major, minor, storage, protocol |
+| `VersionSW` | hex, 7 bytes | second `GetVersion` frame, same field order |
+| `VersionProd` | hex, 14 bytes | third `GetVersion` frame: UID and production details |
 | `Signature` | hex, 56 bytes | NXP originality signature, absent when the card refused it |
 | `FreeMem` | int | bytes reported by `GetFreeMem`, absent when the card refused it |
 
 Absent means the field is not written at all. Do not read a missing field as a
 zero.
+
+`GetVersion` answers over three chained frames and they are stored as three
+fields rather than one blob, because the third frame is not the same shape
+across generations: D40 and EV1 close it with `UID || BatchNo[5] || CW || Year`
+while EV3 re-cuts it as `UID || BatchNo[3] || TypeID[2] || CW || Year`. Each
+frame is kept raw, so any generation round-trips without the format having to
+know which one it is holding.
+
+`VersionHW` bytes 3 and 4 -- major and minor -- are what identify the
+generation. `client/src/mifare/prime.c` maps them: EV1 is `01 00`, EV2 is
+`12 00` or `42 00`, EV2 XL `22 00`, EV3 `33 00`, DuoX `A0 00`. Byte 5 is the
+storage size code, `2^(n>>1)` bytes.
 
 Nothing key related lives here. The PICC master key settings and keys belong to
 application `000000` -- see [Applications](#applications) -- so every key in the
@@ -415,9 +429,11 @@ The dump picks this file up without `--keys` because its name follows the same
     "ATQA": "4403",
     "SAK": "20",
     "ATS": "06757781028002F0",
-    "Version": "0401011200160504010102001605043240CAE45380CD651745414216",
+    "VersionHW": "04010112001605",
+    "VersionSW": "04010102001605",
+    "VersionProd": "043240CAE45380CD651745414216",
     "Signature": "035766BD56631ED57B614CE01A24372BDC29028A310937BC42EE998C66E56E6251083B723099D80EB77291B1A8BDB055C614EC944A11E38E",
-    "FreeMem": 896
+    "FreeMem": 1984
   },
   "Applications": {
     "000000": {
@@ -528,8 +544,8 @@ The dump picks this file up without `--keys` because its name follows the same
 
 Things to read out of it:
 
-* **`FreeMem` is 896** with the two applications in place. Measured on this same
-  card: 2080 free before the example was built, 896 with it, and 2560 after
+* **`FreeMem` is 1984** with the two applications in place. Measured on this same
+  card: 2080 free before the example was built, 1984 with it, and 2560 after
   `hf mfdes formatpicc`. A format therefore reclaims space that creating and
   deleting applications leaves behind -- 0 applications on its own does not mean
   a fully free card.
@@ -549,14 +565,19 @@ Things to read out of it:
 ^[Top](#top)
 
 ```
+
 [=] --- Tag Information ---------------------------
 [+] UID.............. 043240CAE45380
 [+] ATQA............. 03 44
 [+] SAK.............. 20
 [+] ATS.............. 06757781028002F0
-[+] Version.......... 0401011200160504010102001605043240CAE45380CD651745414216
-[+] Signature........ 035766BD56631ED57B614CE01A24372BDC29028A310937BC42EE998C66E56E62...
-[+] Free memory...... 896 bytes
+[+] Version HW....... 04010112001605
+[+]                   12.0 ( DESFire EV2 )
+[+]   Storage size... 0x16 ( 2048 bytes )
+[+] Version SW....... 04010102001605
+[+] Production....... 043240CAE45380CD651745414216
+[+] Signature........ 035766BD56631ED57B614CE01A24372BDC29028A310937BC42EE998C66E56E6251083B723099D80EB77291B1A8BDB055C614EC944A11E38E
+[+] Free memory...... 1984 bytes
 
 [=] --- Applications ------------------------------
 [+] 2 application(s) plus the PICC level
