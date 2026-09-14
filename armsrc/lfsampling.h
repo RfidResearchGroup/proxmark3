@@ -40,12 +40,6 @@ void doCotagAcquisition(void);
 uint16_t doCotagAcquisitionManchester(uint8_t *dest, uint16_t destlen);
 
 /**
-* acquisition of T55x7 LF signal. Similar to other LF, but adjusted with @marshmellows thresholds
-* the data is collected in BigBuf.
-**/
-void doT55x7Acquisition(size_t sample_size, bool ledcontrol);
-
-/**
 * Initializes the FPGA for reader-mode (field on), and acquires the samples.
 * @return number of bits sampled
 **/
