@@ -8229,11 +8229,380 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+//-----------------------------------------------------------------------------
+// DESFire card image collection.
+//
+// `hf mfdes dump` walks the whole PICC into a desfire_dump_t and writes it out
+// as a jsfMfDesfire_v1 json file.  `hf mfdes view` reads one back.
+// See doc/mfdes_dump_format.md for the on-disk schema.
+//-----------------------------------------------------------------------------
+
+// the 14a select answer carries UID/ATQA/SAK/ATS,  none of which the DESFire
+// layer keeps around
+static int DesfireDumpFillCardInfo(iso14a_card_select_t *card_info) {
+
+    DropField();
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
+
+    PacketResponseNG resp;
+    uint8_t select_status = 0;
+    if (WaitForIso14aReply(&resp, 2500, NULL, &select_status) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for card select");
+        return PM3_ETIMEOUT;
+    }
+
+    // 0: couldn't read, 1: OK with ATS, 2: OK no ATS, 3: proprietary anticollision
+    if (select_status != 1 && select_status != 2) {
+        return PM3_ESOFT;
+    }
+
+    memcpy(card_info, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+    return PM3_SUCCESS;
+}
+
+// record a key we authenticated with.  The algo is the application's, not the
+// key's, so it is not stored here -- see desfire_dump_app_t.keytype
+static void DesfireDumpStoreKey(desfire_dump_app_t *app, uint8_t keyno, uint8_t algo, const uint8_t *key) {
+
+    if (keyno >= DESFIRE_MAX_KEY_COUNT) {
+        return;
+    }
+
+    app->keytype = algo;
+    app->keys.present[keyno] = 1;
+    memcpy(app->keys.key[keyno], key, desfire_get_key_length(algo));
+}
+
+// pull keyno for `aid` out of a `hf mfdes chk` key file,  NULL when we have none
+static const uint8_t *DesfireDumpFindKey(const desfire_keys_dump_t *keyfile, uint32_t aid, uint8_t algo, uint8_t keyno) {
+
+    if (keyfile == NULL || keyno >= DESFIRE_MAX_KEY_COUNT || algo >= DESFIRE_MAX_ALGO_COUNT) {
+        return NULL;
+    }
+
+    for (uint8_t i = 0; i < keyfile->appcount && i < DESFIRE_MAX_APP_COUNT; i++) {
+        if (keyfile->app[i].aid != aid) {
+            continue;
+        }
+        if (keyfile->app[i].keys[algo][keyno][0] == 0) {
+            return NULL;
+        }
+        return &keyfile->app[i].keys[algo][keyno][1];
+    }
+    return NULL;
+}
+
+static void DesfireDumpFillAppMeta(desfire_dump_app_t *app, const AppListElm_t *src) {
+
+    app->aid = src->appNum;
+    app->isofid = src->appISONum;
+    app->keysettings = src->keySettings;
+    app->numkeysraw = src->numKeysRaw;
+    app->numkeys = src->numberOfKeys;
+    app->keytype = src->keyType;
+    app->settings_ok = (src->numKeysRaw != 0);
+
+    for (uint8_t i = 0; i < src->numberOfKeys && i < DESFIRE_MAX_KEY_COUNT; i++) {
+        app->keys.version[i] = src->keyVersions[i];
+        app->keys.versionknown[i] = 1;
+    }
+
+    app->dfnamelen = str_nlen((char *)src->appDFName, sizeof(src->appDFName));
+    memcpy(app->dfname, src->appDFName, app->dfnamelen);
+}
+
+// find the application the user named on the command line in the PICC's own
+// list, so an --isoid or --dfname dump still records the AID and key settings
+static int DesfireDumpFindApp(const AppListS appList, size_t appcount, const DesfireContext_t *dctx,
+                              DesfireISOSelectWay selectway, uint32_t id) {
+
+    for (size_t i = 0; i < appcount && i < DESFIRE_MAX_APP_COUNT; i++) {
+
+        switch (selectway) {
+            case ISW6bAID:
+                if (appList[i].appNum == id) {
+                    return i;
+                }
+                break;
+            case ISWIsoID:
+                if (appList[i].appISONum == id) {
+                    return i;
+                }
+                break;
+            case ISWDFName:
+                if (dctx->selectedDFNameLen > 0 &&
+                        memcmp(appList[i].appDFName, dctx->selectedDFName, dctx->selectedDFNameLen) == 0) {
+                    return i;
+                }
+                break;
+            case ISWMF:
+                break;
+        }
+    }
+    return -1;
+}
+
+static void DesfireDumpFillFileSettings(const FileSettings_t *fs, desfire_dump_file_t *f) {
+
+    f->type = fs->fileType;
+    f->commmode = fs->fileCommMode;
+    f->accessrights = fs->rawAccessRights;
+    f->size = fs->fileSize;
+    f->lowerlimit = fs->lowerLimit;
+    f->upperlimit = fs->upperLimit;
+    f->limitedcredit = fs->limitedCredit;
+    f->recordsize = fs->recordSize;
+    f->maxrecords = fs->maxRecordCount;
+    f->currecords = fs->curRecordCount;
+
+    f->addrights_len = fs->additionalAccessRightsLength;
+    if (f->addrights_len > ARRAYLEN(f->addrights)) {
+        f->addrights_len = ARRAYLEN(f->addrights);
+    }
+    for (uint8_t i = 0; i < f->addrights_len; i++) {
+        f->addrights[i] = fs->additionalAccessRights[i];
+    }
+
+    f->settings_ok = true;
+}
+
+// read one file into the image.  Leaves f->read_ok false when the contents
+// could not be fetched -- the caller must not turn that into zeroed data
+static int DesfireDumpReadFile(DesfireContext_t *dctx, const FileSettings_t *fs, desfire_dump_file_t *f,
+                               uint32_t maxdatafilelength, bool verbose) {
+
+    f->read_ok = false;
+
+    int filetype;
+    switch (fs->fileType) {
+        case 0x00:
+        case 0x01:
+            filetype = RFTData;
+            break;
+        case 0x02:
+            filetype = RFTValue;
+            break;
+        case 0x03:
+        case 0x04:
+            filetype = RFTRecord;
+            break;
+        case 0x05:
+            filetype = RFTMAC;
+            break;
+        default:
+            // nothing was sent, the session is still good
+            return PM3_EINVARG;
+    }
+
+    // iso chaining works in the lrp mode
+    dctx->isoChaining |= (dctx->secureChannel == DACLRP);
+
+    DesfireCommunicationMode commMode;
+    if (filetype == RFTValue) {
+        commMode = DesfireValueOpCommMode(dctx, fs, MFDES_GET_VALUE);
+    } else {
+        const uint8_t rrights[] = { fs->rAccess, fs->rwAccess };
+        commMode = DesfireEffectiveCommMode(dctx, fs->commMode, rrights, ARRAYLEN(rrights));
+    }
+
+    // lrp needs to point exact mode
+    if (dctx->secureChannel == DACLRP && fs->rAccess == 0x0e) {
+        commMode = DCMPlain;
+    }
+
+    if (fs->rAccess == 0x0f && fs->rwAccess == 0x0f) {
+        if (verbose) {
+            PrintAndLogEx(INFO, "File 0x%02x read access is denied (0x0F), skipping contents", f->num);
+        }
+        // nothing was sent, the session is still good
+        return PM3_EINVARG;
+    }
+
+    DesfireSetCommMode(dctx, commMode);
+
+    if (filetype == RFTValue) {
+        uint32_t value = 0;
+        if (DesfireValueFileOperations(dctx, f->num, MFDES_GET_VALUE, &value) != PM3_SUCCESS) {
+            return PM3_ESOFT;
+        }
+        f->value = value;
+        f->read_ok = true;
+        return PM3_SUCCESS;
+    }
+
+    uint8_t *resp = calloc(DESFIRE_BUFFER_SIZE, sizeof(uint8_t));
+    if (resp == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+    size_t resplen = 0;
+    int res;
+
+    if (filetype == RFTRecord) {
+
+        size_t reclen = fs->recordSize;
+        res = DesfireReadRecords(dctx, f->num, 0, 0, resp, &resplen);
+        if (res != PM3_SUCCESS) {
+            free(resp);
+            return PM3_ESOFT;
+        }
+
+        if (reclen == 0 && resplen > 0) {
+            reclen = resplen;
+        }
+        f->recordsize = reclen;
+
+    } else {
+        uint32_t length = 0;
+        if (filetype == RFTData && maxdatafilelength && (maxdatafilelength < fs->fileSize)) {
+            length = maxdatafilelength;
+        }
+
+        res = DesfireReadFile(dctx, f->num, 0, length, resp, &resplen);
+        if (res != PM3_SUCCESS) {
+            free(resp);
+            return PM3_ESOFT;
+        }
+    }
+
+    if (resplen == 0) {
+        // an empty answer is a successful read of nothing,  keep read_ok true
+        // so a reader can tell it apart from "we never got there"
+        free(resp);
+        f->read_ok = true;
+        return PM3_SUCCESS;
+    }
+
+    f->data = calloc(resplen, sizeof(uint8_t));
+    if (f->data == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        free(resp);
+        return PM3_EMALLOC;
+    }
+
+    memcpy(f->data, resp, resplen);
+    f->datalen = resplen;
+    f->read_ok = true;
+    free(resp);
+    return PM3_SUCCESS;
+}
+
+static void DesfireDumpPrintFile(const desfire_dump_file_t *f, bool isopresent) {
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--------------------------------- " _CYAN_("File %02x") " ----------------------------------", f->num);
+    PrintAndLogEx(SUCCESS, "File ID         : " _GREEN_("%02x"), f->num);
+    if (isopresent) {
+        if (f->isofid != 0) {
+            PrintAndLogEx(SUCCESS, "File ISO ID     : %04x", f->isofid);
+        } else {
+            PrintAndLogEx(SUCCESS, "File ISO ID     : " _YELLOW_("n/a"));
+        }
+    }
+
+    if (f->read_ok == false) {
+        PrintAndLogEx(WARNING, "Contents        : " _YELLOW_("not read"));
+        return;
+    }
+
+    if (f->type == 0x02) {
+        PrintAndLogEx(SUCCESS, "Value           : %u (0x%08x)", f->value, f->value);
+        return;
+    }
+
+    if (f->datalen == 0) {
+        PrintAndLogEx(SUCCESS, "Contents        : " _YELLOW_("empty"));
+        return;
+    }
+
+    if ((f->type == 0x03 || f->type == 0x04) && f->recordsize > 0 && (f->datalen % f->recordsize) == 0) {
+        uint32_t reccount = f->datalen / f->recordsize;
+        PrintAndLogEx(SUCCESS, "Read %u bytes from file 0x%02x, %u record(s) of %u bytes", f->datalen, f->num, reccount, f->recordsize);
+        for (uint32_t i = 0; i < reccount; i++) {
+            if (i != 0) {
+                PrintAndLogEx(SUCCESS, "Record %u", i);
+            }
+            print_buffer_with_offset(f->data + (i * f->recordsize), f->recordsize, 0, (i == 0));
+        }
+        return;
+    }
+
+    PrintAndLogEx(SUCCESS, "Read %u bytes from file 0x%02x", f->datalen, f->num);
+    print_buffer_with_offset(f->data, f->datalen, 0, true);
+}
+
+// collect one application.  The caller has already selected and authenticated
+static int DesfireDumpCollectApp(DesfireContext_t *dctx, desfire_dump_app_t *app, uint32_t maxlength,
+                                 DesfireISOSelectWay selectway, uint32_t id, int securechann,
+                                 bool noauth, bool verbose) {
+
+    FileList_t FileList = {{0}};
+    size_t filescount = 0;
+    bool isopresent = false;
+
+    int res = DesfireFillFileList(dctx, FileList, &filescount, &isopresent);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Can't get file list for application " _YELLOW_("%06X"), app->aid);
+        return res;
+    }
+
+    // the ISO file id probe in DesfireFillFileList makes the PICC end the session on
+    // applications without ISO file ids, so get it back before reading the files
+    if (noauth == false && DesfireIsAuthenticated(dctx) == false) {
+        DesfireSetCommMode(dctx, DCMPlain);
+        res = DesfireSelectAndAuthenticateAppW(dctx, securechann, selectway, id, noauth, verbose);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "Application " _CYAN_("%s") " have " _GREEN_("%zu") " files", DesfireWayIDStr(selectway, id), filescount);
+
+    if (selectway == ISW6bAID) {
+        DesfirePrintAIDFunctions(id);
+    }
+
+    app->filecount = 0;
+    bool session_lost = false;
+
+    for (size_t i = 0; i < filescount && i < DESFIRE_MAX_FILE_COUNT; i++) {
+
+        // a refused exchange ends the PICC session,  re-open it before the next file.
+        // a file we chose not to read never reached the card and costs us nothing
+        if (session_lost) {
+            DesfireSetCommMode(dctx, DCMPlain);
+            if (DesfireSelectAndAuthenticateAppW(dctx, securechann, selectway, id, noauth, verbose) != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "Lost the session on application " _YELLOW_("%06X") ", stopping here", app->aid);
+                break;
+            }
+            session_lost = false;
+        }
+
+        desfire_dump_file_t *f = &app->files[app->filecount];
+        f->num = FileList[i].fileNum;
+        f->isofid = FileList[i].fileISONum;
+        DesfireDumpFillFileSettings(&FileList[i].fileSettings, f);
+        app->filecount++;
+
+        session_lost = (DesfireDumpReadFile(dctx, &FileList[i].fileSettings, f, maxlength, verbose) == PM3_ESOFT);
+
+        DesfireDumpPrintFile(f, isopresent);
+        DesfirePrintFileSettingsExtended(&FileList[i].fileSettings);
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14ADesDump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes dump",
-                  "For each application show fil list and then file content. Key needs to be provided for authentication or flag --no-auth set (depend on cards settings).",
-                  "hf mfdes dump --aid 123456     -> show file dump for: app=123456 with channel defaults from `default` command/n"
+                  "Dump a DESFire card to a json file. Walks every application and every file\n"
+                  "unless an application is named with --aid / --isoid / --dfname.\n"
+                  "Key needs to be provided for authentication or flag --no-auth set (depend on cards settings).",
+                  "hf mfdes dump                  -> dump the whole PICC with channel defaults from `default` command\n"
+                  "hf mfdes dump --aid 123456     -> dump only application 123456\n"
+                  "hf mfdes dump --keys hf-mfdes-0102030405-keys.json  -> use recovered keys per application\n"
                   "hf mfdes dump --isoid df01 --schann lrp -t aes --length 000090    -> lrp default settings with length limit");
 
     void *argtable[] = {
@@ -8253,6 +8622,9 @@ static int CmdHF14ADesDump(const char *Cmd) {
         arg_str0(NULL, "dfname",  "<hex>", "Application ISO DF Name (5-16 hex bytes, big endian)"),
         arg_str0("l", "length",   "<hex>", "Maximum length for read data files (3 hex bytes, big endian)"),
         arg_lit0(NULL, "no-auth", "Execute without authentication"),
+        arg_str0("f",  "file",    "<fn>", "Save dump to file, if no <fn> UID will be used as filename"),
+        arg_str0(NULL, "keys",    "<fn>", "Load application keys from a `hf mfdes chk` key file"),
+        arg_lit0(NULL, "ns",      "No save to file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -8260,6 +8632,21 @@ static int CmdHF14ADesDump(const char *Cmd) {
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
     bool noauth = arg_get_lit(ctx, 15);
+
+    // an application was named on the command line?  then dump only that one
+    bool single_app = (arg_get_str(ctx, 11)->count > 0) ||
+                      (arg_get_str(ctx, 12)->count > 0) ||
+                      (arg_get_str(ctx, 13)->count > 0);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 16), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    int keyfnlen = 0;
+    char keyfilename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 17), (uint8_t *)keyfilename, FILE_PATH_SIZE, &keyfnlen);
+
+    bool nosave = arg_get_lit(ctx, 18);
 
     DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
@@ -8280,70 +8667,444 @@ static int CmdHF14ADesDump(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
-    if (res != PM3_SUCCESS) {
-        DropField();
-        return res;
+    desfire_dump_t *dump = calloc(1, sizeof(desfire_dump_t));
+    if (dump == NULL) {
+        PrintAndLogEx(ERR, "Failed to allocate memory");
+        return PM3_EMALLOC;
     }
 
-    FileList_t FileList = {{0}};
-    size_t filescount = 0;
-    bool isopresent = false;
-    res = DesfireFillFileList(&dctx, FileList, &filescount, &isopresent);
-    if (res != PM3_SUCCESS) {
-        DropField();
-        return res;
+    // UID / ATQA / SAK / ATS come from the 14a layer, grab them before we talk DESFire
+    DesfireDumpFillCardInfo(&dump->card_info);
+    DropField();
+
+    // no --keys given?  look for the key file this card would have been saved
+    // under, the same `hf-mfdes-<UID>-...` template the dump itself uses
+    bool autokeys = false;
+    if (keyfnlen == 0 && dump->card_info.uidlen > 0) {
+        strcat(keyfilename, "hf-mfdes-");
+        FillFileNameByUID(keyfilename, dump->card_info.uid, "-keys", dump->card_info.uidlen);
+        keyfnlen = strlen(keyfilename);
+        autokeys = true;
     }
 
-    // the ISO file id probe in DesfireFillFileList makes the PICC end the session on
-    // applications without ISO file ids, so get it back before reading the files
-    if (noauth == false && DesfireIsAuthenticated(&dctx) == false) {
-        DesfireSetCommMode(&dctx, DCMPlain);
-        res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
-        if (res != PM3_SUCCESS) {
-            DropField();
-            return res;
+    // optional key file from `hf mfdes chk`
+    desfire_keys_dump_t *keyfile = NULL;
+    if (keyfnlen > 0) {
+        keyfile = calloc(1, sizeof(desfire_keys_dump_t));
+        if (keyfile == NULL) {
+            PrintAndLogEx(ERR, "Failed to allocate memory");
+            free(dump);
+            return PM3_EMALLOC;
         }
-    }
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "Application " _CYAN_("%s") " have " _GREEN_("%zu") " files", DesfireWayIDStr(selectway, id), filescount);
+        // a key file we went looking for on our own is not expected to exist,
+        // so probe quietly first rather than let loadFileJSON complain
+        char *found = NULL;
+        bool exists = (searchFile(&found, RESOURCES_SUBDIR, keyfilename, ".json", autokeys) == PM3_SUCCESS);
+        free(found);
 
-    if (selectway == ISW6bAID)
-        DesfirePrintAIDFunctions(id);
-
-    if (filescount == 0) {
-        PrintAndLogEx(INFO, "There is no files in the application %s", DesfireWayIDStr(selectway, id));
-        DropField();
-        return res;
-    }
-
-    res = PM3_SUCCESS;
-    for (int i = 0; i < filescount; i++) {
-        if (res != PM3_SUCCESS) {
-            DesfireSetCommMode(&dctx, DCMPlain);
-            res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
-            if (res != PM3_SUCCESS) {
-                DropField();
-                return res;
+        size_t klen = 0;
+        if (exists == false || loadFileJSON(keyfilename, keyfile, sizeof(desfire_keys_dump_t), &klen, NULL) != PM3_SUCCESS) {
+            if (autokeys == false) {
+                PrintAndLogEx(WARNING, "Could not load key file `" _YELLOW_("%s") "`, continuing without it", keyfilename);
+            } else if (verbose) {
+                PrintAndLogEx(INFO, "No key file `" _YELLOW_("%s") "` found", keyfilename);
             }
+            free(keyfile);
+            keyfile = NULL;
+        } else {
+            PrintAndLogEx(INFO, "Loaded keys for " _YELLOW_("%u") " application(s) from `" _YELLOW_("%s") "`", keyfile->appcount, keyfilename);
+        }
+    }
+
+    uint8_t buf[255] = {0};
+    size_t buflen = 0;
+
+    // GetVersion and the originality signature are answered unauthenticated.
+    // Asking for them from inside the authenticated session instead would put
+    // them in the wrong communication mode and every answer would come back
+    // looking like a MAC failure
+    DesfireContext_t plainctx = {0};
+    plainctx.commMode = DCMPlain;
+    plainctx.cmdSet = DCCNative;
+
+    if (DesfireAnticollision(verbose) == PM3_SUCCESS) {
+
+        if (DesfireGetVersion(&plainctx, buf, &buflen) == PM3_SUCCESS && buflen <= sizeof(dump->version)) {
+            memcpy(dump->version, buf, buflen);
+            dump->versionlen = buflen;
         }
 
-        PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "--------------------------------- " _CYAN_("File %02x") " ----------------------------------", FileList[i].fileNum);
-        PrintAndLogEx(SUCCESS, "File ID         : " _GREEN_("%02x"), FileList[i].fileNum);
-        if (isopresent) {
-            if (FileList[i].fileISONum != 0)
-                PrintAndLogEx(SUCCESS, "File ISO ID     : %04x", FileList[i].fileISONum);
-            else
-                PrintAndLogEx(SUCCESS, "File ISO ID     : " _YELLOW_("n/a"));
+        buflen = 0;
+        if (DesfireReadSignature(&plainctx, 0x00, buf, &buflen) == PM3_SUCCESS && buflen <= sizeof(dump->signature)) {
+            memcpy(dump->signature, buf, buflen);
+            dump->signaturelen = buflen;
         }
-        DesfirePrintFileSettingsExtended(&FileList[i].fileSettings);
-
-        res = DesfileReadFileAndPrint(&dctx, FileList[i].fileNum, RFTAuto, 0, 0, maxlength, noauth, verbose);
     }
 
     DropField();
+
+    res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, ISW6bAID, 0x000000, noauth, verbose);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "PICC level select/auth " _RED_("failed"));
+        DropField();
+        free(keyfile);
+        free(dump);
+        return res;
+    }
+
+    // the PICC level is application 000000
+    dump->picc.aid = 0x000000;
+    dump->picc.auth_ok = (noauth == false);
+    if (dump->picc.auth_ok) {
+        DesfireDumpStoreKey(&dump->picc, dctx.keyNum, dctx.keyType, dctx.key);
+    }
+
+    // DesfireFillAppList() -> DesfireFillPICCInfo() already asks for free memory,
+    // key settings and key version 0, so don't ask a second time
+    PICCInfo_t PICCInfo = {0};
+    AppListS AppList = {{0}};
+    DesfireFillAppList(&dctx, &PICCInfo, AppList, false, false, true);
+
+    // DesfireFillPICCInfo() reports a refused GetFreeMem as 0xffffffff
+    dump->freemem_ok = (PICCInfo.freemem != 0xffffffff);
+    if (dump->freemem_ok) {
+        dump->freemem = PICCInfo.freemem;
+    }
+
+    dump->picc.keysettings = PICCInfo.keySettings;
+    dump->picc.numkeysraw = PICCInfo.numKeysRaw;
+    dump->picc.numkeys = PICCInfo.numberOfKeys;
+    dump->picc.settings_ok = true;
+
+    // the PICC only hands out the version of key 0
+    dump->picc.keys.version[0] = PICCInfo.keyVersion0;
+    dump->picc.keys.versionknown[0] = 1;
+
+    PrintAndLogEx(NORMAL, "");
+    DesfirePrintPICCInfo(&dctx, &PICCInfo);
+
+    if (single_app) {
+
+        // only the application the user named
+        desfire_dump_app_t *app = &dump->app[0];
+        dump->appcount = 1;
+
+        int idx = DesfireDumpFindApp(AppList, PICCInfo.appCount, &dctx, selectway, id);
+        if (idx >= 0) {
+            DesfireDumpFillAppMeta(app, &AppList[idx]);
+        } else {
+            // not in the PICC's list, record what the selector told us
+            app->aid = (selectway == ISW6bAID) ? id : 0;
+            app->isofid = (selectway == ISWIsoID) ? id : 0;
+            app->dfnamelen = dctx.selectedDFNameLen;
+            memcpy(app->dfname, dctx.selectedDFName, app->dfnamelen);
+        }
+
+        res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Select/auth of %s " _RED_("failed"), DesfireWayIDStr(selectway, id));
+            DropField();
+            desfire_dump_free(dump);
+            free(keyfile);
+            free(dump);
+            return res;
+        }
+
+        app->auth_ok = (noauth == false);
+        if (app->auth_ok) {
+            DesfireDumpStoreKey(app, dctx.keyNum, dctx.keyType, dctx.key);
+        }
+
+        DesfireDumpCollectApp(&dctx, app, maxlength, selectway, id, securechann, noauth, verbose);
+
+    } else {
+
+        uint8_t appcount = (PICCInfo.appCount > DESFIRE_MAX_APP_COUNT) ? DESFIRE_MAX_APP_COUNT : PICCInfo.appCount;
+        if (PICCInfo.appCount > DESFIRE_MAX_APP_COUNT) {
+            PrintAndLogEx(WARNING, "PICC has %zu applications, dumping the first %d", PICCInfo.appCount, DESFIRE_MAX_APP_COUNT);
+        }
+
+        dump->appcount = appcount;
+
+        // the key we authenticated the PICC with is the fallback for every
+        // application, so keep a copy -- picking a key out of the key file for
+        // one application must not carry over into the next
+        uint8_t basekey[DESFIRE_MAX_KEY_SIZE] = {0};
+        memcpy(basekey, dctx.key, sizeof(basekey));
+        DesfireCryptoAlgorithm basealgo = dctx.keyType;
+
+        for (uint8_t i = 0; i < appcount; i++) {
+
+            desfire_dump_app_t *app = &dump->app[i];
+            DesfireDumpFillAppMeta(app, &AppList[i]);
+
+            // a key from the key file beats the one on the command line
+            // DesfireSetKey() would clear the whole context -- command set,
+            // comm mode, KDF and UID all came from the command line and have to
+            // survive, so only the key itself is swapped
+            const uint8_t *appkey = DesfireDumpFindKey(keyfile, app->aid, app->keytype, dctx.keyNum);
+            if (appkey != NULL) {
+                DesfireSetKeyNoClear(&dctx, dctx.keyNum, app->keytype, (uint8_t *)appkey);
+                if (verbose) {
+                    PrintAndLogEx(INFO, "Application " _YELLOW_("%06X") " using key %u from the key file", app->aid, dctx.keyNum);
+                }
+            } else {
+                DesfireSetKeyNoClear(&dctx, dctx.keyNum, basealgo, basekey);
+            }
+
+            res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, ISW6bAID, app->aid, noauth, verbose);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "Application " _YELLOW_("%06X") " select/auth " _RED_("failed") ", skipping", app->aid);
+                continue;
+            }
+
+            app->auth_ok = (noauth == false);
+            if (app->auth_ok) {
+                DesfireDumpStoreKey(app, dctx.keyNum, dctx.keyType, dctx.key);
+            }
+
+            DesfireDumpCollectApp(&dctx, app, maxlength, ISW6bAID, app->aid, securechann, noauth, verbose);
+        }
+    }
+
+    DropField();
+
+    if (nosave) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "Called with no save option");
+        PrintAndLogEx(NORMAL, "");
+        desfire_dump_free(dump);
+        free(keyfile);
+        free(dump);
+        return PM3_SUCCESS;
+    }
+
+    if (fnlen < 1) {
+        if (dump->card_info.uidlen == 0) {
+            PrintAndLogEx(WARNING, "No UID to build a filename from, use " _YELLOW_("-f <fn>"));
+            desfire_dump_free(dump);
+            free(keyfile);
+            free(dump);
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(INFO, "Using UID as filename");
+        strcat(filename, "hf-mfdes-");
+        FillFileNameByUID(filename, dump->card_info.uid, "-dump", dump->card_info.uidlen);
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    pm3_save_dump_json(filename, (uint8_t *)dump, sizeof(desfire_dump_t), jsfMfDesfire_v1);
+
+    desfire_dump_free(dump);
+    free(keyfile);
+    free(dump);
+    return PM3_SUCCESS;
+}
+
+static void DesfireViewPrintKeys(const desfire_dump_app_t *app) {
+
+    for (uint8_t keyno = 0; keyno < DESFIRE_MAX_KEY_COUNT; keyno++) {
+
+        const desfire_dump_keys_t *keys = &app->keys;
+
+        if (keys->versionknown[keyno] == 0 && keys->present[keyno] == 0) {
+            continue;
+        }
+
+        char ver[16] = "??";
+        if (keys->versionknown[keyno]) {
+            snprintf(ver, sizeof(ver), "%02X", keys->version[keyno]);
+        }
+
+        if (keys->present[keyno]) {
+            PrintAndLogEx(SUCCESS, "    Key %02u (ver %s). " _GREEN_("%s")
+                          , keyno
+                          , ver
+                          , sprint_hex_inrow(keys->key[keyno], desfire_get_key_length(app->keytype))
+                         );
+        } else {
+            PrintAndLogEx(SUCCESS, "    Key %02u (ver %s). " _YELLOW_("not recovered"), keyno, ver);
+        }
+    }
+}
+
+// the PICC is application 000000 and prints the same way as the rest
+static void DesfireViewPrintApp(const desfire_dump_app_t *app) {
+
+    PrintAndLogEx(NORMAL, "");
+    if (app->aid == 0x000000) {
+        PrintAndLogEx(INFO, "--- " _CYAN_("AID 000000") " ( PICC level ) ---------------------");
+    } else {
+        PrintAndLogEx(INFO, "--- " _CYAN_("AID %06X") " --------------------------------", app->aid);
+    }
+
+    if (app->isofid != 0) {
+        PrintAndLogEx(SUCCESS, "    ISO DF ID.... %04X", app->isofid);
+    }
+    if (app->dfnamelen > 0) {
+        // DF names are often plain ascii, show both the way `lsapp` does
+        PrintAndLogEx(SUCCESS, "    DF name...... " _YELLOW_("%s") " ( %s )"
+                      , sprint_ascii(app->dfname, app->dfnamelen)
+                      , sprint_hex_inrow(app->dfname, app->dfnamelen)
+                     );
+    }
+    if (app->settings_ok) {
+        PrintAndLogEx(SUCCESS, "    Key settings. %02X, %u %s key(s)"
+                      , app->keysettings
+                      , app->numkeys
+                      , CLIGetOptionListStr(DesfireAlgoOpts, app->keytype)
+                     );
+    }
+    PrintAndLogEx(SUCCESS, "    Authenticated %s", app->auth_ok ? _GREEN_("yes") : _YELLOW_("no"));
+
+    DesfireViewPrintKeys(app);
+
+    PrintAndLogEx(SUCCESS, "    Files........ %u", app->filecount);
+
+    for (uint8_t n = 0; n < app->filecount && n < DESFIRE_MAX_FILE_COUNT; n++) {
+
+        const desfire_dump_file_t *f = &app->files[n];
+
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(SUCCESS, "  File " _GREEN_("%02X") " - %s", f->num, GetDesfireFileType(f->type));
+
+        if (f->isofid != 0) {
+            PrintAndLogEx(SUCCESS, "    ISO file ID.. %04X", f->isofid);
+        }
+
+        if (f->settings_ok) {
+            // f->commmode is the raw file comm mode byte, not a DesfireCommunicationMode
+            PrintAndLogEx(SUCCESS, "    Comm mode.... %s", CLIGetOptionListStr(DesfireCommunicationModeOpts, DesfireFileCommModeToCommMode(f->commmode)));
+            PrintAndLogEx(SUCCESS, "    Access rights %04X", f->accessrights);
+        }
+
+        switch (f->type) {
+            case 0x00:
+            case 0x01:
+                PrintAndLogEx(SUCCESS, "    File size.... %u", f->size);
+                break;
+            case 0x02:
+                PrintAndLogEx(SUCCESS, "    Limits....... %u ... %u", f->lowerlimit, f->upperlimit);
+                break;
+            case 0x03:
+            case 0x04:
+                PrintAndLogEx(SUCCESS, "    Records...... %u of %u, %u bytes each", f->currecords, f->maxrecords, f->recordsize);
+                break;
+            default:
+                break;
+        }
+
+        if (f->read_ok == false) {
+            PrintAndLogEx(WARNING, "    Contents..... " _YELLOW_("not read"));
+            continue;
+        }
+
+        if (f->type == 0x02) {
+            PrintAndLogEx(SUCCESS, "    Value........ " _GREEN_("%u") " (0x%08X)", f->value, f->value);
+            continue;
+        }
+
+        if (f->datalen == 0) {
+            PrintAndLogEx(SUCCESS, "    Contents..... " _YELLOW_("empty"));
+            continue;
+        }
+
+        PrintAndLogEx(NORMAL, "");
+        if ((f->type == 0x03 || f->type == 0x04) && f->recordsize > 0 && (f->datalen % f->recordsize) == 0) {
+            for (uint32_t r = 0; r < f->datalen / f->recordsize; r++) {
+                PrintAndLogEx(SUCCESS, "    Record %u", r);
+                print_buffer_with_offset(f->data + (r * f->recordsize), f->recordsize, 0, (r == 0));
+            }
+        } else {
+            print_buffer_with_offset(f->data, f->datalen, 0, true);
+        }
+    }
+}
+
+static int CmdHF14ADesView(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes view",
+                  "Print a DESFire card dump file (json)",
+                  "hf mfdes view -f hf-mfdes-01020304050607-dump.json");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<fn>", "Filename of dump"),
+        arg_lit0("v", "verbose", "Verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    bool verbose = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    desfire_dump_t *dump = calloc(1, sizeof(desfire_dump_t));
+    if (dump == NULL) {
+        PrintAndLogEx(ERR, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    size_t dlen = 0;
+    int res = loadFileJSON(filename, dump, sizeof(desfire_dump_t), &dlen, NULL);
+    if (res != PM3_SUCCESS) {
+        free(dump);
+        return res;
+    }
+
+    if (dlen != sizeof(desfire_dump_t)) {
+        PrintAndLogEx(ERR, "`" _YELLOW_("%s") "` is not a DESFire card dump", filename);
+        desfire_dump_free(dump);
+        free(dump);
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
+
+    if (dump->card_info.uidlen > 0) {
+        PrintAndLogEx(SUCCESS, "UID.............. " _GREEN_("%s"), sprint_hex_inrow(dump->card_info.uid, dump->card_info.uidlen));
+        // the file keeps ATQA in wire order, `hf 14a info` prints it the other way round
+        PrintAndLogEx(SUCCESS, "ATQA............. %02X %02X", dump->card_info.atqa[1], dump->card_info.atqa[0]);
+        PrintAndLogEx(SUCCESS, "SAK.............. %02X", dump->card_info.sak);
+        if (dump->card_info.ats_len > 0) {
+            PrintAndLogEx(SUCCESS, "ATS.............. %s", sprint_hex_inrow(dump->card_info.ats, dump->card_info.ats_len));
+        }
+    }
+
+    if (dump->versionlen > 0) {
+        PrintAndLogEx(SUCCESS, "Version.......... %s", sprint_hex_inrow(dump->version, dump->versionlen));
+    }
+
+    if (dump->signaturelen > 0) {
+        PrintAndLogEx(SUCCESS, "Signature........ %s", sprint_hex_inrow(dump->signature, dump->signaturelen));
+    }
+
+    if (dump->freemem_ok) {
+        PrintAndLogEx(SUCCESS, "Free memory...... " _GREEN_("%u") " bytes", dump->freemem);
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Applications") " ------------------------------");
+    PrintAndLogEx(SUCCESS, "%u application(s) plus the PICC level", dump->appcount);
+
+    DesfireViewPrintApp(&dump->picc);
+
+    for (uint8_t i = 0; i < dump->appcount && i < DESFIRE_MAX_APP_COUNT; i++) {
+        DesfireViewPrintApp(&dump->app[i]);
+    }
+
+    if (verbose) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "Loaded `" _YELLOW_("%s") "`", filename);
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    desfire_dump_free(dump);
+    free(dump);
     return PM3_SUCCESS;
 }
 
@@ -10000,6 +10761,7 @@ static command_t CommandTable[] = {
     {"getfileisoids",    CmdHF14ADesGetFileISOIDs,    IfPm3Iso14443a,  "Get File ISO IDs list"},
     {"lsfiles",          CmdHF14ADesLsFiles,          IfPm3Iso14443a,  "Show all files list"},
     {"dump",             CmdHF14ADesDump,             IfPm3Iso14443a,  "Dump all files"},
+    {"view",             CmdHF14ADesView,             AlwaysAvailable, "Display content from tag dump file"},
     {"createfile",       CmdHF14ADesCreateFile,       IfPm3Iso14443a,  "Create Standard/Backup File"},
     {"createvaluefile",  CmdHF14ADesCreateValueFile,  IfPm3Iso14443a,  "Create Value File"},
     {"createrecordfile", CmdHF14ADesCreateRecordFile, IfPm3Iso14443a,  "Create Linear/Cyclic Record File"},

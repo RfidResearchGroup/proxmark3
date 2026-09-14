@@ -342,6 +342,9 @@ hf mfdes chk -k 00000000000000000000000000000000 -j hf-mfdes-043240CAE45380-keys
 
 # and dump it
 hf mfdes dump -t 2tdea -k 00000000000000000000000000000000
+
+# to put the card back the way it was
+hf mfdes formatpicc -t 2tdea -k 00000000000000000000000000000000
 ```
 
 Without that `chk` run, application `112233` cannot be opened with the 2TDEA
@@ -525,8 +528,11 @@ The dump picks this file up without `--keys` because its name follows the same
 
 Things to read out of it:
 
-* **`FreeMem` is 896**, not the 2080 a blank card reports. The applications and
-  files took the rest.
+* **`FreeMem` is 896** with the two applications in place. Measured on this same
+  card: 2080 free before the example was built, 896 with it, and 2560 after
+  `hf mfdes formatpicc`. A format therefore reclaims space that creating and
+  deleting applications leaves behind -- 0 applications on its own does not mean
+  a fully free card.
 * **`NumKeysRaw` `83`** decodes to `KeyType: aes` (top bits 10), ISO file ids
   enabled (bit 5) and `NumKeys: 3`.
 * **Keys 1 and 2 of `112233` have a `Version` but no `Key`.** They exist, we

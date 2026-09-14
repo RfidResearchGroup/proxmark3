@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hf mfdes dump` - now walks the whole PICC and saves a `hf-mfdes-<UID>-dump.json` card image, picking up `hf-mfdes-<UID>-keys.json` on its own (@iceman1001)
+- Added `hf mfdes view` - print a DESFire card dump file, no device needed (@iceman1001)
+- Fixed `sprint_hex` - a buffer twice the old size, so printing a long block no longer runs off the end of the static buffer (@iceman1001)
 - Added `vigik_recover_pk.py` - recover public keys from RSA signatures (@iceman1001)
 - Fixed `hf mf autopwn` - a sector that cannot be cracked no longer discards the keys already recovered (@iceman1001)
 - Fixed `hf mf nested` - a NAK from the tag now ends the nonce collection instead of retrying until the client times out (@iceman1001)

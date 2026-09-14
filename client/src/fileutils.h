@@ -42,6 +42,102 @@ typedef struct {
     desfire_app_keys_t app[DESFIRE_MAX_APP_COUNT];
 } desfire_keys_dump_t;
 
+//-----------------------------------------------------------------------------
+// DESFire card image,  as written by `hf mfdes dump` and read back by
+// `hf mfdes view`.  See doc/mfdes_dump_format.md for the on-disk JSON schema.
+//
+// Contents of a file live in a heap buffer hanging off desfire_dump_file_t,
+// so the image can hold real file sizes without a multi-megabyte struct.
+// Whoever fills or loads one of these owns those buffers -- release them with
+// desfire_dump_free() before dropping the image.
+//-----------------------------------------------------------------------------
+
+// keys of one application.  The key type is a property of the application, not
+// of the individual key, so it lives in desfire_dump_app_t.
+//
+// A key version is readable without knowing the key, so the two are tracked
+// separately: `versionknown` without `present` is the normal case for a key we
+// found but could not recover
+typedef struct {
+    uint8_t present[DESFIRE_MAX_KEY_COUNT];         // 1 = we have the key value
+    uint8_t versionknown[DESFIRE_MAX_KEY_COUNT];    // 1 = we read the key version
+    uint8_t version[DESFIRE_MAX_KEY_COUNT];
+    uint8_t key[DESFIRE_MAX_KEY_COUNT][DESFIRE_MAX_KEY_SIZE];
+} desfire_dump_keys_t;
+
+typedef struct {
+    uint8_t num;                // file number,  0x00 ... 0x1F
+    uint16_t isofid;            // ISO file id,  0 = none
+    uint8_t type;               // raw file type byte,  0x00 ... 0x05
+    uint8_t commmode;           // raw file communication mode
+    uint16_t accessrights;      // raw access rights word
+    uint8_t addrights_len;
+    uint16_t addrights[16];     // additional access rights
+
+    uint32_t size;              // standard / backup data file size
+    uint32_t lowerlimit;        // value file
+    uint32_t upperlimit;
+    uint32_t value;
+    uint8_t limitedcredit;
+    uint32_t recordsize;        // record file
+    uint32_t maxrecords;
+    uint32_t currecords;
+
+    bool settings_ok;           // file settings were read
+
+    // read_ok false means "we could not read it",  which is not the same as
+    // "the file is empty".  Never fill `data` with zeros to paper over it,  a
+    // simulator would then confidently answer with contents the card never had.
+    bool read_ok;
+    uint32_t datalen;
+    uint8_t *data;              // heap,  NULL when read_ok is false
+} desfire_dump_file_t;
+
+// One application.  The PICC level is an application too -- AID 000000 -- and
+// uses this same struct, so key settings and keys are always stated against an
+// AID instead of floating loose at card level
+typedef struct {
+    uint32_t aid;
+    uint16_t isofid;
+    uint8_t dfname[16];
+    uint8_t dfnamelen;
+
+    uint8_t keysettings;
+    uint8_t numkeysraw;
+    uint8_t numkeys;
+    uint8_t keytype;            // DesfireCryptoAlgorithm, one per application
+    bool settings_ok;           // key settings were read
+    bool auth_ok;               // we authenticated to this application
+
+    desfire_dump_keys_t keys;
+
+    uint8_t filecount;
+    desfire_dump_file_t files[DESFIRE_MAX_FILE_COUNT];
+} desfire_dump_app_t;
+
+typedef struct {
+    // card identity only.  Anything key related belongs to an application
+    iso14a_card_select_t card_info;
+
+    uint8_t version[28];        // raw GetVersion answer
+    uint8_t versionlen;
+    uint8_t signature[56];      // NXP originality signature
+    uint8_t signaturelen;
+
+    uint32_t freemem;
+    bool freemem_ok;
+
+    desfire_dump_app_t picc;    // AID 000000,  written as Applications.000000
+
+    // real applications only,  the PICC is not counted here
+    uint8_t appcount;
+    desfire_dump_app_t app[DESFIRE_MAX_APP_COUNT];
+} desfire_dump_t;
+
+// release the per-file heap buffers inside an image.  Safe on a NULL pointer
+// and safe to call twice.  Does not free the image itself.
+void desfire_dump_free(desfire_dump_t *dump);
+
 typedef union {
     void *v;
     uint8_t *bytes;
@@ -51,6 +147,7 @@ typedef union {
     iso14a_mf_dump_ev1_t *mfc_ev1;
     iso15_tag_t *iso15;
     desfire_keys_dump_t *mfdes;
+    desfire_dump_t *mfdesdump;
 } udata_t;
 
 typedef enum {
@@ -79,6 +176,7 @@ typedef enum {
     jsfCustom,
     jsfMfDesfireKeys,
     jsfMfDesfireKeys_v2,
+    jsfMfDesfire_v1,
     jsfEM4x05,
     jsfEM4x69,
     jsfEM4x50,
