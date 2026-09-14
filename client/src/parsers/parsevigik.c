@@ -20,6 +20,7 @@
 
 #include <stdlib.h>
 #include <ctype.h>              // isdigit
+#include <stddef.h>             // offsetof
 #include <string.h>
 
 #include "commonutil.h"
@@ -57,8 +58,8 @@ const char *vigik_get_service(uint16_t service_code) {
         if (service_code == vigik_rsa_pk[i].code)
             return vigik_rsa_pk[i].desc;
 
-    //No match, return default
-    return vigik_rsa_pk[ARRAYLEN(vigik_rsa_pk) - 1].desc;
+    // the table ends with a NULL sentinel, so an unmatched code has no name
+    return "unknown service";
 }
 
 
@@ -620,6 +621,35 @@ static int vigik_print_urmet_captiv(const uint8_t *dump, size_t dumplen) {
     return PM3_SUCCESS;
 }
 
+// Factory state: both keys erased, access bits as delivered, data zeroed. A
+// sector like this was never written, as against one a dump failed to read.
+static bool vigik_sector_is_blank(const uint8_t *dump, size_t dumplen, uint8_t sector) {
+    size_t off = (size_t)sector * MFBLOCK_SIZE * 4;
+    if (off + (MFBLOCK_SIZE * 4) > dumplen) {
+        return false;
+    }
+    const uint8_t *tr = dump + off + (MFBLOCK_SIZE * 3);
+    if (tr[6] != 0xFF || tr[7] != 0x07 || tr[8] != 0x80) {
+        return false;
+    }
+    for (uint8_t k = 0; k < MIFARE_KEY_SIZE; k++) {
+        if (tr[k] != 0xFF || tr[10 + k] != 0xFF) {
+            return false;
+        }
+    }
+    for (size_t k = 0; k < MFBLOCK_SIZE * 3; k++) {
+        if (dump[off + k] != 0x00) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// sectors holding the VIGIK record, in the order they are concatenated
+static bool vigik_is_data_aid(uint16_t aid) {
+    return (aid == VIGIK_MAD_AID || aid == VIGIK_MAD_AID_ALT || aid == VIGIK_MAD_AID_ALT2);
+}
+
 bool is_valid_vigik_card(const uint8_t *dump, size_t dumplen) {
     if (dump == NULL || dumplen < sizeof(mad1_sector_t)) {
         return false;
@@ -677,9 +707,10 @@ int vigik_parser_parse(const uint8_t *dump, size_t dumplen) {
     memcpy(d.bytes + dlen, dump, MFBLOCK_SIZE * 3);
     dlen += MFBLOCK_SIZE * 3;
 
+    uint8_t last = 0;
     for (size_t i = 0; i < mad_list.len; i++) {
 
-        if (VIGIK_MAD_AID == mad_list.entries[i].aid || VIGIK_MAD_AID_ALT == mad_list.entries[i].aid) {
+        if (vigik_is_data_aid(mad_list.entries[i].aid)) {
 
             uint32_t offset = mad_list.entries[i].sector * MFBLOCK_SIZE * 4;
 
@@ -688,7 +719,26 @@ int vigik_parser_parse(const uint8_t *dump, size_t dumplen) {
             }
             memcpy(d.bytes + dlen, dump + offset, MFBLOCK_SIZE * 3);
             dlen += MFBLOCK_SIZE * 3;
+            last = mad_list.entries[i].sector;
         }
+    }
+
+    const size_t sigoff = offsetof(mfc_vigik_t, rsa_signature);
+    if (dlen < sigoff + VIGIK_SIG_LEN) {
+
+        size_t have = (dlen > sigoff) ? dlen - sigoff : 0;
+
+        bool rest_blank = true;
+        for (uint8_t sec = last + 1; sec < MIFARE_1K_MAXSECTOR; sec++) {
+            if (vigik_sector_is_blank(dump, dumplen, sec) == false) {
+                rest_blank = false;
+                break;
+            }
+        }
+
+        PrintAndLogEx(INFO, "Signature.......... %zu of %u bytes, %s", have, VIGIK_SIG_LEN,
+                      rest_blank ? _YELLOW_("and every later sector is factory blank")
+                                 : _YELLOW_("sectors missing from the dump"));
     }
 
     vigik_annotate(d.vigik);

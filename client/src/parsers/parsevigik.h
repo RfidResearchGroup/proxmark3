@@ -25,6 +25,7 @@
 // MAD application ids the VIGIK scheme claims
 #define VIGIK_MAD_AID       0x4910
 #define VIGIK_MAD_AID_ALT   0x4916
+#define VIGIK_MAD_AID_ALT2  0x4915
 
 // A key slot the schema does not pin down. Not a valid 48 bit key, so it can
 // never collide with one read off a card.
