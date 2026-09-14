@@ -3636,15 +3636,20 @@ out:
     // release allocated memory from BigBuff.
     BigBuf_free();
 
+    // Exactly one NG response per command. On the abort path (checked == -1,
+    // a new command arrived while the reader loop was still running) send only
+    // the abort reply - falling through to a second reply_ng left the transport
+    // with a stray unsolicited frame, which the higher-latency BLE/FPC bridge
+    // desyncs on (USB tolerates it).
     if (checked == -1) {
         reply_ng(CMD_LF_HITAG_READER, PM3_ESOFT, NULL, 0);
+    } else {
+        reply_ng(CMD_LF_HITAG_READER
+                 , (bSuccessful) ? PM3_SUCCESS : PM3_EFAILED
+                 , (uint8_t *)tag.sectors
+                 , tag_size
+                );
     }
-
-    reply_ng(CMD_LF_HITAG_READER
-             , (bSuccessful) ? PM3_SUCCESS : PM3_EFAILED
-             , (uint8_t *)tag.sectors
-             , tag_size
-            );
 
 }
 
@@ -3976,15 +3981,20 @@ out:
     // release allocated memory from BigBuff.
     BigBuf_free();
 
+    // Exactly one NG response per command. On the abort path (checked == -1,
+    // a new command arrived while the reader loop was still running) send only
+    // the abort reply - falling through to a second reply_ng left the transport
+    // with a stray unsolicited frame, which the higher-latency BLE/FPC bridge
+    // desyncs on (USB tolerates it).
     if (checked == -1) {
         reply_ng(CMD_LF_HITAG2_WRITE, PM3_ESOFT, NULL, 0);
+    } else {
+        reply_ng(CMD_LF_HITAG2_WRITE
+                 , (bSuccessful) ? PM3_SUCCESS : PM3_EFAILED
+                 , (uint8_t *)tag.sectors
+                 , tag_size
+                );
     }
-
-    reply_ng(CMD_LF_HITAG2_WRITE
-             , (bSuccessful) ? PM3_SUCCESS : PM3_EFAILED
-             , (uint8_t *)tag.sectors
-             , tag_size
-            );
 }
 
 
