@@ -29,8 +29,10 @@
 #define HEXACT_DATA_SECTOR_A     9
 #define HEXACT_DATA_SECTOR_B    11
 
+// bytes 6..8 are skipped: the separator is " - " on most cards but byte 8 is
+// 0x01 on at least one, and the published COGELEC fingerprints skip them too
 static const uint8_t hexact_marker[] = {
-    'h', 'e', 'x', 'a', 'c', 't', ' ', '-', ' ', 'c', 'o', 'g', 'e', 'l', 'e', 'c'
+    'h', 'e', 'x', 'a', 'c', 't', 0, 0, 0, 'c', 'o', 'g', 'e', 'l', 'e', 'c'
 };
 
 #define HEXACT_BLOCK0_SAK       0x88
@@ -179,6 +181,9 @@ bool is_valid_hexact_card(const uint8_t *dump, size_t dumplen) {
     }
 
     for (size_t i = 0; i < sizeof(hexact_marker); i++) {
+        if (hexact_marker[i] == 0) {
+            continue;
+        }
         if (tolower(p[i]) != hexact_marker[i]) {
             return false;
         }
@@ -194,6 +199,37 @@ int hexact_parser_parse(const uint8_t *dump, size_t dumplen) {
 
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, _CYAN_("Hexact / COGELEC / Intratone") " detected");
+
+    // sector 15 is written at the factory and then locked, so the case of the
+    // marker cannot change on a card and dates it
+    const uint8_t *mark = hexact_sector(dump, dumplen, HEXACT_ID_SECTOR, 0);
+    const uint8_t *spare = hexact_sector(dump, dumplen, HEXACT_DATA_SECTOR_B, 2);
+    // erased is FF, not zero, so an unpersonalised card must not read as in use
+    bool spare_used = false;
+    if (spare) {
+        for (uint8_t k = 0; k < MFBLOCK_SIZE; k++) {
+            if (spare[k] != 0x00 && spare[k] != 0xFF) {
+                spare_used = true;
+                break;
+            }
+        }
+    }
+    if (mark) {
+        PrintAndLogEx(INFO, "Generation......... %.6s, variant byte %02X, sector %u block 2 %s  ( %s )",
+                      (const char *)mark, mark[8], HEXACT_DATA_SECTOR_B,
+                      spare_used ? "in use" : "unused",
+                      (mark[0] == 'H') ? "older" : "Intratone / Hexact A");
+    }
+
+    if (dumplen > 5 && dump[5] == HEXACT_BLOCK0_SAK) {
+        PrintAndLogEx(INFO, "Block 0 SAK........ 0x%02X  ( " _YELLOW_("anti clone marker") " )", dump[5]);
+        PrintAndLogEx(INFO, "                    the tag answers 0x08, a clone written with this block 0 answers 0x88");
+    }
+
+    PrintAndLogEx(WARNING, _RED_("Anti clone counter measurements"));
+    PrintAndLogEx(INFO, "This vendor is reported to count reader scans in sector " _YELLOW_("%u"), HEXACT_DATA_SECTOR_B);
+    PrintAndLogEx(INFO, "Cloning or emulating a badge can desynchronise the original and lock you out");
+    PrintAndLogEx(NORMAL, "");
 
     const uint8_t *id0 = hexact_sector(dump, dumplen, HEXACT_ID_SECTOR, 0);
     const uint8_t *id1 = hexact_sector(dump, dumplen, HEXACT_ID_SECTOR, 1);
@@ -289,6 +325,15 @@ int hexact_parser_parse(const uint8_t *dump, size_t dumplen) {
 
     uint8_t total = 0;
     uint8_t pass = hexact_cross_check(rec, s0b2, uid, ser, &total, true);
+
+    if (spare_used) {
+        uint8_t pt[MFBLOCK_SIZE];
+        hexact_decrypt(spare, HEXACT_DATA_SECTOR_B, 2, pt);
+        PrintAndLogEx(INFO, "  sector %2u blk 2.. %s  " _YELLOW_("( other generation )"),
+                    HEXACT_DATA_SECTOR_B, 
+                    sprint_hex_inrow(pt, MFBLOCK_SIZE)
+                );
+    }
 
     PrintAndLogEx(INFO, "Cross checks....... %u / %u  ( %s )", pass, total,
                   (pass == total) ? _GREEN_("bound bytes agree with sector 0, 15 and the UID")
