@@ -441,6 +441,11 @@ void DesfirePrintContext(DesfireContext_t *ctx) {
 // during normal operation": the card saying it has damaged or disabled itself.
 // Those are never noise, so they are reported whether or not APDU logging is on.
 // Everything else is an ordinary refusal, and the caller decides what to say.
+// The command a chained 0xAF frame belongs to. 0xAF on its own says nothing
+// about which command was being continued, and that is exactly what you want to
+// know when a card dies on one.
+static uint8_t s_desfire_logical_cmd = 0;
+
 static void DesfireReportUnrecoverable(uint8_t cmd, uint8_t respcode) {
 
     if (respcode != MFDES_E_PICC_INTEGRITY &&
@@ -452,6 +457,15 @@ static void DesfireReportUnrecoverable(uint8_t cmd, uint8_t respcode) {
     }
 
     uint16_t sw = DESFIRE_GET_ISO_STATUS(respcode);
+
+    if (cmd == MFDES_ADDITIONAL_FRAME && s_desfire_logical_cmd != 0 && s_desfire_logical_cmd != MFDES_ADDITIONAL_FRAME) {
+        PrintAndLogEx(WARNING, "Desfire command " _YELLOW_("0x%02X") " frame " _YELLOW_("0xAF") " -> " _RED_("0x%02X") " %s"
+                      , s_desfire_logical_cmd
+                      , respcode
+                      , DesfireGetErrorString(PM3_EAPDU_FAIL, &sw));
+        return;
+    }
+
     PrintAndLogEx(WARNING, "Desfire command " _YELLOW_("0x%02X") " -> " _RED_("0x%02X") " %s"
                   , cmd
                   , respcode
@@ -970,6 +984,8 @@ static int DesfireExchangeExSplit(bool activate_field, DesfireContext_t *ctx, ui
 
     size_t databuflen = 0;
 
+    s_desfire_logical_cmd = cmd;
+
     switch (ctx->cmdSet) {
         case DCCNative:
         case DCCNativeISO:
@@ -1001,6 +1017,15 @@ static int DesfireExchangeExSplit(bool activate_field, DesfireContext_t *ctx, ui
             return PM3_EAPDU_FAIL;
             break;
     }
+
+    // the status the card gave, whichever path produced it. Every card error
+    // collapses to PM3_EAPDU_FAIL on the way out, so callers that want to name
+    // it have to read it from here
+    if (respcode != NULL) {
+        ctx->lastRespCode = *respcode;
+    }
+
+    s_desfire_logical_cmd = 0;
 
     free(databuf);
     return res;
@@ -2027,21 +2052,60 @@ int DesfireFillAppList(DesfireContext_t *dctx, PICCInfo_t *PICCInfo, AppListS ap
     for (int i = 0; i < buflen; i += 3)
         appList[i / 3].appNum = DesfireAIDByteToUint(&buf[i]);
 
+    // GetDFNames must never be sent inside an authenticated session.  Measured on
+    // three DESFire EV1 8K cards: with a session open, the card answers the first
+    // 0xAF continuation frame of the chained response with 0xC1
+    // PICC_INTEGRITY_ERROR, "PICC will be disabled", and is dead from then on.
+    // Unauthenticated the identical frames are answered normally.
+    //
+    // The EV1 datasheet never says how secure messaging applies across 0xAF
+    // frames; EV3 had to spell it out later (ev3.pdf 7.3.2.2), and EV2/EV3
+    // dropped the self-disable status codes altogether.
+    //
+    // Key settings bit 1 governs whether the directory commands need
+    // authentication, and its "needs auth" branch does not name GetDFNames at
+    // all (M134034 p.39), so no configuration obliges us to send it in-session.
+    // A card that refuses the plain command costs us the DF names; sending it
+    // authenticated costs the card.
+    //
+    // It is the PICC's session that has to go, not ours -- clearing the context
+    // alone would leave the card still authenticated and change nothing.
+    // SelectApplication is what ends it on the card side: "each
+    // SelectApplication command invalidates the current authentication status"
+    // (M134034 9.4.5).  Afterwards put the caller's session back.
+    DesfireSecureChannel savedchann = dctx->secureChannel;
+    uint32_t savedaid = dctx->selectedAID;
+    bool reauth = DesfireIsAuthenticated(dctx);
+
+    if (reauth && dctx->selectedDFNameLen > 0) {
+        // selected by DF name rather than by AID, so there is no AID to go back
+        // to. Not worth guessing with someone's card -- leave the names empty.
+        PrintAndLogEx(DEBUG, "Selected by DF name, skipping the DF name list");
+        reauth = false;
+        goto dfnames_done;
+    }
+
+    if (reauth) {
+        int sres = DesfireSelectAIDHex(dctx, 0x000000, false, 0);
+        if (sres != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Could not drop the PICC session, skipping the DF names");
+            reauth = false;
+            goto dfnames_done;
+        }
+    }
+
     // result bytes: 3, 2, 1-16. total record size = 24
     res = DesfireGetDFList(dctx, buf, &buflen);
     if (res != PM3_SUCCESS) {
-        // Same hazard as GetFileISOIDList below: the PICC ends the authentication
-        // on a command error, so drop our side of the session too. Left alone,
-        // every following command is still framed as MACed against a session the
-        // card has already thrown away, and the card sees a run of frames whose
-        // integrity it cannot verify. Callers that keep using the card
-        // re-authenticate.
+        // an error ends the authentication on the PICC as well, so our side is
+        // down either way.  Callers that keep using the card re-authenticate.
         dctx->secureChannel = DACNone;
         uint16_t dfsw = DESFIRE_GET_ISO_STATUS(dctx->lastRespCode);
-        PrintAndLogEx(WARNING, "Desfire GetDFList command " _RED_("error") ". Result: %d, card said " _RED_("0x%02X") " %s. Session dropped by the PICC"
+        PrintAndLogEx(DEBUG, "Desfire GetDFList command " _RED_("error") ". Result: %d, card said " _RED_("0x%02X") " %s"
                       , res
                       , dctx->lastRespCode
                       , DesfireGetErrorString(PM3_EAPDU_FAIL, &dfsw));
+
     } else if (buflen > 0) {
         for (int i = 0; i < buflen; i++) {
             int indx = AppListSearchAID(DesfireAIDByteToUint(&buf[i * 24 + 1]), appList, PICCInfo->appCount);
@@ -2054,6 +2118,24 @@ int DesfireFillAppList(DesfireContext_t *dctx, PICCInfo_t *PICCInfo, AppListS ap
                     16
                 );
             }
+        }
+    }
+
+dfnames_done:
+
+    if (reauth) {
+        // Back to the session the caller handed us, on whatever was selected
+        // then.  This is not always the PICC: the issuer info path selects and
+        // authenticates an application before it gets here, and re-authenticating
+        // AID 000000 with that application's key would simply fail.
+        int rres = DesfireSelectAIDHex(dctx, savedaid, false, 0);
+        if (rres == PM3_SUCCESS) {
+            rres = DesfireAuthenticate(dctx, savedchann, false);
+        }
+
+        if (rres != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Could not restore the session on %06X after reading the DF names, continuing without it", savedaid);
+            DesfireClearSession(dctx);
         }
     }
 

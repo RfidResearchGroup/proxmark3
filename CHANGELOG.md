@@ -3,6 +3,12 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mfdes` - GetDFNames is no longer sent inside an authenticated session, which permanently disabled DESFire EV1 cards (@iceman1001)
+- Added `hf mfdes` - the five DESFire status codes that mean the card damaged or disabled itself are now named instead of reported as `-20` (@iceman1001)
+- Fixed `hf mfdes` - a command error now drops the client's secure channel, since the PICC has already ended the authentication (@iceman1001)
+- Fixed `hf mfdes` - file settings that could not be read are no longer reported and dumped as a zero byte standard data file (@iceman1001)
+- Fixed `hf mfdes pc` - the proximity check commands now check the card's status byte instead of treating an error as success (@iceman1001)
+- Changed `hf mfdes sim` - now runs through the shared ISO14443-A simulation loop as tag type 3 (@iceman1001)
 - Added `hf mfdes eload/esave/eview` - load a DESFire card dump into emulator memory (@iceman1001)
  - Fixed `PLATFORM=PM3ICOPYX` - builds again, it has no FPGA power switch and the AT91 GPIO layer used the pin unconditionally (@iceman1001)
 - Fixed `fpga_compress` - PM3ULTIMATE builds again, its bitstreams are an exact multiple of the interleave size (@iceman1001)
