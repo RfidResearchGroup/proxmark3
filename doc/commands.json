@@ -8566,6 +8566,18 @@
             ],
             "usage": "hf mfdes setconfig [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--aid <hex>] [--isoid <hex>] [-p <hex>] [-d <hex>]"
         },
+        "hf mfdes sim": {
+            "command": "hf mfdes sim",
+            "description": "Simulate the DESFire card image currently in emulator memory. Load one first with `hf mfdes eload`, and read back what a reader changed with `hf mfdes esave`",
+            "notes": [
+                "hf mfdes sim"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hf mfdes sim [-h]"
+        },
         "hf mfdes test": {
             "command": "hf mfdes test",
             "description": "Regression crypto tests",
@@ -16602,8 +16614,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 924,
+        "commands_extracted": 925,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-09-14T17:45:11+00:00"
+        "extracted_on": "2026-09-14T17:55:25+00:00"
     }
 }

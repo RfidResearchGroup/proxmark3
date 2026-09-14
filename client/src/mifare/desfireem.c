@@ -601,6 +601,12 @@ void desfire_em_print(const uint8_t *img, size_t imglen) {
 
     const desfire_em_hdr_t *hdr = (const desfire_em_hdr_t *)img;
 
+    if (hdr->magic != DESFIRE_EM_MAGIC) {
+        PrintAndLogEx(WARNING, "No DESFire card image here, magic is " _YELLOW_("%08X"), hdr->magic);
+        PrintAndLogEx(HINT, "Hint: load one with " _YELLOW_("`hf mfdes eload -f <fn>`"));
+        return;
+    }
+
     PrintAndLogEx(INFO, "--- " _CYAN_("DESFire card image") " -----------------------");
     PrintAndLogEx(SUCCESS, "Generation....... %s", desfire_em_gen_str(hdr->generation));
     PrintAndLogEx(SUCCESS, "UID.............. %s", sprint_hex_inrow(hdr->uid, hdr->uidlen));

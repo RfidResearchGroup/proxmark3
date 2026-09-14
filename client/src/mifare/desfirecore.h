@@ -95,6 +95,10 @@ typedef struct {
 typedef struct {
     uint8_t fileNum;
     uint16_t fileISONum;
+    // false means GetFileSettings failed for this file, so fileSettings is
+    // zeros and not a 0 byte standard data file.  Callers must not read
+    // fileSettings without checking this first
+    bool fileSettingsRead;
     FileSettings_t fileSettings;
 } FileListElm_t;
 

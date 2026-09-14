@@ -661,7 +661,14 @@ static int DesfirePCRun(DesfireContext_t *dctx, const uint8_t proximity_key[MFDE
     size_t prepare_resp_len = 0;
     uint8_t respcode = 0xFF;
     res = DesfireExchangeEx(activate_field, dctx, MFDES_PREPARE_PC, NULL, 0, &respcode, prepare_resp, &prepare_resp_len, true, 0);
-    if (res != PM3_SUCCESS) {
+    if (res != PM3_SUCCESS || respcode != MFDES_S_OPERATION_OK) {
+        // DesfireExchangeEx reports the transport result; the card's own status
+        // comes back in respcode and an error there still reads as success. It
+        // also ends the authentication, so drop our side of the session.
+        if (res == PM3_SUCCESS) {
+            res = PM3_EAPDU_FAIL;
+        }
+        DesfireClearSession(dctx);
         uint16_t sw = status(respcode);
         PrintAndLogEx(ERR, "Prepare proximity check command failed. Result: %d %s", res, DesfireGetErrorString(res, &sw));
         goto out;
@@ -715,7 +722,11 @@ static int DesfirePCRun(DesfireContext_t *dctx, const uint8_t proximity_key[MFDE
         respcode = 0xFF;
 
         res = DesfireExchange(dctx, MFDES_PROXIMITY_CHECK, round_payload, challenge_part_len + 1, &respcode, round_resp, &round_resp_len);
-        if (res != PM3_SUCCESS) {
+        if (res != PM3_SUCCESS || respcode != MFDES_S_OPERATION_OK) {
+            if (res == PM3_SUCCESS) {
+                res = PM3_EAPDU_FAIL;
+            }
+            DesfireClearSession(dctx);
             uint16_t sw = status(respcode);
             PrintAndLogEx(ERR, "Proximity check round %u command failed. Result: %d %s", (unsigned int)round + 1, res, DesfireGetErrorString(res, &sw));
             goto out;
@@ -767,7 +778,11 @@ static int DesfirePCRun(DesfireContext_t *dctx, const uint8_t proximity_key[MFDE
     size_t verify_resp_len = 0;
     respcode = 0xFF;
     res = DesfireExchange(dctx, MFDES_VERIFY_PC, verify_cmd_mac, sizeof(verify_cmd_mac), &respcode, verify_resp, &verify_resp_len);
-    if (res != PM3_SUCCESS) {
+    if (res != PM3_SUCCESS || respcode != MFDES_S_OPERATION_OK) {
+        if (res == PM3_SUCCESS) {
+            res = PM3_EAPDU_FAIL;
+        }
+        DesfireClearSession(dctx);
         uint16_t sw = status(respcode);
         PrintAndLogEx(ERR, "Verify proximity check command failed. Result: %d %s", res, DesfireGetErrorString(res, &sw));
         goto out;
@@ -1468,6 +1483,13 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
         if (res == PM3_SUCCESS) {
             if (filescount > 0) {
                 for (int i = 0; i < filescount; i++) {
+                    if (fileList[i].fileSettingsRead == false) {
+                        // settings we could not read tell us nothing about which
+                        // keys the file uses, so keep every key in the search
+                        for (int k = 0; k < DESFIRE_MAX_KEY_COUNT; k++)
+                            usedkeys[k] = 1;
+                        break;
+                    }
                     if (fileList[i].fileSettings.rAccess < 0x0e)
                         usedkeys[fileList[i].fileSettings.rAccess] = 1;
                     if (fileList[i].fileSettings.wAccess < 0x0e)
@@ -3128,6 +3150,7 @@ static int DesfireGetDelegatedInfoNoFieldOn(DesfireContext_t *dctx, uint16_t dam
     }
 
     if (respcode != MFDES_S_OPERATION_OK) {
+        DesfireClearSession(dctx);
         return PM3_EAPDU_FAIL;
     }
 
@@ -8156,8 +8179,13 @@ static int CmdHF14ADesLsFiles(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "------------------------------------------ " _CYAN_("File list") " -----------------------------------------------------");
-    for (int i = 0; i < filescount; i++)
+    for (int i = 0; i < filescount; i++) {
+        if (FileList[i].fileSettingsRead == false) {
+            PrintAndLogEx(WARNING, "File " _YELLOW_("0x%02x") " settings could not be read", FileList[i].fileNum);
+            continue;
+        }
         DesfirePrintFileSettingsTable((i == 0), FileList[i].fileNum, isopresent, FileList[i].fileISONum, &FileList[i].fileSettings);
+    }
 
     DropField();
     return PM3_SUCCESS;
@@ -8343,7 +8371,15 @@ static int DesfireDumpFindApp(const AppListS appList, size_t appcount, const Des
     return -1;
 }
 
-static void DesfireDumpFillFileSettings(const FileSettings_t *fs, desfire_dump_file_t *f) {
+static void DesfireDumpFillFileSettings(const FileSettings_t *fs, desfire_dump_file_t *f, bool settings_ok) {
+
+    // Settings we never read are not a 0 byte standard data file. Leave the
+    // whole record at its defaults and say so, the same way read_ok does for
+    // contents -- a simulator built from this image must not invent a file.
+    if (settings_ok == false) {
+        f->settings_ok = false;
+        return;
+    }
 
     f->type = fs->fileType;
     f->commmode = fs->fileCommMode;
@@ -8583,8 +8619,15 @@ static int DesfireDumpCollectApp(DesfireContext_t *dctx, desfire_dump_app_t *app
         desfire_dump_file_t *f = &app->files[app->filecount];
         f->num = FileList[i].fileNum;
         f->isofid = FileList[i].fileISONum;
-        DesfireDumpFillFileSettings(&FileList[i].fileSettings, f);
+        DesfireDumpFillFileSettings(&FileList[i].fileSettings, f, FileList[i].fileSettingsRead);
         app->filecount++;
+
+        if (FileList[i].fileSettingsRead == false) {
+            // without the settings we do not know the file's type, so there is
+            // no sensible read command to send
+            PrintAndLogEx(WARNING, "File " _YELLOW_("0x%02x") " settings could not be read, contents skipped", f->num);
+            continue;
+        }
 
         session_lost = (DesfireDumpReadFile(dctx, &FileList[i].fileSettings, f, maxlength, verbose) == PM3_ESOFT);
 
@@ -9041,6 +9084,81 @@ static void DesfireViewPrintApp(const desfire_dump_app_t *app) {
             print_buffer_with_offset(f->data, f->datalen, 0, true);
         }
     }
+}
+
+static int CmdHF14ADesSim(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes sim",
+                  "Simulate the DESFire card image currently in emulator memory.\n"
+                  "Load one first with `hf mfdes eload`, and read back what a reader\n"
+                  "changed with `hf mfdes esave`.\n"
+                  "\n"
+                  "This is `hf 14a sim -t 3` with the DESFire command set behind it:\n"
+                  "UID, ATQA, SAK and ATS all come out of the loaded image",
+                  "hf mfdes sim\n"
+                  "hf mfdes sim -n 1    -> stop after the first reader session\n");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("n", "num", "<dec>", "Exit after <num> commands have been answered. 0 = infinite"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint8_t exit_after = arg_get_int_def(ctx, 1, 0);
+    CLIParserFree(ctx);
+
+    // Same payload the 14a simulation takes -- there is one 14443a tag loop on
+    // the device and this is it. Tag type 3 is MIFARE DESFire; the UID is left
+    // for the device to lift out of the card image header, which is why no UID
+    // is supplied here.
+    struct {
+        uint8_t tagtype;
+        uint16_t flags;
+        uint8_t uid[10];
+        uint8_t exitAfter;
+        uint8_t rats[20];
+        uint8_t ulauth_1a1_len;
+        uint8_t ulauth_1a2_len;
+        uint8_t ulauth_1a1[16];
+        uint8_t ulauth_1a2[16];
+        bool ulauth_1a2_mirror;
+    } PACKED payload;
+
+    memset(&payload, 0x00, sizeof(payload));
+    payload.tagtype = 3;
+    payload.exitAfter = exit_after;
+    FLAG_SET_UID_IN_EMUL(payload.flags);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO14443A_SIMULATE, (uint8_t *)&payload, sizeof(payload));
+
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
+
+    PacketResponseNG resp;
+    bool keypress = kbd_enter_pressed();
+    while (keypress == false) {
+
+        keypress = kbd_enter_pressed();
+
+        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == false) {
+            continue;
+        }
+
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Simulation stopped");
+            PrintAndLogEx(HINT, "Hint: load a card image with " _YELLOW_("`hf mfdes eload -f <fn>`"));
+            return resp.status;
+        }
+        break;
+    }
+
+    if (keypress) {
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+    }
+
+    PrintAndLogEx(INFO, "Done!");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfdes esave`") " to see what a reader changed");
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14ADesELoad(const char *Cmd) {
@@ -11018,6 +11136,7 @@ static command_t CommandTable[] = {
     {"eload",            CmdHF14ADesELoad,            IfPm3Iso14443a,  "Upload file into emulator memory"},
     {"esave",            CmdHF14ADesESave,            IfPm3Iso14443a,  "Save emulator memory to file"},
     {"eview",            CmdHF14ADesEView,            IfPm3Iso14443a,  "View emulator memory"},
+    {"sim",              CmdHF14ADesSim,              IfPm3Iso14443a,  "Simulate DESFire card from emulator memory"},
     {"createfile",       CmdHF14ADesCreateFile,       IfPm3Iso14443a,  "Create Standard/Backup File"},
     {"createvaluefile",  CmdHF14ADesCreateValueFile,  IfPm3Iso14443a,  "Create Value File"},
     {"createrecordfile", CmdHF14ADesCreateRecordFile, IfPm3Iso14443a,  "Create Linear/Cyclic Record File"},

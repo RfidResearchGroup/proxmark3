@@ -72,7 +72,7 @@ endif
 SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c lfadc.c
 SRC_HF = hfops.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
-SRC_ISO14443a = iso14443a.c secc.c mifareutil.c mifarecmd.c epa.c mifaresim.c
+SRC_ISO14443a = iso14443a.c secc.c mifareutil.c mifarecmd.c epa.c mifaresim.c desfiresim.c
 
 ifneq (,$(findstring WITH_SMARTCARD,$(APP_CFLAGS)))
     SRC_ISO14443a += sam_common.c sam_mfc.c sam_seos.c sam_sc.c

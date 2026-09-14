@@ -821,6 +821,7 @@ Check column "offline" for their availability.
 |`hf mfdes eload         `|N       |`Upload file into emulator memory`
 |`hf mfdes esave         `|N       |`Save emulator memory to file`
 |`hf mfdes eview         `|N       |`View emulator memory`
+|`hf mfdes sim           `|N       |`Simulate DESFire card from emulator memory`
 |`hf mfdes createfile    `|N       |`Create Standard/Backup File`
 |`hf mfdes createvaluefile`|N       |`Create Value File`
 |`hf mfdes createrecordfile`|N       |`Create Linear/Cyclic Record File`

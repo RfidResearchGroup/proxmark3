@@ -86,6 +86,10 @@ typedef struct {
     uint8_t sessionKeyEnc[DESFIRE_MAX_KEY_SIZE];  // look at mifare4.h - mf4Session_t
     uint8_t lastIV[DESFIRE_MAX_KEY_SIZE];
     uint8_t lastCommand;
+    // status byte of the last answer the card gave. Every card error collapses
+    // to PM3_EAPDU_FAIL on the way out, so this is the only place the caller can
+    // find out which one it was
+    uint8_t lastRespCode;
     bool lastRequestZeroLen;
     uint16_t cmdCntr;   // for AES
     uint8_t TI[4];      // for AES

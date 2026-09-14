@@ -1071,7 +1071,7 @@ int CmdHF14ASim(const char *Cmd) {
                   "Use type 7 for Mifare Ultralight EV1, Amiibo (NTAG215 pack 0x8080)",
                   "hf 14a sim -t 1 --uid 11223344  -> MIFARE Classic 1k\n"
                   "hf 14a sim -t 2                 -> MIFARE Ultralight\n"
-                  "hf 14a sim -t 3                 -> MIFARE Desfire\n"
+                  "hf 14a sim -t 3                 -> MIFARE DESFire (card image from `hf mfdes eload`)\n"
                   "hf 14a sim -t 4                 -> ISO/IEC 14443-4\n"
                   "hf 14a sim -t 5                 -> MIFARE Tnp3xxx\n"
                   "hf 14a sim -t 6                 -> MIFARE Mini\n"
