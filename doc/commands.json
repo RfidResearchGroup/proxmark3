@@ -11035,7 +11035,7 @@
         },
         "hw bwm powersave": {
             "command": "hw bwm powersave",
-            "description": "Show or set the BWM (ESP32) power-save switch, stored on the BWM in NVS. Default is on: the ESP scales its clock down and light-sleeps between link traffic, and advertises once every 3 s (a phone needs a few seconds to find it). off pins the ESP at full clock, no sleep, fast advertising - the stock behaviour - for A/B power measurements or when chasing a link problem. Applies at once and survives reboots. PM5 only.",
+            "description": "Show or set the BWM (ESP32) power-save switch, stored on the BWM in NVS. Default is on: the ESP scales its clock down and light-sleeps between link traffic, and after 30 s of fast advertising (boot, disconnect) advertises once a second. off pins the ESP at full clock, no sleep, fast advertising throughout - the stock behaviour - for A/B power measurements or when chasing a link problem. Applies at once and survives reboots. PM5 only.",
             "notes": [
                 "hw bwm powersave -> show the current state",
                 "hw bwm powersave off -> stock always-on behaviour",
@@ -16658,9 +16658,7 @@
     },
     "metadata": {
         "commands_extracted": 928,
-        "commands_extracted": 928,
-        "commands_extracted": 928,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-09-14T17:55:25+00:00"
+        "extracted_on": "2026-09-15T19:19:17+00:00"
     }
 }

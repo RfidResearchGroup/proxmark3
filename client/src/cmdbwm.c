@@ -745,10 +745,10 @@ static int CmdBwmPowerSave(const char *Cmd) {
         CLIParserInit(&ctx, "hw bwm powersave",
                       "Show or set the BWM (ESP32) power-save switch, stored on the BWM in NVS.\n"
                       "Default is " _GREEN_("on") ": the ESP scales its clock down and light-sleeps\n"
-                      "between link traffic, and advertises once every 3 s (a phone needs a few\n"
-                      "seconds to find it). " _YELLOW_("off") " pins the ESP at full clock, no sleep, fast\n"
-                      "advertising - the stock behaviour - for A/B power measurements or when\n"
-                      "chasing a link problem. Applies at once and survives reboots. PM5 only.",
+                      "between link traffic, and after 30 s of fast advertising (boot, disconnect)\n"
+                      "advertises once a second. " _YELLOW_("off") " pins the ESP at full clock, no sleep,\n"
+                      "fast advertising throughout - the stock behaviour - for A/B power measurements\n"
+                      "or when chasing a link problem. Applies at once and survives reboots. PM5 only.",
                       "hw bwm powersave        --> show the current state\n"
                       "hw bwm powersave off    --> stock always-on behaviour\n"
                       "hw bwm powersave on     --> re-enable power saving");
