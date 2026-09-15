@@ -65,6 +65,12 @@
 // 64.  Rounding the same way keeps GetFreeMem card-shaped.  Note the rounding is
 // invisible to a reader otherwise -- GetFileSettings reports the size the file
 // was created with, also measured.
+// PICC configuration, set by SetConfiguration option 0x00 and kept in hdr.flags.
+// Both are one way on a card -- "cannot be reset" -- and the bit positions are
+// the config byte's own, so the byte is stored as it arrives.
+#define DESFIRE_EM_PICC_NO_FORMAT   (1 << 0)    // FormatPICC refused from here on
+#define DESFIRE_EM_PICC_RANDOM_UID  (1 << 1)    // anticollision shows a random id
+
 #define DESFIRE_EM_GRANULE          32
 #define DESFIRE_EM_ROUNDUP(x)       (((x) + (DESFIRE_EM_GRANULE - 1)) & ~(DESFIRE_EM_GRANULE - 1))
 
@@ -101,7 +107,7 @@ typedef struct {
     uint32_t magic;             // DESFIRE_EM_MAGIC
     uint8_t  layout;            // DESFIRE_EM_LAYOUT_VERSION
     uint8_t  generation;        // desfire_em_gen_t
-    uint8_t  flags;             // RFU
+    uint8_t  flags;             // desfire_em_picc_flags_t
     uint8_t  rfu0;
 
     // card identity, straight from the dump

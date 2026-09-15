@@ -787,7 +787,8 @@ static uint8_t desfire_sim_hdrlen(uint8_t cmd) {
         case MFDES_GET_VALUE:
         case MFDES_CHANGE_FILE_SETTINGS:
         case MFDES_CHANGE_KEY:
-            return 1;               // file number, or key number, only
+        case MFDES_CHANGE_CONFIGURATION:
+            return 1;               // file, key or option number only
         default:
             return 0;
     }
@@ -826,6 +827,7 @@ static bool desfire_sim_cmd_unwraps_own(uint8_t cmd) {
     return (desfire_sim_cmd_is_write(cmd) ||
             cmd == MFDES_CHANGE_FILE_SETTINGS ||
             cmd == MFDES_CHANGE_KEY_SETTINGS ||
+            cmd == MFDES_CHANGE_CONFIGURATION ||
             cmd == MFDES_CHANGE_KEY);
 }
 
@@ -1906,6 +1908,77 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
             return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, buf, sizeof(buf));
         }
 
+        case MFDES_CHANGE_CONFIGURATION: {
+
+            // "Master key authentication on card level needs to be performed
+            // prior to the SetConfiguration command" -- M134034 9.4.9
+            if (st->authenticated == false || st->selected != 0 || st->auth_keyno != 0) {
+                return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
+            }
+
+            if (inlen < 1) {
+                return desfire_sim_status(out, MFDES_E_LENGTH);
+            }
+
+            // the option byte travels in the clear, the data behind it does not
+            uint8_t buf[DESFIRE_SIM_WRITE_MAX] = {0};
+            if (inlen > sizeof(buf)) {
+                return desfire_sim_status(out, MFDES_E_LENGTH);
+            }
+
+            memcpy(buf, in, inlen);
+            uint16_t len = inlen;
+
+            if (desfire_sim_unwrap(st, cmd, DESFIRE_SIM_COMM_FULL, buf, &len) == false) {
+                desfire_sim_auth_clear(st);
+                return desfire_sim_status(out, MFDES_E_INTEGRITY_ERROR);
+            }
+
+            if (len < 2) {
+                return desfire_sim_status(out, MFDES_E_LENGTH);
+            }
+
+            desfire_em_hdr_t *w = (desfire_em_hdr_t *)hdr;
+
+            switch (buf[0]) {
+
+                case 0x00: {
+                    // the configuration byte.  Both bits it defines are one way
+                    // on a card -- "cannot be reset" -- so they are only ever
+                    // set here, never cleared.
+                    w->flags |= (buf[1] & (DESFIRE_EM_PICC_NO_FORMAT | DESFIRE_EM_PICC_RANDOM_UID));
+                    break;
+                }
+
+                case 0x02: {
+                    // the user defined ATS, TL first and without the CRC the
+                    // card appends.  The spec checks its length and nothing
+                    // else, so neither does this.
+                    uint16_t n = len - 1;
+                    if (n == 0 || n > sizeof(w->ats)) {
+                        return desfire_sim_status(out, MFDES_E_LENGTH);
+                    }
+
+                    memset(w->ats, 0, sizeof(w->ats));
+                    memcpy(w->ats, buf + 1, n);
+                    w->atslen = n;
+                    break;
+                }
+
+                case 0x01:
+                // the default key new applications are created with.  Storing
+                // it needs two fields the card image does not have, and adding
+                // them moves every table in it, so this is refused rather than
+                // silently ignored -- a reader that sets a default key and then
+                // finds new applications keyed with zeros is worse off than one
+                // told the option is not there.
+                default:
+                    return desfire_sim_status(out, MFDES_E_PARAMETER_ERROR);
+            }
+
+            return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, NULL, 0);
+        }
+
         case MFDES_READSIG: {
 
             // one byte selects which signature, and EV1 only has the one
@@ -2693,6 +2766,11 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
                 return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
             }
 
+            // SetConfiguration can switch this command off for good
+            if (hdr->flags & DESFIRE_EM_PICC_NO_FORMAT) {
+                return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+            }
+
             desfire_sim_format(st);
             return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, NULL, 0);
         }
@@ -2785,6 +2863,9 @@ static bool desfire_sim_init(void) {
     return true;
 }
 
+// The three random id bytes, drawn when a simulation starts.
+static uint8_t s_sim_randomid[3];
+
 static void desfire_sim_identity(uint8_t *uid, uint8_t *uidlen, uint8_t *atqa, uint8_t *sak, uint8_t *ats, uint8_t *atslen) {
 
     if (s_ready == false) {
@@ -2793,17 +2874,37 @@ static void desfire_sim_identity(uint8_t *uid, uint8_t *uidlen, uint8_t *atqa, u
 
     const desfire_em_hdr_t *hdr = s_st.hdr;
 
-    if (uid && hdr->uidlen <= sizeof(hdr->uid)) {
-        memcpy(uid, hdr->uid, hdr->uidlen);
+    // With random ID switched on, anticollision shows a 4 byte id whose first
+    // byte is the 0x08 random tag and whose other three are the random number,
+    // and a single cascade level is all that is used (M134034 6.5).  The real
+    // UID is then only reachable through GetCardUID, which is what that command
+    // is for.  A card draws the number at RF reset; the nearest thing here is
+    // the start of a simulation, since that is when the answers are built.
+    bool randomid = (hdr->flags & DESFIRE_EM_PICC_RANDOM_UID) != 0;
+
+    if (uid) {
+        if (randomid) {
+            uid[0] = 0x08;
+            uid[1] = s_sim_randomid[0];
+            uid[2] = s_sim_randomid[1];
+            uid[3] = s_sim_randomid[2];
+        } else if (hdr->uidlen <= sizeof(hdr->uid)) {
+            memcpy(uid, hdr->uid, hdr->uidlen);
+        }
     }
 
     if (uidlen) {
-        *uidlen = hdr->uidlen;
+        *uidlen = randomid ? 4 : hdr->uidlen;
     }
 
     if (atqa) {
         atqa[0] = hdr->atqa[0];
         atqa[1] = hdr->atqa[1];
+
+        // the UID size bits of ATQA byte 0 have to follow the id actually shown
+        if (randomid) {
+            atqa[0] &= ~0xC0;
+        }
     }
 
     if (sak) {
@@ -2961,6 +3062,13 @@ void SimulateDesfireTag(void) {
     // keep emulator memory, that is where eload put the card image
     BigBuf_free_keep_EM();
 
+    // A card draws its random id at RF reset; a simulation draws it here, which
+    // is the moment the anticollision answers are built.
+    uint32_t seed = GetTickCount();
+    s_sim_randomid[0] = (seed >> 16) & 0xFF;
+    s_sim_randomid[1] = (seed >> 8) & 0xFF;
+    s_sim_randomid[2] = seed & 0xFF;
+
     if (desfire_sim_init() == false) {
         Dbprintf("No DESFire card image in emulator memory");
         Dbprintf("Load one with " _YELLOW_("`hf mfdes eload -f <fn>`"));
@@ -2978,6 +3086,10 @@ void SimulateDesfireTag(void) {
 
     uint16_t flags = FLAG_ATS_IN_DATA;
     switch (uidlen) {
+        case 4:
+            // a random id is 4 bytes and uses a single cascade level
+            flags |= FLAG_4B_UID_IN_DATA;
+            break;
         case 7:
             flags |= FLAG_7B_UID_IN_DATA;
             break;

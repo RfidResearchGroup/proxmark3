@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hf mfdes sim` - SetConfiguration is answered, so a reader can disable FormatPICC, switch the card to a random id, or give it a user defined ATS (@iceman1001)
 - Added `hf mfdes sim` - ReadSignature is answered for a card image of a generation that has one, and refused the way a genuine EV1 refuses it (@iceman1001)
 - Added `hf mfdes sim` - GetKeyVersion is answered, so a reader can read the version of any key without knowing the key itself (@iceman1001)
 - Added `hf mfdes sim` - ChangeKeySettings is answered, enciphered and master key only, and clearing the configuration changeable bit is one way as it is on a card (@iceman1001)
