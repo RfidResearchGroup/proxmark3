@@ -113,6 +113,10 @@ endif
 ifneq (,$(findstring WITH_STANDALONE_HF_CRAFTBYTE,$(APP_CFLAGS)))
     SRC_STANDALONE = hf_craftbyte.c
 endif
+# WITH_STANDALONE_HF_DFCSIM
+ifneq (,$(findstring WITH_STANDALONE_HF_DFCSIM,$(APP_CFLAGS)))
+    SRC_STANDALONE = hf_dfcsim.c
+endif
 # WITH_STANDALONE_HF_DOEGOX_AUTH0
 ifneq (,$(findstring WITH_STANDALONE_HF_DOEGOX_AUTH0,$(APP_CFLAGS)))
     SRC_STANDALONE = hf_doegox_auth0.c

@@ -60,6 +60,7 @@ As such the information inside may be false or hallucinated.
 | HF_CARDHOPPER | [CardHopper Relay](../../doc/standalone/hf_cardhopper.md) | Long-range 14A relay over serial/IP | RDV4 (BT) |
 | HF_COLIN | [VIGIKPWN](../../doc/standalone/hf_colin.md) | MIFARE Classic ultra-fast sniff/sim/clone | RDV4 (flash) |
 | HF_CRAFTBYTE | [CraftByte UID Stealer](../../doc/standalone/hf_craftbyte.md) | Scan and emulate ISO14443A UIDs | Generic |
+| HF_DFCSIM | [DESFire DFCB Simulator](../../doc/standalone/hf_dfcsim.md) | Simulate one persistent DFCB credential | RDV4 (flash) |
 | HF_DOEGOX_AUTH0 | [UL-C/UL-AES Unlocker](../../doc/standalone/hf_doegox_auth0.md) | Unlock password-protected Ultralight tags | RDV4 (antenna) |
 | HF_DOEGOX_COMMIT | [DESFire suspended commit](../../doc/standalone/hf_doegox_commit.md) | DESFire Suspend commit without relay | RDV4 (antenna) |
 | HF_EMVPNG | [EMV Visa Reader/Emulator](../../doc/standalone/hf_emvpng.md) | Read Visa EMV cards and emulate transactions | RDV4 (flash) |

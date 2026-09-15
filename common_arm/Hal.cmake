@@ -173,7 +173,7 @@ endif ()
 # Standalone mode
 if (STANDALONE_REQ_DEFS)
     message(STATUS "-------------- PLATFORM_DEFS = ${PLATFORM_DEFS}")
-    if (NOT "${PLATFORM_DEFS};" MATCHES ".*;(${STANDALONE_REQ_DEFS});.*")
+    if (NOT ";${PLATFORM_DEFS};" MATCHES ".*;(${STANDALONE_REQ_DEFS});.*")
         message(FATAL_ERROR "Chosen Standalone mode ${STANDALONE} requires ${STANDALONE_REQ_DEFS}, unsupported by ${PLTNAME}")
     endif ()
 endif ()

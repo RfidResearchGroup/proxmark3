@@ -76,6 +76,9 @@
 | HF_CRAFTBYTE    | UID stealer - Emulates scanned 14a UID |
 |                 | - Anze Jensterle                       |
 +----------------------------------------------------------+
+| HF_DFCSIM       | Simulate a DFCB DESFire credential     |
+| (RDV4 only)     | stored in flashmem                     |
++----------------------------------------------------------+
 | HF_ICECLASS     | Simulate HID iCLASS legacy ags         |
 | (RDV4 only)     | storing in flashmem                    |
 +----------------------------------------------------------+
@@ -135,7 +138,7 @@ set(STANDALONE_MODES
     LF_HIDBRUTE LF_HIDFCBRUTE LF_ICEHID LF_MULTIHID LF_NEDAP_SIM LF_NEXID
     LF_PROXBRUTE LF_PROX2BRUTE LF_SAMYRUN LF_THAREXDE
     HF_14ASNIFF HF_14BSNIFF HF_15SNIFF HF_15SIM
-    HF_AVEFUL HF_BOG HF_CARDHOPPER HF_COLIN HF_CRAFTBYTE HF_ICECLASS
+    HF_AVEFUL HF_BOG HF_CARDHOPPER HF_COLIN HF_CRAFTBYTE HF_DFCSIM HF_ICECLASS
     HF_LEGIC HF_LEGIC_RDV4 HF_LEGICSIM HF_MATTYRUN HF_MFCSIM HF_MSDSAL HF_REBLAY
     HF_ST25_TEAROFF HF_TCPRST HF_TMUDFORD HF_UNISNIFF HF_YOUNG HF_EMVPNG DANKARMULTI)
 # List of modes that require bluetooth
@@ -145,7 +148,7 @@ set(STANDALONE_MODES_REQ_SMARTCARD)
 # List of modes that require flash
 set(STANDALONE_MODES_REQ_FLASH
     LF_HIDFCBRUTE LF_ICEHID LF_NEXID LF_THAREXDE HF_BOG HF_COLIN
-    HF_ICECLASS HF_LEGIC_RDV4 HF_LEGICSIM HF_MFCSIM)
+    HF_DFCSIM HF_ICECLASS HF_LEGIC_RDV4 HF_LEGICSIM HF_MFCSIM)
 
 message(STATUS "STANDALONE = ${STANDALONE}")
 message(STATUS "STANDALONE_MODES = ${STANDALONE_MODES}")

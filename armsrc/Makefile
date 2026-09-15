@@ -38,6 +38,12 @@ include ../armlib/Exports.mk
 # NO space,TABs after the "\" sign.
 # Keep the always-linked DFC engine small enough to coexist with FPGA loading,
 # tracing, and the other HF implementations on 64 KiB RDV4 hardware.
+ifeq ($(PLATFORM),PM5)
+    # PM5 has room for the full DFC credential pools.
+    DFC_MAX_FILES ?= 32
+    DFC_FILE_POOL_SIZE ?= 8192
+    DFC_KEY_POOL_SIZE ?= 4096
+endif
 DFC_MAX_APPS ?= 28
 DFC_MAX_FILES ?= 28
 DFC_FILE_POOL_SIZE ?= 256
@@ -46,10 +52,10 @@ DFC_BUILD_PROFILE_DEFINE := DFC_PROFILE_FULL_EV3
 ifeq ($(STANDALONE),HF_DFCSIM)
     # Preserve the full protocol profile while fitting one practical card and
     # the ISO14443A simulation buffers in the RDV4's 64 KiB RAM.
-    DFC_SIM_MAX_APPS ?= 28
-    DFC_SIM_MAX_FILES ?= 28
-    DFC_SIM_FILE_POOL_SIZE ?= 256
-    DFC_SIM_KEY_POOL_SIZE ?= 512
+    DFC_SIM_MAX_APPS ?= $(DFC_MAX_APPS)
+    DFC_SIM_MAX_FILES ?= $(DFC_MAX_FILES)
+    DFC_SIM_FILE_POOL_SIZE ?= $(DFC_FILE_POOL_SIZE)
+    DFC_SIM_KEY_POOL_SIZE ?= $(DFC_KEY_POOL_SIZE)
     DFC_MAX_APPS := $(DFC_SIM_MAX_APPS)
     DFC_MAX_FILES := $(DFC_SIM_MAX_FILES)
     DFC_FILE_POOL_SIZE := $(DFC_SIM_FILE_POOL_SIZE)
@@ -66,6 +72,10 @@ APP_CFLAGS += -DDFC_FIRMWARE_BUILD -DDFC_CRYPTO_BACKEND_MBEDTLS=1 \
 # HF_DFCSIM defaults to a full EV1 card. Keep optional newer-generation
 # features opt-in so the resulting firmware advertises only what it implements.
 ifeq ($(STANDALONE),HF_DFCSIM)
+    ifeq ($(PLATFORM),PM5)
+        DFC_SIM_PROFILE ?= EV3
+        DFC_SIM_PROXIMITY_CHECK ?= $(if $(filter EV3 MINIMAL_EV3,$(DFC_SIM_PROFILE)),1,0)
+    endif
     DFC_SIM_PROFILE ?= EV1
     DFC_SIM_PROXIMITY_CHECK ?= 0
     DFC_SIM_PROFILE_DEFINE := $(filter $(DFC_SIM_PROFILE),EV1 EV2 EV3 MINIMAL_EV1 MINIMAL_EV3)

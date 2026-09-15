@@ -144,6 +144,7 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | HF_CARDHOPPER    | Long distance (over IP) relay of 14a protocols - Sam Haskins
 | HF_COLIN         | Mifare ultra fast sniff/sim/clone - Colin Brigato
 | HF_CRAFTBYTE     | UID stealer - Emulates scanned 14a UID - Anze Jensterle
+| HF_DFCSIM        | Simulate one persistent DESFire DFCB credential from flash
 | HF_DOEGOX_AUTH0  | UL-C / UL-AES unlocker - Philippe Teuwen (doegox)
 | HF_DOEGOX_COMMIT | DESFire suspended commit - Philippe Teuwen (doegox)
 | HF_ICECLASS      | iCLASS 4-1 mode  sim/read & dump/loclass/glitch & config to flashmem - Iceman1001
