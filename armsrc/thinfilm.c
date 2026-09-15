@@ -46,6 +46,13 @@ void ReadThinFilm(void) {
 
     uint8_t len = 0;
     uint8_t *buf = BigBuf_calloc(36);
+    if (buf == NULL) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("Failed to allocate memory");
+        reply_ng(CMD_HF_THINFILM_READ, PM3_EMALLOC, NULL, 0);
+        hf_field_off();
+        set_tracing(false);
+        return;
+    }
 
     // power on and listen for answer.
     bool status = GetIso14443aAnswerFromTag_Thinfilm(buf, 36, &len);

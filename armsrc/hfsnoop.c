@@ -109,6 +109,15 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len, uint
 
     *len = BigBuf_max_traceLen();
     uint8_t *mem = BigBuf_calloc(*len);
+    if (mem == NULL) {
+        Dbprintf("Failed to allocate memory");
+        FpgaUpdateFrameMode(8, true, true);
+        LED_D_OFF();
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        BigBuf_free();
+        *len = 0;
+        return PM3_EMALLOC;
+    }
 
     uint32_t trigger_cnt = 0;
     uint16_t r = 0, interval = 0;

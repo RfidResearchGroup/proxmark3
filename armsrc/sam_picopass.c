@@ -548,6 +548,10 @@ static int sam_set_card_detected_picopass(const picopass_hdr_t *card_select) {
     }
     uint8_t *response = BigBuf_calloc(ISO7816_MAX_FRAME);
     uint16_t response_len = ISO7816_MAX_FRAME;
+    if (response == NULL) {
+        res = PM3_EMALLOC;
+        goto out;
+    }
 
     // a0 12
     //    ad 10

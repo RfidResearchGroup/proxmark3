@@ -152,6 +152,11 @@ void initSampleBufferEx(uint32_t *sample_size, bool use_malloc) {
         } else {
             *sample_size = MIN(*sample_size, BigBuf_max_traceLen());
             data.buffer = BigBuf_calloc(*sample_size);
+            if (data.buffer == NULL) {
+                Dbprintf("Failed to allocate memory, using whole BigBuf");
+                *sample_size = BigBuf_max_traceLen();
+                data.buffer = BigBuf_get_addr();
+            }
         }
 
     } else {

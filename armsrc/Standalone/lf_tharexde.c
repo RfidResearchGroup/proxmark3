@@ -104,6 +104,11 @@ static bool get_input_data_from_file(uint32_t *tag, char *inputfile) {
 
         uint32_t size = size_in_spiffs(inputfile);
         uint8_t *mem = BigBuf_calloc(size);
+        if (mem == NULL) {
+            Dbprintf(_RED_("failed to allocate memory for %s"), inputfile);
+            BigBuf_free();
+            return false;
+        }
 
         Dbprintf("found input file `" _YELLOW_("%s") "`", inputfile);
 

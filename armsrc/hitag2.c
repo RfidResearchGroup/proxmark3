@@ -1726,6 +1726,13 @@ void SniffHitag2(bool ledcontrol, uint8_t threshold) {
     auth_table_pos = 0;
 
     auth_table = (uint8_t *)BigBuf_calloc(AUTH_TABLE_LENGTH);
+    if (auth_table == NULL) {
+        DbpString("Failed to allocate memory");
+        if (ledcontrol) LEDsoff();
+        switch_off();
+        BigBuf_free_keep_EM();
+        return;
+    }
 
     // Only for debug, if we want to see the edge timing of the captured frames
     uint8_t edges[100];
