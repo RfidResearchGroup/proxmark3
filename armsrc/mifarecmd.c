@@ -2506,6 +2506,17 @@ OUT:
         }
 
         uint8_t *tmp = BigBuf_calloc(480 + 10);
+        if (tmp == NULL) {
+            if (g_dbglevel >= DBG_ERROR) DbpString("ChkKeys fast: failed to allocate buffer");
+            reply_ng(CMD_HF_MIFARE_CHKKEYS_FAST, PM3_EMALLOC, NULL, 0);
+            set_tracing(false);
+            FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+            BigBuf_free();
+            BigBuf_Clear_ext(false);
+            g_dbglevel = oldbg;
+            return;
+        }
+
         memcpy(tmp, k_sector, sectorcnt * sizeof(sector_t));
         num_to_bytes(foo, 8, tmp + 480);
         tmp[488] = bar & 0xFF;
@@ -2667,6 +2678,16 @@ void MifareChkKeys_file(uint8_t *fn) {
     int changed = rdv40_spiffs_lazy_mount();
     uint32_t size = size_in_spiffs((char *)fn);
     uint8_t *mem = BigBuf_calloc(size);
+    if (mem == NULL) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("ChkKeys file: failed to allocate buffer");
+        if (changed) {
+            rdv40_spiffs_lazy_unmount();
+        }
+        SpinOff(0);
+        reply_ng(CMD_HF_MIFARE_CHKKEYS, PM3_EMALLOC, NULL, 0);
+        BigBuf_free();
+        return;
+    }
 
     rdv40_spiffs_read_as_filetype((char *)fn, mem, size, RDV40_SPIFFS_SAFETY_SAFE);
 
@@ -3813,6 +3834,13 @@ void MifareGen3UID(uint8_t uidlen, uint8_t *uid) {
     uint8_t *cmd = BigBuf_calloc(sizeof(uid_cmd) + uidlen + 2);
     iso14a_card_select_t *card_info = (iso14a_card_select_t *) BigBuf_calloc(sizeof(iso14a_card_select_t));
 
+    if (old_uid == NULL || cmd == NULL || card_info == NULL) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("Gen3 UID: failed to allocate buffers");
+        reply_ng(CMD_HF_MIFARE_GEN3UID, PM3_EMALLOC, NULL, 0);
+        BigBuf_free();
+        return;
+    }
+
     LEDsoff();
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     clear_trace();
@@ -3849,6 +3877,13 @@ void MifareGen3Blk(uint8_t block_len, uint8_t *block) {
     uint8_t *cmd = BigBuf_calloc(cmdlen);
 
     iso14a_card_select_t *card_info = (iso14a_card_select_t *) BigBuf_calloc(sizeof(iso14a_card_select_t));
+
+    if (cmd == NULL || card_info == NULL) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("Gen3 blk: failed to allocate buffers");
+        reply_ng(CMD_HF_MIFARE_GEN3BLK, PM3_EMALLOC, NULL, 0);
+        BigBuf_free();
+        return;
+    }
 
     LEDsoff();
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
@@ -4105,6 +4140,13 @@ void MifareSetMod(uint8_t *datain) {
 
     uint8_t *buf = BigBuf_calloc(MAX_MIFARE_FRAME_SIZE);
     uint8_t *par = BigBuf_calloc(MAX_MIFARE_PARITY_SIZE);
+
+    if (uid == NULL || buf == NULL || par == NULL) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("SetMod: failed to allocate buffers");
+        reply_ng(CMD_HF_MIFARE_SETMOD, PM3_EMALLOC, NULL, 0);
+        BigBuf_free();
+        return;
+    }
 
     LEDsoff();
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
