@@ -240,6 +240,10 @@ static int reader_attack_mode(void) {
     BigBuf_free();
     uint16_t mac_response_len = 0;
     uint8_t *mac_responses = BigBuf_calloc(MAC_RESPONSES_SIZE);
+    if (mac_responses == NULL) {
+        Dbprintf("Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
 
     iclass_simulate(ICLASS_SIM_MODE_READER_ATTACK, NUM_CSNS, false, false, csns, mac_responses, &mac_response_len);
 
@@ -252,7 +256,7 @@ static int reader_attack_mode(void) {
         size_t dumplen = NUM_CSNS * 24;
 
         uint8_t *dump = BigBuf_calloc(dumplen);
-        if (dump == false) {
+        if (dump == NULL) {
             Dbprintf("Failed to allocate memory");
             return PM3_EMALLOC;
         }
@@ -306,6 +310,10 @@ static int reader_dump_mode(void) {
         BigBuf_free();
 
         uint8_t *card_data = BigBuf_malloc(ICLASS_16KS_SIZE);
+        if (card_data == NULL) {
+            Dbprintf("Failed to allocate memory");
+            return PM3_EMALLOC;
+        }
         // Don't use calloc since we set allocated memory to 0xFF's
         memset(card_data, 0xFF, ICLASS_16KS_SIZE);
 
@@ -444,6 +452,10 @@ static int dump_sim_mode(void) {
         BigBuf_free();
 
         uint8_t *card_data = BigBuf_malloc(ICLASS_16KS_SIZE);
+        if (card_data == NULL) {
+            Dbprintf("Failed to allocate memory");
+            return PM3_EMALLOC;
+        }
         // Don't use calloc since we set allocated memory to 0xFF's
         memset(card_data, 0xFF, ICLASS_16KS_SIZE);
 

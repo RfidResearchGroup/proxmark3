@@ -196,6 +196,10 @@ static void CodeIso15693AsReaderEOF(void) {
 static int get_uid_slix(uint32_t start_time, uint32_t *eof_time, uint8_t *uid) {
 
     uint8_t *answer = BigBuf_calloc(ISO15693_MAX_RESPONSE_LENGTH);
+    if (answer == NULL) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("Failed to allocate response buffer. Exiting");
+        return PM3_EMALLOC;
+    }
 
     start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
 
@@ -1649,6 +1653,11 @@ void AcquireRawAdcSamplesIso15693(void) {
     LED_A_ON();
 
     uint8_t *dest = BigBuf_calloc(4096);
+    if (dest == NULL) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("Failed to allocate sample buffer. Exiting");
+        LEDsoff();
+        return;
+    }
 
     // switch field on
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER);
@@ -2097,6 +2106,13 @@ void ReaderIso15693(iso15_card_select_t *p_card) {
     set_tracing(true);
 
     uint8_t *answer = BigBuf_calloc(ISO15693_MAX_RESPONSE_LENGTH);
+    if (answer == NULL) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("Failed to allocate response buffer. Exiting");
+        reply_ng(CMD_HF_ISO15693_READER, PM3_EMALLOC, NULL, 0);
+        switch_off();
+        return;
+    }
+
     memset(answer, 0x00, ISO15693_MAX_RESPONSE_LENGTH);
 
     // FIRST WE RUN AN INVENTORY TO GET THE TAG UID

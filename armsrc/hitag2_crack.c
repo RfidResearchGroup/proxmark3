@@ -344,6 +344,11 @@ void ht2_crack2(uint8_t *nrar_hex) {
 
     uint8_t *e_response = BigBuf_calloc(32);
     lf_hitag_crack2_t *c2 = (lf_hitag_crack2_t *)BigBuf_calloc(sizeof(lf_hitag_crack2_t));
+    if (e_response == NULL || c2 == NULL) {
+        BigBuf_free();
+        reply_ng(CMD_LF_HITAG2_CRACK_2, PM3_EMALLOC, NULL, 0);
+        return;
+    }
 
     g_logging = false;
     LEDsoff();
@@ -450,6 +455,11 @@ void ht2_crack2(uint8_t *nrar_hex) {
     Dbprintf("Recovered " _YELLOW_("%4i") " bits of keystream", kslen);
 
     lf_hitag_crack_response_t *packet = (lf_hitag_crack_response_t *)BigBuf_calloc(sizeof(lf_hitag_crack_response_t));
+    if (packet == NULL) {
+        BigBuf_free();
+        reply_ng(CMD_LF_HITAG2_CRACK_2, PM3_EMALLOC, NULL, 0);
+        return;
+    }
 
     packet->status = 1;
     binarray2hex(c2->keybits, kslen, packet->data);
