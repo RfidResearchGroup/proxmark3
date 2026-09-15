@@ -210,7 +210,7 @@ void BigBuf_print_status(void) {
              , (s_emulator_memory != NULL) ? "in use" : "not allocated"
             );
     DbpString(_CYAN_("Tracing"));
-    Dbprintf("  tracing ................ %d", s_tracing);
+    Dbprintf("  tracing ................ %s", (s_tracing) ? "yes" : "no");
     Dbprintf("  traceLen ............... %d", s_trace_len);
 
     if (g_dbglevel >= DBG_DEBUG) {
