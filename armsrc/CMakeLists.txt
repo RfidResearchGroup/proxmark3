@@ -608,7 +608,7 @@ add_custom_command(
 add_custom_command(
         OUTPUT ${DATA_BIN_Z}
         # COMMAND ${CMAKE_COMMAND} -E echo "[=] GEN(7) fullimage.data.bin.z"
-        COMMAND ${FPGA_COMPRESS_EXE} ${DATA_BIN} ${DATA_BIN_Z}
+        COMMAND ${FPGA_COMPRESS_EXE} -s ${DATA_BIN} ${DATA_BIN_Z}
         DEPENDS ${DATA_BIN}
         DEPENDS ${FPGA_COMPRESS_EXE} # Ensure host tool is built before running it.
         COMMENT "Call the 'fpga_compress' to compress '.data' section from 'fullimage.stage1.elf'"
