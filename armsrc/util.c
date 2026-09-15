@@ -25,6 +25,9 @@
 #include "string.h"
 #include "usb_cdc_apis.h"
 #include "usart.h"
+#ifdef WITH_BWM_FORWARD
+#include "bwm_forward.h"
+#endif
 #include "BigBuf.h"        // trace_restart_timeline
 #ifdef WITH_SMARTCARD
 #include "i2c.h"           // sc_log_trace_reset
@@ -327,7 +330,11 @@ int BUTTON_HELD(int ms) {
 // This function returns false if no data is available or
 // the USB connection is invalid.
 bool data_available(void) {
-#ifdef WITH_FPC_USART_HOST
+#if defined(WITH_BWM_FORWARD)
+    // The BWM (BLE / WiFi) link is the host connection on a Proxmark5, so it
+    // has to be polled here too or CMD_BREAK_LOOP is never seen over it.
+    return usb_poll_validate_length() || (bwm_fwd_rxdata_available() > 0);
+#elif defined(WITH_FPC_USART_HOST)
     return usb_poll_validate_length() || (usart_rxdata_available() > 0);
 #else
     return usb_poll_validate_length();
@@ -338,7 +345,9 @@ bool data_available(void) {
 // In most of the cases, you should use data_available() unless
 // the timing is critical.
 bool data_available_fast(void) {
-#ifdef WITH_FPC_USART_HOST
+#if defined(WITH_BWM_FORWARD)
+    return usb_available_length() || (bwm_fwd_rxdata_available() > 0);
+#elif defined(WITH_FPC_USART_HOST)
     return usb_available_length() || (usart_rxdata_available() > 0);
 #else
     return usb_available_length();

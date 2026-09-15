@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `PLATFORM_EXTRAS=BWM` - a command started over the Proxmark5 wireless module can be aborted again, `data_available()` only polled USB so CMD_BREAK_LOOP was never seen on the BLE or WiFi link (@tweathers-sec)
 - Fixed `lf search` - a leftover debug print no longer reports `DEBUG: detectindala | <n>` on every failed Indala demodulation (@tweathers-sec)
 - Changed `memcpy` - the device's own implementation now copies a word at a time when source and destination allow it (@iceman1001)
 - Changed NG replies - the outgoing frame is offset so its payload lands word aligned, taking USB transfer speed from 630 to 789 kB/s on RDV4  (@iceman1001)
