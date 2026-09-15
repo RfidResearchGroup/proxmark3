@@ -17,13 +17,65 @@
 //-----------------------------------------------------------------------------
 #include "string.h"
 
+// The word view of the buffers has to be declared as aliasing, the tree builds
+// with -fstrict-aliasing.
+typedef uint32_t __attribute__((may_alias)) aliasing_u32;
+
 void *memcpy(void *dest, const void *src, int len) {
     uint8_t *d = dest;
     const uint8_t *s = src;
-    while ((len--) > 0) {
-        *d = *s;
-        d++;
-        s++;
+
+    if (len <= 0) {
+        return dest;
+    }
+
+    // ARM7TDMI cannot do misaligned word access, so words are only usable when
+    // both sides sit at the same offset within a word
+    if ((((uintptr_t)d ^ (uintptr_t)s) & 3) == 0) {
+
+        while ((((uintptr_t)d & 3) != 0) && (len > 0)) {
+            *d++ = *s++;
+            len--;
+        }
+
+        aliasing_u32 *dw = (aliasing_u32 *)d;
+        const aliasing_u32 *sw = (const aliasing_u32 *)s;
+
+        while (len >= 16) {
+            dw[0] = sw[0];
+            dw[1] = sw[1];
+            dw[2] = sw[2];
+            dw[3] = sw[3];
+            dw += 4;
+            sw += 4;
+            len -= 16;
+        }
+
+        while (len >= 4) {
+            *dw++ = *sw++;
+            len -= 4;
+        }
+
+        d = (uint8_t *)dw;
+        s = (const uint8_t *)sw;
+    }
+
+    // Byte tail, and the whole copy when the two sides are misaligned against
+    // each other. Unrolled because at -Os the compiler keeps a counter and
+    // indexes off it, so loop overhead otherwise costs more than the copy.
+    while (len >= 4) {
+        d[0] = s[0];
+        d[1] = s[1];
+        d[2] = s[2];
+        d[3] = s[3];
+        d += 4;
+        s += 4;
+        len -= 4;
+    }
+
+    while (len > 0) {
+        *d++ = *s++;
+        len--;
     }
     return dest;
 }
