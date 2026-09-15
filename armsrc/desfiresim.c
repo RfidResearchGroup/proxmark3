@@ -825,6 +825,7 @@ static bool desfire_sim_cmd_is_write(uint8_t cmd) {
 static bool desfire_sim_cmd_unwraps_own(uint8_t cmd) {
     return (desfire_sim_cmd_is_write(cmd) ||
             cmd == MFDES_CHANGE_FILE_SETTINGS ||
+            cmd == MFDES_CHANGE_KEY_SETTINGS ||
             cmd == MFDES_CHANGE_KEY);
 }
 
@@ -1905,6 +1906,38 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
             return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, buf, sizeof(buf));
         }
 
+        case MFDES_GET_KEY_VERSION: {
+
+            if (inlen < 1) {
+                return desfire_sim_status(out, MFDES_E_LENGTH);
+            }
+
+            uint8_t keyno = in[0] & 0x3F;
+            const desfire_em_app_t *app = &st->apps[st->selected];
+
+            // "If AID = 0x00 is selected, the command returns the version of the
+            // PICC master key and therefore only KeyNo = 0x00 is valid" --
+            // M134034 9.3.7
+            if (st->selected == 0) {
+                if (keyno != 0) {
+                    return desfire_sim_status(out, MFDES_E_NO_SUCH_KEY);
+                }
+            } else if (keyno >= (app->numkeysraw & 0x0F)) {
+                return desfire_sim_status(out, MFDES_E_NO_SUCH_KEY);
+            }
+
+            const desfire_em_key_t *k = desfire_sim_key_slot(st, st->selected, keyno);
+            if (k == NULL) {
+                return desfire_sim_status(out, MFDES_E_NO_SUCH_KEY);
+            }
+
+            // A key version is readable without knowing the key, which is why
+            // the image tracks the two apart.  A version the dump never read
+            // comes back as 0, which is what a default key carries anyway.
+            uint8_t ver = k->ver;
+            return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, &ver, 1);
+        }
+
         case MFDES_GET_KEY_SETTINGS: {
             const desfire_em_app_t *a = &st->apps[st->selected];
             uint8_t buf[2] = { a->keysettings, a->numkeysraw };
@@ -2204,6 +2237,47 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
             if (res != MFDES_S_OPERATION_OK) {
                 return desfire_sim_status(out, res);
             }
+            return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, NULL, 0);
+        }
+
+        case MFDES_CHANGE_KEY_SETTINGS: {
+
+            // "Additionally a successful preceding authentication with the
+            // master key is required (PICC master key if AID = 0x00, else with
+            // application master key)" -- M134034 9.3.4
+            if (st->authenticated == false || st->auth_keyno != 0) {
+                return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
+            }
+
+            const desfire_em_app_t *app = &st->apps[st->selected];
+
+            // "This command only succeeds if the configuration changeable bit
+            // of the current key settings was not cleared before".  Clearing it
+            // is one way, which is the point of it.
+            if ((app->keysettings & 0x08) == 0) {
+                return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+            }
+
+            // one byte of new settings, enciphered with a CRC32 behind it, the
+            // same shape ChangeKey uses and nothing in the clear
+            uint8_t buf[DESFIRE_SIM_WRITE_MAX] = {0};
+            if (inlen == 0 || inlen > sizeof(buf)) {
+                return desfire_sim_status(out, MFDES_E_LENGTH);
+            }
+
+            memcpy(buf, in, inlen);
+            uint16_t len = inlen;
+
+            if (desfire_sim_unwrap(st, cmd, DESFIRE_SIM_COMM_FULL, buf, &len) == false) {
+                desfire_sim_auth_clear(st);
+                return desfire_sim_status(out, MFDES_E_INTEGRITY_ERROR);
+            }
+
+            if (len < 1) {
+                return desfire_sim_status(out, MFDES_E_LENGTH);
+            }
+
+            ((desfire_em_app_t *)app)->keysettings = buf[0];
             return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, NULL, 0);
         }
 
