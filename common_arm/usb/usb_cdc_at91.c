@@ -140,12 +140,14 @@ static const char *getStringDescriptor(uint8_t idx) {
     }
 
 
+// CDC LineCoding is 7 bytes on the wire, so this must not pick up the padding
+// byte that natural alignment would add after DataBits.
 typedef struct {
     uint32_t BitRate;
     uint8_t Format;
     uint8_t ParityType;
     uint8_t DataBits;
-} AT91S_CDC_LINE_CODING, *AT91PS_CDC_LINE_CODING;
+} PACKED AT91S_CDC_LINE_CODING, *AT91PS_CDC_LINE_CODING;
 
 static AT91S_CDC_LINE_CODING line = { // purely informative, actual values don't matter
     USART_BAUD_RATE, // baudrate
