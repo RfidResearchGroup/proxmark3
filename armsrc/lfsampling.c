@@ -460,6 +460,11 @@ uint32_t SampleLF(bool verbose, uint32_t sample_size, bool ledcontrol, bool cota
  * @param reader_field - true for reading tags, false for sniffing
  * @return sampling result
 **/
+
+// how long the host is given to collect a streamed USB packet before the link is declared dead?
+// ticks run at 1.5MHz,  about 100ms
+#define LF_REALTIME_USB_TIMEOUT  (100 * 1500)
+
 int ReadLF_realtime(bool reader_field, bool cotag, uint32_t sample_limit) {
     // parameters from config and constants
     const uint8_t bits_per_sample = config.bits_per_sample;
@@ -548,10 +553,21 @@ int ReadLF_realtime(bool reader_field, bool cotag, uint32_t sample_limit) {
             last_byte = curr_byte;
 
             if (samples.total_saved == size_threshold) {
-                // Request USB transmission and change FIFO bank
+
+                // Request USB transmission and change FIFO bank.
+                // A busy IN endpoint only means the host has not collected the previous packet yet,
                 if (async_usb_write_requestWrite() == false) {
-                    return_value = PM3_EIO;
-                    goto out;
+
+                    uint32_t start_ticks = GetTicks();
+                    do {
+
+                        WDT_HIT();
+                        if (GetTicksDelta(start_ticks) > LF_REALTIME_USB_TIMEOUT) {
+                            return_value = PM3_EIO;
+                            goto out;
+                        }
+
+                    } while (async_usb_write_requestWrite() == false);
                 }
 
                 // Reset sample
@@ -573,9 +589,16 @@ int ReadLF_realtime(bool reader_field, bool cotag, uint32_t sample_limit) {
         }
     }
 
-    return_value = async_usb_write_stop();
-
 out:
+    // Always close the async write down, error paths included. Leaving it open
+    // strands the IN endpoint with a half filled FIFO, and every later usb_write() fails
+    {
+        int stop_value = async_usb_write_stop();
+        if (return_value == PM3_SUCCESS) {
+            return_value = stop_value;
+        }
+    }
+
     LED_D_OFF();
 
     // DoAcquisition() end

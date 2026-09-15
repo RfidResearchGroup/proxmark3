@@ -1883,6 +1883,13 @@ int getSamplesFromBufEx(uint8_t *data, size_t sample_num, uint8_t bits_per_sampl
 
     size_t max_num = MIN(sample_num, MAX_GRAPH_TRACE_LEN);
 
+    if (sample_num > MAX_GRAPH_TRACE_LEN) {
+        PrintAndLogEx(WARNING, "graph buffer holds " _YELLOW_("%d") " samples, dropping the last " _YELLOW_("%zu")
+                      , MAX_GRAPH_TRACE_LEN
+                      , sample_num - MAX_GRAPH_TRACE_LEN
+                     );
+    }
+
     if (bits_per_sample < 8) {
 
         if (verbose) PrintAndLogEx(INFO, "Unpacking...");

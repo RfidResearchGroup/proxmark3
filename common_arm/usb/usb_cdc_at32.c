@@ -1,5 +1,6 @@
 #include "pm3_cmd.h"
 #include "ticks_apis.h"
+#include "wdt_apis.h"
 #include "usb_cdc_apis.h"
 #include "usb_read_ng.h"
 #include "usb_cdc_desc.h"
@@ -552,10 +553,25 @@ int async_usb_write_start(void) {
     otg_device_type *dev = OTG_DEVICE(udev->usb_reg);
 
     // check usb state
-    if (!usb_check()) return PM3_EIO;
+    if (!usb_check()) {
+        return PM3_EIO;
+    }
 
     // wait for tx end if working...
-    while (!is_write_completed(ept_in)) if (!usb_check()) return PM3_EIO;
+    uint32_t spins = 0;
+    while (!is_write_completed(ept_in)) {
+
+        if (!usb_check()) {
+            return PM3_EIO;
+        }
+
+        WDT_HIT();
+
+        if (++spins > ASYNC_WRITE_SPIN_LIMIT) {
+            async_usb_write_discard();
+            break;
+        }
+    }
 
     // disable fifo empty irq.
     dev->diepempmsk &= ~(1 << (USBD_CDC_BULK_IN_EPT & 0x7F));
@@ -618,24 +634,56 @@ bool async_usb_write_requestWrite(void) {
 }
 
 /**
+ * Drop a transfer the host refuses to collect.
+ * Disables the IN endpoint and flushes its tx fifo, otherwise the endpoint
+ * stays busy forever and every later usb_write() bails out, which looks
+ * like a dead device.
+ */
+void async_usb_write_discard(void) {
+    usbd_ept_in_check_fifo(udev, USBD_CDC_BULK_IN_EPT & 0x7F);
+    async_write_buf_select = 0;
+    async_write_index = 0;
+}
+
+/**
  * Stop send and wait finish.
  * @return SUCCESS if send stop success, otherwise ERROR
  */
 int async_usb_write_stop(void) {
     otg_eptin_type *ept_in = USB_INEPT(udev->usb_reg, (USBD_CDC_BULK_IN_EPT & 0x7F));
+    uint32_t spins = 0;
 
     // Wait for the end of transfer
-    while (!is_write_completed(ept_in)) if (!usb_check()) return PM3_EIO;
+    while (!is_write_completed(ept_in)) {
 
-    // still have data on local buffer, we need send before write stop.
-    if (async_write_index != 0) {
-        if (!async_usb_write_requestWrite()) {
+        if (!usb_check()) {
             return PM3_EIO;
+        }
+
+        WDT_HIT();
+
+        if (++spins > ASYNC_WRITE_SPIN_LIMIT) {
+            async_usb_write_discard();
+            return PM3_ETIMEOUT;
         }
     }
 
+    // Send a final packet. When the local buffer still holds data this flushes it, 
+    // if empty, send a zero length packet.
+    if (!async_usb_write_requestWrite()) {
+        return PM3_EIO;
+    }
+
     // Wait for the end of fifo flush transfer.
-    while (!is_write_completed(ept_in)) if (!usb_check()) return PM3_EIO;
+    spins = 0;
+    while (!is_write_completed(ept_in)) {
+        if (!usb_check()) return PM3_EIO;
+        WDT_HIT();
+        if (++spins > ASYNC_WRITE_SPIN_LIMIT) {
+            async_usb_write_discard();
+            return PM3_ETIMEOUT;
+        }
+    }
 
     return PM3_SUCCESS;
 }

@@ -21,6 +21,10 @@
 
 #include "common.h"
 
+// How many times the async write helpers spin on the IN endpoint before they give up on the host. 
+// usb_check() stays true for as long as the device is enumerated
+#define ASYNC_WRITE_SPIN_LIMIT  0x00020000
+
 void usb_disable(void);
 void usb_enable(void);
 bool usb_check(void);
@@ -33,6 +37,7 @@ int usb_write(const uint8_t *data, size_t len);
 int async_usb_write_start(void);
 void async_usb_write_pushByte(uint8_t data);
 bool async_usb_write_requestWrite(void);
+void async_usb_write_discard(void);
 int async_usb_write_stop(void);
 
 void usb_update_serial(uint64_t newSerialNumber);

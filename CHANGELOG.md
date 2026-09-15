@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `lf read` - a realtime read no longer ends early when the host falls behind, and the device no longer goes silent until it is replugged (@iceman1001)
+- Fixed `lf read` - a realtime read ending on a full USB packet now delivers its last 64 bytes, an odd packet count was silently one packet short (@iceman1001)
+- Fixed `lf read` - a transfer that stops short says so, instead of being presented as a complete read (@iceman1001)
+- Changed `lf read` / `lf sniff` - the sample count is capped to the graph buffer size, the surplus was streamed and then thrown away (@iceman1001)
 - Added `hf mfdes sim` - SetConfiguration is answered, so a reader can disable FormatPICC, switch the card to a random id, or give it a user defined ATS (@iceman1001)
 - Added `hf mfdes sim` - ReadSignature is answered for a card image of a generation that has one, and refused the way a genuine EV1 refuses it (@iceman1001)
 - Added `hf mfdes sim` - GetKeyVersion is answered, so a reader can read the version of any key without knowing the key itself (@iceman1001)

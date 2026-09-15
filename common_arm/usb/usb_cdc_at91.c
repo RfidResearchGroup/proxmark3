@@ -22,6 +22,7 @@
 #include "proxmark3_arm.h"
 #include "usart_defs.h"
 #include "ticks_apis.h"
+#include "wdt_apis.h"
 #include "usb_read_ng.h"
 #include "usb_cdc_desc.h"
 
@@ -529,14 +530,42 @@ int async_usb_write_start(void) {
         return PM3_EIO;
     }
 
+    uint32_t spins = 0;
     while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXPKTRDY) {
+
         if (usb_check() == false) {
             return PM3_EIO;
+        }
+
+        WDT_HIT();
+
+        if (++spins > ASYNC_WRITE_SPIN_LIMIT) {
+            async_usb_write_discard();
+            break;
         }
     }
 
     isAsyncRequestFinished = false;
     return PM3_SUCCESS;
+}
+
+/*
+ *----------------------------------------------------------------------------
+ * \fn     async_usb_write_discard
+ * \brief  Drop a packet the host refuses to collect
+ *
+ * Without this the endpoint stays busy forever and usb_write() keeps bailing
+ * out with PM3_EIO,  which looks like a dead device.
+ *----------------------------------------------------------------------------
+*/
+void async_usb_write_discard(void) {
+    // Clearing TXPKTRDY by hand is not enough on this silicon, the FIFO keeps
+    // its content.  Reset the endpoint the same way the bus reset handler does
+    // and re-enable it, so the next usb_write() starts from a clean FIFO.
+    pUdp->UDP_RSTEP |= (1u << AT91C_EP_IN);
+    pUdp->UDP_RSTEP &= ~(1u << AT91C_EP_IN);
+    pUdp->UDP_CSR[AT91C_EP_IN] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_IN);
+    isAsyncRequestFinished = true;
 }
 
 /*
@@ -602,10 +631,21 @@ inline bool async_usb_write_requestWrite(void) {
  *----------------------------------------------------------------------------
 */
 int async_usb_write_stop(void) {
+
+    uint32_t spins = 0;
+
     // Wait for the end of transfer
     while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXPKTRDY) {
+
         if (usb_check() == false) {
             return PM3_EIO;
+        }
+
+        WDT_HIT();
+
+        if (++spins > ASYNC_WRITE_SPIN_LIMIT) {
+            async_usb_write_discard();
+            return PM3_ETIMEOUT;
         }
     }
 
@@ -613,13 +653,23 @@ int async_usb_write_stop(void) {
     UDP_CLEAR_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXCOMP);
     while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP) {};
 
-    // FIFO is not empty, request a write in non-ping-pong mode
-    if (isAsyncRequestFinished == false) {
+    // FIFO is not empty, request a write in non-ping-pong mode.
+    // Must send ZLP to close transfer
+    {
         UDP_SET_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXPKTRDY);
 
+        spins = 0;
         while (!(pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP)) {
+
             if (usb_check() == false) {
                 return PM3_EIO;
+            }
+
+            WDT_HIT();
+
+            if (++spins > ASYNC_WRITE_SPIN_LIMIT) {
+                async_usb_write_discard();
+                return PM3_ETIMEOUT;
             }
         }
 

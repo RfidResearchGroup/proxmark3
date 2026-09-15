@@ -1105,28 +1105,32 @@ size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, boo
         msleep(10);
     }
 
-    if (printed_progress) {
-        PrintAndLogEx(NORMAL, "");
-    }
-
-    if (pos == len && (ms_timeout != (size_t) - 1) && (keep_raw_mode == false)) {
-        // If ms_timeout != -1, when the desired data is received, tell the arm side
-        // to stop the current process, and wait for some time to make sure the process
-        // has been stopped.
-        // If ms_timeout == -1, the user might not want to break the existing process
-        // on the arm side.
+    if ((ms_timeout != (size_t) - 1) && (keep_raw_mode == false)) {
         SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
         msleep(ms_timeout);
     }
+
     // Caller is about to chain another raw read: keep raw-receive mode
     // on so the comm thread never drops back into normal framed-packet
-    // parsing in between the two reads. Doing so - even briefly - lets it
+    // parsing in between the two reads. Doing so lets it
     // misparse in-flight sample bytes as a PacketResponseNG preamble and
     // corrupts every USB exchange that follows.
     if (keep_raw_mode == false) {
         SetCommunicationReceiveMode(false);
     }
+
     pos = __atomic_load_n(&comm_raw_pos, __ATOMIC_SEQ_CST);
+
+    if (printed_progress) {
+        // the loop only samples the counter every 10ms
+        // Repeat it with the final count before ending the line.
+        PrintAndLogEx(INPLACE, "Received " _YELLOW_("%zu") " / " _YELLOW_("%zu") " bytes  (" _YELLOW_("%zu") "%%)"
+                      , pos
+                      , len
+                      , (pos * 100) / len
+                     );
+        PrintAndLogEx(NORMAL, "");
+    }
     return pos;
 }
 
