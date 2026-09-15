@@ -226,12 +226,18 @@ void printHf14aConfig(void) {
     Dbprintf("  [m] Magsafe polling............ %s",
              (hf14aconfig.magsafe == 1) ? _GREEN_("enabled") : _YELLOW_("disabled")
             );
-    Dbprintf("  [p] Polling loop annotation.... %s %*D",
-             (hf14aconfig.polling_loop_annotation.frame_length <= 0) ? _YELLOW_("disabled") : _GREEN_("enabled"),
-             hf14aconfig.polling_loop_annotation.frame_length,
-             hf14aconfig.polling_loop_annotation.frame,
-             ""
-            );
+
+    // no frame to show when it is off, and %*D defaults a zero width to 16 bytes
+    if (hf14aconfig.polling_loop_annotation.frame_length <= 0) {
+        Dbprintf("  [p] Polling loop annotation.... %s", _YELLOW_("disabled"));
+    } else {
+        Dbprintf("  [p] Polling loop annotation.... %s %*D",
+                 _GREEN_("enabled"),
+                 hf14aconfig.polling_loop_annotation.frame_length,
+                 hf14aconfig.polling_loop_annotation.frame,
+                 ""
+                );
+    }
 }
 
 /**
