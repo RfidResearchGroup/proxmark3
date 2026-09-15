@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mfdes detect` - the same cipher is no longer sent to the card twice, cutting a PICC level scan with the bundled dictionary from 99 authentications to 63 (@iceman1001)
+- Changed `hf mfdes detect` - a single key number is printed as one value instead of a range of one, so a PICC level scan reads `key num 0x00` (@iceman1001)
+- Fixed `hf mfdes sim` - an enciphered read longer than one frame is chained instead of refused, the init vector carrying from frame to frame (@iceman1001)
 - Fixed `lf read` - a realtime read no longer ends early when the host falls behind, and the device no longer goes silent until it is replugged (@iceman1001)
 - Fixed `lf read` - a realtime read ending on a full USB packet now delivers its last 64 bytes, an odd packet count was silently one packet short (@iceman1001)
 - Fixed `lf read` - a transfer that stops short says so, instead of being presented as a complete read (@iceman1001)

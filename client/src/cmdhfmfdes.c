@@ -56,6 +56,10 @@
 #include "util.h"
 #include "crypto/originality.h"
 
+// How many distinct candidates `hf mfdes detect` remembers per key number so it
+// does not send the same cipher to the card twice.
+#define MFDES_DETECT_TRIED_MAX  256
+
 #define MAX_KEY_LEN        24
 #define MAX_KEYS_LIST_LEN  1024
 // how many errors in a row from the card before we give up on a key number
@@ -2195,10 +2199,16 @@ static int CmdHF14aDesDetect(const char *Cmd) {
         snprintf(algostr, sizeof(algostr), "unknown");
     }
 
-    PrintAndLogEx(INFO, "%s... key num " _YELLOW_("0x%02x") ".." _YELLOW_("0x%02x") ", algo " _YELLOW_("%s") ", channel " _YELLOW_("%s"),
+    char keynostr[32] = {0};
+    if (keynofirst == keynolast) {
+        snprintf(keynostr, sizeof(keynostr), _YELLOW_("0x%02x"), keynofirst);
+    } else {
+        snprintf(keynostr, sizeof(keynostr), _YELLOW_("0x%02x") ".." _YELLOW_("0x%02x"), keynofirst, keynolast);
+    }
+
+    PrintAndLogEx(INFO, "%s... key num %s, algo " _YELLOW_("%s") ", channel " _YELLOW_("%s"),
                   (DesfireMFSelected(selectway, id)) ? "PICC level" : DesfireWayIDStr(selectway, id),
-                  keynofirst,
-                  keynolast,
+                  keynostr,
                   algostr,
                   CLIGetOptionListStr(DesfireSecureChannelOpts, securechann)
                  );
@@ -2225,6 +2235,9 @@ static int CmdHF14aDesDetect(const char *Cmd) {
 
         dctx.keyNum = keyno;
         bool found = false;
+        uint8_t tried[MFDES_DETECT_TRIED_MAX][1 + DESFIRE_MAX_KEY_SIZE] = {0};
+        uint16_t triedcount = 0;
+        uint32_t skipped = 0;
 
         // for key types
         for (uint8_t ktype = T_DES; ktype <= T_AES && found == false; ktype++) {
@@ -2258,7 +2271,48 @@ static int CmdHF14aDesDetect(const char *Cmd) {
 
                 for (uint32_t i = 0; i < keyListLen; i++) {
 
-                    res = DesfireAuthCheck(&dctx, selectway, id, securechann, &keyList[i * keylen]);
+                    uint8_t *candidate = &keyList[i * keylen];
+
+                    // fingerprint: the cipher this key really drives
+                    uint8_t fp[1 + DESFIRE_MAX_KEY_SIZE] = {0};
+                    uint8_t fplen;
+
+                    if (dctx.keyType == T_DES ||
+                        (
+                            (dctx.keyType == T_3DES) && 
+                            (keylen == 16) && 
+                            (memcmp(candidate, candidate + 8, 8) == 0)
+                        )) {
+
+                        fp[0] = T_DES;              // single DES, however it was written
+                        memcpy(fp + 1, candidate, 8);
+                        fplen = 1 + 8;
+
+                    } else {
+                        fp[0] = dctx.keyType;
+                        memcpy(fp + 1, candidate, keylen);
+                        fplen = 1 + keylen;
+                    }
+
+                    bool already = false;
+                    for (uint16_t d = 0; d < triedcount; d++) {
+                        if (memcmp(tried[d], fp, fplen) == 0) {
+                            already = true;
+                            break;
+                        }
+                    }
+
+                    if (already) {
+                        skipped++;
+                        continue;
+                    }
+
+                    if (triedcount < MFDES_DETECT_TRIED_MAX) {
+                        memcpy(tried[triedcount], fp, sizeof(fp));
+                        triedcount++;
+                    }
+
+                    res = DesfireAuthCheck(&dctx, selectway, id, securechann, candidate);
                     if (res == PM3_SUCCESS) {
                         found = true;
                         break; // all the params already in the dctx
@@ -2296,6 +2350,11 @@ static int CmdHF14aDesDetect(const char *Cmd) {
                     break;
                 }
             }
+        }
+
+        if (verbose && skipped) {
+            PrintAndLogEx(INFO, "Skipped %u authentication%s the card had already been sent",
+                          skipped, (skipped == 1) ? "" : "s");
         }
 
         if (found) {

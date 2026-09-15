@@ -56,6 +56,7 @@
 #include "iso14443a.h"
 #include "crc16.h"
 #include "crc32.h"
+#include "crc.h"
 #include "commonutil.h"
 #include "fpga_apis.h"
 #include "fpga_loader.h"
@@ -64,6 +65,8 @@
 #include "protocols.h"
 #include "desfire_em.h"
 #include "desfire_crypto.h"
+
+#define DESFIRE_CRC32_POLY  0xEDB88320
 
 // ISO 7816 wrapping of the DESFire command set: class byte on the way in,
 // first status byte on the way back.
@@ -100,9 +103,12 @@ typedef struct {
     // file, and the mode the first frame settled on -- the access rights are
     // evaluated once, when the command arrives, not again per frame.
     int16_t chain_file;         // index into files[], -1 when none
-    uint32_t chain_off;         // next byte or record to send
-    uint32_t chain_end;         // one past the last
+    uint32_t chain_base;        // where the read starts inside the file
+    uint32_t chain_datalen;     // how many bytes of it the reader asked for
+    uint32_t chain_off;         // position in the stream being handed out
+    uint32_t chain_end;         // its total length
     uint8_t chain_comm;         // effective comm mode for the whole transfer
+    uint8_t chain_crc[4];       // CRC32 of an enciphered read, computed up front
 
     // ---- authentication
     // auth_cmd is the handshake in flight, 0 when none.  The second frame
@@ -920,6 +926,7 @@ static bool desfire_sim_unwrap(desfire_sim_state_t *st, uint8_t cmd, uint8_t com
 
 // ------------------------------------------------------------------- files
 
+
 // Find a live file by its file number within the selected application.
 static const desfire_em_file_t *desfire_sim_find_file(const desfire_sim_state_t *st, uint8_t fileno) {
 
@@ -948,21 +955,12 @@ static int16_t desfire_sim_file_index(const desfire_sim_state_t *st, const desfi
 static uint16_t desfire_sim_read_chunk(desfire_sim_state_t *st, uint8_t *out) {
 
     const desfire_em_file_t *f = &st->files[st->chain_file];
+    const uint8_t *data = st->base + f->dataoff + st->chain_base;
 
     uint32_t left = st->chain_end - st->chain_off;
     uint32_t n = (left > DESFIRE_SIM_READ_CHUNK) ? DESFIRE_SIM_READ_CHUNK : left;
 
-    // An enciphered transfer is one CRC over the whole read, so it cannot be
-    // split across frames the way a plain one can.  Everything this simulation
-    // serves fits a frame, so a read that does not is refused rather than
-    // answered wrongly.
-    if (st->chain_comm == DESFIRE_SIM_COMM_FULL && left > DESFIRE_SIM_READ_CHUNK) {
-        st->chain_cmd = 0;
-        st->chain_file = -1;
-        return desfire_sim_status(out, MFDES_E_LENGTH);
-    }
-
-    const uint8_t *src = st->base + f->dataoff + st->chain_off;
+    uint32_t at = st->chain_off;
     st->chain_off += n;
 
     bool more = (st->chain_off < st->chain_end);
@@ -972,11 +970,32 @@ static uint16_t desfire_sim_read_chunk(desfire_sim_state_t *st, uint8_t *out) {
         st->chain_file = -1;
     }
 
-    if (st->chain_comm == DESFIRE_SIM_COMM_FULL) {
-        return desfire_sim_enciphered(st, out, MFDES_S_OPERATION_OK, src, n);
+    if (st->chain_comm != DESFIRE_SIM_COMM_FULL) {
+        return desfire_sim_chained(st, out, more, data + at, n);
     }
 
-    return desfire_sim_chained(st, out, more, src, n);
+    // An enciphered read is one CBC run over the file data, a CRC32 behind it
+    // and zero padding, split across frames with the init vector carried from
+    // one to the next -- "if the commands are queued due to a very long data
+    // stream, the init vector for the decipherment is always updated" (M134034 7.3.7).
+    uint8_t plain[DESFIRE_SIM_READ_CHUNK] = {0};
+
+    for (uint32_t i = 0; i < n; i++) {
+
+        uint32_t p = at + i;
+
+        if (p < st->chain_datalen) {
+            plain[i] = data[p];
+        } else if (p < st->chain_datalen + 4) {
+            plain[i] = st->chain_crc[p - st->chain_datalen];
+        } else {
+            plain[i] = 0x00;
+        }
+    }
+
+    out[0] = more ? MFDES_ADDITIONAL_FRAME : MFDES_S_OPERATION_OK;
+    desfire_sim_crypt(&st->sesskey, plain, out + 1, n, st->iv, true);
+    return n + 1;
 }
 
 // Set up a data or record read and answer its first frame.  `unit` is 1 for a
@@ -1008,16 +1027,47 @@ static uint16_t desfire_sim_read_start(desfire_sim_state_t *st, const desfire_em
 
     st->chain_cmd = MFDES_READ_DATA;
     st->chain_file = desfire_sim_file_index(st, f);
-    st->chain_off = off * unit;
-    st->chain_end = (off + len) * unit;
+    st->chain_base = off * unit;
+    st->chain_datalen = len * unit;
+    st->chain_off = 0;
     st->chain_comm = comm;
 
     // the command CMAC has already been taken and its result discarded, so the
     // running state starts empty for the response half
     desfire_sim_cmac_reset(st);
 
-    if (st->chain_end > f->datalen) {
-        st->chain_end = f->datalen;
+    if (st->chain_base + st->chain_datalen > f->datalen) {
+        st->chain_datalen = (f->datalen > st->chain_base) ? (f->datalen - st->chain_base) : 0;
+    }
+
+    st->chain_end = st->chain_datalen;
+
+    if (comm == DESFIRE_SIM_COMM_FULL) {
+
+        size_t kbs = key_block_size(&st->sesskey);
+        if (kbs == 0) {
+            return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
+        }
+
+        // The CRC32 covers the data and the status byte the last frame will
+        // carry, so it is taken now and fed out with the rest of the stream.
+        const uint8_t *data = st->base + f->dataoff + st->chain_base;
+
+        crc_t crc;
+        crc_init_ref(&crc, 32, DESFIRE_CRC32_POLY, 0xFFFFFFFF, 0, false, false);
+
+        for (uint32_t i = 0; i < st->chain_datalen; i++) {
+            crc_update(&crc, data[i], 8);
+        }
+        crc_update(&crc, MFDES_S_OPERATION_OK, 8);
+
+        uint32_t v = crc_finish(&crc);
+        st->chain_crc[0] = v & 0xFF;
+        st->chain_crc[1] = (v >> 8) & 0xFF;
+        st->chain_crc[2] = (v >> 16) & 0xFF;
+        st->chain_crc[3] = (v >> 24) & 0xFF;
+
+        st->chain_end = padded_data_length(st->chain_datalen + 4, kbs);
     }
 
     return desfire_sim_read_chunk(st, out);
