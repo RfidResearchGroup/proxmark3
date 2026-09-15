@@ -252,6 +252,14 @@ static char *ReadSchemasFromSPIFFS(char *filename) {
     int changed = rdv40_spiffs_lazy_mount();
     uint32_t size = size_in_spiffs((char *)filename);
     uint8_t *mem = BigBuf_calloc(size);
+    if (mem == NULL) {
+        if (changed) {
+            rdv40_spiffs_lazy_unmount();
+        }
+        SpinOff(0);
+        return NULL;
+    }
+
     rdv40_spiffs_read_as_filetype((char *)filename, (uint8_t *)mem, size, RDV40_SPIFFS_SAFETY_SAFE);
 
     if (changed) {
@@ -264,6 +272,11 @@ static char *ReadSchemasFromSPIFFS(char *filename) {
 static void __attribute__((noinline)) add_schemas_from_json_in_spiffs(char *filename) {
 
     const char *jsonfile = ReadSchemasFromSPIFFS((char *)filename);
+    if (jsonfile == NULL) {
+        DbprintfEx(FLAG_NEWLINE, "[!!] out of memory, schemas NOT loaded");
+        cjSetCursLeft();
+        return;
+    }
 
     int i, len = strlen(jsonfile);
     struct json_token t;
@@ -294,6 +307,12 @@ static void __attribute__((noinline)) ReadLastTagFromFlash(void) {
     cjSetCursLeft();
 
     uint8_t *mem = BigBuf_calloc(size);
+    if (mem == NULL) {
+        DbprintfEx(FLAG_NEWLINE, "[!!] out of memory, last tag NOT recovered");
+        cjSetCursLeft();
+        SpinOff(0);
+        return;
+    }
 
     // this one will handle filetype (symlink or not) and resolving by itself
     rdv40_spiffs_read_as_filetype((char *)HFCOLIN_LASTTAG_SYMLINK, (uint8_t *)mem, len, RDV40_SPIFFS_SAFETY_SAFE);
@@ -457,6 +476,13 @@ void RunMod(void) {
 
     // Can remember something like that in case of Bigbuf
     keyBlock = BigBuf_calloc(ARRAYLEN(mfKeys) * MF_KEY_LENGTH);
+    if (keyBlock == NULL) {
+        DbprintfEx(FLAG_NEWLINE, "[!!] out of memory, aborting");
+        cjSetCursLeft();
+        SpinOff(0);
+        return;
+    }
+
     int mfKeysCnt = ARRAYLEN(mfKeys);
 
     for (int mfKeyCounter = 0; mfKeyCounter < mfKeysCnt; mfKeyCounter++) {
