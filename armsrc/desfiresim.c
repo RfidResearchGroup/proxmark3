@@ -1906,6 +1906,46 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
             return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, buf, sizeof(buf));
         }
 
+        case MFDES_READSIG: {
+
+            // one byte selects which signature, and EV1 only has the one
+            if (inlen < 1) {
+                return desfire_sim_status(out, MFDES_E_LENGTH);
+            }
+
+            if (in[0] != 0x00) {
+                return desfire_sim_status(out, MFDES_E_PARAMETER_ERROR);
+            }
+
+            // An originality signature is not an EV1 feature.  It is absent
+            // from M134034 entirely, the client only asks EV2 and later for one,
+            // and a genuine EV1 answers 91 1C to this command -- measured on
+            // MF3ICD81 UID 04 26 85 12 A2 56 80, which answers GetVersion in the
+            // same breath.  So a card image of that generation says the same,
+            // whatever the image happens to carry.
+            if (hdr->generation == DESFIRE_EM_GEN_D40 ||
+                    hdr->generation == DESFIRE_EM_GEN_EV1 ||
+                    hdr->generation == DESFIRE_EM_GEN_UNKNOWN) {
+                return desfire_sim_status(out, MFDES_E_ILLEGAL_COMMAND_CODE);
+            }
+
+            // A later card whose dump never read a signature has none to give,
+            // and 56 zero bytes would be a lie a reader cannot tell from a real
+            // answer.
+            if (hdr->signaturelen == 0) {
+                return desfire_sim_status(out, MFDES_E_ILLEGAL_COMMAND_CODE);
+            }
+
+            uint8_t n = hdr->signaturelen;
+            if (n > sizeof(hdr->signature)) {
+                n = sizeof(hdr->signature);
+            }
+
+            // ReadSignature answers 0x90 rather than 0x00, and that is the byte
+            // the response CMAC is taken over
+            return desfire_sim_maced(st, out, MFDES_S_SIGNATURE, hdr->signature, n);
+        }
+
         case MFDES_GET_KEY_VERSION: {
 
             if (inlen < 1) {
