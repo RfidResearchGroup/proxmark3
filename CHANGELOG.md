@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed USB WCID descriptors - the device advertised Microsoft OS descriptor support in string 0xEE but stalled the vendor request that follows (@iceman1001)
 - Added `hf mfdes sim` - answers GetDFNames and GetISOFileIDs, so a reader sees the ISO file ids and DF names of the simulated card (@iceman1001)
 - Fixed `hf 14a` - an FPGA bitstream download no longer destroys the emulator memory that `eload` just filled (@iceman1001)
 - Changed `hf mfdes sim` - now a self contained DESFire simulation, answering both native and ISO 7816 wrapped commands (@iceman1001)

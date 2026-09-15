@@ -48,12 +48,9 @@ AT91SAM7S256  USB Device Port
 #define AT91C_USB_EP_IN_SIZE            64
 
 /* WCID specific Request Code */
-#define MS_OS_DESCRIPTOR_INDEX          0xEE
-#define MS_VENDOR_CODE                  0x1C
-#define MS_EXTENDED_COMPAT_ID           0x04
-#define MS_EXTENDED_PROPERTIES          0x05
-#define MS_WCID_GET_DESCRIPTOR          0xC0
-#define MS_WCID_GET_FEATURE_DESCRIPTOR  0xC1
+/* MS_OS_DESCRIPTOR_INDEX, MS_EXTENDED_COMPAT_ID, MS_EXTENDED_PROPERTIES and
+   the MS_WCID_* request types come from usb_cdc_desc.h */
+#define MS_VENDOR_CODE                  USB_CDC_DESC_MS_VENDOR_CODE
 
 /* USB standard request code */
 #define STD_GET_STATUS_ZERO           0x0080
@@ -727,23 +724,26 @@ void AT91F_CDC_Enumerate(void) {
     UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_RXSETUP);
     while ((pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_RXSETUP)) {};
 
-    /*
-    if ( bRequest == MS_VENDOR_CODE) {
-        if ( bmRequestType == MS_WCID_GET_DESCRIPTOR ) { // C0
-            if ( wIndex == MS_EXTENDED_COMPAT_ID ) {  // 4
-                //AT91F_USB_SendData(pUdp, CompatIDFeatureDescriptor, MIN(sizeof(CompatIDFeatureDescriptor), wLength));
-                //return;
-            }
+    // WCID vendor request. StrMS_OSDescriptor advertises MS_VENDOR_CODE, so
+    // every request carrying it has to be answered here. Falling through to the
+    // standard switch below stalls it, which makes Windows cache the device as
+    // having no MS OS descriptors and stop asking.
+    if (bRequest == MS_VENDOR_CODE) {
+
+        if (bmRequestType == MS_WCID_GET_DESCRIPTOR && wIndex == MS_EXTENDED_COMPAT_ID) {
+            AT91F_USB_SendData(pUdp, CompatIDFeatureDescriptor, MIN(sizeof(CompatIDFeatureDescriptor), wLength));
+            return;
         }
 
-        if ( bmRequestType == MS_WCID_GET_FEATURE_DESCRIPTOR ) {  //C1
-            // if ( wIndex == MS_EXTENDED_PROPERTIES ) { // 5  - winusb bug with wIndex == interface index,  so I just send it always)
-                //AT91F_USB_SendData(pUdp, OSprop, MIN(sizeof(OSprop), wLength));
-                //return;
-            // }
+        // wValue holds the interface number, wIndex the descriptor index.
+        if (bmRequestType == MS_WCID_GET_FEATURE_DESCRIPTOR && wIndex == MS_EXTENDED_PROPERTIES) {
+            AT91F_USB_SendData(pUdp, OSprop, MIN(sizeof(OSprop), wLength));
+            return;
         }
+
+        AT91F_USB_SendStall(pUdp);
+        return;
     }
-    */
 
     // Handle supported standard device request Cf Table 9-3 in USB specification Rev 1.1
     switch ((bRequest << 8) | bmRequestType) {

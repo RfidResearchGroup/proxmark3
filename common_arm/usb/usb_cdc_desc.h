@@ -52,6 +52,15 @@
 // https://www.usbzh.com/article/detail-625.html
 #define  USB_CDC_DESC_MS_VENDOR_CODE    0x1C
 
+// WCID request codes. The OS string descriptor lives at string index
+// MS_OS_DESCRIPTOR_INDEX and names USB_CDC_DESC_MS_VENDOR_CODE as the bRequest
+// Windows then uses for the two feature descriptors below.
+#define  MS_OS_DESCRIPTOR_INDEX         0xEE
+#define  MS_EXTENDED_COMPAT_ID          0x04
+#define  MS_EXTENDED_PROPERTIES         0x05
+#define  MS_WCID_GET_DESCRIPTOR         0xC0
+#define  MS_WCID_GET_FEATURE_DESCRIPTOR 0xC1
+
 // exported all desc.
 extern const char devDescriptor[18];
 extern const char cfgDescriptor[67];
@@ -70,5 +79,15 @@ extern char StrSerialNumber[50];
 // WCID, for DRIVER auto install on windows platform.
 //  DOCS: https://www.usbzh.com/article/detail-625.html
 extern const char StrMS_OSDescriptor[18];
+
+// WCID feature descriptors. Only the AT91 driver answers the vendor request
+// that carries them; the AT32 stack routes vendor requests into its
+// third-party class handler, so it does not build these.
+//
+// OSprop publishes this device interface GUID to Windows.
+#ifndef PM5
+extern const char CompatIDFeatureDescriptor[40];
+extern const char OSprop[304];
+#endif
 
 #endif
