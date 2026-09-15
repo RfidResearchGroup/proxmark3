@@ -188,6 +188,10 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
     rx->ng = rx_raw.pre.ng;
     rx->cmd = rx_raw.pre.cmd;
 
+    // Zero the payload only once a packet is really coming in: doing it for
+    // every idle poll of the main loop cost more than the rest of the loop.
+    memset(&rx->data, 0, sizeof(rx->data));
+
     uint16_t length = rx_raw.pre.length;
 
     if (rx->magic == COMMANDNG_PREAMBLE_MAGIC) { // New style NG command

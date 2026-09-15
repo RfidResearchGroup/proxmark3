@@ -87,6 +87,7 @@
 #include "bwm_charger.h"   // BWM charger / fuel-gauge + low-batt warning (WITH_BWM_*)
 #include "buzzer.h"        // PM5 mainboard buzzer API
 #include "rgb_indicator.h" // PM5 antenna-RGB power/battery indicator (WITH_PM5_PWR_LED)
+#include "pm5_power.h"     // PM5 power-save idle (clock scaling + WFI)
 
 
 #ifdef WITH_PM5_AUTOOFF
@@ -594,15 +595,35 @@ static void SendStatus(uint32_t wait) {
     {
         // Read the ESP firmware version so hw status shows what the BWM runs
         // (and lets you confirm an OTA took: the string flips after a reflash).
+        // The client gives hw status about 2 s, so a module that is silent
+        // (link still re-syncing after a reset, or absent) must not eat more
+        // than this before the rest of the report goes out. One retry: a rare
+        // slow wake from light sleep can lose the first frame, and that frame
+        // has already woken the module, so the second one lands while it is up.
         uint8_t bwm_ver[64] = {0};
         uint16_t bwm_ver_len = sizeof(bwm_ver) - 1;
-        if (bwm_esp_get_version(bwm_ver, &bwm_ver_len) == PM3_SUCCESS) {
+        int vres = bwm_esp_get_version(bwm_ver, &bwm_ver_len, 800);
+        if (vres == PM3_ETIMEOUT) {
+            bwm_ver_len = sizeof(bwm_ver) - 1;
+            vres = bwm_esp_get_version(bwm_ver, &bwm_ver_len, 800);
+        }
+        if (vres == PM3_SUCCESS) {
             bwm_ver[bwm_ver_len] = 0x00;
             Dbprintf("  BWM fw version...... " _YELLOW_("%s"), bwm_ver);
+            // Only once the ESP has answered. An ESP firmware without this
+            // command reports it (or, older still, stays silent), so keep the
+            // wait short: hw status must finish inside the client's timeout.
+            uint8_t ps = 0;
+            if (bwm_esp_get_power_save(&ps, 300) == PM3_SUCCESS) {
+                Dbprintf("  BWM power save...... " _YELLOW_("%s"), ps ? "on" : "off");
+            }
         } else {
             Dbprintf("  BWM fw version...... " _YELLOW_("%s"), "unknown");
         }
     }
+#endif
+#ifdef PM5
+    pm5_power_print_status();
 #endif
     printConnSpeed(wait);
     DbpString(_CYAN_("Various"));
@@ -4177,7 +4198,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                     // ack is lost). Replies here with a payload, unlike the others.
                     uint8_t ver[64];
                     uint16_t vlen = sizeof(ver);
-                    res = bwm_esp_get_version(ver, &vlen);
+                    res = bwm_esp_get_version(ver, &vlen, 3000);
                     reply_ng(CMD_PM5_BWM_ESP_OTA, res, ver, (res == PM3_SUCCESS) ? vlen : 0);
                     replied = true;
                     break;
@@ -4264,6 +4285,61 @@ static void PacketReceived(PacketCommandNG *packet) {
 #endif
             break;
         }
+        case CMD_PM5_BWM_POWERSAVE: {
+#ifdef WITH_BWM_FORWARD
+            // Payload: [action:u8][state:u8 if SET]. Both reply with the state the
+            // ESP applied (u8). SET is persisted on the ESP; nothing to keep here.
+            if (packet->length < 1) {
+                reply_ng(CMD_PM5_BWM_POWERSAVE, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            uint8_t action = packet->data.asBytes[0];
+            uint8_t state = 0;
+            int res;
+            if (action == BWM_POWERSAVE_ACTION_GET) {
+                res = bwm_esp_get_power_save(&state, 3000);
+            } else if (action == BWM_POWERSAVE_ACTION_SET && packet->length >= 2) {
+                res = bwm_esp_set_power_save(packet->data.asBytes[1] != 0, &state);
+            } else {
+                reply_ng(CMD_PM5_BWM_POWERSAVE, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            reply_ng(CMD_PM5_BWM_POWERSAVE, res, &state, (res == PM3_SUCCESS) ? 1 : 0);
+#else
+            reply_ng(CMD_PM5_BWM_POWERSAVE, PM3_ENOTIMPL, NULL, 0);
+#endif
+            break;
+        }
+        case CMD_PM5_BWM_WIFI_PS: {
+#ifdef WITH_BWM_FORWARD
+            // Payload: [action:u8][mode:u8 if SET]. Reply: [mode:u8][wifi_state:u8],
+            // the mode the ESP applied and its WiFi connect state (0xFF = WiFi off,
+            // BLE-only) so the host can show that the type is moot right now.
+            if (packet->length < 1) {
+                reply_ng(CMD_PM5_BWM_WIFI_PS, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            uint8_t action = packet->data.asBytes[0];
+            uint8_t out[2] = { 0, BWM_WIFI_STATE_OFF };
+            int res;
+            if (action == BWM_WIFI_PS_ACTION_GET) {
+                res = bwm_esp_get_wifi_ps(&out[0]);
+            } else if (action == BWM_WIFI_PS_ACTION_SET && packet->length >= 2 && packet->data.asBytes[1] <= BWM_WIFI_PS_MAX) {
+                res = bwm_esp_set_wifi_ps(packet->data.asBytes[1], &out[0]);
+            } else {
+                reply_ng(CMD_PM5_BWM_WIFI_PS, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            if (res == PM3_SUCCESS) {
+                uint32_t ip = 0;
+                (void)bwm_wifi_forward_status(&out[1], &ip);   // 0xFF when the WiFi stack is down
+            }
+            reply_ng(CMD_PM5_BWM_WIFI_PS, res, out, (res == PM3_SUCCESS) ? sizeof(out) : 0);
+#else
+            reply_ng(CMD_PM5_BWM_WIFI_PS, PM3_ENOTIMPL, NULL, 0);
+#endif
+            break;
+        }
         case CMD_PM5_BWM_AUTOOFF: {
             // Toggle automatic power-off on USB unplug (runtime, default on).
             // Payload: 1 byte, non-zero = enable (default), zero = disable.
@@ -4275,8 +4351,16 @@ static void PacketReceived(PacketCommandNG *packet) {
 #endif
             break;
         }
-#endif
-#endif
+#endif // WITH_BWM_STATUS
+        case CMD_PM5_POWERSAVE: {
+            // Toggle the power-save idle (runtime, default on).
+            // Payload: 1 byte, non-zero = enable (default), zero = disable.
+            pm5_power_set_enabled((packet->length >= 1) ? (packet->data.asBytes[0] != 0) : true);
+            uint8_t state = pm5_power_get_enabled() ? 1 : 0;
+            reply_ng(CMD_PM5_POWERSAVE, PM3_SUCCESS, &state, 1);
+            break;
+        }
+#endif // PM5
         default: {
             Dbprintf("%s: 0x%04x", "unknown command:", packet->cmd);
             break;
@@ -4367,6 +4451,10 @@ void __attribute__((noreturn)) AppMain(void) {
     bwm_charger_kick();
 #endif
 
+#ifdef PM5
+    pm5_power_init();
+#endif
+
     for (;;) {
         WDT_HIT();
 
@@ -4390,11 +4478,15 @@ void __attribute__((noreturn)) AppMain(void) {
 
         // Check if there is a packet available
         PacketCommandNG rx;
-        memset(&rx.data, 0, sizeof(rx.data));
-
         int ret = receive_ng(&rx);
         if (ret == PM3_SUCCESS) {
+#ifdef PM5
+            pm5_power_boost();   // commands assume the full 288 MHz clock
+#endif
             PacketReceived(&rx);
+#ifdef PM5
+            pm5_power_unboost();
+#endif
             last_activity_label = GetTickCountLabel();
             last_activity_tick = GetTickCount();
         } else if (ret != PM3_ENODATA) {
@@ -4483,5 +4575,10 @@ void __attribute__((noreturn)) AppMain(void) {
 
 #endif
         }
+
+#ifdef PM5
+        // Nothing left to do this pass: downclock if allowed, halt until the next IRQ / ms tick.
+        pm5_power_idle();
+#endif
     }
 }

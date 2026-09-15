@@ -88,7 +88,18 @@ int bwm_wifi_forward_status(uint8_t *state, uint32_t *ip_out);
 #define BWM_CMD_START_BLE_SPP      4021   // no payload: restore BLE after OTA
 #define BWM_CMD_SET_BLE_DEVICE_NAME 4002   // req: name bytes
 #define BWM_CMD_GET_BLE_DEVICE_NAME 4003   // resp: current BLE device name string
-int bwm_esp_get_version(uint8_t *buf, uint16_t *buflen);
+// ESP power-save switch (DFS + light sleep + low-duty advertising), persisted on
+// the ESP. Both return the ESP's applied state in *state.
+#define BWM_CMD_SET_SYS_POWER_SAVE 1019   // req: u8 0=off 1=on; resp: u8 applied state
+#define BWM_CMD_GET_SYS_POWER_SAVE 1020   // resp: u8 state
+int bwm_esp_get_power_save(uint8_t *state, uint32_t timeout_ms);
+// ESP WiFi modem power-save type (0 none, 1 min, 2 max), persisted on the ESP.
+#define BWM_CMD_SET_WIFI_CFG_PS_MODE 2052   // req: u8 mode; resp: u8 applied mode
+#define BWM_CMD_GET_WIFI_CFG_PS_MODE 2053   // resp: u8 mode
+int bwm_esp_get_wifi_ps(uint8_t *mode);
+int bwm_esp_set_wifi_ps(uint8_t mode, uint8_t *applied);
+int bwm_esp_set_power_save(bool on, uint8_t *state);
+int bwm_esp_get_version(uint8_t *buf, uint16_t *buflen, uint32_t timeout_ms);
 int bwm_esp_get_ble_name(uint8_t *buf, uint16_t *buflen);
 int bwm_esp_set_ble_name(const uint8_t *name, uint16_t len);
 int bwm_esp_ota_begin(uint32_t total_size);

@@ -161,26 +161,23 @@ static usbd_desc_handler cdc_desc_handler = {
   */
 static void usb_clock48m_select(usb_clk48_s clk_s) {
     if (clk_s == USB_CLK_HICK) {
-        /* UNUSED!!!
-
+        // HICK-48 (also makes SCLK-from-HICK 48 MHz), trimmed by the ACC against
+        // the USB SOF to +/-0.25%. Independent of the PLL, so the PLL can be
+        // powered down at idle (armsrc/pm5_power.c) without touching USB.
         crm_usb_clock_source_select(CRM_USB_CLOCK_SOURCE_HICK);
 
-        // enable the acc calibration ready interrupt
         crm_periph_clock_enable(CRM_ACC_PERIPH_CLOCK, TRUE);
 
-        // update the c1\c2\c3 value
+        // compare window around the ideal 8000 HICK/6 counts per 1 ms SOF
         acc_write_c1(7980);
         acc_write_c2(8000);
         acc_write_c3(8020);
-        #if (USB_ID == 0)
+#if (USB_ID == 0)
         acc_sof_select(ACC_SOF_OTG1);
-        #else
+#else
         acc_sof_select(ACC_SOF_OTG2);
-        #endif
-        // open acc calibration
+#endif
         acc_calibration_mode_enable(ACC_CAL_HICKTRIM, TRUE);
-
-        */
     } else {
         switch (system_core_clock) {
             /* 48MHz */
@@ -373,7 +370,11 @@ void usb_enable(void) {
     usb_gpio_config();
 
     crm_periph_clock_enable(OTG_CLOCK, TRUE); // enable otgfs clock
+#ifdef AS_BOOTROM
     usb_clock48m_select(USB_CLK_HEXT); // select usb 48m clcok source
+#else
+    usb_clock48m_select(USB_CLK_HICK); // crystal-less, survives the idle PLL-off (pm5_power.c)
+#endif
     nvic_irq_enable(OTG_IRQ, 0, 0); // enable otgfs irq
     usbd_init(&otg_core_struct, USB_FULL_SPEED_CORE_ID, USB_ID, &cdc_class_handler, &cdc_desc_handler); // init usb
 

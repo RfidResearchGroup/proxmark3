@@ -920,6 +920,21 @@ typedef struct {
 #define BWM_BLE_NAME_ACTION_GET 0x00  // resp: current BLE device name string
 #define BWM_BLE_NAME_ACTION_SET 0x01  // req: name bytes follow the action byte; BWM reboots to apply
 #define BWM_BLE_NAME_MAX_LEN    15    // usable chars; ESP name buffer is 16 incl NUL
+// PM5, toggle the power-save idle (48 MHz + WFI when idle). Used by `hw powersave`.
+#define CMD_PM5_POWERSAVE    0x0180
+// PM5, BWM power-save switch on the ESP (DFS, light sleep, low-duty advertising;
+// persisted on the BWM). Used by `hw bwm powersave`.
+#define CMD_PM5_BWM_POWERSAVE 0x0181  // payload: [action:u8][state:u8 if SET]; resp: u8 applied state
+#define BWM_POWERSAVE_ACTION_GET 0x00
+#define BWM_POWERSAVE_ACTION_SET 0x01
+// PM5, BWM WiFi modem power-save type (persisted on the ESP). Used by `hw bwm wifipower`.
+#define CMD_PM5_BWM_WIFI_PS   0x0182  // payload: [action:u8][mode:u8 if SET]; resp: [mode:u8][wifi_state:u8, 0xFF = WiFi off]
+#define BWM_WIFI_PS_ACTION_GET 0x00
+#define BWM_WIFI_PS_ACTION_SET 0x01
+#define BWM_WIFI_PS_NONE       0      // modem never sleeps
+#define BWM_WIFI_PS_MIN        1      // sleeps between DTIM beacons (ESP-IDF default)
+#define BWM_WIFI_PS_MAX        2      // sleeps for the listen interval
+#define BWM_WIFI_STATE_OFF     0xFF   // wifi_state byte: WiFi stack down (BLE-only)
 #define BWM_OTA_ACTION_BEGIN 0x00
 #define BWM_OTA_ACTION_WRITE 0x01
 #define BWM_OTA_ACTION_END   0x02

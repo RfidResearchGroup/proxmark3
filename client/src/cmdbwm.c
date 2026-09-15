@@ -696,15 +696,163 @@ static int CmdBwmName(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// Round trip for the BWM u8 settings (`hw bwm powersave`, `hw bwm wifipower`):
+// send [action][value] (value only when has_value) and wait for the ESP's answer.
+// Prints the generic failure messages; on PM3_SUCCESS resp holds >= 1 byte.
+static int bwm_setting_txn(uint16_t cmd, uint8_t action, uint8_t value, bool has_value,
+                           PacketResponseNG *resp, const char *what) {
+    uint8_t payload[2] = { action, value };
+    clearCommandBuffer();
+    SendCommandNG(cmd, payload, has_value ? 2 : 1);
+    if (WaitForResponseTimeout(cmd, resp, 8000) == false) {
+        PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a responsive BWM?)");
+        return PM3_ETIMEOUT;
+    }
+    if (resp->status == PM3_ENOTIMPL) {
+        PrintAndLogEx(WARNING, "firmware built without BWM link support");
+        return resp->status;
+    }
+    if (resp->status != PM3_SUCCESS || resp->length < 1) {
+        PrintAndLogEx(FAILED, "BWM did not answer the %s command (BWM firmware too old?)", what);
+        return (resp->status != PM3_SUCCESS) ? resp->status : PM3_EFAILED;
+    }
+    return PM3_SUCCESS;
+}
+
+static const char *bwm_wifi_state_name(uint8_t state) {
+    switch (state) {
+        case 0:  return "disconnected";
+        case 1:  return "connecting";
+        case 2:  return "connected";
+        case 3:  return "reconnecting";
+        case 4:  return "connect task stopped";
+        default: return "unknown state";
+    }
+}
+
+static int CmdBwmPowerSave(const char *Cmd) {
+    // Positional sub-action (no dashes): hw bwm powersave [on | off]; no verb shows the state
+    char verb[16] = {0};
+    sscanf(Cmd, "%15s", verb);
+    bool on   = (strcmp(verb, "on")  == 0);
+    bool off  = (strcmp(verb, "off") == 0);
+    bool show = (verb[0] == 0);
+
+    if (!on && !off && !show) {
+        // Not a recognised sub-action: render help (also serves -h), or error on
+        // a stray token, then stop.
+        CLIParserContext *ctx;
+        CLIParserInit(&ctx, "hw bwm powersave",
+                      "Show or set the BWM (ESP32) power-save switch, stored on the BWM in NVS.\n"
+                      "Default is " _GREEN_("on") ": the ESP scales its clock down and light-sleeps\n"
+                      "between link traffic, and advertises once every 3 s (a phone needs a few\n"
+                      "seconds to find it). " _YELLOW_("off") " pins the ESP at full clock, no sleep, fast\n"
+                      "advertising - the stock behaviour - for A/B power measurements or when\n"
+                      "chasing a link problem. Applies at once and survives reboots. PM5 only.",
+                      "hw bwm powersave        --> show the current state\n"
+                      "hw bwm powersave off    --> stock always-on behaviour\n"
+                      "hw bwm powersave on     --> re-enable power saving");
+        void *argtable[] = {
+            arg_param_begin,
+            arg_param_end
+        };
+        CLIExecWithReturn(ctx, Cmd, argtable, true);
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "specify " _YELLOW_("on") ", " _YELLOW_("off") " or nothing to show the state");
+        return PM3_EINVARG;
+    }
+
+    PacketResponseNG resp;
+    int res = bwm_setting_txn(CMD_PM5_BWM_POWERSAVE, show ? BWM_POWERSAVE_ACTION_GET : BWM_POWERSAVE_ACTION_SET,
+                              on ? 1 : 0, !show, &resp, "power-save");
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+    bool state = (resp.data.asBytes[0] != 0);
+    PrintAndLogEx(SUCCESS, "BWM power save..... %s", state ? _GREEN_("on") : _YELLOW_("off"));
+    return PM3_SUCCESS;
+}
+
+static const char *bwm_wifi_ps_name(uint8_t mode) {
+    switch (mode) {
+        case BWM_WIFI_PS_NONE: return "none";
+        case BWM_WIFI_PS_MIN:  return "min";
+        case BWM_WIFI_PS_MAX:  return "max";
+        default:               return "?";
+    }
+}
+
+static int CmdBwmWifiPower(const char *Cmd) {
+    // Positional sub-action (no dashes): hw bwm wifipower [off | none | min | max]; no verb shows the state
+    char verb[16] = {0};
+    sscanf(Cmd, "%15s", verb);
+    int mode = -1;
+    if (verb[0] == 0) {
+        mode = -1;
+    } else if (strcmp(verb, "off") == 0) {
+        // WiFi fully off: the module tears the stack down and stays BLE-only across
+        // reboots. Same as `hw bwm wifi stop`; bring it back with `hw bwm wifi --ssid`.
+        return CmdBWMWifi("stop");
+    } else if (strcmp(verb, "none") == 0) {
+        mode = BWM_WIFI_PS_NONE;
+    } else if (strcmp(verb, "min") == 0) {
+        mode = BWM_WIFI_PS_MIN;
+    } else if (strcmp(verb, "max") == 0) {
+        mode = BWM_WIFI_PS_MAX;
+    } else {
+        // Not a recognised sub-action: render help (also serves -h), or error on
+        // a stray token, then stop.
+        CLIParserContext *ctx;
+        CLIParserInit(&ctx, "hw bwm wifipower",
+                      "Show or set how much power the BWM (ESP32) spends on WiFi.\n"
+                      _YELLOW_("off") " turns WiFi fully off (BLE-only, persists across reboots; the default state,\n"
+                      "same as `hw bwm wifi stop`). Bring it back with " _YELLOW_("hw bwm wifi --ssid <ssid> --pwd <pwd>") ".\n"
+                      "The other three set the modem power-save type used while WiFi is up, stored on the\n"
+                      "BWM: " _GREEN_("min") " (default) sleeps between DTIM beacons, the ESP-IDF default; " _YELLOW_("max") " sleeps\n"
+                      "for the whole listen interval, lowest current but slower to react; " _YELLOW_("none") " never\n"
+                      "sleeps, lowest latency, highest current. Independent of " _YELLOW_("hw bwm powersave") ". PM5 only.",
+                      "hw bwm wifipower          --> show whether WiFi is up and the power-save type\n"
+                      "hw bwm wifipower off      --> WiFi fully off, BLE-only\n"
+                      "hw bwm wifipower none     --> modem always on while WiFi is up\n"
+                      "hw bwm wifipower min      --> ESP-IDF default (DTIM sleep)\n"
+                      "hw bwm wifipower max      --> deepest modem sleep");
+        void *argtable[] = {
+            arg_param_begin,
+            arg_param_end
+        };
+        CLIExecWithReturn(ctx, Cmd, argtable, true);
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "specify " _YELLOW_("off") ", " _YELLOW_("none") ", " _YELLOW_("min") ", " _YELLOW_("max") " or nothing to show the state");
+        return PM3_EINVARG;
+    }
+
+    PacketResponseNG resp;
+    int res = bwm_setting_txn(CMD_PM5_BWM_WIFI_PS, (mode < 0) ? BWM_WIFI_PS_ACTION_GET : BWM_WIFI_PS_ACTION_SET,
+                              (mode < 0) ? 0 : (uint8_t)mode, mode >= 0, &resp, "WiFi power");
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+    uint8_t wifi_state = (resp.length >= 2) ? resp.data.asBytes[1] : BWM_WIFI_STATE_OFF;
+    if (wifi_state == BWM_WIFI_STATE_OFF) {
+        PrintAndLogEx(SUCCESS, "BWM WiFi................ " _GREEN_("off") " (BLE-only)");
+    } else {
+        PrintAndLogEx(SUCCESS, "BWM WiFi................ " _YELLOW_("on") " (%s)", bwm_wifi_state_name(wifi_state));
+    }
+    PrintAndLogEx(SUCCESS, "BWM WiFi power save..... " _YELLOW_("%s"), bwm_wifi_ps_name(resp.data.asBytes[0]));
+    return PM3_SUCCESS;
+}
+
 static command_t BwmCommandTable[] = {
     {"help",     CmdHelpBwm,    AlwaysAvailable, "This help"},
     {"autooff",  CmdBwmAutoOff, IfPm5, "Toggle auto power-off on USB unplug"},
     {"charge",   CmdBwmCharge,  IfPm5, "Enable/disable battery charging (one-shot)"},
     {"name",     CmdBwmName,    IfPm5, "Get/set the BWM BLE advertising name"},
+    {"powersave", CmdBwmPowerSave, IfPm5, "Show/set the BWM power-save switch (DFS, light sleep, slow adv)"},
     {"setcap",   CmdBwmSetCap,  IfPm5, "Set fuel-gauge design capacity (run once after battery change)"},
     {"upgrade",  CmdBWMUpgrade, IfPm5, "Reflash BWM (ESP32) firmware over the BWM link, no header"},
     {"vchg",     CmdBwmVchg,    IfPm5, "Set charger charge-voltage target (default 4100 mV)"},
     {"wifi",     CmdBWMWifi,    IfPm5, "Bring up WiFi (STA + TCP server) for a tcp: connection"},
+    {"wifipower", CmdBwmWifiPower, IfPm5, "WiFi fully off, or the modem power-save type (none/min/max)"},
     {NULL, NULL, NULL, NULL}
 };
 

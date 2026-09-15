@@ -11033,6 +11033,20 @@
             ],
             "usage": "hw bwm name [-h] [--set <name>]"
         },
+        "hw bwm powersave": {
+            "command": "hw bwm powersave",
+            "description": "Show or set the BWM (ESP32) power-save switch, stored on the BWM in NVS. Default is on: the ESP scales its clock down and light-sleeps between link traffic, and advertises once every 3 s (a phone needs a few seconds to find it). off pins the ESP at full clock, no sleep, fast advertising - the stock behaviour - for A/B power measurements or when chasing a link problem. Applies at once and survives reboots. PM5 only.",
+            "notes": [
+                "hw bwm powersave -> show the current state",
+                "hw bwm powersave off -> stock always-on behaviour",
+                "hw bwm powersave on -> re-enable power saving"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hw bwm powersave [-h]"
+        },
         "hw bwm setcap": {
             "command": "hw bwm setcap",
             "description": "Program the BWM fuel gauge (BQ27427) Design Capacity for the fitted cell. Run ONCE after fitting or replacing the battery. This triggers a gauge config-update; do not run it repeatedly, as that disrupts the Impedance Track learning cycle. PM5 only.",
@@ -11093,6 +11107,22 @@
                 "--hostname <name> DHCP hostname (default Proxmark5)"
             ],
             "usage": "hw bwm wifi [-h] [--ssid <ssid>] [--pwd <pwd>] [--port <dec>] [--hostname <name>]"
+        },
+        "hw bwm wifipower": {
+            "command": "hw bwm wifipower",
+            "description": "Show or set how much power the BWM (ESP32) spends on WiFi. off turns WiFi fully off (BLE-only, persists across reboots; the default state, same as `hw bwm wifi stop`). Bring it back with hw bwm wifi --ssid <ssid> --pwd <pwd>. The other three set the modem power-save type used while WiFi is up, stored on the BWM: min (default) sleeps between DTIM beacons, the ESP-IDF default; max sleeps for the whole listen interval, lowest current but slower to react; none never sleeps, lowest latency, highest current. Independent of hw bwm powersave. PM5 only.",
+            "notes": [
+                "hw bwm wifipower -> show whether WiFi is up and the power-save type",
+                "hw bwm wifipower off -> WiFi fully off, BLE-only",
+                "hw bwm wifipower none -> modem always on while WiFi is up",
+                "hw bwm wifipower min -> ESP-IDF default (DTIM sleep)",
+                "hw bwm wifipower max -> deepest modem sleep"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hw bwm wifipower [-h]"
         },
         "hw connect": {
             "command": "hw connect",
@@ -11223,6 +11253,19 @@
                 "-l, --len <dec> length of payload to send"
             ],
             "usage": "hw ping [-h] [-l <dec>]"
+        },
+        "hw powersave": {
+            "command": "hw powersave",
+            "description": "Toggle the PM5 power-save idle. Default is on: between commands the core drops from 288 to 48 MHz with the PLL off, the FPGA clock stopped and the CPU halted (WFI) until the next USB / BWM / button event. Commands and the BWM housekeeping always run at full speed. Turn it off to get the old always-288 MHz busy loop back, e.g. when chasing a timing problem. Runtime only: resets to on at each boot. See `hw status` for the idle stats.",
+            "notes": [
+                "hw powersave off -> stay at 288 MHz, no idle sleep",
+                "hw powersave on -> re-enable the power-save idle"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hw powersave [-h]"
         },
         "hw qc_pm5": {
             "command": "hw qc_pm5",
@@ -16614,7 +16657,9 @@
         }
     },
     "metadata": {
-        "commands_extracted": 925,
+        "commands_extracted": 928,
+        "commands_extracted": 928,
+        "commands_extracted": 928,
         "extracted_by": "PM3Help2JSON v1.00",
         "extracted_on": "2026-09-14T17:55:25+00:00"
     }
