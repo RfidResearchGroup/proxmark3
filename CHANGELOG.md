@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `lf search` - a leftover debug print no longer reports `DEBUG: detectindala | <n>` on every failed Indala demodulation (@tweathers-sec)
 - Changed `memcpy` - the device's own implementation now copies a word at a time when source and destination allow it (@iceman1001)
 - Changed NG replies - the outgoing frame is offset so its payload lands word aligned, taking USB transfer speed from 630 to 789 kB/s on RDV4  (@iceman1001)
 - Fixed `AT91F_USB_SendStall` - waiting for the host to collect the STALL is now bounded (@iceman1001)
