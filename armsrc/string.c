@@ -96,11 +96,51 @@ void *memmove(void *dest, const void *src, size_t len) {
 }
 
 void *memset(void *dest, uint8_t c, int len) {
+
     uint8_t *d = dest;
-    while ((len--) > 0) {
-        *d = c;
-        d++;
+
+    if (len <= 0) {
+        return dest;
     }
+
+    // Same treatment memcpy got, and simpler: with no source buffer there is no
+    // alignment to match, so a word fill is always available once the
+    // destination is aligned.  ARM7TDMI cannot do a misaligned word access.
+    while ((((uintptr_t)d & 3) != 0) && (len > 0)) {
+        *d++ = c;
+        len--;
+    }
+
+    uint32_t w = c;
+    w |= w << 8;
+    w |= w << 16;
+
+    aliasing_u32 *dw = (aliasing_u32 *)d;
+
+    // unrolled four ways, because at -Os the loop bookkeeping otherwise costs
+    // more than the stores
+    while (len >= 16) {
+        dw[0] = w;
+        dw[1] = w;
+        dw[2] = w;
+        dw[3] = w;
+        dw += 4;
+        len -= 16;
+    }
+
+    while (len >= 4) {
+        *dw++ = w;
+        len -= 4;
+    }
+
+    d = (uint8_t *)dw;
+
+    // at most three bytes are left
+    while (len > 0) {
+        *d++ = c;
+        len--;
+    }
+
     return dest;
 }
 

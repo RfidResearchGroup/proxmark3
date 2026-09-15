@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `memset` - the device's own implementation now fills a word at a time, the same treatment `memcpy` got, taking its bulk path from six instructions per byte to about nine per sixteen (@iceman1001)
+- Changed `receive_ng` - the command payload is zeroed when a packet actually arrives rather than on every idle pass of the main loop, which also covers two callers that were never zeroing it at all (@iceman1001)
 - Changed `hf mfdes chk` - runs with no arguments now, falling back to the bundled dictionary the way `hf mfdes detect` already does (@iceman1001)
 - Changed `hf mfdes chk` - tidier output: the stray `d` and `p` progress characters are gone, a found key no longer repeats the AID the `Checking aid` line above it just gave, and the crypto algorithm is highlighted the way `hf mfdes detect` already highlights it (@iceman1001)
 - Fixed `hf mfdes sim` - a chained write is answered instead of being refused with 91 1C on its second frame, so a write longer than one frame works at all (@iceman1001)
