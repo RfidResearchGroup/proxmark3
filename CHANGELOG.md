@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf mfdes chk` - runs with no arguments now, falling back to the bundled dictionary the way `hf mfdes detect` already does (@iceman1001)
+- Changed `hf mfdes chk` - tidier output: the stray `d` and `p` progress characters are gone, a found key no longer repeats the AID the `Checking aid` line above it just gave, and the crypto algorithm is highlighted the way `hf mfdes detect` already highlights it (@iceman1001)
 - Fixed `hf mfdes sim` - a chained write is answered instead of being refused with 91 1C on its second frame, so a write longer than one frame works at all (@iceman1001)
 - Fixed `hf mfdes sim` - an error status now ends the authenticated session, as M134034 7.3.4 requires of a card (@iceman1001)
 - Fixed `hf mfdes sim` - answers are sized from the frame size the reader asks for in its RATS instead of a fixed 96 bytes (@iceman1001)

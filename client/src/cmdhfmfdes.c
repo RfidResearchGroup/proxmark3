@@ -1326,8 +1326,9 @@ static int AuthCheckDesfireKeyType(DesfireContext_t *dctx,
 
             int res = DesfireAuthenticate(dctx, secureChannel, false);
             if (res == PM3_SUCCESS) {
-                PrintAndLogEx(SUCCESS, "AID 0x%06X, Found %s Key %02u... " _GREEN_("%s"),
-                              curaid, keytypestr, keyno, sprint_hex_inrow(key, keylen));
+                // the AID is already on the "Checking aid" line above
+                PrintAndLogEx(SUCCESS, "Found " _GREEN_("%s") " Key %02u... " _GREEN_("%s"),
+                              keytypestr, keyno, sprint_hex_inrow(key, keylen));
 
                 found->keys[keytype][keyno][0] = 0x01;
                 memcpy(&found->keys[keytype][keyno][1], key, keylen);
@@ -1603,7 +1604,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
         arg_param_begin,
         arg_str0(NULL, "aid",        "<hex>", "Use specific AID (3 hex bytes, big endian)"),
         arg_str0("k",  "key",        "<hex>", "Key for authenticate (8|16|24 hex bytes)"),
-        arg_str0("f", "file",        "<fn>",  "Filename of dictionary"),
+        arg_str0("f", "file",        "<fn>",  "Filename of dictionary (default: `" MFDES_DEFAULT_DICT "`)"),
         arg_lit0(NULL, "pattern1b",  "Check all 1-byte combinations of key (0000...0000, 0101...0101, 0202...0202, ...)"),
         arg_lit0(NULL, "pattern2b",  "Check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)"),
         arg_str0(NULL, "startp2b",   "<pattern>", "Start key (2-byte HEX) for 2-byte search (use with `--pattern2b`)"),
@@ -1615,7 +1616,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
         arg_lit0("a",  "apdu",       "Show APDU requests and responses"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int aidlength = 0;
     uint8_t aid[3] = {0};
@@ -1654,6 +1655,12 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     bool pattern1b = arg_get_lit(ctx, 4);
     bool pattern2b = arg_get_lit(ctx, 5);
+
+    // No dictionary and no pattern asked for means the bundled DESFire
+    // dictionary, which is what `hf mfdes detect` already falls back to.
+    if (dict_filenamelen == 0 && pattern1b == false && pattern2b == false) {
+        dict_filenamelen = snprintf((char *)dict_filename, sizeof(dict_filename), "%s", MFDES_DEFAULT_DICT);
+    }
 
     if (pattern1b && pattern2b) {
         PrintAndLogEx(ERR, "Pattern search mode must be 2-byte or 1-byte only.");
@@ -1933,14 +1940,6 @@ static int CmdHF14aDesChk(const char *Cmd) {
             }
 
             result = (result || foundKeyThisRound);
-
-            if (foundKeyThisRound == true && verbose == false) {
-                if (pattern1b || pattern2b) {
-                    PrintAndLogEx(NORMAL, "p" NOLF);
-                } else if (dict_filenamelen) {
-                    PrintAndLogEx(NORMAL, "d" NOLF);
-                }
-            }
         }
 
         if (loadedAllKeys == false) {
@@ -2350,11 +2349,6 @@ static int CmdHF14aDesDetect(const char *Cmd) {
                     break;
                 }
             }
-        }
-
-        if (verbose && skipped) {
-            PrintAndLogEx(INFO, "Skipped %u authentication%s the card had already been sent",
-                          skipped, (skipped == 1) ? "" : "s");
         }
 
         if (found) {
