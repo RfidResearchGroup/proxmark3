@@ -10454,6 +10454,148 @@ static int CmdHF14AGen4_GDM_GetBlk(const char *Cmd) {
     return gdm_read_blocks(blk, sec, key, keylen, gdm, gen1a, wupa, ISO14443A_CMD_READBLOCK, "Block");
 }
 
+typedef enum {
+    GDM_UID_SOURCE_BLOCK0,
+    GDM_UID_SOURCE_HIDDEN0,
+    GDM_UID_SOURCE_HIDDEN1,
+    GDM_UID_SOURCE_RANDOM,
+} gdm_uid_source_t;
+
+static gdm_uid_source_t gdm_uid_source_from_config(uint8_t perso) {
+    if (perso == 0x5A || perso == 0xC3 || perso == 0xA5) {
+        return GDM_UID_SOURCE_HIDDEN0;
+    }
+    if (perso == 0x69) {
+        return GDM_UID_SOURCE_HIDDEN1;
+    }
+    if (perso == 0x87) {
+        return GDM_UID_SOURCE_RANDOM;
+    }
+    return GDM_UID_SOURCE_BLOCK0;
+}
+
+static const char *gdm_uid_source_name(gdm_uid_source_t source) {
+    switch (source) {
+        case GDM_UID_SOURCE_HIDDEN0:
+            return "hidden block 0 (7-byte CL2)";
+        case GDM_UID_SOURCE_HIDDEN1:
+            return "hidden block 1 (F3)";
+        case GDM_UID_SOURCE_RANDOM:
+            return "random UID (F2)";
+        case GDM_UID_SOURCE_BLOCK0:
+            return "real block 0 (4-byte)";
+    }
+    return "unknown";
+}
+
+static void gdm_build_uid4_block(const uint8_t *uid, uint8_t *block) {
+    memset(block, 0, MFBLOCK_SIZE);
+    memcpy(block, uid, 4);
+    block[4] = uid[0] ^ uid[1] ^ uid[2] ^ uid[3];
+    block[5] = 0x08;
+    block[6] = 0x04;
+}
+
+static void gdm_build_uid7_hidden_block(const uint8_t *uid, uint8_t *block) {
+    memset(block, 0, MFBLOCK_SIZE);
+    block[0] = 0x88;
+    memcpy(&block[1], uid, 3);
+    block[4] = block[0] ^ block[1] ^ block[2] ^ block[3];
+    block[5] = 0x04;
+    memcpy(&block[6], &uid[3], 4);
+    block[10] = block[6] ^ block[7] ^ block[8] ^ block[9];
+    block[11] = 0x08;
+}
+
+static void gdm_build_uid7_block0(const uint8_t *uid, uint8_t *block) {
+    memset(block, 0, MFBLOCK_SIZE);
+    memcpy(block, uid, 7);
+    block[7] = 0x88;
+    block[8] = 0x44;
+}
+
+static int gdm_write_data_block(const gdm_wakeup_t *w, uint8_t write_cmd,
+                                uint8_t block_no, const uint8_t *data) {
+    mf_writeblock_ex_t payload = {
+        .wakeup = w->wakeup_type,
+        .auth_cmd = w->auth_cmd,
+        .write_cmd = write_cmd,
+        .block_no = block_no,
+    };
+    memcpy(payload.key, w->key, sizeof(payload.key));
+    memcpy(payload.block_data, data, sizeof(payload.block_data));
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFARE_WRITEBL_EX, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp = {0};
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_WRITEBL_EX, &resp, 1500) == false) {
+        return PM3_ETIMEOUT;
+    }
+    return resp.status;
+}
+
+static int gdm_stage_uid_block(const gdm_wakeup_t *w, uint8_t write_cmd,
+                               uint8_t read_cmd, uint8_t block_no,
+                               const uint8_t *data, const char *name) {
+    int res = gdm_write_data_block(w, write_cmd, block_no, data);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Failed to write %s. Status: %d", name, res);
+        return res;
+    }
+
+    uint8_t verify[MFBLOCK_SIZE] = {0};
+    res = gdm_try_read(read_cmd, block_no, w, verify);
+    if (res != PM3_SUCCESS || memcmp(data, verify, MFBLOCK_SIZE) != 0) {
+        PrintAndLogEx(FAILED, "Failed to verify %s", name);
+        return PM3_EWRONGANSWER;
+    }
+
+    PrintAndLogEx(SUCCESS, "%s written and verified", name);
+    return PM3_SUCCESS;
+}
+
+static int gdm_select_uid(uint8_t *uid, uint8_t *uidlen) {
+    clearCommandBuffer();
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
+
+    PacketResponseNG resp = {0};
+    uint8_t select_status = 0;
+    if (WaitForIso14aReply(&resp, 2500, NULL, &select_status) == false) {
+        DropField();
+        return PM3_ETIMEOUT;
+    }
+    if (select_status == 0) {
+        DropField();
+        return PM3_ECARDEXCHANGE;
+    }
+
+    const iso14a_card_select_t *card = (const iso14a_card_select_t *)resp.data.asBytes;
+    if (card->uidlen != 4 && card->uidlen != 7) {
+        DropField();
+        return PM3_ECARDEXCHANGE;
+    }
+
+    *uidlen = card->uidlen;
+    memcpy(uid, card->uid, card->uidlen);
+    DropField();
+    return PM3_SUCCESS;
+}
+
+static int gdm_verify_selected_uid(const uint8_t *expected, uint8_t expected_len,
+                                   uint8_t *actual, uint8_t *actual_len) {
+    int res = gdm_select_uid(actual, actual_len);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Card could not be selected after the UID update");
+        return res;
+    }
+    if (*actual_len != expected_len || memcmp(actual, expected, expected_len) != 0) {
+        PrintAndLogEx(FAILED, "UID verification failed. Expected %s", sprint_hex(expected, expected_len));
+        PrintAndLogEx(FAILED, "Card selected with UID %s", sprint_hex(actual, *actual_len));
+        return PM3_EWRONGANSWER;
+    }
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14AGen4_GDM_SetUid(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf gdmsetuid",
@@ -10493,6 +10635,10 @@ static int CmdHF14AGen4_GDM_SetUid(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    uint8_t old_uid[10] = {0};
+    uint8_t old_uidlen = 0;
+    int old_uid_res = gdm_select_uid(old_uid, &old_uidlen);
+
     // Auto-detect wakeup by probing a hidden-block read; gdmsetuid needs a gen1a/gdm backdoor
     gdm_wakeup_t gw;
     int wres = gdm_resolve_for_write(gdm, gen1a, wupa, key, keylen,
@@ -10510,113 +10656,103 @@ static int CmdHF14AGen4_GDM_SetUid(const char *Cmd) {
     if (gdm_read_config(wakeup_type, auth_cmd, key, config) != PM3_SUCCESS) {
         return PM3_EFAILED;
     }
-    bool update_config = false;
-    PacketResponseNG resp;
-
-    // Step 2: Prepare payloads
-    mf_writeblock_ex_t write_payload = {
-        .wakeup = wakeup_type,
-        .auth_cmd = auth_cmd,
-        .write_cmd = ISO14443A_CMD_WRITEBLOCK,  // 0xA0
-        .block_no = 0
-    };
-    memcpy(write_payload.key, key, 6);
-
-    mf_writeblock_ex_t write_payload2 = write_payload; // Used for 7-byte A800 hidden block write
-
-    if (uidlen == 4) {
-        if (f3d) {
-            // F3 perso writes to hidden block 1 (0xA8), not public block 1
-            write_payload.write_cmd = MIFARE_MAGIC_GDM_WRITEBLOCK; // 0xA8
-            write_payload.block_no = 1;
-            if (config[9] != 0x69) {
-                config[9] = 0x69;
-                update_config = true;
-                PrintAndLogEx(INFO, "Updating config for 4-byte F3 Perso mode (config[9] = 0x69)");
-            }
-        } else {
-            write_payload.block_no = 0;
-            if (config[9] != 0x00) {
-                config[9] = 0x00;
-                update_config = true;
-                PrintAndLogEx(INFO, "Updating config for 4-byte standard mode (config[9] = 0x00)");
-            }
-        }
-
-        memcpy(write_payload.block_data, uid, 4);
-        write_payload.block_data[4] = uid[0] ^ uid[1] ^ uid[2] ^ uid[3];
-        write_payload.block_data[5] = 0x08;
-        write_payload.block_data[6] = 0x04;
-        write_payload.block_data[7] = 0x00;
-        memset(&write_payload.block_data[8], 0, 8);
-    } else { // 7 bytes
+    gdm_uid_source_t old_source = gdm_uid_source_from_config(config[9]);
+    gdm_uid_source_t new_source = GDM_UID_SOURCE_BLOCK0;
+    if (uidlen == 7) {
+        new_source = GDM_UID_SOURCE_HIDDEN0;
         if (f3d) {
             PrintAndLogEx(WARNING, "F3 perso (--f3d) is ignored for 7-byte UID");
         }
-
-        if (config[9] != 0x5A && config[9] != 0xC3 && config[9] != 0xA5) {
-            config[9] = 0x5A;
-            update_config = true;
-            PrintAndLogEx(INFO, "Updating config for 7-byte UID mode (config[9] = 0x5A)");
-        }
-
-        // hidden block 0 write payload (A800)
-        write_payload2.write_cmd = MIFARE_MAGIC_GDM_WRITEBLOCK; // 0xA8
-        write_payload2.block_no = 0;
-        write_payload2.block_data[0] = 0x88;
-        memcpy(&write_payload2.block_data[1], uid, 3);
-        write_payload2.block_data[4] = 0x88 ^ uid[0] ^ uid[1] ^ uid[2];
-        write_payload2.block_data[5] = 0x04;
-        memcpy(&write_payload2.block_data[6], &uid[3], 4);
-        write_payload2.block_data[10] = uid[3] ^ uid[4] ^ uid[5] ^ uid[6];
-        write_payload2.block_data[11] = 0x08;
-        memset(&write_payload2.block_data[12], 0, 4);
-
-        // regular block 0 write payload (A000)
-        write_payload.block_no = 0;
-        memcpy(write_payload.block_data, uid, 7);
-        write_payload.block_data[7] = 0x88;
-        write_payload.block_data[8] = 0x44;
-        memset(&write_payload.block_data[9], 0, 7);
+    } else if (f3d) {
+        new_source = GDM_UID_SOURCE_HIDDEN1;
     }
 
-    // Step 3: Write config if needed
+    if (old_uid_res == PM3_SUCCESS) {
+        PrintAndLogEx(INFO, "Old UID... %s", sprint_hex(old_uid, old_uidlen));
+    } else {
+        PrintAndLogEx(WARNING, "Old UID could not be selected; continuing with the magic backdoor");
+    }
+    PrintAndLogEx(INFO, "UID source: %s -> %s", gdm_uid_source_name(old_source), gdm_uid_source_name(new_source));
+
+    uint8_t uid4_block[MFBLOCK_SIZE] = {0};
+    uint8_t uid7_hidden[MFBLOCK_SIZE] = {0};
+    uint8_t uid7_block0[MFBLOCK_SIZE] = {0};
+    if (uidlen == 7) {
+        gdm_build_uid7_hidden_block(uid, uid7_hidden);
+        gdm_build_uid7_block0(uid, uid7_block0);
+    } else {
+        gdm_build_uid4_block(uid, uid4_block);
+    }
+
+    uint8_t write_cmd = ISO14443A_CMD_WRITEBLOCK;
+    uint8_t read_cmd = ISO14443A_CMD_READBLOCK;
+    uint8_t source_block = 0;
+    const uint8_t *source_data = uid4_block;
+    if (new_source == GDM_UID_SOURCE_HIDDEN0) {
+        write_cmd = MIFARE_MAGIC_GDM_WRITEBLOCK;
+        read_cmd = MIFARE_MAGIC_GDM_READBLOCK;
+        source_data = uid7_hidden;
+    } else if (new_source == GDM_UID_SOURCE_HIDDEN1) {
+        write_cmd = MIFARE_MAGIC_GDM_WRITEBLOCK;
+        read_cmd = MIFARE_MAGIC_GDM_READBLOCK;
+        source_block = 1;
+    }
+    int res = gdm_stage_uid_block(&gw, write_cmd, read_cmd, source_block,
+                                  source_data, gdm_uid_source_name(new_source));
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(HINT, "The current UID source and config were not changed");
+        return res;
+    }
+
+    uint8_t target_perso = 0x00;
+    if (new_source == GDM_UID_SOURCE_HIDDEN1) {
+        target_perso = 0x69;
+    } else if (new_source == GDM_UID_SOURCE_HIDDEN0) {
+        target_perso = (old_source == GDM_UID_SOURCE_HIDDEN0) ? config[9] : 0x5A;
+    }
+    bool update_config = (config[9] != target_perso);
+    config[9] = target_perso;
+
     if (update_config) {
-        int res = gdm_write_config(wakeup_type, auth_cmd, key, config);
+        PrintAndLogEx(INFO, "Activating %s", gdm_uid_source_name(new_source));
+        res = gdm_write_config(wakeup_type, auth_cmd, key, config);
         if (res != PM3_SUCCESS) {
+            PrintAndLogEx(HINT, "The staged UID was not activated; the previous UID source remains selected");
             return res;
         }
-        PrintAndLogEx(SUCCESS, "Config updated successfully");
     }
 
-    // Step 4: Write hidden block (for 7 byte UID)
-    if (uidlen == 7) {
-        clearCommandBuffer();
-        SendCommandNG(CMD_HF_MIFARE_WRITEBL_EX, (uint8_t *)&write_payload2, sizeof(write_payload2));
-        if (WaitForResponseTimeout(CMD_HF_MIFARE_WRITEBL_EX, &resp, 1500) == false) {
-            PrintAndLogEx(FAILED, "Failed to write hidden block 0: timeout");
-            return PM3_ETIMEOUT;
-        }
-        if (resp.status != PM3_SUCCESS) {
-            PrintAndLogEx(FAILED, "Failed to write hidden block 0. Status: %d", resp.status);
-            return resp.status;
-        }
-        PrintAndLogEx(SUCCESS, "Hidden block 0 updated successfully");
+    uint8_t verify_uid[10] = {0};
+    uint8_t verify_uidlen = 0;
+    res = gdm_verify_selected_uid(uid, uidlen, verify_uid, &verify_uidlen);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(HINT, "The UID data was written, but normal card selection did not verify it");
+        return res;
+    }
+    PrintAndLogEx(SUCCESS, "New UID... %s ( " _GREEN_("verified") " )", sprint_hex(verify_uid, verify_uidlen));
+
+    bool partial = false;
+    if (new_source == GDM_UID_SOURCE_HIDDEN0) {
+        res = gdm_stage_uid_block(&gw, ISO14443A_CMD_WRITEBLOCK, ISO14443A_CMD_READBLOCK,
+                                  0, uid7_block0, "7-byte real block 0 representation");
+        partial = (res != PM3_SUCCESS);
     }
 
-    // Step 5: Write regular block 0 / 1
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_MIFARE_WRITEBL_EX, (uint8_t *)&write_payload, sizeof(write_payload));
-    if (WaitForResponseTimeout(CMD_HF_MIFARE_WRITEBL_EX, &resp, 1500) == false) {
-        PrintAndLogEx(FAILED, "Failed to write real block %d: timeout", write_payload.block_no);
-        return PM3_ETIMEOUT;
+    uint8_t empty_block[MFBLOCK_SIZE] = {0};
+    if (old_source == GDM_UID_SOURCE_HIDDEN0 && new_source != old_source) {
+        res = gdm_stage_uid_block(&gw, MIFARE_MAGIC_GDM_WRITEBLOCK, MIFARE_MAGIC_GDM_READBLOCK,
+                                  0, empty_block, "inactive hidden block 0");
+        partial = partial || (res != PM3_SUCCESS);
+    } else if (old_source == GDM_UID_SOURCE_HIDDEN1 && new_source != old_source) {
+        res = gdm_stage_uid_block(&gw, MIFARE_MAGIC_GDM_WRITEBLOCK, MIFARE_MAGIC_GDM_READBLOCK,
+                                  1, empty_block, "inactive hidden block 1");
+        partial = partial || (res != PM3_SUCCESS);
     }
-    if (resp.status != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "Failed to write real block %d. Status: %d", write_payload.block_no, resp.status);
-        return resp.status;
-    }
-    PrintAndLogEx(SUCCESS, "Real block %d updated successfully", write_payload.block_no);
 
+    if (partial) {
+        PrintAndLogEx(WARNING, "UID change verified, but post-commit cleanup was incomplete");
+        return PM3_EPARTIAL;
+    }
     return PM3_SUCCESS;
 }
 
