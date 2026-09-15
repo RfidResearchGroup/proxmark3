@@ -158,6 +158,51 @@ static uint16_t desfire_sim_payload(uint8_t *out, uint8_t status, const uint8_t 
     return len + 1;
 }
 
+// One GetDFNames record: AID, ISO file id, DF name.  Applications without a DF
+// name are not sent back at all (M134034 9.4.4), so this walks past them.
+//
+// Returns the length written, or 0 when there are no more records.  `next` is
+// the application index to resume from, `more` says whether another follows.
+static uint16_t desfire_sim_dfname_record(const desfire_sim_state_t *st, uint8_t from,
+                                          uint8_t *buf, uint8_t *next, bool *more) {
+
+    const desfire_em_hdr_t *hdr = st->hdr;
+    *more = false;
+
+    for (uint8_t i = from; i < hdr->appcount; i++) {
+
+        const desfire_em_app_t *a = &st->apps[i];
+        if ((a->flags & DESFIRE_EM_APP_DELETED) || a->dfnamelen == 0) {
+            continue;
+        }
+
+        uint8_t dfnamelen = a->dfnamelen;
+        if (dfnamelen > sizeof(a->dfname)) {
+            dfnamelen = sizeof(a->dfname);
+        }
+
+        memcpy(buf, a->aid, 3);
+        uint16_t n = 3;
+        buf[n++] = a->isofid & 0xFF;
+        buf[n++] = (a->isofid >> 8) & 0xFF;
+        memcpy(buf + n, a->dfname, dfnamelen);
+        n += dfnamelen;
+
+        for (uint8_t j = i + 1; j < hdr->appcount; j++) {
+            if ((st->apps[j].flags & DESFIRE_EM_APP_DELETED) == 0 && st->apps[j].dfnamelen) {
+                *more = true;
+                break;
+            }
+        }
+
+        *next = i + 1;
+        return n;
+    }
+
+    *next = hdr->appcount;
+    return 0;
+}
+
 // Dispatch one DESFire command. `cmd` is the command byte, `in`/`inlen` the
 // parameters after it. Writes the answer to `out` and returns its length.
 static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const uint8_t *in, uint16_t inlen, uint8_t *out) {
@@ -198,7 +243,82 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
                 return desfire_sim_payload(out, MFDES_S_OPERATION_OK, hdr->versionprod, hdr->versionprodlen);
             }
 
+            if (st->chain_cmd == MFDES_GET_DF_NAMES) {
+
+                uint8_t buf[DESFIRE_SIM_MAX_RESP] = {0};
+                uint8_t next = st->chain_step;
+                bool more = false;
+                uint16_t n = desfire_sim_dfname_record(st, st->chain_step, buf, &next, &more);
+
+                if (n == 0) {
+                    st->chain_cmd = 0;
+                    st->chain_step = 0;
+                    return desfire_sim_status(out, MFDES_S_OPERATION_OK);
+                }
+
+                if (more) {
+                    st->chain_step = next;
+                    return desfire_sim_payload(out, MFDES_ADDITIONAL_FRAME, buf, n);
+                }
+
+                st->chain_cmd = 0;
+                st->chain_step = 0;
+                return desfire_sim_payload(out, MFDES_S_OPERATION_OK, buf, n);
+            }
+
             return desfire_sim_status(out, MFDES_E_ILLEGAL_COMMAND_CODE);
+        }
+
+        case MFDES_GET_DF_NAMES: {
+            // PICC level only (M134034 9.4.4), one application per frame
+            if (st->selected != 0) {
+                return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+            }
+
+            uint8_t buf[DESFIRE_SIM_MAX_RESP] = {0};
+            uint8_t next = 1;
+            bool more = false;
+            uint16_t n = desfire_sim_dfname_record(st, 1, buf, &next, &more);
+            if (n == 0) {
+                return desfire_sim_status(out, MFDES_S_OPERATION_OK);
+            }
+
+            if (more) {
+                st->chain_cmd = MFDES_GET_DF_NAMES;
+                st->chain_step = next;
+                return desfire_sim_payload(out, MFDES_ADDITIONAL_FRAME, buf, n);
+            }
+            return desfire_sim_payload(out, MFDES_S_OPERATION_OK, buf, n);
+        }
+
+        case MFDES_GET_ISOFILE_IDS: {
+            // application level: the ISO file ids of the files that have one.
+            // Value and transaction MAC files never carry one.
+            if (st->selected == 0) {
+                return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+            }
+
+            uint8_t buf[DESFIRE_SIM_MAX_RESP] = {0};
+            uint16_t n = 0;
+            for (uint16_t i = 0; i < hdr->filecount && (n + 2) <= sizeof(buf); i++) {
+
+                const desfire_em_file_t *f = &st->files[i];
+                if (f->app != st->selected || (f->flags & DESFIRE_EM_FILE_DELETED)) {
+                    continue;
+                }
+                if (f->type == 0x02 || f->type == 0x05 || f->isofid == 0) {
+                    continue;
+                }
+
+                buf[n++] = f->isofid & 0xFF;
+                buf[n++] = (f->isofid >> 8) & 0xFF;
+            }
+
+            // "If there is no ISO File EF, only an error code can be returned"
+            if (n == 0) {
+                return desfire_sim_status(out, MFDES_E_FILE_NOT_FOUND);
+            }
+            return desfire_sim_payload(out, MFDES_S_OPERATION_OK, buf, n);
         }
 
         case MFDES_GET_APPLICATION_IDS: {
