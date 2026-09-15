@@ -32,11 +32,64 @@ endif
 # Proxmark5 requires armlib.
 include ../armlib/Exports.mk
 
+
 #remove one of the following defines and comment out the relevant line
 #in the next section to remove that particular feature from compilation.
 # NO space,TABs after the "\" sign.
+# Keep the always-linked DFC engine small enough to coexist with FPGA loading,
+# tracing, and the other HF implementations on 64 KiB RDV4 hardware.
+DFC_MAX_APPS ?= 28
+DFC_MAX_FILES ?= 28
+DFC_FILE_POOL_SIZE ?= 256
+DFC_KEY_POOL_SIZE ?= 512
+DFC_BUILD_PROFILE_DEFINE := DFC_PROFILE_FULL_EV3
+ifeq ($(STANDALONE),HF_DFCSIM)
+    # Preserve the full protocol profile while fitting one practical card and
+    # the ISO14443A simulation buffers in the RDV4's 64 KiB RAM.
+    DFC_SIM_MAX_APPS ?= 28
+    DFC_SIM_MAX_FILES ?= 28
+    DFC_SIM_FILE_POOL_SIZE ?= 256
+    DFC_SIM_KEY_POOL_SIZE ?= 512
+    DFC_MAX_APPS := $(DFC_SIM_MAX_APPS)
+    DFC_MAX_FILES := $(DFC_SIM_MAX_FILES)
+    DFC_FILE_POOL_SIZE := $(DFC_SIM_FILE_POOL_SIZE)
+    DFC_KEY_POOL_SIZE := $(DFC_SIM_KEY_POOL_SIZE)
+endif
+
 APP_CFLAGS = $(PLATFORM_DEFS)
 APP_CFLAGS += $(ARMLIB_EXPORT_CFLAGS)
+APP_CFLAGS += -DDFC_FIRMWARE_BUILD -DDFC_CRYPTO_BACKEND_MBEDTLS=1 \
+    -DDFC_MAX_APPS=$(DFC_MAX_APPS) -DDFC_MAX_FILES=$(DFC_MAX_FILES) \
+    -DDFC_FILE_POOL_SIZE=$(DFC_FILE_POOL_SIZE) -DDFC_KEY_POOL_SIZE=$(DFC_KEY_POOL_SIZE) \
+    -DDFC_ENABLE_TEXT_CODEC=0
+
+# HF_DFCSIM defaults to a full EV1 card. Keep optional newer-generation
+# features opt-in so the resulting firmware advertises only what it implements.
+ifeq ($(STANDALONE),HF_DFCSIM)
+    DFC_SIM_PROFILE ?= EV1
+    DFC_SIM_PROXIMITY_CHECK ?= 0
+    DFC_SIM_PROFILE_DEFINE := $(filter $(DFC_SIM_PROFILE),EV1 EV2 EV3 MINIMAL_EV1 MINIMAL_EV3)
+    ifeq ($(DFC_SIM_PROFILE_DEFINE),)
+        $(error DFC_SIM_PROFILE must be EV1, EV2, EV3, MINIMAL_EV1, or MINIMAL_EV3)
+    endif
+    ifeq ($(filter $(DFC_SIM_PROXIMITY_CHECK),0 1),)
+        $(error DFC_SIM_PROXIMITY_CHECK must be 0 or 1)
+    endif
+    ifeq ($(DFC_SIM_PROXIMITY_CHECK),1)
+        ifeq ($(filter $(DFC_SIM_PROFILE),EV3 MINIMAL_EV3),)
+            $(error DFC_SIM_PROXIMITY_CHECK=1 requires DFC_SIM_PROFILE=EV3 or MINIMAL_EV3)
+        endif
+    endif
+    DFC_SIM_PROFILE_EV1 := DFC_PROFILE_FULL_EV1
+    DFC_SIM_PROFILE_EV2 := DFC_PROFILE_FULL_EV2
+    DFC_SIM_PROFILE_EV3 := DFC_PROFILE_FULL_EV3
+    DFC_SIM_PROFILE_MINIMAL_EV1 := DFC_PROFILE_MINIMAL_EV1
+    DFC_SIM_PROFILE_MINIMAL_EV3 := DFC_PROFILE_MINIMAL_EV3
+    DFC_BUILD_PROFILE_DEFINE := $(DFC_SIM_PROFILE_$(DFC_SIM_PROFILE))
+    APP_CFLAGS += -DDFC_ENABLE_PROXIMITY_CHECK=$(DFC_SIM_PROXIMITY_CHECK)
+endif
+APP_CFLAGS += -DDFC_BUILD_PROFILE=$(DFC_BUILD_PROFILE_DEFINE)
+APP_CFLAGS += -I../common/dfc-core/src -I../common/dfc-core/port -I../common/crapto1
 
 # HAL for platform
 ifeq ($(PLATFORM),PM5)
@@ -73,6 +126,22 @@ SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c lfadc.c
 SRC_HF = hfops.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
 SRC_ISO14443a = iso14443a.c secc.c mifareutil.c mifarecmd.c epa.c mifaresim.c desfiresim.c
+SRC_DFC = \
+    ../common/dfc-core/src/aes_cmac.c \
+    ../common/dfc-core/src/des_cmac.c \
+    ../common/dfc-core/src/dfc_common.c \
+    ../common/dfc-core/src/dfc_credential.c \
+    ../common/dfc-core/src/dfc_crypto.c \
+    ../common/dfc-core/src/dfc_der.c \
+    ../common/dfc-core/src/dfc_emulator.c \
+    ../common/dfc-core/src/dfc_emulator_commands.c \
+    ../common/dfc-core/src/dfc_emulator_crypto.c \
+    ../common/dfc-core/src/dfc_emulator_iso7816.c \
+    ../common/dfc-core/src/dfc_ev2.c \
+    ../common/dfc-core/src/dfc_profile.c \
+    ../common/dfc-core/src/dfc_secure_messaging.c \
+    ../common/dfc-core/src/dfc_virtual_picc.c \
+    dfc_port_pm3.c
 
 ifneq (,$(findstring WITH_SMARTCARD,$(APP_CFLAGS)))
     SRC_ISO14443a += sam_common.c sam_mfc.c sam_seos.c sam_sc.c
@@ -207,6 +276,7 @@ THUMBSRC = start.c \
     $(SRC_SPIFFS) \
     $(SRC_HF) \
     $(SRC_ISO14443a) \
+    $(SRC_DFC) \
     $(SRC_ISO14443b) \
     $(SRC_CRAPTO1) \
     $(SRC_ICLASS) \
@@ -253,6 +323,7 @@ VERSIONSRC = version_pm3.c \
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common_arm/Makefile.common
+VPATH += ../common/dfc-core/src
 
 INSTALLFW = $(OBJDIR)/fullimage.elf
 ifneq (,$(FWTAG))

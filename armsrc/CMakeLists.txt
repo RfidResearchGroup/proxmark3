@@ -31,7 +31,64 @@ include(${CMAKE_CURRENT_LIST_DIR}/../tools/FpgaCompress.cmake)
 
 # ---------------------------------------------------------------------------------
 
-set(APP_CFLAGS ${PLATFORM_DEFS} -ffunction-sections -fdata-sections)
+# These defaults apply to normal and standalone firmware so the always-linked
+# DFC engine leaves room for FPGA decompression, tracing, and other HF modes.
+set(DFC_MAX_APPS 28)
+set(DFC_MAX_FILES 28)
+set(DFC_FILE_POOL_SIZE 256)
+set(DFC_KEY_POOL_SIZE 512)
+set(DFC_BUILD_PROFILE_DEFINE DFC_PROFILE_FULL_EV3)
+if (STANDALONE STREQUAL "HF_DFCSIM")
+    # These tune capacity, not commands or cryptography. Defaults leave enough
+    # RDV4 RAM for FPGA decompression and ISO14443A simulation buffers.
+    set(DFC_SIM_MAX_APPS 28 CACHE STRING "Maximum DFC applications")
+    set(DFC_SIM_MAX_FILES 28 CACHE STRING "Maximum DFC files")
+    set(DFC_SIM_FILE_POOL_SIZE 256 CACHE STRING "DFC file data pool bytes")
+    set(DFC_SIM_KEY_POOL_SIZE 512 CACHE STRING "DFC key pool bytes")
+    set(DFC_MAX_APPS ${DFC_SIM_MAX_APPS})
+    set(DFC_MAX_FILES ${DFC_SIM_MAX_FILES})
+    set(DFC_FILE_POOL_SIZE ${DFC_SIM_FILE_POOL_SIZE})
+    set(DFC_KEY_POOL_SIZE ${DFC_SIM_KEY_POOL_SIZE})
+endif ()
+
+set(APP_CFLAGS ${PLATFORM_DEFS} -ffunction-sections -fdata-sections
+        -DDFC_FIRMWARE_BUILD -DDFC_CRYPTO_BACKEND_MBEDTLS=1
+        -DDFC_MAX_APPS=${DFC_MAX_APPS} -DDFC_MAX_FILES=${DFC_MAX_FILES}
+        -DDFC_FILE_POOL_SIZE=${DFC_FILE_POOL_SIZE} -DDFC_KEY_POOL_SIZE=${DFC_KEY_POOL_SIZE}
+        -DDFC_ENABLE_TEXT_CODEC=0)
+
+# Match the Make build: standalone DFC simulation is EV1 unless explicitly
+# built for a newer card generation. Proximity checking is an EV3-only opt-in.
+if (STANDALONE STREQUAL "HF_DFCSIM")
+    set(DFC_SIM_PROFILE "EV1" CACHE STRING "DFC simulator profile")
+    set_property(CACHE DFC_SIM_PROFILE PROPERTY STRINGS EV1 EV2 EV3 MINIMAL_EV1 MINIMAL_EV3)
+    option(DFC_SIM_PROXIMITY_CHECK "Enable EV3 proximity checking in HF_DFCSIM" OFF)
+
+    if (DFC_SIM_PROFILE STREQUAL "EV1")
+        set(DFC_SIM_PROFILE_DEFINE DFC_PROFILE_FULL_EV1)
+    elseif (DFC_SIM_PROFILE STREQUAL "EV2")
+        set(DFC_SIM_PROFILE_DEFINE DFC_PROFILE_FULL_EV2)
+    elseif (DFC_SIM_PROFILE STREQUAL "EV3")
+        set(DFC_SIM_PROFILE_DEFINE DFC_PROFILE_FULL_EV3)
+    elseif (DFC_SIM_PROFILE STREQUAL "MINIMAL_EV1")
+        set(DFC_SIM_PROFILE_DEFINE DFC_PROFILE_MINIMAL_EV1)
+    elseif (DFC_SIM_PROFILE STREQUAL "MINIMAL_EV3")
+        set(DFC_SIM_PROFILE_DEFINE DFC_PROFILE_MINIMAL_EV3)
+    else ()
+        message(FATAL_ERROR "DFC_SIM_PROFILE must be EV1, EV2, EV3, MINIMAL_EV1, or MINIMAL_EV3")
+    endif ()
+
+    if (DFC_SIM_PROXIMITY_CHECK AND NOT DFC_SIM_PROFILE MATCHES "EV3$")
+        message(FATAL_ERROR "DFC_SIM_PROXIMITY_CHECK requires DFC_SIM_PROFILE=EV3 or MINIMAL_EV3")
+    endif ()
+    set(DFC_BUILD_PROFILE_DEFINE ${DFC_SIM_PROFILE_DEFINE})
+    if (DFC_SIM_PROXIMITY_CHECK)
+        list(APPEND APP_CFLAGS -DDFC_ENABLE_PROXIMITY_CHECK=1)
+    else ()
+        list(APPEND APP_CFLAGS -DDFC_ENABLE_PROXIMITY_CHECK=0)
+    endif ()
+endif ()
+list(APPEND APP_CFLAGS -DDFC_BUILD_PROFILE=${DFC_BUILD_PROFILE_DEFINE})
 
 set(INC_DIRS
         ../include
@@ -48,7 +105,10 @@ set(INC_DIRS
         ../common_arm/wdt
         ../common_fpga
         ../common
+        ../common/crapto1
         ../common/lz4
+        ../common/dfc-core/src
+        ../common/dfc-core/port
         .
 )
 
@@ -102,6 +162,25 @@ set(SRC_ISO14443a
         sam_mfc.c
         sam_seos.c
         sam_sc.c
+)
+
+set(SRC_DFC
+        ../common/dfc-core/src/aes_cmac.c
+        ../common/dfc-core/src/des_cmac.c
+        ../common/dfc-core/src/dfc_common.c
+        ../common/dfc-core/src/dfc_credential.c
+        ../common/dfc-core/src/dfc_crypto.c
+        ../common/dfc-core/src/dfc_der.c
+        ../common/dfc-core/src/dfc_emulator.c
+        ../common/dfc-core/src/dfc_emulator_commands.c
+        ../common/dfc-core/src/dfc_emulator_crypto.c
+        ../common/dfc-core/src/dfc_emulator_iso7816.c
+        ../common/dfc-core/src/dfc_ev2.c
+        ../common/dfc-core/src/dfc_profile.c
+        ../common/dfc-core/src/dfc_secure_messaging.c
+        ../common/dfc-core/src/dfc_virtual_picc.c
+        desfiresim.c
+        dfc_port_pm3.c
 )
 
 #UNUSED: mifaresniff.c
@@ -268,6 +347,7 @@ set(THUMBSRC
         ${SRC_SPIFFS}
         ${SRC_HF}
         ${SRC_ISO14443a}
+        ${SRC_DFC}
         ${SRC_ISO14443b}
         ${SRC_CRAPTO1}
         ${SRC_ICLASS}

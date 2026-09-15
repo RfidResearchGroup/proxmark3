@@ -1152,6 +1152,18 @@ typedef struct {
 #define CMD_HF_MIFARE_STATIC_NESTED 0x0615
 #define CMD_HF_MIFARE_STATIC_ENC 0x0616
 #define CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES 0x0617
+#define CMD_HF_DFC_SIMULATE 0x0618
+
+#define DFC_SIM_BEGIN       0x01
+#define DFC_SIM_END         0x02
+#define DFC_SIM_SCAN        0x03
+#define DFC_SIM_FIELD_OFF   0x04
+#define DFC_SIM_APDU        0x05
+#define DFC_SIM_FRAME       0x06
+#define DFC_SIM_RANDOM      0x07
+#define DFC_SIM_ADVANCE     0x08
+#define DFC_SIM_CLEAR_DIRTY 0x09
+#define DFC_SIM_STATE       0x0a
 
 #define CMD_HF_MIFARE_READBL 0x0620
 #define CMD_HF_MIFARE_READBL_EX 0x0628

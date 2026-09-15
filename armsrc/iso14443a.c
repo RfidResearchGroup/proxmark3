@@ -1409,9 +1409,10 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
 
                 if (im_atqa[0] || im_atqa[1]) {
                     // the UID size bits of byte 0 are set further down, from the
-                    // cascade level the image's UID actually needs
-                    rATQA[0] = im_atqa[0];
-                    rATQA[1] = im_atqa[1];
+                    // cascade level the image's UID actually needs. DFC stores
+                    // ATQA in display order; this RF buffer transmits in reverse.
+                    rATQA[0] = im_atqa[1];
+                    rATQA[1] = im_atqa[0];
                 }
 
                 if (im_sak) {
@@ -1833,8 +1834,11 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
     //-----------------------------------------------------------------------------
     FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF);
 
-    // free eventually allocated BigBuf memory but keep Emulator Memory
-    BigBuf_free_keep_EM();
+    // DFC has already built its credential and protocol session in BigBuf.
+    // Keep those live allocations; the normal simulator teardown releases them.
+    if (tagType != 3) {
+        BigBuf_free_keep_EM();
+    }
 
     // clear trace before allocating. The response buffers come out of the same
     // pool and BigBuf_malloc() won't hand out memory the trace still occupies.
@@ -1868,12 +1872,14 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
 
     uint8_t *dynamic_response_buffer = BigBuf_calloc(dynamic_response_buffer_size);
     if (dynamic_response_buffer == NULL) {
+        if (tagType == 3) desfire_sim_deinit(true);
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EMALLOC, NULL, 0);
         return;
     }
     uint8_t *dynamic_modulation_buffer = BigBuf_calloc(dynamic_modulation_buffer_size);
     if (dynamic_modulation_buffer == NULL) {
+        if (tagType == 3) desfire_sim_deinit(true);
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EMALLOC, NULL, 0);
         return;
@@ -1888,6 +1894,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
     if (SimulateIso14443aInit(tagType, flags, useruid, ats, ats_len,
                               &responses, &cuid, &pages,
                               ulc_key) == false) {
+        if (tagType == 3) desfire_sim_deinit(true);
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
         return;
@@ -1958,6 +1965,11 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
     uint8_t wrblock = 0;
 
     bool odd_reply = true;
+    // Keep activation bookkeeping local to the DESFire adapter. Resetting the
+    // full emulator before ATQA misses the fixed Type A response window; doing
+    // it once at RATS clears application/authentication state before ISO-DEP.
+    bool desfire_activation_pending = false;
+    bool desfire_iso_dep_active = false;
 
     set_tracing(true);
     LED_A_ON();
@@ -1975,6 +1987,15 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
             Dbprintf("Emulator stopped. Trace length: %d ", BigBuf_get_traceLen());
             retval = PM3_EOPABORTED;
             break;
+        }
+
+        // ISO14443-4: discard transmission errors without changing block state.
+        if (tagType == 3 && desfire_iso_dep_active && len > 2) {
+            bool valid = CheckCrc14A(receivedCmd, len);
+            for (uint16_t i = 0; valid && i < len; i++) {
+                valid = oddparity8(receivedCmd[i]) == ((receivedCmdPar[i / 8] >> (7 - (i & 7))) & 1);
+            }
+            if (!valid) continue;
         }
 
         // we need to check "ordered" states before, because received data may be same to any command - is wrong!!!
@@ -2070,12 +2091,17 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
             odd_reply = !odd_reply;
             if (odd_reply) {
                 p_response = &responses[RESP_INDEX_ATQA];
+                if (tagType == 3) {
+                    desfire_activation_pending = true;
+                    desfire_iso_dep_active = false;
+                }
             }
-            // a fresh activation puts a DESFire back at AID 000000
-            desfire_sim_reset();
         } else if (receivedCmd[0] == ISO14443A_CMD_WUPA && len == 1) { // Received a WAKEUP
             p_response = &responses[RESP_INDEX_ATQA];
-            desfire_sim_reset();
+            if (tagType == 3) {
+                desfire_activation_pending = true;
+                desfire_iso_dep_active = false;
+            }
         } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 2) {    // Received request for UID (cascade 1)
             p_response = &responses[RESP_INDEX_UIDC1];
         } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2 && len == 2) {  // Received request for UID (cascade 2)
@@ -2275,6 +2301,10 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
             LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
             p_response = NULL;
             order = ORDER_HALTED;
+            if (tagType == 3) {
+                desfire_activation_pending = false;
+                desfire_iso_dep_active = false;
+            }
         } else if (receivedCmd[0] == MIFARE_ULEV1_VERSION && len == 3 && (tagType == 2 || tagType == 7 || tagType == 14)) {
             p_response = &responses[RESP_INDEX_VERSION];
         } else if (receivedCmd[0] == MFDES_GET_VERSION && len == 4 && (tagType == 3)) {
@@ -2296,6 +2326,17 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
                 EmSend4bit(CARD_NACK_NA);
                 p_response = NULL;
             } else {
+                if (tagType == 3 && desfire_sim_ready()) {
+                    if (!desfire_activation_pending || desfire_iso_dep_active) {
+                        p_response = NULL;
+                        goto jump;
+                    }
+                    uint8_t ignored[DESFIRE_SIM_MAX_RESP];
+                    desfire_sim_reset();
+                    desfire_sim_frame(receivedCmd, len - 2, ignored);
+                    desfire_activation_pending = false;
+                    desfire_iso_dep_active = true;
+                }
                 p_response = &responses[RESP_INDEX_ATS];
             }
 
@@ -2556,37 +2597,15 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
             dynamic_response_info.response_n = 0;
             dynamic_response_info.modulation_n = 0;
 
-            // DESFire, from the card image in emulator memory. Only I-blocks
-            // come here; S(DESELECT), R-blocks and the rest keep the generic
-            // 14443-4 handling below.
-            if (tagType == 3 && desfire_sim_ready() && (receivedCmd[0] & 0xC0) == 0x00) {
-
-                // prologue is PCB, then CID and NAD when the PCB says so
-                uint8_t prologue = 1;
-                if (receivedCmd[0] & 0x08) {
-                    prologue++;
-                }
-                if (receivedCmd[0] & 0x04) {
-                    prologue++;
-                }
-
-                // prologue + at least a command byte + CRC
-                if (len >= prologue + 1 + 2) {
-
-                    // echo the prologue back untouched. The low bit of the PCB
-                    // is the block number, and a reader that gets the wrong one
-                    // reads the answer as a retransmission and stalls.
-                    memcpy(dynamic_response_info.response, receivedCmd, prologue);
-                    dynamic_response_info.response[0] &= ~0x10;     // we never chain
-
-                    uint16_t n = desfire_sim_apdu(receivedCmd + prologue,
-                                                  len - prologue - 2,
-                                                  dynamic_response_info.response + prologue);
-                    if (n > 0) {
-                        dynamic_response_info.response_n = prologue + n;
-
-                        // count answered DESFire commands, so `-n` can bound a
-                        // simulation the way it does for the other tag types
+            // Route complete ISO-DEP frames through dfc-core so block numbers,
+            // retransmissions, chaining, CID and deselect share one state machine.
+            // This RF loop owns the trailing CRC.
+            if (tagType == 3 && desfire_sim_ready() && desfire_iso_dep_active && len > 2) {
+                uint16_t n = desfire_sim_frame(
+                    receivedCmd, len - 2, dynamic_response_info.response);
+                if (n > 0) {
+                    dynamic_response_info.response_n = n;
+                    if ((receivedCmd[0] & 0xC0) == 0x00) {
                         numReads++;
                         if (exitAfterNReads > 0 && numReads >= exitAfterNReads) {
                             finished = true;
@@ -2735,6 +2754,9 @@ jump:
     switch_off();
 
     set_tracing(false);
+    if (tagType == 3) {
+        desfire_sim_deinit(true);
+    }
     BigBuf_free_keep_EM();
 
     if (g_dbglevel >= DBG_EXTENDED) {
@@ -5548,6 +5570,7 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
     switch_off();
 
     set_tracing(false);
+    if (tagType == 3) desfire_sim_deinit(true);
     BigBuf_free_keep_EM();
 
     reply_ng(CMD_HF_MIFARE_SIMULATE, retval, NULL, 0);

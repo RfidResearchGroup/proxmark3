@@ -67,6 +67,7 @@
 #include "lfzx.h"
 #include "mifarecmd.h"
 #include "mifaredesfire.h"
+#include "desfiresim.h"
 #include "mifaresim.h"
 #include "emvsim.h"
 #include "pcf7931.h"
@@ -1324,6 +1325,12 @@ static void PacketReceived(PacketCommandNG *packet) {
     }
     */
 
+    // Direct DFC sessions span several client commands. Any unrelated command
+    // ends that ownership and writes changes back to emulator memory first.
+    if (packet->cmd != CMD_HF_DFC_SIMULATE && desfire_sim_ready()) {
+        desfire_sim_deinit(true);
+    }
+
     switch (packet->cmd) {
         case CMD_BREAK_LOOP:
             break;
@@ -2546,6 +2553,23 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
             Mifare1ksim(payload->flags, payload->exitAfter, payload->uid, payload->atqa, payload->sak);
+            break;
+        }
+        case CMD_HF_DFC_SIMULATE: {
+            if (packet->length < 1) {
+                reply_ng(CMD_HF_DFC_SIMULATE, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            uint8_t response[PM3_CMD_DATA_SIZE] = {0};
+            size_t response_length = 0;
+            int status = desfire_sim_control(
+                packet->data.asBytes[0],
+                packet->data.asBytes + 1,
+                packet->length - 1,
+                response,
+                sizeof(response),
+                &response_length);
+            reply_ng(CMD_HF_DFC_SIMULATE, status, response, response_length);
             break;
         }
         case CMD_HF_MIFARE_EML_MEMCLR: {

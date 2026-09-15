@@ -39,6 +39,15 @@
 // simulates a bare DESFire shell that only answers the anticollision.
 // Idempotent: call it as often as convenient, it parses once.
 bool desfire_sim_init(void);
+bool desfire_sim_flush(void);
+void desfire_sim_deinit(bool flush);
+int desfire_sim_control(
+    uint8_t operation,
+    const uint8_t *input,
+    size_t input_length,
+    uint8_t *output,
+    size_t output_capacity,
+    size_t *output_length);
 
 // Whether desfire_sim_init() found an image. Cheap, safe before init.
 bool desfire_sim_ready(void);
@@ -56,6 +65,9 @@ void desfire_sim_reset(void);
 // with the prologue and CRC already stripped; `out` receives the status byte
 // and its payload, at most DESFIRE_SIM_MAX_RESP bytes. Returns that length.
 uint16_t desfire_sim_apdu(const uint8_t *in, uint16_t inlen, uint8_t *out);
+
+// Answer one complete ISO 14443-4 frame, excluding its RF CRC.
+uint16_t desfire_sim_frame(const uint8_t *in, uint16_t inlen, uint8_t *out);
 
 // One line about what is loaded, for the simulation banner.
 void desfire_sim_print_banner(void);
