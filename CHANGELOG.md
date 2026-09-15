@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hf mfdes sim` - DESFire EV1 simulation now answers authentication, secure messaging, file reads, writes and transactions from the card image in emulator memory (@iceman1001)
+- Fixed `hf mfdes sim` - a 2TDEA key whose two halves match is handled as a single DES key, session key generation included, so the session key matches what a genuine PICC derives (@iceman1001)
+- Fixed `hf mfdes sim` - the CMAC of a chained answer is taken over the whole transfer instead of being restarted on every 0xAF continuation (@iceman1001)
 - Fixed `PLATFORM_EXTRAS=BWM` - a command started over the Proxmark5 wireless module can be aborted again, `data_available()` only polled USB so CMD_BREAK_LOOP was never seen on the BLE or WiFi link (@tweathers-sec)
 - Fixed `lf search` - a leftover debug print no longer reports `DEBUG: detectindala | <n>` on every failed Indala demodulation (@tweathers-sec)
 - Changed `memcpy` - the device's own implementation now copies a word at a time when source and destination allow it (@iceman1001)

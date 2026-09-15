@@ -55,10 +55,15 @@
 #include "util.h"
 #include "iso14443a.h"
 #include "crc16.h"
+#include "crc32.h"
+#include "commonutil.h"
 #include "fpga_apis.h"
 #include "fpga_loader.h"
+#include "rssi_apis.h"
+#include "ticks_apis.h"
 #include "protocols.h"
 #include "desfire_em.h"
+#include "desfire_crypto.h"
 
 // ISO 7816 wrapping of the DESFire command set: class byte on the way in,
 // first status byte on the way back.
@@ -69,15 +74,62 @@
 // GetApplicationIDs on a full PICC is 28 * 3 bytes plus a status byte.
 #define DESFIRE_SIM_MAX_RESP    128
 
+// Largest write gathered across chained frames, header and secure messaging
+// included.  A reader that asks to write more than this in one command is
+// refused rather than served a truncated write.
+#define DESFIRE_SIM_WRITE_MAX   272
+
+// A reader chaining a long write fills its frames; a frame shorter than this
+// is the last one.  The client splits native writes well below it.
+#define DESFIRE_SIM_WRITE_FRAME 52
+
 typedef struct {
     const desfire_em_hdr_t *hdr;
     const desfire_em_app_t *apps;
     const desfire_em_file_t *files;
+    const desfire_em_key_t *keys;
     const uint8_t *base;
 
     int selected;               // index into apps[], -1 when nothing is selected
     uint8_t chain_cmd;          // command being continued over 0xAF, 0 when none
     uint8_t chain_step;         // which frame of it comes next
+
+    // ---- a read being handed out over several frames
+    // GetVersion and GetDFNames step through fixed records and only need
+    // chain_step.  A file read has to remember where in the file it is, which
+    // file, and the mode the first frame settled on -- the access rights are
+    // evaluated once, when the command arrives, not again per frame.
+    int16_t chain_file;         // index into files[], -1 when none
+    uint32_t chain_off;         // next byte or record to send
+    uint32_t chain_end;         // one past the last
+    uint8_t chain_comm;         // effective comm mode for the whole transfer
+
+    // ---- authentication
+    // auth_cmd is the handshake in flight, 0 when none.  The second frame
+    // arrives as 0xAF, so the command has to be remembered across it.
+    uint8_t auth_cmd;
+    uint8_t auth_keynum;
+    uint8_t rndb[16];
+    uint8_t rndlen;
+    uint8_t iv[16];             // runs through the handshake, then the session
+    struct desfire_key authkey;
+
+    bool authenticated;
+    uint8_t auth_keyno;         // the key number we authenticated with
+    struct desfire_key sesskey;
+
+    // The session CMAC is taken a piece at a time, so up to one block of the
+    // message is held back between calls -- see desfire_sim_cmac_update().
+    uint8_t cmac_pend[DESFIRE_MAX_CRYPTO_BLOCK_SIZE];
+    uint8_t cmac_pendlen;
+
+    // ---- a write being gathered over several frames
+    // A write is secured as one message, so none of it can be acted on until
+    // the last frame is in: the MAC covers the whole thing, and an enciphered
+    // write carries one CRC32 at the end of the lot.
+    uint8_t wbuf[DESFIRE_SIM_WRITE_MAX];
+    uint16_t wlen;
+    uint8_t wcmd;               // the command being gathered, 0 when none
 } desfire_sim_state_t;
 
 // The simulation runs one card at a time, and the 14a loop calls in here from
@@ -121,9 +173,11 @@ static bool desfire_sim_load(desfire_sim_state_t *st) {
     st->hdr = hdr;
     st->apps = (const desfire_em_app_t *)(em + hdr->app_off);
     st->files = (const desfire_em_file_t *)(em + hdr->file_off);
+    st->keys = (const desfire_em_key_t *)(em + hdr->key_off);
     st->selected = 0;           // a PICC comes up with AID 000000 selected
     st->chain_cmd = 0;
     st->chain_step = 0;
+    st->chain_file = -1;
     return true;
 }
 
@@ -156,6 +210,884 @@ static uint16_t desfire_sim_payload(uint8_t *out, uint8_t status, const uint8_t 
         memcpy(out + 1, data, len);
     }
     return len + 1;
+}
+
+// ------------------------------------------------------------ authentication
+
+// Fixed tag nonce, the same approach the UL-C simulation takes. It makes a
+// session reproducible, which is useful for testing, and means the simulation
+// is replayable -- it is a simulation of a card, not a secure one.
+static const uint8_t s_sim_rndb[16] = {
+    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+    0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10
+};
+
+// rotate left by one byte, the RndA/RndB' transform of the handshake
+static void desfire_sim_rol(uint8_t *data, uint8_t len) {
+    if (len < 2) {
+        return;
+    }
+    uint8_t first = data[0];
+    memmove(data, data + 1, len - 1);
+    data[len - 1] = first;
+}
+
+// The key material for (application, key number), or NULL when the image does
+// not hold it. A key we only know the version of cannot authenticate: the
+// image format keeps DESFIRE_EM_KEY_PRESENT apart from DESFIRE_EM_KEY_VERKNOWN
+// exactly so a simulation refuses rather than authenticating with zeros.
+static const desfire_em_key_t *desfire_sim_find_key(const desfire_sim_state_t *st, uint8_t app, uint8_t keyno) {
+
+    for (uint16_t i = 0; i < st->hdr->keycount; i++) {
+        const desfire_em_key_t *k = &st->keys[i];
+        if (k->app == app && k->num == keyno) {
+            return (k->flags & DESFIRE_EM_KEY_PRESENT) ? k : NULL;
+        }
+    }
+    return NULL;
+}
+
+// Build a crypto key of the application's algorithm from stored key material.
+//
+// DES and 2K3DES keys are both stored as 16 bytes and the key itself decides
+// which one the PICC uses: "If the 2nd half of the key string is equal to the
+// 1st half, the key is handled as a single DES key by the PICC" (M134034 8.1).
+// The all zero default key is the common case of that.  It matters well beyond
+// the cipher, because the same rule governs session key generation -- so a card
+// that skips it authenticates fine, then MACs every later frame with a key the
+// reader does not have.  The comparison is over the stored bytes including the
+// version bits, which is why it is done here rather than after any constructor
+// that clears them.
+static void desfire_sim_make_key(struct desfire_key *out, uint8_t algo, const uint8_t *value) {
+
+    memset(out, 0, sizeof(*out));
+    switch (algo) {
+        case T_DES:
+            Desfire_des_key_new(value, out);
+            break;
+        case T_3DES:
+            if (memcmp(value, value + 8, 8) == 0) {
+                Desfire_des_key_new(value, out);
+            } else {
+                Desfire_3des_key_new(value, out);
+            }
+            break;
+        case T_3K3DES:
+            Desfire_3k3des_key_new(value, out);
+            break;
+        case T_AES:
+        default:
+            Desfire_aes_key_new(value, out);
+            break;
+    }
+}
+
+// Derive the session key from the two nonces.
+//
+// This does not call the tree's Desfire_session_key_new(): its 3K3DES branch
+// passes the result through Desfire_3k3des_key_new(), which clears the low bit
+// of the first eight bytes.  In a stored key those bits carry the key version,
+// but a session key has no version and the reader keeps the derived bytes as
+// they are -- clearing them here would leave the two sides MACing under
+// different keys.  The layouts themselves are M134034 7.3.8.
+static void desfire_sim_session_key(desfire_sim_state_t *st, const uint8_t *rnda, const uint8_t *rndb) {
+
+    uint8_t buf[24] = {0};
+
+    switch (st->authkey.type) {
+
+        case T_DES:
+            memcpy(buf, rnda, 4);
+            memcpy(buf + 4, rndb, 4);
+            Desfire_des_key_new_with_version(buf, &st->sesskey);
+            break;
+
+        case T_3DES:
+            memcpy(buf, rnda, 4);
+            memcpy(buf + 4, rndb, 4);
+            memcpy(buf + 8, rnda + 4, 4);
+            memcpy(buf + 12, rndb + 4, 4);
+            Desfire_3des_key_new_with_version(buf, &st->sesskey);
+            break;
+
+        case T_3K3DES:
+            memcpy(buf, rnda, 4);
+            memcpy(buf + 4, rndb, 4);
+            memcpy(buf + 8, rnda + 6, 4);
+            memcpy(buf + 12, rndb + 6, 4);
+            memcpy(buf + 16, rnda + 12, 4);
+            memcpy(buf + 20, rndb + 12, 4);
+            Desfire_3k3des_key_new_with_version(buf, &st->sesskey);
+            break;
+
+        case T_AES:
+        default:
+            memcpy(buf, rnda, 4);
+            memcpy(buf + 4, rndb, 4);
+            memcpy(buf + 8, rnda + 12, 4);
+            memcpy(buf + 12, rndb + 12, 4);
+            Desfire_aes_key_new(buf, &st->sesskey);
+            break;
+    }
+}
+
+// One CBC block chain in either direction, picking the cipher from the key.
+static void desfire_sim_crypt(struct desfire_key *key, const uint8_t *in, uint8_t *out,
+                              uint16_t len, uint8_t *iv, bool encrypt) {
+
+    if (key->type == T_AES) {
+        if (encrypt) {
+            aes128_nxp_send(in, out, len, key->data, iv);
+        } else {
+            aes128_nxp_receive(in, out, len, key->data, iv);
+        }
+        return;
+    }
+
+    // 2 key or 3 key triple DES; a single DES key is stored doubled
+    int keymode = (key->type == T_3K3DES) ? 3 : 2;
+    if (encrypt) {
+        tdes_nxp_send(in, out, len, key->data, iv, keymode);
+    } else {
+        tdes_nxp_receive(in, out, len, key->data, iv, keymode);
+    }
+}
+
+// How long the challenge is for a given algorithm.
+static uint8_t desfire_sim_rndlen(uint8_t algo) {
+    return (algo == T_AES || algo == T_3K3DES) ? 16 : 8;
+}
+
+// Drop any authenticated session. SelectApplication does this, and so does any
+// command the PICC answers with an error.
+static void desfire_sim_auth_clear(desfire_sim_state_t *st) {
+    st->auth_cmd = 0;
+    st->authenticated = false;
+    st->auth_keyno = 0;
+    st->cmac_pendlen = 0;
+    memset(st->cmac_pend, 0, sizeof(st->cmac_pend));
+    memset(st->iv, 0, sizeof(st->iv));
+    memset(&st->sesskey, 0, sizeof(st->sesskey));
+    memset(&st->authkey, 0, sizeof(st->authkey));
+}
+
+// First frame of the handshake: pick the key, answer with E(RndB).
+static uint16_t desfire_sim_auth_start(desfire_sim_state_t *st, uint8_t cmd,
+                                       const uint8_t *in, uint16_t inlen, uint8_t *out) {
+
+    if (inlen < 1) {
+        return desfire_sim_status(out, MFDES_E_LENGTH);
+    }
+
+    uint8_t keyno = in[0] & 0x0F;
+    const desfire_em_app_t *app = &st->apps[st->selected];
+
+    if (keyno >= (app->numkeysraw & 0x0F) && keyno != 0) {
+        return desfire_sim_status(out, MFDES_E_NO_SUCH_KEY);
+    }
+
+    const desfire_em_key_t *k = desfire_sim_find_key(st, st->selected, keyno);
+    if (k == NULL) {
+        // we do not hold this key, so we cannot play the other half
+        if (g_dbglevel >= DBG_EXTENDED) {
+            Dbprintf("DESFire sim: no key %u for app index %d in the image", keyno, st->selected);
+        }
+        return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
+    }
+
+    // the command has to match the application's key algorithm
+    uint8_t algo = app->keytype;
+    bool ok = ((cmd == MFDES_AUTHENTICATE && (algo == T_DES || algo == T_3DES)) ||
+               (cmd == MFDES_AUTHENTICATE_ISO && (algo == T_DES || algo == T_3DES || algo == T_3K3DES)) ||
+               (cmd == MFDES_AUTHENTICATE_AES && algo == T_AES));
+    if (ok == false) {
+        return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
+    }
+
+    desfire_sim_auth_clear(st);
+    desfire_sim_make_key(&st->authkey, algo, k->key);
+
+    st->rndlen = desfire_sim_rndlen(algo);
+    memcpy(st->rndb, s_sim_rndb, st->rndlen);
+
+    // tdes_nxp_send() casts away const and XORs the IV into its *input* buffer,
+    // so anything handed to it is destroyed. With a zero IV and a single block
+    // that is a no-op, which is why 2TDEA survives it, but a 16 byte challenge
+    // is two blocks and the second one corrupts the stored RndB. Encrypt a copy.
+    uint8_t plain[16] = {0};
+    uint8_t encrndb[16] = {0};
+    memcpy(plain, st->rndb, st->rndlen);
+    memset(st->iv, 0, sizeof(st->iv));
+    desfire_sim_crypt(&st->authkey, plain, encrndb, st->rndlen, st->iv, true);
+
+    st->auth_cmd = cmd;
+    st->auth_keynum = keyno;
+    return desfire_sim_payload(out, MFDES_ADDITIONAL_FRAME, encrndb, st->rndlen);
+}
+
+// Second frame: E(RndA || RndB'). Check RndB', answer E(RndA') and derive the
+// session key.
+static uint16_t desfire_sim_auth_finish(desfire_sim_state_t *st, const uint8_t *in, uint16_t inlen, uint8_t *out) {
+
+    uint16_t want = st->rndlen * 2;
+    if (inlen < want) {
+        desfire_sim_auth_clear(st);
+        return desfire_sim_status(out, MFDES_E_LENGTH);
+    }
+
+    uint8_t both[32] = {0};
+    desfire_sim_crypt(&st->authkey, in, both, want, st->iv, false);
+
+    const uint8_t *rnda = both;
+    const uint8_t *rndbprime = both + st->rndlen;
+
+    uint8_t expect[16] = {0};
+    memcpy(expect, st->rndb, st->rndlen);
+    desfire_sim_rol(expect, st->rndlen);
+
+    if (memcmp(expect, rndbprime, st->rndlen) != 0) {
+        // the reader does not hold the key
+        desfire_sim_auth_clear(st);
+        return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
+    }
+
+    uint8_t rndaprime[16] = {0};
+    memcpy(rndaprime, rnda, st->rndlen);
+    desfire_sim_rol(rndaprime, st->rndlen);
+
+    uint8_t encrndaprime[16] = {0};
+    desfire_sim_crypt(&st->authkey, rndaprime, encrndaprime, st->rndlen, st->iv, true);
+
+    // session key, and the CMAC subkeys the MACed mode will need
+    desfire_sim_session_key(st, rnda, st->rndb);
+    cmac_generate_subkeys(&st->sesskey);
+
+    st->authenticated = true;
+    st->auth_keyno = st->auth_keynum;
+    st->auth_cmd = 0;
+    memset(st->iv, 0, sizeof(st->iv));
+
+    if (g_dbglevel >= DBG_EXTENDED) {
+        Dbprintf("DESFire sim: authenticated app index %d key %u", st->selected, st->auth_keyno);
+    }
+
+    return desfire_sim_payload(out, MFDES_S_OPERATION_OK, encrndaprime, st->rndlen);
+}
+
+// ---------------------------------------------------------- secure messaging
+
+// EV1 file communication modes, the raw 2 bit field of the file settings.
+#define DESFIRE_SIM_COMM_PLAIN      0x00
+#define DESFIRE_SIM_COMM_MACED      0x01
+#define DESFIRE_SIM_COMM_PLAIN2     0x02    // a second plain encoding, EV1 9.3.1
+#define DESFIRE_SIM_COMM_FULL       0x03
+
+// Access rights are four nibbles in one word: read, write, read-write and
+// change, from the top down.  0x0E grants everyone, 0x0F denies everyone, and
+// anything else names the key that has to be authenticated.
+#define DESFIRE_SIM_AR_READ(r)      (((r) >> 12) & 0x0F)
+#define DESFIRE_SIM_AR_WRITE(r)     (((r) >> 8) & 0x0F)
+#define DESFIRE_SIM_AR_RW(r)        (((r) >> 4) & 0x0F)
+#define DESFIRE_SIM_AR_CHANGE(r)    ((r) & 0x0F)
+
+#define DESFIRE_SIM_AR_FREE         0x0E
+#define DESFIRE_SIM_AR_DENY         0x0F
+
+// Does this access right let the current session through?  `keyed` is set when
+// it was a key that granted it rather than free access, which the caller needs
+// to pick the communication mode -- see desfire_sim_eff_comm().
+static bool desfire_sim_right_ok(const desfire_sim_state_t *st, uint8_t right, bool *keyed) {
+
+    if (right == DESFIRE_SIM_AR_DENY) {
+        return false;
+    }
+
+    if (right == DESFIRE_SIM_AR_FREE) {
+        return true;
+    }
+
+    if (st->authenticated && st->auth_keyno == right) {
+        *keyed = true;
+        return true;
+    }
+
+    return false;
+}
+
+// The mode a file operation actually runs in.
+//
+// Measured on a DESFire EV2 2K, and the same on the ev1 channel: the PICC
+// applies the file's communication mode only when a key right matching the
+// authenticated key granted the operation.  When free access (0x0E) granted it
+// instead, the transfer is plain whatever the file settings say.  Free access
+// alone is not the trigger -- a keyed right that matches wins, so both rights
+// have to be evaluated before deciding.
+static bool desfire_sim_eff_comm(const desfire_sim_state_t *st, const desfire_em_file_t *f,
+                                 bool write, uint8_t *comm) {
+
+    uint16_t r = f->rights;
+    bool keyed = false;
+
+    // read and write are each granted by their own right or by read-write
+    bool a = desfire_sim_right_ok(st, write ? DESFIRE_SIM_AR_WRITE(r) : DESFIRE_SIM_AR_READ(r), &keyed);
+    bool b = desfire_sim_right_ok(st, DESFIRE_SIM_AR_RW(r), &keyed);
+
+    if ((a || b) == false) {
+        return false;
+    }
+
+    *comm = keyed ? (f->flags & DESFIRE_EM_FILE_COMM_MASK) : DESFIRE_SIM_COMM_PLAIN;
+    return true;
+}
+
+// GetValue, Debit and LimitedCredit are granted by any of the three rights,
+// Credit by read-write alone -- measured, EV1 9.5.6.  The FreeValue option bit
+// forces GetValue plain whatever the rights say.
+static bool desfire_sim_value_comm(const desfire_sim_state_t *st, const desfire_em_file_t *f,
+                                   bool creditonly, uint8_t *comm) {
+
+    uint16_t r = f->rights;
+    bool keyed = false;
+    bool ok;
+
+    if (creditonly) {
+        ok = desfire_sim_right_ok(st, DESFIRE_SIM_AR_RW(r), &keyed);
+    } else {
+        bool a = desfire_sim_right_ok(st, DESFIRE_SIM_AR_READ(r), &keyed);
+        bool b = desfire_sim_right_ok(st, DESFIRE_SIM_AR_WRITE(r), &keyed);
+        bool c = desfire_sim_right_ok(st, DESFIRE_SIM_AR_RW(r), &keyed);
+        ok = (a || b || c);
+    }
+
+    if (ok == false) {
+        return false;
+    }
+
+    if ((creditonly == false) && (f->flags & DESFIRE_EM_FILE_FREEGETVAL)) {
+        *comm = DESFIRE_SIM_COMM_PLAIN;
+        return true;
+    }
+
+    *comm = keyed ? (f->flags & DESFIRE_EM_FILE_COMM_MASK) : DESFIRE_SIM_COMM_PLAIN;
+    return true;
+}
+
+// The session CMAC, taken a piece at a time.
+//
+// Two reasons it streams rather than taking a buffer.  The tree's cmac() draws
+// its scratch from BigBuf and never hands it back, which is fine for the
+// one-shot reader path it was written for but would drain the buffer a block at
+// a time over a session.  And a chained read is MACed over the whole transfer,
+// not per frame -- the client joins every frame and verifies once -- so the
+// data is only ever seen in pieces and can be several hundred bytes in total.
+//
+// CMAC is CBC-MAC with the final block treated differently, so a complete block
+// is only pushed through the chain once something is known to follow it.  That
+// leaves between 1 and one block of data pending at all times.
+
+static void desfire_sim_cmac_reset(desfire_sim_state_t *st) {
+    st->cmac_pendlen = 0;
+    memset(st->cmac_pend, 0, sizeof(st->cmac_pend));
+}
+
+static void desfire_sim_cmac_update(desfire_sim_state_t *st, const uint8_t *data, uint32_t len) {
+
+    size_t kbs = key_block_size(&st->sesskey);
+    if (kbs == 0 || kbs > sizeof(st->cmac_pend)) {
+        return;
+    }
+
+    while (len > 0) {
+
+        // Being here with a full block held means more data follows it, so it
+        // is not the last block and can go through the chain now.  Flushing at
+        // the top rather than the bottom is what makes a second call safe: the
+        // previous one returns with a full block pending whenever the data it
+        // was given filled one exactly, and consuming that first is the only
+        // way this loop makes progress.
+        if (st->cmac_pendlen == kbs) {
+            mifare_cypher_blocks_chained(NULL, &st->sesskey, st->iv, st->cmac_pend, kbs, MCD_SEND, MCO_ENCYPHER);
+            st->cmac_pendlen = 0;
+        }
+
+        uint32_t room = kbs - st->cmac_pendlen;
+        uint32_t n = (len < room) ? len : room;
+
+        memcpy(st->cmac_pend + st->cmac_pendlen, data, n);
+        st->cmac_pendlen += n;
+        data += n;
+        len -= n;
+    }
+}
+
+static void desfire_sim_cmac_final(desfire_sim_state_t *st, uint8_t *mac) {
+
+    size_t kbs = key_block_size(&st->sesskey);
+    if (kbs == 0 || kbs > sizeof(st->cmac_pend)) {
+        return;
+    }
+
+    // a message that is a whole number of blocks takes the first subkey, one
+    // that has to be padded takes the second
+    if (st->cmac_pendlen == kbs) {
+        xor(st->cmac_pend, st->sesskey.cmac_sk1, kbs);
+    } else {
+        st->cmac_pend[st->cmac_pendlen++] = 0x80;
+        while (st->cmac_pendlen < kbs) {
+            st->cmac_pend[st->cmac_pendlen++] = 0x00;
+        }
+        xor(st->cmac_pend, st->sesskey.cmac_sk2, kbs);
+    }
+
+    mifare_cypher_blocks_chained(NULL, &st->sesskey, st->iv, st->cmac_pend, kbs, MCD_SEND, MCO_ENCYPHER);
+    memcpy(mac, st->iv, kbs);
+    desfire_sim_cmac_reset(st);
+}
+
+// The session CMAC runs over every command and every response, in order, so it
+// has to be taken even when neither side puts it on the wire -- skipping one
+// leaves the two IVs apart and every later MAC is wrong.  This is the command
+// half: `cmd` followed by its parameters, exactly as they arrived.
+static void desfire_sim_cmac_command(desfire_sim_state_t *st, uint8_t cmd, const uint8_t *in, uint16_t inlen) {
+
+    if (st->authenticated == false) {
+        return;
+    }
+
+    uint8_t mac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+    desfire_sim_cmac_reset(st);
+    desfire_sim_cmac_update(st, &cmd, 1);
+    desfire_sim_cmac_update(st, in, inlen);
+    desfire_sim_cmac_final(st, mac);
+}
+
+// The response half: the CMAC covers the payload followed by the status byte,
+// and its first 8 bytes are appended to the answer.  An EV1 session MACs the
+// response even for a plain transfer, which is why this is not conditional on
+// the file's communication mode.
+static uint16_t desfire_sim_maced(desfire_sim_state_t *st, uint8_t *out, uint8_t status,
+                                  const uint8_t *data, uint16_t len) {
+
+    if (st->authenticated == false) {
+        return desfire_sim_payload(out, status, data, len);
+    }
+
+    uint8_t mac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+    desfire_sim_cmac_reset(st);
+    desfire_sim_cmac_update(st, data, len);
+    desfire_sim_cmac_update(st, &status, 1);
+    desfire_sim_cmac_final(st, mac);
+
+    out[0] = status;
+    if (len) {
+        memcpy(out + 1, data, len);
+    }
+    memcpy(out + 1 + len, mac, DESFIRE_CMAC_LENGTH);
+    return len + 1 + DESFIRE_CMAC_LENGTH;
+}
+
+// A fully enciphered response: plaintext, CRC32 over plaintext and the status
+// byte, then zero padding to the block size, all encrypted under the session
+// key with the running IV.
+static uint16_t desfire_sim_enciphered(desfire_sim_state_t *st, uint8_t *out, uint8_t status,
+                                       const uint8_t *data, uint16_t len) {
+
+    size_t kbs = key_block_size(&st->sesskey);
+    if (kbs == 0) {
+        return desfire_sim_payload(out, status, data, len);
+    }
+
+    uint8_t buf[DESFIRE_SIM_MAX_RESP] = {0};
+    size_t padded = padded_data_length(len + 4, kbs);
+    if (padded + 1 > sizeof(buf)) {
+        return desfire_sim_status(out, MFDES_E_LENGTH);
+    }
+
+    // the CRC is taken over the plaintext with the status byte appended, but
+    // only the plaintext and the CRC itself are sent
+    uint8_t crcbuf[DESFIRE_SIM_MAX_RESP] = {0};
+    if (len) {
+        memcpy(crcbuf, data, len);
+    }
+    crcbuf[len] = status;
+    crc32_append(crcbuf, len + 1);
+
+    if (len) {
+        memcpy(buf, data, len);
+    }
+    memcpy(buf + len, crcbuf + len + 1, 4);
+
+    out[0] = status;
+    desfire_sim_crypt(&st->sesskey, buf, out + 1, padded, st->iv, true);
+    return padded + 1;
+}
+
+// One frame of a chained answer.
+//
+// Intermediate frames carry no MAC.  The client joins every frame of a transfer
+// and verifies a single CMAC over the lot, taken against the status byte of the
+// last frame, so the data feeds the running CMAC as it goes out and only the
+// final frame carries the result.
+static uint16_t desfire_sim_chained(desfire_sim_state_t *st, uint8_t *out, bool more,
+                                    const uint8_t *data, uint16_t len) {
+
+    if (st->authenticated == false) {
+        return desfire_sim_payload(out, more ? MFDES_ADDITIONAL_FRAME : MFDES_S_OPERATION_OK, data, len);
+    }
+
+    desfire_sim_cmac_update(st, data, len);
+
+    if (more) {
+        return desfire_sim_payload(out, MFDES_ADDITIONAL_FRAME, data, len);
+    }
+
+    uint8_t status = MFDES_S_OPERATION_OK;
+    uint8_t mac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+    desfire_sim_cmac_update(st, &status, 1);
+    desfire_sim_cmac_final(st, mac);
+
+    out[0] = status;
+    if (len) {
+        memcpy(out + 1, data, len);
+    }
+    memcpy(out + 1 + len, mac, DESFIRE_CMAC_LENGTH);
+    return len + 1 + DESFIRE_CMAC_LENGTH;
+}
+
+// Wrap one answer in whatever the transfer's communication mode calls for.
+static uint16_t desfire_sim_respond(desfire_sim_state_t *st, uint8_t *out, uint8_t status,
+                                    const uint8_t *data, uint16_t len, uint8_t comm) {
+
+    if (st->authenticated && comm == DESFIRE_SIM_COMM_FULL) {
+        return desfire_sim_enciphered(st, out, status, data, len);
+    }
+
+    // plain and MACed are the same on the response side of an EV1 session
+    return desfire_sim_maced(st, out, status, data, len);
+}
+
+// ------------------------------------------------ the reader's secure messaging
+
+// How many leading bytes of a command's parameters are the header, the part an
+// enciphered command leaves in the clear.  Same table the client keeps.
+static uint8_t desfire_sim_hdrlen(uint8_t cmd) {
+
+    switch (cmd) {
+        case MFDES_WRITE_DATA:
+        case MFDES_WRITE_DATA2:
+        case MFDES_WRITE_RECORD:
+        case MFDES_WRITE_RECORD2:
+            return 7;               // file number, 3 byte offset, 3 byte length
+        case MFDES_UPDATE_RECORD:
+        case MFDES_UPDATE_RECORD2:
+            return 10;              // and a 3 byte record number on top
+        case MFDES_CREDIT:
+        case MFDES_DEBIT:
+        case MFDES_LIMITED_CREDIT:
+        case MFDES_GET_VALUE:
+            return 1;               // file number only
+        default:
+            return 0;
+    }
+}
+
+// Commands the reader puts a MAC on the wire for, when the transfer is MACed.
+// Everything else calculates the MAC to move the IV along and sends nothing.
+static bool desfire_sim_cmd_macs_request(uint8_t cmd) {
+
+    switch (cmd) {
+        case MFDES_WRITE_DATA:
+        case MFDES_WRITE_DATA2:
+        case MFDES_WRITE_RECORD:
+        case MFDES_WRITE_RECORD2:
+        case MFDES_UPDATE_RECORD:
+        case MFDES_UPDATE_RECORD2:
+        case MFDES_CREDIT:
+        case MFDES_DEBIT:
+        case MFDES_LIMITED_CREDIT:
+            return true;
+        default:
+            return false;
+    }
+}
+
+// Commands that carry data the reader secured, so they unwrap it themselves
+// rather than going through the blanket command CMAC.
+static bool desfire_sim_cmd_is_write(uint8_t cmd) {
+    return (desfire_sim_cmd_macs_request(cmd));
+}
+
+// Take the reader's secure messaging off a gathered command.
+//
+// `buf`/`len` is the command's parameters as they arrived, header included and
+// with whatever the transfer's mode added.  On success the plain parameters are
+// left in place and *len is trimmed to them.  The session IV moves on either
+// way -- that is the point of calculating a MAC nobody transmits.
+static bool desfire_sim_unwrap(desfire_sim_state_t *st, uint8_t cmd, uint8_t comm,
+                               uint8_t *buf, uint16_t *len) {
+
+    uint8_t hdrlen = desfire_sim_hdrlen(cmd);
+
+    if (st->authenticated == false) {
+        // no session, so nothing was added and nothing can be checked
+        return (comm != DESFIRE_SIM_COMM_FULL);
+    }
+
+    if (comm == DESFIRE_SIM_COMM_FULL) {
+
+        size_t kbs = key_block_size(&st->sesskey);
+        if (kbs == 0 || *len < hdrlen) {
+            return false;
+        }
+
+        uint16_t enclen = *len - hdrlen;
+        if (enclen == 0 || (enclen % kbs) != 0) {
+            return false;
+        }
+
+        // the header travels in the clear, the rest is one CBC run
+        desfire_sim_crypt(&st->sesskey, buf + hdrlen, buf + hdrlen, enclen, st->iv, false);
+
+        // CRC32 covers the command byte, the header and the plain data, and
+        // sits directly behind the data with zero padding after it.  The data
+        // length is not transmitted, so it is found by trying each candidate.
+        for (uint16_t datalen = 0; datalen + 4 <= enclen; datalen++) {
+
+            uint8_t crcbuf[DESFIRE_SIM_WRITE_MAX + 8] = {0};
+            uint16_t n = 0;
+            crcbuf[n++] = cmd;
+            memcpy(crcbuf + n, buf, hdrlen);
+            n += hdrlen;
+            memcpy(crcbuf + n, buf + hdrlen, datalen);
+            n += datalen;
+
+            uint8_t want[4] = {0};
+            crc32_ex(crcbuf, n, want);
+
+            if (memcmp(want, buf + hdrlen + datalen, 4) == 0) {
+                *len = hdrlen + datalen;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    if (comm == DESFIRE_SIM_COMM_MACED && desfire_sim_cmd_macs_request(cmd)) {
+
+        if (*len < DESFIRE_CMAC_LENGTH) {
+            return false;
+        }
+        uint16_t plainlen = *len - DESFIRE_CMAC_LENGTH;
+
+        uint8_t mac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+        desfire_sim_cmac_reset(st);
+        desfire_sim_cmac_update(st, &cmd, 1);
+        desfire_sim_cmac_update(st, buf, plainlen);
+        desfire_sim_cmac_final(st, mac);
+
+        if (memcmp(mac, buf + plainlen, DESFIRE_CMAC_LENGTH) != 0) {
+            return false;
+        }
+
+        *len = plainlen;
+        return true;
+    }
+
+    // plain inside a session: the MAC is calculated and thrown away, only so
+    // the next one starts from the right IV
+    uint8_t mac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+    desfire_sim_cmac_reset(st);
+    desfire_sim_cmac_update(st, &cmd, 1);
+    desfire_sim_cmac_update(st, buf, *len);
+    desfire_sim_cmac_final(st, mac);
+    return true;
+}
+
+// ------------------------------------------------------------------- files
+
+// Find a live file by its file number within the selected application.
+static const desfire_em_file_t *desfire_sim_find_file(const desfire_sim_state_t *st, uint8_t fileno) {
+
+    for (uint16_t i = 0; i < st->hdr->filecount; i++) {
+
+        const desfire_em_file_t *f = &st->files[i];
+        if (f->app != st->selected || f->num != fileno) {
+            continue;
+        }
+        return (f->flags & DESFIRE_EM_FILE_DELETED) ? NULL : f;
+    }
+    return NULL;
+}
+
+static int16_t desfire_sim_file_index(const desfire_sim_state_t *st, const desfire_em_file_t *f) {
+    return (int16_t)(f - st->files);
+}
+
+// How much file data one frame carries.  The native answer is a status byte,
+// the payload, and up to a CMAC or a block of padding behind it, and the whole
+// thing has to fit DESFIRE_SIM_MAX_RESP.
+#define DESFIRE_SIM_READ_CHUNK  96
+
+// Hand out the next slice of a file read, chaining with 0xAF while more is
+// left.  Shared by the first frame and every continuation.
+static uint16_t desfire_sim_read_chunk(desfire_sim_state_t *st, uint8_t *out) {
+
+    const desfire_em_file_t *f = &st->files[st->chain_file];
+
+    uint32_t left = st->chain_end - st->chain_off;
+    uint32_t n = (left > DESFIRE_SIM_READ_CHUNK) ? DESFIRE_SIM_READ_CHUNK : left;
+
+    // An enciphered transfer is one CRC over the whole read, so it cannot be
+    // split across frames the way a plain one can.  Everything this simulation
+    // serves fits a frame, so a read that does not is refused rather than
+    // answered wrongly.
+    if (st->chain_comm == DESFIRE_SIM_COMM_FULL && left > DESFIRE_SIM_READ_CHUNK) {
+        st->chain_cmd = 0;
+        st->chain_file = -1;
+        return desfire_sim_status(out, MFDES_E_LENGTH);
+    }
+
+    const uint8_t *src = st->base + f->dataoff + st->chain_off;
+    st->chain_off += n;
+
+    bool more = (st->chain_off < st->chain_end);
+    if (more == false) {
+        st->chain_cmd = 0;
+        st->chain_step = 0;
+        st->chain_file = -1;
+    }
+
+    if (st->chain_comm == DESFIRE_SIM_COMM_FULL) {
+        return desfire_sim_enciphered(st, out, MFDES_S_OPERATION_OK, src, n);
+    }
+
+    return desfire_sim_chained(st, out, more, src, n);
+}
+
+// Set up a data or record read and answer its first frame.  `unit` is 1 for a
+// data file and the record size for a record file, so offset and length are
+// counted in whatever the command counts in.
+static uint16_t desfire_sim_read_start(desfire_sim_state_t *st, const desfire_em_file_t *f,
+                                       uint32_t off, uint32_t len, uint32_t unit,
+                                       uint32_t avail, uint8_t comm, uint8_t *out) {
+
+    // A file whose contents were never read holds reserved space and nothing
+    // meaningful.  "8 bytes of 00" and "we could not read 8 bytes" are
+    // different facts, so this answers an error rather than zeros.
+    if (f->flags & DESFIRE_EM_FILE_UNKNOWN) {
+        return desfire_sim_status(out, MFDES_E_FILE_NOT_FOUND);
+    }
+
+    if (off > avail) {
+        return desfire_sim_status(out, MFDES_E_BOUNDARY);
+    }
+
+    // zero length means "to the end", EV1 9.5.1
+    if (len == 0) {
+        len = avail - off;
+    }
+
+    if (off + len > avail) {
+        return desfire_sim_status(out, MFDES_E_BOUNDARY);
+    }
+
+    st->chain_cmd = MFDES_READ_DATA;
+    st->chain_file = desfire_sim_file_index(st, f);
+    st->chain_off = off * unit;
+    st->chain_end = (off + len) * unit;
+    st->chain_comm = comm;
+
+    // the command CMAC has already been taken and its result discarded, so the
+    // running state starts empty for the response half
+    desfire_sim_cmac_reset(st);
+
+    if (st->chain_end > f->datalen) {
+        st->chain_end = f->datalen;
+    }
+
+    return desfire_sim_read_chunk(st, out);
+}
+
+// --------------------------------------------------------------- the writes
+
+// Emulator memory is what the image lives in, and a write changes it in place
+// so `hf mfdes esave` afterwards shows what the reader did.  The parsed view is
+// const because almost everything only reads it; this is the one way back.
+static uint8_t *desfire_sim_wbase(void) {
+    return BigBuf_get_EM_addr();
+}
+
+// Where a file's writes land.  Standard data files write straight through.
+// Backup data, value and record files are covered by CommitTransaction, so
+// writes go to the shadow region and only move across on commit -- EV1 9.5.
+static uint16_t desfire_sim_write_region(const desfire_em_file_t *f) {
+    if (f->type == 0x00 || f->shadow_off == 0) {
+        return f->dataoff;
+    }
+    return f->shadow_off;
+}
+
+static bool desfire_sim_file_is_backed(const desfire_em_file_t *f) {
+    return (f->type != 0x00 && f->shadow_off != 0);
+}
+
+// Start a transaction on a file the first time it is written, so that an abort
+// has something to discard and a commit something to move.
+static void desfire_sim_mark_dirty(desfire_sim_state_t *st, const desfire_em_file_t *f) {
+
+    if (desfire_sim_file_is_backed(f) == false || (f->flags & DESFIRE_EM_FILE_DIRTY)) {
+        return;
+    }
+
+    desfire_em_file_t *w = (desfire_em_file_t *)f;
+    uint8_t *base = desfire_sim_wbase();
+
+    // the shadow starts as a copy, so a partial write leaves the rest of the
+    // file as it was rather than as zeros
+    memcpy(base + f->shadow_off, base + f->dataoff, f->datalen);
+    w->flags |= DESFIRE_EM_FILE_DIRTY;
+}
+
+// CommitTransaction: every dirty file's shadow becomes the committed data.
+static void desfire_sim_commit(desfire_sim_state_t *st) {
+
+    uint8_t *base = desfire_sim_wbase();
+
+    for (uint16_t i = 0; i < st->hdr->filecount; i++) {
+
+        desfire_em_file_t *f = (desfire_em_file_t *)&st->files[i];
+        if (f->app != st->selected || (f->flags & DESFIRE_EM_FILE_DIRTY) == 0) {
+            continue;
+        }
+
+        memcpy(base + f->dataoff, base + f->shadow_off, f->datalen);
+        f->flags &= ~DESFIRE_EM_FILE_DIRTY;
+    }
+}
+
+// AbortTransaction: the shadows are dropped and nothing moves.
+static void desfire_sim_abort(desfire_sim_state_t *st) {
+
+    for (uint16_t i = 0; i < st->hdr->filecount; i++) {
+        desfire_em_file_t *f = (desfire_em_file_t *)&st->files[i];
+        if (f->app == st->selected) {
+            f->flags &= ~DESFIRE_EM_FILE_DIRTY;
+        }
+    }
+}
+
+// The value a value file currently holds, taking an uncommitted change into
+// account -- a Debit followed by GetValue in the same transaction reads back
+// the new value, EV1 9.5.6.
+static uint32_t desfire_sim_value_get(const desfire_sim_state_t *st, const desfire_em_file_t *f) {
+    return f->u.value.value;
+}
+
+static void desfire_sim_value_set(desfire_sim_state_t *st, const desfire_em_file_t *f, uint32_t v) {
+    desfire_em_file_t *w = (desfire_em_file_t *)f;
+    desfire_sim_mark_dirty(st, f);
+    w->u.value.value = v;
 }
 
 // One GetDFNames record: AID, ISO file id, DF name.  Applications without a DF
@@ -203,6 +1135,197 @@ static uint16_t desfire_sim_dfname_record(const desfire_sim_state_t *st, uint8_t
     return 0;
 }
 
+// Act on a write once every frame of it has arrived.  `buf`/`len` are the plain
+// parameters, secure messaging already stripped.
+static uint16_t desfire_sim_write_apply(desfire_sim_state_t *st, uint8_t cmd,
+                                        uint8_t *buf, uint16_t len, uint8_t comm, uint8_t *out) {
+
+    const desfire_em_file_t *f = desfire_sim_find_file(st, buf[0]);
+    if (f == NULL) {
+        return desfire_sim_status(out, MFDES_E_FILE_NOT_FOUND);
+    }
+
+    uint8_t *base = desfire_sim_wbase();
+
+    switch (cmd) {
+
+        case MFDES_WRITE_DATA:
+        case MFDES_WRITE_DATA2: {
+
+            if (f->type != 0x00 && f->type != 0x01) {
+                return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+            }
+
+            uint32_t off = buf[1] | (buf[2] << 8) | (buf[3] << 16);
+            uint32_t n = buf[4] | (buf[5] << 8) | (buf[6] << 16);
+
+            if (len < 7 + n) {
+                return desfire_sim_status(out, MFDES_E_LENGTH);
+            }
+            if (off + n > f->u.data.size || off + n > f->datalen) {
+                return desfire_sim_status(out, MFDES_E_BOUNDARY);
+            }
+
+            desfire_sim_mark_dirty(st, f);
+            memcpy(base + desfire_sim_write_region(f) + off, buf + 7, n);
+
+            // contents are meaningful now even if the dump never read them
+            ((desfire_em_file_t *)f)->flags &= ~DESFIRE_EM_FILE_UNKNOWN;
+            return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, NULL, 0);
+        }
+
+        case MFDES_WRITE_RECORD:
+        case MFDES_WRITE_RECORD2: {
+
+            if (f->type != 0x03 && f->type != 0x04) {
+                return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+            }
+
+            uint32_t off = buf[1] | (buf[2] << 8) | (buf[3] << 16);
+            uint32_t n = buf[4] | (buf[5] << 8) | (buf[6] << 16);
+            uint32_t rs = f->u.record.recordsize;
+
+            if (rs == 0 || len < 7 + n || off + n > rs) {
+                return desfire_sim_status(out, MFDES_E_BOUNDARY);
+            }
+
+            // a linear file is full once it holds maxrecords; a cyclic one
+            // overwrites the oldest instead -- EV1 9.5.9
+            uint32_t cur = f->u.record.currecords;
+            uint32_t max = f->u.record.maxrecords;
+
+            if (f->type == 0x03 && cur >= max) {
+                return desfire_sim_status(out, MFDES_E_BOUNDARY);
+            }
+
+            uint32_t slot = (cur < max) ? cur : (cur % max);
+            if ((slot + 1) * rs > f->datalen) {
+                return desfire_sim_status(out, MFDES_E_BOUNDARY);
+            }
+
+            desfire_sim_mark_dirty(st, f);
+            memcpy(base + desfire_sim_write_region(f) + (slot * rs) + off, buf + 7, n);
+
+            if (cur < max) {
+                ((desfire_em_file_t *)f)->u.record.currecords = cur + 1;
+            }
+            return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, NULL, 0);
+        }
+
+        case MFDES_UPDATE_RECORD:
+        case MFDES_UPDATE_RECORD2: {
+
+            if (f->type != 0x03 && f->type != 0x04) {
+                return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+            }
+
+            uint32_t rec = buf[1] | (buf[2] << 8) | (buf[3] << 16);
+            uint32_t off = buf[4] | (buf[5] << 8) | (buf[6] << 16);
+            uint32_t n = buf[7] | (buf[8] << 8) | (buf[9] << 16);
+            uint32_t rs = f->u.record.recordsize;
+
+            if (rs == 0 || len < 10 + n || off + n > rs || rec >= f->u.record.currecords) {
+                return desfire_sim_status(out, MFDES_E_BOUNDARY);
+            }
+            if ((rec + 1) * rs > f->datalen) {
+                return desfire_sim_status(out, MFDES_E_BOUNDARY);
+            }
+
+            desfire_sim_mark_dirty(st, f);
+            memcpy(base + desfire_sim_write_region(f) + (rec * rs) + off, buf + 10, n);
+            return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, NULL, 0);
+        }
+
+        case MFDES_CREDIT:
+        case MFDES_DEBIT:
+        case MFDES_LIMITED_CREDIT: {
+
+            if (f->type != 0x02 || len < 5) {
+                return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+            }
+
+            uint32_t delta = buf[1] | (buf[2] << 8) | (buf[3] << 16) | ((uint32_t)buf[4] << 24);
+            uint32_t v = desfire_sim_value_get(st, f);
+
+            if (cmd == MFDES_DEBIT) {
+                if (delta > v || (v - delta) < f->u.value.lower) {
+                    return desfire_sim_status(out, MFDES_E_BOUNDARY);
+                }
+                v -= delta;
+            } else {
+                if (delta > f->u.value.upper || (v + delta) > f->u.value.upper) {
+                    return desfire_sim_status(out, MFDES_E_BOUNDARY);
+                }
+                v += delta;
+            }
+
+            desfire_sim_value_set(st, f, v);
+            return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, NULL, 0);
+        }
+
+        default:
+            return desfire_sim_status(out, MFDES_E_ILLEGAL_COMMAND_CODE);
+    }
+}
+
+// Gather one frame of a write.  A write is secured as a whole, so nothing is
+// acted on until the reader stops chaining -- the MAC covers every byte of it
+// and an enciphered write carries a single CRC32 at the end.
+static uint16_t desfire_sim_write_gather(desfire_sim_state_t *st, uint8_t cmd,
+                                         const uint8_t *in, uint16_t inlen, uint8_t *out) {
+
+    if (st->wcmd == 0) {
+        st->wcmd = cmd;
+        st->wlen = 0;
+    }
+
+    if ((uint32_t)st->wlen + inlen > sizeof(st->wbuf)) {
+        st->wcmd = 0;
+        st->wlen = 0;
+        return desfire_sim_status(out, MFDES_E_LENGTH);
+    }
+
+    memcpy(st->wbuf + st->wlen, in, inlen);
+    st->wlen += inlen;
+
+    // The reader chains by sending its own 0xAF frames; the card only answers
+    // 0xAF to ask for more.  A full frame means more is probably coming, so
+    // this asks for it and acts when a short frame arrives.
+    if (inlen >= DESFIRE_SIM_WRITE_FRAME) {
+        return desfire_sim_status(out, MFDES_ADDITIONAL_FRAME);
+    }
+
+    uint8_t wcmd = st->wcmd;
+    uint16_t wlen = st->wlen;
+    st->wcmd = 0;
+    st->wlen = 0;
+
+    if (wlen < 1) {
+        return desfire_sim_status(out, MFDES_E_LENGTH);
+    }
+
+    const desfire_em_file_t *f = desfire_sim_find_file(st, st->wbuf[0]);
+    if (f == NULL) {
+        return desfire_sim_status(out, MFDES_E_FILE_NOT_FOUND);
+    }
+
+    uint8_t comm = DESFIRE_SIM_COMM_PLAIN;
+    bool ok = (f->type == 0x02)
+              ? desfire_sim_value_comm(st, f, (wcmd == MFDES_CREDIT), &comm)
+              : desfire_sim_eff_comm(st, f, true, &comm);
+
+    if (ok == false) {
+        return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+    }
+
+    if (desfire_sim_unwrap(st, wcmd, comm, st->wbuf, &wlen) == false) {
+        desfire_sim_auth_clear(st);
+        return desfire_sim_status(out, MFDES_E_INTEGRITY_ERROR);
+    }
+
+    return desfire_sim_write_apply(st, wcmd, st->wbuf, wlen, comm, out);
+}
+
 // Dispatch one DESFire command. `cmd` is the command byte, `in`/`inlen` the
 // parameters after it. Writes the answer to `out` and returns its length.
 static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const uint8_t *in, uint16_t inlen, uint8_t *out) {
@@ -210,13 +1333,39 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
     const desfire_em_hdr_t *hdr = st->hdr;
 
     // an additional frame only means anything while a command is being chained
-    if (cmd == MFDES_ADDITIONAL_FRAME && st->chain_cmd == 0) {
+    // or an authentication is half done
+    if (cmd == MFDES_ADDITIONAL_FRAME && st->chain_cmd == 0 && st->auth_cmd == 0) {
         return desfire_sim_status(out, MFDES_E_ILLEGAL_COMMAND_CODE);
     }
 
     if (cmd != MFDES_ADDITIONAL_FRAME) {
         st->chain_cmd = 0;
         st->chain_step = 0;
+        st->chain_file = -1;
+        if (desfire_sim_cmd_is_write(cmd) == false) {
+            st->wcmd = 0;
+            st->wlen = 0;
+        }
+
+        // a command arriving mid handshake abandons it
+        if (cmd != MFDES_AUTHENTICATE && cmd != MFDES_AUTHENTICATE_ISO && cmd != MFDES_AUTHENTICATE_AES) {
+            st->auth_cmd = 0;
+        }
+    }
+
+    // The session CMAC covers every command and response in order, so it is
+    // taken here for all of them, before the command is acted on.  The
+    // authentication handshake is the exception -- it is what establishes the
+    // session key, so it runs outside the chain.
+    // 0xAF is not a command in its own right, it continues one, and a chained
+    // transfer is secured as a single message -- the reader joins every frame
+    // and checks one MAC over the lot.  MACing the continuation would reset the
+    // running calculation halfway through and leave the last frame's MAC wrong,
+    // so it is left to the auth, read and write paths that own the chain.
+    if (cmd != MFDES_AUTHENTICATE && cmd != MFDES_AUTHENTICATE_ISO &&
+            cmd != MFDES_AUTHENTICATE_AES && cmd != MFDES_ADDITIONAL_FRAME &&
+            st->auth_cmd == 0 && desfire_sim_cmd_is_write(cmd) == false && st->wcmd == 0) {
+        desfire_sim_cmac_command(st, cmd, in, inlen);
     }
 
     switch (cmd) {
@@ -226,21 +1375,34 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
             // are answered with ADDITIONAL_FRAME so the reader asks again.
             st->chain_cmd = MFDES_GET_VERSION;
             st->chain_step = 1;
-            return desfire_sim_payload(out, MFDES_ADDITIONAL_FRAME, hdr->versionhw, hdr->versionhwlen);
+            desfire_sim_cmac_reset(st);
+            return desfire_sim_chained(st, out, true, hdr->versionhw, hdr->versionhwlen);
         }
 
         case MFDES_ADDITIONAL_FRAME: {
+
+            if (st->auth_cmd != 0) {
+                return desfire_sim_auth_finish(st, in, inlen, out);
+            }
 
             if (st->chain_cmd == MFDES_GET_VERSION) {
 
                 if (st->chain_step == 1) {
                     st->chain_step = 2;
-                    return desfire_sim_payload(out, MFDES_ADDITIONAL_FRAME, hdr->versionsw, hdr->versionswlen);
+                    return desfire_sim_chained(st, out, true, hdr->versionsw, hdr->versionswlen);
                 }
 
                 st->chain_cmd = 0;
                 st->chain_step = 0;
-                return desfire_sim_payload(out, MFDES_S_OPERATION_OK, hdr->versionprod, hdr->versionprodlen);
+                return desfire_sim_chained(st, out, false, hdr->versionprod, hdr->versionprodlen);
+            }
+
+            if (st->wcmd != 0) {
+                return desfire_sim_write_gather(st, st->wcmd, in, inlen, out);
+            }
+
+            if (st->chain_cmd == MFDES_READ_DATA && st->chain_file >= 0) {
+                return desfire_sim_read_chunk(st, out);
             }
 
             if (st->chain_cmd == MFDES_GET_DF_NAMES) {
@@ -258,16 +1420,21 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
 
                 if (more) {
                     st->chain_step = next;
-                    return desfire_sim_payload(out, MFDES_ADDITIONAL_FRAME, buf, n);
+                    return desfire_sim_chained(st, out, true, buf, n);
                 }
 
                 st->chain_cmd = 0;
                 st->chain_step = 0;
-                return desfire_sim_payload(out, MFDES_S_OPERATION_OK, buf, n);
+                return desfire_sim_chained(st, out, false, buf, n);
             }
 
             return desfire_sim_status(out, MFDES_E_ILLEGAL_COMMAND_CODE);
         }
+
+        case MFDES_AUTHENTICATE:
+        case MFDES_AUTHENTICATE_ISO:
+        case MFDES_AUTHENTICATE_AES:
+            return desfire_sim_auth_start(st, cmd, in, inlen, out);
 
         case MFDES_GET_DF_NAMES: {
             // PICC level only (M134034 9.4.4), one application per frame
@@ -283,12 +1450,14 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
                 return desfire_sim_status(out, MFDES_S_OPERATION_OK);
             }
 
+            desfire_sim_cmac_reset(st);
+
             if (more) {
                 st->chain_cmd = MFDES_GET_DF_NAMES;
                 st->chain_step = next;
-                return desfire_sim_payload(out, MFDES_ADDITIONAL_FRAME, buf, n);
+                return desfire_sim_chained(st, out, true, buf, n);
             }
-            return desfire_sim_payload(out, MFDES_S_OPERATION_OK, buf, n);
+            return desfire_sim_chained(st, out, false, buf, n);
         }
 
         case MFDES_GET_ISOFILE_IDS: {
@@ -318,7 +1487,7 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
             if (n == 0) {
                 return desfire_sim_status(out, MFDES_E_FILE_NOT_FOUND);
             }
-            return desfire_sim_payload(out, MFDES_S_OPERATION_OK, buf, n);
+            return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, buf, n);
         }
 
         case MFDES_GET_APPLICATION_IDS: {
@@ -336,7 +1505,7 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
                 memcpy(buf + n, st->apps[i].aid, 3);
                 n += 3;
             }
-            return desfire_sim_payload(out, MFDES_S_OPERATION_OK, buf, n);
+            return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, buf, n);
         }
 
         case MFDES_SELECT_APPLICATION: {
@@ -352,6 +1521,10 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
             }
 
             st->selected = idx;
+
+            // "each SelectApplication command invalidates the current
+            // authentication status" -- M134034 9.4.5
+            desfire_sim_auth_clear(st);
             return desfire_sim_status(out, MFDES_S_OPERATION_OK);
         }
 
@@ -360,13 +1533,13 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
             // bytes, LSB first.
             uint32_t freemem = (hdr->cardsize > hdr->reserved) ? (hdr->cardsize - hdr->reserved) : 0;
             uint8_t buf[3] = { freemem & 0xFF, (freemem >> 8) & 0xFF, (freemem >> 16) & 0xFF };
-            return desfire_sim_payload(out, MFDES_S_OPERATION_OK, buf, sizeof(buf));
+            return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, buf, sizeof(buf));
         }
 
         case MFDES_GET_KEY_SETTINGS: {
             const desfire_em_app_t *a = &st->apps[st->selected];
             uint8_t buf[2] = { a->keysettings, a->numkeysraw };
-            return desfire_sim_payload(out, MFDES_S_OPERATION_OK, buf, sizeof(buf));
+            return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, buf, sizeof(buf));
         }
 
         case MFDES_GET_FILE_IDS: {
@@ -386,7 +1559,7 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
                 }
                 buf[n++] = st->files[i].num;
             }
-            return desfire_sim_payload(out, MFDES_S_OPERATION_OK, buf, n);
+            return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, buf, n);
         }
 
         case MFDES_GET_FILE_SETTINGS: {
@@ -449,10 +1622,167 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
                         break;
                 }
 
-                return desfire_sim_payload(out, MFDES_S_OPERATION_OK, buf, n);
+                return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, buf, n);
             }
 
             return desfire_sim_status(out, MFDES_E_FILE_NOT_FOUND);
+        }
+
+        case MFDES_READ_DATA:
+        case MFDES_READ_DATA2: {
+
+            // fileno, then a 3 byte offset and a 3 byte length
+            if (inlen < 7) {
+                return desfire_sim_status(out, MFDES_E_LENGTH);
+            }
+
+            const desfire_em_file_t *f = desfire_sim_find_file(st, in[0]);
+            if (f == NULL) {
+                return desfire_sim_status(out, MFDES_E_FILE_NOT_FOUND);
+            }
+
+            if (f->type != 0x00 && f->type != 0x01) {
+                return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+            }
+
+            uint8_t comm = DESFIRE_SIM_COMM_PLAIN;
+            if (desfire_sim_eff_comm(st, f, false, &comm) == false) {
+                return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+            }
+
+            uint32_t off = in[1] | (in[2] << 8) | (in[3] << 16);
+            uint32_t len = in[4] | (in[5] << 8) | (in[6] << 16);
+
+            return desfire_sim_read_start(st, f, off, len, 1, f->u.data.size, comm, out);
+        }
+
+        case MFDES_READ_RECORDS:
+        case MFDES_READ_RECORDS2: {
+
+            if (inlen < 7) {
+                return desfire_sim_status(out, MFDES_E_LENGTH);
+            }
+
+            const desfire_em_file_t *f = desfire_sim_find_file(st, in[0]);
+            if (f == NULL) {
+                return desfire_sim_status(out, MFDES_E_FILE_NOT_FOUND);
+            }
+
+            if (f->type != 0x03 && f->type != 0x04) {
+                return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+            }
+
+            uint8_t comm = DESFIRE_SIM_COMM_PLAIN;
+            if (desfire_sim_eff_comm(st, f, false, &comm) == false) {
+                return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+            }
+
+            uint32_t off = in[1] | (in[2] << 8) | (in[3] << 16);
+            uint32_t num = in[4] | (in[5] << 8) | (in[6] << 16);
+
+            // offset counts back from the newest record, so record 0 is the one
+            // written last -- EV1 9.5.8
+            if (f->u.record.recordsize == 0) {
+                return desfire_sim_status(out, MFDES_E_FILE_NOT_FOUND);
+            }
+
+            return desfire_sim_read_start(st, f, off, num, f->u.record.recordsize,
+                                          f->u.record.currecords, comm, out);
+        }
+
+        case MFDES_GET_VALUE: {
+
+            if (inlen < 1) {
+                return desfire_sim_status(out, MFDES_E_LENGTH);
+            }
+
+            const desfire_em_file_t *f = desfire_sim_find_file(st, in[0]);
+            if (f == NULL) {
+                return desfire_sim_status(out, MFDES_E_FILE_NOT_FOUND);
+            }
+
+            if (f->type != 0x02) {
+                return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+            }
+
+            uint8_t comm = DESFIRE_SIM_COMM_PLAIN;
+            if (desfire_sim_value_comm(st, f, false, &comm) == false) {
+                return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+            }
+
+            uint32_t v = f->u.value.value;
+            uint8_t buf[4] = { v & 0xFF, (v >> 8) & 0xFF, (v >> 16) & 0xFF, (v >> 24) & 0xFF };
+            return desfire_sim_respond(st, out, MFDES_S_OPERATION_OK, buf, sizeof(buf), comm);
+        }
+
+        case MFDES_WRITE_DATA:
+        case MFDES_WRITE_DATA2:
+        case MFDES_WRITE_RECORD:
+        case MFDES_WRITE_RECORD2:
+        case MFDES_UPDATE_RECORD:
+        case MFDES_UPDATE_RECORD2:
+        case MFDES_CREDIT:
+        case MFDES_DEBIT:
+        case MFDES_LIMITED_CREDIT:
+            return desfire_sim_write_gather(st, cmd, in, inlen, out);
+
+        case MFDES_COMMIT_TRANSACTION: {
+
+            if (st->selected == 0) {
+                return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+            }
+            desfire_sim_commit(st);
+            return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, NULL, 0);
+        }
+
+        case MFDES_ABORT_TRANSACTION: {
+
+            if (st->selected == 0) {
+                return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+            }
+            desfire_sim_abort(st);
+            return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, NULL, 0);
+        }
+
+        case MFDES_CLEAR_RECORD_FILE: {
+
+            if (inlen < 1) {
+                return desfire_sim_status(out, MFDES_E_LENGTH);
+            }
+
+            const desfire_em_file_t *f = desfire_sim_find_file(st, in[0]);
+            if (f == NULL) {
+                return desfire_sim_status(out, MFDES_E_FILE_NOT_FOUND);
+            }
+            if (f->type != 0x03 && f->type != 0x04) {
+                return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+            }
+
+            uint8_t comm = DESFIRE_SIM_COMM_PLAIN;
+            if (desfire_sim_eff_comm(st, f, true, &comm) == false) {
+                return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+            }
+
+            // the records only go once the transaction is committed
+            desfire_sim_mark_dirty(st, f);
+            ((desfire_em_file_t *)f)->u.record.currecords = 0;
+            return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, NULL, 0);
+        }
+
+        case MFDES_GET_UID: {
+
+            // The real card answers the UID enciphered under the session key,
+            // so this needs an authenticated session and nothing else.
+            if (st->authenticated == false) {
+                return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
+            }
+
+            uint8_t uidlen = hdr->uidlen;
+            if (uidlen > sizeof(hdr->uid)) {
+                uidlen = sizeof(hdr->uid);
+            }
+
+            return desfire_sim_enciphered(st, out, MFDES_S_OPERATION_OK, hdr->uid, uidlen);
         }
 
         default:
@@ -538,6 +1868,8 @@ static void desfire_sim_reset(void) {
     s_st.selected = 0;          // a PICC comes up with AID 000000 selected
     s_st.chain_cmd = 0;
     s_st.chain_step = 0;
+    s_st.chain_file = -1;
+    desfire_sim_auth_clear(&s_st);
 }
 
 static uint16_t desfire_sim_apdu(const uint8_t *in, uint16_t inlen, uint8_t *out) {
@@ -612,6 +1944,20 @@ static void desfire_sim_print_banner(void) {
 }
 
 //-------------------------------------------------------- the simulation loop
+
+// ISO/IEC 14443-3 activation states. A real PICC only answers what its current
+// state allows: after a HALT it hears WUPA but not REQA, it will not start
+// cascade 2 before cascade 1 finished, and nothing at the 14443-4 layer is
+// legal until RATS has been answered.
+typedef enum {
+    DESF_NOFIELD = 0,   // unpowered
+    DESF_IDLE,          // powered, answers REQA and WUPA
+    DESF_READY1,        // cascade level 1 in progress
+    DESF_READY2,        // cascade level 2 in progress
+    DESF_ACTIVE,        // selected, SAK sent, waiting for RATS
+    DESF_ISO4,          // RATS answered, 14443-4 layer open
+    DESF_HALTED         // answers WUPA only
+} desfire_sim_pstate_t;
 
 // ISO/IEC 14443-4 block prologue. The low bit of an I-block PCB is the block
 // number and has to be echoed back, or the reader reads our answer as a
@@ -726,54 +2072,174 @@ void SimulateDesfireTag(void) {
     int retval = PM3_SUCCESS;
     uint32_t cmdcount = 0;
 
+    // Field state. A DESFire is passively powered, so when the field goes away
+    // it loses the selected application, the authentication and anything a
+    // transaction had not committed.
+    //
+    // EmGetCmd() samples the field while it listens rather than before it, so
+    // there is no window where the simulation has stopped listening -- an
+    // ANTICOLL arrives a few hundred microseconds after our ATQA and a single
+    // RSSI conversion is long enough to miss it. This is the same call the
+    // MIFARE Classic simulation uses.
+    bool field_on = true;
+    desfire_sim_pstate_t pstate = DESF_IDLE;
+    uint32_t idle_counter = 0;
+
     for (;;) {
 
         WDT_HIT();
 
-        int len = 0;
-        if (GetIso14443aCommandFromReader(receivedCmd, sizeof(receivedCmd), receivedCmdPar, &len) == false) {
-            Dbprintf("Emulator stopped. Trace length: %d", BigBuf_get_traceLen());
+        // Watch for the client asking us to stop, in this loop rather than
+        // relying on the one inside EmGetCmd(). With no field EmGetCmd()
+        // returns "field off" after 4 ms, which is long before its own check
+        // fires at 3 * 4000 iterations -- so a simulation sitting in front of
+        // no reader would never see CMD_BREAK_LOOP, and the device would stay
+        // in this loop after the client had gone. Same shape as Mifare1ksim.
+        if (idle_counter >= 1000) {
+            idle_counter = 0;
+            if (data_available()) {
+                retval = PM3_EOPABORTED;
+                break;
+            }
+        } else {
+            idle_counter++;
+        }
+
+        if (BUTTON_PRESS()) {
             retval = PM3_EOPABORTED;
             break;
         }
 
-        if (len <= 0) {
+        uint16_t len = 0;
+        int res = EmGetCmd(receivedCmd, sizeof(receivedCmd), &len, receivedCmdPar);
+
+        if (res == 2) {
+            // the reader took its field away, so the PICC lost power
+            if (field_on) {
+                field_on = false;
+                pstate = DESF_NOFIELD;
+                desfire_sim_reset();
+                LED_A_OFF();
+                if (g_dbglevel >= DBG_EXTENDED) {
+                    DbpString("DESFire sim: field lost, PICC powered down");
+                }
+            }
+            continue;
+
+        } else if (res == 1) {
+
+            if (g_dbglevel >= DBG_EXTENDED) {
+                Dbprintf("Button pressed");
+            }
+            retval = PM3_EOPABORTED;
+            break;
+        }
+
+        if (field_on == false) {
+            field_on = true;
+            pstate = DESF_IDLE;
+            LED_A_ON();
+        }
+
+        if (len == 0) {
             continue;
         }
 
         cmdcount++;
 
-        tag_response_info_t *p_response = NULL;
+        // ---- ISO/IEC 14443-3 activation ----
+        //
+        // Answer first, then do the bookkeeping. The frame delay time for a
+        // REQA/WUPA answer is fixed by the standard at 1172 or 1236 carrier
+        // periods and a reader rejects anything else, so nothing may sit
+        // between receiving the frame and sending the precompiled reply --
+        // clearing the session alone costs enough to miss the window. This is
+        // the shape Mifare1ksim uses.
+        //
+        // Each frame is also only honoured in the state that allows it, so a
+        // half finished cascade is never answered as though it had completed.
 
-        // ---- activation, all precompiled ----
-        if (receivedCmd[0] == ISO14443A_CMD_WUPA || receivedCmd[0] == ISO14443A_CMD_REQA) {
-            desfire_sim_reset();            // a fresh activation reselects the PICC
-            p_response = &responses[RESP_INDEX_ATQA];
+        // REQA and WUPA are 7 bit frames. WUPA wakes a halted card, REQA does
+        // not -- that distinction is the whole point of having two of them.
+        if (len == 1 && (receivedCmd[0] == ISO14443A_CMD_WUPA ||
+                         (receivedCmd[0] == ISO14443A_CMD_REQA && pstate != DESF_HALTED))) {
 
-        } else if (len == 2 && receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT) {
-            p_response = &responses[RESP_INDEX_UIDC1];
-        } else if (len == 2 && receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2) {
-            p_response = &responses[RESP_INDEX_UIDC2];
-        } else if (len == 9 && receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT) {
-            p_response = &responses[RESP_INDEX_SAKC1];
-        } else if (len == 9 && receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2) {
-            p_response = &responses[RESP_INDEX_SAKC2];
-        } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {
-            p_response = &responses[RESP_INDEX_ATS];
-        } else if (receivedCmd[0] == ISO14443A_CMD_PPS) {
-            p_response = &responses[RESP_INDEX_PPS];
-        } else if (receivedCmd[0] == ISO14443A_CMD_HALT && len == 4) {
+            EmSendPrecompiledCmd(&responses[RESP_INDEX_ATQA]);
+            desfire_sim_reset();        // a fresh activation reselects the PICC
+            pstate = DESF_READY1;
+            continue;
+        }
+
+        if (len == 2 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && receivedCmd[1] == 0x20
+                && pstate == DESF_READY1) {
+            EmSendPrecompiledCmd(&responses[RESP_INDEX_UIDC1]);
+            continue;
+        }
+
+        if (len == 9 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && receivedCmd[1] == 0x70
+                && pstate == DESF_READY1) {
+
+            // a card only answers a SELECT that carries its own UID
+            if (memcmp(receivedCmd + 2, responses[RESP_INDEX_UIDC1].response, 4) != 0) {
+                continue;
+            }
+            EmSendPrecompiledCmd(&responses[RESP_INDEX_SAKC1]);
+            // a 7 or 10 byte UID needs another cascade level, a 4 byte one is done
+            pstate = (uidlen > 4) ? DESF_READY2 : DESF_ACTIVE;
+            continue;
+        }
+
+        if (len == 2 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2 && receivedCmd[1] == 0x20
+                && pstate == DESF_READY2) {
+            EmSendPrecompiledCmd(&responses[RESP_INDEX_UIDC2]);
+            continue;
+        }
+
+        if (len == 9 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2 && receivedCmd[1] == 0x70
+                && pstate == DESF_READY2) {
+
+            if (memcmp(receivedCmd + 2, responses[RESP_INDEX_UIDC2].response, 4) != 0) {
+                continue;
+            }
+            EmSendPrecompiledCmd(&responses[RESP_INDEX_SAKC2]);
+            pstate = DESF_ACTIVE;
+            continue;
+        }
+
+        if (len == 4 && receivedCmd[0] == ISO14443A_CMD_RATS && pstate == DESF_ACTIVE) {
+            EmSendPrecompiledCmd(&responses[RESP_INDEX_ATS]);
+            pstate = DESF_ISO4;
+            continue;
+        }
+
+        if (receivedCmd[0] == ISO14443A_CMD_PPS && pstate == DESF_ISO4) {
+            EmSendPrecompiledCmd(&responses[RESP_INDEX_PPS]);
+            continue;
+        }
+
+        if (len == 4 && receivedCmd[0] == ISO14443A_CMD_HALT) {
             desfire_sim_reset();
-            continue;                       // a halted tag says nothing
+            pstate = DESF_HALTED;
+            continue;                   // a halted tag says nothing
+        }
+
+        if (pstate != DESF_ISO4) {
+            // nothing below here is legal until RATS has been answered
+            if (g_dbglevel >= DBG_EXTENDED) {
+                Dbprintf("DESFire sim: frame ignored in state %u, %d bytes", pstate, len);
+            }
+            continue;
+        }
 
         // ---- ISO/IEC 14443-4 ----
-        } else if ((receivedCmd[0] & PCB_TYPE_MASK) == PCB_TYPE_S) {
+        if ((receivedCmd[0] & PCB_TYPE_MASK) == PCB_TYPE_S) {
 
             if (receivedCmd[0] == PCB_S_DESELECT) {
                 uint8_t r[3] = { PCB_S_DESELECT, 0, 0 };
                 AddCrc14A(r, 1);
                 EmSendCmd(r, sizeof(r));
                 desfire_sim_reset();
+                pstate = DESF_ACTIVE;   // out of 14443-4, RATS would be needed again
             }
             continue;
 
@@ -821,17 +2287,18 @@ void SimulateDesfireTag(void) {
             }
             continue;
         }
+    }
 
-        EmSendPrecompiledCmd(p_response);
+    if (g_dbglevel >= DBG_ERROR) {
+        Dbprintf("Emulator stopped. Trace length: %d", BigBuf_get_traceLen());
+    }
+    if (g_dbglevel >= DBG_EXTENDED) {
+        Dbprintf("-[ commands received %u ]-", cmdcount);
     }
 
     switch_off();
     set_tracing(false);
     BigBuf_free_keep_EM();
-
-    if (g_dbglevel >= DBG_EXTENDED) {
-        Dbprintf("-[ commands received %u ]-", cmdcount);
-    }
 
     reply_ng(CMD_HF_DESFIRE_SIMULATE, retval, NULL, 0);
 }

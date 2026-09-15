@@ -152,16 +152,26 @@ batch `B9 0C 17 49 70`, week 27 / 2017, hardware `04010101001A05`, software
 
 ### Keys
 
-Every key on this card is the default all-zero one. The PICC master key is
-2TDEA `00000000000000000000000000000000`; each application uses its own
-algorithm, and all of its keys are that algorithm's all-zero key.
+Every key on this card is the counting sequence `01 02 03 .. 10`, extended to
+`.. 18` for the 24 byte 3TDEA keys. The PICC master key is 2TDEA
+`0102030405060708090A0B0C0D0E0F10`; each application uses its own algorithm,
+and all of its keys are that algorithm's length of the same sequence.
+
+Deliberately not the all-zero key, and not a key whose two halves match. A
+16 byte DES/2TDEA key string whose second half equals the first is handled as a
+single DES key by the PICC -- during authentication *and* session key
+generation (M134034 8.1) -- and the all-zero key is the common case of that. A
+card image keyed with it exercises only the degenerate path: an implementation
+that derives the wrong session key still authenticates, and only fails later on
+the first MACed or enciphered frame. This sequence has distinct halves, so a
+wrong derivation shows up immediately.
 
 The `mfdes v2` key files carry **application** keys only -- that format has no
 place for the PICC master key, because `hf mfdes chk` only walks the application
 list and takes the PICC key from `-k`. Hand it in explicitly:
 
 ```
-hf mfdes dump -n 0 -t 2TDEA -k 00000000000000000000000000000000 --keys traces/mifare/hf-mfdes-ev1-8k-test-keys.json
+hf mfdes dump -n 0 -t 2TDEA -k 0102030405060708090A0B0C0D0E0F10 --keys traces/mifare/hf-mfdes-ev1-8k-test-keys.json
 ```
 
 Note that every key is also stored inside the dump itself, under each
