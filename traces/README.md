@@ -131,3 +131,52 @@ mode, so the files differ mainly in that one byte.
 |lf_ht2_publicA.bin                       |Hitag2 in Public Mode A (config `0x02`), Manchester, pages 4-5, carries an EM4102 payload|
 |lf_ht2_publicB.bin                       |Hitag2 in Public Mode B (config `0x00`), biphase 32 T0, pages 4-7|
 |lf_ht2_publicC.bin                       |Hitag2 in Public Mode C (config `0x04`), biphase 64 T0, pages 4-7|
+
+## MIFARE DESFire card images
+
+Card images for `hf mfdes eload`, used by `hf mfdes sim`. All three are in the
+`mfdes v1` dump format documented in `doc/mfdes_dump_format.md`.
+
+The 8K images come off a genuine MIFARE DESFire EV1 8K, UID `04268512A25680`,
+batch `B9 0C 17 49 70`, week 27 / 2017, hardware `04010101001A05`, software
+`04010101041A05`.
+
+|filename|description|
+|--------|-----------|
+|hf-mfdes-ev1-8k-empty.json     |EV1 8K straight after `formatpicc`. PICC only, default 2TDEA key, 7936 bytes free|
+|hf-mfdes-ev1-4k-empty.json     |The same image edited to present as an EV1 4K. **Derived, not dumped from 4K silicon** -- the storage size byte of `VersionHW`/`VersionSW` is changed from `0x1A` to `0x18`, and `FreeMem` set to 3840, the nominal 4096 minus the 256 bytes of overhead the 8K part shows|
+|hf-mfdes-ev1-8k-test.json      |The same card with three applications and all five EV1 file types, for exercising a simulation|
+|hf-mfdes-ev1-8k-test-keys.json |Application keys for the above, in the `mfdes v2` format `hf mfdes chk -j` writes|
+|hf-mfdes-ev1-8k-empty-keys.json|Key file for the empty 8K image. Empty by construction, a blank card has no applications|
+|hf-mfdes-ev1-4k-empty-keys.json|Key file for the empty 4K image. Likewise empty|
+
+### Keys
+
+Every key on this card is the default all-zero one. The PICC master key is
+2TDEA `00000000000000000000000000000000`; each application uses its own
+algorithm, and all of its keys are that algorithm's all-zero key.
+
+The `mfdes v2` key files carry **application** keys only -- that format has no
+place for the PICC master key, because `hf mfdes chk` only walks the application
+list and takes the PICC key from `-k`. Hand it in explicitly:
+
+```
+hf mfdes dump -n 0 -t 2TDEA -k 00000000000000000000000000000000 --keys traces/mifare/hf-mfdes-ev1-8k-test-keys.json
+```
+
+Note that every key is also stored inside the dump itself, under each
+application's `Keys` object, so `eload` and `sim` need no key file at all --
+the key files are for reading or rebuilding the physical card.
+
+`hf-mfdes-ev1-8k-test.json` holds:
+
+|AID|keys|ISO DF name|files|
+|---|----|-----------|-----|
+|`010203`|AES, 3      |`test1`|`01` standard 256 B free access, `02` backup 128 B MAC mode, rights `1200`|
+|`112233`|2TDEA, 2    |`test2`|`00` value, 1000 with limits [0..10000], `01` linear record, 2 of 8 records, 16 B each|
+|`AABBCC`|3TDEA, 5    |`test3`|`05` cyclic record, 1 of 4 records, 24 B each, `03` standard 64 B free access|
+
+```
+hf mfdes eload -f traces/mifare/hf-mfdes-ev1-8k-test.json
+hf mfdes sim
+```
