@@ -9747,6 +9747,34 @@ static int gdm_try_read(uint8_t read_cmd, int block_no, const gdm_wakeup_t *w, u
     return PM3_SUCCESS;
 }
 
+// Write a single block with one wakeup attempt. Quiet: returns status, prints nothing.
+static int gdm_try_write(uint8_t write_cmd, int block_no, const gdm_wakeup_t *w, const uint8_t *data) {
+    mf_writeblock_ex_t payload = {
+        .wakeup = w->wakeup_type,
+        .auth_cmd = w->auth_cmd,
+        .write_cmd = write_cmd,
+        .block_no = block_no
+    };
+    memcpy(payload.key, w->key, sizeof(payload.key));
+    memcpy(payload.block_data, data, sizeof(payload.block_data));
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFARE_WRITEBL_EX, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_WRITEBL_EX, &resp, 1500) == false) {
+        return PM3_ETIMEOUT;
+    }
+    return resp.status;
+}
+
+static void gdm_report_signature_partial(bool sigsec_enabled) {
+    if (sigsec_enabled) {
+        PrintAndLogEx(WARNING, "Signature sector was already enabled; its hidden data may now be incomplete");
+    } else {
+        PrintAndLogEx(INFO, "Configuration was not changed; signature sector remains disabled");
+    }
+}
+
 // Try each attempt against `probe_blk`; return the index of the first that reads
 // successfully (data in `out`), or -1 if all fail.
 static int gdm_pick_wakeup(uint8_t read_cmd, int probe_blk, const gdm_wakeup_t *attempts,
@@ -10019,7 +10047,7 @@ static int CmdHF14AGen4_GDM_SetCfg(const char *Cmd) {
     } else if (gdm_read_config(wakeup_type, auth_cmd, key, config) != PM3_SUCCESS) {
         return PM3_EFAILED;
     }
-    bool changed = false;
+    bool wrote_hidden = false;
 
 #define APPLY_CONFIG_FLAG(flag, idx, on_val, off_val, name) \
         if (flag != -1) { \
@@ -10798,74 +10826,86 @@ static int CmdHF14AGen4_GDM_SetSig(const char *Cmd) {
     if (wres != PM3_SUCCESS) {
         return wres;
     }
-    uint8_t wakeup_type = gw.wakeup_type;
-    uint8_t auth_cmd = gw.auth_cmd;
-    memcpy(key, gw.key, sizeof(key));
-
-    // Step 1: Write signature part 1 (block 5)
-    mf_writeblock_ex_t write_payload = {
-        .wakeup = wakeup_type,
-        .auth_cmd = auth_cmd,
-        .write_cmd = MIFARE_MAGIC_GDM_WRITEBLOCK, // 0xA8
-        .block_no = 5
-    };
-    memcpy(write_payload.key, key, 6);
-    memcpy(write_payload.block_data, sig, MFBLOCK_SIZE);
-
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_MIFARE_WRITEBL_EX, (uint8_t *)&write_payload, sizeof(write_payload));
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_MIFARE_WRITEBL_EX, &resp, 1500) == false || resp.status != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "Failed to write signature part 1 (block 5). Status: %d", resp.status);
-        return PM3_EFAILED;
-    }
-    PrintAndLogEx(SUCCESS, "Signature part 1 written to block 5");
-
-    // Step 2: Write signature part 2 (block 6)
-    write_payload.block_no = 6;
-    memcpy(write_payload.block_data, sig + MFBLOCK_SIZE, MFBLOCK_SIZE);
-
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_MIFARE_WRITEBL_EX, (uint8_t *)&write_payload, sizeof(write_payload));
-    if (WaitForResponseTimeout(CMD_HF_MIFARE_WRITEBL_EX, &resp, 1500) == false || resp.status != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "Failed to write signature part 2 (block 6). Status: %d", resp.status);
-        return PM3_EFAILED;
-    }
-    PrintAndLogEx(SUCCESS, "Signature part 2 written to block 6");
-
-    // Step 3: Read config and enable signature sector
     uint8_t config[MFBLOCK_SIZE];
-    if (gdm_read_config(wakeup_type, auth_cmd, key, config) != PM3_SUCCESS) {
+    if (gdm_read_config(gw.wakeup_type, gw.auth_cmd, gw.key, config) != PM3_SUCCESS) {
         return PM3_EFAILED;
     }
+    bool sigsec_enabled = (config[13] == 0x5A);
 
-    if (config[13] != 0x5A) {
-        config[13] = 0x5A;
-        if (gdm_write_config(wakeup_type, auth_cmd, key, config) != PM3_SUCCESS) {
-            return PM3_EFAILED;
-        }
-        PrintAndLogEx(SUCCESS, "Enabled signature sector in config (config[13] = 0x5A)");
-    } else {
-        PrintAndLogEx(INFO, "Signature sector already enabled in config");
-    }
-
-    // Step 4: Ensure hidden block 7 (signature sector trailer) holds the known-good value
-    mf_writeblock_ex_t trailer_payload = {
-        .wakeup = wakeup_type,
-        .auth_cmd = auth_cmd,
-        .write_cmd = MIFARE_MAGIC_GDM_WRITEBLOCK, // 0xA8 hidden write
-        .block_no = 7
+    static const char *const labels[] = {
+        "signature sector trailer (hidden block 7)",
+        "signature part 1 (hidden block 5)",
+        "signature part 2 (hidden block 6)"
     };
-    memcpy(trailer_payload.key, key, 6);
-    memcpy(trailer_payload.block_data, MF_SIGNATURE_KEYS, MFBLOCK_SIZE);
+    const uint8_t blocks[] = {7, 5, 6};
+    const uint8_t *const expected[] = {MF_SIGNATURE_KEYS, sig, sig + MFBLOCK_SIZE};
+    bool changed = false;
 
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_MIFARE_WRITEBL_EX, (uint8_t *)&trailer_payload, sizeof(trailer_payload));
-    if (WaitForResponseTimeout(CMD_HF_MIFARE_WRITEBL_EX, &resp, 1500) == false || resp.status != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "Failed to write signature sector trailer (hidden block 7). Status: %d", resp.status);
-        return PM3_EFAILED;
+    // Prepare and verify hidden data before exposing sector 17.
+    for (size_t i = 0; i < ARRAYLEN(blocks); i++) {
+        int status = gdm_try_write(MIFARE_MAGIC_GDM_WRITEBLOCK, blocks[i], &gw, expected[i]);
+        if (status != PM3_SUCCESS) {
+            if (status == PM3_ETIMEOUT) {
+                PrintAndLogEx(FAILED, "Timed out writing %s", labels[i]);
+                PrintAndLogEx(WARNING, "The write result is unknown; signature data may be partially updated");
+                gdm_report_signature_partial(sigsec_enabled);
+                return PM3_EPARTIAL;
+            }
+            PrintAndLogEx(FAILED, "Failed to write %s. Status: %d", labels[i], status);
+            if (wrote_hidden) {
+                gdm_report_signature_partial(sigsec_enabled);
+            }
+            return wrote_hidden ? PM3_EPARTIAL : status;
+        }
+        wrote_hidden = true;
+        PrintAndLogEx(SUCCESS, "Wrote %s", labels[i]);
     }
-    PrintAndLogEx(SUCCESS, "Signature sector trailer written to hidden block 7");
+
+    for (size_t i = 0; i < ARRAYLEN(blocks); i++) {
+        uint8_t actual[MFBLOCK_SIZE];
+        int status = gdm_try_read(MIFARE_MAGIC_GDM_READBLOCK, blocks[i], &gw, actual);
+        if (status != PM3_SUCCESS) {
+            if (status == PM3_ETIMEOUT) {
+                PrintAndLogEx(FAILED, "Timed out verifying %s", labels[i]);
+            } else {
+                PrintAndLogEx(FAILED, "Failed to verify %s", labels[i]);
+            }
+            gdm_report_signature_partial(sigsec_enabled);
+            return PM3_EPARTIAL;
+        }
+        if (memcmp(actual, expected[i], MFBLOCK_SIZE) != 0) {
+            PrintAndLogEx(FAILED, "Verification failed for %s", labels[i]);
+            PrintAndLogEx(INFO, "expected: %s", sprint_hex(expected[i], MFBLOCK_SIZE));
+            PrintAndLogEx(INFO, "actual:   %s", sprint_hex(actual, MFBLOCK_SIZE));
+            gdm_report_signature_partial(sigsec_enabled);
+            return PM3_EPARTIAL;
+        }
+        PrintAndLogEx(SUCCESS, "Verified %s", labels[i]);
+    }
+
+    if (config[13] == 0x5A) {
+        PrintAndLogEx(INFO, "Signature sector already enabled in config");
+        return PM3_SUCCESS;
+    }
+
+    config[13] = 0x5A;
+    if (gdm_write_config(gw.wakeup_type, gw.auth_cmd, gw.key, config) != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Hidden signature data is verified, but the sigsec update could not be confirmed");
+        return PM3_EPARTIAL;
+    }
+
+    uint8_t verify_config[MFBLOCK_SIZE];
+    if (gdm_read_config(gw.wakeup_type, gw.auth_cmd, gw.key, verify_config) != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Could not verify the sigsec config update");
+        return PM3_EPARTIAL;
+    }
+    if (memcmp(verify_config, config, MFBLOCK_SIZE) != 0) {
+        PrintAndLogEx(FAILED, "Verification failed for the config block");
+        PrintAndLogEx(INFO, "expected: %s", sprint_hex(config, MFBLOCK_SIZE));
+        PrintAndLogEx(INFO, "actual:   %s", sprint_hex(verify_config, MFBLOCK_SIZE));
+        return PM3_EPARTIAL;
+    }
+    PrintAndLogEx(SUCCESS, "Enabled signature sector in config (config[13] = 0x5A)");
 
     return PM3_SUCCESS;
 }
