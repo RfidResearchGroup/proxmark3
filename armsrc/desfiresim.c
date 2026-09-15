@@ -82,9 +82,6 @@
 // refused rather than served a truncated write.
 #define DESFIRE_SIM_WRITE_MAX   272
 
-// A reader chaining a long write fills its frames; a frame shorter than this
-// is the last one.  The client splits native writes well below it.
-#define DESFIRE_SIM_WRITE_FRAME 52
 
 typedef struct {
     const desfire_em_hdr_t *hdr;
@@ -135,6 +132,7 @@ typedef struct {
     // write carries one CRC32 at the end of the lot.
     uint8_t wbuf[DESFIRE_SIM_WRITE_MAX];
     uint16_t wlen;
+    uint16_t wexpect;           // bytes the command says it is, 0 until known
     uint8_t wcmd;               // the command being gathered, 0 when none
 } desfire_sim_state_t;
 
@@ -945,10 +943,46 @@ static int16_t desfire_sim_file_index(const desfire_sim_state_t *st, const desfi
     return (int16_t)(f - st->files);
 }
 
-// How much file data one frame carries.  The native answer is a status byte,
-// the payload, and up to a CMAC or a block of padding behind it, and the whole
-// thing has to fit DESFIRE_SIM_MAX_RESP.
+// The most file data one frame can carry.  The answer is a status byte, the
+// payload and up to a CMAC or a block of padding behind it, and the whole thing
+// has to fit DESFIRE_SIM_MAX_RESP as well as the reader's own frame size.
 #define DESFIRE_SIM_READ_CHUNK  96
+
+// What the reader said it can receive, set from the RATS parameter byte.  Until
+// RATS has been seen the ISO 14443-4 default of 32 bytes applies (FSDI 0 and 1
+// both mean a small frame, and 32 is the value a PICC assumes), but nothing
+// this sizes is reachable before RATS anyway.
+static uint16_t s_sim_readchunk = DESFIRE_SIM_READ_CHUNK;
+
+static void desfire_sim_set_fsd(uint8_t fsdi) {
+
+    static const uint16_t fsdtbl[] = { 16, 24, 32, 40, 48, 64, 96, 128, 256 };
+
+    uint16_t fsd = (fsdi < ARRAYLEN(fsdtbl)) ? fsdtbl[fsdi] : 256;
+
+    // room the frame needs around the payload: the 14443-4 prologue, the status
+    // byte, a CMAC or a block of padding, and the CRC
+    uint16_t room = (fsd > 16) ? (fsd - 16) : 0;
+
+    // an enciphered read is handed out in whole cipher blocks, so the chunk has
+    // to be a multiple of the largest block size in play
+    room -= (room % 16);
+
+    if (room > DESFIRE_SIM_READ_CHUNK) {
+        room = DESFIRE_SIM_READ_CHUNK;
+    }
+
+    // A reader asking for frames below 32 bytes cannot be served: the status
+    // byte, a CMAC and the framing already cost twelve, and what is left will
+    // not hold a cipher block.  One block is sent anyway rather than nothing,
+    // which is what the old fixed 96 did to every reader below 128.  No reader
+    // in practice asks for less -- this card's own ATS advertises 64.
+    if (room < 16) {
+        room = 16;
+    }
+
+    s_sim_readchunk = room;
+}
 
 // Hand out the next slice of a file read, chaining with 0xAF while more is
 // left.  Shared by the first frame and every continuation.
@@ -958,7 +992,7 @@ static uint16_t desfire_sim_read_chunk(desfire_sim_state_t *st, uint8_t *out) {
     const uint8_t *data = st->base + f->dataoff + st->chain_base;
 
     uint32_t left = st->chain_end - st->chain_off;
-    uint32_t n = (left > DESFIRE_SIM_READ_CHUNK) ? DESFIRE_SIM_READ_CHUNK : left;
+    uint32_t n = (left > s_sim_readchunk) ? s_sim_readchunk : left;
 
     uint32_t at = st->chain_off;
     st->chain_off += n;
@@ -1699,6 +1733,7 @@ static uint16_t desfire_sim_write_gather(desfire_sim_state_t *st, uint8_t cmd,
     if (st->wcmd == 0) {
         st->wcmd = cmd;
         st->wlen = 0;
+        st->wexpect = 0;
     }
 
     if ((uint32_t)st->wlen + inlen > sizeof(st->wbuf)) {
@@ -1710,10 +1745,83 @@ static uint16_t desfire_sim_write_gather(desfire_sim_state_t *st, uint8_t cmd,
     memcpy(st->wbuf + st->wlen, in, inlen);
     st->wlen += inlen;
 
-    // The reader chains by sending its own 0xAF frames; the card only answers
-    // 0xAF to ask for more.  A full frame means more is probably coming, so
-    // this asks for it and acts when a short frame arrives.
-    if (inlen >= DESFIRE_SIM_WRITE_FRAME) {
+    // How long the whole command is does not have to be guessed at from how
+    // full a frame looked: a write says so itself.  WriteData, WriteRecord and
+    // UpdateRecord each carry a 3 byte length in their header, and the header
+    // is in the clear whatever the communication mode, enciphered included.  So
+    // the total is known as soon as the header has arrived, and the card asks
+    // for more frames until it has exactly that many bytes.
+    if (st->wexpect == 0) {
+
+        uint8_t hdrlen = desfire_sim_hdrlen(cmd);
+
+        if (st->wlen < hdrlen) {
+            return desfire_sim_status(out, MFDES_ADDITIONAL_FRAME);
+        }
+
+        uint32_t datalen;
+        switch (cmd) {
+            case MFDES_WRITE_DATA:
+            case MFDES_WRITE_DATA2:
+            case MFDES_WRITE_RECORD:
+            case MFDES_WRITE_RECORD2:
+                datalen = st->wbuf[4] | (st->wbuf[5] << 8) | (st->wbuf[6] << 16);
+                break;
+            case MFDES_UPDATE_RECORD:
+            case MFDES_UPDATE_RECORD2:
+                datalen = st->wbuf[7] | (st->wbuf[8] << 8) | (st->wbuf[9] << 16);
+                break;
+            default:
+                datalen = 4;            // a value operation is always 4 bytes
+                break;
+        }
+
+        // What that becomes on the wire depends on how the reader secured it,
+        // which is the file's business, so the file has to be looked at first.
+        const desfire_em_file_t *wf = desfire_sim_find_file(st, st->wbuf[0]);
+        if (wf == NULL) {
+            st->wcmd = 0;
+            st->wlen = 0;
+            return desfire_sim_status(out, MFDES_E_FILE_NOT_FOUND);
+        }
+
+        uint8_t wcomm = DESFIRE_SIM_COMM_PLAIN;
+        bool wok = (wf->type == 0x02)
+                   ? desfire_sim_value_comm(st, wf, (cmd == MFDES_CREDIT), &wcomm)
+                   : desfire_sim_eff_comm(st, wf, true, &wcomm);
+
+        if (wok == false) {
+            st->wcmd = 0;
+            st->wlen = 0;
+            return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+        }
+
+        uint32_t total = hdrlen + datalen;
+
+        if (st->authenticated) {
+            if (wcomm == DESFIRE_SIM_COMM_FULL) {
+                size_t kbs = key_block_size(&st->sesskey);
+                if (kbs == 0) {
+                    st->wcmd = 0;
+                    st->wlen = 0;
+                    return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
+                }
+                total = hdrlen + padded_data_length(datalen + 4, kbs);
+            } else if (wcomm == DESFIRE_SIM_COMM_MACED && desfire_sim_cmd_macs_request(cmd)) {
+                total += DESFIRE_CMAC_LENGTH;
+            }
+        }
+
+        if (total > sizeof(st->wbuf)) {
+            st->wcmd = 0;
+            st->wlen = 0;
+            return desfire_sim_status(out, MFDES_E_LENGTH);
+        }
+
+        st->wexpect = total;
+    }
+
+    if (st->wlen < st->wexpect) {
         return desfire_sim_status(out, MFDES_ADDITIONAL_FRAME);
     }
 
@@ -1721,6 +1829,7 @@ static uint16_t desfire_sim_write_gather(desfire_sim_state_t *st, uint8_t cmd,
     uint16_t wlen = st->wlen;
     st->wcmd = 0;
     st->wlen = 0;
+    st->wexpect = 0;
 
     if (wlen < 1) {
         return desfire_sim_status(out, MFDES_E_LENGTH);
@@ -1754,9 +1863,9 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
 
     const desfire_em_hdr_t *hdr = st->hdr;
 
-    // an additional frame only means anything while a command is being chained
-    // or an authentication is half done
-    if (cmd == MFDES_ADDITIONAL_FRAME && st->chain_cmd == 0 && st->auth_cmd == 0) {
+    // an additional frame only means anything while a command is being chained,
+    // a write is being gathered, or an authentication is half done
+    if (cmd == MFDES_ADDITIONAL_FRAME && st->chain_cmd == 0 && st->auth_cmd == 0 && st->wcmd == 0) {
         return desfire_sim_status(out, MFDES_E_ILLEGAL_COMMAND_CODE);
     }
 
@@ -2994,6 +3103,34 @@ static void desfire_sim_reset(void) {
     desfire_sim_auth_clear(&s_st);
 }
 
+// Run one command and apply the rule that outlives it: "The CMAC is not
+// calculated and attached, if an error code is returned. Then the application of
+// the PICC leaves the authenticated state and needs to be authenticated again"
+// (M134034 7.3.4).  Doing it here rather than at every error return means a new
+// error path cannot forget it.  0x00, 0x0C, 0x90 and 0xAF are the four statuses
+// that are not errors.
+static uint16_t desfire_sim_dispatch(uint8_t cmd, const uint8_t *in, uint16_t inlen, uint8_t *out) {
+
+    uint16_t n = desfire_sim_command(&s_st, cmd, in, inlen, out);
+
+    if (n == 0) {
+        return 0;
+    }
+
+    switch (out[0]) {
+        case MFDES_S_OPERATION_OK:
+        case MFDES_S_NO_CHANGES:
+        case MFDES_S_SIGNATURE:
+        case MFDES_S_ADDITIONAL_FRAME:
+            break;
+        default:
+            desfire_sim_auth_clear(&s_st);
+            break;
+    }
+
+    return n;
+}
+
 static uint16_t desfire_sim_apdu(const uint8_t *in, uint16_t inlen, uint8_t *out) {
 
     if (s_ready == false || inlen < 1) {
@@ -3025,7 +3162,7 @@ static uint16_t desfire_sim_apdu(const uint8_t *in, uint16_t inlen, uint8_t *out
         }
 
         uint8_t native[DESFIRE_SIM_MAX_RESP] = {0};
-        uint16_t n = desfire_sim_command(&s_st, cmd, data, lc, native);
+        uint16_t n = desfire_sim_dispatch(cmd, data, lc, native);
         if (n == 0) {
             return 0;
         }
@@ -3039,7 +3176,7 @@ static uint16_t desfire_sim_apdu(const uint8_t *in, uint16_t inlen, uint8_t *out
         return n + 1;
     }
 
-    return desfire_sim_command(&s_st, in[0], in + 1, inlen - 1, out);
+    return desfire_sim_dispatch(in[0], in + 1, inlen - 1, out);
 }
 
 static void desfire_sim_print_banner(void) {
@@ -3340,6 +3477,13 @@ void SimulateDesfireTag(void) {
         }
 
         if (len == 4 && receivedCmd[0] == ISO14443A_CMD_RATS && pstate == DESF_ACTIVE) {
+
+            // The high nibble of the RATS parameter is FSDI, which says how big
+            // a frame this reader can receive.  Answers are sized from it rather
+            // than from a constant picked to suit one reader -- a reader that
+            // asks for small frames has to be given small frames.
+            desfire_sim_set_fsd(receivedCmd[1] >> 4);
+
             EmSendPrecompiledCmd(&responses[RESP_INDEX_ATS]);
             pstate = DESF_ISO4;
             continue;

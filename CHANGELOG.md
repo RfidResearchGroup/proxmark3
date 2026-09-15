@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mfdes sim` - a chained write is answered instead of being refused with 91 1C on its second frame, so a write longer than one frame works at all (@iceman1001)
+- Fixed `hf mfdes sim` - an error status now ends the authenticated session, as M134034 7.3.4 requires of a card (@iceman1001)
+- Fixed `hf mfdes sim` - answers are sized from the frame size the reader asks for in its RATS instead of a fixed 96 bytes (@iceman1001)
+- Fixed `hf mfdes sim` - the length of a write is taken from the 3 byte length the command carries rather than guessed from how full a frame looked (@iceman1001)
 - Fixed `hf mfdes detect` - the same cipher is no longer sent to the card twice, cutting a PICC level scan with the bundled dictionary from 99 authentications to 63 (@iceman1001)
 - Changed `hf mfdes detect` - a single key number is printed as one value instead of a range of one, so a PICC level scan reads `key num 0x00` (@iceman1001)
 - Fixed `hf mfdes sim` - an enciphered read longer than one frame is chained instead of refused, the init vector carrying from frame to frame (@iceman1001)
