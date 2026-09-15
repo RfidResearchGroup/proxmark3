@@ -89,7 +89,7 @@ static uint8_t btConnection    = 0;
 static uint8_t btReceiveBank   = AT91C_UDP_RX_DATA_BK0;
 
 // -- pre def functions
-void AT91F_USB_SendData(AT91PS_UDP pudp, const char *pData, uint32_t length);
+void AT91F_USB_SendData(AT91PS_UDP pudp, const char *pData, uint32_t length, uint32_t wLength);
 void AT91F_USB_SendZlp(AT91PS_UDP pudp);
 void AT91F_USB_SendStall(AT91PS_UDP pudp);
 void AT91F_CDC_Enumerate(void);
@@ -631,10 +631,21 @@ int async_usb_write_stop(void) {
  *----------------------------------------------------------------------------
  * \fn    AT91F_USB_SendData
  * \brief Send Data through the control endpoint
+ *
+ * length is how much the device has to give, wLength how much the host asked
+ * for. When less than wLength is sent and that amount is a whole number of
+ * control endpoint packets, the transfer needs a zero length packet to end it,
+ * or the host keeps polling until it times out.
  *----------------------------------------------------------------------------
 */
-void AT91F_USB_SendData(AT91PS_UDP pudp, const char *pData, uint32_t length) {
+void AT91F_USB_SendData(AT91PS_UDP pudp, const char *pData, uint32_t length, uint32_t wLength) {
     AT91_REG csr;
+
+    length = MIN(length, wLength);
+
+    bool send_zlp = (length > 0) &&
+                    (length < wLength) &&
+                    ((length % AT91C_USB_EP_CONTROL_SIZE) == 0);
 
     do {
         uint32_t cpt = MIN(length, AT91C_USB_EP_CONTROL_SIZE);
@@ -666,6 +677,10 @@ void AT91F_USB_SendData(AT91PS_UDP pudp, const char *pData, uint32_t length) {
     if (pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP) {
         UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_TXCOMP);
         while (pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP) {};
+    }
+
+    if (send_zlp) {
+        AT91F_USB_SendZlp(pudp);
     }
 }
 
@@ -731,13 +746,13 @@ void AT91F_CDC_Enumerate(void) {
     if (bRequest == MS_VENDOR_CODE) {
 
         if (bmRequestType == MS_WCID_GET_DESCRIPTOR && wIndex == MS_EXTENDED_COMPAT_ID) {
-            AT91F_USB_SendData(pUdp, CompatIDFeatureDescriptor, MIN(sizeof(CompatIDFeatureDescriptor), wLength));
+            AT91F_USB_SendData(pUdp, CompatIDFeatureDescriptor, sizeof(CompatIDFeatureDescriptor), wLength);
             return;
         }
 
         // wValue holds the interface number, wIndex the descriptor index.
         if (bmRequestType == MS_WCID_GET_FEATURE_DESCRIPTOR && wIndex == MS_EXTENDED_PROPERTIES) {
-            AT91F_USB_SendData(pUdp, OSprop, MIN(sizeof(OSprop), wLength));
+            AT91F_USB_SendData(pUdp, OSprop, sizeof(OSprop), wLength);
             return;
         }
 
@@ -750,16 +765,16 @@ void AT91F_CDC_Enumerate(void) {
         case STD_GET_DESCRIPTOR: {
 
             if (wValue == 0x100) {        // Return Device Descriptor
-                AT91F_USB_SendData(pUdp, devDescriptor, MIN(sizeof(devDescriptor), wLength));
+                AT91F_USB_SendData(pUdp, devDescriptor, sizeof(devDescriptor), wLength);
             } else if (wValue == 0x200) {   // Return Configuration Descriptor
-                AT91F_USB_SendData(pUdp, cfgDescriptor, MIN(sizeof(cfgDescriptor), wLength));
+                AT91F_USB_SendData(pUdp, cfgDescriptor, sizeof(cfgDescriptor), wLength);
             } else if ((wValue & 0xF00) == 0xF00) { // Return BOS Descriptor
-                AT91F_USB_SendData(pUdp, bosDescriptor, MIN(sizeof(bosDescriptor), wLength));
+                AT91F_USB_SendData(pUdp, bosDescriptor, sizeof(bosDescriptor), wLength);
             } else if ((wValue & 0x300) == 0x300) {  // Return String Descriptor
 
                 const char *strDescriptor = getStringDescriptor(wValue & 0xff);
                 if (strDescriptor != NULL) {
-                    AT91F_USB_SendData(pUdp, strDescriptor, MIN(strDescriptor[0], wLength));
+                    AT91F_USB_SendData(pUdp, strDescriptor, strDescriptor[0], wLength);
                 } else {
                     AT91F_USB_SendStall(pUdp);
                 }
@@ -799,25 +814,25 @@ void AT91F_CDC_Enumerate(void) {
             pUdp->UDP_CSR[AT91C_EP_NOTIFY] = (wValue) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_INT_IN)   : 0;
             break;
         case STD_GET_CONFIGURATION:
-            AT91F_USB_SendData(pUdp, (char *) & (btConfiguration), sizeof(btConfiguration));
+            AT91F_USB_SendData(pUdp, (char *) & (btConfiguration), sizeof(btConfiguration), wLength);
             break;
         case STD_GET_STATUS_ZERO:
             wStatus = 0;   // Device is Bus powered, remote wakeup disabled
-            AT91F_USB_SendData(pUdp, (char *) &wStatus, sizeof(wStatus));
+            AT91F_USB_SendData(pUdp, (char *) &wStatus, sizeof(wStatus), wLength);
             break;
         case STD_GET_STATUS_INTERFACE:
             wStatus = 0;   // reserved for future use
-            AT91F_USB_SendData(pUdp, (char *) &wStatus, sizeof(wStatus));
+            AT91F_USB_SendData(pUdp, (char *) &wStatus, sizeof(wStatus), wLength);
             break;
         case STD_GET_STATUS_ENDPOINT:
             wStatus = 0;
             wIndex &= 0x0F;
             if ((pUdp->UDP_GLBSTATE & AT91C_UDP_CONFG) && (wIndex <= AT91C_EP_NOTIFY)) {
                 wStatus = (pUdp->UDP_CSR[wIndex] & AT91C_UDP_EPEDS) ? 0 : 1;
-                AT91F_USB_SendData(pUdp, (char *) &wStatus, sizeof(wStatus));
+                AT91F_USB_SendData(pUdp, (char *) &wStatus, sizeof(wStatus), wLength);
             } else if ((pUdp->UDP_GLBSTATE & AT91C_UDP_FADDEN) && (wIndex == AT91C_EP_CONTROL)) {
                 wStatus = (pUdp->UDP_CSR[wIndex] & AT91C_UDP_EPEDS) ? 0 : 1;
-                AT91F_USB_SendData(pUdp, (char *) &wStatus, sizeof(wStatus));
+                AT91F_USB_SendData(pUdp, (char *) &wStatus, sizeof(wStatus), wLength);
             } else {
                 AT91F_USB_SendStall(pUdp);
             }
@@ -875,7 +890,7 @@ void AT91F_CDC_Enumerate(void) {
             break;
         }
         case GET_LINE_CODING:
-            AT91F_USB_SendData(pUdp, (char *) &line, MIN(sizeof(line), wLength));
+            AT91F_USB_SendData(pUdp, (char *) &line, sizeof(line), wLength);
             break;
         case SET_CONTROL_LINE_STATE:
             btConnection = wValue;
