@@ -7903,17 +7903,19 @@
         },
         "hf mfdes esave": {
             "command": "hf mfdes esave",
-            "description": "Save the card image in emulator memory to a dump file. Shows what a reader left behind if one has been talking to the simulation",
+            "description": "Save the card image in emulator memory to a dump file. Shows what a reader left behind if one has been talking to the simulation. A deleted application or file is kept in the image as a tombstone, because the memory it held stays spent until a FormatPICC. By default those are left out, so the dump is the card as a reader sees it. Use `--keep` to save them as well, which is what you want to see everything a reader did rather than only the result",
             "notes": [
-                "hf mfdes esave -f myfile"
+                "hf mfdes esave -f myfile",
+                "hf mfdes esave -f myfile --keep -> keep applications and files a reader deleted"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> Filename, if no <fn> UID will be used as filename",
-                "-v, --verbose Verbose output"
+                "-v, --verbose Verbose output",
+                "--keep Keep applications and files that were deleted"
             ],
-            "usage": "hf mfdes esave [-hv] [-f <fn>]"
+            "usage": "hf mfdes esave [-hv] [-f <fn>] [--keep]"
         },
         "hf mfdes eview": {
             "command": "hf mfdes eview",
@@ -8568,7 +8570,7 @@
         },
         "hf mfdes sim": {
             "command": "hf mfdes sim",
-            "description": "Simulate the DESFire card image currently in emulator memory. Load one first with `hf mfdes eload`, and read back what a reader changed with `hf mfdes esave`",
+            "description": "Simulate the DESFire card image currently in emulator memory. Load one first with `hf mfdes eload`, and read back what a reader changed with `hf mfdes esave`. UID, ATQA, SAK and ATS all come out of the loaded image",
             "notes": [
                 "hf mfdes sim"
             ],
@@ -16616,6 +16618,6 @@
     "metadata": {
         "commands_extracted": 925,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-09-14T17:55:25+00:00"
+        "extracted_on": "2026-09-15T20:08:49+00:00"
     }
 }
