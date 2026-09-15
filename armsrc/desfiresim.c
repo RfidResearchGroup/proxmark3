@@ -1135,6 +1135,57 @@ static uint16_t desfire_sim_dfname_record(const desfire_sim_state_t *st, uint8_t
     return 0;
 }
 
+// FormatPICC: every application and every file goes, and the memory they held
+// comes back.  The PICC master key and its settings are explicitly untouched
+// (M134034 9.4.6), and so is the card identity, so what is left is the same
+// card with nothing on it.
+//
+// Everywhere else a delete only sets a tombstone, because a real card does not
+// hand the memory back either.  This is the one command that reclaims, and here
+// that means rebuilding the tables around the surviving PICC entry and putting
+// both frontiers back where an empty card has them.
+static void desfire_sim_format(desfire_sim_state_t *st) {
+
+    uint8_t *base = desfire_sim_wbase();
+    desfire_em_hdr_t *hdr = (desfire_em_hdr_t *)base;
+
+    uint16_t oldkeys = hdr->keycount;
+
+    // With no applications but the PICC and no files at all, the key table
+    // starts directly behind the one application entry.
+    uint16_t newoff = hdr->app_off + sizeof(desfire_em_app_t);
+    desfire_em_key_t *dst = (desfire_em_key_t *)(base + newoff);
+
+    // Only the PICC's own keys survive, compacted to the front of the new
+    // table.  Each one moves to an address at or below the one it came from --
+    // the table start only ever moves down and the write index never runs ahead
+    // of the read index -- so copying forward cannot clobber a key not yet read.
+    uint8_t keepcount = 0;
+    for (uint16_t i = 0; i < oldkeys; i++) {
+
+        if (st->keys[i].app != 0) {
+            continue;
+        }
+
+        memmove(&dst[keepcount], &st->keys[i], sizeof(desfire_em_key_t));
+        keepcount++;
+    }
+
+    hdr->appcount = 1;
+    hdr->filecount = 0;
+    hdr->keycount = keepcount;
+
+    hdr->file_off = newoff;         // empty, so the key table starts here too
+    hdr->key_off = newoff;
+    hdr->tables_end = newoff + (keepcount * sizeof(desfire_em_key_t));
+
+    hdr->data_start = hdr->size;
+    hdr->reserved = 0;
+
+    // the tables moved, so the parsed view of them has to be taken again
+    desfire_sim_load(st);
+}
+
 // Act on a write once every frame of it has arrived.  `buf`/`len` are the plain
 // parameters, secure messaging already stripped.
 static uint16_t desfire_sim_write_apply(desfire_sim_state_t *st, uint8_t cmd,
@@ -1725,6 +1776,20 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
         case MFDES_DEBIT:
         case MFDES_LIMITED_CREDIT:
             return desfire_sim_write_gather(st, cmd, in, inlen, out);
+
+        case MFDES_FORMAT_PICC: {
+
+            // "This command always requires a preceding authentication with the
+            // PICC master key" -- M134034 9.4.6.  Unlike create and delete it is
+            // not relaxed by the free create/delete key setting, so this checks
+            // the session rather than the application's key settings.
+            if (st->authenticated == false || st->selected != 0 || st->auth_keyno != 0) {
+                return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
+            }
+
+            desfire_sim_format(st);
+            return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, NULL, 0);
+        }
 
         case MFDES_COMMIT_TRANSACTION: {
 

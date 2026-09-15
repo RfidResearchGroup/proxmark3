@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hf mfdes sim` - FormatPICC is answered, releasing every application and file and handing the memory back, with the PICC master key and its settings kept (@iceman1001)
+- Fixed `hf mfdes esave` - the ATS was saved as zeros, a `sizeof()` of the 256 byte destination cast to uint8_t wrapped to 0 and the copy was skipped while its length was still reported (@iceman1001)
 - Added `hf mfdes sim` - DESFire EV1 simulation now answers authentication, secure messaging, file reads, writes and transactions from the card image in emulator memory (@iceman1001)
 - Fixed `hf mfdes sim` - a 2TDEA key whose two halves match is handled as a single DES key, session key generation included, so the session key matches what a genuine PICC derives (@iceman1001)
 - Fixed `hf mfdes sim` - the CMAC of a chained answer is taken over the whole transfer instead of being restarted on every 0xAF continuation (@iceman1001)

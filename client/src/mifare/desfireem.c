@@ -455,12 +455,16 @@ int desfire_em_unpack(const uint8_t *img, size_t imglen, desfire_dump_t *dump) {
 
     memset(dump, 0, sizeof(desfire_dump_t));
 
-    dump->card_info.uidlen = hdr->uidlen;
-    memcpy(dump->card_info.uid, hdr->uid, MIN(hdr->uidlen, (uint8_t)sizeof(dump->card_info.uid)));
+    // Bound each copy by the image's own array, which is the smaller of the two
+    // and the one a corrupt length could run past.  Not by the destination cast
+    // to uint8_t: card_info.ats is 256 bytes, that cast wrapped to 0, and the
+    // ATS was silently dropped while its length was still reported as 8.
+    dump->card_info.uidlen = MIN(hdr->uidlen, sizeof(hdr->uid));
+    memcpy(dump->card_info.uid, hdr->uid, dump->card_info.uidlen);
     memcpy(dump->card_info.atqa, hdr->atqa, sizeof(hdr->atqa));
     dump->card_info.sak = hdr->sak;
-    dump->card_info.ats_len = hdr->atslen;
-    memcpy(dump->card_info.ats, hdr->ats, MIN(hdr->atslen, (uint8_t)sizeof(dump->card_info.ats)));
+    dump->card_info.ats_len = MIN(hdr->atslen, sizeof(hdr->ats));
+    memcpy(dump->card_info.ats, hdr->ats, dump->card_info.ats_len);
 
     dump->versionhwlen = hdr->versionhwlen;
     memcpy(dump->versionhw, hdr->versionhw, sizeof(dump->versionhw));
