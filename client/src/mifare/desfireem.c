@@ -431,6 +431,10 @@ int desfire_em_pack(const desfire_dump_t *dump, uint8_t *out, size_t outlen, siz
 }
 
 int desfire_em_unpack(const uint8_t *img, size_t imglen, desfire_dump_t *dump) {
+    return desfire_em_unpack_ex(img, imglen, dump, false);
+}
+
+int desfire_em_unpack_ex(const uint8_t *img, size_t imglen, desfire_dump_t *dump, bool keep_deleted) {
 
     if (img == NULL || dump == NULL || imglen < sizeof(desfire_em_hdr_t)) {
         return PM3_EINVARG;
@@ -491,12 +495,38 @@ int desfire_em_unpack(const uint8_t *img, size_t imglen, desfire_dump_t *dump) {
         return PM3_EINVARG;
     }
 
-    dump->appcount = hdr->appcount - 1;    // app[0] is the PICC
+    // A deleted application or file is a tombstone in the image, so the memory
+    // it held stays spent, but it is gone as far as a reader is concerned and it
+    // does not belong in a dump of the card.  Applications are therefore packed
+    // down as they are copied out, and appmap carries image index -> dump index
+    // so the key and file tables, which refer to applications by image index,
+    // can follow.
+    int appmap[DESFIRE_EM_MAX_APPS + 1];
+    for (uint16_t i = 0; i < ARRAYLEN(appmap); i++) {
+        appmap[i] = -1;
+    }
+
+    dump->appcount = 0;
 
     for (uint8_t i = 0; i < hdr->appcount; i++) {
 
-        desfire_dump_app_t *a = (i == 0) ? &dump->picc : &dump->app[i - 1];
         const desfire_em_app_t *s = &apps[i];
+
+        if (i > 0 && (s->flags & DESFIRE_EM_APP_DELETED) && (keep_deleted == false)) {
+            continue;
+        }
+
+        desfire_dump_app_t *a;
+        if (i == 0) {
+            a = &dump->picc;            // app[0] is the PICC, never deleted
+        } else {
+            if (dump->appcount >= DESFIRE_MAX_APP_COUNT) {
+                continue;
+            }
+            a = &dump->app[dump->appcount];
+            appmap[i] = dump->appcount;
+            dump->appcount++;
+        }
 
         a->aid = s->aid[0] | (s->aid[1] << 8) | (s->aid[2] << 16);
         a->isofid = s->isofid;
@@ -517,7 +547,15 @@ int desfire_em_unpack(const uint8_t *img, size_t imglen, desfire_dump_t *dump) {
             continue;
         }
 
-        desfire_dump_app_t *a = (s->app == 0) ? &dump->picc : &dump->app[s->app - 1];
+        desfire_dump_app_t *a;
+        if (s->app == 0) {
+            a = &dump->picc;
+        } else {
+            if (appmap[s->app] < 0) {
+                continue;               // its application was deleted
+            }
+            a = &dump->app[appmap[s->app]];
+        }
 
         if (s->flags & DESFIRE_EM_KEY_VERKNOWN) {
             a->keys.versionknown[s->num] = 1;
@@ -537,7 +575,15 @@ int desfire_em_unpack(const uint8_t *img, size_t imglen, desfire_dump_t *dump) {
             continue;
         }
 
-        desfire_dump_app_t *a = &dump->app[s->app - 1];
+        if ((s->flags & DESFIRE_EM_FILE_DELETED) && (keep_deleted == false)) {
+            continue;
+        }
+
+        if (appmap[s->app] < 0) {
+            continue;                   // its application was deleted
+        }
+
+        desfire_dump_app_t *a = &dump->app[appmap[s->app]];
         if (a->filecount >= DESFIRE_MAX_FILE_COUNT) {
             continue;
         }

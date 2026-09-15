@@ -785,6 +785,7 @@ static uint8_t desfire_sim_hdrlen(uint8_t cmd) {
         case MFDES_DEBIT:
         case MFDES_LIMITED_CREDIT:
         case MFDES_GET_VALUE:
+        case MFDES_CHANGE_FILE_SETTINGS:
             return 1;               // file number only
         default:
             return 0;
@@ -815,6 +816,13 @@ static bool desfire_sim_cmd_macs_request(uint8_t cmd) {
 // rather than going through the blanket command CMAC.
 static bool desfire_sim_cmd_is_write(uint8_t cmd) {
     return (desfire_sim_cmd_macs_request(cmd));
+}
+
+// The writes gather across frames; ChangeFileSettings arrives whole but is
+// enciphered, and either way the command's own handler does the unwrapping and
+// moves the IV along, so the blanket CMAC has to keep its hands off.
+static bool desfire_sim_cmd_unwraps_own(uint8_t cmd) {
+    return (desfire_sim_cmd_is_write(cmd) || cmd == MFDES_CHANGE_FILE_SETTINGS);
 }
 
 // Take the reader's secure messaging off a gathered command.
@@ -1133,6 +1141,151 @@ static uint16_t desfire_sim_dfname_record(const desfire_sim_state_t *st, uint8_t
 
     *next = hdr->appcount;
     return 0;
+}
+
+// ------------------------------------------------------------ file creation
+
+// Bytes the committed region of a file occupies, before any shadow.  The same
+// accounting eload uses, so an image a reader has added files to still agrees
+// with itself.
+static uint32_t desfire_sim_file_extent(uint8_t type, uint32_t size,
+                                        uint32_t recsize, uint32_t maxrec) {
+
+    switch (type) {
+        case 0x00:
+        case 0x01:
+            return size;
+        case 0x02:
+            // the payload is a 4 byte value, but it is allocated and shadowed
+            // like anything else, so it gets a whole granule
+            return DESFIRE_EM_GRANULE;
+        case 0x03:
+        case 0x04:
+            // the declared extent, not the records that happen to exist, so
+            // WriteRecord never has to grow anything
+            return recsize * maxrec;
+        default:
+            return 0;
+    }
+}
+
+// CommitTransaction covers everything but a standard data file, and what it
+// covers needs a shadow region to write into -- EV1 9.6.10.
+static bool desfire_sim_type_has_shadow(uint8_t type) {
+    return (type == 0x01 || type == 0x02 || type == 0x03 || type == 0x04);
+}
+
+// Add a file to the selected application.
+//
+// The file table sits between the application table and the key table, so a new
+// entry goes in where the key table starts and the keys move up by one entry.
+// The file's data is taken off the other end, from the region growing down.
+//
+// Returns a DESFire status byte.
+static uint8_t desfire_sim_file_create(desfire_sim_state_t *st, uint8_t fileno, uint8_t type,
+                                       uint8_t comm, uint16_t rights, uint16_t isofid,
+                                       uint32_t size, uint32_t recsize, uint32_t maxrec,
+                                       uint32_t lower, uint32_t upper, uint32_t value,
+                                       uint8_t options) {
+
+    uint8_t *base = desfire_sim_wbase();
+    desfire_em_hdr_t *hdr = (desfire_em_hdr_t *)base;
+
+    if (st->selected == 0) {
+        return MFDES_E_PERMISSION_DENIED;
+    }
+
+    if (fileno > 0x1F) {
+        return MFDES_E_PARAMETER_ERROR;
+    }
+
+    if (hdr->filecount >= DESFIRE_EM_MAX_FILES) {
+        return MFDES_E_OUT_OF_EEPROM;
+    }
+
+    if (desfire_sim_find_file(st, fileno) != NULL) {
+        return MFDES_E_DUPLICATE;
+    }
+
+    uint32_t extent = DESFIRE_EM_ROUNDUP(desfire_sim_file_extent(type, size, recsize, maxrec));
+    if (extent == 0) {
+        return MFDES_E_PARAMETER_ERROR;
+    }
+
+    uint32_t reserve = desfire_sim_type_has_shadow(type) ? (extent * 2) : extent;
+
+    if ((uint32_t)hdr->reserved + reserve > hdr->cardsize) {
+        return MFDES_E_OUT_OF_EEPROM;
+    }
+
+    // the tables grow up and the file data grows down, and an allocation only
+    // has to leave the two apart -- here both move at once
+    uint32_t grow = sizeof(desfire_em_file_t);
+    if ((uint32_t)hdr->tables_end + grow + reserve > hdr->data_start) {
+        return MFDES_E_OUT_OF_EEPROM;
+    }
+
+    // open a gap where the key table starts
+    uint16_t at = hdr->key_off;
+    memmove(base + at + grow, base + at, hdr->tables_end - at);
+
+    desfire_em_file_t *f = (desfire_em_file_t *)(base + at);
+    memset(f, 0, sizeof(*f));
+    f->app = st->selected;
+    f->num = fileno;
+    f->type = type;
+    f->flags = comm & DESFIRE_EM_FILE_COMM_MASK;
+    f->rights = rights;
+    f->isofid = isofid;
+
+    hdr->key_off += grow;
+    hdr->tables_end += grow;
+
+    // and take the data off the far end
+    hdr->data_start -= reserve;
+    hdr->reserved += reserve;
+
+    f->dataoff = hdr->data_start;
+    f->datalen = extent;
+    f->shadow_off = desfire_sim_type_has_shadow(type) ? (hdr->data_start + extent) : 0;
+
+    // a new file reads back as zeros, which is a fact about it rather than a
+    // gap in the dump, so it is not marked unknown
+    memset(base + hdr->data_start, 0, reserve);
+
+    switch (type) {
+        case 0x00:
+        case 0x01:
+            f->u.data.size = size;
+            break;
+        case 0x02:
+            f->u.value.lower = lower;
+            f->u.value.upper = upper;
+            f->u.value.value = value;
+            if (options & 0x01) {
+                f->flags |= DESFIRE_EM_FILE_LIMCREDIT;
+            }
+            if (options & 0x02) {
+                f->flags |= DESFIRE_EM_FILE_FREEGETVAL;
+            }
+            break;
+        case 0x03:
+        case 0x04:
+            f->u.record.recordsize = recsize;
+            f->u.record.maxrecords = maxrec;
+            f->u.record.currecords = 0;
+            break;
+        default:
+            break;
+    }
+
+    hdr->filecount++;
+
+    // the key table moved, so the parsed view has to be taken again
+    int selected = st->selected;
+    desfire_sim_load(st);
+    st->selected = selected;
+    return MFDES_S_OPERATION_OK;
 }
 
 // ------------------------------------------------------- applications
@@ -1543,7 +1696,7 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
     // so it is left to the auth, read and write paths that own the chain.
     if (cmd != MFDES_AUTHENTICATE && cmd != MFDES_AUTHENTICATE_ISO &&
             cmd != MFDES_AUTHENTICATE_AES && cmd != MFDES_ADDITIONAL_FRAME &&
-            st->auth_cmd == 0 && desfire_sim_cmd_is_write(cmd) == false && st->wcmd == 0) {
+            st->auth_cmd == 0 && desfire_sim_cmd_unwraps_own(cmd) == false && st->wcmd == 0) {
         desfire_sim_cmac_command(st, cmd, in, inlen);
     }
 
@@ -1904,6 +2057,208 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
         case MFDES_DEBIT:
         case MFDES_LIMITED_CREDIT:
             return desfire_sim_write_gather(st, cmd, in, inlen, out);
+
+        case MFDES_CREATE_STD_DATA_FILE:
+        case MFDES_CREATE_BACKUP_DATA_FILE:
+        case MFDES_CREATE_VALUE_FILE:
+        case MFDES_CREATE_LINEAR_RECORD_FILE:
+        case MFDES_CREATE_CYCLIC_RECORD_FILE: {
+
+            if (st->selected == 0) {
+                return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+            }
+
+            const desfire_em_app_t *app = &st->apps[st->selected];
+
+            // application key settings bit 2 clear means create and delete need
+            // the application master key (M134034 9.3.4)
+            if ((app->keysettings & 0x04) == 0) {
+                if (st->authenticated == false || st->auth_keyno != 0) {
+                    return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
+                }
+            }
+
+            // the ISO file id is only on the wire when the application was
+            // created with ISO file ids enabled
+            bool isofids = (app->flags & DESFIRE_EM_APP_ISOFIDS) != 0;
+            uint8_t type;
+            uint8_t need;
+
+            switch (cmd) {
+                case MFDES_CREATE_STD_DATA_FILE:
+                    type = 0x00;
+                    need = isofids ? 9 : 7;
+                    break;
+                case MFDES_CREATE_BACKUP_DATA_FILE:
+                    type = 0x01;
+                    need = isofids ? 9 : 7;
+                    break;
+                case MFDES_CREATE_VALUE_FILE:
+                    type = 0x02;
+                    need = 17;      // never carries an ISO file id
+                    break;
+                case MFDES_CREATE_LINEAR_RECORD_FILE:
+                    type = 0x03;
+                    need = isofids ? 12 : 10;
+                    break;
+                default:
+                    type = 0x04;
+                    need = isofids ? 12 : 10;
+                    break;
+            }
+
+            // every one of these is fixed length, so a frame that is not
+            // exactly the expected size is rejected rather than parsed from the
+            // wrong offset -- a reader that sends an ISO file id to an
+            // application that does not use them lands here
+            if (inlen != need) {
+                return desfire_sim_status(out, MFDES_E_LENGTH);
+            }
+
+            uint8_t fileno = in[0];
+            uint16_t isofid = 0;
+            const uint8_t *p = in + 1;
+
+            if (isofids && type != 0x02) {
+                isofid = p[0] | (p[1] << 8);
+                p += 2;
+            }
+
+            uint8_t comm = p[0];
+            uint16_t rights = p[1] | (p[2] << 8);
+            p += 3;
+
+            uint32_t size = 0, recsize = 0, maxrec = 0;
+            uint32_t lower = 0, upper = 0, value = 0;
+            uint8_t options = 0;
+
+            if (type == 0x00 || type == 0x01) {
+
+                size = p[0] | (p[1] << 8) | (p[2] << 16);
+
+            } else if (type == 0x02) {
+
+                lower = p[0] | (p[1] << 8) | (p[2] << 16) | ((uint32_t)p[3] << 24);
+                upper = p[4] | (p[5] << 8) | (p[6] << 16) | ((uint32_t)p[7] << 24);
+                value = p[8] | (p[9] << 8) | (p[10] << 16) | ((uint32_t)p[11] << 24);
+                options = p[12];
+
+                // "The upper limit has to be higher than the lower limit,
+                // otherwise an error message would be sent by the PICC and thus
+                // the file would not be created" -- M134034 9.5.7, and the
+                // initial value has to sit between the two
+                if ((int32_t)upper <= (int32_t)lower ||
+                        (int32_t)value < (int32_t)lower || (int32_t)value > (int32_t)upper) {
+                    return desfire_sim_status(out, MFDES_E_PARAMETER_ERROR);
+                }
+
+            } else {
+
+                recsize = p[0] | (p[1] << 8) | (p[2] << 16);
+                maxrec = p[3] | (p[4] << 8) | (p[5] << 16);
+
+                if (recsize == 0 || maxrec == 0) {
+                    return desfire_sim_status(out, MFDES_E_PARAMETER_ERROR);
+                }
+            }
+
+            uint8_t res = desfire_sim_file_create(st, fileno, type, comm, rights, isofid,
+                                                  size, recsize, maxrec, lower, upper, value, options);
+            if (res != MFDES_S_OPERATION_OK) {
+                return desfire_sim_status(out, res);
+            }
+            return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, NULL, 0);
+        }
+
+        case MFDES_CHANGE_FILE_SETTINGS: {
+
+            if (inlen < 1) {
+                return desfire_sim_status(out, MFDES_E_LENGTH);
+            }
+
+            if (st->selected == 0) {
+                return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+            }
+
+            const desfire_em_file_t *f = desfire_sim_find_file(st, in[0]);
+            if (f == NULL) {
+                return desfire_sim_status(out, MFDES_E_FILE_NOT_FOUND);
+            }
+
+            uint8_t change = DESFIRE_SIM_AR_CHANGE(f->rights);
+
+            // "This change only succeeds if the current Access Rights for
+            // Change Access Rights is different from never" -- M134034 9.5.4
+            if (change == DESFIRE_SIM_AR_DENY) {
+                return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+            }
+
+            // "However, if the ChangeAccessRights Access Rights is set with the
+            // value free, no security mechanism is necessary and therefore the
+            // data is sent as plain text (5 byte overall length)."  Otherwise it
+            // is enciphered under the key that right names.
+            uint8_t comm;
+            if (change == DESFIRE_SIM_AR_FREE) {
+                comm = DESFIRE_SIM_COMM_PLAIN;
+            } else {
+                if (st->authenticated == false || st->auth_keyno != change) {
+                    return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
+                }
+                comm = DESFIRE_SIM_COMM_FULL;
+            }
+
+            uint8_t buf[DESFIRE_SIM_WRITE_MAX] = {0};
+            if (inlen > sizeof(buf)) {
+                return desfire_sim_status(out, MFDES_E_LENGTH);
+            }
+
+            memcpy(buf, in, inlen);
+            uint16_t len = inlen;
+
+            if (desfire_sim_unwrap(st, cmd, comm, buf, &len) == false) {
+                desfire_sim_auth_clear(st);
+                return desfire_sim_status(out, MFDES_E_INTEGRITY_ERROR);
+            }
+
+            // file number, the new communication settings, then the new rights
+            if (len < 4) {
+                return desfire_sim_status(out, MFDES_E_LENGTH);
+            }
+
+            desfire_em_file_t *w = (desfire_em_file_t *)f;
+            w->flags = (w->flags & ~DESFIRE_EM_FILE_COMM_MASK) | (buf[1] & DESFIRE_EM_FILE_COMM_MASK);
+            w->rights = buf[2] | (buf[3] << 8);
+
+            return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, NULL, 0);
+        }
+
+        case MFDES_DELETE_FILE: {
+
+            if (inlen < 1) {
+                return desfire_sim_status(out, MFDES_E_LENGTH);
+            }
+
+            if (st->selected == 0) {
+                return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+            }
+
+            const desfire_em_app_t *app = &st->apps[st->selected];
+            if ((app->keysettings & 0x04) == 0) {
+                if (st->authenticated == false || st->auth_keyno != 0) {
+                    return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
+                }
+            }
+
+            const desfire_em_file_t *f = desfire_sim_find_file(st, in[0]);
+            if (f == NULL) {
+                return desfire_sim_status(out, MFDES_E_FILE_NOT_FOUND);
+            }
+
+            // a tombstone, like DeleteApplication: the memory stays spent and
+            // only FormatPICC hands it back
+            ((desfire_em_file_t *)f)->flags |= DESFIRE_EM_FILE_DELETED;
+            return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, NULL, 0);
+        }
 
         case MFDES_CREATE_APPLICATION: {
 

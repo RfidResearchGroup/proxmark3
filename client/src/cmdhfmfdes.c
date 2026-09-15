@@ -9223,13 +9223,19 @@ static int CmdHF14ADesESave(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes esave",
                   "Save the card image in emulator memory to a dump file.\n"
-                  "Shows what a reader left behind if one has been talking to the simulation",
-                  "hf mfdes esave -f myfile");
+                  "Shows what a reader left behind if one has been talking to the simulation.\n"
+                  "A deleted application or file is kept in the image as a tombstone, because the\n"
+                  "memory it held stays spent until a FormatPICC. By default those are left out, so\n"
+                  "the dump is the card as a reader sees it. Use `--keep` to save them as well, which\n"
+                  "is what you want to see everything a reader did rather than only the result",
+                  "hf mfdes esave -f myfile\n"
+                  "hf mfdes esave -f myfile --keep   -> keep applications and files a reader deleted");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<fn>", "Filename, if no <fn> UID will be used as filename"),
         arg_lit0("v", "verbose", "Verbose output"),
+        arg_lit0(NULL, "keep", "Keep applications and files that were deleted"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -9238,6 +9244,7 @@ static int CmdHF14ADesESave(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     bool verbose = arg_get_lit(ctx, 2);
+    bool keep_deleted = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     size_t emsize = g_conn.em_size;
@@ -9269,7 +9276,7 @@ static int CmdHF14ADesESave(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
-    res = desfire_em_unpack(img, emsize, dump);
+    res = desfire_em_unpack_ex(img, emsize, dump, keep_deleted);
     free(img);
 
     if (res != PM3_SUCCESS) {

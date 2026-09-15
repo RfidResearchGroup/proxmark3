@@ -48,6 +48,11 @@ int desfire_em_pack(const desfire_dump_t *dump, uint8_t *out, size_t outlen, siz
 
 // Walk an image back into a desfire_dump_t. The caller owns the per-file heap
 // buffers afterwards and must release them with desfire_dump_free().
+// Unpack a card image into a dump.  A deleted application or file is a tombstone
+// in the image: the memory it held stays spent, but it is gone as far as a
+// reader is concerned.  `keep_deleted` decides which of those two views you get
+// -- false for the card as a reader sees it, true to keep what was there.
+int desfire_em_unpack_ex(const uint8_t *img, size_t imglen, desfire_dump_t *dump, bool keep_deleted);
 int desfire_em_unpack(const uint8_t *img, size_t imglen, desfire_dump_t *dump);
 
 // Print an image's structure. Does not need a device.

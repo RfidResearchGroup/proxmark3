@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hf mfdes sim` - ChangeFileSettings is answered, plain when the change access right is free and enciphered under the key it names otherwise (@iceman1001)
+- Added `hf mfdes esave` - `--keep` saves applications and files a reader deleted, which are otherwise left out so the dump is the card as a reader sees it (@iceman1001)
+- Added `hf mfdes sim` - CreateFile in all five EV1 flavours and DeleteFile are answered, so a reader can lay out an application's file system on the simulated card (@iceman1001)
 - Added `hf mfdes sim` - CreateApplication and DeleteApplication are answered, so a reader can add and remove applications on the simulated card (@iceman1001)
 - Added `hf mfdes sim` - FormatPICC is answered, releasing every application and file and handing the memory back, with the PICC master key and its settings kept (@iceman1001)
 - Fixed `hf mfdes esave` - the ATS was saved as zeros, a `sizeof()` of the 256 byte destination cast to uint8_t wrapped to 0 and the copy was skipped while its length was still reported (@iceman1001)
