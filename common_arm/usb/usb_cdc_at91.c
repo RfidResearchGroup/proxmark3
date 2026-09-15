@@ -184,6 +184,7 @@ static uint16_t usb_read_ng_data_available(void) {
 static uint8_t usb_read_ng_data_read(void) {
     return pUdp->UDP_FDR[AT91C_EP_OUT];
 }
+#endif
 
 // Implemented for read_ng
 static void usb_read_ng_clear(void) {
@@ -196,6 +197,7 @@ static void usb_read_ng_clear(void) {
     }
 }
 
+#ifndef AS_BOOTROM
 // Instance for 'read_ng' apis
 static const usb_read_ng_config_t g_usb_read_ng_config = {
     .is_link_ready    = usb_read_ng_link_ready,
@@ -372,13 +374,25 @@ FORCE_INLINE uint16_t usb_available_length(void) {
     bug.
 **/
 bool usb_poll_validate_length(void) {
+#ifndef AS_BOOTROM
+    // A previous USB packet may already contain the next command.
+    if (usb_read_ng_has_buffered_data()) {
+        return true;
+    }
+#endif
     // Reuse 'usb_poll()' implemented.
     if (usb_poll() == false) {
         return false;
     }
-    // Why code this: return (((pUdp->UDP_CSR[AT91C_EP_OUT] & AT91C_UDP_RXBYTECNT) >> 16) > 0);
-    // For speed? but 'usb_available_length()' is a inline function.
-    return (usb_available_length() > 0);
+    if (usb_available_length() > 0) {
+        return true;
+    }
+
+    // A transfer whose size is an exact multiple of the endpoint size can end
+    // with a zero-length packet. Acknowledge it here; otherwise this receive
+    // bank remains selected forever and data queued in the other bank stalls.
+    usb_read_ng_clear();
+    return false;
 }
 
 /*
