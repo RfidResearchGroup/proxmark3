@@ -48,12 +48,9 @@ AT91SAM7S256  USB Device Port
 #define AT91C_USB_EP_IN_SIZE            64
 
 /* WCID specific Request Code */
-#define MS_OS_DESCRIPTOR_INDEX          0xEE
-#define MS_VENDOR_CODE                  0x1C
-#define MS_EXTENDED_COMPAT_ID           0x04
-#define MS_EXTENDED_PROPERTIES          0x05
-#define MS_WCID_GET_DESCRIPTOR          0xC0
-#define MS_WCID_GET_FEATURE_DESCRIPTOR  0xC1
+/* MS_OS_DESCRIPTOR_INDEX, MS_EXTENDED_COMPAT_ID, MS_EXTENDED_PROPERTIES and
+   the MS_WCID_* request types come from usb_cdc_desc.h */
+#define MS_VENDOR_CODE                  USB_CDC_DESC_MS_VENDOR_CODE
 
 /* USB standard request code */
 #define STD_GET_STATUS_ZERO           0x0080
@@ -92,7 +89,7 @@ static uint8_t btConnection    = 0;
 static uint8_t btReceiveBank   = AT91C_UDP_RX_DATA_BK0;
 
 // -- pre def functions
-void AT91F_USB_SendData(AT91PS_UDP pudp, const char *pData, uint32_t length);
+void AT91F_USB_SendData(AT91PS_UDP pudp, const char *pData, uint32_t length, uint32_t wLength);
 void AT91F_USB_SendZlp(AT91PS_UDP pudp);
 void AT91F_USB_SendStall(AT91PS_UDP pudp);
 void AT91F_CDC_Enumerate(void);
@@ -143,12 +140,14 @@ static const char *getStringDescriptor(uint8_t idx) {
     }
 
 
+// CDC LineCoding is 7 bytes on the wire, so this must not pick up the padding
+// byte that natural alignment would add after DataBits.
 typedef struct {
     uint32_t BitRate;
     uint8_t Format;
     uint8_t ParityType;
     uint8_t DataBits;
-} AT91S_CDC_LINE_CODING, *AT91PS_CDC_LINE_CODING;
+} PACKED AT91S_CDC_LINE_CODING, *AT91PS_CDC_LINE_CODING;
 
 static AT91S_CDC_LINE_CODING line = { // purely informative, actual values don't matter
     USART_BAUD_RATE, // baudrate
@@ -634,10 +633,21 @@ int async_usb_write_stop(void) {
  *----------------------------------------------------------------------------
  * \fn    AT91F_USB_SendData
  * \brief Send Data through the control endpoint
+ *
+ * length is how much the device has to give, wLength how much the host asked
+ * for. When less than wLength is sent and that amount is a whole number of
+ * control endpoint packets, the transfer needs a zero length packet to end it,
+ * or the host keeps polling until it times out.
  *----------------------------------------------------------------------------
 */
-void AT91F_USB_SendData(AT91PS_UDP pudp, const char *pData, uint32_t length) {
+void AT91F_USB_SendData(AT91PS_UDP pudp, const char *pData, uint32_t length, uint32_t wLength) {
     AT91_REG csr;
+
+    length = MIN(length, wLength);
+
+    bool send_zlp = (length > 0) &&
+                    (length < wLength) &&
+                    ((length % AT91C_USB_EP_CONTROL_SIZE) == 0);
 
     do {
         uint32_t cpt = MIN(length, AT91C_USB_EP_CONTROL_SIZE);
@@ -670,6 +680,10 @@ void AT91F_USB_SendData(AT91PS_UDP pudp, const char *pData, uint32_t length) {
         UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_TXCOMP);
         while (pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP) {};
     }
+
+    if (send_zlp) {
+        AT91F_USB_SendZlp(pudp);
+    }
 }
 
 //*----------------------------------------------------------------------------
@@ -690,10 +704,41 @@ void AT91F_USB_SendZlp(AT91PS_UDP pudp) {
 //* \brief Stall the control endpoint
 //*----------------------------------------------------------------------------
 void AT91F_USB_SendStall(AT91PS_UDP pudp) {
+
     UDP_SET_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_FORCESTALL);
-    while (!(pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_ISOERROR)) {};
-    UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, (AT91C_UDP_FORCESTALL | AT91C_UDP_ISOERROR));
-    while (pudp->UDP_CSR[AT91C_EP_CONTROL] & (AT91C_UDP_FORCESTALL | AT91C_UDP_ISOERROR)) {};
+
+    // STALLSENT only arrives once the host polls the endpoint and takes the
+    // handshake, so every way the host can fail to do that needs an exit.
+    // usb_check() is not one of them, it calls back into AT91F_CDC_Enumerate().
+    uint16_t time_out = 0;
+    while (!(pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_STALLSENT)) {
+
+        // host dropped this request and started another one
+        if (pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_RXSETUP) {
+            break;
+        }
+
+        // bus reset. Not RXSUSP: nothing in this driver writes it back to
+        // UDP_ICR, so once the bus first idles it stays latched for good.
+        if (pudp->UDP_ISR & AT91C_UDP_ENDBUSRES) {
+            break;
+        }
+
+        if (time_out++ == 0x1FFF) {
+            break;
+        }
+    }
+
+    UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, (AT91C_UDP_FORCESTALL | AT91C_UDP_STALLSENT));
+
+    // leaving the loop above early can let the host set STALLSENT after the
+    // clear, so this wait is bounded too
+    time_out = 0;
+    while (pudp->UDP_CSR[AT91C_EP_CONTROL] & (AT91C_UDP_FORCESTALL | AT91C_UDP_STALLSENT)) {
+        if (time_out++ == 0x1FFF) {
+            break;
+        }
+    }
 }
 
 //*----------------------------------------------------------------------------
@@ -727,39 +772,42 @@ void AT91F_CDC_Enumerate(void) {
     UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_RXSETUP);
     while ((pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_RXSETUP)) {};
 
-    /*
-    if ( bRequest == MS_VENDOR_CODE) {
-        if ( bmRequestType == MS_WCID_GET_DESCRIPTOR ) { // C0
-            if ( wIndex == MS_EXTENDED_COMPAT_ID ) {  // 4
-                //AT91F_USB_SendData(pUdp, CompatIDFeatureDescriptor, MIN(sizeof(CompatIDFeatureDescriptor), wLength));
-                //return;
-            }
+    // WCID vendor request. StrMS_OSDescriptor advertises MS_VENDOR_CODE, so
+    // every request carrying it has to be answered here. Falling through to the
+    // standard switch below stalls it, which makes Windows cache the device as
+    // having no MS OS descriptors and stop asking.
+    if (bRequest == MS_VENDOR_CODE) {
+
+        if (bmRequestType == MS_WCID_GET_DESCRIPTOR && wIndex == MS_EXTENDED_COMPAT_ID) {
+            AT91F_USB_SendData(pUdp, CompatIDFeatureDescriptor, sizeof(CompatIDFeatureDescriptor), wLength);
+            return;
         }
 
-        if ( bmRequestType == MS_WCID_GET_FEATURE_DESCRIPTOR ) {  //C1
-            // if ( wIndex == MS_EXTENDED_PROPERTIES ) { // 5  - winusb bug with wIndex == interface index,  so I just send it always)
-                //AT91F_USB_SendData(pUdp, OSprop, MIN(sizeof(OSprop), wLength));
-                //return;
-            // }
+        // wValue holds the interface number, wIndex the descriptor index.
+        if (bmRequestType == MS_WCID_GET_FEATURE_DESCRIPTOR && wIndex == MS_EXTENDED_PROPERTIES) {
+            AT91F_USB_SendData(pUdp, OSprop, sizeof(OSprop), wLength);
+            return;
         }
+
+        AT91F_USB_SendStall(pUdp);
+        return;
     }
-    */
 
     // Handle supported standard device request Cf Table 9-3 in USB specification Rev 1.1
     switch ((bRequest << 8) | bmRequestType) {
         case STD_GET_DESCRIPTOR: {
 
             if (wValue == 0x100) {        // Return Device Descriptor
-                AT91F_USB_SendData(pUdp, devDescriptor, MIN(sizeof(devDescriptor), wLength));
+                AT91F_USB_SendData(pUdp, devDescriptor, sizeof(devDescriptor), wLength);
             } else if (wValue == 0x200) {   // Return Configuration Descriptor
-                AT91F_USB_SendData(pUdp, cfgDescriptor, MIN(sizeof(cfgDescriptor), wLength));
+                AT91F_USB_SendData(pUdp, cfgDescriptor, sizeof(cfgDescriptor), wLength);
             } else if ((wValue & 0xF00) == 0xF00) { // Return BOS Descriptor
-                AT91F_USB_SendData(pUdp, bosDescriptor, MIN(sizeof(bosDescriptor), wLength));
+                AT91F_USB_SendData(pUdp, bosDescriptor, sizeof(bosDescriptor), wLength);
             } else if ((wValue & 0x300) == 0x300) {  // Return String Descriptor
 
                 const char *strDescriptor = getStringDescriptor(wValue & 0xff);
                 if (strDescriptor != NULL) {
-                    AT91F_USB_SendData(pUdp, strDescriptor, MIN(strDescriptor[0], wLength));
+                    AT91F_USB_SendData(pUdp, strDescriptor, strDescriptor[0], wLength);
                 } else {
                     AT91F_USB_SendStall(pUdp);
                 }
@@ -799,25 +847,25 @@ void AT91F_CDC_Enumerate(void) {
             pUdp->UDP_CSR[AT91C_EP_NOTIFY] = (wValue) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_INT_IN)   : 0;
             break;
         case STD_GET_CONFIGURATION:
-            AT91F_USB_SendData(pUdp, (char *) & (btConfiguration), sizeof(btConfiguration));
+            AT91F_USB_SendData(pUdp, (char *) & (btConfiguration), sizeof(btConfiguration), wLength);
             break;
         case STD_GET_STATUS_ZERO:
             wStatus = 0;   // Device is Bus powered, remote wakeup disabled
-            AT91F_USB_SendData(pUdp, (char *) &wStatus, sizeof(wStatus));
+            AT91F_USB_SendData(pUdp, (char *) &wStatus, sizeof(wStatus), wLength);
             break;
         case STD_GET_STATUS_INTERFACE:
             wStatus = 0;   // reserved for future use
-            AT91F_USB_SendData(pUdp, (char *) &wStatus, sizeof(wStatus));
+            AT91F_USB_SendData(pUdp, (char *) &wStatus, sizeof(wStatus), wLength);
             break;
         case STD_GET_STATUS_ENDPOINT:
             wStatus = 0;
             wIndex &= 0x0F;
             if ((pUdp->UDP_GLBSTATE & AT91C_UDP_CONFG) && (wIndex <= AT91C_EP_NOTIFY)) {
                 wStatus = (pUdp->UDP_CSR[wIndex] & AT91C_UDP_EPEDS) ? 0 : 1;
-                AT91F_USB_SendData(pUdp, (char *) &wStatus, sizeof(wStatus));
+                AT91F_USB_SendData(pUdp, (char *) &wStatus, sizeof(wStatus), wLength);
             } else if ((pUdp->UDP_GLBSTATE & AT91C_UDP_FADDEN) && (wIndex == AT91C_EP_CONTROL)) {
                 wStatus = (pUdp->UDP_CSR[wIndex] & AT91C_UDP_EPEDS) ? 0 : 1;
-                AT91F_USB_SendData(pUdp, (char *) &wStatus, sizeof(wStatus));
+                AT91F_USB_SendData(pUdp, (char *) &wStatus, sizeof(wStatus), wLength);
             } else {
                 AT91F_USB_SendStall(pUdp);
             }
@@ -875,7 +923,7 @@ void AT91F_CDC_Enumerate(void) {
             break;
         }
         case GET_LINE_CODING:
-            AT91F_USB_SendData(pUdp, (char *) &line, MIN(sizeof(line), wLength));
+            AT91F_USB_SendData(pUdp, (char *) &line, sizeof(line), wLength);
             break;
         case SET_CONTROL_LINE_STATE:
             btConnection = wValue;

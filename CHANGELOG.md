@@ -4,6 +4,13 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Fixed `PLATFORM_EXTRAS=BWM` - a command started over the Proxmark5 wireless module can be aborted again, `data_available()` only polled USB so CMD_BREAK_LOOP was never seen on the BLE or WiFi link (@tweathers-sec)
+- Fixed `lf search` - a leftover debug print no longer reports `DEBUG: detectindala | <n>` on every failed Indala demodulation (@tweathers-sec)
+- Changed `memcpy` - the device's own implementation now copies a word at a time when source and destination allow it (@iceman1001)
+- Changed NG replies - the outgoing frame is offset so its payload lands word aligned, taking USB transfer speed from 630 to 789 kB/s on RDV4  (@iceman1001)
+- Fixed `AT91F_USB_SendStall` - waiting for the host to collect the STALL is now bounded (@iceman1001)
+- Fixed `GET_LINE_CODING` - the CDC line coding struct is now packed to the 7 bytes the spec defines (@iceman1001)
+- Fixed USB control transfers - a descriptor whose length is an exact multiple of the 8 byte control endpoint now ends with a zero length packet (@iceman1001)
+- Fixed USB WCID descriptors - the device advertised Microsoft OS descriptor support in string 0xEE but stalled the vendor request that follows (@iceman1001)
 - Added `hf mfdes sim` - answers GetDFNames and GetISOFileIDs, so a reader sees the ISO file ids and DF names of the simulated card (@iceman1001)
 - Fixed `hf 14a` - an FPGA bitstream download no longer destroys the emulator memory that `eload` just filled (@iceman1001)
 - Changed `hf mfdes sim` - now a self contained DESFire simulation, answering both native and ISO 7816 wrapped commands (@iceman1001)
