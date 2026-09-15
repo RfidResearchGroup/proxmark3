@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hf mfdes sim` - ChangeKey is answered, both the plain and the XORed key frame, so a reader can rekey the simulated card and the new keys are in what `hf mfdes esave` writes out (@iceman1001)
 - Added `hf mfdes sim` - ChangeFileSettings is answered, plain when the change access right is free and enciphered under the key it names otherwise (@iceman1001)
 - Added `hf mfdes esave` - `--keep` saves applications and files a reader deleted, which are otherwise left out so the dump is the card as a reader sees it (@iceman1001)
 - Added `hf mfdes sim` - CreateFile in all five EV1 flavours and DeleteFile are answered, so a reader can lay out an application's file system on the simulated card (@iceman1001)

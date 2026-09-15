@@ -786,7 +786,8 @@ static uint8_t desfire_sim_hdrlen(uint8_t cmd) {
         case MFDES_LIMITED_CREDIT:
         case MFDES_GET_VALUE:
         case MFDES_CHANGE_FILE_SETTINGS:
-            return 1;               // file number only
+        case MFDES_CHANGE_KEY:
+            return 1;               // file number, or key number, only
         default:
             return 0;
     }
@@ -822,7 +823,9 @@ static bool desfire_sim_cmd_is_write(uint8_t cmd) {
 // enciphered, and either way the command's own handler does the unwrapping and
 // moves the IV along, so the blanket CMAC has to keep its hands off.
 static bool desfire_sim_cmd_unwraps_own(uint8_t cmd) {
-    return (desfire_sim_cmd_is_write(cmd) || cmd == MFDES_CHANGE_FILE_SETTINGS);
+    return (desfire_sim_cmd_is_write(cmd) ||
+            cmd == MFDES_CHANGE_FILE_SETTINGS ||
+            cmd == MFDES_CHANGE_KEY);
 }
 
 // Take the reader's secure messaging off a gathered command.
@@ -1141,6 +1144,40 @@ static uint16_t desfire_sim_dfname_record(const desfire_sim_state_t *st, uint8_t
 
     *next = hdr->appcount;
     return 0;
+}
+
+// ----------------------------------------------------------------- key change
+
+// Key length for an algorithm.  A single DES key is carried and stored as its
+// 16 byte doubled form, which is how the reader sends it too.
+static uint8_t desfire_sim_keylen(uint8_t algo) {
+    return (algo == T_3K3DES) ? 24 : 16;
+}
+
+// For everything but AES the key version lives in the low bit of each of the
+// first eight key bytes -- the DES parity bits, which the cipher ignores.
+static uint8_t desfire_sim_key_version(uint8_t algo, const uint8_t *key, uint8_t sent) {
+
+    if (algo == T_AES) {
+        return sent;            // AES carries the version as its own byte
+    }
+
+    uint8_t ver = 0;
+    for (uint8_t i = 0; i < 8; i++) {
+        ver |= (key[i] & 1) << (7 - i);
+    }
+    return ver;
+}
+
+// Find a key entry to write to, whether or not we hold its current value.
+static desfire_em_key_t *desfire_sim_key_slot(desfire_sim_state_t *st, uint8_t app, uint8_t keyno) {
+
+    for (uint16_t i = 0; i < st->hdr->keycount; i++) {
+        if (st->keys[i].app == app && st->keys[i].num == keyno) {
+            return (desfire_em_key_t *)&st->keys[i];
+        }
+    }
+    return NULL;
 }
 
 // ------------------------------------------------------------ file creation
@@ -2167,6 +2204,177 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
             if (res != MFDES_S_OPERATION_OK) {
                 return desfire_sim_status(out, res);
             }
+            return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, NULL, 0);
+        }
+
+        case MFDES_CHANGE_KEY: {
+
+            if (inlen < 1) {
+                return desfire_sim_status(out, MFDES_E_LENGTH);
+            }
+
+            if (st->authenticated == false) {
+                return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
+            }
+
+            uint8_t keyno = in[0] & 0x3F;
+            const desfire_em_app_t *app = &st->apps[st->selected];
+            uint8_t algo = app->keytype;
+
+            // At PICC level the top two bits of the key number choose the
+            // algorithm the new master key is to be, since there is no
+            // application creation to fix it -- M134034 9.3.6.  Inside an
+            // application the key type cannot change after creation.
+            if (st->selected == 0) {
+
+                if (keyno != 0) {
+                    return desfire_sim_status(out, MFDES_E_PARAMETER_ERROR);
+                }
+
+                switch ((in[0] >> 6) & 0x03) {
+                    case 0x01:
+                        algo = T_3K3DES;
+                        break;
+                    case 0x02:
+                        algo = T_AES;
+                        break;
+                    default:
+                        algo = T_3DES;
+                        break;
+                }
+
+            } else if (keyno >= (app->numkeysraw & 0x0F)) {
+                return desfire_sim_status(out, MFDES_E_NO_SUCH_KEY);
+            }
+
+            // Which key had to be authenticated: the master key changes only
+            // with the master key and only while it is still changeable, and
+            // everything else is governed by the change-key nibble of the
+            // application's key settings (M134034 9.3.4 and 9.3.6).
+            uint8_t ck = (app->keysettings >> 4) & 0x0F;
+
+            if (keyno == 0) {
+
+                if ((app->keysettings & 0x01) == 0) {
+                    return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+                }
+                if (st->auth_keyno != 0) {
+                    return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
+                }
+
+            } else if (ck == 0x0F) {
+
+                // every key but the master key is frozen
+                return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+
+            } else if (ck == 0x0E) {
+
+                // free: a key is changed by whoever authenticated with it
+                if (st->auth_keyno != keyno) {
+                    return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
+                }
+
+            } else if (st->auth_keyno != ck) {
+                return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
+            }
+
+            desfire_em_key_t *slot = desfire_sim_key_slot(st, st->selected, keyno);
+            if (slot == NULL) {
+                return desfire_sim_status(out, MFDES_E_NO_SUCH_KEY);
+            }
+
+            // The reader enciphers the key data under the session key.  Its
+            // shape is fixed, so the length is known rather than searched for:
+            // the key, an AES version byte, the CRC32 over command, key number
+            // and that lot, and -- only when the key being changed is not the
+            // one the session was opened with -- a CRC32 of the new key on top.
+            uint8_t keylen = desfire_sim_keylen(algo);
+            bool xored = (keyno != st->auth_keyno);
+
+            uint16_t plainlen = keylen + ((algo == T_AES) ? 1 : 0) + 4 + (xored ? 4 : 0);
+
+            size_t kbs = key_block_size(&st->sesskey);
+            if (kbs == 0) {
+                return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
+            }
+
+            uint16_t enclen = inlen - 1;
+            if (enclen != padded_data_length(plainlen, kbs)) {
+                return desfire_sim_status(out, MFDES_E_LENGTH);
+            }
+
+            uint8_t buf[DESFIRE_SIM_WRITE_MAX] = {0};
+            if (enclen > sizeof(buf)) {
+                return desfire_sim_status(out, MFDES_E_LENGTH);
+            }
+
+            desfire_sim_crypt(&st->sesskey, in + 1, buf, enclen, st->iv, false);
+
+            // the CRC32 covers the command byte, the key number as it arrived,
+            // and the plaintext up to but not including the CRC itself
+            uint16_t upto = keylen + ((algo == T_AES) ? 1 : 0);
+
+            uint8_t crcbuf[DESFIRE_SIM_WRITE_MAX + 8] = {0};
+            crcbuf[0] = cmd;
+            crcbuf[1] = in[0];
+            memcpy(crcbuf + 2, buf, upto);
+
+            uint8_t want[4] = {0};
+            crc32_ex(crcbuf, upto + 2, want);
+
+            if (memcmp(want, buf + upto, 4) != 0) {
+                desfire_sim_auth_clear(st);
+                return desfire_sim_status(out, MFDES_E_INTEGRITY_ERROR);
+            }
+
+            uint8_t newkey[DESFIRE_MAX_KEY_SIZE] = {0};
+            memcpy(newkey, buf, keylen);
+
+            if (xored) {
+
+                // what arrived is the new key XORed with the current one, so the
+                // card needs to hold the current one to recover it
+                if ((slot->flags & DESFIRE_EM_KEY_PRESENT) == 0) {
+                    return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
+                }
+
+                for (uint8_t i = 0; i < keylen; i++) {
+                    newkey[i] ^= slot->key[i];
+                }
+
+                // and a CRC32 of the new key alone proves the XOR came apart
+                uint8_t want2[4] = {0};
+                crc32_ex(newkey, keylen, want2);
+
+                if (memcmp(want2, buf + upto + 4, 4) != 0) {
+                    desfire_sim_auth_clear(st);
+                    return desfire_sim_status(out, MFDES_E_INTEGRITY_ERROR);
+                }
+            }
+
+            memset(slot->key, 0, sizeof(slot->key));
+            memcpy(slot->key, newkey, keylen);
+            slot->ver = desfire_sim_key_version(algo, newkey, (algo == T_AES) ? buf[keylen] : 0);
+            slot->flags |= DESFIRE_EM_KEY_PRESENT | DESFIRE_EM_KEY_VERKNOWN;
+
+            // changing the PICC master key can change its algorithm with it
+            if (st->selected == 0 && algo != app->keytype) {
+                desfire_em_app_t *w = (desfire_em_app_t *)app;
+                w->keytype = algo;
+                w->numkeysraw = (w->numkeysraw & 0x3F) |
+                                ((algo == T_AES) ? 0x80 : ((algo == T_3K3DES) ? 0x40 : 0x00));
+            }
+
+            // "After a successful change of the key used to reach the current
+            // authentication status, this authentication is invalidated"
+            // -- M134034 9.3.6.  The answer to this one still carries its MAC,
+            // so the session is dropped after it is built.
+            if (xored == false) {
+                uint16_t n = desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, NULL, 0);
+                desfire_sim_auth_clear(st);
+                return n;
+            }
+
             return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, NULL, 0);
         }
 
