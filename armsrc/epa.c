@@ -636,14 +636,15 @@ static int EPA_Setup(void) {
         // if we're here, there is no type A card, so we look for type B
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
         // power up the field
-        iso14443b_setup();
-        iso14b_card_select_t card_b_info;
-        int return_code = iso14443b_select_card(&card_b_info);
+        if (iso14443b_setup() == PM3_SUCCESS) {
+            iso14b_card_select_t card_b_info;
+            int return_code = iso14443b_select_card(&card_b_info);
 
-        if (return_code == 0) {
-            Dbprintf("ISO 14443 Type B");
-            iso_type = 'b';
-            return 0;
+            if (return_code == 0) {
+                Dbprintf("ISO 14443 Type B");
+                iso_type = 'b';
+                return 0;
+            }
         }
     }
 #endif

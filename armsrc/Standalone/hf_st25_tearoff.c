@@ -1077,7 +1077,10 @@ void ModInfo(void) {
 void RunMod(void) {
     StandAloneMode();
     Dbprintf(_YELLOW_("HF ST25TB Store/Restore mode started"));
-    iso14443b_setup();
+    if (iso14443b_setup() != PM3_SUCCESS) {
+        Dbprintf(_RED_("Failed to allocate buffers, exiting"));
+        return;
+    }
     LED_D_OFF();
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF); // Use HF bitstream for ISO14443B
 

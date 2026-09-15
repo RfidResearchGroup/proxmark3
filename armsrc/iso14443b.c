@@ -820,6 +820,13 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
     CodeIso14443bAsTag(respATQB, sizeof(respATQB));
     uint8_t *encodedATQB = BigBuf_calloc(ts->max);
     uint16_t encodedATQBLen = ts->max;
+
+    if (receivedCmd == NULL || encodedATQB == NULL) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("14b sim: failed to allocate buffers");
+        switch_off();
+        return;
+    }
+
     memcpy(encodedATQB, ts->buf, ts->max);
 
 
@@ -827,6 +834,13 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
     CodeIso14443bAsTag(respOK, sizeof(respOK));
     uint8_t *encodedOK = BigBuf_calloc(ts->max);
     uint16_t encodedOKLen = ts->max;
+
+    if (encodedOK == NULL) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("14b sim: failed to allocate buffers");
+        switch_off();
+        return;
+    }
+
     memcpy(encodedOK, ts->buf, ts->max);
 
     // Simulation loop
@@ -2443,7 +2457,7 @@ static int iso14443b_select_picopass_card(picopass_hdr_t *hdr) {
 
 // Set up ISO 14443 Type B communication (similar to iso14443a_setup)
 // field is setup for "Sending as Reader"
-void iso14443b_setup(void) {
+int iso14443b_setup(void) {
 
     switch_off(); // disconnect raw
     SpinDelay(20);
@@ -2454,8 +2468,16 @@ void iso14443b_setup(void) {
     BigBuf_free();
 
     // Initialize Demod and Uart structs
-    Demod14bInit(BigBuf_calloc(MAX_FRAME_SIZE), MAX_FRAME_SIZE);
-    Uart14bInit(BigBuf_calloc(MAX_FRAME_SIZE));
+    uint8_t *demod_buf = BigBuf_calloc(MAX_FRAME_SIZE);
+    uint8_t *uart_buf = BigBuf_calloc(MAX_FRAME_SIZE);
+    if (demod_buf == NULL || uart_buf == NULL) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("14b setup: failed to allocate buffers");
+        BigBuf_free();
+        return PM3_EMALLOC;
+    }
+
+    Demod14bInit(demod_buf, MAX_FRAME_SIZE);
+    Uart14bInit(uart_buf);
 
     // connect Demodulated Signal to ADC:
     SetAdcMuxFor(ADC_MUXSEL_HIPKD);
@@ -2481,6 +2503,8 @@ void iso14443b_setup(void) {
     s_field_on = true;
 
     LED_D_ON();
+
+    return PM3_SUCCESS;
 }
 
 //-----------------------------------------------------------------------------
@@ -2526,12 +2550,21 @@ int read_14b_srx_block(uint8_t blocknr, uint8_t *block) {
 }
 
 void read_14b_st_block(uint8_t blocknr) {
-    iso14443b_setup();
+    if (iso14443b_setup() != PM3_SUCCESS) {
+        reply_ng(CMD_HF_SRI_READ, PM3_EMALLOC, NULL, 0);
+        return;
+    }
 
     set_tracing(true);
 
     uint8_t *data = BigBuf_calloc(ISO14B_BLOCK_SIZE);
     iso14b_card_select_t *card = (iso14b_card_select_t *) BigBuf_calloc(sizeof(iso14b_card_select_t));
+
+    if (data == NULL || card == NULL) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("14b st block: failed to allocate buffers");
+        reply_ng(CMD_HF_SRI_READ, PM3_EMALLOC, NULL, 0);
+        goto out;
+    }
 
     int res = iso14443b_select_srx_card(card);
     if (res != PM3_SUCCESS) {
@@ -2767,12 +2800,21 @@ static int tearoff_rand(void) {
 //  - FpgaDownloadAndGo (bitstream already cached)
 //  - BigBuf_free + BigBuf_calloc (demod buffers persist)
 //  - 100ms field stabilization (tag only needs ~20ms to power up)
-static void tearoff_field_on(void) {
+static int tearoff_field_on(void) {
     // Reset the AT91 SSC PDC (DMA) receive buffer before each field-on
     // by mirroring iso14443b_setup() memory allocations for Demod14b/Uart14b.
     BigBuf_free();
-    Demod14bInit(BigBuf_calloc(MAX_FRAME_SIZE), MAX_FRAME_SIZE);
-    Uart14bInit(BigBuf_calloc(MAX_FRAME_SIZE));
+
+    uint8_t *demod_buf = BigBuf_calloc(MAX_FRAME_SIZE);
+    uint8_t *uart_buf = BigBuf_calloc(MAX_FRAME_SIZE);
+    if (demod_buf == NULL || uart_buf == NULL) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("14b tearoff: failed to allocate buffers");
+        BigBuf_free();
+        return PM3_EMALLOC;
+    }
+
+    Demod14bInit(demod_buf, MAX_FRAME_SIZE);
+    Uart14bInit(uart_buf);
 
     SetAdcMuxFor(ADC_MUXSEL_HIPKD);
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER); // programs PDC with fresh BigBuf address
@@ -2786,6 +2828,7 @@ static void tearoff_field_on(void) {
     StartCountSspClk();
     iso14b_set_fwt(8);
     s_field_on = true;
+    return PM3_SUCCESS;
 }
 
 // Cut the RF field.
@@ -2818,7 +2861,10 @@ static int tearoff_read_block(uint8_t block_address, uint32_t *block_value) {
     int res;
     iso14b_card_select_t card;
 
-    tearoff_field_on();
+    res = tearoff_field_on();
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
 
     res = iso14443b_select_srx_card(&card);
     if (res != PM3_SUCCESS) {
@@ -2859,7 +2905,9 @@ static void tearoff_write_block(uint8_t block_address, uint32_t data, uint16_t t
     block[2] = (data >> 16) & 0xFF;
     block[3] = (data >> 24) & 0xFF;
 
-    tearoff_field_on();
+    if (tearoff_field_on() != PM3_SUCCESS) {
+        return;
+    }
 
     iso14b_card_select_t card;
     int res = iso14443b_select_srx_card(&card);
@@ -3055,7 +3103,11 @@ void ST25TB_TearOff(const uint8_t *data) {
     // One-time full setup: loads FPGA bitstream, allocates demod buffers,
     // configures ADC mux and SSC. All subsequent field cycles use the
     // lightweight tearoff_field_on/off which skip the heavy initialization.
-    iso14443b_setup();
+    if (iso14443b_setup() != PM3_SUCCESS) {
+        reply_ng(CMD_HF_ISO14443B_ST25TB_TEAROFF, PM3_EMALLOC, NULL, 0);
+        return;
+    }
+
     set_tracing(true);
     tearoff_field_off(false); // Start with field off, tearoff_read_block will turn it on
 
@@ -3205,7 +3257,10 @@ void SendRawCommand14443B(iso14b_raw_cmd_t *p) {
     }
 
     if ((p->flags & ISO14B_CONNECT) == ISO14B_CONNECT) {
-        iso14443b_setup();
+        if (iso14443b_setup() != PM3_SUCCESS) {
+            reply_ng(CMD_HF_ISO14443B_COMMAND, PM3_EMALLOC, NULL, 0);
+            goto out;
+        }
     }
 
     if ((p->flags & ISO14B_SET_TIMEOUT) == ISO14B_SET_TIMEOUT) {

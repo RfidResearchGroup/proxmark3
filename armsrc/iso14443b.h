@@ -38,7 +38,7 @@
 #define AddCrc15(data, len) compute_crc(CRC_ICLASS, (data), (len), (data)+(len), (data)+(len)+1)
 #endif
 
-void iso14443b_setup(void);
+int iso14443b_setup(void);
 int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void *rxdata, uint16_t rxmaxlen, uint8_t *response_byte, uint16_t *responselen);
 
 int iso14443b_select_card(iso14b_card_select_t *card);
