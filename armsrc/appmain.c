@@ -4320,6 +4320,35 @@ static void PacketReceived(PacketCommandNG *packet) {
 #endif
             break;
         }
+        case CMD_PM5_BWM_WIFI_PS: {
+#ifdef WITH_BWM_FORWARD
+            // Payload / reply layout: pm3_cmd.h. wifi_state rides along so the host
+            // can say the type is moot while WiFi is down.
+            if (packet->length < 1) {
+                reply_ng(CMD_PM5_BWM_WIFI_PS, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            uint8_t action = packet->data.asBytes[0];
+            uint8_t out[2] = { 0, BWM_WIFI_STATE_OFF };
+            int res;
+            if (action == BWM_WIFI_PS_ACTION_GET) {
+                res = bwm_esp_get_wifi_ps(&out[0]);
+            } else if (action == BWM_WIFI_PS_ACTION_SET && packet->length >= 2 && packet->data.asBytes[1] <= BWM_WIFI_PS_MAX) {
+                res = bwm_esp_set_wifi_ps(packet->data.asBytes[1], &out[0]);
+            } else {
+                reply_ng(CMD_PM5_BWM_WIFI_PS, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            if (res == PM3_SUCCESS) {
+                uint32_t ip = 0;
+                (void)bwm_wifi_forward_status(&out[1], &ip);   // 0xFF when the WiFi stack is down
+            }
+            reply_ng(CMD_PM5_BWM_WIFI_PS, res, out, (res == PM3_SUCCESS) ? sizeof(out) : 0);
+#else
+            reply_ng(CMD_PM5_BWM_WIFI_PS, PM3_ENOTIMPL, NULL, 0);
+#endif
+            break;
+        }
         case CMD_PM5_BWM_AUTOOFF: {
             // Toggle automatic power-off on USB unplug (runtime, default on).
             // Payload: 1 byte, non-zero = enable (default), zero = disable.
