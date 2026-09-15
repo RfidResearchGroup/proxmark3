@@ -1344,7 +1344,7 @@ out:
     *size = found_size;
 
     if (found_size < 64) {
-        PrintAndLogEx(INFO, "DEBUG: detectindala | %zu", found_size);
+        PrintAndLogEx(DEBUG, "DEBUG: detectindala | %zu", found_size);
         return -5;
     }
 
