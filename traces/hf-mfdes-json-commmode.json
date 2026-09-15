@@ -1,0 +1,26 @@
+{
+  "FileType": "mfdes v1",
+  "Version": 1,
+  "Card": {
+    "UID": "04112233445566",
+    "VersionHW": "04010101001805",
+    "VersionSW": "04010101001805"
+  },
+  "Applications": {
+    "000000": {
+      "KeySettings": "0F", "NumKeysRaw": "81", "NumKeys": 1, "KeyType": "aes",
+      "Keys": {"0": {"Version": "00", "Key": "00000000000000000000000000000000"}}
+    },
+    "030201": {
+      "KeySettings": "0F", "NumKeysRaw": "81", "NumKeys": 1, "KeyType": "aes",
+      "Keys": {"0": {"Version": "00", "Key": "00000000000000000000000000000000"}},
+      "Files": {
+        "01": {
+          "Type": "standard", "TypeRaw": "00",
+          "CommMode": "unknown", "CommModeRaw": "43",
+          "AccessRights": "EEEE", "FileSize": 1, "Read": true, "Data": "A5"
+        }
+      }
+    }
+  }
+}

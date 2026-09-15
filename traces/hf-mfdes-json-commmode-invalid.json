@@ -1,0 +1,8 @@
+{
+  "FileType": "mfdes v1",
+  "Applications": {
+    "030201": {
+      "Files": {"01": {"TypeRaw": "00", "CommMode": "unknown"}}
+    }
+  }
+}

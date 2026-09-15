@@ -237,6 +237,12 @@ endif(CMAKE_COMPILER_IS_GNUCXX)
 add_subdirectory(${PM3_ROOT}/client/deps deps)
 
 set (TARGET_SOURCES
+        ${PM3_ROOT}/common/dfc-core/src/dfc_common.c
+        ${PM3_ROOT}/common/dfc-core/src/dfc_credential.c
+        ${PM3_ROOT}/common/dfc-core/src/dfc_crypto.c
+        ${PM3_ROOT}/common/dfc-core/src/dfc_der.c
+        ${PM3_ROOT}/common/dfc-core/src/dfc_profile.c
+        ${PM3_ROOT}/common/dfc-core/src/dfc_text.c
         ${PM3_ROOT}/common/commonutil.c
         ${PM3_ROOT}/common/util_posix.c
         ${PM3_ROOT}/common/bucketsort.c
@@ -258,6 +264,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/crypto/duoxcrypto.c
         ${PM3_ROOT}/client/src/crypto/libpcrypto.c
         ${PM3_ROOT}/client/src/crypto/originality.c
+        ${PM3_ROOT}/client/src/dfc_port_client.c
         ${PM3_ROOT}/client/src/emrtd/emrtd_pace.c
         ${PM3_ROOT}/client/src/emrtd/emrtd_pacetest.c
         ${PM3_ROOT}/client/src/emv/test/cda_test.c
@@ -359,6 +366,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhflto.c
         ${PM3_ROOT}/client/src/cmdhfmf.c
         ${PM3_ROOT}/client/src/cmdhfmfdes.c
+        ${PM3_ROOT}/client/src/mifare/dfcfile.c
         ${PM3_ROOT}/client/src/cmdhfmfhard.c
         ${PM3_ROOT}/client/src/cmdhfmfp.c
         ${PM3_ROOT}/client/src/cmdhfmfsen.c
@@ -715,13 +723,17 @@ add_library(pm3rrg_rdv4_static STATIC
 set(PM3_LIBRARY_TARGETS pm3rrg_rdv4 pm3rrg_rdv4_static)
 foreach (target IN LISTS PM3_LIBRARY_TARGETS)
     target_compile_definitions(${target} PRIVATE LIBPM3)
+    target_compile_definitions(${target} PRIVATE DFC_CRYPTO_BACKEND_MBEDTLS=1)
     target_compile_options(${target} PUBLIC -Wall -Werror -O3)
     target_include_directories(${target} PRIVATE
             ${PM3_ROOT}/common
+            ${PM3_ROOT}/common/dfc-core/src
+            ${PM3_ROOT}/common/dfc-core/port
             ${PM3_ROOT}/common_fpga
             ${PM3_ROOT}/include
             ${PM3_ROOT}/client/src
             ${PM3_ROOT}/client/include
+            ${PM3_ROOT}/client/deps/tinycbor
             ${ADDITIONAL_DIRS}
     )
 endforeach()

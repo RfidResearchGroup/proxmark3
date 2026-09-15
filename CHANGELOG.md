@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf mfdes sim` - use dfc-core with temporary emulator workspace and direct APDU testing (@cindersocket)
+- Added `hf mfdes` - DFC/DFCB credential support, SPIFFS load/save and `view --emu` (@cindersocket)
+- Added `HF_DFCSIM` - single-card SPIFFS standalone with automatic factory credential creation and persistence (@cindersocket)
+- Fixed USB - buffered commands and empty OUT packets no longer stall PM3/PM5 communication (@cindersocket)
+- Fixed CMake - compress firmware data without FPGA padding so startup decompression fits (@cindersocket)
 - Fixed `hf mfdes` - GetDFNames is no longer sent inside an authenticated session, which permanently disabled DESFire EV1 cards (@iceman1001)
 - Added `hf mfdes` - the five DESFire status codes that mean the card damaged or disabled itself are now named instead of reported as `-20` (@iceman1001)
 - Fixed `hf mfdes` - a command error now drops the client's secure channel, since the PICC has already ended the authentication (@iceman1001)

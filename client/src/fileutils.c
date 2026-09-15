@@ -776,7 +776,9 @@ static void desfire_json_save_app(json_t *root, char *path, size_t pathlen, cons
             snprintf(path, pathlen, "%s.TypeRaw", fpath);
             JsonSaveBufAsHexCompact(root, path, (uint8_t *)&f->type, 1);
             snprintf(path, pathlen, "%s.CommMode", fpath);
-            JsonSaveStr(root, path, desfire_comm_mode_name(f->commmode));
+            JsonSaveStr(root, path, desfire_comm_mode_name(f->commmode & 0x03));
+            snprintf(path, pathlen, "%s.CommModeRaw", fpath);
+            JsonSaveBufAsHexCompact(root, path, (uint8_t *)&f->commmode, 1);
             snprintf(path, pathlen, "%s.AccessRights", fpath);
             desfire_json_save_u16(root, path, f->accessrights);
 
@@ -875,7 +877,7 @@ static uint8_t desfire_comm_mode_from_name(const char *name) {
             return i;
         }
     }
-    return 0;
+    return UINT8_MAX;
 }
 
 static uint32_t json_load_int(json_t *root, const char *path, uint32_t def) {
@@ -1057,7 +1059,20 @@ static int desfire_json_load_app(json_t *japp, const char *aidstr, desfire_dump_
         JsonLoadBufAsHex(jfile, "$.TypeRaw", &f->type, 1, &len);
         f->settings_ok = (len == 1);
 
-        f->commmode = desfire_comm_mode_from_name(json_load_str(jfile, "$.CommMode"));
+        if (json_object_get(jfile, "CommModeRaw") != NULL) {
+            len = 0;
+            JsonLoadBufAsHex(jfile, "$.CommModeRaw", &f->commmode, 1, &len);
+            if (len != 1) {
+                PrintAndLogEx(ERR, "Invalid DESFire CommModeRaw");
+                return PM3_EINVARG;
+            }
+        } else {
+            f->commmode = desfire_comm_mode_from_name(json_load_str(jfile, "$.CommMode"));
+            if (f->commmode == UINT8_MAX) {
+                PrintAndLogEx(ERR, "Unknown DESFire CommMode without CommModeRaw");
+                return PM3_EINVARG;
+            }
+        }
 
         len = 0;
         JsonLoadBufAsHex(jfile, "$.AccessRights", tmp, sizeof(tmp), &len);

@@ -817,11 +817,20 @@ Check column "offline" for their availability.
 |`hf mfdes getfileisoids `|N       |`Get File ISO IDs list`
 |`hf mfdes lsfiles       `|N       |`Show all files list`
 |`hf mfdes dump          `|N       |`Dump all files`
-|`hf mfdes view          `|Y       |`Display content from tag dump file`
+|`hf mfdes view          `|Y       |`Display a dump file or emulator memory (--emu)`
 |`hf mfdes eload         `|N       |`Upload file into emulator memory`
 |`hf mfdes esave         `|N       |`Save emulator memory to file`
-|`hf mfdes eview         `|N       |`View emulator memory`
+|`hf mfdes eview         `|N       |`Alias for view --emu`
 |`hf mfdes sim           `|N       |`Simulate DESFire card from emulator memory`
+|`hf mfdes etest         `|N       |`Manage direct emulator test session`
+|`hf mfdes escan         `|N       |`Activate the direct emulator`
+|`hf mfdes efieldoff     `|N       |`Drop the direct emulator field`
+|`hf mfdes eapdu         `|N       |`Send an APDU directly to the emulator`
+|`hf mfdes eframe        `|N       |`Send an ISO-DEP frame directly to the emulator`
+|`hf mfdes erandom       `|N       |`Inject emulator random bytes`
+|`hf mfdes etime         `|N       |`Advance direct emulator time`
+|`hf mfdes ecleardirty   `|N       |`Clear emulator dirty state`
+|`hf mfdes estate        `|N       |`Show direct emulator state`
 |`hf mfdes createfile    `|N       |`Create Standard/Backup File`
 |`hf mfdes createvaluefile`|N       |`Create Value File`
 |`hf mfdes createrecordfile`|N       |`Create Linear/Cyclic Record File`

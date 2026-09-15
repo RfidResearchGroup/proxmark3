@@ -656,6 +656,9 @@ while true; do
       if ! CheckExecute "emv test"                       "$CLIENTBIN -c 'emv test'" "Tests \( ok"; then break; fi
       if ! CheckExecute "hf cipurse test"                "$CLIENTBIN -c 'hf cipurse test'" "Tests \( ok"; then break; fi
       if ! CheckExecute "hf mfdes test"                  "$CLIENTBIN -c 'hf mfdes test'"   "Tests \( ok"; then break; fi
+      if ! CheckExecute "hf mfdes JSON raw comm mode"    "$CLIENTBIN -c 'hf mfdes view -f traces/hf-mfdes-json-commmode.json -v'" "Comm mode.*encrypt"; then break; fi
+      if ! CheckExecute "hf mfdes JSON unknown mode"    "$CLIENTBIN -c 'hf mfdes view -f traces/hf-mfdes-json-commmode-invalid.json' 2>&1" "Unknown DESFire CommMode without CommModeRaw"; then break; fi
+      if ! CheckExecute "hf mfdes view conflicting sources" "$CLIENTBIN -c 'hf mfdes view --emu -f traces/hf-mfdes-json-commmode.json' 2>&1" "Specify either --file or --emu"; then break; fi
       if ! CheckExecute "hf gst test"                    "$CLIENTBIN -c 'hf gst test'"     "Tests \( ok"; then break; fi
       if ! CheckExecute "hf saflok test"                 "$CLIENTBIN -c 'hf saflok test'"  "Tests \( ok"; then break; fi
       if ! CheckExecute "mad test"                       "$CLIENTBIN -c 'mad test'"        "Tests \( ok"; then break; fi

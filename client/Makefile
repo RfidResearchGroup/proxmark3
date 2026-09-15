@@ -484,7 +484,8 @@ CFLAGS += $(MYDEFS) $(MYCFLAGS) $(MYINCLUDES)
 
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
 PM3CFLAGS = $(CFLAGS)
-PM3CFLAGS += -I./src -I./include -I../include -I../common -I../common_fpga $(PM3INCLUDES) $(INCLUDES)
+PM3CFLAGS += -I./src -I./include -I../include -I../common -I../common_fpga \
+    -I../common/dfc-core/src -I../common/dfc-core/port $(PM3INCLUDES) $(INCLUDES)
 # WIP Testing
 #PM3CFLAGS += -std=c11 -pedantic
 
@@ -769,6 +770,14 @@ SRCS =  mifare/aiddesfire.c \
         cmdhflto.c \
         cmdhfmf.c \
         cmdhfmfdes.c \
+        mifare/dfcfile.c \
+        ../common/dfc-core/src/dfc_common.c \
+        ../common/dfc-core/src/dfc_credential.c \
+        ../common/dfc-core/src/dfc_crypto.c \
+        ../common/dfc-core/src/dfc_der.c \
+        ../common/dfc-core/src/dfc_profile.c \
+        ../common/dfc-core/src/dfc_text.c \
+        dfc_port_client.c \
         cmdhfmfhard.c \
         cmdhfmfp.c \
         cmdhfmfsen.c \

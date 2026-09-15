@@ -53,6 +53,8 @@
 #include "mifare/aiddesfire.h"
 #include "mifare/prime.h"
 #include "mifare/desfireem.h"   // emulator memory card image
+#include "mifare/dfcfile.h"
+#include "cmdflashmemspiffs.h"
 #include "util.h"
 #include "crypto/originality.h"
 
@@ -9160,112 +9162,8 @@ static int CmdHF14ADesSim(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHF14ADesELoad(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes eload",
-                  "Load a DESFire card dump into emulator memory.\n"
-                  "The dump is packed into the on-device card image, see doc/mfdes_dump_format.md",
-                  "hf mfdes eload -f hf-mfdes-01020304050607-dump.json");
 
-    void *argtable[] = {
-        arg_param_begin,
-        arg_str1("f", "file", "<fn>", "Filename of dump"),
-        arg_lit0("v", "verbose", "Verbose output"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
-
-    int fnlen = 0;
-    char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-    bool verbose = arg_get_lit(ctx, 2);
-    CLIParserFree(ctx);
-
-    desfire_dump_t *dump = calloc(1, sizeof(desfire_dump_t));
-    if (dump == NULL) {
-        PrintAndLogEx(ERR, "Failed to allocate memory");
-        return PM3_EMALLOC;
-    }
-
-    size_t dlen = 0;
-    int res = loadFileJSON(filename, dump, sizeof(desfire_dump_t), &dlen, NULL);
-    if (res != PM3_SUCCESS) {
-        free(dump);
-        return res;
-    }
-
-    if (dlen != sizeof(desfire_dump_t)) {
-        PrintAndLogEx(ERR, "`" _YELLOW_("%s") "` is not a DESFire card dump", filename);
-        desfire_dump_free(dump);
-        free(dump);
-        return PM3_EINVARG;
-    }
-
-    // the device tells us how much emulator memory it has, so a platform with
-    // more of it holds a bigger card with no change here
-    size_t emsize = g_conn.em_size;
-    if (emsize == 0) {
-        PrintAndLogEx(ERR, "Device did not report an emulator memory size");
-        desfire_dump_free(dump);
-        free(dump);
-        return PM3_EDEVNOTSUPP;
-    }
-
-    uint8_t *img = calloc(emsize, sizeof(uint8_t));
-    if (img == NULL) {
-        PrintAndLogEx(ERR, "Failed to allocate memory");
-        desfire_dump_free(dump);
-        free(dump);
-        return PM3_EMALLOC;
-    }
-
-    size_t used = 0;
-    res = desfire_em_pack(dump, img, emsize, &used);
-    desfire_dump_free(dump);
-    free(dump);
-
-    if (res != PM3_SUCCESS) {
-        free(img);
-        return res;
-    }
-
-    if (verbose) {
-        desfire_em_print(img, emsize);
-    }
-
-    res = desfire_em_upload(img, emsize);
-    free(img);
-
-    if (res != PM3_SUCCESS) {
-        return res;
-    }
-
-    PrintAndLogEx(SUCCESS, "Done!");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfdes eview`") " to verify");
-    return PM3_SUCCESS;
-}
-
-static int CmdHF14ADesESave(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes esave",
-                  "Save the card image in emulator memory to a dump file.\n"
-                  "Shows what a reader left behind if one has been talking to the simulation",
-                  "hf mfdes esave -f myfile");
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_str0("f", "file", "<fn>", "Filename, if no <fn> UID will be used as filename"),
-        arg_lit0("v", "verbose", "Verbose output"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-
-    int fnlen = 0;
-    char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-    bool verbose = arg_get_lit(ctx, 2);
-    CLIParserFree(ctx);
-
+static int DesfireViewEmulator(bool verbose) {
     size_t emsize = g_conn.em_size;
     if (emsize == 0) {
         PrintAndLogEx(ERR, "Device did not report an emulator memory size");
@@ -9284,74 +9182,9 @@ static int CmdHF14ADesESave(const char *Cmd) {
         return res;
     }
 
-    if (verbose) {
-        desfire_em_print(img, emsize);
-    }
-
-    desfire_dump_t *dump = calloc(1, sizeof(desfire_dump_t));
-    if (dump == NULL) {
-        PrintAndLogEx(ERR, "Failed to allocate memory");
-        free(img);
-        return PM3_EMALLOC;
-    }
-
-    res = desfire_em_unpack(img, emsize, dump);
-    free(img);
-
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(HINT, "Hint: emulator memory holds no DESFire card image, try " _YELLOW_("`hf mfdes eload`"));
-        free(dump);
-        return res;
-    }
-
-    if (fnlen < 1) {
-        if (dump->card_info.uidlen == 0) {
-            PrintAndLogEx(WARNING, "No UID to build a filename from, use " _YELLOW_("-f <fn>"));
-            desfire_dump_free(dump);
-            free(dump);
-            return PM3_ESOFT;
-        }
-        PrintAndLogEx(INFO, "Using UID as filename");
-        strcat(filename, "hf-mfdes-");
-        FillFileNameByUID(filename, dump->card_info.uid, "-dump", dump->card_info.uidlen);
-    }
-
-    pm3_save_dump_json(filename, (uint8_t *)dump, sizeof(desfire_dump_t), jsfMfDesfire_v1);
-
-    desfire_dump_free(dump);
-    free(dump);
-    return PM3_SUCCESS;
-}
-
-static int CmdHF14ADesEView(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes eview",
-                  "Show the DESFire card image currently in emulator memory",
-                  "hf mfdes eview");
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_lit0("v", "verbose", "Also print every application and file"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool verbose = arg_get_lit(ctx, 1);
-    CLIParserFree(ctx);
-
-    size_t emsize = g_conn.em_size;
-    if (emsize == 0) {
-        PrintAndLogEx(ERR, "Device did not report an emulator memory size");
-        return PM3_EDEVNOTSUPP;
-    }
-
-    uint8_t *img = calloc(emsize, sizeof(uint8_t));
-    if (img == NULL) {
-        PrintAndLogEx(ERR, "Failed to allocate memory");
-        return PM3_EMALLOC;
-    }
-
-    int res = desfire_em_download(img, emsize);
-    if (res != PM3_SUCCESS) {
+    size_t dfcb_length = dfc_file_length(img, emsize);
+    if (dfcb_length) {
+        res = dfc_file_print(img, dfcb_length, verbose);
         free(img);
         return res;
     }
@@ -9378,25 +9211,167 @@ static int CmdHF14ADesEView(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHF14ADesView(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfdes view",
-                  "Print a DESFire card dump file (json)",
-                  "hf mfdes view -f hf-mfdes-01020304050607-dump.json");
+#define DFC_SPIFFS_FILENAME "hf_dfcsim.dfcb"
 
+static int CmdHF14ADesELoad(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes eload",
+                  "Load a JSON, DFC, or DFCB credential into emulator memory",
+                  "hf mfdes eload -f card.dfc\n"
+                  "hf mfdes eload -f card.dfcb\n"
+                  "hf mfdes eload --spiffs");
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "Filename of dump"),
-        arg_lit0("v", "verbose", "Verbose output"),
+        arg_str0("f", "file", "<fn>", "JSON, DFC, or DFCB credential"),
+        arg_lit0(NULL, "spiffs", "Load hf_dfcsim.dfcb from SPIFFS"),
+        arg_lit0("v", "verbose", "Print the loaded credential"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
+    char filename[FILE_PATH_SIZE] = {0};
+    int filename_length = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, sizeof(filename), &filename_length);
+    bool from_spiffs = arg_get_lit(ctx, 2);
+    bool verbose = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+    if (from_spiffs == (filename_length > 0)) {
+        PrintAndLogEx(ERR, "Choose exactly one of --file or --spiffs");
+        return PM3_EINVARG;
+    }
+    if (from_spiffs && !IfPm3Flash()) {
+        PrintAndLogEx(ERR, "SPIFFS is not supported by this device firmware");
+        return PM3_EDEVNOTSUPP;
+    }
+
+    size_t emsize = g_conn.em_size;
+    uint8_t *image = calloc(emsize, 1);
+    if (emsize == 0 || image == NULL) {
+        free(image);
+        return emsize == 0 ? PM3_EDEVNOTSUPP : PM3_EMALLOC;
+    }
+
+    size_t image_length = 0;
+    int status;
+    if (from_spiffs) {
+        void *stored = NULL;
+        size_t stored_length = 0;
+        char spiffs_name[] = DFC_SPIFFS_FILENAME;
+        status = flashmem_spiffs_download(
+            spiffs_name, strlen(spiffs_name), &stored, &stored_length);
+        if (status == PM3_SUCCESS) {
+            image_length = dfc_file_length(stored, stored_length);
+            if (image_length == 0 || image_length > emsize) {
+                status = PM3_EINVARG;
+            } else {
+                memcpy(image, stored, image_length);
+            }
+        }
+        free(stored);
+    } else {
+        status = dfc_file_load(filename, image, emsize, &image_length);
+    }
+
+    if (status == PM3_SUCCESS) {
+        if (verbose) dfc_file_print(image, image_length, true);
+        status = desfire_em_upload(image, emsize);
+    }
+    free(image);
+    if (status == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Loaded %zu-byte DFCB credential", image_length);
+    }
+    return status;
+}
+
+static int CmdHF14ADesESave(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes esave",
+                  "Save emulator memory as DFC, DFCB, or to SPIFFS",
+                  "hf mfdes esave -f card\n"
+                  "hf mfdes esave -f card --format dfcb\n"
+                  "hf mfdes esave --spiffs");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<fn>", "Output filename"),
+        arg_str0(NULL, "format", "<dfc|dfcb|json>", "Output format, default dfc"),
+        arg_lit0(NULL, "spiffs", "Save as hf_dfcsim.dfcb in SPIFFS"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    char filename[FILE_PATH_SIZE] = "hf-mfdes-emulator";
+    int filename_length = 0;
+    if (arg_get_str(ctx, 1)->count) {
+        memset(filename, 0, sizeof(filename));
+        CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, sizeof(filename), &filename_length);
+    }
+    const char *requested = arg_get_str(ctx, 2)->count ? arg_get_str(ctx, 2)->sval[0] : "dfc";
+    const char *format = strcmp(requested, "dfc") == 0 ? "dfc" :
+                         strcmp(requested, "dfcb") == 0 ? "dfcb" :
+                         strcmp(requested, "json") == 0 ? "json" : NULL;
+    bool to_spiffs = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+    if (to_spiffs && filename_length > 0) {
+        PrintAndLogEx(ERR, "--file and --spiffs are mutually exclusive");
+        return PM3_EINVARG;
+    }
+    if (to_spiffs && !IfPm3Flash()) {
+        PrintAndLogEx(ERR, "SPIFFS is not supported by this device firmware");
+        return PM3_EDEVNOTSUPP;
+    }
+    if (format == NULL) {
+        return PM3_EINVARG;
+    }
+
+    size_t emsize = g_conn.em_size;
+    uint8_t *image = calloc(emsize, 1);
+    if (emsize == 0 || image == NULL) {
+        free(image);
+        return emsize == 0 ? PM3_EDEVNOTSUPP : PM3_EMALLOC;
+    }
+    int status = desfire_em_download(image, emsize);
+    size_t image_length = status == PM3_SUCCESS ? dfc_file_length(image, emsize) : 0;
+    if (status == PM3_SUCCESS && image_length == 0) {
+        status = PM3_EINVARG;
+    }
+    if (status == PM3_SUCCESS && to_spiffs) {
+        status = flashmem_spiffs_load(DFC_SPIFFS_FILENAME, image, image_length);
+    } else if (status == PM3_SUCCESS) {
+        status = dfc_file_save(filename, format, image, image_length);
+    }
+    free(image);
+    return status;
+}
+
+static int DesfireView(const char *Cmd, bool emulator) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes view",
+                  "Print a DESFire dump file or the emulator image",
+                  "hf mfdes view -f hf-mfdes-01020304050607-dump.json\n"
+                  "hf mfdes view --emu -v");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<fn>", "Filename of dump"),
+        arg_lit0("v", "verbose", "Verbose output"),
+        arg_lit0(NULL, "emu", "Read emulator memory instead of a file"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, emulator);
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     bool verbose = arg_get_lit(ctx, 2);
+    emulator |= arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
+
+    if (emulator == (fnlen != 0)) {
+        PrintAndLogEx(ERR, "Specify either --file or --emu");
+        return PM3_EINVARG;
+    }
+    if (emulator) {
+        if (!IfPm3Iso14443a()) return PM3_EDEVNOTSUPP;
+        return DesfireViewEmulator(verbose);
+    }
 
     desfire_dump_t *dump = calloc(1, sizeof(desfire_dump_t));
     if (dump == NULL) {
@@ -9476,6 +9451,14 @@ static int CmdHF14ADesView(const char *Cmd) {
     desfire_dump_free(dump);
     free(dump);
     return PM3_SUCCESS;
+}
+
+static int CmdHF14ADesView(const char *Cmd) {
+    return DesfireView(Cmd, false);
+}
+
+static int CmdHF14ADesEView(const char *Cmd) {
+    return DesfireView(Cmd, true);
 }
 
 static bool MfdSelectionHasAny(const mfd_app_select *select) {
@@ -11092,6 +11075,190 @@ static int CmdHF14ADesTest(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static bool g_dfc_machine_output;
+
+static int DfcSimRequest(
+    uint8_t operation,
+    const uint8_t *data,
+    size_t data_length,
+    PacketResponseNG *response) {
+    if (data_length + 1 > PM3_CMD_DATA_SIZE) {
+        return PM3_EOVFLOW;
+    }
+    uint8_t payload[PM3_CMD_DATA_SIZE] = {operation};
+    if (data_length) {
+        memcpy(payload + 1, data, data_length);
+    }
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_DFC_SIMULATE, payload, data_length + 1);
+    if (!WaitForResponseTimeout(CMD_HF_DFC_SIMULATE, response, 2000)) {
+        return PM3_ETIMEOUT;
+    }
+    return response->status;
+}
+
+static void DfcMachineResult(const char *command, int status, const uint8_t *data, size_t length) {
+    if (!g_dfc_machine_output) {
+        return;
+    }
+    PrintAndLogEx(
+        NORMAL,
+        "{\"command\":\"%s\",\"ok\":%s,\"status\":%d,\"data\":\"%s\"}",
+        command,
+        status == PM3_SUCCESS ? "true" : "false",
+        status,
+        data && length ? sprint_hex_inrow(data, length) : "");
+}
+
+static int CmdHF14ADesETest(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes etest",
+                  "Start or end a direct, no-RF emulator test session",
+                  "hf mfdes etest begin --machine\n"
+                  "hf mfdes etest end");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1(NULL, NULL, "<begin|end>", "Session operation"),
+        arg_lit0(NULL, "machine", "Emit stable JSON result lines"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    const char *operation = arg_get_str(ctx, 1)->sval[0];
+    bool begin = strcmp(operation, "begin") == 0;
+    bool end = strcmp(operation, "end") == 0;
+    bool machine = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    uint8_t code;
+    if (begin) {
+        code = DFC_SIM_BEGIN;
+        g_dfc_machine_output = machine;
+    } else if (end) {
+        code = DFC_SIM_END;
+    } else {
+        return PM3_EINVARG;
+    }
+
+    PacketResponseNG response = {0};
+    int status = DfcSimRequest(code, NULL, 0, &response);
+    DfcMachineResult(begin ? "begin" : "end", status, response.data.asBytes, response.length);
+    if (code == DFC_SIM_END) {
+        g_dfc_machine_output = false;
+    }
+    return status;
+}
+
+static int DfcSimpleOperation(const char *name, uint8_t operation) {
+    PacketResponseNG response = {0};
+    int status = DfcSimRequest(operation, NULL, 0, &response);
+    DfcMachineResult(name, status, response.data.asBytes, response.length);
+    if (!g_dfc_machine_output && status == PM3_SUCCESS && response.length) {
+        PrintAndLogEx(SUCCESS, "%s", sprint_hex_inrow(response.data.asBytes, response.length));
+    }
+    return status;
+}
+
+static int CmdHF14ADesEScan(const char *Cmd) {
+    (void)Cmd;
+    return DfcSimpleOperation("escan", DFC_SIM_SCAN);
+}
+
+static int CmdHF14ADesEFieldOff(const char *Cmd) {
+    (void)Cmd;
+    return DfcSimpleOperation("efieldoff", DFC_SIM_FIELD_OFF);
+}
+
+static int CmdHF14ADesEClearDirty(const char *Cmd) {
+    (void)Cmd;
+    return DfcSimpleOperation("ecleardirty", DFC_SIM_CLEAR_DIRTY);
+}
+
+static int CmdHF14ADesEState(const char *Cmd) {
+    (void)Cmd;
+    PacketResponseNG response = {0};
+    int status = DfcSimRequest(DFC_SIM_STATE, NULL, 0, &response);
+    if (g_dfc_machine_output && status == PM3_SUCCESS && response.length == 4) {
+        PrintAndLogEx(
+            NORMAL,
+            "{\"command\":\"estate\",\"ok\":true,\"dirty\":%s,"
+            "\"random_underflow\":%s,\"random_remaining\":%u}",
+            response.data.asBytes[0] ? "true" : "false",
+            response.data.asBytes[1] ? "true" : "false",
+            response.data.asBytes[2] | (response.data.asBytes[3] << 8));
+    } else {
+        DfcMachineResult("estate", status, response.data.asBytes, response.length);
+    }
+    return status;
+}
+
+static int DfcHexOperation(const char *Cmd, const char *name, uint8_t operation, bool accept_dialect) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, name, "Send bytes directly to the in-memory emulator", "");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<hex>", "Input bytes"),
+        arg_str0(NULL, "dialect", "<native|native-apdu|iso-apdu>", "Wire dialect"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    uint8_t data[PM3_CMD_DATA_SIZE - 1] = {0};
+    int data_length = 0;
+    int parse_status = CLIParamHexToBuf(
+        arg_get_str(ctx, 1), data, sizeof(data), &data_length);
+    const char *dialect = arg_get_str(ctx, 2)->count ? arg_get_str(ctx, 2)->sval[0] : "native-apdu";
+    bool dialect_valid = strcmp(dialect, "native") == 0 ||
+        strcmp(dialect, "native-apdu") == 0 || strcmp(dialect, "iso-apdu") == 0;
+    bool default_dialect = strcmp(dialect, "native-apdu") == 0;
+    CLIParserFree(ctx);
+    if (parse_status != 0 || !dialect_valid ||
+            (!accept_dialect && !default_dialect)) {
+        return PM3_EINVARG;
+    }
+
+    PacketResponseNG response = {0};
+    int status = DfcSimRequest(operation, data, data_length, &response);
+    DfcMachineResult(name, status, response.data.asBytes, response.length);
+    if (!g_dfc_machine_output && status == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "%s", sprint_hex_inrow(response.data.asBytes, response.length));
+    }
+    return status;
+}
+
+static int CmdHF14ADesEApdu(const char *Cmd) {
+    return DfcHexOperation(Cmd, "eapdu", DFC_SIM_APDU, true);
+}
+
+static int CmdHF14ADesEFrame(const char *Cmd) {
+    return DfcHexOperation(Cmd, "eframe", DFC_SIM_FRAME, false);
+}
+
+static int CmdHF14ADesERandom(const char *Cmd) {
+    return DfcHexOperation(Cmd, "erandom", DFC_SIM_RANDOM, false);
+}
+
+static int CmdHF14ADesETime(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes etime", "Advance emulator time", "hf mfdes etime -m 100");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("m", "milliseconds", "<dec>", "Elapsed milliseconds"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    uint32_t milliseconds = arg_get_int_def(ctx, 1, 0);
+    CLIParserFree(ctx);
+    uint8_t data[] = {
+        milliseconds,
+        milliseconds >> 8,
+        milliseconds >> 16,
+        milliseconds >> 24,
+    };
+    PacketResponseNG response = {0};
+    int status = DfcSimRequest(DFC_SIM_ADVANCE, data, sizeof(data), &response);
+    DfcMachineResult("etime", status, response.data.asBytes, response.length);
+    return status;
+}
+
 static command_t CommandTable[] = {
     {"help",             CmdHelp,                     AlwaysAvailable, "This help"},
     {"list",             CmdHF14ADesList,             AlwaysAvailable, "List DESFire (ISO 14443A) history"},
@@ -11131,11 +11298,20 @@ static command_t CommandTable[] = {
     {"getfileisoids",    CmdHF14ADesGetFileISOIDs,    IfPm3Iso14443a,  "Get File ISO IDs list"},
     {"lsfiles",          CmdHF14ADesLsFiles,          IfPm3Iso14443a,  "Show all files list"},
     {"dump",             CmdHF14ADesDump,             IfPm3Iso14443a,  "Dump all files"},
-    {"view",             CmdHF14ADesView,             AlwaysAvailable, "Display content from tag dump file"},
+    {"view",             CmdHF14ADesView,             AlwaysAvailable, "Display a dump file or emulator memory (--emu)"},
     {"eload",            CmdHF14ADesELoad,            IfPm3Iso14443a,  "Upload file into emulator memory"},
     {"esave",            CmdHF14ADesESave,            IfPm3Iso14443a,  "Save emulator memory to file"},
-    {"eview",            CmdHF14ADesEView,            IfPm3Iso14443a,  "View emulator memory"},
+    {"eview",            CmdHF14ADesEView,            IfPm3Iso14443a,  "Alias for view --emu"},
     {"sim",              CmdHF14ADesSim,              IfPm3Iso14443a,  "Simulate DESFire card from emulator memory"},
+    {"etest",            CmdHF14ADesETest,            IfPm3Iso14443a,  "Manage direct emulator test session"},
+    {"escan",            CmdHF14ADesEScan,            IfPm3Iso14443a,  "Activate the direct emulator"},
+    {"efieldoff",        CmdHF14ADesEFieldOff,        IfPm3Iso14443a,  "Drop the direct emulator field"},
+    {"eapdu",            CmdHF14ADesEApdu,            IfPm3Iso14443a,  "Send an APDU directly to the emulator"},
+    {"eframe",           CmdHF14ADesEFrame,           IfPm3Iso14443a,  "Send an ISO-DEP frame directly to the emulator"},
+    {"erandom",          CmdHF14ADesERandom,          IfPm3Iso14443a,  "Inject emulator random bytes"},
+    {"etime",            CmdHF14ADesETime,            IfPm3Iso14443a,  "Advance direct emulator time"},
+    {"ecleardirty",      CmdHF14ADesEClearDirty,      IfPm3Iso14443a,  "Clear emulator dirty state"},
+    {"estate",           CmdHF14ADesEState,           IfPm3Iso14443a,  "Show direct emulator state"},
     {"createfile",       CmdHF14ADesCreateFile,       IfPm3Iso14443a,  "Create Standard/Backup File"},
     {"createvaluefile",  CmdHF14ADesCreateValueFile,  IfPm3Iso14443a,  "Create Value File"},
     {"createrecordfile", CmdHF14ADesCreateRecordFile, IfPm3Iso14443a,  "Create Linear/Cyclic Record File"},

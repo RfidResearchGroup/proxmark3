@@ -671,6 +671,15 @@ int desfire_em_upload(const uint8_t *img, size_t imglen) {
         }
     }
 
+    // MEMSET has no response. A ping provides an ordered barrier so callers
+    // cannot start using emulator memory while the upload is still in flight.
+    clearCommandBuffer();
+    SendCommandNG(CMD_PING, NULL, 0);
+    if (WaitForResponseTimeout(CMD_PING, NULL, 1000) == false) {
+        PrintAndLogEx(ERR, "Timed out waiting for emulator upload to finish");
+        return PM3_ETIMEOUT;
+    }
+
     return PM3_SUCCESS;
 }
 
