@@ -11108,6 +11108,22 @@
             ],
             "usage": "hw bwm wifi [-h] [--ssid <ssid>] [--pwd <pwd>] [--port <dec>] [--hostname <name>]"
         },
+        "hw bwm wifipower": {
+            "command": "hw bwm wifipower",
+            "description": "Show or set how much power the BWM (ESP32) spends on WiFi. off turns WiFi fully off (BLE-only, persists across reboots; the default state, same as `hw bwm wifi stop`). Bring it back with hw bwm wifi --ssid <ssid> --pwd <pwd>. The other three set the modem power-save type used while WiFi is up, stored on the BWM: min (default) sleeps between DTIM beacons, the ESP-IDF default; max sleeps for the whole listen interval, lowest current but slower to react; none never sleeps, lowest latency, highest current. Independent of hw bwm powersave. PM5 only.",
+            "notes": [
+                "hw bwm wifipower -> show whether WiFi is up and the power-save type",
+                "hw bwm wifipower off -> WiFi fully off, BLE-only",
+                "hw bwm wifipower none -> modem always on while WiFi is up",
+                "hw bwm wifipower min -> ESP-IDF default (DTIM sleep)",
+                "hw bwm wifipower max -> deepest modem sleep"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hw bwm wifipower [-h]"
+        },
         "hw connect": {
             "command": "hw connect",
             "description": "Connects to a Proxmark3 device via specified serial port. Baudrate here is only for physical UART or UART-BT, NOT for USB-CDC or blue shark add-on",
@@ -16641,8 +16657,9 @@
         }
     },
     "metadata": {
-        "commands_extracted": 926,
-        "commands_extracted": 926,
+        "commands_extracted": 928,
+        "commands_extracted": 928,
+        "commands_extracted": 928,
         "extracted_by": "PM3Help2JSON v1.00",
         "extracted_on": "2026-09-14T17:55:25+00:00"
     }

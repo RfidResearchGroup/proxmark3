@@ -27,6 +27,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added `hf mfdes view` - print a DESFire card dump file, no device needed (@iceman1001)
 - Fixed `sprint_hex` - a buffer twice the old size, so printing a long block no longer runs off the end of the static buffer (@iceman1001)
 - Added `hw powersave` - PM5 low-power idle, on by default: between commands the core drops to 48 MHz with the PLL off, the FPGA clock stopped and the CPU halted (WFI); USB now runs crystal-less off HICK. Ported from the Fantasi firmware (@Msprg)
+- Added `hw bwm powersave` - show/set the BWM (ESP32) power-save switch: DFS, light sleep and 3 s advertising, or the stock always-on behaviour, persisted on the module (@Msprg)
+- Added `hw bwm wifipower` - turn the BWM WiFi fully off, or set its modem power-save type (none/min/max), persisted on the module (@Msprg)
 - Added `vigik_recover_pk.py` - recover public keys from RSA signatures (@iceman1001)
 - Fixed `hf mf autopwn` - a sector that cannot be cracked no longer discards the keys already recovered (@iceman1001)
 - Fixed `hf mf nested` - a NAK from the tag now ends the nonce collection instead of retrying until the client times out (@iceman1001)

@@ -160,7 +160,11 @@ int bwm_cmd(uint16_t cmd, const uint8_t *req, uint16_t req_len,
                                     esp_err = (int32_t)((uint32_t)pbuf[2] | ((uint32_t)pbuf[3] << 8) |
                                                          ((uint32_t)pbuf[4] << 16) | ((uint32_t)pbuf[5] << 24));
                                 }
-                                Dbprintf("[bwm-wifi] cmd 0x%04x failed, esp_err=0x%08x", (unsigned)cmd, (unsigned)esp_err);
+                                // Expected in places (e.g. a status query while WiFi is
+                                // off): only worth seeing when debugging the link.
+                                if (g_dbglevel >= DBG_DEBUG) {
+                                    Dbprintf("[bwm-wifi] cmd 0x%04x failed, esp_err=0x%08x", (unsigned)cmd, (unsigned)esp_err);
+                                }
                                 return PM3_EFAILED;
                             }
                         }
@@ -317,25 +321,34 @@ int bwm_esp_get_version(uint8_t *buf, uint16_t *buflen, uint32_t timeout_ms) {
     return bwm_cmd(BWM_CMD_GET_VERSION_INFO, NULL, 0, buf, buflen, timeout_ms);
 }
 
-int bwm_esp_get_power_save(uint8_t *state, uint32_t timeout_ms) {
+// One u8-in / u8-out ESP setting round trip: send req (NULL/0 for a GET) and
+// expect a one-byte reply in *out. PM3_EFAILED if the ESP acked without a payload.
+static int bwm_esp_u8_cmd(uint16_t cmd, const uint8_t *req, uint16_t req_len, uint8_t *out, uint32_t timeout_ms) {
     uint16_t len = 1;
-    int r = bwm_cmd(BWM_CMD_GET_SYS_POWER_SAVE, NULL, 0, state, &len, timeout_ms);
+    int r = bwm_cmd(cmd, req, req_len, out, &len, timeout_ms);
     if (r == PM3_SUCCESS && len < 1) {
         r = PM3_EFAILED;
     }
     return r;
 }
 
+int bwm_esp_get_power_save(uint8_t *state, uint32_t timeout_ms) {
+    return bwm_esp_u8_cmd(BWM_CMD_GET_SYS_POWER_SAVE, NULL, 0, state, timeout_ms);
+}
+
 int bwm_esp_set_power_save(bool on, uint8_t *state) {
     // Applied at once on the ESP (no reboot) and saved to its NVS; the reply
     // carries the state the ESP ended up in.
     uint8_t v = on ? 1 : 0;
-    uint16_t len = 1;
-    int r = bwm_cmd(BWM_CMD_SET_SYS_POWER_SAVE, &v, 1, state, &len, 3000);
-    if (r == PM3_SUCCESS && len < 1) {
-        r = PM3_EFAILED;
-    }
-    return r;
+    return bwm_esp_u8_cmd(BWM_CMD_SET_SYS_POWER_SAVE, &v, 1, state, 3000);
+}
+
+int bwm_esp_get_wifi_ps(uint8_t *mode) {
+    return bwm_esp_u8_cmd(BWM_CMD_GET_WIFI_CFG_PS_MODE, NULL, 0, mode, 3000);
+}
+
+int bwm_esp_set_wifi_ps(uint8_t mode, uint8_t *applied) {
+    return bwm_esp_u8_cmd(BWM_CMD_SET_WIFI_CFG_PS_MODE, &mode, 1, applied, 3000);
 }
 
 int bwm_esp_get_ble_name(uint8_t *buf, uint16_t *buflen) {
