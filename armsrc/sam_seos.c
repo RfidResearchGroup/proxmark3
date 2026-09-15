@@ -63,6 +63,10 @@ static int sam_set_card_detected_seos(iso14a_card_select_t *card_select) {
 
     uint8_t *response = BigBuf_calloc(ISO7816_MAX_FRAME);
     uint16_t response_len = ISO7816_MAX_FRAME;
+    if (request == NULL || response == NULL) {
+        res = PM3_EMALLOC;
+        goto out;
+    }
 
     const uint8_t payload[] = {
         0xa0, 8, // <- SAM command

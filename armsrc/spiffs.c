@@ -930,6 +930,13 @@ void rdv40_spiffs_safe_print_tree(void) {
 
     char *resolvedlink = (char *)BigBuf_calloc(11 + SPIFFS_OBJ_NAME_LEN);
     char *linkdest = (char *)BigBuf_calloc(SPIFFS_OBJ_NAME_LEN);
+    if (resolvedlink == NULL || linkdest == NULL) {
+        DbpString("Failed to allocate memory");
+        rdv40_spiffs_lazy_mount_rollback(changed);
+        BigBuf_free();
+        return;
+    }
+
     bool printed = false;
 
     SPIFFS_opendir(&fs, "/", &d);
