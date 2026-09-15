@@ -704,10 +704,41 @@ void AT91F_USB_SendZlp(AT91PS_UDP pudp) {
 //* \brief Stall the control endpoint
 //*----------------------------------------------------------------------------
 void AT91F_USB_SendStall(AT91PS_UDP pudp) {
+
     UDP_SET_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_FORCESTALL);
-    while (!(pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_ISOERROR)) {};
-    UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, (AT91C_UDP_FORCESTALL | AT91C_UDP_ISOERROR));
-    while (pudp->UDP_CSR[AT91C_EP_CONTROL] & (AT91C_UDP_FORCESTALL | AT91C_UDP_ISOERROR)) {};
+
+    // STALLSENT only arrives once the host polls the endpoint and takes the
+    // handshake, so every way the host can fail to do that needs an exit.
+    // usb_check() is not one of them, it calls back into AT91F_CDC_Enumerate().
+    uint16_t time_out = 0;
+    while (!(pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_STALLSENT)) {
+
+        // host dropped this request and started another one
+        if (pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_RXSETUP) {
+            break;
+        }
+
+        // bus reset. Not RXSUSP: nothing in this driver writes it back to
+        // UDP_ICR, so once the bus first idles it stays latched for good.
+        if (pudp->UDP_ISR & AT91C_UDP_ENDBUSRES) {
+            break;
+        }
+
+        if (time_out++ == 0x1FFF) {
+            break;
+        }
+    }
+
+    UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, (AT91C_UDP_FORCESTALL | AT91C_UDP_STALLSENT));
+
+    // leaving the loop above early can let the host set STALLSENT after the
+    // clear, so this wait is bounded too
+    time_out = 0;
+    while (pudp->UDP_CSR[AT91C_EP_CONTROL] & (AT91C_UDP_FORCESTALL | AT91C_UDP_STALLSENT)) {
+        if (time_out++ == 0x1FFF) {
+            break;
+        }
+    }
 }
 
 //*----------------------------------------------------------------------------
