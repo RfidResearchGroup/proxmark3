@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `memcpy` - the device's own implementation now copies a word at a time when source and destination allow it (@iceman1001)
+- Changed NG replies - the outgoing frame is offset so its payload lands word aligned, taking USB transfer speed from 630 to 789 kB/s on RDV4  (@iceman1001)
+- Fixed `AT91F_USB_SendStall` - waiting for the host to collect the STALL is now bounded (@iceman1001)
 - Fixed `GET_LINE_CODING` - the CDC line coding struct is now packed to the 7 bytes the spec defines (@iceman1001)
 - Fixed USB control transfers - a descriptor whose length is an exact multiple of the 8 byte control endpoint now ends with a zero length packet (@iceman1001)
 - Fixed USB WCID descriptors - the device advertised Microsoft OS descriptor support in string 0xEE but stalled the vendor request that follows (@iceman1001)

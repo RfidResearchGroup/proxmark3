@@ -92,35 +92,42 @@ int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const v
 extern int cep_spi_write_sync(uint8_t *data, size_t len);
 
 static int reply_ng_internal(uint16_t cmd, int8_t status, uint8_t reason, const uint8_t *data, size_t len, bool ng) {
-    PacketResponseNGRaw txBufferNG;
+    // The NG preamble is 10 bytes, so data[] would sit 2 past a word boundary
+    // and memcpy could never take its word path. Offsetting the whole frame by
+    // 2 lands data[] on a word boundary. The bytes on the wire are unchanged.
+    struct {
+        uint8_t pad[2];
+        PacketResponseNGRaw raw;
+    } __attribute__((aligned(4))) frame;
+    PacketResponseNGRaw *tx = &frame.raw;
     size_t txBufferNGLen;
 
     // Compose the outgoing command frame
-    txBufferNG.pre.magic = RESPONSENG_PREAMBLE_MAGIC;
-    txBufferNG.pre.cmd = cmd;
-    txBufferNG.pre.status = status;
-    txBufferNG.pre.reason = reason;
-    txBufferNG.pre.ng = ng;
+    tx->pre.magic = RESPONSENG_PREAMBLE_MAGIC;
+    tx->pre.cmd = cmd;
+    tx->pre.status = status;
+    tx->pre.reason = reason;
+    tx->pre.ng = ng;
     if (len > PM3_CMD_DATA_SIZE) {
         len = PM3_CMD_DATA_SIZE;
         // overwrite status
-        txBufferNG.pre.status = PM3_EOVFLOW;
+        tx->pre.status = PM3_EOVFLOW;
     }
 
     // length is only 15bit (32768)
-    txBufferNG.pre.length = (len & 0x7FFF);
+    tx->pre.length = (len & 0x7FFF);
 
     // Add the (optional) content to the frame, with a maximum size of PM3_CMD_DATA_SIZE
     if (data && len) {
-        memcpy(txBufferNG.data, data, len);
+        memcpy(tx->data, data, len);
     }
 
-    PacketResponseNGPostamble *tx_post = (PacketResponseNGPostamble *)((uint8_t *)&txBufferNG + sizeof(PacketResponseNGPreamble) + len);
+    PacketResponseNGPostamble *tx_post = (PacketResponseNGPostamble *)((uint8_t *)tx + sizeof(PacketResponseNGPreamble) + len);
 
     // Note: if we send to both FPC & USB, we'll set CRC for both if any of them require CRC
     if ((g_reply_via_fpc && g_reply_with_crc_on_fpc) || ((g_reply_via_usb) && g_reply_with_crc_on_usb)) {
         uint8_t first, second;
-        compute_crc(CRC_14443_A, (uint8_t *)&txBufferNG, sizeof(PacketResponseNGPreamble) + len, &first, &second);
+        compute_crc(CRC_14443_A, (uint8_t *)tx, sizeof(PacketResponseNGPreamble) + len, &first, &second);
         tx_post->crc = ((first << 8) | second);
     } else {
         tx_post->crc = RESPONSENG_POSTAMBLE_MAGIC;
@@ -134,17 +141,17 @@ static int reply_ng_internal(uint16_t cmd, int8_t status, uint8_t reason, const 
     // Send frame and make sure all bytes are transmitted
 
     if (g_reply_via_usb) {
-        resultusb = usb_write((uint8_t *)&txBufferNG, txBufferNGLen);
+        resultusb = usb_write((uint8_t *)tx, txBufferNGLen);
     }
     if (g_reply_via_fpc) {
 
         // TODO DXL 测试阶段，暂时通过SPI应答
-        // resultusb = cep_spi_write_sync((uint8_t *)&txBufferNG, txBufferNGLen);
+        // resultusb = cep_spi_write_sync((uint8_t *)tx, txBufferNGLen);
 
 #if defined(WITH_BWM_FORWARD)
-        resultfpc = bwm_fwd_writebuffer_sync((uint8_t *)&txBufferNG, txBufferNGLen);
+        resultfpc = bwm_fwd_writebuffer_sync((uint8_t *)tx, txBufferNGLen);
 #elif defined(WITH_FPC_USART_HOST)
-        resultfpc = usart_writebuffer_sync((uint8_t *)&txBufferNG, txBufferNGLen);
+        resultfpc = usart_writebuffer_sync((uint8_t *)tx, txBufferNGLen);
 #else
         return PM3_EDEVNOTSUPP;
 #endif
