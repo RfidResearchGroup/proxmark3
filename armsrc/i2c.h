@@ -72,8 +72,17 @@
 //Old value was 20/22 (16 kHz) - increased to 4/2 (100 kHz) and seems to be working reliably.
 //It was previously reported that 5/7 (59 kHz) was too fast, but this was before SIM module firmware updates.
 //Values above 4/2 (100 kHz) have been tested to work successfully, but they seem to run slower than 4/2.
+#ifndef PM5
 #define I2C_DELAY_1CLK_US       4
 #define I2C_DELAY_2CLK_US       2
+#endif 
+
+
+//Gating for PM5 old values as the new ones seems to be incompatible until further changes
+#ifdef PM5
+#define I2C_DELAY_1CLK_US       20
+#define I2C_DELAY_2CLK_US       22
+#endif 
 
 // Only one delay per bit is rise time critical: the one bracketing an SDA
 // transition, where a released line has to charge through the pull-up before
