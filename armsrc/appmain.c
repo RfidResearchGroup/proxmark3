@@ -1993,6 +1993,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             }
 
             uint8_t *buf = BigBuf_calloc(payload->length);
+            if (buf == NULL) {
+                reply_ng(CMD_HF_ISO15693_EML_GETMEM, PM3_EMALLOC, NULL, 0);
+                return;
+            }
             emlGet(buf, payload->offset, payload->length);
             LED_B_ON();
             reply_ng(CMD_HF_ISO15693_EML_GETMEM, PM3_SUCCESS, buf, payload->length);
@@ -2613,6 +2617,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             }
 
             uint8_t *buf = BigBuf_calloc(size);
+            if (buf == NULL) {
+                reply_ng(CMD_HF_MIFARE_EML_MEMGET, PM3_EMALLOC, NULL, 0);
+                return;
+            }
 
             emlGetMem_xt(buf, payload->blockno, payload->blockcnt, payload->blockwidth); // data, block num, blocks count (max 4)
 
@@ -3060,6 +3068,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint16_t available;
             uint16_t pre_available = 0;
             uint8_t *dest = BigBuf_calloc(USART_FIFOLEN);
+            if (dest == NULL) {
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Failed to allocate memory");
+                reply_ng(CMD_USART_RX, PM3_EMALLOC, NULL, 0);
+                LED_B_OFF();
+                break;
+            }
             uint32_t wait = payload->waittime;
 
             StartTicks();
@@ -3104,6 +3118,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint16_t available;
             uint16_t pre_available = 0;
             uint8_t *dest = BigBuf_calloc(USART_FIFOLEN);
+            if (dest == NULL) {
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Failed to allocate memory");
+                reply_ng(CMD_USART_TXRX, PM3_EMALLOC, NULL, 0);
+                LED_B_OFF();
+                break;
+            }
             uint32_t wait = payload->waittime;
 
             StartTicks();
@@ -3688,6 +3708,13 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             LED_B_ON();
             uint8_t *mem = BigBuf_calloc(PM3_CMD_DATA_SIZE);
+            if (mem == NULL) {
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Failed to allocate memory");
+                reply_ng(CMD_FLASHMEM_DOWNLOAD, PM3_EMALLOC, NULL, 0);
+                LED_B_OFF();
+                break;
+            }
+
             if (packet->length < sizeof(download_req_t)) {
                 break;
             }
@@ -3728,6 +3755,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             LED_B_ON();
 
             rdv40_validation_t *info = (rdv40_validation_t *)BigBuf_calloc(sizeof(rdv40_validation_t));
+            if (info == NULL) {
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Failed to allocate memory");
+                reply_ng(CMD_FLASHMEM_GET_SIGNATURE, PM3_EMALLOC, NULL, 0);
+                LED_B_OFF();
+                break;
+            }
 
             // returns 0 when failing
             uint16_t isok = Flash_ReadData(FLASH_MEM_SIGNATURE_OFFSET_P(spi_flash_pages64k), info->signature, FLASH_MEM_SIGNATURE_LEN);
