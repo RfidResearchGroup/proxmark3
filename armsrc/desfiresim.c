@@ -1135,6 +1135,134 @@ static uint16_t desfire_sim_dfname_record(const desfire_sim_state_t *st, uint8_t
     return 0;
 }
 
+// ------------------------------------------------------- applications
+
+// Room the card charges for an application: the application itself plus its
+// keys, rounded to a granule.  The same accounting eload uses, so an image the
+// reader has added to still agrees with itself.
+static uint16_t desfire_sim_app_cost(uint8_t numkeys, uint8_t keytype) {
+
+    uint8_t keylen;
+    switch (keytype) {
+        case T_3K3DES:
+            keylen = 24;
+            break;
+        case T_DES:
+        case T_3DES:
+        case T_AES:
+        default:
+            keylen = 16;
+            break;
+    }
+
+    return DESFIRE_EM_ROUNDUP(DESFIRE_EM_APP_OVERHEAD + (numkeys * keylen));
+}
+
+// Add an application to the image.
+//
+// The tables sit head to tail -- applications, then files, then keys -- so a new
+// application entry goes in at the end of the application table, which is where
+// the file table currently starts, and everything above it moves up by one
+// entry.  The new application's keys then go on the end of the key table.
+//
+// Returns a DESFire status byte.
+static uint8_t desfire_sim_app_create(desfire_sim_state_t *st, uint32_t aid, uint8_t keysettings,
+                                      uint8_t numkeysraw, uint16_t isofid,
+                                      const uint8_t *dfname, uint8_t dfnamelen) {
+
+    uint8_t *base = desfire_sim_wbase();
+    desfire_em_hdr_t *hdr = (desfire_em_hdr_t *)base;
+
+    if (hdr->appcount >= DESFIRE_EM_MAX_APPS) {
+        return MFDES_E_OUT_OF_EEPROM;
+    }
+
+    uint8_t numkeys = numkeysraw & 0x0F;
+    if (numkeys > DESFIRE_EM_MAX_KEYS) {
+        return MFDES_E_PARAMETER_ERROR;
+    }
+
+    // bits 6-7 of the key settings pick the cipher for the whole application
+    uint8_t keytype;
+    switch ((numkeysraw >> 6) & 0x03) {
+        case 0x01:
+            keytype = T_3K3DES;
+            break;
+        case 0x02:
+            keytype = T_AES;
+            break;
+        case 0x00:
+            keytype = T_3DES;
+            break;
+        default:
+            return MFDES_E_PARAMETER_ERROR;
+    }
+
+    uint16_t cost = desfire_sim_app_cost(numkeys, keytype);
+    if ((uint32_t)hdr->reserved + cost > hdr->cardsize) {
+        return MFDES_E_OUT_OF_EEPROM;
+    }
+
+    // the tables have to stay clear of the file data growing down at them
+    uint32_t grow = sizeof(desfire_em_app_t) + ((uint32_t)numkeys * sizeof(desfire_em_key_t));
+    if ((uint32_t)hdr->tables_end + grow > hdr->data_start) {
+        return MFDES_E_OUT_OF_EEPROM;
+    }
+
+    // open a gap where the file table starts, and put the new entry in it
+    uint16_t at = hdr->file_off;
+    memmove(base + at + sizeof(desfire_em_app_t), base + at, hdr->tables_end - at);
+
+    desfire_em_app_t *a = (desfire_em_app_t *)(base + at);
+    memset(a, 0, sizeof(*a));
+    a->aid[0] = aid & 0xFF;
+    a->aid[1] = (aid >> 8) & 0xFF;
+    a->aid[2] = (aid >> 16) & 0xFF;
+    a->keysettings = keysettings;
+    a->numkeysraw = numkeysraw;
+    a->keytype = keytype;
+    a->isofid = isofid;
+
+    if (numkeysraw & 0x20) {
+        a->flags |= DESFIRE_EM_APP_ISOFIDS;
+    }
+
+    if (dfnamelen > sizeof(a->dfname)) {
+        dfnamelen = sizeof(a->dfname);
+    }
+    if (dfnamelen) {
+        memcpy(a->dfname, dfname, dfnamelen);
+    }
+    a->dfnamelen = dfnamelen;
+
+    hdr->file_off += sizeof(desfire_em_app_t);
+    hdr->key_off += sizeof(desfire_em_app_t);
+    hdr->tables_end += sizeof(desfire_em_app_t);
+
+    // the application's keys go on the end of the key table, all zero, which is
+    // what a card gives a new application
+    uint8_t appidx = hdr->appcount;
+    desfire_em_key_t *k = (desfire_em_key_t *)(base + hdr->tables_end);
+
+    for (uint8_t i = 0; i < numkeys; i++) {
+        memset(&k[i], 0, sizeof(desfire_em_key_t));
+        k[i].app = appidx;
+        k[i].num = i;
+        k[i].flags = DESFIRE_EM_KEY_PRESENT | DESFIRE_EM_KEY_VERKNOWN;
+    }
+
+    hdr->tables_end += numkeys * sizeof(desfire_em_key_t);
+    hdr->keycount += numkeys;
+    hdr->appcount++;
+    hdr->reserved += cost;
+
+    // the tables moved, so the parsed view of them has to be taken again
+    int selected = st->selected;
+    desfire_sim_load(st);
+    st->selected = selected;
+    return MFDES_S_OPERATION_OK;
+}
+
 // FormatPICC: every application and every file goes, and the memory they held
 // comes back.  The PICC master key and its settings are explicitly untouched
 // (M134034 9.4.6), and so is the card identity, so what is left is the same
@@ -1776,6 +1904,107 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
         case MFDES_DEBIT:
         case MFDES_LIMITED_CREDIT:
             return desfire_sim_write_gather(st, cmd, in, inlen, out);
+
+        case MFDES_CREATE_APPLICATION: {
+
+            // "This command requires that the currently selected AID is
+            // 0x00 00 00 which references the card level" -- M134034 9.4.1
+            if (st->selected != 0) {
+                return desfire_sim_status(out, MFDES_E_PERMISSION_DENIED);
+            }
+
+            // AID, KeySettings1, KeySettings2, then optionally a 2 byte ISO
+            // file id and a DF name of up to 16 bytes
+            if (inlen < 5) {
+                return desfire_sim_status(out, MFDES_E_LENGTH);
+            }
+
+            // PICC key settings bit 2 clear means create needs the PICC master
+            // key; set means it is free (M134034 9.3.4)
+            const desfire_em_app_t *picc = &st->apps[0];
+            if ((picc->keysettings & 0x04) == 0) {
+                if (st->authenticated == false || st->auth_keyno != 0) {
+                    return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
+                }
+            }
+
+            uint32_t aid = in[0] | (in[1] << 8) | (in[2] << 16);
+            if (aid == 0x000000) {
+                // reserved as the reference to the PICC itself
+                return desfire_sim_status(out, MFDES_E_PARAMETER_ERROR);
+            }
+
+            if (desfire_sim_find_app(st, aid) >= 0) {
+                return desfire_sim_status(out, MFDES_E_DUPLICATE);
+            }
+
+            uint16_t isofid = 0;
+            const uint8_t *dfname = NULL;
+            uint8_t dfnamelen = 0;
+
+            if (inlen >= 7) {
+                isofid = in[5] | (in[6] << 8);
+                dfname = in + 7;
+                dfnamelen = inlen - 7;
+            }
+
+            uint8_t res = desfire_sim_app_create(st, aid, in[3], in[4], isofid, dfname, dfnamelen);
+            if (res != MFDES_S_OPERATION_OK) {
+                return desfire_sim_status(out, res);
+            }
+            return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, NULL, 0);
+        }
+
+        case MFDES_DELETE_APPLICATION: {
+
+            if (inlen < 3) {
+                return desfire_sim_status(out, MFDES_E_LENGTH);
+            }
+
+            uint32_t aid = in[0] | (in[1] << 8) | (in[2] << 16);
+            if (aid == 0x000000) {
+                return desfire_sim_status(out, MFDES_E_PARAMETER_ERROR);
+            }
+
+            int idx = desfire_sim_find_app(st, aid);
+            if (idx < 0) {
+                return desfire_sim_status(out, MFDES_E_APPLICATION_NOT_FOUND);
+            }
+
+            // Either the PICC master key, or -- when the PICC leaves create and
+            // delete free -- the application's own master key, in which case
+            // that application has to be the selected and authenticated one
+            // (M134034 9.3.4, footnote to bit 2).
+            const desfire_em_app_t *picc = &st->apps[0];
+            bool bypicc = (st->authenticated && st->selected == 0 && st->auth_keyno == 0);
+            bool byapp = (st->authenticated && st->selected == idx && st->auth_keyno == 0 &&
+                          (picc->keysettings & 0x04));
+
+            if (bypicc == false && byapp == false) {
+                return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
+            }
+
+            // A tombstone, not a compaction: the memory stays spent, which is
+            // what a real card does -- only FormatPICC hands it back.
+            desfire_em_app_t *a = (desfire_em_app_t *)&st->apps[idx];
+            a->flags |= DESFIRE_EM_APP_DELETED;
+
+            for (uint16_t i = 0; i < hdr->filecount; i++) {
+                if (st->files[i].app == idx) {
+                    ((desfire_em_file_t *)&st->files[i])->flags |= DESFIRE_EM_FILE_DELETED;
+                }
+            }
+
+            // deleting the application you are sitting in drops you back to the
+            // PICC, and the session with it
+            if (st->selected == idx) {
+                st->selected = 0;
+                desfire_sim_auth_clear(st);
+                return desfire_sim_status(out, MFDES_S_OPERATION_OK);
+            }
+
+            return desfire_sim_maced(st, out, MFDES_S_OPERATION_OK, NULL, 0);
+        }
 
         case MFDES_FORMAT_PICC: {
 
