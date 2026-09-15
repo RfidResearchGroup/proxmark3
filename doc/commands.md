@@ -1056,6 +1056,7 @@ Check column "offline" for their availability.
 |`hw bwm upgrade         `|N       |`Reflash BWM (ESP32) firmware over the BWM link, no header`
 |`hw bwm vchg            `|N       |`Set charger charge-voltage target (default 4100 mV)`
 |`hw bwm wifi            `|N       |`Bring up WiFi (STA + TCP server) for a tcp: connection`
+|`hw bwm wifipower       `|N       |`WiFi fully off, or the modem power-save type (none/min/max)`
 
 
 ### lf
