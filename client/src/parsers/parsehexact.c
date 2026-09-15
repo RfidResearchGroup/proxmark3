@@ -64,7 +64,6 @@ typedef struct {
 } hexact_check_t;
 
 static const hexact_check_t hexact_checks[] = {
-    {0,  0, HX_ID_SER, 0, 0xFF}, {0,  1, HX_ID_SER, 1, 0xFF},
     {0,  4, HX_ID,     4, 0xFE}, {0,  7, HX_ID_UID, 7, 0x00},
     {1,  1, HX_ID,     1, 0x00}, {1,  4, HX_ID,     4, 0x00},
     {1, 15, HX_ID_UID, 7, 0x00},
@@ -118,36 +117,39 @@ static const struct {
     uint8_t b_rec, b_pos;       // b_rec HEXACT_SITE_NOPOS for none
     bool fold_uid1;
     int8_t idn;                 // identifier byte to fold, -1 for none
+    int8_t ser;                 // serial byte to fold, -1 for none
 } hexact_site[] = {
-    {0,  2, 2,  2, false, -1},
-    {0,  3, 1,  3, false, -1},
-    {0,  5, 1,  5, false, -1},
-    {0, 12, 1, 12, false, -1},
-    {0, 13, 1, 13, false, -1},
-    {0, 14, 1, 14, false, -1},
-    {0, 15, 1,  7, true,  -1},
-    {3,  0, HEXACT_SITE_NOPOS, 0, false,  0},
-    {3,  1, HEXACT_SITE_NOPOS, 0, false,  1},
-    {3, 15, 0, 15, false, -1},
+    {0, 2, 2, 2, false, -1, -1},
+    {0, 3, 1, 3, false, -1, -1},
+    {0, 5, 1, 5, false, -1, -1},
+    {0, 12, 1, 12, false, -1, -1},
+    {0, 13, 1, 13, false, -1, -1},
+    {0, 14, 1, 14, false, -1, -1},
+    {0, 15, 1, 7, true, -1, -1},
+    {0, 0, HEXACT_SITE_NOPOS, 0, false, 0, 0},
+    {0, 1, HEXACT_SITE_NOPOS, 0, false, 1, 1},
+    {3, 0, HEXACT_SITE_NOPOS, 0, false, 0, -1},
+    {3, 1, HEXACT_SITE_NOPOS, 0, false, 1, -1},
+    {3, 15, 0, 15, false, -1, -1},
 };
 #define HEXACT_SITE_BYTES   ARRAYLEN(hexact_site)
-#define HEXACT_SITE_S9      7       // how many of them sector 9 alone gives
+#define HEXACT_SITE_S9      9       // how many of them sector 9 alone gives
 
 // Installations already in the research corpus. Row 0 has four cards, the rest
 // one each, so anything that is not row 0 is a card worth having.
 static const uint8_t hexact_known_site[][HEXACT_SITE_S9] = {
-    {0x9D, 0xFF, 0x00, 0x99, 0xCC, 0x20, 0xD0},
-    {0x2C, 0x2F, 0x70, 0x21, 0xB5, 0x7F, 0x45},
-    {0xE1, 0x50, 0x00, 0xEC, 0x1D, 0x00, 0xF4},
-    {0xAF, 0xB3, 0x00, 0xEC, 0x1D, 0x00, 0x03},
-    {0xD4, 0x58, 0x7F, 0xA5, 0x67, 0xD4, 0x0D},
+    {0x9D, 0xFF, 0x00, 0x99, 0xCC, 0x20, 0xD0, 0xFF, 0xFF},
+    {0x2C, 0x2F, 0x70, 0x21, 0xB5, 0x7F, 0x45, 0xDF, 0x10},
+    {0xE1, 0x50, 0x00, 0xEC, 0x1D, 0x00, 0xF4, 0xE6, 0xF3},
+    {0xAF, 0xB3, 0x00, 0xEC, 0x1D, 0x00, 0x03, 0xDC, 0x7D},
+    {0xD4, 0x58, 0x7F, 0xA5, 0x67, 0xD4, 0x0D, 0x0C, 0x14},
 };
 
 // A blank block decrypts to the bare keystream, so a site byte is produced only
 // when every block it reads was written.
 static bool hexact_site_read(const uint8_t rec[][MFBLOCK_SIZE], const uint8_t *idn,
-                             const uint8_t *uid, const bool *written, size_t i,
-                             uint8_t *out) {
+                             const uint8_t *uid, const uint8_t *ser,
+                             const bool *written, size_t i, uint8_t *out) {
     if (written[hexact_site[i].a_rec] == false) {
         return false;
     }
@@ -164,6 +166,9 @@ static bool hexact_site_read(const uint8_t rec[][MFBLOCK_SIZE], const uint8_t *i
     }
     if (hexact_site[i].idn >= 0) {
         v ^= idn[hexact_site[i].idn];
+    }
+    if (hexact_site[i].ser >= 0) {
+        v ^= ser[hexact_site[i].ser];
     }
     *out = v;
     return true;
@@ -193,14 +198,14 @@ static uint8_t hexact_cross_check(const uint8_t rec[][MFBLOCK_SIZE], const uint8
         }
     }
 
-    // the same byte is repeated in two records on every card seen so far
+    // byte 7 repeats across two records in one of two phases; a card uses one
     if (written[1] && written[2]) {
         (*total)++;
-        if (rec[2][15] == rec[1][7]) {
+        if (rec[2][15] == rec[1][7] || rec[2][7] == rec[1][15]) {
             pass++;
         } else if (verbose && shown++ < HEXACT_MAX_SHOWN) {
-            PrintAndLogEx(INFO, "  mismatch......... record tie is %02X, expected %02X",
-                          rec[2][15], rec[1][7]);
+            PrintAndLogEx(INFO, "  mismatch......... record tie %02X/%02X matches neither phase",
+                          rec[2][15], rec[2][7]);
         }
     }
 
@@ -441,7 +446,7 @@ int hexact_parser_parse(const uint8_t *dump, size_t dumplen) {
 
     for (size_t i = 0; i < HEXACT_SITE_BYTES; i++) {
         uint8_t v = 0;
-        if (hexact_site_read(rec, idn, uid, written, i, &v) == false) {
+        if (hexact_site_read(rec, idn, uid, ser, written, i, &v) == false) {
             continue;
         }
         touched[hexact_site[i].a_rec] |= (1 << hexact_site[i].a_pos);
@@ -633,8 +638,9 @@ int hexact_selftest(void) {
 
     // the two offsets the builder knows, read back through the table
     uint8_t v3 = 0, v4 = 0;
-    bool ok = hexact_site_read(rec, dump + (2 * MFBLOCK_SIZE), dump, written, 6, &v3);
-    ok &= hexact_site_read(rec, dump + (2 * MFBLOCK_SIZE), dump, written, 9, &v4);
+    const uint8_t *sser = dump + ((mfFirstBlockOfSector(HEXACT_ID_SECTOR) + 2) * MFBLOCK_SIZE);
+    bool ok = hexact_site_read(rec, dump + (2 * MFBLOCK_SIZE), dump, sser, written, 6, &v3);
+    ok &= hexact_site_read(rec, dump + (2 * MFBLOCK_SIZE), dump, sser, written, 11, &v4);
 
     PrintAndLogEx(INFO, "  site constants..... %02X %02X  ( %s )", v3, v4,
                   (ok && v3 == 0xD0 && v4 == 0xB1) ? _GREEN_("ok") : _RED_("fail"));

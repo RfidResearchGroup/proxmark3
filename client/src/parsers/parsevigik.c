@@ -33,6 +33,8 @@
 #include "mbedtls/bignum.h"
 
 #define VIGIK_BLOCK0_SAK   0x88    // 24 of the 25 known family cards carry it
+#define VIGIK_INFO_SHORT   0x01    // info flag of the short signature profile
+#define VIGIK_SIG_LEN_ALT   96     // and how many bytes it carries
 #define VIGIK_SIG_LEN      128     // RSA 1024, the signature on the card
 #define VIGIK_SIGNED        "( " _GREEN_("signed") " )"
 #define VIGIK_MSG_SLOTS     64     // message byte slots in an ISO 9796-1 block
@@ -775,11 +777,19 @@ int vigik_parser_parse(const uint8_t *dump, size_t dumplen) {
             }
         }
 
-        const char *why = _YELLOW_("sectors missing from the dump");
-        if (rest_blank) {
-            why = _YELLOW_("and every later sector is factory blank");
+        // the header's info flag marks the short profile, so a card can say for
+        // itself that it carries 96 bytes rather than a truncated 128
+        if (have == VIGIK_SIG_LEN_ALT && d.vigik->info_flag == VIGIK_INFO_SHORT && rest_blank) {
+            PrintAndLogEx(INFO, "Signature.......... %zu bytes, " _YELLOW_("short profile")
+                          "  ( info flag %02X, not the %u byte one )",
+                          have, VIGIK_INFO_SHORT, VIGIK_SIG_LEN);
+        } else {
+            const char *why = _YELLOW_("sectors missing from the dump");
+            if (rest_blank) {
+                why = _YELLOW_("and every later sector is factory blank");
+            }
+            PrintAndLogEx(INFO, "Signature.......... %zu of %u bytes, %s", have, VIGIK_SIG_LEN, why);
         }
-        PrintAndLogEx(INFO, "Signature.......... %zu of %u bytes, %s", have, VIGIK_SIG_LEN, why);
     }
 
     vigik_annotate(d.vigik);
