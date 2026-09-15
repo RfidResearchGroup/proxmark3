@@ -9092,44 +9092,18 @@ static int CmdHF14ADesSim(const char *Cmd) {
                   "Load one first with `hf mfdes eload`, and read back what a reader\n"
                   "changed with `hf mfdes esave`.\n"
                   "\n"
-                  "This is `hf 14a sim -t 3` with the DESFire command set behind it:\n"
                   "UID, ATQA, SAK and ATS all come out of the loaded image",
-                  "hf mfdes sim\n"
-                  "hf mfdes sim -n 1    -> stop after the first reader session\n");
+                  "hf mfdes sim");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0("n", "num", "<dec>", "Exit after <num> commands have been answered. 0 = infinite"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    uint8_t exit_after = arg_get_int_def(ctx, 1, 0);
     CLIParserFree(ctx);
 
-    // Same payload the 14a simulation takes -- there is one 14443a tag loop on
-    // the device and this is it. Tag type 3 is MIFARE DESFire; the UID is left
-    // for the device to lift out of the card image header, which is why no UID
-    // is supplied here.
-    struct {
-        uint8_t tagtype;
-        uint16_t flags;
-        uint8_t uid[10];
-        uint8_t exitAfter;
-        uint8_t rats[20];
-        uint8_t ulauth_1a1_len;
-        uint8_t ulauth_1a2_len;
-        uint8_t ulauth_1a1[16];
-        uint8_t ulauth_1a2[16];
-        bool ulauth_1a2_mirror;
-    } PACKED payload;
-
-    memset(&payload, 0x00, sizeof(payload));
-    payload.tagtype = 3;
-    payload.exitAfter = exit_after;
-    FLAG_SET_UID_IN_EMUL(payload.flags);
-
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO14443A_SIMULATE, (uint8_t *)&payload, sizeof(payload));
+    SendCommandNG(CMD_HF_DESFIRE_SIMULATE, NULL, 0);
 
     PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
 
@@ -9139,13 +9113,13 @@ static int CmdHF14ADesSim(const char *Cmd) {
 
         keypress = kbd_enter_pressed();
 
-        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == false) {
+        if (WaitForResponseTimeout(CMD_HF_DESFIRE_SIMULATE, &resp, 1500) == false) {
             continue;
         }
 
         if (resp.status != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "Simulation stopped");
-            PrintAndLogEx(HINT, "Hint: load a card image with " _YELLOW_("`hf mfdes eload -f <fn>`"));
+            PrintAndLogEx(WARNING, "Simulation stopped, no card image in emulator memory?");
+            PrintAndLogEx(HINT, "Hint: load one with " _YELLOW_("`hf mfdes eload -f <fn>`"));
             return resp.status;
         }
         break;

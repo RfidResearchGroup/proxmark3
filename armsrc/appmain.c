@@ -68,6 +68,7 @@
 #include "mifarecmd.h"
 #include "mifaredesfire.h"
 #include "mifaresim.h"
+#include "desfiresim.h"
 #include "emvsim.h"
 #include "pcf7931.h"
 #include "Standalone/standalone.h"
@@ -2546,6 +2547,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
             Mifare1ksim(payload->flags, payload->exitAfter, payload->uid, payload->atqa, payload->sak);
+            break;
+        }
+        case CMD_HF_DESFIRE_SIMULATE: {
+            SimulateDesfireTag();
             break;
         }
         case CMD_HF_MIFARE_EML_MEMCLR: {

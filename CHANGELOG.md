@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 14a` - an FPGA bitstream download no longer destroys the emulator memory that `eload` just filled (@iceman1001)
+- Changed `hf mfdes sim` - now a self contained DESFire simulation, answering both native and ISO 7816 wrapped commands (@iceman1001)
 - Fixed `hf mfdes` - GetDFNames is no longer sent inside an authenticated session, which permanently disabled DESFire EV1 cards (@iceman1001)
 - Added `hf mfdes` - the five DESFire status codes that mean the card damaged or disabled itself are now named instead of reported as `-20` (@iceman1001)
 - Fixed `hf mfdes` - a command error now drops the client's secure channel, since the PICC has already ended the authentication (@iceman1001)

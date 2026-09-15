@@ -18,7 +18,6 @@
 // Routines to support ISO 14443 type A.
 //-----------------------------------------------------------------------------
 #include "iso14443a.h"
-#include "desfiresim.h"
 
 #include "pm3_cmd.h"
 #include "string.h"
@@ -1394,40 +1393,6 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
             sak = 0x20;
             memcpy(rATS, "\x06\x75\x77\x81\x02\x80\x00\x00", 8);
             rATS_len = 8; // including CRC
-
-            // A DESFire card image in emulator memory answers for itself: ATQA,
-            // SAK and ATS come from the card it was dumped from, and the loop
-            // below hands ISO 14443-4 I-blocks to it. Without an image this
-            // stays the generic shell that only answers the anticollision.
-            if (desfire_sim_init()) {
-
-                uint8_t im_atqa[2] = {0};
-                uint8_t im_sak = 0;
-                uint8_t im_ats[20] = {0};
-                uint8_t im_atslen = 0;
-                desfire_sim_identity(NULL, NULL, im_atqa, &im_sak, im_ats, &im_atslen);
-
-                if (im_atqa[0] || im_atqa[1]) {
-                    // the UID size bits of byte 0 are set further down, from the
-                    // cascade level the image's UID actually needs
-                    rATQA[0] = im_atqa[0];
-                    rATQA[1] = im_atqa[1];
-                }
-
-                if (im_sak) {
-                    sak = im_sak;
-                }
-
-                if (im_atslen > 0 && (size_t)im_atslen + 2 <= sizeof(rATS)) {
-                    memset(rATS, 0, sizeof(rATS));
-                    memcpy(rATS, im_ats, im_atslen);
-                    rATS_len = im_atslen + 2;    // including CRC
-                }
-
-            } else {
-                DbpString("No DESFire card image loaded, simulating a bare PICC");
-                DbpString("Load one with " _YELLOW_("`hf mfdes eload -f <fn>`"));
-            }
             break;
         }
         case 4: { // ISO/IEC 14443-4 - javacard (JCOP)
@@ -1605,16 +1570,6 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
             memcpy(data, emdata, 3); // uid bytes 0-2
             memcpy(data + 3, emdata + 4, 4); // uid bytes 3-7
             FLAG_SET_UID_IN_DATA(flags, 7);
-        } else if (tagType == 3 && desfire_sim_ready()) {
-            // a DESFire image does not start with the UID, it starts with a
-            // header that has the UID and its length in it
-            uint8_t im_uidlen = 0;
-            desfire_sim_identity(data, &im_uidlen, NULL, NULL, NULL, NULL);
-            FLAG_SET_UID_IN_DATA(flags, im_uidlen);
-            if (IS_FLAG_UID_IN_EMUL(flags)) {
-                if (g_dbglevel >= DBG_ERROR) Dbprintf("[-] ERROR: card image has a %u byte UID", im_uidlen);
-                return false;
-            }
         } else {
             emlGet(data, 0, 4);
             FLAG_SET_UID_IN_DATA(flags, 4);
@@ -1847,10 +1802,6 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
     uint16_t dynamic_response_buffer_size = DYNAMIC_RESPONSE_BUFFER_SIZE;
     if (tagType == 10) {
         dynamic_response_buffer_size = ST25TA_EML_NDEF_MAX + 4;
-    } else if (tagType == 3) {
-        // GetApplicationIDs on a full PICC is 28 * 3 bytes, over the 64 the
-        // other tag types get. Room for the 14443-4 prologue and CRC on top.
-        dynamic_response_buffer_size = DESFIRE_SIM_MAX_RESP + 8;
     }
 
     // prepare_tag_modulation() memcpy's the encoded answer out of the ToSend
@@ -1917,10 +1868,6 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
             reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EMALLOC, NULL, 0);
             return;
         }
-    }
-
-    if (tagType == 3) {
-        desfire_sim_print_banner();
     }
 
     // We need to listen to the high-frequency, peak-detected path.
@@ -2071,11 +2018,8 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
             if (odd_reply) {
                 p_response = &responses[RESP_INDEX_ATQA];
             }
-            // a fresh activation puts a DESFire back at AID 000000
-            desfire_sim_reset();
         } else if (receivedCmd[0] == ISO14443A_CMD_WUPA && len == 1) { // Received a WAKEUP
             p_response = &responses[RESP_INDEX_ATQA];
-            desfire_sim_reset();
         } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 2) {    // Received request for UID (cascade 1)
             p_response = &responses[RESP_INDEX_UIDC1];
         } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2 && len == 2) {  // Received request for UID (cascade 2)
@@ -2556,46 +2500,8 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
             dynamic_response_info.response_n = 0;
             dynamic_response_info.modulation_n = 0;
 
-            // DESFire, from the card image in emulator memory. Only I-blocks
-            // come here; S(DESELECT), R-blocks and the rest keep the generic
-            // 14443-4 handling below.
-            if (tagType == 3 && desfire_sim_ready() && (receivedCmd[0] & 0xC0) == 0x00) {
-
-                // prologue is PCB, then CID and NAD when the PCB says so
-                uint8_t prologue = 1;
-                if (receivedCmd[0] & 0x08) {
-                    prologue++;
-                }
-                if (receivedCmd[0] & 0x04) {
-                    prologue++;
-                }
-
-                // prologue + at least a command byte + CRC
-                if (len >= prologue + 1 + 2) {
-
-                    // echo the prologue back untouched. The low bit of the PCB
-                    // is the block number, and a reader that gets the wrong one
-                    // reads the answer as a retransmission and stalls.
-                    memcpy(dynamic_response_info.response, receivedCmd, prologue);
-                    dynamic_response_info.response[0] &= ~0x10;     // we never chain
-
-                    uint16_t n = desfire_sim_apdu(receivedCmd + prologue,
-                                                  len - prologue - 2,
-                                                  dynamic_response_info.response + prologue);
-                    if (n > 0) {
-                        dynamic_response_info.response_n = prologue + n;
-
-                        // count answered DESFire commands, so `-n` can bound a
-                        // simulation the way it does for the other tag types
-                        numReads++;
-                        if (exitAfterNReads > 0 && numReads >= exitAfterNReads) {
-                            finished = true;
-                        }
-                    }
-                }
-
             // ST25TA512B  IKEA Rothult
-            } else if (tagType == 10)  {
+            if (tagType == 10)  {
                 // we replay 90 00 for all commands but the read bin and we deny the verify cmd.
 
                 static const uint8_t default_st25ta_ndef[] = {
@@ -3082,6 +2988,7 @@ int EmSendCmd14443aRaw(const uint8_t *resp, uint16_t respLen) {
         }
     }
     LastTimeProxToAirStart = ThisTransferTime + (correction_needed ? 8 : 0);
+
     return PM3_SUCCESS;
 }
 
@@ -4221,7 +4128,14 @@ int iso14443a_fast_select_card(const uint8_t *uid_ptr, uint8_t num_cascades) {
 
 void iso14443a_setup(uint8_t fpga_minor_mode) {
     set_session_channel(false);
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+
+    // keep_EM: a bitstream download frees and clears BigBuf to get scratch space
+    // for the decompressor, and the plain FpgaDownloadAndGo() takes the emulator
+    // memory with it. Every 14a command comes through here, so a card image that
+    // `eload` had just put in place was destroyed by the next `hf 14a` command
+    // whenever the HF bitstream was not already resident. The decompressor still
+    // has BigBuf below the emulator memory to work in.
+    FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF);
     // Set up the synchronous serial port
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_ISO14443A);
     // connect Demodulated Signal to ADC:

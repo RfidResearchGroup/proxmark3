@@ -47,10 +47,27 @@
 #include "desfiresim.h"
 
 #include "string.h"
+#include "proxmark3_arm.h"
+#include "cmd.h"
+#include "appmain.h"
 #include "BigBuf.h"
 #include "dbprint.h"
+#include "util.h"
+#include "iso14443a.h"
+#include "crc16.h"
+#include "fpga_apis.h"
+#include "fpga_loader.h"
 #include "protocols.h"
 #include "desfire_em.h"
+
+// ISO 7816 wrapping of the DESFire command set: class byte on the way in,
+// first status byte on the way back.
+#define DESFIRE_SIM_ISO7816_CLA 0x90
+#define DESFIRE_SIM_ISO7816_SW1 0x91
+
+// Largest answer built before the 14443-4 prologue and CRC are added.
+// GetApplicationIDs on a full PICC is 28 * 3 bytes plus a status byte.
+#define DESFIRE_SIM_MAX_RESP    128
 
 typedef struct {
     const desfire_em_hdr_t *hdr;
@@ -330,7 +347,7 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
 
 //---------------------------------------------------------------- entry points
 
-bool desfire_sim_init(void) {
+static bool desfire_sim_init(void) {
 
     // Always re-parse rather than cache across calls: an eload between two
     // simulations replaces the image in place, and a stale parse would serve
@@ -347,11 +364,7 @@ bool desfire_sim_init(void) {
     return true;
 }
 
-bool desfire_sim_ready(void) {
-    return s_ready;
-}
-
-void desfire_sim_identity(uint8_t *uid, uint8_t *uidlen, uint8_t *atqa, uint8_t *sak, uint8_t *ats, uint8_t *atslen) {
+static void desfire_sim_identity(uint8_t *uid, uint8_t *uidlen, uint8_t *atqa, uint8_t *sak, uint8_t *ats, uint8_t *atslen) {
 
     if (s_ready == false) {
         return;
@@ -396,7 +409,7 @@ void desfire_sim_identity(uint8_t *uid, uint8_t *uidlen, uint8_t *atqa, uint8_t 
     }
 }
 
-void desfire_sim_reset(void) {
+static void desfire_sim_reset(void) {
 
     if (s_ready == false) {
         return;
@@ -407,7 +420,7 @@ void desfire_sim_reset(void) {
     s_st.chain_step = 0;
 }
 
-uint16_t desfire_sim_apdu(const uint8_t *in, uint16_t inlen, uint8_t *out) {
+static uint16_t desfire_sim_apdu(const uint8_t *in, uint16_t inlen, uint8_t *out) {
 
     if (s_ready == false || inlen < 1) {
         return 0;
@@ -455,7 +468,7 @@ uint16_t desfire_sim_apdu(const uint8_t *in, uint16_t inlen, uint8_t *out) {
     return desfire_sim_command(&s_st, in[0], in + 1, inlen - 1, out);
 }
 
-void desfire_sim_print_banner(void) {
+static void desfire_sim_print_banner(void) {
 
     if (s_ready == false) {
         return;
@@ -476,4 +489,229 @@ void desfire_sim_print_banner(void) {
         Dbprintf(_YELLOW_("Only the EV1 command set is implemented"));
         Dbprintf(_YELLOW_("A reader using a later command will get ILLEGAL_COMMAND_CODE 0x1C"));
     }
+}
+
+//-------------------------------------------------------- the simulation loop
+
+// ISO/IEC 14443-4 block prologue. The low bit of an I-block PCB is the block
+// number and has to be echoed back, or the reader reads our answer as a
+// retransmission and stalls.
+#define PCB_TYPE_MASK           0xC0
+#define PCB_TYPE_I              0x00
+#define PCB_TYPE_R              0x80
+#define PCB_TYPE_S              0xC0
+#define PCB_I_CHAINING          0x10
+#define PCB_BLOCKNUM            0x01
+#define PCB_CID_FOLLOWS         0x08
+#define PCB_NAD_FOLLOWS         0x04
+#define PCB_S_DESELECT          0xC2
+
+// enough for a 2 byte ATQA: 9 bytes of modulation per byte, plus framing
+#define ATQA_MODULATION_BUFFER_SIZE  32
+
+void SimulateDesfireTag(void) {
+
+    //-------------------------------------------------------------------------
+    // Get the bitstream in place before anything is allocated. iso14443a_setup()
+    // below would otherwise do it, and a bitstream download frees and clears
+    // BigBuf to get scratch space for the decompressor -- taking the emulator
+    // memory holding our card image and the precompiled anticollision answers
+    // with it. The pointers survive, the bytes behind them do not, and the tag
+    // then clocks out zeros.
+    //-------------------------------------------------------------------------
+    FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF);
+
+    // keep emulator memory, that is where eload put the card image
+    BigBuf_free_keep_EM();
+
+    if (desfire_sim_init() == false) {
+        Dbprintf("No DESFire card image in emulator memory");
+        Dbprintf("Load one with " _YELLOW_("`hf mfdes eload -f <fn>`"));
+        reply_ng(CMD_HF_DESFIRE_SIMULATE, PM3_EINVARG, NULL, 0);
+        return;
+    }
+
+    uint8_t uid[10] = {0};
+    uint8_t uidlen = 0;
+    uint8_t atqa[2] = {0};
+    uint8_t sak = 0;
+    uint8_t ats[20] = {0};
+    uint8_t atslen = 0;
+    desfire_sim_identity(uid, &uidlen, atqa, &sak, ats, &atslen);
+
+    uint16_t flags = FLAG_ATS_IN_DATA;
+    switch (uidlen) {
+        case 7:
+            flags |= FLAG_7B_UID_IN_DATA;
+            break;
+        case 10:
+            flags |= FLAG_10B_UID_IN_DATA;
+            break;
+        default:
+            Dbprintf("Card image has a %u byte UID, cannot simulate that", uidlen);
+            reply_ng(CMD_HF_DESFIRE_SIMULATE, PM3_EINVARG, NULL, 0);
+            return;
+    }
+
+    tag_response_info_t *responses = NULL;
+    uint32_t cuid = 0;
+    uint8_t pages = 0;
+
+    // tag type 3 gives the DESFire SAK and a DESFire shaped ATS; the ATS from
+    // the image replaces it because FLAG_ATS_IN_DATA is set
+    if (SimulateIso14443aInit(3, flags, uid, ats, atslen, &responses, &cuid, &pages, NULL) == false) {
+        BigBuf_free_keep_EM();
+        reply_ng(CMD_HF_DESFIRE_SIMULATE, PM3_EINIT, NULL, 0);
+        return;
+    }
+
+    // SimulateIso14443aInit() derives the ATQA from the tag type, so a 7 byte
+    // UID comes out 44 03 -- which is right for DESFire, but the image may say
+    // otherwise. Rebuild that one precompiled answer when it differs.
+    if ((atqa[0] || atqa[1]) &&
+            (responses[RESP_INDEX_ATQA].response[0] != atqa[0] ||
+             responses[RESP_INDEX_ATQA].response[1] != atqa[1])) {
+
+        uint8_t *atqa_buf = BigBuf_calloc(ATQA_MODULATION_BUFFER_SIZE);
+        if (atqa_buf != NULL) {
+
+            uint8_t *p = atqa_buf;
+            size_t avail = ATQA_MODULATION_BUFFER_SIZE;
+
+            tag_response_info_t atqa_resp = {
+                .response = atqa,
+                .response_n = sizeof(atqa)
+            };
+
+            if (prepare_allocated_tag_modulation(&atqa_resp, &p, &avail)) {
+                responses[RESP_INDEX_ATQA] = atqa_resp;
+            } else {
+                Dbprintf(_RED_("Could not build the ATQA answer, using the default"));
+            }
+        }
+    }
+
+    iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
+
+    uint8_t receivedCmd[MAX_FRAME_SIZE] = {0};
+    uint8_t receivedCmdPar[MAX_PARITY_SIZE] = {0};
+    uint8_t answer[DESFIRE_SIM_MAX_RESP + 8] = {0};
+
+    clear_trace();
+    set_tracing(true);
+    LED_A_ON();
+
+    desfire_sim_print_banner();
+
+    int retval = PM3_SUCCESS;
+    uint32_t cmdcount = 0;
+
+    for (;;) {
+
+        WDT_HIT();
+
+        int len = 0;
+        if (GetIso14443aCommandFromReader(receivedCmd, sizeof(receivedCmd), receivedCmdPar, &len) == false) {
+            Dbprintf("Emulator stopped. Trace length: %d", BigBuf_get_traceLen());
+            retval = PM3_EOPABORTED;
+            break;
+        }
+
+        if (len <= 0) {
+            continue;
+        }
+
+        cmdcount++;
+
+        tag_response_info_t *p_response = NULL;
+
+        // ---- activation, all precompiled ----
+        if (receivedCmd[0] == ISO14443A_CMD_WUPA || receivedCmd[0] == ISO14443A_CMD_REQA) {
+            desfire_sim_reset();            // a fresh activation reselects the PICC
+            p_response = &responses[RESP_INDEX_ATQA];
+
+        } else if (len == 2 && receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT) {
+            p_response = &responses[RESP_INDEX_UIDC1];
+        } else if (len == 2 && receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2) {
+            p_response = &responses[RESP_INDEX_UIDC2];
+        } else if (len == 9 && receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT) {
+            p_response = &responses[RESP_INDEX_SAKC1];
+        } else if (len == 9 && receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2) {
+            p_response = &responses[RESP_INDEX_SAKC2];
+        } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {
+            p_response = &responses[RESP_INDEX_ATS];
+        } else if (receivedCmd[0] == ISO14443A_CMD_PPS) {
+            p_response = &responses[RESP_INDEX_PPS];
+        } else if (receivedCmd[0] == ISO14443A_CMD_HALT && len == 4) {
+            desfire_sim_reset();
+            continue;                       // a halted tag says nothing
+
+        // ---- ISO/IEC 14443-4 ----
+        } else if ((receivedCmd[0] & PCB_TYPE_MASK) == PCB_TYPE_S) {
+
+            if (receivedCmd[0] == PCB_S_DESELECT) {
+                uint8_t r[3] = { PCB_S_DESELECT, 0, 0 };
+                AddCrc14A(r, 1);
+                EmSendCmd(r, sizeof(r));
+                desfire_sim_reset();
+            }
+            continue;
+
+        } else if ((receivedCmd[0] & PCB_TYPE_MASK) == PCB_TYPE_R) {
+
+            // R(ACK) is a retransmission request. We do not keep the previous
+            // answer, so acknowledge and move on.
+            uint8_t r[3] = { (uint8_t)(0xA2 | (receivedCmd[0] & PCB_BLOCKNUM)), 0, 0 };
+            AddCrc14A(r, 1);
+            EmSendCmd(r, sizeof(r));
+            continue;
+
+        } else if ((receivedCmd[0] & PCB_TYPE_MASK) == PCB_TYPE_I) {
+
+            uint8_t prologue = 1;
+            if (receivedCmd[0] & PCB_CID_FOLLOWS) {
+                prologue++;
+            }
+            if (receivedCmd[0] & PCB_NAD_FOLLOWS) {
+                prologue++;
+            }
+
+            // prologue + at least a command byte + CRC
+            if (len < prologue + 1 + 2) {
+                continue;
+            }
+
+            uint16_t n = desfire_sim_apdu(receivedCmd + prologue, len - prologue - 2, answer + prologue);
+            if (n == 0) {
+                continue;
+            }
+
+            // echo the prologue back, block number included
+            memcpy(answer, receivedCmd, prologue);
+            answer[0] &= ~PCB_I_CHAINING;
+
+            AddCrc14A(answer, prologue + n);
+            EmSendCmd(answer, prologue + n + 2);
+            continue;
+
+        } else {
+            if (g_dbglevel >= DBG_EXTENDED) {
+                Dbprintf("DESFire sim: unknown frame, %d bytes", len);
+                Dbhexdump(len, receivedCmd, false);
+            }
+            continue;
+        }
+
+        EmSendPrecompiledCmd(p_response);
+    }
+
+    switch_off();
+    set_tracing(false);
+    BigBuf_free_keep_EM();
+
+    if (g_dbglevel >= DBG_EXTENDED) {
+        Dbprintf("-[ commands received %u ]-", cmdcount);
+    }
+
+    reply_ng(CMD_HF_DESFIRE_SIMULATE, retval, NULL, 0);
 }
