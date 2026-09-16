@@ -25,7 +25,11 @@
 #include <signal.h>
 #include <unistd.h>
 #include <pthread.h>
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <sys/ioctl.h>
+#endif
 
 // ---- ANSI ----------------------------------------------------------------
 #define CSI          "\x1b["
@@ -42,10 +46,10 @@
 #define TRUECOLOR 1
 
 static const char *GLYPHS[] = {
-    "ｦ", "ｧ", "ｨ", "ｩ", "ｪ", "ｫ", "ｬ", "ｭ", "ｮ", "ｯ", "ｰ", "ｱ", "ｲ", "ｳ", "ｴ", "ｵ",
-    "ｶ", "ｷ", "ｸ", "ｹ", "ｺ", "ｻ", "ｼ", "ｽ", "ｾ", "ｿ", "ﾀ", "ﾁ", "ﾂ", "ﾃ", "ﾄ", "ﾅ",
-    "ﾆ", "ﾇ", "ﾈ", "ﾉ", "ﾊ", "ﾋ", "ﾌ", "ﾍ", "ﾎ", "ﾏ", "ﾐ", "ﾑ", "ﾒ", "ﾓ", "ﾔ", "ﾕ",
-    "ﾖ", "ﾗ", "ﾘ", "ﾙ", "ﾚ", "ﾛ", "ﾜ", "ﾝ",
+    "\xef\xbd\xa6", "\xef\xbd\xa7", "\xef\xbd\xa8", "\xef\xbd\xa9", "\xef\xbd\xaa", "\xef\xbd\xab", "\xef\xbd\xac", "\xef\xbd\xad", "\xef\xbd\xae", "\xef\xbd\xaf", "\xef\xbd\xb0", "\xef\xbd\xb1", "\xef\xbd\xb2", "\xef\xbd\xb3", "\xef\xbd\xb4", "\xef\xbd\xb5",
+    "\xef\xbd\xb6", "\xef\xbd\xb7", "\xef\xbd\xb8", "\xef\xbd\xb9", "\xef\xbd\xba", "\xef\xbd\xbb", "\xef\xbd\xbc", "\xef\xbd\xbd", "\xef\xbd\xbe", "\xef\xbd\xbf", "\xef\xbe\x80", "\xef\xbe\x81", "\xef\xbe\x82", "\xef\xbe\x83", "\xef\xbe\x84", "\xef\xbe\x85",
+    "\xef\xbe\x86", "\xef\xbe\x87", "\xef\xbe\x88", "\xef\xbe\x89", "\xef\xbe\x8a", "\xef\xbe\x8b", "\xef\xbe\x8c", "\xef\xbe\x8d", "\xef\xbe\x8e", "\xef\xbe\x8f", "\xef\xbe\x90", "\xef\xbe\x91", "\xef\xbe\x92", "\xef\xbe\x93", "\xef\xbe\x94", "\xef\xbe\x95",
+    "\xef\xbe\x96", "\xef\xbe\x97", "\xef\xbe\x98", "\xef\xbe\x99", "\xef\xbe\x9a", "\xef\xbe\x9b", "\xef\xbe\x9c", "\xef\xbe\x9d",
     "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
 };
 static const int NGLYPH = (int)(sizeof(GLYPHS) / sizeof(GLYPHS[0]));
@@ -135,9 +139,16 @@ static void sleep_ms(double ms) {
 }
 
 static int term_width(void) {
+#ifdef _WIN32
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
+        return csbi.srWindow.Right - csbi.srWindow.Left + 1;
+    }
+#else
     struct winsize ws;
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0 && ws.ws_col > 0)
         return ws.ws_col;
+#endif
     return 80;
 }
 
@@ -382,9 +393,13 @@ static void fade_out(void) {
 void fx_matrix_run(int rows, double duration_ms) {
     if (!isatty(STDOUT_FILENO)) return;
 
+#ifdef _WIN32
+    void (*old)(int) = signal(SIGINT, on_sigint);
+#else
     struct sigaction sa = {0}, old;
     sa.sa_handler = on_sigint;
     sigaction(SIGINT, &sa, &old);
+#endif
 
     if (!fx_state_init(rows)) goto out;
 
@@ -404,7 +419,13 @@ void fx_matrix_run(int rows, double duration_ms) {
     free(g_buf);
     g_buf = NULL;
 out:
+#ifdef _WIN32
+    if (old != SIG_ERR) {
+        signal(SIGINT, old);
+    }
+#else
     sigaction(SIGINT, &old, NULL);
+#endif
     g_stop = 0;
 }
 
