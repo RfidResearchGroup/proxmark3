@@ -9,6 +9,7 @@ cd "$PM3PATH" || exit 1
 
 TESTALL=false
 TESTDESFIREVALUE=false
+TESTDESFIREREADER=false
 TESTHIDWIEGAND=false
 TESTMFHIDENCODE=false
 TESTICLASSREADER=false
@@ -24,11 +25,12 @@ while (( "$#" )); do
   case "$1" in
     -h|--help)
       echo """
-Usage: $0 [--pm3bin /path/to/pm3] [--pm3port /dev/tty...] [desfire_value|hid_wiegand|mf_hid_encode|iclass_emu|iclass_reader|hitag2]
+Usage: $0 [--pm3bin /path/to/pm3] [--pm3port /dev/tty...] [desfire_value|desfire_reader|hid_wiegand|mf_hid_encode|iclass_emu|iclass_reader|hitag2]
     --pm3bin ...:    Specify path to pm3 binary to test
     --pm3port ...:   Specify serial port for client/proxmark3
     --manual ...:    Pause after successful online LF HID clone/read checks for external reader verification
     desfire_value:   Test DESFire value operations with card
+    desfire_reader:  Load DESFire HID credentials for external reader verification
     hid_wiegand:     Test LF HID T55xx clone and PM3 readback flows
     mf_hid_encode:   Test MIFARE Classic HID encoding flows
     iclass_emu:      Test iCLASS emulator memory load/write/read flows
@@ -64,6 +66,11 @@ Usage: $0 [--pm3bin /path/to/pm3] [--pm3port /dev/tty...] [desfire_value|hid_wie
     desfire_value)
       TESTALL=false
       TESTDESFIREVALUE=true
+      shift
+      ;;
+    desfire_reader)
+      TESTALL=false
+      TESTDESFIREREADER=true
       shift
       ;;
     hid_wiegand)
@@ -257,6 +264,13 @@ function CleanupMfHidEncodeCard() {
   fi
 }
 
+function CleanupOnlineTests() {
+  CleanupMfHidEncodeCard
+  if [ -n "${DFC_FACTORY_JSON:-}" ] || [ -n "${DFC_FIELD_JSON:-}" ]; then
+    rm -f "${DFC_FACTORY_JSON:-/tmp/pm3-no-dfc-factory}" "${DFC_FIELD_JSON:-/tmp/pm3-no-dfc-field}"
+  fi
+}
+
 function CheckMfHidEncodeRoundTrip() {
   printf "%-40s" "$1 "
 
@@ -381,7 +395,7 @@ function WaitForEnter() {
   fi
 }
 
-trap CleanupMfHidEncodeCard EXIT
+trap CleanupOnlineTests EXIT
 
 echo -e "${C_BLUE}Iceman Proxmark3 online test tool${C_NC}"
 echo ""
@@ -396,7 +410,7 @@ if command -v git >/dev/null && git rev-parse --is-inside-work-tree >/dev/null 2
 fi
 
 # Check that user specified a test
-if [ "$TESTDESFIREVALUE" = false ] && [ "$TESTHIDWIEGAND" = false ] && [ "$TESTMFHIDENCODE" = false ] && [ "$TESTICLASSEMU" = false ] && [ "$TESTICLASSREADER" = false ] && [ "$TESTSMARTCARD" = false ] && [ "$TESTHITAG2" = false ]; then
+if [ "$TESTDESFIREVALUE" = false ] && [ "$TESTDESFIREREADER" = false ] && [ "$TESTHIDWIEGAND" = false ] && [ "$TESTMFHIDENCODE" = false ] && [ "$TESTICLASSEMU" = false ] && [ "$TESTICLASSREADER" = false ] && [ "$TESTSMARTCARD" = false ] && [ "$TESTHITAG2" = false ]; then
   echo "Error: You must specify a test target. Use -h for help."
   exit 1
 fi
@@ -567,6 +581,27 @@ while true; do
       WaitForEnter "PRESS ENTER TO START ICLASS 2K3DES SIM, PRESENT THE PM3 TO ANOTHER READER, CONFIRM: iCLASS H10301 FC 31 CN 337, THEN PRESS THE PM3 BUTTON TO STOP SIM"
       if ! CheckExecute "hf iclass emu reader 2k3des" "$PM3CMD -c 'hf iclass tagsim -w H10301 --fc 31 --cn 337 --enc 2k3des' 2>&1" "Uploaded .* bytes to emulator memory"; then break; fi
       if ! CheckExecute "hf iclass sim preserves emu" "$PM3CMD -c 'hf iclass eview -s 80' 2>&1 | LC_ALL=C tr -cd '\11\12\15\40-\176' | tr '\n' ' '" "0/0x00.*BD 0C 60 10 F7 FF 12 E0.*6/0x06.*03 03 03 03 00 03 E0 17.*7/0x07.*10 A1 45 91 9E D1 6F 50"; then break; fi
+    fi
+
+    if $TESTDESFIREREADER; then
+      echo -e "\n${C_BLUE}Testing DESFire reader verification${C_NC} ${PM3BIN:=./pm3}"
+      if ! CheckFileExist "pm3 exists"               "$PM3BIN"; then break; fi
+      PM3CMD="$PM3BIN"
+      if [ -n "${PM3PORT:-}" ]; then
+        echo "Using PM3 port: $PM3PORT"
+        PM3CMD="$PM3CMD -p $PM3PORT"
+      fi
+
+      DFC_FACTORY_JSON="/tmp/pm3-dfc-factory-$$.json"
+      DFC_FIELD_JSON="/tmp/pm3-dfc-field-$$.json"
+      if ! CheckExecute "convert factory DFC" "python3 tools/dfc_converter.py traces/desfire/H10301-FC69-CN420-factory.dfc $DFC_FACTORY_JSON && echo converted" "converted"; then break; fi
+      if ! CheckExecute "convert field DFC" "python3 tools/dfc_converter.py traces/desfire/H10301-FC69-CN420-field.dfc $DFC_FIELD_JSON && echo converted" "converted"; then break; fi
+
+      WaitForEnter "PRESS ENTER TO START DESFIRE FACTORY SIM, PRESENT THE PM3 TO THE HID READER, CONFIRM: H10301 FC 69 CN 420, THEN PRESS THE PM3 BUTTON TO STOP SIM"
+      if ! CheckExecute "hf mfdes factory to reader" "$PM3CMD -c 'hf mfdes eload -f $DFC_FACTORY_JSON; hf mfdes sim' 2>&1" "Done!"; then break; fi
+      WaitForEnter "PRESS ENTER TO START DESFIRE FIELD SIM, PRESENT THE PM3 TO THE HID READER, CONFIRM: H10301 FC 69 CN 420, THEN PRESS THE PM3 BUTTON TO STOP SIM"
+      if ! CheckExecute "hf mfdes field to reader" "$PM3CMD -c 'hf mfdes eload -f $DFC_FIELD_JSON; hf mfdes sim' 2>&1" "Done!"; then break; fi
+      rm -f "$DFC_FACTORY_JSON" "$DFC_FIELD_JSON"
     fi
 
     # SIM module / ISO 7816 contact card tests.
