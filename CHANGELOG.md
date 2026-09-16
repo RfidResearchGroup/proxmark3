@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed USB receive stalling on a zero-length OUT packet and missing a command already buffered behind another (@cindersocket)
 - Fixed dictionary loading to skip keys longer than the requested key size instead of truncating them (@iceman1001)
 - Changed `hf mfdes chk` to check every key number the application declares, not only the ones a file's access rights name (@iceman1001)
 - Changed `hf mfdes chk` to report when no keys were found and to stop spending a card round trip on an exhausted dictionary (@iceman1001)
