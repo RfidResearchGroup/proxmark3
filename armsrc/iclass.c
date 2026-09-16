@@ -1660,12 +1660,12 @@ void iClass_Raw(uint8_t *msg) {
         start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
     } else {
         switch_clock_to_countsspclk();
+        start_time = GetCountSspClk();
     }
 
     uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
     uint16_t resp_len = 0;
 
-    start_time = GetCountSspClk();
     bool is_update = rawlen > 0 && ((raw[0] & 0x0F) == ICLASS_CMD_UPDATE);
     uint8_t tries = is_update ? 1 : 3;
     uint16_t timeout = is_update ? ICLASS_READER_TIMEOUT_UPDATE : ICLASS_READER_TIMEOUT_ACTALL;
