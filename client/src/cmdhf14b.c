@@ -923,6 +923,18 @@ static void print_sr_blocks(uint8_t *data, size_t len, const uint8_t *uid, bool 
     print_footer();
 }
 
+// Everything `hf 14b view` shows for an SRx tag once the block data is in hand.
+// Shared so a dump read straight off the card gets the same treatment as one
+// loaded from a file - the MyKey decode used to be reachable only via a file.
+static void sr_view_dump(uint8_t *data, size_t len, const uint8_t *uid, bool dense_output) {
+
+    print_sr_blocks(data, len, uid, dense_output);
+
+    if (is_valid_mykey_card(data, len)) {
+        (void)mykey_parser_parse(data, len, uid);
+    }
+}
+
 static void print_std_blocks(uint8_t *data, size_t len, const uint8_t *uid, uint8_t uidlen, bool dense_output) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "-------- " _CYAN_("ISO14443-B Standard tag memory") " ---------");
@@ -2484,7 +2496,7 @@ static int CmdHF14BDump(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        print_sr_blocks(data, cardsize, card.uid, dense_output);
+        sr_view_dump(data, cardsize, card.uid, dense_output);
 
         if (nosave) {
             PrintAndLogEx(INFO, "Called with no save option");
@@ -3370,12 +3382,7 @@ static int CmdHF14BView(const char *Cmd) {
 
     // figure out a way to identify the different dump files.
     // STD/SR/CT is difference
-    const uint8_t *uid = get_uid_from_filename(filename);
-    print_sr_blocks(dump, bytes_read, uid, dense_output);
-
-    if (is_valid_mykey_card(dump, bytes_read)) {
-        (void)mykey_parser_parse(dump, bytes_read, uid);
-    }
+    sr_view_dump(dump, bytes_read, get_uid_from_filename(filename), dense_output);
     //print_std_blocks(dump, bytes_read);
     //print_ct_blocks(dump, bytes_read);
 
