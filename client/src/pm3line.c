@@ -34,6 +34,7 @@
 #include "pm3_cmd.h"
 #include "ui.h"                          // g_session
 #include "util.h"                        // str_ndup
+#include "frame_data2.h"                 // fx_terminal_restore
 
 static void pm3line_claim_signals(void);
 
@@ -150,6 +151,7 @@ static void sigint_handler(int signum) {
             // Second CTRL-C. The graceful path did not take, restore the
             // default disposition and let this one through.
             if (gs_sigint_caught) {
+                fx_terminal_restore();
                 sigaction(SIGINT, &gs_old_sigint_action, NULL);
                 raise(SIGINT);
                 break;
@@ -192,6 +194,8 @@ static void sigtstp_handler(int signum) {
     int at_prompt = gs_at_prompt;
     (void) at_prompt;
 
+    fx_terminal_restore();
+
 #if defined(HAVE_READLINE)
     if (at_prompt) {
         rl_cleanup_after_signal();
@@ -211,6 +215,7 @@ static void sigtstp_handler(int signum) {
     sigprocmask(SIG_SETMASK, &set, NULL);
 
     pm3line_claim_signals();
+    fx_terminal_resume();
 
 #if defined(HAVE_READLINE)
     if (at_prompt) {
@@ -221,6 +226,8 @@ static void sigtstp_handler(int signum) {
 
 // Leave the terminal usable when the client is killed instead of quit
 static void sigfatal_handler(int signum) {
+
+    fx_terminal_restore();
 
 #if defined(HAVE_READLINE)
     if (gs_at_prompt) {

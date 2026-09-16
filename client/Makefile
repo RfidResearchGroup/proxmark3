@@ -869,6 +869,7 @@ SRCS =  mifare/aiddesfire.c \
         emrtd/emrtd_pacetest.c \
         fileutils.c \
         flash.c \
+        frame_data2.c \
         frame_progress.c \
         generator.c \
         graph.c \

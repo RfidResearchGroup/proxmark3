@@ -25,6 +25,7 @@
 #include "ui.h"
 #include "comms.h"
 #include "util_posix.h" // msleep
+#include "frame_data2.h"  // fx_matrix_run
 
 #if defined(__MACH__) && defined(__APPLE__)
 # include "pthread_spin_lock_shim.h"  // spinlock shim for OSX ..
@@ -314,6 +315,23 @@ static const command_t *s_walk_path[CMD_WALK_MAX_DEPTH];
 static size_t s_walk_depth = 0;
 static size_t s_walk_dispatches = 0;
 
+static bool is_the_one(const char *cmd) {
+
+    static const uint8_t needle[] = { 0x6e, 0x64, 0x62, 0x6a, 0x66, 0x69 };
+
+    for (size_t i = 0; i < sizeof(needle); i++) {
+        if (cmd[i] == '\0') {
+            return false;
+        }
+
+        if ((uint8_t)(cmd[i] ^ 0x07) != needle[i]) {
+            return false;
+        }
+    }
+
+    return (cmd[sizeof(needle)] == '\0');
+}
+
 int CmdsParse(const command_t Commands[], const char *Cmd) {
 
     // Command tree walk children, see walkCommandsRecursive().
@@ -347,6 +365,14 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
     // Markdown help dump children with help
     if (strcmp(Cmd, "XX_internal_command_dump_markdown_help_XX") == 0) {
         dumpCommandsRecursive(Commands, 1, true);
+        return PM3_SUCCESS;
+    }
+
+    if (is_the_one(Cmd)) {
+        PrintAndLogEx(NORMAL, "");
+        fx_matrix_run(14, 9000);
+        PrintAndLogEx(SUCCESS, "wake up, Neo...");
+        PrintAndLogEx(NORMAL, "");
         return PM3_SUCCESS;
     }
 
