@@ -432,10 +432,23 @@ uint16_t usb_available_length(void) {
  * @return
  */
 bool usb_poll_validate_length(void) {
+#ifndef AS_BOOTROM
+    // A previous USB packet may already contain the next command.
+    if (usb_read_ng_has_buffered_data()) {
+        return true;
+    }
+#endif
     if (usb_poll() == false) {
         return false;
     }
-    return usb_available_length() > 0;
+    if (usb_available_length() > 0) {
+        return true;
+    }
+
+    // Consume a terminating zero-length packet and rearm the OUT endpoint.
+    // Otherwise no subsequent command can be received.
+    usb_vcp_get_rxdata(udev, NULL, 0);
+    return false;
 }
 
 /**
