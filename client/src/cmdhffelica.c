@@ -1937,8 +1937,8 @@ static void felica_info_process_system_services(int level, uint8_t flags,
             json_t *data_json = json_object_get(node_json, "data");
             const bool has_data_matchers = json_is_object(data_json) && (json_object_size(data_json) > 0);
             const size_t matcher_count = felica_parse_service_node_matchers(node_json,
-                nodes[node_count].matchers,
-                ARRAYLEN(nodes[node_count].matchers));
+                                         nodes[node_count].matchers,
+                                         ARRAYLEN(nodes[node_count].matchers));
             if (has_data_matchers && matcher_count == 0) {
                 continue;
             }
@@ -2345,9 +2345,9 @@ static int discover_systems(uint8_t flags, const uint8_t *primary_idm,
         for (uint32_t attempt = 0; attempt < attempts; attempt++) {
             felica_syscode_response_t system_code_response;
             const int request_system_code_status = send_request_system_code(flags,
-                sizeof(request_system_code_request), (uint8_t *)&request_system_code_request,
-                false, FELICA_OPTIONAL_CMD_TIMEOUT_MS, 0, false,
-                &system_code_response);
+                                                   sizeof(request_system_code_request), (uint8_t *)&request_system_code_request,
+                                                   false, FELICA_OPTIONAL_CMD_TIMEOUT_MS, 0, false,
+                                                   &system_code_response);
 
             if (request_system_code_status != PM3_SUCCESS) {
                 continue;
@@ -5152,7 +5152,7 @@ static int felica_discover_nodes(const uint8_t *idm,
         bool discovered = false;
         if (info->method == FELICA_NODE_DISCOVERY_READ_WITHOUT_ENCRYPTION) {
             discovered = felica_discover_nodes_with_read_without_encryption_ex(flags, idm, retry_count, pmm,
-                visitor, ctx, &discovered_count, &stop_status);
+                         visitor, ctx, &discovered_count, &stop_status);
         } else {
             discovered = info->run(flags, idm, retry_count, visitor, ctx, &discovered_count, &stop_status);
         }

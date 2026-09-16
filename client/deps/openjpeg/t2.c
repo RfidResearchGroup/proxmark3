@@ -351,7 +351,7 @@ OPJ_BOOL opj_t2_encode_packets(opj_t2_t *p_t2,
                         } else {
                             info_PK->start_pos = ((l_cp->m_specific_param.m_enc.m_tp_on | l_tcp->POC) &&
                                                   info_PK->start_pos) ? info_PK->start_pos : info_TL->packet[cstr_info->packno -
-                                                                            1].end_pos + 1;
+                                                      1].end_pos + 1;
                         }
                         info_PK->end_pos = info_PK->start_pos + l_nb_bytes - 1;
                         info_PK->end_ph_pos += info_PK->start_pos -
@@ -550,7 +550,7 @@ OPJ_BOOL opj_t2_decode_packets(opj_tcd_t *tcd,
                 } else {
                     info_PK->start_pos = (l_cp->m_specific_param.m_enc.m_tp_on &&
                                           info_PK->start_pos) ? info_PK->start_pos : info_TL->packet[p_cstr_info->packno -
-                                                                      1].end_pos + 1;
+                                              1].end_pos + 1;
                 }
                 info_PK->end_pos = info_PK->start_pos + l_nb_bytes_read - 1;
                 info_PK->end_ph_pos += info_PK->start_pos -
@@ -1439,7 +1439,7 @@ static OPJ_BOOL opj_t2_read_packet_data(opj_t2_t *p_t2,
                         (partial_buffer)) {
                     if (p_t2->cp->strict) {
                         opj_event_msg(p_manager, EVT_ERROR,
-                                      "read: segment too long (%d) with max (%d) for codeblock %d (p=%d, b=%d, r=%d, c=%d)\n",
+                        "read: segment too long (%d) with max (%d) for codeblock %d (p=%d, b=%d, r=%d, c=%d)\n",
                                       l_seg->newlen, p_max_length, cblkno, p_pi->precno, bandno, p_pi->resno,
                                       p_pi->compno);
                         return OPJ_FALSE;

@@ -668,7 +668,7 @@ int async_usb_write_stop(void) {
         }
     }
 
-    // Send a final packet. When the local buffer still holds data this flushes it, 
+    // Send a final packet. When the local buffer still holds data this flushes it,
     // if empty, send a zero length packet.
     if (!async_usb_write_requestWrite()) {
         return PM3_EIO;

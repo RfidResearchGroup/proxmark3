@@ -368,7 +368,7 @@ void opj_tcd_makelayer_fixed(opj_tcd_t *tcd, OPJ_UINT32 layno,
                 for (k = 0; k < 3; k++) {
                     matrice[i][j][k] =
                         (OPJ_INT32)((OPJ_FLOAT32)cp->m_specific_param.m_enc.m_matrice[i *
-                                      tilec->numresolutions * 3 + j * 3 + k]
+                                    tilec->numresolutions * 3 + j * 3 + k]
                                     * (OPJ_FLOAT32)(tcd->image->comps[compno].prec / 16.0));
                 }
             }
@@ -1152,7 +1152,7 @@ static INLINE OPJ_BOOL opj_tcd_init_tile(opj_tcd_t *p_tcd, OPJ_UINT32 p_tile_no,
                     if ((((OPJ_UINT32) - 1) / (OPJ_UINT32)sizeof_block) <
                             l_nb_code_blocks) {
                         opj_event_msg(manager, EVT_ERROR,
-                                      "Size of code block data exceeds system limits\n");
+                        "Size of code block data exceeds system limits\n");
                         return OPJ_FALSE;
                     }
                     l_nb_code_blocks_size = l_nb_code_blocks * (OPJ_UINT32)sizeof_block;
@@ -1805,7 +1805,7 @@ OPJ_BOOL opj_tcd_update_tile_data(opj_tcd_t *p_tcd,
             l_width = (OPJ_UINT32)(l_res->x1 - l_res->x0);
             l_height = (OPJ_UINT32)(l_res->y1 - l_res->y0);
             l_stride = (OPJ_UINT32)(l_tilec->resolutions[l_tilec->minimum_num_resolutions -
-                                                                                          1].x1 -
+                                                         1].x1 -
                                     l_tilec->resolutions[l_tilec->minimum_num_resolutions - 1].x0) - l_width;
             l_src_data = l_tilec->data;
         } else {

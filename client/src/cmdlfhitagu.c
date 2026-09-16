@@ -130,9 +130,9 @@ void annotateHitagU(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
                 concatbits(&block_count, 0, cmd, 5 + 6 + 8, 8, false);
 
                 snprintf(exp + strlen(exp), size - strlen(exp), "READ MULTIPLE BLOCK start:%d num:%d"
-                                    , reflect8(block_addr)
-                                    , reflect8(block_count)
-                                   );
+                         , reflect8(block_addr)
+                         , reflect8(block_count)
+                        );
                 break;
             }
             case HITAGU_CMD_WRITE_SINGLE_BLOCK: {
@@ -143,9 +143,9 @@ void annotateHitagU(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
                 concatbits(block_data, 0, cmd, 5 + 6 + 8, 32, false);
 
                 snprintf(exp + strlen(exp), size - strlen(exp), "WRITE SINGLE BLOCK start:%d data:[%s]"
-                                    , reflect8(block_addr)
-                                    , sprint_hex_inrow(block_data, 4)
-                                   );
+                         , reflect8(block_addr)
+                         , sprint_hex_inrow(block_data, 4)
+                        );
                 break;
             }
             case HITAGU_CMD_SELECT: {

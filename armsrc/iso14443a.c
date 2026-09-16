@@ -606,7 +606,7 @@ void Demod14aReset(void) {
 }
 
 void Demod14aInit(uint8_t *d, uint16_t n, uint8_t *par) {
-    // No ISO14443-A frame can be longer than MAX_FRAME_SIZE (FSD/FSC max out at 256 bytes), 
+    // No ISO14443-A frame can be longer than MAX_FRAME_SIZE (FSD/FSC max out at 256 bytes),
     // while callers happily pass PM3_CMD_DATA_SIZE sized receive buffers
     Demod.output_len = MIN(n, MAX_FRAME_SIZE);
     Demod.output = d;

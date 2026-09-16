@@ -2445,7 +2445,7 @@ static OPJ_BOOL opj_j2k_read_siz(opj_j2k_t *p_j2k,
     for (i = 0; i < l_image->numcomps; ++i) {
         if (! l_image->comps[i].sgnd) {
             p_j2k->m_specific_param.m_decoder.m_default_tcp->tccps[i].m_dc_level_shift = 1
-                    << (l_image->comps[i].prec - 1);
+                << (l_image->comps[i].prec - 1);
         }
     }
 
@@ -3220,7 +3220,7 @@ static OPJ_BOOL opj_j2k_read_qcc(opj_j2k_t *p_j2k,
             /* we try to correct */
             l_comp_no = backup_compno % l_num_comp;
             opj_event_msg(p_manager, EVT_WARNING, "- trying to adjust this\n"
-                          "- setting component number to %d\n",
+                                                  "- setting component number to %d\n",
                           l_comp_no);
         }
 
@@ -4469,7 +4469,7 @@ static OPJ_BOOL opj_j2k_read_sot(opj_j2k_t *p_j2k,
             /* we try to correct */
             tileno = backup_tileno;
             opj_event_msg(p_manager, EVT_WARNING, "- trying to adjust this\n"
-                          "- setting tile number to %d\n",
+                                                  "- setting tile number to %d\n",
                           tileno);
         }
 
@@ -4512,7 +4512,7 @@ static OPJ_BOOL opj_j2k_read_sot(opj_j2k_t *p_j2k,
             /* we try to correct */
             l_tot_len = 0;
             opj_event_msg(p_manager, EVT_WARNING, "- trying to adjust this\n"
-                          "- setting Psot to %d => assuming it is the last tile\n",
+                                                  "- setting Psot to %d => assuming it is the last tile\n",
                           l_tot_len);
         }
     };
@@ -4864,7 +4864,7 @@ static OPJ_BOOL opj_j2k_write_sod(opj_j2k_t *p_j2k,
     if (l_remaining_data <
             p_j2k->m_specific_param.m_encoder.m_reserved_bytes_for_PLT) {
         opj_event_msg(p_manager, EVT_ERROR,
-                      "Not enough bytes in output buffer to write SOD marker\n");
+        "Not enough bytes in output buffer to write SOD marker\n");
         opj_tcd_marker_info_destroy(marker_info);
         return OPJ_FALSE;
     }
@@ -6404,10 +6404,10 @@ static OPJ_BOOL opj_j2k_add_mct(opj_tcp_t *p_tcp, opj_image_t *p_image,
                                 OPJ_UINT32 p_index) {
     OPJ_UINT32 i;
     opj_simple_mcc_decorrelation_data_t *l_mcc_record;
-    opj_mct_data_t *l_deco_array, * l_offset_array;
+    opj_mct_data_t *l_deco_array, *l_offset_array;
     OPJ_UINT32 l_data_size, l_mct_size, l_offset_size;
     OPJ_UINT32 l_nb_elem;
-    OPJ_UINT32 *l_offset_data, * l_current_offset_data;
+    OPJ_UINT32 *l_offset_data, *l_current_offset_data;
     opj_tccp_t *l_tccp;
 
     /* preconditions */
@@ -8518,10 +8518,10 @@ static OPJ_BOOL opj_j2k_mct_validation(opj_j2k_t *p_j2k,
 OPJ_BOOL opj_j2k_setup_mct_encoding(opj_tcp_t *p_tcp, opj_image_t *p_image) {
     OPJ_UINT32 i;
     OPJ_UINT32 l_indix = 1;
-    opj_mct_data_t *l_mct_deco_data = 00, * l_mct_offset_data = 00;
+    opj_mct_data_t *l_mct_deco_data = 00, *l_mct_offset_data = 00;
     opj_simple_mcc_decorrelation_data_t *l_mcc_data;
     OPJ_UINT32 l_mct_size, l_nb_elem;
-    OPJ_FLOAT32 *l_data, * l_current_data;
+    OPJ_FLOAT32 *l_data, *l_current_data;
     opj_tccp_t *l_tccp;
 
     /* preconditions */
@@ -8734,14 +8734,14 @@ static OPJ_BOOL opj_j2k_encoding_validation(opj_j2k_t *p_j2k,
     if ((p_j2k->m_cp.tdx) < (OPJ_UINT32)(1 <<
                                          (p_j2k->m_cp.tcps->tccps->numresolutions - 1U))) {
         opj_event_msg(p_manager, EVT_ERROR,
-                      "Number of resolutions is too high in comparison to the size of tiles\n");
+        "Number of resolutions is too high in comparison to the size of tiles\n");
         return OPJ_FALSE;
     }
 
     if ((p_j2k->m_cp.tdy) < (OPJ_UINT32)(1 <<
                                          (p_j2k->m_cp.tcps->tccps->numresolutions - 1U))) {
         opj_event_msg(p_manager, EVT_ERROR,
-                      "Number of resolutions is too high in comparison to the size of tiles\n");
+        "Number of resolutions is too high in comparison to the size of tiles\n");
         return OPJ_FALSE;
     }
 
@@ -9807,7 +9807,7 @@ OPJ_BOOL opj_j2k_read_tile_header(opj_j2k_t *p_j2k,
                         (OPJ_UINT32)l_tcp->m_current_tile_part_number + 1 < l_tcp->m_nb_tile_parts) {
                     const OPJ_OFF_T next_tp_sot_pos = p_j2k->cstr_index->tile_index[
                                                           p_j2k->m_current_tile_number].tp_index[l_tcp->m_current_tile_part_number +
-                                                                  1].start_pos;
+                                                              1].start_pos;
 
                     if (next_tp_sot_pos != opj_stream_tell(p_stream)) {
 #if 0
@@ -11209,7 +11209,7 @@ static OPJ_BOOL opj_j2k_read_SQcd_SQcc(opj_j2k_t *p_j2k,
             /* we try to correct */
             l_num_band = 1;
             opj_event_msg(p_manager, EVT_WARNING, "- trying to adjust them\n"
-                          "- setting number of bands to %d => HYPOTHESIS!!!\n",
+                                                  "- setting number of bands to %d => HYPOTHESIS!!!\n",
                           l_num_band);
         };
 
@@ -11398,7 +11398,7 @@ static void opj_j2k_dump_MH_index(opj_j2k_t *p_j2k, FILE *out_stream) {
     fprintf(out_stream, "Codestream index from main header: {\n");
 
     fprintf(out_stream, "\t Main header start position=%" PRIi64 "\n"
-            "\t Main header end position=%" PRIi64 "\n",
+                        "\t Main header end position=%" PRIi64 "\n",
             cstr_index->main_head_start, cstr_index->main_head_end);
 
     fprintf(out_stream, "\t Marker list: {\n");
@@ -12341,10 +12341,10 @@ OPJ_BOOL opj_j2k_get_tile(opj_j2k_t *p_j2k,
 
         l_img_comp->w = (OPJ_UINT32)(opj_int_ceildivpow2(l_comp_x1,
                                                          (OPJ_INT32)l_img_comp->factor) - opj_int_ceildivpow2((OPJ_INT32)l_img_comp->x0,
-                                                                 (OPJ_INT32)l_img_comp->factor));
+                                                             (OPJ_INT32)l_img_comp->factor));
         l_img_comp->h = (OPJ_UINT32)(opj_int_ceildivpow2(l_comp_y1,
                                                          (OPJ_INT32)l_img_comp->factor) - opj_int_ceildivpow2((OPJ_INT32)l_img_comp->y0,
-                                                                 (OPJ_INT32)l_img_comp->factor));
+                                                             (OPJ_INT32)l_img_comp->factor));
 
         l_img_comp++;
     }

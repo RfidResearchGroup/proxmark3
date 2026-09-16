@@ -116,7 +116,7 @@ static OPJ_BOOL opj_lupDecompose(OPJ_FLOAT32 *matrix,
     OPJ_UINT32 lLastColum = nb_compo - 1;
     OPJ_UINT32 lSwapSize = nb_compo * (OPJ_UINT32)sizeof(OPJ_FLOAT32);
     OPJ_FLOAT32 *lTmpMatrix = matrix;
-    OPJ_FLOAT32 *lColumnMatrix, * lDestMatrix;
+    OPJ_FLOAT32 *lColumnMatrix, *lDestMatrix;
     OPJ_UINT32 offset = 1;
     OPJ_UINT32 lStride = nb_compo - 1;
 

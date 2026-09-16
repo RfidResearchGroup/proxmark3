@@ -1759,7 +1759,7 @@ static void opj_t1_clbl_decode_processor(void *user_data, opj_tls_t *tls) {
         }
     } else if (tccp->qmfbid == 1) {
         OPJ_INT32 *OPJ_RESTRICT tiledp = &tilec->data[(OPJ_SIZE_T)y * tile_w +
-                                                                    (OPJ_SIZE_T)x];
+                                                      (OPJ_SIZE_T)x];
         for (j = 0; j < cblk_h; ++j) {
             //positive -> round down aka.  (83)/2 =  41.5 ->  41
             //negative -> round up   aka. (-83)/2 = -41.5 -> -41
@@ -1814,7 +1814,7 @@ static void opj_t1_clbl_decode_processor(void *user_data, opj_tls_t *tls) {
     } else {        /* if (tccp->qmfbid == 0) */
         const float stepsize = 0.5f * band->stepsize;
         OPJ_FLOAT32 *OPJ_RESTRICT tiledp = (OPJ_FLOAT32 *) &tilec->data[(OPJ_SIZE_T)y *
-                                                         tile_w + (OPJ_SIZE_T)x];
+                                           tile_w + (OPJ_SIZE_T)x];
         for (j = 0; j < cblk_h; ++j) {
             OPJ_FLOAT32 *OPJ_RESTRICT tiledp2 = tiledp;
             for (i = 0; i < cblk_w; ++i) {

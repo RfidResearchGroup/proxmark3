@@ -263,9 +263,9 @@ static int CmdBwmCharge(const char *Cmd) {
                       "Enable or disable BWM battery charging by clearing/setting the\n"
                       "AW32001E charge-enable bit (CEB, REG01[3]). PM5 only.\n"
                       _RED_("One-shot:") " the charger watchdog reverts this after ~160 s unless\n"
-                      "serviced, so charging may stop on its own. Use to nudge a top-up.",
-                      "hw bwm charge off    --> disable charging\n"
-                      "hw bwm charge on     --> enable charging");
+              "serviced, so charging may stop on its own. Use to nudge a top-up.",
+              "hw bwm charge off    --> disable charging\n"
+              "hw bwm charge on     --> enable charging");
         void *argtable[] = {
             arg_param_begin,
             arg_param_end
@@ -388,12 +388,12 @@ static int CmdBwmSetCap(const char *Cmd) {
 
 static void progressbar(long sent, long total, int style) {
     int percent = (int)((double)sent / total * 100);
-    
+
     // Use \r at the start to move the cursor back to the beginning of the line
-    printf("\rProgress: [%d%%]", percent); 
-    
+    printf("\rProgress: [%d%%]", percent);
+
     // Force stdout to print immediately without waiting for a newline
-    fflush(stdout); 
+    fflush(stdout);
 }
 
 // One full OTA attempt: BEGIN -> WRITE... -> END. The BWM OTA has no resume
@@ -406,8 +406,9 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms
     // OTA slot here; that can take 20-40 s on a 4 MB ESP32-C2, so wait longer
     // than the device-side 60 s timeout plus USB round-trip.
     uint8_t beg[5] = { BWM_OTA_ACTION_BEGIN,
-                       (uint8_t)(fwlen & 0xFF),         (uint8_t)((fwlen >> 8) & 0xFF),
-                       (uint8_t)((fwlen >> 16) & 0xFF), (uint8_t)((fwlen >> 24) & 0xFF) };
+                       (uint8_t)(fwlen & 0xFF), (uint8_t)((fwlen >> 8) & 0xFF),
+                       (uint8_t)((fwlen >> 16) & 0xFF), (uint8_t)((fwlen >> 24) & 0xFF)
+                     };
     clearCommandBuffer();
     SendCommandNG(CMD_PM5_BWM_ESP_OTA, beg, sizeof(beg));
     if (WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 75000) == false) {
@@ -549,7 +550,7 @@ static int CmdBWMUpgrade(const char *Cmd) {
         free(fw);
         return PM3_EFILE;
     }
-    
+
     // Check Chip ID at offset 0x0C (2 bytes, little-endian)
     uint16_t chip_id = MemLeToUint2byte(fw + 0x0C);
     if (chip_id != 0x000C) {
@@ -565,7 +566,7 @@ static int CmdBWMUpgrade(const char *Cmd) {
         free(fw);
         return PM3_EFILE;
     }
-    
+
     // Record the running version first, so we can confirm the update actually took
     // even when the finalize ack is lost (the case that used to discard a completed
     // flash and restart from scratch).
@@ -577,8 +578,8 @@ static int CmdBWMUpgrade(const char *Cmd) {
 
     // No resume (DEV.md 8.4): a chunk lost mid-transfer restarts the whole upload.
     const int max_attempts = 6;   // a single dropped chunk restarts the whole upload;
-                                  // more attempts make an all-fail run rare until per-chunk
-                                  // retry (offset-idempotent ESP write) lands.
+    // more attempts make an all-fail run rare until per-chunk
+    // retry (offset-idempotent ESP write) lands.
     for (int attempt = 1; attempt <= max_attempts; attempt++) {
         if (attempt > 1) {
             // Abort the in-flight ESP OTA (if any) and give a slow erase a chance

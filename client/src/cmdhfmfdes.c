@@ -1951,16 +1951,16 @@ static int CmdHF14aDesChk(const char *Cmd) {
             if (deskeyListLen || aeskeyListLen || k3kkeyListLen) {
 
                 res = AuthCheckDesfire(&dctx,
-                            secureChannel,
-                            &app_ids[x * 3],
-                            deskeyList, deskeyListLen,
-                            aeskeyList, aeskeyListLen,
-                            k3kkeyList, k3kkeyListLen,
-                            autoschann,
-                            found,
-                            &foundKeyThisRound,
-                            verbose
-                    );
+                                       secureChannel,
+                                       &app_ids[x * 3],
+                                       deskeyList, deskeyListLen,
+                                       aeskeyList, aeskeyListLen,
+                                       k3kkeyList, k3kkeyListLen,
+                                       autoschann,
+                                       found,
+                                       &foundKeyThisRound,
+                                       verbose
+                                      );
 
                 if (res == PM3_EOPABORTED) {
                     break;
@@ -2305,11 +2305,11 @@ static int CmdHF14aDesDetect(const char *Cmd) {
                     uint8_t fplen;
 
                     if (dctx.keyType == T_DES ||
-                        (
-                            (dctx.keyType == T_3DES) && 
-                            (keylen == 16) && 
-                            (memcmp(candidate, candidate + 8, 8) == 0)
-                        )) {
+                            (
+                                (dctx.keyType == T_3DES) &&
+                                (keylen == 16) &&
+                                (memcmp(candidate, candidate + 8, 8) == 0)
+                            )) {
 
                         fp[0] = T_DES;              // single DES, however it was written
                         memcpy(fp + 1, candidate, 8);
@@ -2398,7 +2398,7 @@ static int CmdHF14aDesDetect(const char *Cmd) {
                           CLIGetOptionListStr(DesfireAlgoOpts, dctx.keyType),
                           desfire_get_key_length(dctx.keyType),
                           sprint_hex_inrow(dctx.key, desfire_get_key_length(dctx.keyType))
-                        );
+                         );
 
             // every key in an application uses the same algo,  so the rest of
             // the key numbers only have to try the one that just worked
@@ -5485,8 +5485,8 @@ static int CmdHF14ADesGetFileIDs(const char *Cmd) {
                   "Get File IDs list from card. Master key needs to be provided or flag --no-auth set.",
                   "hf mfdes getfileids --aid 123456                                   -> execute with defaults from `default` command\n"
                   "hf mfdes getfileids --dfname D2760000850100                        -> select DF by name and get file IDs\n"
-                  "hf mfdes getfileids -n 0 -t des -k 0000000000000000 --aid 123456   -> execute with default factory setup\n"                 
-                );
+                  "hf mfdes getfileids -n 0 -t des -k 0000000000000000 --aid 123456   -> execute with default factory setup\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -10811,7 +10811,7 @@ static int CmdHF14ADesVerifyCert(const char *Cmd) {
         arg_str0(NULL, "fid",       "<hex>", "Certificate file ID (1 byte)"), // 15
         arg_lit0(NULL, "no-auth",   "Read certificate file without authentication"), // 16
         arg_strn(NULL, "ca", "<name|cert|pubkey|path|skip>", 0, MFDES_VERIFYCERT_MAX_CAS,
-                 "CA input, or `skip` to skip certificate signature validation. Repeat --ca for multiple entries"), // 17
+        "CA input, or `skip` to skip certificate signature validation. Repeat --ca for multiple entries"), // 17
         arg_str0(NULL, "keyaid",    "<hex>", "Key application ID (default: cert app)"), // 18
         arg_str0(NULL, "keyisoid",  "<hex>", "Key application ISO DF ID (2 bytes)"), // 19
         arg_str0(NULL, "keydfname", "<hex>", "Key application DF name (default: cert app)"), // 20

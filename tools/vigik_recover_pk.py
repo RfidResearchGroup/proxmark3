@@ -15,7 +15,7 @@
 # See LICENSE.txt for the text of the license.
 #-------
 #
-# Recover the RSA public modulus a VIGIK service signs its cards with, from the cards alone. as described in 
+# Recover the RSA public modulus a VIGIK service signs its cards with, from the cards alone. as described in
 # "A common weakness in RSA signatures: extracting public keys from communications and embedded devices",
 # Renaud Lifchitz, Hackito Ergo Sum 2014.
 #

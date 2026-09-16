@@ -21,7 +21,7 @@
 
 #include "common.h"
 
-// How many times the async write helpers spin on the IN endpoint before they give up on the host. 
+// How many times the async write helpers spin on the IN endpoint before they give up on the host.
 // usb_check() stays true for as long as the device is enumerated
 #define ASYNC_WRITE_SPIN_LIMIT  0x00020000
 

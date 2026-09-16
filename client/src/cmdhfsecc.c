@@ -476,11 +476,11 @@ static int CmdHFHIDConfigSim(const char *Cmd) {
     strncpy(uid_str, sprint_hex_inrow(uid, uidlen), sizeof(uid_str) - 1);
     uid_str[sizeof(uid_str) - 1] = '\0';
     PrintAndLogEx(INFO, "HID Config Card sim:"
-                  " UID " _YELLOW_("%s")
-                  " AID " _YELLOW_("%s")
-                  " ATS len " _YELLOW_("%d")
-                  " APDU overrides " _YELLOW_("%u")
-                  " default resp " _YELLOW_("%s"),
+                        " UID " _YELLOW_("%s")
+                        " AID " _YELLOW_("%s")
+                        " ATS len " _YELLOW_("%d")
+                        " APDU overrides " _YELLOW_("%u")
+                        " default resp " _YELLOW_("%s"),
                   uid_str, aid_str, ats_len, apdu_count,
                   has_default_resp ? sprint_hex_inrow(default_resp, default_resp_len_sz) : "9000 (builtin)");
     PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");

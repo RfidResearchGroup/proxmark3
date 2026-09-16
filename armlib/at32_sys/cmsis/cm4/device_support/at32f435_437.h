@@ -338,7 +338,7 @@ typedef enum IRQn {
 #endif
 
 #if defined (AT32F437xx)
-                                  ADC1_2_3_IRQn               = 18,     /*!< adc1 adc2 and adc3 global interrupt                  */
+    ADC1_2_3_IRQn               = 18,     /*!< adc1 adc2 and adc3 global interrupt                  */
                                   CAN1_TX_IRQn                = 19,     /*!< can1 tx interrupts                                   */
                                   CAN1_RX0_IRQn               = 20,     /*!< can1 rx0 interrupts                                  */
                                   CAN1_RX1_IRQn               = 21,     /*!< can1 rx1 interrupt                                   */

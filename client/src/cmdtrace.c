@@ -1473,7 +1473,7 @@ int CmdTraceListAlias(const char *Cmd, const char *alias, const char *protocol) 
         arg_lit0("r", NULL, "show frame delay times relative to the previous transfer"),
         arg_lit0("u", NULL, "display times in microseconds instead of clock cycles"),
         arg_lit0("x", NULL, "show hexdump to convert to pcap(ng)\n"
-        "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
+                 "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
         arg_str0("f", "file", "<fn>", "filename of dictionary"),
         arg_param_end
     };
@@ -1528,7 +1528,7 @@ int CmdTraceList(const char *Cmd) {
         arg_lit0("r", NULL, "show frame delay times relative to the previous transfer"),
         arg_lit0("u", NULL, "display times in microseconds instead of clock cycles"),
         arg_lit0("x", NULL, "show hexdump to convert to pcap(ng)\n"
-        "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
+                 "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
         arg_str0("t", "type", "<str>", "protocol to annotate the trace"),
         arg_str0("f", "file", "<fn>", "filename of dictionary"),
         arg_param_end

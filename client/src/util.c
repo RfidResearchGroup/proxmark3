@@ -743,7 +743,7 @@ bool bytes_equal_not_null(const void *a, size_t a_len, const void *b, size_t b_l
 }
 
 // Append a formatted string to buf without ever writing past buf_len.
-// Returns the length of the resulting string. 
+// Returns the length of the resulting string.
 // buf must already be a valid NULL terminated string.
 size_t str_append(char *buf, size_t buf_len, const char *fmt, ...) {
 

@@ -100,7 +100,7 @@ bool WaitForTxIdle(uint32_t ms_timeout) {
         if (msclock() - start >= ms_timeout) {
             return false;
         }
-        
+
         xyield(); // just to avoid CPU busy loop
     }
 }

@@ -99,7 +99,7 @@ void lf_sample_mean(void) {
     adc_avg = adc_sum >> 5; // division by 32
     previous_adc_val = adc_avg;
     DBG Dbprintf("LF ADC average %u, max %u, min %u, diff %u  (threshold is +/-%u counts)",
-             adc_avg, adc_max, adc_min, adc_max - adc_min, (unsigned)(LIMIT_DEV_Q5_REPORT / 32));
+                 adc_avg, adc_max, adc_min, adc_max - adc_min, (unsigned)(LIMIT_DEV_Q5_REPORT / 32));
 }
 
 static size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {

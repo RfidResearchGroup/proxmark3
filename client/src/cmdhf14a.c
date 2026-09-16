@@ -735,7 +735,7 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
 
 // Annex C uses CRC-B and continuous frames without parity.
 static int hf14a_timeslot_exchange(const uint8_t *data, uint16_t len, bool request,
-                                  PacketResponseNG *resp, uint16_t *rlen) {
+                                   PacketResponseNG *resp, uint16_t *rlen) {
     uint8_t frame[11];
     if (len > sizeof(frame) - 2) {
         return PM3_EINVARG;
@@ -753,7 +753,7 @@ static int hf14a_timeslot_exchange(const uint8_t *data, uint16_t len, bool reque
     clearCommandBuffer();
     // Timeouts in 128/fc units; inter-frame delay in microseconds.
     SendIso14aReaderEx(flags, frame, len, len, request ? 7 : 0,
-                      request ? 79 : 547, request ? 0 : 1100);
+                       request ? 79 : 547, request ? 0 : 1100);
     if (WaitForIso14aReply(resp, 1500, rlen, NULL) == false || *rlen == 0) {
         return PM3_ETIMEOUT;
     }

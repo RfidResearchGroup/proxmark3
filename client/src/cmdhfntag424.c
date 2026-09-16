@@ -723,8 +723,8 @@ static int ntag424_authenticate_ev2_first(uint8_t keyno, uint8_t *key, ntag424_s
     if (memcmp(response.rnd_a, &rnd_a_clear[1], 15) != 0 ||
             response.rnd_a[15] != rnd_a_clear[0]) {
         PrintAndLogEx(ERR, "Incorrect response from card\n"
-                      "expected: %s\n"
-                      "got: %s"
+                           "expected: %s\n"
+                           "got: %s"
                       , sprint_hex(rnd_a_clear, 16),
                       sprint_hex(response.rnd_a, 16));
         return PM3_ESOFT;

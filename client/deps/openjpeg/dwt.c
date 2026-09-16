@@ -2247,7 +2247,7 @@ static OPJ_BOOL opj_dwt_decode_tile(opj_thread_pool_t *tp,
                                  tr->y0);  /* height of the resolution level computed */
 
     OPJ_UINT32 w = (OPJ_UINT32)(tilec->resolutions[tilec->minimum_num_resolutions -
-                                                                                  1].x1 -
+                                                   1].x1 -
                                 tilec->resolutions[tilec->minimum_num_resolutions - 1].x0);
     OPJ_SIZE_T h_mem_size;
     int num_threads;
@@ -3464,7 +3464,7 @@ OPJ_BOOL opj_dwt_decode_tile_97(opj_thread_pool_t *tp,
                                  res->y0);    /* height of the resolution level computed */
 
     OPJ_UINT32 w = (OPJ_UINT32)(tilec->resolutions[tilec->minimum_num_resolutions -
-                                                                                  1].x1 -
+                                                   1].x1 -
                                 tilec->resolutions[tilec->minimum_num_resolutions - 1].x0);
 
     OPJ_SIZE_T l_data_size;

@@ -103,7 +103,7 @@ int proac_parser_parse(const uint8_t *dump, size_t dumplen) {
                   PROAC_MAD_AID,
                   mad_count_aid(s0, PROAC_MAD_AID),
                   MAD1_NUM_AIDS
-            );
+                 );
 
     // The one card this was written against carries a MAD whose CRC was never
     // filled in, so a reader in this system cannot be validating it. Say so
@@ -133,9 +133,9 @@ int proac_parser_parse(const uint8_t *dump, size_t dumplen) {
     }
 
     PrintAndLogEx(INFO, "Payload............ sector %u and %u, 96 bytes, " _YELLOW_("not decoded"),
-                  PROAC_BLOB_SECTOR_A, 
+                  PROAC_BLOB_SECTOR_A,
                   PROAC_BLOB_SECTOR_B
-            );
+                 );
 
     const uint8_t sectors[2] = { PROAC_BLOB_SECTOR_A, PROAC_BLOB_SECTOR_B };
 

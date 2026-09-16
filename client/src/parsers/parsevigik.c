@@ -94,7 +94,7 @@ static uint8_t vigik_shadow(uint8_t b) {
 }
 
 // Recover the message an ISO 9796-1 signature carries, checking the redundancy on
-// the way. `sig` is the signature as it sits on the card, `modulus` the public key to try. 
+// the way. `sig` is the signature as it sits on the card, `modulus` the public key to try.
 // On success msg holds msglen bytes.
 static int vigik_iso9796_recover(const uint8_t *sig, const char *modulus, uint8_t *msg, size_t *msglen) {
 
@@ -217,15 +217,15 @@ static void vigik_print_date(const char *label, const uint8_t *v, const char *su
 
     if (sane) {
         PrintAndLogEx(INFO, "%s %s ( " _YELLOW_("%04u-%02u-%02u %02u:%02u") " )%s",
-                    label,
-                    sprint_hex_inrow(v, 5),
-                    1900 + v[0], 
-                    v[1], 
-                    v[2], 
-                    v[3], 
-                    v[4], 
-                    suffix
-                );
+                      label,
+                      sprint_hex_inrow(v, 5),
+                      1900 + v[0],
+                      v[1],
+                      v[2],
+                      v[3],
+                      v[4],
+                      suffix
+                     );
     } else {
         PrintAndLogEx(INFO, "%s %s" "%s", label, sprint_hex_inrow(v, 5), suffix);
     }
@@ -296,10 +296,10 @@ int vigik_verify(mfc_vigik_t *d) {
         // The service code on the card says which service issued it, so it should name the key
         if (vigik_rsa_pk[i].code != (uint16_t)d->service_code) {
             PrintAndLogEx(WARNING, "Card says service 0x%04X but the key that verified is listed as 0x%04X ( %s )",
-                          (uint16_t)d->service_code, 
-                          vigik_rsa_pk[i].code, 
+                          (uint16_t)d->service_code,
+                          vigik_rsa_pk[i].code,
                           vigik_rsa_pk[i].desc
-                    );
+                         );
         }
 
         PrintAndLogEx(SUCCESS, "Signature verification: " _GREEN_("successful"));
@@ -600,9 +600,9 @@ static int vigik_print_urmet_captiv(const uint8_t *dump, size_t dumplen) {
         char num[URMET_DIGITS_LEN + 1] = {0};
         memcpy(num, b1 + URMET_DIGITS_OFF, URMET_DIGITS_LEN);
         PrintAndLogEx(INFO, "Number............. " _YELLOW_("%s") "%s"
-                    , num
-                    , (strspn(num, "0") == URMET_DIGITS_LEN) ? "  ( all zero, unset )" : ""
-                );
+                      , num
+                      , (strspn(num, "0") == URMET_DIGITS_LEN) ? "  ( all zero, unset )" : ""
+                     );
     } else {
         PrintAndLogEx(INFO, "Number............. %s  ( not ASCII digits )", sprint_hex_inrow(b1 + URMET_DIGITS_OFF, URMET_DIGITS_LEN));
     }

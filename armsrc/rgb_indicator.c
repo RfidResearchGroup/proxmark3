@@ -74,7 +74,7 @@ void rgb_indicator_update(void) {
     // next state change (which never comes on battery). Retrying next cycle costs
     // one I2C poke and self-heals once the controller is ready.
     bool ok = on_battery ? RgbLedSet(0, 8, 0)   // dim green: alive, on battery
-                         : RgbLedSet(0, 0, 0);  // on USB: off (cable already signals power)
+              : RgbLedSet(0, 0, 0);  // on USB: off (cable already signals power)
     if (ok) {
         last_state = on_battery;
     }

@@ -300,10 +300,10 @@ void print_gallagher_creds(GallagherCredentials_t *creds) {
         return;
     }
     PrintAndLogEx(SUCCESS, "Gallagher - region: " _GREEN_("%c") " ( " _GREEN_("%u") " )"
-                  ", facility: " _GREEN_("%u")
-                  ", card number: " _GREEN_("%u")
-                  ", issue level: " _GREEN_("%u"),
-                  'A' + creds->region_code,
+                           ", facility: " _GREEN_("%u")
+                           ", card number: " _GREEN_("%u")
+                           ", issue level: " _GREEN_("%u"),
+    'A' + creds->region_code,
                   creds->region_code,
                   creds->facility_code,
                   creds->card_number,

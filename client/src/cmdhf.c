@@ -374,13 +374,13 @@ int CmdHFTune(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    // All three modes of this command answer under the same command id 
+    // All three modes of this command answer under the same command id
     // and there is no sequence number
     if ((resp.status != PM3_SUCCESS) || (resp.length != 0)) {
         PrintAndLogEx(WARNING, "unexpected reply to HF initialization (status %d, %u bytes)",
                       resp.status,
                       (unsigned)resp.length
-                );
+                     );
     }
 
     mode[0] = 2;

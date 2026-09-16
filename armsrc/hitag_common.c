@@ -762,7 +762,7 @@ void hitag_tag_send_frame_mc4k_sync(const uint8_t *frame, size_t frame_len, int 
                         : TEST_BIT_MSB(frame, idx - (size_t)sof_bits);
 
         bool loaded = bit ? (phase < HITAG_T_TAG_HALF_PERIOD)
-                          : (phase >= HITAG_T_TAG_HALF_PERIOD);
+                      : (phase >= HITAG_T_TAG_HALF_PERIOD);
 
         // Shallower load: switch on for only the first s_mod_duty periods of the
         // loaded half bit.  The envelope the reader sees is a low pass of this,
@@ -1146,18 +1146,18 @@ void hitag_tag_send_frame_ex(const uint8_t *frame, size_t frame_len, int sof_bit
     }
 
     if (lead_in)
-    switch (modulation) {
-        case AC4K:
-        case MC8K: {
-            while (GetPrecisionCounter() < T0 * 40) {}; // FADV
-            break;
+        switch (modulation) {
+            case AC4K:
+            case MC8K: {
+                while (GetPrecisionCounter() < T0 * 40) {}; // FADV
+                break;
+            }
+            case AC2K:
+            case MC4K: {
+                while (GetPrecisionCounter() < T0 * 20) {}; // STD + ADV
+                break;
+            }
         }
-        case AC2K:
-        case MC4K: {
-            while (GetPrecisionCounter() < T0 * 20) {}; // STD + ADV
-            break;
-        }
-    }
 
     // SOF - send start of frame
     for (size_t i = 0; i < sof_bits; i++) {

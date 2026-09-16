@@ -254,7 +254,7 @@ void mbedtls_aesni_inverse_key(unsigned char *invkey,
     for (fk -= 16, ik += 16; fk > fwdkey; fk -= 16, ik += 16)
         asm("movdqu (%0), %%xmm0       \n\t"
             AESIMC  xmm0_xmm0         "\n\t"
-            "movdqu %%xmm0, (%1)       \n\t"
+                                  "movdqu %%xmm0, (%1)       \n\t"
             :
             : "r"(fk), "r"(ik)
             : "memory", "xmm0");
@@ -403,23 +403,23 @@ static void aesni_setkey_enc_256(unsigned char *rk,
         /* Set xmm2 to stuff:Y:stuff:stuff with Y = subword( r11 )
          * and proceed to generate next round key from there */
         AESKEYGENA xmm0_xmm2 ",0x00        \n\t"
-        "pshufd $0xaa, %%xmm2, %%xmm2      \n\t"
-        "pxor %%xmm1, %%xmm2               \n\t"
-        "pslldq $4, %%xmm1                 \n\t"
-        "pxor %%xmm1, %%xmm2               \n\t"
-        "pslldq $4, %%xmm1                 \n\t"
-        "pxor %%xmm1, %%xmm2               \n\t"
-        "pslldq $4, %%xmm1                 \n\t"
-        "pxor %%xmm2, %%xmm1               \n\t"
-        "add $16, %0                       \n\t"
-        "movdqu %%xmm1, (%0)               \n\t"
-        "ret                               \n\t"
+                         "pshufd $0xaa, %%xmm2, %%xmm2      \n\t"
+                         "pxor %%xmm1, %%xmm2               \n\t"
+                         "pslldq $4, %%xmm1                 \n\t"
+                         "pxor %%xmm1, %%xmm2               \n\t"
+                         "pslldq $4, %%xmm1                 \n\t"
+                         "pxor %%xmm1, %%xmm2               \n\t"
+                         "pslldq $4, %%xmm1                 \n\t"
+                         "pxor %%xmm2, %%xmm1               \n\t"
+                         "add $16, %0                       \n\t"
+                         "movdqu %%xmm1, (%0)               \n\t"
+                         "ret                               \n\t"
 
         /*
          * Main "loop" - Generating one more key than necessary,
          * see definition of mbedtls_aes_context.buf
          */
-        "2:                                \n\t"
+                         "2:                                \n\t"
         AESKEYGENA xmm1_xmm2 ",0x01        \n\tcall 1b \n\t"
         AESKEYGENA xmm1_xmm2 ",0x02        \n\tcall 1b \n\t"
         AESKEYGENA xmm1_xmm2 ",0x04        \n\tcall 1b \n\t"

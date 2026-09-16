@@ -3526,9 +3526,9 @@ static int CmdHF15CFinalize(const char *Cmd) {
     CLIParserInit(&ctx, "hf 15 cfinalize",
                   "Finalize a magic ISO15693 'V3' tag.\n"
                   _RED_("This operation is irreversible.") " After finalize the configuration\n"
-                  "area is erased and the UID can no longer be changed. Set the UID with\n"
-                  "`" _YELLOW_("hf 15 csetuid --v3") "` first, then lock it in with this command.",
-                  "hf 15 cfinalize -y"
+          "area is erased and the UID can no longer be changed. Set the UID with\n"
+          "`" _YELLOW_("hf 15 csetuid --v3") "` first, then lock it in with this command.",
+          "hf 15 cfinalize -y"
                  );
 
     void *argtable[] = {

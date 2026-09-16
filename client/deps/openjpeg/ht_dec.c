@@ -1154,7 +1154,7 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
             opj_mutex_lock(p_manager_mutex);
         }
         opj_event_msg(p_manager, EVT_ERROR, "We do not support ROI in decoding "
-                      "HT codeblocks\n");
+                                            "HT codeblocks\n");
         if (p_manager_mutex) {
             opj_mutex_unlock(p_manager_mutex);
         }
@@ -1265,8 +1265,8 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
             opj_mutex_lock(p_manager_mutex);
         }
         opj_event_msg(p_manager, EVT_WARNING, "A malformed codeblock that has "
-                      "more than one coding pass, but zero length for "
-                      "2nd and potentially the 3rd pass in an HT codeblock.\n");
+                                              "more than one coding pass, but zero length for "
+                                              "2nd and potentially the 3rd pass in an HT codeblock.\n");
         if (p_manager_mutex) {
             opj_mutex_unlock(p_manager_mutex);
         }
@@ -1277,8 +1277,8 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
             opj_mutex_lock(p_manager_mutex);
         }
         opj_event_msg(p_manager, EVT_ERROR, "We do not support more than 3 "
-                      "coding passes in an HT codeblock; This codeblocks has "
-                      "%d passes.\n", num_passes);
+                                            "coding passes in an HT codeblock; This codeblocks has "
+                                            "%d passes.\n", num_passes);
         if (p_manager_mutex) {
             opj_mutex_unlock(p_manager_mutex);
         }
@@ -1299,8 +1299,8 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
             opj_mutex_lock(p_manager_mutex);
         }
         opj_event_msg(p_manager, EVT_ERROR, "32 bits are not enough to "
-                      "decode this codeblock, since the number of "
-                      "bitplane, %d, is larger than 30.\n", cblk->Mb);
+                                            "decode this codeblock, since the number of "
+                                            "bitplane, %d, is larger than 30.\n", cblk->Mb);
         if (p_manager_mutex) {
             opj_mutex_unlock(p_manager_mutex);
         }
@@ -1315,8 +1315,8 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
             opj_mutex_lock(p_manager_mutex);
         }
         opj_event_msg(p_manager, EVT_ERROR, "Malformed HT codeblock. "
-                      "Decoding this codeblock is stopped. There are "
-                      "%d zero bitplanes in %d bitplanes.\n",
+                                            "Decoding this codeblock is stopped. There are "
+                                            "%d zero bitplanes in %d bitplanes.\n",
                       zero_bplanes, cblk->Mb);
 
         if (p_manager_mutex) {
@@ -1337,11 +1337,11 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
             if (only_cleanup_pass_is_decoded == OPJ_FALSE) {
                 only_cleanup_pass_is_decoded = OPJ_TRUE;
                 opj_event_msg(p_manager, EVT_WARNING, "Malformed HT codeblock. "
-                              "When the number of zero planes bitplanes is "
-                              "equal to the number of bitplanes, only the cleanup "
-                              "pass makes sense, but we have %d passes in this "
-                              "codeblock. Therefore, only the cleanup pass will be "
-                              "decoded. This message will not be displayed again.\n",
+                                                      "When the number of zero planes bitplanes is "
+                                                      "equal to the number of bitplanes, only the cleanup "
+                                                      "pass makes sense, but we have %d passes in this "
+                                                      "codeblock. Therefore, only the cleanup pass will be "
+                                                      "decoded. This message will not be displayed again.\n",
                               num_passes);
             }
             if (p_manager_mutex) {
@@ -1363,7 +1363,7 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
             opj_mutex_lock(p_manager_mutex);
         }
         opj_event_msg(p_manager, EVT_ERROR, "Malformed HT codeblock. "
-                      "Invalid codeblock length values.\n");
+                                            "Invalid codeblock length values.\n");
 
         if (p_manager_mutex) {
             opj_mutex_unlock(p_manager_mutex);
@@ -1380,8 +1380,8 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
             opj_mutex_lock(p_manager_mutex);
         }
         opj_event_msg(p_manager, EVT_ERROR, "Malformed HT codeblock. "
-                      "One of the following condition is not met: "
-                      "2 <= Scup <= min(Lcup, 4079)\n");
+                                            "One of the following condition is not met: "
+                                            "2 <= Scup <= min(Lcup, 4079)\n");
 
         if (p_manager_mutex) {
             opj_mutex_unlock(p_manager_mutex);
@@ -1395,7 +1395,7 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
             opj_mutex_lock(p_manager_mutex);
         }
         opj_event_msg(p_manager, EVT_ERROR, "Malformed HT codeblock. "
-                      "Incorrect MEL segment sequence.\n");
+                                            "Incorrect MEL segment sequence.\n");
         if (p_manager_mutex) {
             opj_mutex_unlock(p_manager_mutex);
         }
@@ -1557,8 +1557,8 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
                 opj_mutex_lock(p_manager_mutex);
             }
             opj_event_msg(p_manager, EVT_ERROR, "Malformed HT codeblock. Decoding "
-                          "this codeblock is stopped. U_q is larger than zero "
-                          "bitplanes + 1 \n");
+                                                "this codeblock is stopped. U_q is larger than zero "
+                                                "bitplanes + 1 \n");
             if (p_manager_mutex) {
                 opj_mutex_unlock(p_manager_mutex);
             }
@@ -1583,8 +1583,8 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
                 opj_mutex_lock(p_manager_mutex);
             }
             opj_event_msg(p_manager, EVT_ERROR, "Malformed HT codeblock. "
-                          "VLC code produces significant samples outside "
-                          "the codeblock area.\n");
+                                                "VLC code produces significant samples outside "
+                                                "the codeblock area.\n");
             if (p_manager_mutex) {
                 opj_mutex_unlock(p_manager_mutex);
             }
@@ -1858,8 +1858,8 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
                     opj_mutex_lock(p_manager_mutex);
                 }
                 opj_event_msg(p_manager, EVT_ERROR, "Malformed HT codeblock. "
-                              "Decoding this codeblock is stopped. U_q is"
-                              "larger than bitplanes + 1 \n");
+                                                    "Decoding this codeblock is stopped. U_q is"
+                                                    "larger than bitplanes + 1 \n");
                 if (p_manager_mutex) {
                     opj_mutex_unlock(p_manager_mutex);
                 }
@@ -1884,8 +1884,8 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
                     opj_mutex_lock(p_manager_mutex);
                 }
                 opj_event_msg(p_manager, EVT_ERROR, "Malformed HT codeblock. "
-                              "VLC code produces significant samples outside "
-                              "the codeblock area.\n");
+                                                    "VLC code produces significant samples outside "
+                                                    "the codeblock area.\n");
                 if (p_manager_mutex) {
                     opj_mutex_unlock(p_manager_mutex);
                 }

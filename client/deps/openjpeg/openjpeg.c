@@ -671,9 +671,9 @@ opj_codec_t *OPJ_CALLCONV opj_create_compress(OPJ_CODEC_FORMAT p_format) {
                                                                      struct opj_event_mgr *)) opj_j2k_setup_encoder;
 
             l_codec->m_codec_data.m_compression.opj_encoder_set_extra_options = (OPJ_BOOL(
-                        *)(void *,
-                           const char *const *,
-                           struct opj_event_mgr *)) opj_j2k_encoder_set_extra_options;
+                    *)(void *,
+                       const char *const *,
+                       struct opj_event_mgr *)) opj_j2k_encoder_set_extra_options;
 
             l_codec->opj_set_threads =
                 (OPJ_BOOL(*)(void *p_codec, OPJ_UINT32 num_threads)) opj_j2k_set_threads;
@@ -717,9 +717,9 @@ opj_codec_t *OPJ_CALLCONV opj_create_compress(OPJ_CODEC_FORMAT p_format) {
                                                                      struct opj_event_mgr *)) opj_jp2_setup_encoder;
 
             l_codec->m_codec_data.m_compression.opj_encoder_set_extra_options = (OPJ_BOOL(
-                        *)(void *,
-                           const char *const *,
-                           struct opj_event_mgr *)) opj_jp2_encoder_set_extra_options;
+                    *)(void *,
+                       const char *const *,
+                       struct opj_event_mgr *)) opj_jp2_encoder_set_extra_options;
 
             l_codec->opj_set_threads =
                 (OPJ_BOOL(*)(void *p_codec, OPJ_UINT32 num_threads)) opj_jp2_set_threads;

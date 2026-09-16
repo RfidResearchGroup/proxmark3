@@ -106,7 +106,7 @@ uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len) {
 
 // assumes valid start 256 based 00 address
 // Start writing flash from the specified location.
-// Write FLASH_MEM_BLOCK_SIZE bytes at most each time. 
+// Write FLASH_MEM_BLOCK_SIZE bytes at most each time.
 // If the writing is nearly complete, write it as bytes_remaining bytes.
 uint16_t Flash_Write(uint32_t address, uint8_t *in, uint16_t len) {
 

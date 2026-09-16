@@ -633,7 +633,7 @@ static OPJ_BOOL opj_jp2_read_ihdr(opj_jp2_t *jp2,
 static OPJ_BYTE *opj_jp2_write_ihdr(opj_jp2_t *jp2,
                                     OPJ_UINT32 *p_nb_bytes_written
                                    ) {
-    OPJ_BYTE *l_ihdr_data, * l_current_ihdr_ptr;
+    OPJ_BYTE *l_ihdr_data, *l_current_ihdr_ptr;
 
     /* preconditions */
     assert(jp2 != 00);
@@ -687,7 +687,7 @@ static OPJ_BYTE *opj_jp2_write_bpcc(opj_jp2_t *jp2,
     OPJ_UINT32 i;
     /* room for 8 bytes for box and 1 byte for each component */
     OPJ_UINT32 l_bpcc_size;
-    OPJ_BYTE *l_bpcc_data, * l_current_bpcc_ptr;
+    OPJ_BYTE *l_bpcc_data, *l_current_bpcc_ptr;
 
     /* preconditions */
     assert(jp2 != 00);
@@ -757,7 +757,7 @@ static OPJ_BYTE *opj_jp2_write_cdef(opj_jp2_t *jp2,
                                     OPJ_UINT32 *p_nb_bytes_written) {
     /* room for 8 bytes for box, 2 for n */
     OPJ_UINT32 l_cdef_size = 10;
-    OPJ_BYTE *l_cdef_data, * l_current_cdef_ptr;
+    OPJ_BYTE *l_cdef_data, *l_current_cdef_ptr;
     OPJ_UINT32 l_value;
     OPJ_UINT16 i;
 
@@ -808,7 +808,7 @@ static OPJ_BYTE *opj_jp2_write_colr(opj_jp2_t *jp2,
                                    ) {
     /* room for 8 bytes for box 3 for common data and variable upon profile*/
     OPJ_UINT32 l_colr_size = 11;
-    OPJ_BYTE *l_colr_data, * l_current_colr_ptr;
+    OPJ_BYTE *l_colr_data, *l_current_colr_ptr;
 
     /* preconditions */
     assert(jp2 != 00);
@@ -1740,7 +1740,7 @@ static OPJ_BOOL opj_jp2_write_ftyp(opj_jp2_t *jp2,
                                    opj_event_mgr_t *p_manager) {
     OPJ_UINT32 i;
     OPJ_UINT32 l_ftyp_size;
-    OPJ_BYTE *l_ftyp_data, * l_current_data_ptr;
+    OPJ_BYTE *l_ftyp_data, *l_current_data_ptr;
     OPJ_BOOL l_result;
 
     /* preconditions */

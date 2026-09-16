@@ -366,24 +366,24 @@ int hexact_parser_parse(const uint8_t *dump, size_t dumplen) {
         PrintAndLogEx(INFO, "Payload............ sector %u and %u, " _YELLOW_("%s"),
                       HEXACT_DATA_SECTOR_A, HEXACT_DATA_SECTOR_B,
                       all_ff ? "erased, card not personalised" : "not read"
-                );
+                     );
         return PM3_SUCCESS;
     }
 
     PrintAndLogEx(INFO, "Payload............ sector %u and %u, " _YELLOW_("mask removed"),
-            HEXACT_DATA_SECTOR_A,
-            HEXACT_DATA_SECTOR_B
-        );
+                  HEXACT_DATA_SECTOR_A,
+                  HEXACT_DATA_SECTOR_B
+                 );
 
     for (uint8_t i = 0; i < HEXACT_PAYLOAD_BLOCKS; i++) {
         char line[(2 * 16) + 4] = {0};
         str_append(line, sizeof(line), "%s  ", sprint_hex_inrow(rec[i], 8));
         str_append(line, sizeof(line), "%s", sprint_hex_inrow(rec[i] + 8, 8));
         PrintAndLogEx(INFO, "  sector %2u blk %u.. %s",
-                    hexact_payload[i].sector,
-                    hexact_payload[i].blk,
-                    line
-                );
+                      hexact_payload[i].sector,
+                      hexact_payload[i].blk,
+                      line
+                     );
     }
 
     const uint8_t *uid = dump;
@@ -425,16 +425,16 @@ int hexact_parser_parse(const uint8_t *dump, size_t dumplen) {
         uint8_t pt[MFBLOCK_SIZE];
         hexact_decrypt(spare, HEXACT_DATA_SECTOR_B, 2, pt);
         PrintAndLogEx(INFO, "  sector %2u blk 2.. %s  " _YELLOW_("( other generation )"),
-                    HEXACT_DATA_SECTOR_B,
-                    sprint_hex_inrow(pt, MFBLOCK_SIZE)
-                );
+                      HEXACT_DATA_SECTOR_B,
+                      sprint_hex_inrow(pt, MFBLOCK_SIZE)
+                     );
     }
 
     if (wiped == false) {
         PrintAndLogEx(INFO, "Cross checks....... %u / %u  ( %s )", pass, total,
                       (pass == total) ? _GREEN_("bound bytes agree with sector 0, 15 and the UID")
-                                      : _RED_("bound bytes disagree, see above")
-                );
+                      : _RED_("bound bytes disagree, see above")
+                     );
     }
 
     // two badges of one building carry the same row, two buildings never do
@@ -583,10 +583,10 @@ int hexact_selftest(void) {
     uint8_t rec[HEXACT_PAYLOAD_BLOCKS][MFBLOCK_SIZE];
     for (uint8_t i = 0; i < HEXACT_PAYLOAD_BLOCKS; i++) {
         hexact_decrypt(dump + ((mfFirstBlockOfSector(hexact_payload[i].sector) + hexact_payload[i].blk) * MFBLOCK_SIZE),
-                    hexact_payload[i].sector,
-                    hexact_payload[i].blk,
-                    rec[i]
-                );
+                       hexact_payload[i].sector,
+                       hexact_payload[i].blk,
+                       rec[i]
+                      );
     }
 
     bool written[HEXACT_PAYLOAD_BLOCKS];
@@ -594,20 +594,20 @@ int hexact_selftest(void) {
 
     uint8_t total = 0;
     uint8_t pass = hexact_cross_check(
-                        rec,
-                        dump + (2 * MFBLOCK_SIZE),
-                        dump,
-                        dump + (mfFirstBlockOfSector(HEXACT_ID_SECTOR) + 2) * MFBLOCK_SIZE,
-                        written,
-                        &total,
-                        false
-                    );
+                       rec,
+                       dump + (2 * MFBLOCK_SIZE),
+                       dump,
+                       dump + (mfFirstBlockOfSector(HEXACT_ID_SECTOR) + 2) * MFBLOCK_SIZE,
+                       written,
+                       &total,
+                       false
+                   );
 
     PrintAndLogEx(INFO, "  intact card........ %u / %u  ( %s )",
-                pass,
-                total,
-                (pass == total) ? _GREEN_("ok") : _RED_("fail")
-    );
+                  pass,
+                  total,
+                  (pass == total) ? _GREEN_("ok") : _RED_("fail")
+                 );
 
     if (pass != total) {
         return PM3_ESOFT;
@@ -615,20 +615,20 @@ int hexact_selftest(void) {
 
     dump[0] ^= 0x01;
     uint8_t broken = hexact_cross_check(
-                        rec,
-                        dump + (2 * MFBLOCK_SIZE),
-                        dump,
-                        dump + (mfFirstBlockOfSector(HEXACT_ID_SECTOR) + 2) * MFBLOCK_SIZE,
-                        written,
-                        &total,
-                        false
-                );
+                         rec,
+                         dump + (2 * MFBLOCK_SIZE),
+                         dump,
+                         dump + (mfFirstBlockOfSector(HEXACT_ID_SECTOR) + 2) * MFBLOCK_SIZE,
+                         written,
+                         &total,
+                         false
+                     );
 
     PrintAndLogEx(INFO, "  one UID bit flipped %u / %u  ( %s )"
-                        , broken
-                        , total
-                        , (broken == total - 4) ? _GREEN_("ok") : _RED_("fail")
-                );
+                  , broken
+                  , total
+                  , (broken == total - 4) ? _GREEN_("ok") : _RED_("fail")
+                 );
 
     if (broken != total - 4) {
         return PM3_ESOFT;
