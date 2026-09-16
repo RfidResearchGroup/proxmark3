@@ -512,6 +512,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/parsers/parsehid.c
         ${PM3_ROOT}/client/src/parsers/parsevigik.c
         ${PM3_ROOT}/client/src/parsers/parsehexact.c
+        ${PM3_ROOT}/client/src/parsers/parsemykey.c
         ${PM3_ROOT}/client/src/parsers/parseproac.c
         ${PM3_ROOT}/client/src/parsers/hrtparser/hrtparser.c
         ${PM3_ROOT}/client/src/pla.c

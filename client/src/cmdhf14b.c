@@ -37,6 +37,7 @@
 #include "cmdhf.h"              // handle HF plot
 #include "atrs.h"               // atqbToEmulatedAtr
 #include "pla.h"                // ECP parsing
+#include "parsers/parsemykey.h" // MyKey / COGES
 
 #define MAX_14B_TIMEOUT_MS (4949U)
 
@@ -2619,153 +2620,6 @@ static int CmdHF14BRestore(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-/*
-
-static uint32_t srix4kEncode(uint32_t value) {
-    // vv = value
-    // pp = position
-    //                vv vv vv pp
-    // 4 bytes      : 00 1A 20 01
-    // only the lower crumbs.
-    uint8_t block = (value & 0xFF);
-    uint8_t i = 0;
-    uint8_t valuebytes[] = {0, 0, 0};
-    Uint3byteToMemBe(valuebytes, value >> 8);
-
-    uint32_t value_x = (value >> 8);
-    PrintAndLogEx(INFO, "value...... %08x  %06x", value, value_x);
-    PrintAndLogEx(INFO, "3b value... %s", sprint_hex_inrow(valuebytes, sizeof(valuebytes)));
-    PrintAndLogEx(INFO, "block no... %02x", block);
-
-    // Scrambled part
-    // Crumb swapping of value.
-    uint32_t foo = 0;
-    foo |= CRUMB(value_x, 22) << 28;
-    foo |= CRUMB(value_x, 14) << 26;
-    foo |= CRUMB(value_x, 6) << 24;
-
-    foo |= CRUMB(value_x, 20) << 20;
-    foo |= CRUMB(value_x, 12) << 18;
-    foo |= CRUMB(value_x, 4) << 16;
-
-    foo |= CRUMB(value_x, 18) << 12;
-    foo |= CRUMB(value_x, 10) << 10;
-    foo |= CRUMB(value_x, 2) << 8;
-
-    foo |= CRUMB(value_x, 16) << 4;
-    foo |= CRUMB(value_x, 8) << 2;
-    foo |= CRUMB(value_x, 0) << 0;
-
-    PrintAndLogEx(INFO, "hex........ %02x %02x %02x", CRUMB(value_x, 22), CRUMB(value_x, 14), CRUMB(value_x, 6));
-    PrintAndLogEx(INFO, "hex........ %02x %02x %02x", CRUMB(value_x, 20), CRUMB(value_x, 12), CRUMB(value_x, 4));
-    PrintAndLogEx(INFO, "hex........ %02x %02x %02x", CRUMB(value_x, 18), CRUMB(value_x, 10), CRUMB(value_x, 2));
-    PrintAndLogEx(INFO, "hex........ %02x %02x %02x", CRUMB(value_x, 16), CRUMB(value_x, 8), CRUMB(value_x, 0));
-
-    PrintAndLogEx(INFO, "hex........ %08x", foo);
-
-    // chksum part
-    uint32_t chksum = 0xFF - block;
-
-    // chksum is reduced by each nibbles of value.
-    for (i = 0; i < 3; ++i) {
-        chksum -= NIBBLE_HIGH(valuebytes[i]);
-        chksum -= NIBBLE_LOW(valuebytes[i]);
-    }
-
-    // base4 conversion and left shift twice
-    i = 3;
-    uint8_t base4[] = {0, 0, 0, 0};
-    while (chksum != 0) {
-        base4[i--] = (chksum % 4 << 2);
-        chksum /= 4;
-    }
-    PrintAndLogEx(INFO, "%s", sprint_hex_inrow(base4, sizeof(base4)));
-
-    // merge scambled and chksum parts
-    uint32_t encvalue = 0;
-
-        (NIBBLE_LOW(base4[0]) << 28) |
-        (NIBBLE_HIGH(temp[0])  << 24) |
-
-        (NIBBLE_LOW(base4[1]) << 20) |
-        (NIBBLE_LOW(temp[0])  << 16) |
-
-        (NIBBLE_LOW(base4[2]) << 12) |
-        (NIBBLE_HIGH(temp[1])  << 8) |
-
-        (NIBBLE_LOW(base4[3]) << 4) |
-        NIBBLE_LOW(temp[1]);
-
-    PrintAndLogEx(NORMAL, "ICE encoded | %08X -> %08X", value, encvalue);
-    return encvalue;
-}
-*/
-
-static uint32_t srix4k_decode_counter(uint32_t num) {
-    uint32_t value = ~num;
-    ++value;
-    return value;
-}
-/*
-static uint32_t srix4kDecode(uint32_t value) {
-    switch (value) {
-        case 0xC04F42C5:
-            return 0x003139;
-        case 0xC1484807:
-            return 0x002943;
-        case 0xC0C60848:
-            return 0x001A20;
-    }
-    return 0;
-}
-*/
-
-static uint32_t srix4k_get_magicbytes(uint64_t uid, uint32_t block6, uint32_t block18, uint32_t block19) {
-#define MASK 0xFFFFFFFF;
-    uint32_t uid32 = uid & MASK;
-    uint32_t counter = srix4k_decode_counter(block6);
-    uint32_t decodedBlock18 = 0;
-    uint32_t decodedBlock19 = 0;
-//    uint32_t decodedBlock18 = srix4kDecode(block18);
-//    uint32_t decodedBlock19 = srix4kDecode(block19);
-    uint32_t doubleBlock = (decodedBlock18 << 16 | decodedBlock19) + 1;
-
-    uint32_t result = (uid32 * doubleBlock * counter) & MASK;
-    PrintAndLogEx(SUCCESS, "Magic bytes | %08X", result);
-    return result;
-}
-
-static int CmdSRIX4kValid(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf 14b valid",
-                  "SRIX checksum test",
-                  "hf 14b valid\n"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
-    CLIParserFree(ctx);
-
-    uint64_t uid = 0xD00202501A4532F9;
-    uint32_t block6 = 0xFFFFFFFF;
-    uint32_t block18 = 0xC04F42C5;
-    uint32_t block19 = 0xC1484807;
-    uint32_t block21 = 0xD1BCABA4;
-
-    uint32_t test_b18 = 0x001A2001; // 0x00313918;
-    uint32_t test_b18_enc = 0;
-    // uint32_t test_b18_enc = srix4kEncode(test_b18);
-    // uint32_t test_b18_dec = srix4kDecode(test_b18_enc);
-    PrintAndLogEx(SUCCESS, "ENCODE & CHECKSUM |  %08X -> %08X (%s)", test_b18, test_b18_enc, "");
-
-    uint32_t magic = srix4k_get_magicbytes(uid, block6, block18, block19);
-    PrintAndLogEx(SUCCESS, "BLOCK 21 |  %08X -> %08X (no XOR)", block21, magic ^ block21);
-    return PM3_SUCCESS;
-}
-
 int select_card_14443b_4(bool disconnect, iso14b_card_select_t *card) {
     if (card) {
         memset(card, 0, sizeof(iso14b_card_select_t));
@@ -3471,13 +3325,15 @@ static int CmdHF14BView(const char *Cmd) {
                   "note:\n"
                   "  - command expects the filename to contain a UID\n"
                   "    which is needed to determine card memory type",
-                  "hf 14b view -f hf-14b-01020304-dump.bin"
+                  "hf 14b view -f hf-14b-01020304-dump.bin\n"
+                  "hf 14b view --selftest"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
+        arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0("z", "dense", "dense dump output style"),
+        arg_lit0(NULL, "selftest", "Run the dump parsers self tests and exit"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3486,7 +3342,17 @@ static int CmdHF14BView(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     bool verbose = arg_get_lit(ctx, 2);
     bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 3));
+    bool selftest = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
+
+    if (selftest) {
+        return mykey_selftest();
+    }
+
+    if (fnlen == 0) {
+        PrintAndLogEx(ERR, "Specify a filename with `" _YELLOW_("-f") "` or run `" _YELLOW_("--selftest") "`");
+        return PM3_EINVARG;
+    }
 
     // read dump file
     uint8_t *dump = NULL;
@@ -3504,7 +3370,12 @@ static int CmdHF14BView(const char *Cmd) {
 
     // figure out a way to identify the different dump files.
     // STD/SR/CT is difference
-    print_sr_blocks(dump, bytes_read, get_uid_from_filename(filename), dense_output);
+    const uint8_t *uid = get_uid_from_filename(filename);
+    print_sr_blocks(dump, bytes_read, uid, dense_output);
+
+    if (is_valid_mykey_card(dump, bytes_read)) {
+        (void)mykey_parser_parse(dump, bytes_read, uid);
+    }
     //print_std_blocks(dump, bytes_read);
     //print_ct_blocks(dump, bytes_read);
 
@@ -3739,7 +3610,6 @@ static command_t CommandTable[] = {
     {"wrbl",      CmdHF14BSriWrbl,     IfPm3Iso14443b,  "Write data to a SRI512/SRIX4 tag"},
     {"tearoff",   CmdHF14BSriTearoff,  IfPm3Iso14443b,  "Tear-off attack on ST25TB/SRx counter blocks"},
     {"view",      CmdHF14BView,        AlwaysAvailable, "Display content from tag dump file"},
-    {"valid",     CmdSRIX4kValid,      AlwaysAvailable, "SRIX4 checksum test"},
     {"---------", CmdHelp,             IfPm3Iso14443b,  "------------------ " _CYAN_("ASK CTS / C-ticket") " ------------------"},
     {"ctdump",    CmdHF14BCtsDump,     IfPm3Iso14443b,  "Dump ASK CTS/C-ticket"},
     {"ctrdbl",    CmdHF14BCtRdBl,      IfPm3Iso14443b,  "Read ASK CTS/C-ticket block"},

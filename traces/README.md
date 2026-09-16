@@ -190,3 +190,20 @@ the key files are for reading or rebuilding the physical card.
 hf mfdes eload -f traces/mifare/hf-mfdes-ev1-8k-test.json
 hf mfdes sim
 ```
+
+## ST25TB card images
+
+`14b v2` dump format, 128 EEPROM blocks of four bytes followed by the system
+block. The file name has to carry the UID, `hf 14b view` reads it from there to
+work out the chip type and, for MyKey, to derive the session key.
+
+|filename|description|
+|--------|-----------|
+|hf-14b-D0021F673CB26556-dump.json        |ST25TB04K carrying a COGES v3 MyKey, reset state: no vendor bound, zero credit, empty transaction ring. Blocks 7 and 8 are write protected|
+
+```
+hf 14b view -f traces/hf-14b-D0021F673CB26556-dump.json
+```
+
+This is the vector behind `hf 14b view --selftest`, which checks the block
+scrambler, the session key and all 48 block checksums against it.
