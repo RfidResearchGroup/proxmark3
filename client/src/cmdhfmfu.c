@@ -1218,7 +1218,7 @@ static int ulc_print_configuration(uint8_t *data) {
 static int ulaes_print_configuration(uint8_t *data, uint8_t start_page) {
 
     // first call
-    if (start_page == 0x2C) {
+    if (start_page == 0x29) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("UL-AES Configuration") " --------------------------");
 
