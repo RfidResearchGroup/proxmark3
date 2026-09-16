@@ -67,6 +67,7 @@
 
 #define MIFAREU3P_KEY_SIZE 16
 #define MIFAREULC_KEY_INDEX 3
+#define MFU_DEFAULT_KEY_DIC "mfulc_default_keys.dic"
 
 // The Capability Container sits in block 3, the NDEF data area starts at block 4
 // and READ takes a one byte block number, so block 255 is the last one reachable.
@@ -4721,57 +4722,12 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
     return isok;
 }
 
-static int CmdHF14AMfUCAuthChk(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfu cchk",
-                  "It checks MIFARE Ultralight C tags keys against a dictionary file with keys\n",
-                  "hf mfu cchk -f mfulc_default_keys.dic");
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_str0("f", "file", "<fn>", "filename of dictionary"),
-        arg_int0("s", "segment", "<0..3>", "Segment index (full key if not specified)"),
-        arg_int0("r", "retries", "<0..255>", "Number of retries (def: 0)"),
-        arg_str0("k", "key", "<hex>", "Starting key, 16 hex bytes (def: zero key), for segment check"),
-        arg_lit0("x", "xor", "XOR starting key with segment candidates (def: override)"),
-        arg_lit0("n", "nocheck", "Skip checking tag answer correctness"),
-        arg_lit0("0", "read0", "Use fast READ0 (skip anticol)"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-
-    int fnlen = 0;
-    char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-    int segment = arg_get_int_def(ctx, 2, -1);   // -1 means full key
-    int retries = arg_get_int_def(ctx, 3, 0);
-    int ref_keylen = 0;
-    uint8_t ref_key[16] = {0};
-    CLIGetHexWithReturn(ctx, 4, ref_key, &ref_keylen);
-    bool xor_ref_key = arg_get_lit(ctx, 5);
-    bool check_answer = !arg_get_lit(ctx, 6);
-    bool use_fastread0 = arg_get_lit(ctx, 7);
-    CLIParserFree(ctx);
-
-    if (fnlen == 0) {
-        PrintAndLogEx(ERR, "No dictionary file specified");
-        return PM3_EFILE;
-    }
-    if (segment < -1 || segment > 3) {
-        PrintAndLogEx(ERR, "Invalid segment (must be 0..3)");
-        return PM3_EINVARG;
-    }
-    if (retries < 0 || retries > 255) {
-        PrintAndLogEx(ERR, "Invalid retries (must be 0..255)");
-        return PM3_EINVARG;
-    }
-    if (ref_keylen && ref_keylen != MIFAREU3P_KEY_SIZE) {
-        PrintAndLogEx(WARNING, "Key must be %i hex bytes. Got %d", MIFAREU3P_KEY_SIZE, ref_keylen);
-        return PM3_EINVARG;
-    }
-    if (ref_keylen == 0) {
-        ref_keylen = MIFAREU3P_KEY_SIZE;
-    }
+// Runs one dictionary against one key slot.  The device can only hold a few keys
+// per frame, so the dictionary is fed to it in chunks: the first chunk selects the
+// card, the last one drops the field.
+static int mfu_auth_chk(uint8_t key_index, const char *filename, int fnlen, int segment,
+                        int retries, uint8_t *ref_key, bool xor_ref_key, bool check_answer,
+                        bool use_fastread0) {
 
     uint8_t *keyBlock = NULL;
     uint32_t keycnt = 0;
@@ -4792,9 +4748,6 @@ static int CmdHF14AMfUCAuthChk(const char *Cmd) {
         max_chunk = MIFAREU3P_CHKKEY_MAX_KEYS;
     }
     uint32_t chunksize = (keycnt > max_chunk) ? max_chunk : keycnt;
-    bool firstChunk = true, lastChunk = false;
-
-    int i = 0;
 
     // time
     uint32_t auths = 0;
@@ -4802,7 +4755,12 @@ static int CmdHF14AMfUCAuthChk(const char *Cmd) {
 
     // main keychunk loop
     for (int r = 0; r < retries + 1; r++) {
-        for (i = 0; i < keycnt; i += chunksize) {
+
+        // every pass needs its own select and its own teardown
+        bool firstChunk = true, lastChunk = false;
+
+        for (uint32_t i = 0; i < keycnt; i += chunksize) {
+
             if (kbd_enter_pressed()) {
                 clearCommandBuffer();
                 SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
@@ -4812,22 +4770,22 @@ static int CmdHF14AMfUCAuthChk(const char *Cmd) {
                 goto out;
             }
 
-            uint32_t nkeys = ((keycnt - i)  > chunksize) ? chunksize : keycnt - i;
+            uint32_t nkeys = ((keycnt - i) > chunksize) ? chunksize : keycnt - i;
 
             // last chunk?
             if (nkeys == keycnt - i) {
                 lastChunk = true;
             }
-            int res = mfu_3pass_check_keys(MIFAREULC_KEY_INDEX, firstChunk, lastChunk, nkeys, segment, ref_key, xor_ref_key, keyBlock + (i * keysize), false, true, &auths, &ms, check_answer, use_fastread0);
-            if (firstChunk)
-                firstChunk = false;
+
+            int res = mfu_3pass_check_keys(key_index, firstChunk, lastChunk, nkeys, segment, ref_key, xor_ref_key, keyBlock + (i * keysize), false, true, &auths, &ms, check_answer, use_fastread0);
+            firstChunk = false;
 
             // all keys,  aborted
             if (res == PM3_SUCCESS || res == 2) {
                 PrintAndLogEx(NORMAL, "");
                 goto out;
             }
-            PrintAndLogEx(INPLACE, "Testing %5i/%5i ( " _YELLOW_("%02.1f %%") " )", i, keycnt, (float)i * 100 / keycnt);
+            PrintAndLogEx(INPLACE, "Testing %5u/%5u ( " _YELLOW_("%02.1f %%") " )", i, keycnt, (float)i * 100 / keycnt);
         } // end chunks of keys
     }
     PrintAndLogEx(NORMAL, "");
@@ -4839,6 +4797,102 @@ out:
     free(keyBlock);
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
+}
+
+static int CmdHF14AMfUAuthChk(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu chk",
+                  "Checks MIFARE Ultralight C / Ultralight AES tag keys against a dictionary file.\n"
+                  "The tag type is read off the card and picks the key slot to attack.\n"
+                  "  UL-C ..... single 3DES key, --idx does not apply\n"
+                  "  UL-AES ... key index 0 DataProtKey (default)\n"
+                  "             key index 1 UIDRetrKey\n"
+                  "             key index 2 OriginalityKey\n"
+                  "Without -f, " _YELLOW_(MFU_DEFAULT_KEY_DIC) " is used for both tag types.\n"
+                  "A segment check (-s) holds 4 byte keys, so it needs its own dictionary via -f.",
+                  "hf mfu chk\n"
+                  "hf mfu chk -f mfulc_default_keys.dic\n"
+                  "hf mfu chk -f mfulaes_hw1.dic --idx 1\n"
+                  "hf mfu chk -f mfulc_segment_hw1.dic -s 0");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<fn>", "filename of dictionary"),
+        arg_int0("i", "idx", "<0..2>", "Key index, Ultralight AES only (def: 0)"),
+        arg_int0("s", "segment", "<0..3>", "Segment index (full key if not specified)"),
+        arg_int0("r", "retries", "<0..255>", "Number of retries (def: 0)"),
+        arg_str0("k", "key", "<hex>", "Starting key, 16 hex bytes (def: zero key), for segment check"),
+        arg_lit0("x", "xor", "XOR starting key with segment candidates (def: override)"),
+        arg_lit0("n", "nocheck", "Skip checking tag answer correctness"),
+        arg_lit0("0", "read0", "Use fast READ0 (skip anticol)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    int key_idx = arg_get_int_def(ctx, 2, -1);   // -1 means not given
+    int segment = arg_get_int_def(ctx, 3, -1);   // -1 means full key
+    int retries = arg_get_int_def(ctx, 4, 0);
+    int ref_keylen = 0;
+    uint8_t ref_key[16] = {0};
+    CLIGetHexWithReturn(ctx, 5, ref_key, &ref_keylen);
+    bool xor_ref_key = arg_get_lit(ctx, 6);
+    bool check_answer = !arg_get_lit(ctx, 7);
+    bool use_fastread0 = arg_get_lit(ctx, 8);
+    CLIParserFree(ctx);
+
+    if (key_idx < -1 || key_idx > 2) {
+        PrintAndLogEx(ERR, "Invalid key index (must be 0..2)");
+        return PM3_EINVARG;
+    }
+    if (segment < -1 || segment > 3) {
+        PrintAndLogEx(ERR, "Invalid segment (must be 0..3)");
+        return PM3_EINVARG;
+    }
+    if (retries < 0 || retries > 255) {
+        PrintAndLogEx(ERR, "Invalid retries (must be 0..255)");
+        return PM3_EINVARG;
+    }
+    if (ref_keylen && ref_keylen != MIFAREU3P_KEY_SIZE) {
+        PrintAndLogEx(WARNING, "Key must be %i hex bytes. Got %d", MIFAREU3P_KEY_SIZE, ref_keylen);
+        return PM3_EINVARG;
+    }
+
+    if (fnlen == 0) {
+        if (segment != -1) {
+            PrintAndLogEx(ERR, "A segment check needs a segment dictionary, pass one with " _YELLOW_("-f"));
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("mfulc_segment_hw1.dic") "` or `" _YELLOW_("mfulaes_segment_hw1.dic") "`");
+            return PM3_EFILE;
+        }
+        fnlen = snprintf(filename, sizeof(filename), MFU_DEFAULT_KEY_DIC);
+        PrintAndLogEx(INFO, "No dictionary given, using " _YELLOW_("%s"), filename);
+    }
+
+    uint64_t tagtype = GetHF14AMfU_Type();
+    if (tagtype == MFU_TT_UL_ERROR) {
+        PrintAndLogEx(WARNING, "No Ultralight tag found");
+        return PM3_ESOFT;
+    }
+    ul_print_type(tagtype, 0);
+
+    uint8_t key_index;
+    if ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES) {
+        key_index = (key_idx == -1) ? 0 : (uint8_t)key_idx;
+    } else if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) {
+        if (key_idx != -1) {
+            PrintAndLogEx(ERR, "Ultralight C holds a single key, " _YELLOW_("--idx") " is for Ultralight AES");
+            return PM3_EINVARG;
+        }
+        key_index = MIFAREULC_KEY_INDEX;
+    } else {
+        PrintAndLogEx(ERR, "Tag is neither Ultralight C nor Ultralight AES");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu info") "` to see what this tag is");
+        return PM3_EINVARG;
+    }
+
+    return mfu_auth_chk(key_index, filename, fnlen, segment, retries, ref_key, xor_ref_key, check_answer, use_fastread0);
 }
 //-------------------------------------------------------------------------------
 // Ultralight AES Methods
@@ -4931,134 +4985,6 @@ static int CmdHF14AMfUAESAuth(const char *Cmd) {
 
 
 
-static int CmdHF14AMfUAESAuthChk(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfu aeschk",
-                  "It checks MIFARE Ultralight AES tags keys against a dictionary file with keys\n"
-                  "  Key index 0... DataProtKey (default)\n"
-                  "  Key index 1... UIDRetrKey\n"
-                  "  Key index 2... OriginalityKey\n",
-                  "hf mfu aeschk -f mfulaes_default_keys.dic");
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_str0("f", "file", "<fn>", "filename of dictionary"),
-        arg_int0("i", "idx", "<0..2>", "Key index (def: 0)"),
-        arg_int0("s", "segment", "<0..3>", "Segment index (full key if not specified)"),
-        arg_int0("r", "retries", "<0..255>", "Number of retries (def: 0)"),
-        arg_str0("k", "key", "<hex>", "Starting key, 16 hex bytes (def: zero key), for segment check"),
-        arg_lit0("x", "xor", "XOR starting key with segment candidates (def: override)"),
-        arg_lit0("n", "nocheck", "Skip checking tag answer correctness"),
-        arg_lit0("0", "read0", "Use fast READ0 (skip anticol)"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-
-    int fnlen = 0;
-    char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-    int key_index = arg_get_int_def(ctx, 2, 0);
-    int segment = arg_get_int_def(ctx, 3, -1);   // -1 means full key
-    int retries = arg_get_int_def(ctx, 4, 0);
-    int ref_keylen = 0;
-    uint8_t ref_key[16] = {0};
-    CLIGetHexWithReturn(ctx, 5, ref_key, &ref_keylen);
-    bool xor_ref_key = arg_get_lit(ctx, 6);
-    bool check_answer = !arg_get_lit(ctx, 7);
-    bool use_fastread0 = arg_get_lit(ctx, 8);
-    CLIParserFree(ctx);
-
-    if (fnlen == 0) {
-        PrintAndLogEx(ERR, "No dictionary file specified");
-        return PM3_EFILE;
-    }
-    if (key_index < 0 || key_index > 2) {
-        PrintAndLogEx(ERR, "Invalid key index (must be 0..2)");
-        return PM3_EINVARG;
-    }
-    if (segment < -1 || segment > 3) {
-        PrintAndLogEx(ERR, "Invalid segment (must be 0..3)");
-        return PM3_EINVARG;
-    }
-    if (retries < 0 || retries > 255) {
-        PrintAndLogEx(ERR, "Invalid retries (must be 0..255)");
-        return PM3_EINVARG;
-    }
-    if (ref_keylen && ref_keylen != MIFAREU3P_KEY_SIZE) {
-        PrintAndLogEx(WARNING, "Key must be %i hex bytes. Got %d", MIFAREU3P_KEY_SIZE, ref_keylen);
-        return PM3_EINVARG;
-    }
-    if (ref_keylen == 0) {
-        ref_keylen = MIFAREU3P_KEY_SIZE;
-    }
-
-    uint8_t *keyBlock = NULL;
-    uint32_t keycnt = 0;
-    int keysize = segment != -1 ? MIFAREU3P_KEY_SIZE / 4 : MIFAREU3P_KEY_SIZE;
-    int ret = mfu_3pass_load_keys(&keyBlock, &keycnt, filename, fnlen, keysize);
-    if (ret != PM3_SUCCESS) {
-        return ret;
-    }
-    if (keycnt == 0) {
-        PrintAndLogEx(ERR, "Dictionary contains no keys");
-        free(keyBlock);
-        return PM3_ESOFT;
-    }
-
-    // cap by what fits in one frame, then by what the nkeys field can announce
-    uint32_t max_chunk = (g_conn.max_cmd_data_size - MIFAREU3P_CHKKEY_HEADER) / keysize;
-    if (max_chunk > MIFAREU3P_CHKKEY_MAX_KEYS) {
-        max_chunk = MIFAREU3P_CHKKEY_MAX_KEYS;
-    }
-    uint32_t chunksize = (keycnt > max_chunk) ? max_chunk : keycnt;
-    bool firstChunk = true, lastChunk = false;
-
-    int i = 0;
-
-    uint32_t auths = 0;
-    uint32_t ms = 0;
-
-    // main keychunk loop
-    for (int r = 0; r < retries + 1; r++) {
-        for (i = 0; i < keycnt; i += chunksize) {
-            if (kbd_enter_pressed()) {
-                clearCommandBuffer();
-                SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-                SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);   // field is still ON if not on last chunk
-                PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(WARNING, "\naborted via keyboard!");
-                goto out;
-            }
-
-            uint32_t nkeys = ((keycnt - i)  > chunksize) ? chunksize : keycnt - i;
-
-            // last chunk?
-            if (nkeys == keycnt - i) {
-                lastChunk = true;
-            }
-
-            int res = mfu_3pass_check_keys(key_index, firstChunk, lastChunk, nkeys, segment, ref_key, xor_ref_key, keyBlock + (i * keysize), false, true, &auths, &ms, check_answer, use_fastread0);
-            if (firstChunk)
-                firstChunk = false;
-
-            // all keys,  aborted
-            if (res == PM3_SUCCESS || res == 2) {
-                PrintAndLogEx(NORMAL, "");
-                goto out;
-            }
-            PrintAndLogEx(INPLACE, "Testing %5i/%5i ( " _YELLOW_("%02.1f %%") " )", i, keycnt, (float)i * 100 / keycnt);
-        } // end chunks of keys
-    }
-    PrintAndLogEx(NORMAL, "");
-out:
-    PrintAndLogEx(INFO, "Time spent " _YELLOW_("%.1fs"), (float)(ms / 1000.0));
-    PrintAndLogEx(INFO, "Authentication attempts: %u", auths);
-    PrintAndLogEx(INFO, "Speed: %.1f auths/s", (float)(auths * 1000.0 / ms));
-
-    free(keyBlock);
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
 
 static int CmdHF14AMfUAESGetUID(const char *Cmd) {
     CLIParserContext *ctx;
@@ -6929,7 +6855,9 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
             }
 
         }
-    } else if (fixed != -1) delay_bd = fixed;
+    } else if (fixed != -1) {
+        delay_bd = fixed;
+    }
 
     if (ul_select(&card) == false) {
         PrintAndLogEx(NORMAL, "");
@@ -9081,11 +9009,10 @@ static command_t CommandTable[] = {
     {"otptear",  CmdHF14AMfuOtpTearoff,     IfPm3Iso14443a,  "Tear-off test on OTP bits"},
     {"countertear", CmdHF14AMfuEv1CounterTearoff,     IfPm3Iso14443a,  "Tear-off test on Ev1/NTAG Counter bits"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("operations") " -----------------------"},
+    {"chk",      CmdHF14AMfUAuthChk,        IfPm3Iso14443a,  "Ultralight C/AES - Authentication dictionary check"},
     {"cauth",    CmdHF14AMfUCAuth,          IfPm3Iso14443a,  "Ultralight-C - Authentication"},
-    {"cchk",     CmdHF14AMfUCAuthChk,       IfPm3Iso14443a,  "Ultralight-C - Authentication dictionary check"},
     {"desbrute", CmdHF14AMfUCDesBrute,      AlwaysAvailable, "Ultralight-C - 3DES key segment brute force"},
     {"aesauth",  CmdHF14AMfUAESAuth,        IfPm3Iso14443a,  "Ultralight-AES - Authentication"},
-    {"aeschk",   CmdHF14AMfUAESAuthChk,     IfPm3Iso14443a,  "Ultralight-AES - Authentication dictionary check"},
     {"aesgetuid",  CmdHF14AMfUAESGetUID,    IfPm3Iso14443a,  "Ultralight-AES - Get UID when RID in use"},
     {"setkey",   CmdHF14AMfUSetKey,         IfPm3Iso14443a,  "Ultralight C/AES - Set 3DES/AES keys"},
     {"dump",     CmdHF14AMfUDump,           IfPm3Iso14443a,  "Dump MIFARE Ultralight family tag to binary file"},

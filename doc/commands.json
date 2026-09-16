@@ -9185,26 +9185,6 @@
             ],
             "usage": "hf mfu aesauth [-hlkn0] [--key <hex>] [-i <0..2>] [--schann] [-r <n>]"
         },
-        "hf mfu aeschk": {
-            "command": "hf mfu aeschk",
-            "description": "It checks MIFARE Ultralight AES tags keys against a dictionary file with keys Key index 0... DataProtKey (default) Key index 1... UIDRetrKey Key index 2... OriginalityKey",
-            "notes": [
-                "hf mfu aeschk -f mfulaes_default_keys.dic"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help",
-                "-f, --file <fn> filename of dictionary",
-                "-i, --idx <0..2> Key index (def: 0)",
-                "-s, --segment <0..3> Segment index (full key if not specified)",
-                "-r, --retries <0..255> Number of retries (def: 0)",
-                "-k, --key <hex> Starting key, 16 hex bytes (def: zero key), for segment check",
-                "-x, --xor XOR starting key with segment candidates (def: override)",
-                "-n, --nocheck Skip checking tag answer correctness",
-                "-0, --read0 Use fast READ0 (skip anticol)"
-            ],
-            "usage": "hf mfu aeschk [-hxn0] [-f <fn>] [-i <0..2>] [-s <0..3>] [-r <0..255>] [-k <hex>]"
-        },
         "hf mfu aesgetuid": {
             "command": "hf mfu aesgetuid",
             "description": "Retreives real UID on Mifare Ultralight AES tags when random ID is enabled. Uses key index 1 (UIDRetrKey). If no key is specified, null key will be tried.",
@@ -9266,16 +9246,20 @@
             ],
             "usage": "hf mfu cauth [-hlkn0] [--key <hex>] [-r <n>] [--noauth] [--reset] [--collect] [--pair <ERndB:ERndARndBp>]..."
         },
-        "hf mfu cchk": {
-            "command": "hf mfu cchk",
-            "description": "It checks MIFARE Ultralight C tags keys against a dictionary file with keys",
+        "hf mfu chk": {
+            "command": "hf mfu chk",
+            "description": "Checks MIFARE Ultralight C / Ultralight AES tag keys against a dictionary file. The tag type is read off the card and picks the key slot to attack. UL-C ..... single 3DES key, --idx does not apply UL-AES ... key index 0 DataProtKey (default) key index 1 UIDRetrKey key index 2 OriginalityKey Without -f, mfulc_default_keys.dic is used for both tag types. A segment check (-s) holds 4 byte keys, so it needs its own dictionary via -f.",
             "notes": [
-                "hf mfu cchk -f mfulc_default_keys.dic"
+                "hf mfu chk",
+                "hf mfu chk -f mfulc_default_keys.dic",
+                "hf mfu chk -f mfulaes_hw1.dic --idx 1",
+                "hf mfu chk -f mfulc_segment_hw1.dic -s 0"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> filename of dictionary",
+                "-i, --idx <0..2> Key index, Ultralight AES only (def: 0)",
                 "-s, --segment <0..3> Segment index (full key if not specified)",
                 "-r, --retries <0..255> Number of retries (def: 0)",
                 "-k, --key <hex> Starting key, 16 hex bytes (def: zero key), for segment check",
@@ -9283,7 +9267,7 @@
                 "-n, --nocheck Skip checking tag answer correctness",
                 "-0, --read0 Use fast READ0 (skip anticol)"
             ],
-            "usage": "hf mfu cchk [-hxn0] [-f <fn>] [-s <0..3>] [-r <0..255>] [-k <hex>]"
+            "usage": "hf mfu chk [-hxn0] [-f <fn>] [-i <0..2>] [-s <0..3>] [-r <0..255>] [-k <hex>]"
         },
         "hf mfu countertear": {
             "command": "hf mfu countertear",
@@ -16606,8 +16590,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 924,
+        "commands_extracted": 923,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-09-16T09:42:55+00:00"
+        "extracted_on": "2026-09-16T10:14:24+00:00"
     }
 }

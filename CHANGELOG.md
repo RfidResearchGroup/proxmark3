@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf mfu cchk` and `hf mfu aeschk` into one `hf mfu chk` which detects UL-C vs UL-AES (@iceman1001)
 - Added `hf 14b view` - MyKey / COGES keys on SRIX4K now decode (@iceman1001)
 - Added `hf 14b view --selftest` - runs the MyKey parser self tests (@iceman1001)
 - Removed `hf 14b valid` - the SRIX4K scrambler stub it wrapped is finished and lives in the MyKey parser (@iceman1001)
