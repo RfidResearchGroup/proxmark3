@@ -104,6 +104,10 @@ set(SRC_ISO14443a
         sam_sc.c
 )
 
+if (NOT SKIP_DESFIRE_SIM)
+    list(APPEND SRC_ISO14443a desfiresim.c)
+endif ()
+
 #UNUSED: mifaresniff.c
 
 set(SRC_ISO14443b iso14443b.c)

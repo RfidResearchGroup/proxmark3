@@ -68,7 +68,9 @@
 #include "mifarecmd.h"
 #include "mifaredesfire.h"
 #include "mifaresim.h"
+#ifdef WITH_DESFIRE_SIM
 #include "desfiresim.h"
+#endif
 #include "emvsim.h"
 #include "pcf7931.h"
 #include "Standalone/standalone.h"
@@ -2549,10 +2551,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             Mifare1ksim(payload->flags, payload->exitAfter, payload->uid, payload->atqa, payload->sak);
             break;
         }
+#ifdef WITH_DESFIRE_SIM
         case CMD_HF_DESFIRE_SIMULATE: {
             SimulateDesfireTag();
             break;
         }
+#endif
         case CMD_HF_MIFARE_EML_MEMCLR: {
 
             //-----------------------------------------------------------------------------

@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed build too large for 256kb images by guarding WITH_DESFIRE_SIM (@iceman1001)
 - Fixed `pm3 flash` - the progress bar no longer keeps SIGINT after it finishes, CTRL-C works again afterwards (@iceman1001)
 - Fixed `CTRL-C` / `CTRL-Z` - the client owns its signals instead of letting readline re-raise them, CTRL-C quits cleanly saving the history and CTRL-Z suspends reliably (@iceman1001)
 - Fixed `CTRL-C` / `CTRL-Z` - readline re-raised caught signals to itself, which in a threaded client looped instead of quitting or suspending (@iceman1001)
