@@ -9260,8 +9260,8 @@ static int CmdHF14ADesETest(const char *Cmd) {
                   "Drive the DESFire simulation from the host over USB, no RF involved.\n"
                   "The card image in emulator memory answers each --apdu, native or ISO 7816\n"
                   "wrapped, as `hf mfdes sim` would over the air. Bytes given with --random are\n"
-                  "used for the next RndB and random UID draws, so a recorded session replays\n"
-                  "byte for byte.\n"
+                  "drawn in order by the next random UID (3, at --scan on a random-id image) and\n"
+                  "RndB (8 or 16, at the next authentication), so a recorded session can be replayed.\n"
                   "\n"
                   "One action per call. Load an image first with `hf mfdes eload`",
                   "hf mfdes etest --begin\n"

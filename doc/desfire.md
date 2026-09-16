@@ -602,7 +602,7 @@ Switch LRP mode on
 
 `hf mfdes etest --end` - drop the state and the random queue
 
-The simulation normally uses a fixed RndB. Queued bytes are drawn in order by the next authentication and by the next activation of a random-id card (3 bytes). A draw that finds the queue short takes nothing, falls back to the fixed value and sets the underflow flag `--state` shows.
+The simulation normally uses a fixed RndB and a tick-derived random UID. Queued bytes are drawn in order: `--scan` takes 3 for the UID when the image has random ID switched on, then each authentication takes its RndB, 8 or 16 bytes by key type. On a random-id image queue the UID bytes before `--scan` and the RndB before the authentication; queuing only the RndB first would spend it on the UID. A draw that finds the queue short takes nothing, falls back to the fixed or tick-derived value and sets the underflow flag `--state` shows.
 
 `hf mfdes etest --apdu 900A0000010000 -j` - the same, as one line of JSON for a script
 

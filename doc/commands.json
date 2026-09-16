@@ -7899,9 +7899,17 @@
                 "hf mfdes esave -f myfile --keep -> keep applications and files a reader deleted"
             ],
             "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> Filename, if no <fn> UID will be used as filename",
+                "-v, --verbose Verbose output",
+                "--keep Keep applications and files that were deleted"
+            ],
+            "usage": "hf mfdes esave [-hv] [-f <fn>] [--keep]"
+        },
         "hf mfdes etest": {
             "command": "hf mfdes etest",
-            "description": "Drive the DESFire simulation from the host over USB, no RF involved. The card image in emulator memory answers each --apdu, native or ISO 7816 wrapped, as `hf mfdes sim` would over the air. Bytes given with --random are used for the next RndB and random UID draws, so a recorded session replays byte for byte. One action per call. Load an image first with `hf mfdes eload`",
+            "description": "Drive the DESFire simulation from the host over USB, no RF involved. The card image in emulator memory answers each --apdu, native or ISO 7816 wrapped, as `hf mfdes sim` would over the air. Bytes given with --random are drawn in order by the next random UID (3, at --scan on a random-id image) and RndB (8 or 16, at the next authentication), so a recorded session can be replayed. One action per call. Load an image first with `hf mfdes eload`",
             "notes": [
                 "hf mfdes etest --begin",
                 "hf mfdes etest --scan",
@@ -7923,14 +7931,6 @@
                 "-j, --json One line of JSON instead of text"
             ],
             "usage": "hf mfdes etest [-hj] [--begin] [--end] [--scan] [--apdu <hex>] [--random <hex>] [--fieldoff] [--state]"
-        },
-            "options": [
-                "-h, --help This help",
-                "-f, --file <fn> Filename, if no <fn> UID will be used as filename",
-                "-v, --verbose Verbose output",
-                "--keep Keep applications and files that were deleted"
-            ],
-            "usage": "hf mfdes esave [-hv] [-f <fn>] [--keep]"
         },
         "hf mfdes eview": {
             "command": "hf mfdes eview",
