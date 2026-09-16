@@ -2556,6 +2556,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             SimulateDesfireTag();
             break;
         }
+        case CMD_HF_DESFIRE_SIM_TEST: {
+            DesfireSimTest(packet);
+            break;
+        }
 #endif
         case CMD_HF_MIFARE_EML_MEMCLR: {
 

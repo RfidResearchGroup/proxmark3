@@ -43,4 +43,33 @@ typedef struct {
     uint8_t keys[DESFIRE_MAX_ALGO_COUNT][DESFIRE_MAX_KEY_COUNT][DESFIRE_MAX_KEY_SIZE + 1];
 } desfire_app_keys_t;
 
+// `hf mfdes etest`: one CMD_HF_DESFIRE_SIM_TEST packet carries one operation.
+typedef enum {
+    DESFIRE_SIM_TEST_BEGIN = 0, // check the image, clear the random queue       -> no data
+    DESFIRE_SIM_TEST_END,       // drop the state and the random queue           -> no data
+    DESFIRE_SIM_TEST_SCAN,      // RF reset and activation                       -> iso14a_card_select_t
+    DESFIRE_SIM_TEST_APDU,      // data: one command, native or ISO 7816 wrapped -> the answer
+    DESFIRE_SIM_TEST_RANDOM,    // data: bytes the next RndB / random id draws use
+    DESFIRE_SIM_TEST_FIELDOFF,  // RF reset: session dropped, image re-read      -> no data
+    DESFIRE_SIM_TEST_STATE,     //                                               -> desfire_sim_test_state_t
+} desfire_sim_test_op_t;
+
+// bytes the random queue holds, RANDOM answers PM3_EOVFLOW past this
+#define DESFIRE_SIM_TEST_RANDOM_MAX 64
+
+typedef struct {
+    uint8_t op;                 // desfire_sim_test_op_t
+    uint16_t len;
+    uint8_t data[];
+} PACKED desfire_sim_test_cmd_t;
+
+typedef struct {
+    uint8_t ready;              // activated and answering
+    uint8_t authenticated;
+    uint8_t auth_keyno;
+    uint8_t aid[3];             // selected application, wire order
+    uint8_t random_remaining;   // queued bytes not yet drawn
+    uint8_t random_underflow;   // a draw wanted more than was queued, sticky
+} PACKED desfire_sim_test_state_t;
+
 #endif

@@ -26,6 +26,7 @@
 #define __DESFIRESIM_H
 
 #include "common.h"
+#include "pm3_cmd.h"
 
 // Simulate the DESFire card image sitting in emulator memory, as put there by
 // `hf mfdes eload`. Self contained: this owns its own ISO 14443-A loop rather
@@ -33,5 +34,10 @@
 // Runs until the button is pressed or the client breaks the loop, and answers
 // on CMD_HF_DESFIRE_SIMULATE.
 void SimulateDesfireTag(void);
+
+// Drive the same simulation from the host, one operation per packet and no
+// RF: the command bytes arrive over USB and the answer goes back the same way.
+// Answers on CMD_HF_DESFIRE_SIM_TEST, see desfire_sim_test_op_t.
+void DesfireSimTest(PacketCommandNG *packet);
 
 #endif // __DESFIRESIM_H
