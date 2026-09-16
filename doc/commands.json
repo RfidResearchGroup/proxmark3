@@ -9636,6 +9636,7 @@
                 "hf mfu restore -f myfile -s -> special write",
                 "hf mfu restore -f myfile -k AABBCCDD -s -> special write, use key",
                 "hf mfu restore -f myfile -k AABBCCDD -ser -> special write, use key, write dump pwd, ...",
+                "hf mfu restore -f myfile -k 00112233445566778899AABBCCDDEEFF -> UL-C / UL-AES, use key",
                 "",
                 "Note: Restoring a NTAG/UL dump to a UMC will likely result in incorrect PWD and PACK"
             ],
@@ -9643,7 +9644,7 @@
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> Specify a filename for dump file",
-                "-k, --key <hex> key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)",
+                "-k, --key <hex> key for authentication (UL-C/UL-AES 16 bytes, EV1/NTAG 4 bytes)",
                 "-l swap entered key's endianness",
                 "-s enable special write UID -MAGIC TAG ONLY-",
                 "-e enable special write version/signature -MAGIC NTAG 21* ONLY-",
