@@ -3429,10 +3429,125 @@ static uint16_t desfire_sim_dispatch(uint8_t cmd, const uint8_t *in, uint16_t in
     return n;
 }
 
+// ISO 7816 status words, the two bytes that end every answer on that path
+#define ISO7816_SW_OK               0x9000
+#define ISO7816_SW_WRONG_LENGTH     0x6700
+#define ISO7816_SW_SECURITY         0x6982
+#define ISO7816_SW_NOT_FOUND        0x6A82
+#define ISO7816_SW_BAD_P1P2         0x6A86
+#define ISO7816_SW_BAD_INS          0x6D00
+
+static uint16_t desfire_sim_sw(uint8_t *out, uint16_t sw) {
+    out[0] = sw >> 8;
+    out[1] = sw & 0xFF;
+    return 2;
+}
+
+// The PICC's own DF name, what a reader selects to reach the card level
+static const uint8_t s_sim_picc_dfname[7] = { 0xD2, 0x76, 0x00, 0x00, 0x85, 0x01, 0x00 };
+
+// The ISO 7816 face of the card, as far as a reader that opens with a SELECT
+// before it talks DESFire needs it: the PICC by its well known name or 3F00,
+// an application by its DF name or ISO file id, a file by its ISO file id.
+// Reading and writing through this layer are not here.
+static uint16_t desfire_sim_iso7816(desfire_sim_state_t *st, const uint8_t *in, uint16_t inlen, uint8_t *out) {
+
+    if (inlen < 4) {
+        return desfire_sim_sw(out, ISO7816_SW_WRONG_LENGTH);
+    }
+
+    switch (in[1]) {
+        case 0xA4:                  // SELECT
+            break;
+        case 0xB0:                  // READ BINARY
+        case 0xB2:                  // READ RECORDS
+        case 0xD6:                  // UPDATE BINARY
+        case 0xE2:                  // APPEND RECORD
+            return desfire_sim_sw(out, ISO7816_SW_SECURITY);
+        default:
+            return desfire_sim_sw(out, ISO7816_SW_BAD_INS);
+    }
+
+    // Lc says how much data follows; a frame shorter than that is a wrong
+    // length, and an Le behind the data is allowed
+    uint8_t lc = (inlen > 4) ? in[4] : 0;
+    const uint8_t *data = in + 5;
+    if (inlen < (uint16_t)(5 + lc) && lc) {
+        return desfire_sim_sw(out, ISO7816_SW_WRONG_LENGTH);
+    }
+
+    int idx = -1;
+    uint16_t fid = (lc == 2) ? ((data[0] << 8) | data[1]) : 0;
+
+    switch (in[2]) {
+
+        case 0x04:                  // by DF name
+            if (lc == sizeof(s_sim_picc_dfname) && memcmp(data, s_sim_picc_dfname, lc) == 0) {
+                idx = 0;
+                break;
+            }
+            for (uint8_t i = 1; i < st->hdr->appcount && idx < 0; i++) {
+                const desfire_em_app_t *a = &st->apps[i];
+                if ((a->flags & DESFIRE_EM_APP_DELETED) == 0 && a->dfnamelen == lc && memcmp(a->dfname, data, lc) == 0) {
+                    idx = i;
+                }
+            }
+            break;
+
+        case 0x00:                  // by file id: the MF, an application, or a file of the selected one
+        case 0x01:                  // a child DF
+        case 0x02:                  // a child EF
+            if (lc != 2) {
+                return desfire_sim_sw(out, ISO7816_SW_WRONG_LENGTH);
+            }
+            if (in[2] != 0x02) {
+                if (fid == 0x3F00) {
+                    idx = 0;
+                    break;
+                }
+                for (uint8_t i = 1; i < st->hdr->appcount && idx < 0; i++) {
+                    const desfire_em_app_t *a = &st->apps[i];
+                    if ((a->flags & DESFIRE_EM_APP_DELETED) == 0 && a->isofid && a->isofid == fid) {
+                        idx = i;
+                    }
+                }
+            }
+            if (idx < 0 && in[2] != 0x01) {
+                for (uint16_t i = 0; i < st->hdr->filecount; i++) {
+                    const desfire_em_file_t *f = &st->files[i];
+                    if (f->app == st->selected && (f->flags & DESFIRE_EM_FILE_DELETED) == 0 && f->isofid && f->isofid == fid) {
+                        return desfire_sim_sw(out, ISO7816_SW_OK);
+                    }
+                }
+            }
+            break;
+
+        case 0x03:                  // the parent, always there
+            return desfire_sim_sw(out, ISO7816_SW_OK);
+
+        default:
+            return desfire_sim_sw(out, ISO7816_SW_BAD_P1P2);
+    }
+
+    if (idx < 0) {
+        return desfire_sim_sw(out, ISO7816_SW_NOT_FOUND);
+    }
+
+    // selecting an application this way ends the session like SelectApplication does
+    st->selected = idx;
+    desfire_sim_auth_clear(st);
+    return desfire_sim_sw(out, ISO7816_SW_OK);
+}
+
 static uint16_t desfire_sim_apdu(const uint8_t *in, uint16_t inlen, uint8_t *out) {
 
     if (s_ready == false || inlen < 1) {
         return 0;
+    }
+
+    // a class byte of 00 is ISO 7816 proper, not a wrapped DESFire command
+    if (in[0] == 0x00) {
+        return desfire_sim_iso7816(&s_st, in, inlen, out);
     }
 
     // Two framings carry the same commands and a reader may use either.

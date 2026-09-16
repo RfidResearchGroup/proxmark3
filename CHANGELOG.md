@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Fixed `hf mfdes sim` - the ATS now advertises 106 kbit/s only, PPS to a higher rate is refused, a selected card ignores REQA/WUPA, and ISO-DEP block recovery now follows the card sequence (@mistial-dev)
+- Added `hf mfdes sim` - answers ISO 7816 SELECT by DF name or file id with real status words, so a reader that opens with a SELECT reaches the card (@mistial-dev)
 - Fixed `hf mfdes sim` - a session opened with the 0x0A legacy authentication now uses the legacy secure messaging: 4 byte DES MAC, CRC16, no MAC on plain answers (@mistial-dev)
 - Fixed `hf mfdes sim` - the 0x0A legacy authentication now enciphers the reader token and RndA' from a zero IV as a card does, so the session key and final frame match genuine silicon (@mistial-dev)
 - Added `hf mfdes etest` - drives the DESFire simulation over USB without RF, with injectable RndB / random UID (@mistial-dev)
