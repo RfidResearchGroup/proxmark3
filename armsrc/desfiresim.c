@@ -226,6 +226,50 @@ static const uint8_t s_sim_rndb[16] = {
     0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10
 };
 
+// Random bytes queued by the host, see `hf mfdes etest --random`. A byte
+// stream, not blocks: RndB draws 8 or 16, a random id 3. Outside s_st because
+// desfire_sim_init() wipes that at every activation.
+static struct {
+    uint8_t buf[DESFIRE_SIM_TEST_RANDOM_MAX];
+    uint8_t head;
+    uint8_t len;
+    bool underflow;             // sticky: a draw wanted more than was queued
+} s_rnd;
+
+static void desfire_sim_random_clear(void) {
+    memset(&s_rnd, 0, sizeof(s_rnd));
+}
+
+static bool desfire_sim_random_push(const uint8_t *src, uint16_t len) {
+
+    if (len == 0 || len > sizeof(s_rnd.buf) - s_rnd.len) {
+        return false;
+    }
+
+    if (s_rnd.head) {
+        memmove(s_rnd.buf, s_rnd.buf + s_rnd.head, s_rnd.len);
+        s_rnd.head = 0;
+    }
+
+    memcpy(s_rnd.buf + s_rnd.len, src, len);
+    s_rnd.len += len;
+    return true;
+}
+
+// A short queue gives nothing, so a half value never desynchronises the rest.
+static bool desfire_sim_random(uint8_t *dst, uint8_t len) {
+
+    if (s_rnd.len < len) {
+        s_rnd.underflow = true;
+        return false;
+    }
+
+    memcpy(dst, s_rnd.buf + s_rnd.head, len);
+    s_rnd.head += len;
+    s_rnd.len -= len;
+    return true;
+}
+
 // rotate left by one byte, the RndA/RndB' transform of the handshake
 static void desfire_sim_rol(uint8_t *data, uint8_t len) {
     if (len < 2) {
@@ -412,7 +456,9 @@ static uint16_t desfire_sim_auth_start(desfire_sim_state_t *st, uint8_t cmd,
     desfire_sim_make_key(&st->authkey, algo, k->key);
 
     st->rndlen = desfire_sim_rndlen(algo);
-    memcpy(st->rndb, s_sim_rndb, st->rndlen);
+    if (desfire_sim_random(st->rndb, st->rndlen) == false) {
+        memcpy(st->rndb, s_sim_rndb, st->rndlen);
+    }
 
     // tdes_nxp_send() casts away const and XORs the IV into its *input* buffer,
     // so anything handed to it is destroyed. With a zero IV and a single block
@@ -3025,6 +3071,24 @@ static bool desfire_sim_init(void) {
 // The three random id bytes, drawn when a simulation starts.
 static uint8_t s_sim_randomid[3];
 
+// Drawn at RF reset, host queued bytes first. A card without the option draws
+// nothing, so the queue is left for the RndB that follows.
+static void desfire_sim_draw_randomid(void) {
+
+    if (s_ready == false || (s_st.hdr->flags & DESFIRE_EM_PICC_RANDOM_UID) == 0) {
+        return;
+    }
+
+    if (desfire_sim_random(s_sim_randomid, sizeof(s_sim_randomid))) {
+        return;
+    }
+
+    uint32_t seed = GetTickCount();
+    s_sim_randomid[0] = (seed >> 16) & 0xFF;
+    s_sim_randomid[1] = (seed >> 8) & 0xFF;
+    s_sim_randomid[2] = seed & 0xFF;
+}
+
 static void desfire_sim_identity(uint8_t *uid, uint8_t *uidlen, uint8_t *atqa, uint8_t *sak, uint8_t *ats, uint8_t *atslen) {
 
     if (s_ready == false) {
@@ -3249,12 +3313,8 @@ void SimulateDesfireTag(void) {
     // keep emulator memory, that is where eload put the card image
     BigBuf_free_keep_EM();
 
-    // A card draws its random id at RF reset; a simulation draws it here, which
-    // is the moment the anticollision answers are built.
-    uint32_t seed = GetTickCount();
-    s_sim_randomid[0] = (seed >> 16) & 0xFF;
-    s_sim_randomid[1] = (seed >> 8) & 0xFF;
-    s_sim_randomid[2] = seed & 0xFF;
+    // bytes a host queued for etest must not reach a reader
+    desfire_sim_random_clear();
 
     if (desfire_sim_init() == false) {
         Dbprintf("No DESFire card image in emulator memory");
@@ -3262,6 +3322,10 @@ void SimulateDesfireTag(void) {
         reply_ng(CMD_HF_DESFIRE_SIMULATE, PM3_EINVARG, NULL, 0);
         return;
     }
+
+    // A card draws its random id at RF reset; a simulation draws it here, which
+    // is the moment the anticollision answers are built.
+    desfire_sim_draw_randomid();
 
     uint8_t uid[10] = {0};
     uint8_t uidlen = 0;
@@ -3578,4 +3642,104 @@ void SimulateDesfireTag(void) {
     BigBuf_free_keep_EM();
 
     reply_ng(CMD_HF_DESFIRE_SIMULATE, retval, NULL, 0);
+}
+
+//------------------------------------------------------- host driven simulation
+
+// SimulateDesfireTag() with the antenna replaced by USB: one operation per
+// packet, the answer in the reply. Nothing here touches the FPGA.
+void DesfireSimTest(PacketCommandNG *packet) {
+
+    int16_t status = PM3_EINVARG;
+    const uint8_t *data = NULL;
+    uint16_t n = 0;
+
+    iso14a_card_select_t card = {0};
+    desfire_sim_test_state_t st = {0};
+    uint8_t out[DESFIRE_SIM_MAX_RESP + 8] = {0};
+
+    if (packet->ng == false || packet->length < sizeof(desfire_sim_test_cmd_t)) {
+        reply_ng(CMD_HF_DESFIRE_SIM_TEST, status, NULL, 0);
+        return;
+    }
+
+    const desfire_sim_test_cmd_t *p = (const desfire_sim_test_cmd_t *)packet->data.asBytes;
+
+    if (p->len > packet->length - sizeof(desfire_sim_test_cmd_t)) {
+        reply_ng(CMD_HF_DESFIRE_SIM_TEST, status, NULL, 0);
+        return;
+    }
+
+    switch (p->op) {
+
+        // check the image is there, then wait for SCAN like a card waits for a field
+        case DESFIRE_SIM_TEST_BEGIN:
+            desfire_sim_random_clear();
+            status = desfire_sim_init() ? PM3_SUCCESS : PM3_ENODATA;
+            s_ready = false;
+            break;
+
+        case DESFIRE_SIM_TEST_END:
+            desfire_sim_random_clear();
+            memset(&s_st, 0, sizeof(s_st));
+            s_ready = false;
+            status = PM3_SUCCESS;
+            break;
+
+        // field off. desfire_sim_init() is the RF reset, the image is re-read
+        case DESFIRE_SIM_TEST_FIELDOFF:
+            status = desfire_sim_init() ? PM3_SUCCESS : PM3_ENODATA;
+            s_ready = false;
+            break;
+
+        // field on, anticollision, RATS with the largest FSDI
+        case DESFIRE_SIM_TEST_SCAN:
+            if (desfire_sim_init() == false) {
+                status = PM3_ENODATA;
+                break;
+            }
+            desfire_sim_reset();
+            desfire_sim_draw_randomid();
+            desfire_sim_set_fsd(8);
+            desfire_sim_identity(card.uid, &card.uidlen, card.atqa, &card.sak, card.ats, &card.ats_len);
+            data = (uint8_t *)&card;
+            n = sizeof(card);
+            status = PM3_SUCCESS;
+            break;
+
+        // n == 0 is a card that stayed mute, which is an answer too
+        case DESFIRE_SIM_TEST_APDU:
+            if (s_ready == false || p->len == 0) {
+                break;
+            }
+            n = desfire_sim_apdu(p->data, p->len, out);
+            data = out;
+            status = PM3_SUCCESS;
+            break;
+
+        case DESFIRE_SIM_TEST_RANDOM:
+            status = desfire_sim_random_push(p->data, p->len) ? PM3_SUCCESS : PM3_EOVFLOW;
+            break;
+
+        case DESFIRE_SIM_TEST_STATE:
+            st.ready = s_ready;
+            st.random_remaining = s_rnd.len;
+            st.random_underflow = s_rnd.underflow;
+            if (s_ready) {
+                st.authenticated = s_st.authenticated;
+                st.auth_keyno = s_st.auth_keyno;
+                if (s_st.selected >= 0) {
+                    memcpy(st.aid, s_st.apps[s_st.selected].aid, sizeof(st.aid));
+                }
+            }
+            data = (uint8_t *)&st;
+            n = sizeof(st);
+            status = PM3_SUCCESS;
+            break;
+
+        default:
+            break;
+    }
+
+    reply_ng(CMD_HF_DESFIRE_SIM_TEST, status, data, n);
 }
