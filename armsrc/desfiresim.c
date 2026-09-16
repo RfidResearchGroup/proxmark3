@@ -401,6 +401,25 @@ static void desfire_sim_crypt(struct desfire_key *key, const uint8_t *in, uint8_
     }
 }
 
+// Undo a 0x0A reader token. In the legacy scheme the PICC only ever
+// enciphers, so each block is enciphered and xored with the previous
+// ciphertext block, from a zero IV. The reader built it the other way round.
+static void desfire_sim_d40_receive(struct desfire_key *key, const uint8_t *in, uint8_t *out, uint16_t len) {
+
+    uint8_t prev[8] = {0};
+
+    for (uint16_t off = 0; off + 8 <= len; off += 8) {
+        uint8_t block[8];
+        uint8_t iv[8] = {0};
+        memcpy(block, in + off, sizeof(block));
+        desfire_sim_crypt(key, block, out + off, sizeof(block), iv, true);
+        for (uint8_t i = 0; i < sizeof(block); i++) {
+            out[off + i] ^= prev[i];
+        }
+        memcpy(prev, in + off, sizeof(prev));
+    }
+}
+
 // How long the challenge is for a given algorithm.
 static uint8_t desfire_sim_rndlen(uint8_t algo) {
     return (algo == T_AES || algo == T_3K3DES) ? 16 : 8;
@@ -486,7 +505,11 @@ static uint16_t desfire_sim_auth_finish(desfire_sim_state_t *st, const uint8_t *
     }
 
     uint8_t both[32] = {0};
-    desfire_sim_crypt(&st->authkey, in, both, want, st->iv, false);
+    if (st->auth_cmd == MFDES_AUTHENTICATE) {
+        desfire_sim_d40_receive(&st->authkey, in, both, want);
+    } else {
+        desfire_sim_crypt(&st->authkey, in, both, want, st->iv, false);
+    }
 
     const uint8_t *rnda = both;
     const uint8_t *rndbprime = both + st->rndlen;
@@ -504,6 +527,11 @@ static uint16_t desfire_sim_auth_finish(desfire_sim_state_t *st, const uint8_t *
     uint8_t rndaprime[16] = {0};
     memcpy(rndaprime, rnda, st->rndlen);
     desfire_sim_rol(rndaprime, st->rndlen);
+
+    // a 0x0A cryptogram starts from a zero IV, nothing chains across frames
+    if (st->auth_cmd == MFDES_AUTHENTICATE) {
+        memset(st->iv, 0, sizeof(st->iv));
+    }
 
     uint8_t encrndaprime[16] = {0};
     desfire_sim_crypt(&st->authkey, rndaprime, encrndaprime, st->rndlen, st->iv, true);
