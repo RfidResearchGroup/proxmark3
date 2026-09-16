@@ -57,14 +57,7 @@ test):
 The ARM-side build has no `mkdir` for its object directories — only the host
 build creates its own. `armsrc/obj/`, `armsrc/obj/Standalone/` and
 `bootrom/obj/` exist because each is held open in git by a tracked `.dummy`
-file, and `make clean` deliberately deletes only the files *inside* them:
-
-```
-clean:
-	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.o
-	...
-```
-
+file, and `make clean` deliberately deletes only the files *inside* them.
 Delete such a directory and nothing recreates it. Every subsequent build dies
 with messages that give no hint a tracked file went missing:
 
