@@ -3687,13 +3687,20 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
             break;
         }
 
-        // add null terminator
-        line[keylen] = 0;
-
         // smaller keys than expected is skipped
         if (strlen(line) < keylen) {
             continue;
         }
+
+        // a longer run of hex than asked for is a key of a different size, not
+        // this key with something appended.  A comment or trailing whitespace
+        // after the key is still fine
+        if (isxdigit((unsigned char)line[keylen])) {
+            continue;
+        }
+
+        // add null terminator
+        line[keylen] = 0;
 
         // The line start with # is comment, skip
         if (line[0] == '#') {

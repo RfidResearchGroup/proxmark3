@@ -1409,12 +1409,15 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
     bool k3kdes = false;
 
     bool uselrp = false;
+    uint8_t numkeys = 0;
 
     uint8_t data[250] = {0};
     size_t datalen = 0;
 
     res = DesfireGetKeySettings(dctx, data, &datalen);
     if (res == PM3_SUCCESS && datalen >= 2) {
+
+        numkeys = data[1] & 0x0F;
 
         switch (data[1] >> 6) {
             case 0:
@@ -1479,7 +1482,17 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
     // always check master key
     usedkeys[0] = 1;
 
-    if (curaid != 0) {
+    if (numkeys > 0) {
+
+        uint8_t keynolast = (numkeys <= DESFIRE_MAX_KEY_COUNT) ? numkeys : DESFIRE_MAX_KEY_COUNT;
+        for (uint8_t k = 0; k < keynolast; k++) {
+            usedkeys[k] = 1;
+        }
+
+    } else if (curaid != 0) {
+
+        // key settings were not readable, so fall back to the key numbers the file
+        // access rights name
         FileList_t fileList = {{0}};
         size_t filescount = 0;
         bool isopresent = 0;
@@ -1487,29 +1500,39 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
         if (res == PM3_SUCCESS) {
             if (filescount > 0) {
                 for (int i = 0; i < filescount; i++) {
+
                     if (fileList[i].fileSettingsRead == false) {
-                        // settings we could not read tell us nothing about which
-                        // keys the file uses, so keep every key in the search
-                        for (int k = 0; k < DESFIRE_MAX_KEY_COUNT; k++)
+                        for (int k = 0; k < DESFIRE_MAX_KEY_COUNT; k++) {
                             usedkeys[k] = 1;
+                        }
                         break;
                     }
-                    if (fileList[i].fileSettings.rAccess < 0x0e)
+
+                    if (fileList[i].fileSettings.rAccess < 0x0e) {
                         usedkeys[fileList[i].fileSettings.rAccess] = 1;
-                    if (fileList[i].fileSettings.wAccess < 0x0e)
+                    }
+
+                    if (fileList[i].fileSettings.wAccess < 0x0e) {
                         usedkeys[fileList[i].fileSettings.wAccess] = 1;
-                    if (fileList[i].fileSettings.rwAccess < 0x0e)
+                    }
+
+                    if (fileList[i].fileSettings.rwAccess < 0x0e) {
                         usedkeys[fileList[i].fileSettings.rwAccess] = 1;
-                    if (fileList[i].fileSettings.chAccess < 0x0e)
+                    }
+
+                    if (fileList[i].fileSettings.chAccess < 0x0e) {
                         usedkeys[fileList[i].fileSettings.chAccess] = 1;
+                    }
                 }
             } else {
-                for (int i = 0; i < DESFIRE_MAX_KEY_COUNT; i++)
+                for (int i = 0; i < DESFIRE_MAX_KEY_COUNT; i++) {
                     usedkeys[i] = 1;
+                }
             }
         } else {
-            for (int i = 0; i < DESFIRE_MAX_KEY_COUNT; i++)
+            for (int i = 0; i < DESFIRE_MAX_KEY_COUNT; i++) {
                 usedkeys[i] = 1;
+            }
         }
     }
 
@@ -1536,9 +1559,11 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
         PrintAndLogEx(INFO, "Check: %s %s %s %s " NOLF, (des) ? "DES" : "", (tdes) ? "2TDEA" : "", (k3kdes) ? "3TDEA" : "", (aes) ? "AES" : "");
         PrintAndLogEx(NORMAL, "channel: %s " NOLF, CLIGetOptionListStr(DesfireSecureChannelOpts, secureChannel));
         PrintAndLogEx(NORMAL, "keys: " NOLF);
-        for (int i = 0; i < DESFIRE_MAX_KEY_COUNT; i++)
-            if (usedkeys[i] == 1)
+        for (int i = 0; i < DESFIRE_MAX_KEY_COUNT; i++) {
+            if (usedkeys[i] == 1) {
                 PrintAndLogEx(NORMAL, "%02x " NOLF, i);
+            }
+        }
         PrintAndLogEx(NORMAL, "");
     }
 
@@ -1923,23 +1948,26 @@ static int CmdHF14aDesChk(const char *Cmd) {
                 loadedAllKeys = true;
             }
 
-            res = AuthCheckDesfire(&dctx,
-                        secureChannel,
-                        &app_ids[x * 3],
-                        deskeyList, deskeyListLen,
-                        aeskeyList, aeskeyListLen,
-                        k3kkeyList, k3kkeyListLen,
-                        autoschann, 
-                        found, 
-                        &foundKeyThisRound, 
-                        verbose
-                );
+            if (deskeyListLen || aeskeyListLen || k3kkeyListLen) {
 
-            if (res == PM3_EOPABORTED) {
-                break;
+                res = AuthCheckDesfire(&dctx,
+                            secureChannel,
+                            &app_ids[x * 3],
+                            deskeyList, deskeyListLen,
+                            aeskeyList, aeskeyListLen,
+                            k3kkeyList, k3kkeyListLen,
+                            autoschann,
+                            found,
+                            &foundKeyThisRound,
+                            verbose
+                    );
+
+                if (res == PM3_EOPABORTED) {
+                    break;
+                }
+
+                result = (result || foundKeyThisRound);
             }
-
-            result = (result || foundKeyThisRound);
         }
 
         if (loadedAllKeys == false) {
@@ -1947,8 +1975,8 @@ static int CmdHF14aDesChk(const char *Cmd) {
         }
 
     }
-    if (verbose == false) {
-        PrintAndLogEx(NORMAL, "");
+    if (result == false) {
+        PrintAndLogEx(WARNING, "No keys found");
     }
 
     // save keys to json

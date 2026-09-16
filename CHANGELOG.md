@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed dictionary loading to skip keys longer than the requested key size instead of truncating them (@iceman1001)
+- Changed `hf mfdes chk` to check every key number the application declares, not only the ones a file's access rights name (@iceman1001)
+- Changed `hf mfdes chk` to report when no keys were found and to stop spending a card round trip on an exhausted dictionary (@iceman1001)
 - Changed `hf mfu cchk` and `hf mfu aeschk` into one `hf mfu chk` which detects UL-C vs UL-AES (@iceman1001)
 - Added `hf 14b view` - MyKey / COGES keys on SRIX4K now decode (@iceman1001)
 - Added `hf 14b view --selftest` - runs the MyKey parser self tests (@iceman1001)
