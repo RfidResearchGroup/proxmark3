@@ -196,6 +196,10 @@ else
     $(error Invalid or empty PLATFORM: $(PLATFORM). $(KNOWN_DEFINITIONS))
 endif
 
+ifeq ($(ENABLE_HFMFDESETEST),1)
+    PLATFORM_DEFS += -DENABLE_HFMFDESETEST
+endif
+
 # parsing additional PLATFORM_EXTRAS tokens
 PLATFORM_EXTRAS_TMP:=$(PLATFORM_EXTRAS)
 ifneq (,$(findstring SMARTCARD,$(PLATFORM_EXTRAS_TMP)))

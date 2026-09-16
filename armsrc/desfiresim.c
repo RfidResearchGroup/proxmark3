@@ -228,6 +228,7 @@ static const uint8_t s_sim_rndb[16] = {
     0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10
 };
 
+#ifdef ENABLE_HFMFDESETEST
 // Random bytes queued by the host, see `hf mfdes etest --random`. A byte
 // stream, not blocks: RndB draws 8 or 16, a random id 3. Outside s_st because
 // desfire_sim_init() wipes that at every activation.
@@ -257,10 +258,12 @@ static bool desfire_sim_random_push(const uint8_t *src, uint16_t len) {
     s_rnd.len += len;
     return true;
 }
+#endif
 
 // A short queue gives nothing, so a half value never desynchronises the rest.
 static bool desfire_sim_random(uint8_t *dst, uint8_t len) {
 
+#ifdef ENABLE_HFMFDESETEST
     if (s_rnd.len < len) {
         s_rnd.underflow = true;
         return false;
@@ -270,6 +273,11 @@ static bool desfire_sim_random(uint8_t *dst, uint8_t len) {
     s_rnd.head += len;
     s_rnd.len -= len;
     return true;
+#else
+    (void)dst;
+    (void)len;
+    return false;
+#endif
 }
 
 // rotate left by one byte, the RndA/RndB' transform of the handshake
@@ -3662,8 +3670,10 @@ void SimulateDesfireTag(void) {
     // keep emulator memory, that is where eload put the card image
     BigBuf_free_keep_EM();
 
+#ifdef ENABLE_HFMFDESETEST
     // bytes a host queued for etest must not reach a reader
     desfire_sim_random_clear();
+#endif
 
     if (desfire_sim_init() == false) {
         Dbprintf("No DESFire card image in emulator memory");
@@ -4051,6 +4061,7 @@ void SimulateDesfireTag(void) {
 
 //------------------------------------------------------- host driven simulation
 
+#ifdef ENABLE_HFMFDESETEST
 // SimulateDesfireTag() with the antenna replaced by USB: one operation per
 // packet, the answer in the reply. Nothing here touches the FPGA.
 void DesfireSimTest(PacketCommandNG *packet) {
@@ -4148,3 +4159,4 @@ void DesfireSimTest(PacketCommandNG *packet) {
 
     reply_ng(CMD_HF_DESFIRE_SIM_TEST, status, data, n);
 }
+#endif

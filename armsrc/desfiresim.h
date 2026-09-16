@@ -38,6 +38,8 @@ void SimulateDesfireTag(void);
 // Drive the same simulation from the host, one operation per packet and no
 // RF: the command bytes arrive over USB and the answer goes back the same way.
 // Answers on CMD_HF_DESFIRE_SIM_TEST, see desfire_sim_test_op_t.
+#ifdef ENABLE_HFMFDESETEST
 void DesfireSimTest(PacketCommandNG *packet);
+#endif
 
 #endif // __DESFIRESIM_H

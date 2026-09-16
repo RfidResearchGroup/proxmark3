@@ -31,6 +31,11 @@ include(${CMAKE_CURRENT_LIST_DIR}/../tools/FpgaCompress.cmake)
 
 # ---------------------------------------------------------------------------------
 
+option(ENABLE_HFMFDESETEST "Build the host-driven DESFire emulator test hook" OFF)
+if (ENABLE_HFMFDESETEST)
+    list(APPEND PLATFORM_DEFS -DENABLE_HFMFDESETEST)
+endif ()
+
 set(APP_CFLAGS ${PLATFORM_DEFS} -ffunction-sections -fdata-sections)
 
 set(INC_DIRS
