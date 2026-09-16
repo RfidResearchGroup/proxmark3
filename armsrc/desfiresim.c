@@ -3569,6 +3569,13 @@ void SimulateDesfireTag(void) {
     uint8_t atslen = 0;
     desfire_sim_identity(uid, &uidlen, atqa, &sak, ats, &atslen);
 
+    // The simulation runs at 106 kbit/s only. A genuine EV1's TA(1) offers
+    // 212, 424 and 848 and a reader takes the offer, after which nothing it
+    // sends can be decoded. On air TA(1) says 106; the image keeps the card's.
+    if (atslen >= 3 && (ats[1] & 0x10)) {
+        ats[2] = 0x00;
+    }
+
     uint16_t flags = FLAG_ATS_IN_DATA;
     switch (uidlen) {
         case 4:
@@ -3630,6 +3637,12 @@ void SimulateDesfireTag(void) {
     uint8_t receivedCmd[MAX_FRAME_SIZE] = {0};
     uint8_t receivedCmdPar[MAX_PARITY_SIZE] = {0};
     uint8_t answer[DESFIRE_SIM_MAX_RESP + 8] = {0};
+
+    // ISO 14443-4 keeps reader and card block numbers independently
+    uint8_t last_answer[DESFIRE_SIM_MAX_RESP + 8] = {0};
+    uint16_t last_answer_len = 0;
+    uint8_t expected_pcd_block = 0;
+    uint8_t picc_block = 1;
 
     clear_trace();
     set_tracing(true);
@@ -3729,8 +3742,11 @@ void SimulateDesfireTag(void) {
 
         // REQA and WUPA are 7 bit frames. WUPA wakes a halted card, REQA does
         // not -- that distinction is the whole point of having two of them.
-        if (len == 1 && (receivedCmd[0] == ISO14443A_CMD_WUPA ||
-                         (receivedCmd[0] == ISO14443A_CMD_REQA && pstate != DESF_HALTED))) {
+        // A selected card ignores both: a genuine EV1 stays silent and keeps
+        // its session, and a reader that hears an ATQA thinks a new card came.
+        bool polled = (pstate == DESF_IDLE || pstate == DESF_READY1 || pstate == DESF_READY2);
+        if (len == 1 && ((receivedCmd[0] == ISO14443A_CMD_WUPA && (polled || pstate == DESF_HALTED)) ||
+                         (receivedCmd[0] == ISO14443A_CMD_REQA && polled))) {
 
             EmSendPrecompiledCmd(&responses[RESP_INDEX_ATQA]);
             desfire_sim_reset();        // a fresh activation reselects the PICC
@@ -3784,10 +3800,19 @@ void SimulateDesfireTag(void) {
 
             EmSendPrecompiledCmd(&responses[RESP_INDEX_ATS]);
             pstate = DESF_ISO4;
+            expected_pcd_block = 0;
+            picc_block = 1;
+            last_answer_len = 0;
             continue;
         }
 
-        if (receivedCmd[0] == ISO14443A_CMD_PPS && pstate == DESF_ISO4) {
+        // PPS: only a request that keeps 106 kbit/s both ways is agreed to.
+        // PPS1, when PPS0 says it is there, carries the rates in its low nibble.
+        if ((receivedCmd[0] & 0xF0) == ISO14443A_CMD_PPS && pstate == DESF_ISO4) {
+            bool pps1 = (len >= 5) && (receivedCmd[1] & 0x10);
+            if (pps1 && (receivedCmd[2] & 0x0F)) {
+                continue;
+            }
             EmSendPrecompiledCmd(&responses[RESP_INDEX_PPS]);
             continue;
         }
@@ -3807,6 +3832,12 @@ void SimulateDesfireTag(void) {
         }
 
         // ---- ISO/IEC 14443-4 ----
+
+        // a frame that did not survive the air is not a command
+        if (len < 3 || check_crc(CRC_14443_A, receivedCmd, len) == false) {
+            continue;
+        }
+
         if ((receivedCmd[0] & PCB_TYPE_MASK) == PCB_TYPE_S) {
 
             if (receivedCmd[0] == PCB_S_DESELECT) {
@@ -3815,16 +3846,27 @@ void SimulateDesfireTag(void) {
                 EmSendCmd(r, sizeof(r));
                 desfire_sim_reset();
                 pstate = DESF_ACTIVE;   // out of 14443-4, RATS would be needed again
+                expected_pcd_block = 0;
+                picc_block = 1;
+                last_answer_len = 0;
             }
             continue;
 
         } else if ((receivedCmd[0] & PCB_TYPE_MASK) == PCB_TYPE_R) {
 
-            // R(ACK) is a retransmission request. We do not keep the previous
-            // answer, so acknowledge and move on.
-            uint8_t r[3] = { (uint8_t)(0xA2 | (receivedCmd[0] & PCB_BLOCKNUM)), 0, 0 };
-            AddCrc14A(r, 1);
-            EmSendCmd(r, sizeof(r));
+            uint8_t blocknum = receivedCmd[0] & PCB_BLOCKNUM;
+            if (blocknum == picc_block && last_answer_len) {
+                EmSendCmd(last_answer, last_answer_len);
+                continue;
+            }
+
+            // A nonmatching R(NAK) is answered with R(ACK). There is no
+            // card-side chaining to continue for a nonmatching R(ACK).
+            if (receivedCmd[0] & 0x10) {
+                uint8_t r[3] = { (uint8_t)(0xA2 | picc_block), 0, 0 };
+                AddCrc14A(r, 1);
+                EmSendCmd(r, sizeof(r));
+            }
             continue;
 
         } else if ((receivedCmd[0] & PCB_TYPE_MASK) == PCB_TYPE_I) {
@@ -3842,17 +3884,31 @@ void SimulateDesfireTag(void) {
                 continue;
             }
 
+            uint8_t blocknum = receivedCmd[0] & PCB_BLOCKNUM;
+            if (blocknum != expected_pcd_block) {
+                uint8_t r[3] = { (uint8_t)(0xB2 | expected_pcd_block), 0, 0 };
+                AddCrc14A(r, 1);
+                EmSendCmd(r, sizeof(r));
+                continue;
+            }
+            expected_pcd_block ^= 1;
+            picc_block ^= 1;
+
             uint16_t n = desfire_sim_apdu(receivedCmd + prologue, len - prologue - 2, answer + prologue);
             if (n == 0) {
                 continue;
             }
 
-            // echo the prologue back, block number included
+            // Preserve CID/NAD, but use the card's own block number.
             memcpy(answer, receivedCmd, prologue);
-            answer[0] &= ~PCB_I_CHAINING;
+            answer[0] &= ~(PCB_I_CHAINING | PCB_BLOCKNUM);
+            answer[0] |= picc_block;
 
             AddCrc14A(answer, prologue + n);
             EmSendCmd(answer, prologue + n + 2);
+
+            last_answer_len = prologue + n + 2;
+            memcpy(last_answer, answer, last_answer_len);
             continue;
 
         } else {
