@@ -61,9 +61,9 @@ static  bool setDefaultMqttServer(const char *srv) {
 
     char *tmp = (char *)realloc(g_session.mqtt_server, strlen(srv) + 1);
     if (tmp == NULL) {
+        // keep the old value.  realloc leaves it valid on failure, and dropping it
+        // would hand every later reader a NULL
         PrintAndLogEx(WARNING, "Failed to allocate memory");
-        free(g_session.mqtt_server);
-        g_session.mqtt_server = NULL;
         return false;
     }
     g_session.mqtt_server = tmp;
@@ -84,9 +84,9 @@ static bool setDefaultMqttPort(const char *port) {
 
     char *tmp = (char *)realloc(g_session.mqtt_port, strlen(port) + 1);
     if (tmp == NULL) {
+        // keep the old value.  realloc leaves it valid on failure, and dropping it
+        // would hand every later reader a NULL
         PrintAndLogEx(WARNING, "Failed to allocate memory");
-        free(g_session.mqtt_port);
-        g_session.mqtt_port = NULL;
         return false;
     }
     g_session.mqtt_port = tmp;
@@ -107,9 +107,9 @@ static bool setDefaultMqttTopic(const char *topic) {
 
     char *tmp = (char *)realloc(g_session.mqtt_topic, strlen(topic) + 1);
     if (tmp == NULL) {
+        // keep the old value.  realloc leaves it valid on failure, and dropping it
+        // would hand every later reader a NULL
         PrintAndLogEx(WARNING, "Failed to allocate memory");
-        free(g_session.mqtt_topic);
-        g_session.mqtt_topic = NULL;
         return false;
     }
     g_session.mqtt_topic = tmp;

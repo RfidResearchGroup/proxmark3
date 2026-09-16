@@ -305,24 +305,24 @@ static int CmdMqttSend(const char *Cmd) {
     }
 
     if (alen == 0) {
-        if (strlen(g_session.mqtt_server)) {
-            strcpy(addr, g_session.mqtt_server);
+        if ((g_session.mqtt_server != NULL) && (strcmp(g_session.mqtt_server, "") != 0)) {
+            snprintf(addr, sizeof(addr), "%s", g_session.mqtt_server);
         } else {
             strcpy(addr, "mqtt.proxdump.com");
         }
     }
 
     if (plen == 0) {
-        if (strlen(g_session.mqtt_port)) {
-            strcpy(port, g_session.mqtt_port);
+        if ((g_session.mqtt_port != NULL) && (strcmp(g_session.mqtt_port, "") != 0)) {
+            snprintf(port, sizeof(port), "%s", g_session.mqtt_port);
         } else {
             strcpy(port, "1883");
         }
     }
 
     if (tlen == 0) {
-        if (strlen(g_session.mqtt_topic)) {
-            strcpy(topic, g_session.mqtt_topic);
+        if ((g_session.mqtt_topic != NULL) && (strcmp(g_session.mqtt_topic, "") != 0)) {
+            snprintf(topic, sizeof(topic), "%s", g_session.mqtt_topic);
         } else {
             strcpy(topic, "proxdump");
         }
@@ -382,24 +382,24 @@ static int CmdMqttReceive(const char *Cmd) {
     }
 
     if (alen == 0) {
-        if (strlen(g_session.mqtt_server)) {
-            strcpy(addr, g_session.mqtt_server);
+        if ((g_session.mqtt_server != NULL) && (strcmp(g_session.mqtt_server, "") != 0)) {
+            snprintf(addr, sizeof(addr), "%s", g_session.mqtt_server);
         } else {
             strcpy(addr, "proxdump.com");
         }
     }
 
     if (plen == 0) {
-        if (strlen(g_session.mqtt_port)) {
-            strcpy(port, g_session.mqtt_port);
+        if ((g_session.mqtt_port != NULL) && (strcmp(g_session.mqtt_port, "") != 0)) {
+            snprintf(port, sizeof(port), "%s", g_session.mqtt_port);
         } else {
             strcpy(port, "1883");
         }
     }
 
     if (tlen == 0) {
-        if (strlen(g_session.mqtt_topic)) {
-            strcpy(topic, g_session.mqtt_topic);
+        if ((g_session.mqtt_topic != NULL) && (strcmp(g_session.mqtt_topic, "") != 0)) {
+            snprintf(topic, sizeof(topic), "%s", g_session.mqtt_topic);
         } else {
             strcpy(topic, "proxdump");
         }
