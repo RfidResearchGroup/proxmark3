@@ -1696,7 +1696,7 @@
         },
         "hf 14b help": {
             "command": "hf 14b help",
-            "description": "--------- ----------------------- General ----------------------- help This help list List ISO-14443-B history --------- ----------------------- Operations ----------------------- view Display content from tag dump file valid SRIX4 checksum test --------------------------------------------------------------------------------------- hf 14b config available offline: no --------------------------------------------------------------------------------------- hf 14b list available offline: yes Alias of `trace list -t 14b -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "--------- ----------------------- General ----------------------- help This help list List ISO-14443-B history --------- ----------------------- Operations ----------------------- view Display content from tag dump file --------------------------------------------------------------------------------------- hf 14b config available offline: no --------------------------------------------------------------------------------------- hf 14b list available offline: yes Alias of `trace list -t 14b -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf 14b list --frame -> show frame delay times",
                 "hf 14b list -1 -> use trace buffer"
@@ -1873,32 +1873,22 @@
             ],
             "usage": "hf 14b tearoff [-h] -b <dec> -d <hex> [--adj <dec>] [--safety <dec>] [--start <dec>]"
         },
-        "hf 14b valid": {
-            "command": "hf 14b valid",
-            "description": "SRIX checksum test",
-            "notes": [
-                "hf 14b valid"
-            ],
-            "offline": true,
-            "options": [
-                "-h, --help This help"
-            ],
-            "usage": "hf 14b valid [-h]"
-        },
         "hf 14b view": {
             "command": "hf 14b view",
             "description": "Print a ISO14443-B dump file (bin/eml/json) note: - command expects the filename to contain a UID which is needed to determine card memory type",
             "notes": [
-                "hf 14b view -f hf-14b-01020304-dump.bin"
+                "hf 14b view -f hf-14b-01020304-dump.bin",
+                "hf 14b view --selftest"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> Specify a filename for dump file",
                 "-v, --verbose verbose output",
-                "-z, --dense dense dump output style"
+                "-z, --dense dense dump output style",
+                "--selftest Run the dump parsers self tests and exit"
             ],
-            "usage": "hf 14b view [-hvz] -f <fn>"
+            "usage": "hf 14b view [-hvz] [-f <fn>] [--selftest]"
         },
         "hf 14b wrbl": {
             "command": "hf 14b wrbl",
@@ -7385,7 +7375,7 @@
                 "-h, --help This help",
                 "--aid <hex> Use specific AID (3 hex bytes, big endian)",
                 "-k, --key <hex> Key for authenticate (8|16|24 hex bytes)",
-                "-f, --file <fn> Filename of dictionary",
+                "-f, --file <fn> Filename of dictionary (default: `mfdes_default_keys`)",
                 "--pattern1b Check all 1-byte combinations of key (0000...0000, 0101...0101, 0202...0202, ...)",
                 "--pattern2b Check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)",
                 "--startp2b <pattern> Start key (2-byte HEX) for 2-byte search (use with `--pattern2b`)",
@@ -16616,8 +16606,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 925,
+        "commands_extracted": 924,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-09-15T20:08:49+00:00"
+        "extracted_on": "2026-09-16T09:42:55+00:00"
     }
 }

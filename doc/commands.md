@@ -238,7 +238,6 @@ Check column "offline" for their availability.
 |`hf 14b wrbl            `|N       |`Write data to a SRI512/SRIX4 tag`
 |`hf 14b tearoff         `|N       |`Tear-off attack on ST25TB/SRx counter blocks`
 |`hf 14b view            `|Y       |`Display content from tag dump file`
-|`hf 14b valid           `|Y       |`SRIX4 checksum test`
 |`hf 14b ctdump          `|N       |`Dump ASK CTS/C-ticket`
 |`hf 14b ctrdbl          `|N       |`Read ASK CTS/C-ticket block`
 |`hf 14b setuid          `|N       |`Set UID for magic card`
