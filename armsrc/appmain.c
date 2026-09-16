@@ -2556,10 +2556,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             SimulateDesfireTag();
             break;
         }
+#ifdef ENABLE_HFMFDESETEST
         case CMD_HF_DESFIRE_SIM_TEST: {
             DesfireSimTest(packet);
             break;
         }
+#endif
 #endif
         case CMD_HF_MIFARE_EML_MEMCLR: {
 
