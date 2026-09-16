@@ -26,6 +26,7 @@
     - [How to work with value files](#how-to-work-with-value-files)
     - [How to work with transaction mac](#how-to-work-with-transaction-mac)
     - [How to switch DESFire Light to LRP mode](#how-to-switch-desfire-light-to-lrp-mode)
+    - [How to drive the simulation from the host](#how-to-drive-the-simulation-from-the-host)
 
 
 ## Documentation
@@ -581,3 +582,30 @@ or in the LRP mode
 Switch LRP mode on
 
 `hf mfdes setconfig --appisoid df01 -t aes -s ev2 --param 05 --data 00000000010000000000`
+
+### How to drive the simulation from the host
+^[Top](#top)
+
+`hf mfdes sim` answers a reader over the air. `hf mfdes etest` answers the same simulation from the host over USB with no RF, one action per call, so a recorded card session can be replayed against it. The card image comes from `hf mfdes eload` as for `sim`.
+
+`hf mfdes etest --begin` - check the image and clear the random queue
+
+`hf mfdes etest --scan` - RF reset and activation, shows UID, ATQA, SAK and ATS
+
+`hf mfdes etest --random CCF53270570A7669` - queue the RndB the next authentication answers with, 8 or 16 bytes by key type
+
+`hf mfdes etest --apdu 900A0000010000` - one command, native or ISO 7816 wrapped, shows the answer
+
+`hf mfdes etest --fieldoff` - RF reset, the session is gone until the next `--scan`
+
+`hf mfdes etest --state` - selected AID, authentication, random queue and the sticky underflow flag
+
+`hf mfdes etest --end` - drop the state and the random queue
+
+The simulation normally uses a fixed RndB. Queued bytes are drawn in order by the next authentication and by the next activation of a random-id card (3 bytes). A draw that finds the queue short takes nothing, falls back to the fixed value and sets the underflow flag `--state` shows.
+
+`hf mfdes etest --apdu 900A0000010000 -j` - the same, as one line of JSON for a script
+
+```
+{"command":"apdu","ok":true,"data":"DF6AB29AAE46BA2791AF"}
+```
