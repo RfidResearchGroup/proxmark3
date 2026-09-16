@@ -191,6 +191,13 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
         return PM3_EIO;
     }
 
+    // Zero the payload only once a packet is really coming in: doing it for
+    // every idle poll of the main loop cost more than the rest of the loop.
+    // Both branches below leave the tail of data untouched -- an NG command
+    // fills only its own length, and an old style one only PM3_CMD_DATA_SIZE_OLD
+    // -- so what is not written has to start at zero.
+    memset(&rx->data, 0, sizeof(rx->data));
+
     rx->magic = rx_raw.pre.magic;
     rx->ng = rx_raw.pre.ng;
     rx->cmd = rx_raw.pre.cmd;

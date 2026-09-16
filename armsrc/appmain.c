@@ -4388,9 +4388,9 @@ void __attribute__((noreturn)) AppMain(void) {
             while (1);
         }
 
-        // Check if there is a packet available
+        // Check if there is a packet available.  receive_ng() zeroes the
+        // payload itself, once it knows a packet is actually arriving.
         PacketCommandNG rx;
-        memset(&rx.data, 0, sizeof(rx.data));
 
         int ret = receive_ng(&rx);
         if (ret == PM3_SUCCESS) {

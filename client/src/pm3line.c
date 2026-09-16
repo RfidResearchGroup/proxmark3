@@ -21,6 +21,9 @@
 #include <stdio.h> // for Mingw readline and for getline
 #include <string.h>
 #include <signal.h>
+#ifndef _WIN32
+#include <unistd.h>                      // write, isatty, STDOUT_FILENO
+#endif
 #if defined(HAVE_READLINE)
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -31,6 +34,8 @@
 #include "pm3_cmd.h"
 #include "ui.h"                          // g_session
 #include "util.h"                        // str_ndup
+
+static void pm3line_claim_signals(void);
 
 #if defined(HAVE_READLINE)
 
@@ -77,6 +82,13 @@ static char **rl_command_completion(const char *text, int start, int end) {
     return rl_completion_matches(text, rl_command_generator);
 }
 
+static int (*gs_check_hook)(void) = NULL;
+
+static int pm3line_startup_hook(void) {
+    pm3line_claim_signals();
+    return 0;
+}
+
 #elif defined(HAVE_LINENOISE)
 static void ln_command_completion(const char *text, linenoiseCompletions *lc) {
     const char *prev_match = "";
@@ -113,6 +125,9 @@ static void ln_command_completion(const char *text, linenoiseCompletions *lc) {
 }
 #endif // HAVE_READLINE
 
+static volatile sig_atomic_t gs_sigint_caught = 0;
+static volatile sig_atomic_t gs_at_prompt = 0;
+
 #  if defined(_WIN32)
 /*
 static bool WINAPI terminate_handler(DWORD t) {
@@ -125,13 +140,39 @@ static bool WINAPI terminate_handler(DWORD t) {
 */
 #  else
 static struct sigaction gs_old_sigint_action;
+static struct sigaction gs_old_sigtstp_action;
+static volatile sig_atomic_t gs_echo_ctrl_c = 0;
+static void sigtstp_handler(int signum);
 static void sigint_handler(int signum) {
 
     switch (signum) {
         case SIGINT: {
-            sigaction(SIGINT, &gs_old_sigint_action, NULL);
-            pm3line_flush_history();
-            kill(0, SIGINT);
+            // Second CTRL-C. The graceful path did not take, restore the
+            // default disposition and let this one through.
+            if (gs_sigint_caught) {
+                sigaction(SIGINT, &gs_old_sigint_action, NULL);
+                raise(SIGINT);
+                break;
+            }
+            // Only set a flag here. Saving the history means malloc and stdio,
+            // neither is safe to call from a signal handler in a threaded
+            // client. write() is, and the terminal no longer echoes the
+            // character for us since readline turned ECHO off
+            gs_sigint_caught = 1;
+
+            if (gs_echo_ctrl_c) {
+                static const char at_prompt[] = "^C";
+                // the terminal is out of raw mode while a command runs, so it
+                // echoed the ^C itself. Only say what happens next
+                static const char in_command[] = "\nquitting once this command is done. CTRL-C again to force\n";
+                ssize_t ignored;
+                if (gs_at_prompt) {
+                    ignored = write(STDOUT_FILENO, at_prompt, sizeof(at_prompt) - 1);
+                } else {
+                    ignored = write(STDOUT_FILENO, in_command, sizeof(in_command) - 1);
+                }
+                (void) ignored;
+            }
             break;
         }
         default: {
@@ -140,23 +181,140 @@ static void sigint_handler(int signum) {
     }
 }
 
+// CTRL-Z. Put the terminal back the way the shell expects it, stop for real
+// on this thread, and set the line editor up again once we are continued
+static void sigtstp_handler(int signum) {
+
+    if (signum != SIGTSTP) {
+        return;
+    }
+
+    int at_prompt = gs_at_prompt;
+    (void) at_prompt;
+
+#if defined(HAVE_READLINE)
+    if (at_prompt) {
+        rl_cleanup_after_signal();
+    }
 #endif
+
+    sigaction(SIGTSTP, &gs_old_sigtstp_action, NULL);
+
+    sigset_t set;
+    sigprocmask(SIG_BLOCK, NULL, &set);
+    sigdelset(&set, SIGTSTP);
+
+    raise(SIGTSTP);
+
+    // the signal raised above is blocked while we are inside the handler,
+    // unblocking it is what stops us. We resume here on SIGCONT
+    sigprocmask(SIG_SETMASK, &set, NULL);
+
+    pm3line_claim_signals();
+
+#if defined(HAVE_READLINE)
+    if (at_prompt) {
+        rl_reset_after_signal();
+    }
+#endif
+}
+
+// Leave the terminal usable when the client is killed instead of quit
+static void sigfatal_handler(int signum) {
+
+#if defined(HAVE_READLINE)
+    if (gs_at_prompt) {
+        rl_cleanup_after_signal();
+    }
+#endif
+
+    signal(signum, SIG_DFL);
+    raise(signum);
+}
+
+static void claim_one_signal(int signum, void (*handler)(int)) {
+
+    struct sigaction current;
+    if (sigaction(signum, NULL, &current) != 0) {
+        return;
+    }
+
+    if (current.sa_handler == handler) {
+        return;
+    }
+
+    struct sigaction action;
+    memset(&action, 0, sizeof(action));
+    action.sa_handler = handler;
+    sigaction(signum, &action, NULL);
+}
+
+#endif
+
+// Readline answers a caught signal by cleaning up, re-raising it and then
+// reinstalling its handler. In a threaded client that re-raise lands on
+// whichever handler is installed at that instant, which can be readline's own
+// again, and the cycle repeats. Measured on CTRL-C and CTRL-Z alike, one
+// keypress gave a dozen echoes and a coin flip over whether it did anything.
+// So the client owns them, and takes them back from anything that grabs one,
+// like the flasher progress bar, which installs a handler it never restores
+static void pm3line_claim_signals(void) {
+#  if !defined(_WIN32)
+    claim_one_signal(SIGINT, &sigint_handler);
+    claim_one_signal(SIGTSTP, &sigtstp_handler);
+#  endif
+}
 
 void pm3line_install_signals(void) {
 #  if defined(_WIN32)
 //    SetConsoleCtrlHandler((PHANDLER_ROUTINE)terminate_handler, true);
 #  else
+    gs_echo_ctrl_c = (isatty(STDOUT_FILENO) == 1);
+
     struct sigaction action;
     memset(&action, 0, sizeof(action));
+
     action.sa_handler = &sigint_handler;
     sigaction(SIGINT, &action, &gs_old_sigint_action);
+
+    action.sa_handler = &sigtstp_handler;
+    sigaction(SIGTSTP, &action, &gs_old_sigtstp_action);
+
+    action.sa_handler = &sigfatal_handler;
+    sigaction(SIGTERM, &action, NULL);
+    sigaction(SIGQUIT, &action, NULL);
+    sigaction(SIGHUP, &action, NULL);
 #  endif
 
 #if defined(HAVE_READLINE)
-    rl_catch_signals = 1;
-    rl_set_signals();
+    // Readline must not catch these itself, see pm3line_claim_signals().
+    // rl_catch_sigwinch is a separate flag, window resizes stay with readline
+    rl_catch_signals = 0;
+    rl_startup_hook = pm3line_startup_hook;
 #endif // HAVE_READLINE
 }
+
+#if defined(HAVE_READLINE)
+// readline calls this roughly ten times a second while it waits for input
+static int pm3line_event_hook(void) {
+
+    pm3line_claim_signals();
+
+    if (gs_sigint_caught) {
+        // Drop the line being edited and make readline() return, so the caller
+        // reaches the normal shutdown instead of dying inside a handler
+        rl_free_line_state();
+        rl_replace_line("", 0);
+        rl_done = 1;
+        return 0;
+    }
+
+    if (gs_check_hook) {
+        return gs_check_hook();
+    }
+    return 0;
+}
+#endif // HAVE_READLINE
 
 void pm3line_init(void) {
 #if defined(HAVE_READLINE) || defined(HAVE_LINENOISE)
@@ -175,8 +333,6 @@ void pm3line_init(void) {
     rl_getc_function = getc;
 #endif
 
-    pm3line_install_signals();
-
 #ifdef RL_STATE_READCMD
     rl_extend_line_buffer(1024);
 #endif // RL_STATE_READCMD
@@ -184,18 +340,50 @@ void pm3line_init(void) {
     linenoiseInstallWindowChangeHandler();
     linenoiseSetCompletionCallback(ln_command_completion);
 #endif // HAVE_READLINE
+
+    pm3line_install_signals();
 }
 
 char *pm3line_read(const char *s) {
+
+    pm3line_claim_signals();
+
+    // CTRL-C already asked for a shutdown, do not put up another prompt.
+    // NULL is what CTRL-D returns, the caller exits cleanly on it and that
+    // path flushes the history
+    if (gs_sigint_caught) {
+        return NULL;
+    }
+
+    gs_at_prompt = 1;
+
 #if defined(HAVE_READLINE)
-    return readline(s);
+    char *line = readline(s);
+    gs_at_prompt = 0;
+    if (gs_sigint_caught) {
+        free(line);
+        return NULL;
+    }
+    return line;
 #elif defined(HAVE_LINENOISE)
-    return linenoise(s);
+    char *line = linenoise(s);
+    gs_at_prompt = 0;
+    if (gs_sigint_caught) {
+        free(line);
+        return NULL;
+    }
+    return line;
 #else
     printf("%s", s);
     // MinGW/ProxSpace builds do not provide getline() in this fallback path.
     char input[1024] = {0};
     if (fgets(input, sizeof(input), stdin) == NULL) {
+        gs_at_prompt = 0;
+        return NULL;
+    }
+
+    gs_at_prompt = 0;
+    if (gs_sigint_caught) {
         return NULL;
     }
 
@@ -256,10 +444,20 @@ void pm3line_add_history(const char *line) {
     // add if not identical to latest recorded line
     if ((!entry) || (strcmp(entry->line, line) != 0)) {
         add_history(line);
+        // keep the file in sync, so a crash or a kill -9 does not take the
+        // history with it. append_history fails when the file is not there yet
+        if (g_session.history_path) {
+            if (append_history(1, g_session.history_path) != 0) {
+                write_history(g_session.history_path);
+            }
+        }
     }
 #elif defined(HAVE_LINENOISE)
     // linenoiseHistoryAdd takes already care of duplicate entries
     linenoiseHistoryAdd(line);
+    if (g_session.history_path) {
+        linenoiseHistorySave(g_session.history_path);
+    }
 #else
     (void) line;
 #endif
@@ -279,7 +477,8 @@ void pm3line_flush_history(void) {
 
 void pm3line_check(int (check)(void)) {
 #if defined(HAVE_READLINE)
-    rl_event_hook = check;
+    gs_check_hook = check;
+    rl_event_hook = pm3line_event_hook;
 #else
     check();
 #endif

@@ -910,6 +910,23 @@ static int write_block(uint32_t address, int magic, uint8_t *data, uint32_t leng
     return ret;
 }
 
+// Hand the signals back to whoever had them. The client needs SIGINT to be
+// able to quit on CTRL-C once the flashing is done
+static void restore_progress_signals(void (*old_sigint)(int), void (*old_sigwinch)(int)) {
+
+    if (old_sigint != SIG_ERR) {
+        signal(SIGINT, old_sigint);
+    }
+
+#ifndef _WIN32
+    if (old_sigwinch != SIG_ERR) {
+        signal(SIGWINCH, old_sigwinch);
+    }
+#else
+    (void) old_sigwinch;
+#endif
+}
+
 // Write a file's segments to Flash
 int flash_write(flash_file_t *ctx, flash_dev_t *flash_dev) {
 
@@ -930,11 +947,14 @@ int flash_write(flash_file_t *ctx, flash_dev_t *flash_dev) {
         uint32_t baddr = seg->start;
 
         int pct = 0;
+        void (*old_sigint)(int) = SIG_ERR;
+        void (*old_sigwinch)(int) = SIG_ERR;
+
         if (blocks > 50) {
 
-            signal(SIGINT, hadouken_on_sigint);
+            old_sigint = signal(SIGINT, hadouken_on_sigint);
 #ifndef _WIN32
-            signal(SIGWINCH, hadouken_on_sigwinch);
+            old_sigwinch = signal(SIGWINCH, hadouken_on_sigwinch);
 #endif
 
             hadouken_start(30.0, 0, 1);
@@ -950,6 +970,7 @@ int flash_write(flash_file_t *ctx, flash_dev_t *flash_dev) {
             if (write_block(baddr, ctx->ver_info->magic, data, block_size, flash_dev) < 0) {
                 if (blocks > 50) {
                     hadouken_stop();
+                    restore_progress_signals(old_sigint, old_sigwinch);
                 }
                 PrintAndLogEx(ERR, "Error writing block %d of %u", block, blocks);
                 return PM3_EFATAL;
@@ -968,6 +989,7 @@ int flash_write(flash_file_t *ctx, flash_dev_t *flash_dev) {
 
         if (blocks > 50) {
             hadouken_stop();
+            restore_progress_signals(old_sigint, old_sigwinch);
         }
         fflush(stdout);
     }
