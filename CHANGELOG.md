@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mfdes sim` - a session opened with the 0x0A legacy authentication now uses the legacy secure messaging: 4 byte DES MAC, CRC16, no MAC on plain answers (@mistial-dev)
 - Fixed `hf mfdes sim` - the 0x0A legacy authentication now enciphers the reader token and RndA' from a zero IV as a card does, so the session key and final frame match genuine silicon (@mistial-dev)
 - Added `hf mfdes etest` - drives the DESFire simulation over USB without RF, with injectable RndB / random UID (@mistial-dev)
 - Fixed USB receive stalling on a zero-length OUT packet and missing a command already buffered behind another (@cindersocket)
