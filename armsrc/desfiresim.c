@@ -105,7 +105,8 @@ typedef struct {
     uint32_t chain_off;         // position in the stream being handed out
     uint32_t chain_end;         // its total length
     uint8_t chain_comm;         // effective comm mode for the whole transfer
-    uint8_t chain_crc[4];       // CRC32 of an enciphered read, computed up front
+    uint8_t chain_crc[4];       // CRC of an enciphered read, computed up front
+    uint8_t chain_crclen;       // 4 for CRC32, 2 for the legacy CRC16
 
     // ---- authentication
     // auth_cmd is the handshake in flight, 0 when none.  The second frame
@@ -118,6 +119,7 @@ typedef struct {
     struct desfire_key authkey;
 
     bool authenticated;
+    bool legacy;                // the session came from 0x0A: DES MAC, CRC16, zero IVs
     uint8_t auth_keyno;         // the key number we authenticated with
     struct desfire_key sesskey;
 
@@ -430,6 +432,7 @@ static uint8_t desfire_sim_rndlen(uint8_t algo) {
 static void desfire_sim_auth_clear(desfire_sim_state_t *st) {
     st->auth_cmd = 0;
     st->authenticated = false;
+    st->legacy = false;
     st->auth_keyno = 0;
     st->cmac_pendlen = 0;
     memset(st->cmac_pend, 0, sizeof(st->cmac_pend));
@@ -541,6 +544,7 @@ static uint16_t desfire_sim_auth_finish(desfire_sim_state_t *st, const uint8_t *
     cmac_generate_subkeys(&st->sesskey);
 
     st->authenticated = true;
+    st->legacy = (st->auth_cmd == MFDES_AUTHENTICATE);
     st->auth_keyno = st->auth_keynum;
     st->auth_cmd = 0;
     memset(st->iv, 0, sizeof(st->iv));
@@ -722,13 +726,57 @@ static void desfire_sim_cmac_final(desfire_sim_state_t *st, uint8_t *mac) {
     desfire_sim_cmac_reset(st);
 }
 
+// ---- the legacy session, after a 0x0A authentication
+//
+// Its MAC is DES CBC under the session key from a zero IV over the data zero
+// padded to whole blocks, the first four bytes of the last block.  Taken in
+// pieces like the CMAC, since a chained read is one MAC.  Nothing carries over
+// between commands, so there is no IV to keep in step.
+static void desfire_sim_lmac_reset(desfire_sim_state_t *st) {
+    st->cmac_pendlen = 0;
+    memset(st->cmac_pend, 0, sizeof(st->cmac_pend));
+    memset(st->iv, 0, sizeof(st->iv));
+}
+
+static void desfire_sim_lmac_update(desfire_sim_state_t *st, const uint8_t *data, uint32_t len) {
+
+    while (len > 0) {
+        uint32_t room = 8 - st->cmac_pendlen;
+        uint32_t n = (len < room) ? len : room;
+        memcpy(st->cmac_pend + st->cmac_pendlen, data, n);
+        st->cmac_pendlen += n;
+        data += n;
+        len -= n;
+
+        if (st->cmac_pendlen == 8) {
+            desfire_sim_crypt(&st->sesskey, st->cmac_pend, st->cmac_pend, 8, st->iv, true);
+            st->cmac_pendlen = 0;
+        }
+    }
+}
+
+static void desfire_sim_lmac_final(desfire_sim_state_t *st, uint8_t *mac) {
+
+    if (st->cmac_pendlen) {
+        memset(st->cmac_pend + st->cmac_pendlen, 0, 8 - st->cmac_pendlen);
+        desfire_sim_crypt(&st->sesskey, st->cmac_pend, st->cmac_pend, 8, st->iv, true);
+    }
+    memcpy(mac, st->iv, DESFIRE_MAC_LENGTH);
+    desfire_sim_lmac_reset(st);
+}
+
+// the legacy modes use ISO 14443-A's CRC16, low byte first
+static void desfire_sim_crc16(const uint8_t *data, uint16_t len, uint8_t *out) {
+    compute_crc(CRC_14443_A, data, len, out, out + 1);
+}
+
 // The session CMAC runs over every command and every response, in order, so it
 // has to be taken even when neither side puts it on the wire -- skipping one
 // leaves the two IVs apart and every later MAC is wrong.  This is the command
 // half: `cmd` followed by its parameters, exactly as they arrived.
 static void desfire_sim_cmac_command(desfire_sim_state_t *st, uint8_t cmd, const uint8_t *in, uint16_t inlen) {
 
-    if (st->authenticated == false) {
+    if (st->authenticated == false || st->legacy) {
         return;
     }
 
@@ -746,7 +794,8 @@ static void desfire_sim_cmac_command(desfire_sim_state_t *st, uint8_t cmd, const
 static uint16_t desfire_sim_maced(desfire_sim_state_t *st, uint8_t *out, uint8_t status,
                                   const uint8_t *data, uint16_t len) {
 
-    if (st->authenticated == false) {
+    // a legacy session puts nothing on a plain answer
+    if (st->authenticated == false || st->legacy) {
         return desfire_sim_payload(out, status, data, len);
     }
 
@@ -806,11 +855,36 @@ static uint16_t desfire_sim_enciphered(desfire_sim_state_t *st, uint8_t *out, ui
 // and verifies a single CMAC over the lot, taken against the status byte of the
 // last frame, so the data feeds the running CMAC as it goes out and only the
 // final frame carries the result.
-static uint16_t desfire_sim_chained(desfire_sim_state_t *st, uint8_t *out, bool more,
+static uint16_t desfire_sim_chained(desfire_sim_state_t *st, uint8_t *out, bool more, uint8_t comm,
                                     const uint8_t *data, uint16_t len) {
 
     if (st->authenticated == false) {
         return desfire_sim_payload(out, more ? MFDES_ADDITIONAL_FRAME : MFDES_S_OPERATION_OK, data, len);
+    }
+
+    // a legacy session MACs a MACed transfer, four bytes on the last frame, and
+    // nothing else
+    if (st->legacy) {
+
+        if (comm != DESFIRE_SIM_COMM_MACED) {
+            return desfire_sim_payload(out, more ? MFDES_ADDITIONAL_FRAME : MFDES_S_OPERATION_OK, data, len);
+        }
+
+        desfire_sim_lmac_update(st, data, len);
+
+        if (more) {
+            return desfire_sim_payload(out, MFDES_ADDITIONAL_FRAME, data, len);
+        }
+
+        uint8_t mac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+        desfire_sim_lmac_final(st, mac);
+
+        out[0] = MFDES_S_OPERATION_OK;
+        if (len) {
+            memcpy(out + 1, data, len);
+        }
+        memcpy(out + 1 + len, mac, DESFIRE_MAC_LENGTH);
+        return len + 1 + DESFIRE_MAC_LENGTH;
     }
 
     desfire_sim_cmac_update(st, data, len);
@@ -835,6 +909,44 @@ static uint16_t desfire_sim_chained(desfire_sim_state_t *st, uint8_t *out, bool 
 // Wrap one answer in whatever the transfer's communication mode calls for.
 static uint16_t desfire_sim_respond(desfire_sim_state_t *st, uint8_t *out, uint8_t status,
                                     const uint8_t *data, uint16_t len, uint8_t comm) {
+
+    if (st->authenticated && st->legacy) {
+
+        // enciphered: data, CRC16 over it, zero padding, one CBC run from a zero IV
+        if (comm == DESFIRE_SIM_COMM_FULL) {
+
+            uint8_t buf[DESFIRE_SIM_MAX_RESP] = {0};
+            size_t padded = padded_data_length(len + 2, 8);
+            if (padded + 1 > sizeof(buf)) {
+                return desfire_sim_status(out, MFDES_E_LENGTH);
+            }
+
+            if (len) {
+                memcpy(buf, data, len);
+            }
+            desfire_sim_crc16(buf, len, buf + len);
+
+            memset(st->iv, 0, sizeof(st->iv));
+            out[0] = status;
+            desfire_sim_crypt(&st->sesskey, buf, out + 1, padded, st->iv, true);
+            return padded + 1;
+        }
+
+        // MACed: four bytes behind the data, none behind a bare status
+        if (comm == DESFIRE_SIM_COMM_MACED && len) {
+            uint8_t mac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+            desfire_sim_lmac_reset(st);
+            desfire_sim_lmac_update(st, data, len);
+            desfire_sim_lmac_final(st, mac);
+
+            out[0] = status;
+            memcpy(out + 1, data, len);
+            memcpy(out + 1 + len, mac, DESFIRE_MAC_LENGTH);
+            return len + 1 + DESFIRE_MAC_LENGTH;
+        }
+
+        return desfire_sim_payload(out, status, data, len);
+    }
 
     if (st->authenticated && comm == DESFIRE_SIM_COMM_FULL) {
         return desfire_sim_enciphered(st, out, status, data, len);
@@ -923,6 +1035,71 @@ static bool desfire_sim_unwrap(desfire_sim_state_t *st, uint8_t cmd, uint8_t com
     if (st->authenticated == false) {
         // no session, so nothing was added and nothing can be checked
         return (comm != DESFIRE_SIM_COMM_FULL);
+    }
+
+    if (st->legacy) {
+
+        if (comm == DESFIRE_SIM_COMM_FULL) {
+
+            if (*len < hdrlen) {
+                return false;
+            }
+
+            uint16_t enclen = *len - hdrlen;
+            if (enclen == 0 || (enclen % 8) != 0 || enclen > DESFIRE_SIM_WRITE_MAX) {
+                return false;
+            }
+
+            // the reader deciphered it, so the card enciphers it back
+            uint8_t plain[DESFIRE_SIM_WRITE_MAX] = {0};
+            desfire_sim_d40_receive(&st->sesskey, buf + hdrlen, plain, enclen);
+            memcpy(buf + hdrlen, plain, enclen);
+
+            // CRC16 over the data alone sits behind it, zero padding after it.
+            // The shortest data whose CRC fits and whose padding is all zero.
+            for (uint16_t datalen = 0; datalen + 2 <= enclen; datalen++) {
+
+                uint8_t want[2] = {0};
+                desfire_sim_crc16(buf + hdrlen, datalen, want);
+                if (memcmp(want, buf + hdrlen + datalen, 2) != 0) {
+                    continue;
+                }
+
+                bool zeros = true;
+                for (uint16_t i = datalen + 2; i < enclen; i++) {
+                    zeros = zeros && (buf[hdrlen + i] == 0);
+                }
+                if (zeros) {
+                    *len = hdrlen + datalen;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // MACed: four bytes over the data behind the header
+        if (comm == DESFIRE_SIM_COMM_MACED && desfire_sim_cmd_macs_request(cmd)) {
+
+            if (*len < hdrlen + DESFIRE_MAC_LENGTH) {
+                return false;
+            }
+            uint16_t plainlen = *len - DESFIRE_MAC_LENGTH;
+
+            uint8_t mac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
+            desfire_sim_lmac_reset(st);
+            desfire_sim_lmac_update(st, buf + hdrlen, plainlen - hdrlen);
+            desfire_sim_lmac_final(st, mac);
+
+            if (memcmp(mac, buf + plainlen, DESFIRE_MAC_LENGTH) != 0) {
+                return false;
+            }
+
+            *len = plainlen;
+            return true;
+        }
+
+        // plain carries nothing and nothing has to be kept in step
+        return true;
     }
 
     if (comm == DESFIRE_SIM_COMM_FULL) {
@@ -1079,7 +1256,7 @@ static uint16_t desfire_sim_read_chunk(desfire_sim_state_t *st, uint8_t *out) {
     }
 
     if (st->chain_comm != DESFIRE_SIM_COMM_FULL) {
-        return desfire_sim_chained(st, out, more, data + at, n);
+        return desfire_sim_chained(st, out, more, st->chain_comm, data + at, n);
     }
 
     // An enciphered read is one CBC run over the file data, a CRC32 behind it
@@ -1094,7 +1271,7 @@ static uint16_t desfire_sim_read_chunk(desfire_sim_state_t *st, uint8_t *out) {
 
         if (p < st->chain_datalen) {
             plain[i] = data[p];
-        } else if (p < st->chain_datalen + 4) {
+        } else if (p < st->chain_datalen + st->chain_crclen) {
             plain[i] = st->chain_crc[p - st->chain_datalen];
         } else {
             plain[i] = 0x00;
@@ -1142,13 +1319,27 @@ static uint16_t desfire_sim_read_start(desfire_sim_state_t *st, const desfire_em
 
     // the command CMAC has already been taken and its result discarded, so the
     // running state starts empty for the response half
-    desfire_sim_cmac_reset(st);
+    if (st->legacy) {
+        desfire_sim_lmac_reset(st);
+    } else {
+        desfire_sim_cmac_reset(st);
+    }
 
     if (st->chain_base + st->chain_datalen > f->datalen) {
         st->chain_datalen = (f->datalen > st->chain_base) ? (f->datalen - st->chain_base) : 0;
     }
 
     st->chain_end = st->chain_datalen;
+    st->chain_crclen = 4;
+
+    // a legacy session enciphers the data and a CRC16 over it, from a zero IV
+    if (comm == DESFIRE_SIM_COMM_FULL && st->authenticated && st->legacy) {
+        const uint8_t *data = st->base + f->dataoff + st->chain_base;
+        desfire_sim_crc16(data, st->chain_datalen, st->chain_crc);
+        st->chain_crclen = 2;
+        st->chain_end = padded_data_length(st->chain_datalen + 2, 8);
+        return desfire_sim_read_chunk(st, out);
+    }
 
     if (comm == DESFIRE_SIM_COMM_FULL) {
 
@@ -1874,15 +2065,16 @@ static uint16_t desfire_sim_write_gather(desfire_sim_state_t *st, uint8_t cmd,
 
         if (st->authenticated) {
             if (wcomm == DESFIRE_SIM_COMM_FULL) {
-                size_t kbs = key_block_size(&st->sesskey);
+                // a legacy session carries a CRC16 in DES blocks, an EV1 one a CRC32
+                size_t kbs = st->legacy ? 8 : key_block_size(&st->sesskey);
                 if (kbs == 0) {
                     st->wcmd = 0;
                     st->wlen = 0;
                     return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
                 }
-                total = hdrlen + padded_data_length(datalen + 4, kbs);
+                total = hdrlen + padded_data_length(datalen + (st->legacy ? 2 : 4), kbs);
             } else if (wcomm == DESFIRE_SIM_COMM_MACED && desfire_sim_cmd_macs_request(cmd)) {
-                total += DESFIRE_CMAC_LENGTH;
+                total += st->legacy ? DESFIRE_MAC_LENGTH : DESFIRE_CMAC_LENGTH;
             }
         }
 
@@ -1981,7 +2173,7 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
             st->chain_cmd = MFDES_GET_VERSION;
             st->chain_step = 1;
             desfire_sim_cmac_reset(st);
-            return desfire_sim_chained(st, out, true, hdr->versionhw, hdr->versionhwlen);
+            return desfire_sim_chained(st, out, true, DESFIRE_SIM_COMM_PLAIN, hdr->versionhw, hdr->versionhwlen);
         }
 
         case MFDES_ADDITIONAL_FRAME: {
@@ -1994,12 +2186,12 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
 
                 if (st->chain_step == 1) {
                     st->chain_step = 2;
-                    return desfire_sim_chained(st, out, true, hdr->versionsw, hdr->versionswlen);
+                    return desfire_sim_chained(st, out, true, DESFIRE_SIM_COMM_PLAIN, hdr->versionsw, hdr->versionswlen);
                 }
 
                 st->chain_cmd = 0;
                 st->chain_step = 0;
-                return desfire_sim_chained(st, out, false, hdr->versionprod, hdr->versionprodlen);
+                return desfire_sim_chained(st, out, false, DESFIRE_SIM_COMM_PLAIN, hdr->versionprod, hdr->versionprodlen);
             }
 
             if (st->wcmd != 0) {
@@ -2025,12 +2217,12 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
 
                 if (more) {
                     st->chain_step = next;
-                    return desfire_sim_chained(st, out, true, buf, n);
+                    return desfire_sim_chained(st, out, true, DESFIRE_SIM_COMM_PLAIN, buf, n);
                 }
 
                 st->chain_cmd = 0;
                 st->chain_step = 0;
-                return desfire_sim_chained(st, out, false, buf, n);
+                return desfire_sim_chained(st, out, false, DESFIRE_SIM_COMM_PLAIN, buf, n);
             }
 
             return desfire_sim_status(out, MFDES_E_ILLEGAL_COMMAND_CODE);
@@ -2060,9 +2252,9 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
             if (more) {
                 st->chain_cmd = MFDES_GET_DF_NAMES;
                 st->chain_step = next;
-                return desfire_sim_chained(st, out, true, buf, n);
+                return desfire_sim_chained(st, out, true, DESFIRE_SIM_COMM_PLAIN, buf, n);
             }
-            return desfire_sim_chained(st, out, false, buf, n);
+            return desfire_sim_chained(st, out, false, DESFIRE_SIM_COMM_PLAIN, buf, n);
         }
 
         case MFDES_GET_ISOFILE_IDS: {
@@ -2708,12 +2900,15 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
             // the key, an AES version byte, the CRC32 over command, key number
             // and that lot, and -- only when the key being changed is not the
             // one the session was opened with -- a CRC32 of the new key on top.
+            // A legacy session carries CRC16s over the key data alone and the
+            // reader deciphered the lot; an EV1 session CRC32s and enciphers.
             uint8_t keylen = desfire_sim_keylen(algo);
             bool xored = (keyno != st->auth_keyno);
+            uint8_t crclen = st->legacy ? 2 : 4;
 
-            uint16_t plainlen = keylen + ((algo == T_AES) ? 1 : 0) + 4 + (xored ? 4 : 0);
+            uint16_t plainlen = keylen + ((algo == T_AES) ? 1 : 0) + crclen + (xored ? crclen : 0);
 
-            size_t kbs = key_block_size(&st->sesskey);
+            size_t kbs = st->legacy ? 8 : key_block_size(&st->sesskey);
             if (kbs == 0) {
                 return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
             }
@@ -2728,21 +2923,28 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
                 return desfire_sim_status(out, MFDES_E_LENGTH);
             }
 
-            desfire_sim_crypt(&st->sesskey, in + 1, buf, enclen, st->iv, false);
+            if (st->legacy) {
+                desfire_sim_d40_receive(&st->sesskey, in + 1, buf, enclen);
+            } else {
+                desfire_sim_crypt(&st->sesskey, in + 1, buf, enclen, st->iv, false);
+            }
 
             // the CRC32 covers the command byte, the key number as it arrived,
             // and the plaintext up to but not including the CRC itself
             uint16_t upto = keylen + ((algo == T_AES) ? 1 : 0);
 
-            uint8_t crcbuf[DESFIRE_SIM_WRITE_MAX + 8] = {0};
-            crcbuf[0] = cmd;
-            crcbuf[1] = in[0];
-            memcpy(crcbuf + 2, buf, upto);
-
             uint8_t want[4] = {0};
-            crc32_ex(crcbuf, upto + 2, want);
+            if (st->legacy) {
+                desfire_sim_crc16(buf, upto, want);
+            } else {
+                uint8_t crcbuf[DESFIRE_SIM_WRITE_MAX + 8] = {0};
+                crcbuf[0] = cmd;
+                crcbuf[1] = in[0];
+                memcpy(crcbuf + 2, buf, upto);
+                crc32_ex(crcbuf, upto + 2, want);
+            }
 
-            if (memcmp(want, buf + upto, 4) != 0) {
+            if (memcmp(want, buf + upto, crclen) != 0) {
                 desfire_sim_auth_clear(st);
                 return desfire_sim_status(out, MFDES_E_INTEGRITY_ERROR);
             }
@@ -2762,11 +2964,15 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
                     newkey[i] ^= slot->key[i];
                 }
 
-                // and a CRC32 of the new key alone proves the XOR came apart
+                // and a CRC of the new key alone proves the XOR came apart
                 uint8_t want2[4] = {0};
-                crc32_ex(newkey, keylen, want2);
+                if (st->legacy) {
+                    desfire_sim_crc16(newkey, keylen, want2);
+                } else {
+                    crc32_ex(newkey, keylen, want2);
+                }
 
-                if (memcmp(want2, buf + upto + 4, 4) != 0) {
+                if (memcmp(want2, buf + upto + crclen, crclen) != 0) {
                     desfire_sim_auth_clear(st);
                     return desfire_sim_status(out, MFDES_E_INTEGRITY_ERROR);
                 }
