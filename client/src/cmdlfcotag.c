@@ -31,7 +31,7 @@
 #include "ui.h"         // PrintAndLog
 #include "ctype.h"      // tolower
 #include "cliparser.h"
-#include "commonutil.h" // reflect32
+#include "commonutil.h" // reflect32, ARRAYLEN
 #include "cmdlf.h"      // lf_getconfig, lf_setconfig, lf_read_cotag
 #include "graph.h"      // g_GraphTraceLen
 
@@ -273,9 +273,9 @@ static int demod_cotag(int32_t *samples, int num_samples, int clock, int clock_s
         int len;
         const char *name;
     } preamble_patterns[] = {
-        { preamble_a, (int)(sizeof(preamble_a)   / sizeof(preamble_a[0])), "A"   },
-        { preamble_p, (int)(sizeof(preamble_p)  / sizeof(preamble_p[0])),  "P"   },
-        { preamble_p0, (int)(sizeof(preamble_p0) / sizeof(preamble_p0[0])), "P-0" },
+        { preamble_a, ARRAYLEN(preamble_a), "A"   },
+        { preamble_p, ARRAYLEN(preamble_p),  "P"   },
+        { preamble_p0, ARRAYLEN(preamble_p0), "P-0" },
         { NULL, 0, "" },
     };
 

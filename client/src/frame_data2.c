@@ -30,6 +30,7 @@
 #else
 #include <sys/ioctl.h>
 #endif
+#include "commonutil.h"             // ARRAYLEN
 
 // ---- ANSI ----------------------------------------------------------------
 #define CSI          "\x1b["
@@ -52,7 +53,6 @@ static const char *GLYPHS[] = {
     "\xef\xbe\x96", "\xef\xbe\x97", "\xef\xbe\x98", "\xef\xbe\x99", "\xef\xbe\x9a", "\xef\xbe\x9b", "\xef\xbe\x9c", "\xef\xbe\x9d",
     "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
 };
-static const int NGLYPH = (int)(sizeof(GLYPHS) / sizeof(GLYPHS[0]));
 
 #define LOGO_BOLD 1
 
@@ -279,7 +279,7 @@ static void render_frame_locked(void) {
             }
 
             if (frand() < (is_field ? 0.01 : 0.04))
-                g_cell[y][x] = (int)(frand() * NGLYPH);
+                g_cell[y][x] = (int)(frand() * ARRAYLEN(GLYPHS));
 
             const char *g = GLYPHS[g_cell[y][x]];
 
@@ -360,7 +360,7 @@ static int fx_state_init(int rows) {
     }
     for (int y = 0; y < g_rows; y++)
         for (int x = 0; x < g_cols; x++)
-            g_cell[y][x] = (int)(frand() * NGLYPH);
+            g_cell[y][x] = (int)(frand() * ARRAYLEN(GLYPHS));
 
     build_mask(g_rows, g_cols);
 
