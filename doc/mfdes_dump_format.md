@@ -13,6 +13,7 @@ built on.
 - [MIFARE DESFire dump file format](#mifare-desfire-dump-file-format)
 - [Table of Contents](#table-of-contents)
 - [Commands](#commands)
+- [DFC compatibility](#dfc-compatibility)
 - [File identity](#file-identity)
 - [Card level](#card-level)
 - [Applications](#applications)
@@ -52,6 +53,23 @@ naming the file again.
 With no `--aid` / `--isoid` / `--dfname` the command walks every application the
 PICC lists. The default filename is `hf-mfdes-<UID>-dump.json`; only json is
 written, there is no `.bin` companion.
+
+## DFC compatibility
+^[Top](#top)
+
+`tools/dfc_converter.py` converts between this JSON format and DFC v4 text
+credentials. DFC is used by the DESFire Compatible app for Flipper Zero and
+Chameleon Ultra, so the converter moves supported card images between those
+devices and Proxmark3.
+
+```text
+python3 tools/dfc_converter.py credential.dfc credential.json
+python3 tools/dfc_converter.py credential.json credential.dfc
+```
+
+The file extensions select the direction. The converter refuses features that
+the destination cannot represent instead of silently discarding them. DFC
+binary `.dfcb` files are not supported.
 
 ## File identity
 ^[Top](#top)
