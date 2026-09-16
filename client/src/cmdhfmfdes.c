@@ -9219,6 +9219,249 @@ static int CmdHF14ADesSim(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// One `hf mfdes etest` operation: send it and hand back the answer
+static int desfire_etest_exchange(uint8_t op, const uint8_t *data, uint16_t len, PacketResponseNG *resp) {
+
+    uint8_t buf[PM3_CMD_DATA_SIZE] = {0};
+    desfire_sim_test_cmd_t *cmd = (desfire_sim_test_cmd_t *)buf;
+
+    if (len > sizeof(buf) - sizeof(*cmd)) {
+        return PM3_EINVARG;
+    }
+
+    cmd->op = op;
+    cmd->len = len;
+    if (len) {
+        memcpy(cmd->data, data, len);
+    }
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_DESFIRE_SIM_TEST, buf, sizeof(*cmd) + len);
+
+    if (WaitForResponseTimeout(CMD_HF_DESFIRE_SIM_TEST, resp, 2000) == false) {
+        return PM3_ETIMEOUT;
+    }
+
+    return resp->status;
+}
+
+// uppercase hex into a caller's buffer, sprint_hex_inrow() has one static one
+static void desfire_etest_hex(char *dst, size_t dstlen, const uint8_t *src, size_t n) {
+    size_t i = 0;
+    for (; i < n && (2 * i + 2) < dstlen; i++) {
+        snprintf(dst + 2 * i, dstlen - 2 * i, "%02X", src[i]);
+    }
+    dst[2 * i] = 0;
+}
+
+static int CmdHF14ADesETest(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes etest",
+                  "Drive the DESFire simulation from the host over USB, no RF involved.\n"
+                  "The card image in emulator memory answers each --apdu, native or ISO 7816\n"
+                  "wrapped, as `hf mfdes sim` would over the air. Bytes given with --random are\n"
+                  "used for the next RndB and random UID draws, so a recorded session replays\n"
+                  "byte for byte.\n"
+                  "\n"
+                  "One action per call. Load an image first with `hf mfdes eload`",
+                  "hf mfdes etest --begin\n"
+                  "hf mfdes etest --scan\n"
+                  "hf mfdes etest --random 0102030405060708\n"
+                  "hf mfdes etest --apdu 900A0000010000 -j\n"
+                  "hf mfdes etest --state -j\n"
+                  "hf mfdes etest --end");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "begin",    "Check the image, clear the random queue"),
+        arg_lit0(NULL, "end",      "Drop the state and the random queue"),
+        arg_lit0(NULL, "scan",     "RF reset and activation, show UID/ATQA/SAK/ATS"),
+        arg_str0(NULL, "apdu",     "<hex>", "Send one command, show the answer"),
+        arg_str0(NULL, "random",   "<hex>", "Queue bytes for the next RndB / random UID draws"),
+        arg_lit0(NULL, "fieldoff", "RF reset, session dropped"),
+        arg_lit0(NULL, "state",    "Show session and random queue state"),
+        arg_lit0("j",  "json",     "One line of JSON instead of text"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool begin = arg_get_lit(ctx, 1);
+    bool end = arg_get_lit(ctx, 2);
+    bool scan = arg_get_lit(ctx, 3);
+    bool has_apdu = (arg_get_str(ctx, 4)->count > 0);
+    bool has_random = (arg_get_str(ctx, 5)->count > 0);
+    bool fieldoff = arg_get_lit(ctx, 6);
+    bool state = arg_get_lit(ctx, 7);
+    bool json = arg_get_lit(ctx, 8);
+
+    int apdulen = 0;
+    uint8_t apdu[PM3_CMD_DATA_SIZE - sizeof(desfire_sim_test_cmd_t)] = {0};
+    if (CLIParamHexToBuf(arg_get_str(ctx, 4), apdu, sizeof(apdu), &apdulen)) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    int rndlen = 0;
+    uint8_t rnd[DESFIRE_SIM_TEST_RANDOM_MAX] = {0};
+    if (CLIParamHexToBuf(arg_get_str(ctx, 5), rnd, sizeof(rnd), &rndlen)) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    CLIParserFree(ctx);
+
+    if (begin + end + scan + has_apdu + has_random + fieldoff + state != 1) {
+        PrintAndLogEx(WARNING, "Give exactly one action");
+        return PM3_EINVARG;
+    }
+
+    if ((has_apdu && apdulen == 0) || (has_random && rndlen == 0)) {
+        PrintAndLogEx(WARNING, "Need at least one byte");
+        return PM3_EINVARG;
+    }
+
+    uint8_t op;
+    const char *name;
+    const uint8_t *data = NULL;
+    uint16_t len = 0;
+
+    if (begin) {
+        op = DESFIRE_SIM_TEST_BEGIN;
+        name = "begin";
+    } else if (end) {
+        op = DESFIRE_SIM_TEST_END;
+        name = "end";
+    } else if (scan) {
+        op = DESFIRE_SIM_TEST_SCAN;
+        name = "scan";
+    } else if (has_apdu) {
+        op = DESFIRE_SIM_TEST_APDU;
+        name = "apdu";
+        data = apdu;
+        len = apdulen;
+    } else if (has_random) {
+        op = DESFIRE_SIM_TEST_RANDOM;
+        name = "random";
+        data = rnd;
+        len = rndlen;
+    } else if (fieldoff) {
+        op = DESFIRE_SIM_TEST_FIELDOFF;
+        name = "fieldoff";
+    } else {
+        op = DESFIRE_SIM_TEST_STATE;
+        name = "state";
+    }
+
+    PacketResponseNG resp;
+    int res = desfire_etest_exchange(op, data, len, &resp);
+
+    // the JSON fields of a successful answer, nothing for the plain acks
+    char fields[2 * PM3_CMD_DATA_SIZE + 128] = {0};
+
+    if (res == PM3_SUCCESS && op == DESFIRE_SIM_TEST_SCAN) {
+        if (resp.length < sizeof(iso14a_card_select_t)) {
+            res = PM3_EFAILED;
+        } else {
+            iso14a_card_select_t card;
+            memcpy(&card, resp.data.asBytes, sizeof(card));
+
+            char uid[2 * sizeof(card.uid) + 1];
+            char atqa[2 * sizeof(card.atqa) + 1];
+            char ats[2 * sizeof(card.ats) + 1];
+            desfire_etest_hex(uid, sizeof(uid), card.uid, card.uidlen);
+            desfire_etest_hex(atqa, sizeof(atqa), card.atqa, sizeof(card.atqa));
+            desfire_etest_hex(ats, sizeof(ats), card.ats, card.ats_len);
+
+            if (json) {
+                snprintf(fields, sizeof(fields), ",\"uid\":\"%s\",\"atqa\":\"%s\",\"sak\":\"%02X\",\"ats\":\"%s\"", uid, atqa, card.sak, ats);
+            } else {
+                PrintAndLogEx(SUCCESS, "UID.... %s", uid);
+                PrintAndLogEx(SUCCESS, "ATQA... %s", atqa);
+                PrintAndLogEx(SUCCESS, "SAK.... %02X", card.sak);
+                PrintAndLogEx(SUCCESS, "ATS.... %s", ats);
+            }
+        }
+    }
+
+    if (res == PM3_SUCCESS && op == DESFIRE_SIM_TEST_APDU) {
+        char hex[2 * PM3_CMD_DATA_SIZE + 1];
+        desfire_etest_hex(hex, sizeof(hex), resp.data.asBytes, resp.length);
+        if (json) {
+            snprintf(fields, sizeof(fields), ",\"data\":\"%s\"", hex);
+        } else {
+            PrintAndLogEx(INFO, "<- %s", resp.length ? hex : "(no answer)");
+        }
+    }
+
+    if (res == PM3_SUCCESS && op == DESFIRE_SIM_TEST_STATE) {
+        if (resp.length < sizeof(desfire_sim_test_state_t)) {
+            res = PM3_EFAILED;
+        } else {
+            desfire_sim_test_state_t st;
+            memcpy(&st, resp.data.asBytes, sizeof(st));
+            if (json) {
+                snprintf(fields, sizeof(fields),
+                         ",\"ready\":%s,\"authenticated\":%s,\"auth_keyno\":%u,\"aid\":\"%02X%02X%02X\",\"random_remaining\":%u,\"random_underflow\":%s",
+                         st.ready ? "true" : "false",
+                         st.authenticated ? "true" : "false",
+                         st.auth_keyno,
+                         st.aid[0], st.aid[1], st.aid[2],
+                         st.random_remaining,
+                         st.random_underflow ? "true" : "false");
+            } else {
+                PrintAndLogEx(SUCCESS, "Ready............ %s", st.ready ? _GREEN_("yes") : _RED_("no"));
+                PrintAndLogEx(SUCCESS, "Selected AID..... %02X%02X%02X", st.aid[0], st.aid[1], st.aid[2]);
+                PrintAndLogEx(SUCCESS, "Authenticated.... %s", st.authenticated ? _GREEN_("yes") : "no");
+                if (st.authenticated) {
+                    PrintAndLogEx(SUCCESS, "Key number....... %u", st.auth_keyno);
+                }
+                PrintAndLogEx(SUCCESS, "Random queued.... %u byte(s)", st.random_remaining);
+                PrintAndLogEx(SUCCESS, "Random underflow. %s", st.random_underflow ? _RED_("yes") : "no");
+            }
+        }
+    }
+
+    if (res != PM3_SUCCESS) {
+        const char *why;
+        switch (res) {
+            case PM3_ENODATA:
+                why = "no card image in emulator memory";
+                break;
+            case PM3_EOVFLOW:
+                why = "random queue full";
+                break;
+            case PM3_ETIMEOUT:
+                why = "no answer, firmware too old or built without DESFire simulation";
+                break;
+            case PM3_EFAILED:
+                why = "short answer";
+                break;
+            default:
+                why = (op == DESFIRE_SIM_TEST_APDU) ? "not activated, --scan first" : "invalid request";
+                break;
+        }
+
+        if (json) {
+            PrintAndLogEx(NORMAL, "{\"command\":\"%s\",\"ok\":false,\"error\":\"%s\"}", name, why);
+        } else {
+            PrintAndLogEx(FAILED, "%s failed, %s", name, why);
+            if (res == PM3_ENODATA) {
+                PrintAndLogEx(HINT, "Hint: load one with " _YELLOW_("`hf mfdes eload -f <fn>`"));
+            }
+        }
+        return res;
+    }
+
+    bool plain_ack = (op == DESFIRE_SIM_TEST_BEGIN || op == DESFIRE_SIM_TEST_END ||
+                      op == DESFIRE_SIM_TEST_RANDOM || op == DESFIRE_SIM_TEST_FIELDOFF);
+    if (json) {
+        PrintAndLogEx(NORMAL, "{\"command\":\"%s\",\"ok\":true%s}", name, fields);
+    } else if (plain_ack) {
+        PrintAndLogEx(SUCCESS, "%s ( " _GREEN_("ok") " )", name);
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14ADesELoad(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes eload",
@@ -11202,6 +11445,7 @@ static command_t CommandTable[] = {
     {"esave",            CmdHF14ADesESave,            IfPm3Iso14443a,  "Save emulator memory to file"},
     {"eview",            CmdHF14ADesEView,            IfPm3Iso14443a,  "View emulator memory"},
     {"sim",              CmdHF14ADesSim,              IfPm3Iso14443a,  "Simulate DESFire card from emulator memory"},
+    {"etest",            CmdHF14ADesETest,            IfPm3Iso14443a,  "Drive the simulation from the host, no RF"},
     {"createfile",       CmdHF14ADesCreateFile,       IfPm3Iso14443a,  "Create Standard/Backup File"},
     {"createvaluefile",  CmdHF14ADesCreateValueFile,  IfPm3Iso14443a,  "Create Value File"},
     {"createrecordfile", CmdHF14ADesCreateRecordFile, IfPm3Iso14443a,  "Create Linear/Cyclic Record File"},
