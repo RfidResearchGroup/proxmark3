@@ -2802,10 +2802,14 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         uint8_t startconfigblock = 0;
         uint8_t ulev1_conf[16] = {0x00};
 
-        for (uint8_t i = 1; i < ARRAYLEN(UL_TYPES_ARRAY); i++) {
-            if ((tagtype & UL_TYPES_ARRAY[i]) == UL_TYPES_ARRAY[i]) {
-                startconfigblock = UL_MEMORY_ARRAY[i] - 3;
-                break;
+        // UL-AES config doesn't sit in the last four pages,  those are the AES keys.
+        // Its config pages are read further down
+        if ((tagtype & MFU_TT_UL_AES) != MFU_TT_UL_AES) {
+            for (uint8_t i = 1; i < ARRAYLEN(UL_TYPES_ARRAY); i++) {
+                if ((tagtype & UL_TYPES_ARRAY[i]) == UL_TYPES_ARRAY[i]) {
+                    startconfigblock = UL_MEMORY_ARRAY[i] - 3;
+                    break;
+                }
             }
         }
 
