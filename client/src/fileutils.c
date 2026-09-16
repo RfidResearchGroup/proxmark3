@@ -411,7 +411,15 @@ bool setDefaultPath(savePaths_t pathIndex, const char *path) {
 
         size_t len = strlen(path);
 
-        g_session.defaultPaths[pathIndex] = (char *)realloc(g_session.defaultPaths[pathIndex], len + 1);
+        char *tmp = (char *)realloc(g_session.defaultPaths[pathIndex], len + 1);
+        if (tmp == NULL) {
+            // keep the old path.  Dropping it would leave a NULL in defaultPaths[]
+            // for every later file search to walk over
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            return false;
+        }
+
+        g_session.defaultPaths[pathIndex] = tmp;
         strcpy(g_session.defaultPaths[pathIndex], path);
         return true;
     }
@@ -3802,15 +3810,18 @@ int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, vo
 
             mem_size += block_size;
 
-            *pdata = realloc(*pdata, mem_size);
-            if (*pdata == NULL) {
+            uint8_t *tmp = (uint8_t *)realloc(*pdata, mem_size);
+            if (tmp == NULL) {
                 PrintAndLogEx(WARNING, "Failed to allocate memory");
+                free(*pdata);
+                *pdata = NULL;
                 retval = PM3_EFILE;
                 fclose(f);
                 goto out;
-            } else {
-                memset((uint8_t *)*pdata + (mem_size - block_size), 0, block_size);
             }
+
+            *pdata = tmp;
+            memset((uint8_t *)*pdata + (mem_size - block_size), 0, block_size);
         }
 
         // The line start with # is comment, skip
@@ -4433,6 +4444,10 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
     // try the session paths
     PrintAndLogEx(DEBUG, "Searching preferences paths");
     for (int i = 0; i < spItemCount; i++) {
+
+        if (g_session.defaultPaths[i] == NULL) {
+            continue;
+        }
 
         size_t sn = strlen(g_session.defaultPaths[i]) + strlen(filename) + strlen(PATHSEP) + 1;
         char *default_path = calloc(sn, sizeof(char));
