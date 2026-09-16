@@ -2351,6 +2351,10 @@ static int CmdHF14aDesDetect(const char *Cmd) {
             }
         }
 
+        if (verbose && skipped) {
+            PrintAndLogEx(INFO, "Skipped " _YELLOW_("%u") " duplicate keys", skipped);
+        }
+
         if (found) {
 
             foundcount++;
