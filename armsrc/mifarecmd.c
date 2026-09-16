@@ -873,14 +873,6 @@ void MifareUWriteBlockCompat(mful_writeblock_t *packet) {
         }
     }
 
-    // UL-AES authentication
-    if (useAESKey) {
-        if (mifare_ultra_aes_auth(0, packet->key, packet->use_schann, true, true, NULL) == 0) {
-            OnErrorNG(CMD_HF_MIFAREU_WRITEBL_COMPAT, PM3_ESOFT);
-            return;
-        }
-    }
-
     // UL-EV1 / NTAG authentication
     if (usePwd) {
         uint8_t pack[4] = {0, 0, 0, 0};
