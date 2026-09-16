@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `CTRL-C` / `CTRL-Z` - readline re-raised caught signals to itself, which in a threaded client looped instead of quitting or suspending (@iceman1001)
+- Fixed `pm3 flash` - the progress bar no longer keeps SIGINT after it finishes, CTRL-C works again afterwards (@iceman1001)
+- Changed `pm3 history` - written after every command, so it survives a kill instead of only a clean exit (@iceman1001)
 - Changed `memset` - the device's own implementation now fills a word at a time, the same treatment `memcpy` got.  (@iceman1001)
 - Changed `receive_ng` - the command payload is zeroed when a packet actually arrives rather than on every idle pass of the main loop.  Thanks @Msprg (@iceman1001)
 - Changed `hf mfdes chk` - runs with no arguments now, falling back to the bundled dictionary the way `hf mfdes detect` already does (@iceman1001)
