@@ -295,7 +295,7 @@ endif (NOT SKIPWHEREAMISYSTEM EQUAL 1)
 # These must be set BEFORE add_subdirectory(deps): CMake copies the
 # current variable scope into a subdirectory at that point, so flags set
 # further down never reach the bundled deps and jansson fails the
-#=stringop-overflow false positive on its own.
+# -Werror=stringop-overflow false positive on its own.
 # GCC 10 has issues with false positives on stringop-overflow,
 # let's disable them for now (cf https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92955, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94335)
 # beware these flags didn't exist for GCC < 7
@@ -552,7 +552,7 @@ endif()
 
 add_custom_command(
     OUTPUT  ${CMAKE_BINARY_DIR}/version_pm3.c
-    COMMAND ${CMAKE_COMMAND} -E copy ${PM3_ROOT}/common/default_version_pm3.c ${CMAKE_BINARY_DIR}/version_pm3.c
+    COMMAND sh ${PM3_ROOT}/tools/mkversion.sh ${CMAKE_BINARY_DIR}/version_pm3.c || ${CMAKE_COMMAND} -E copy ${PM3_ROOT}/common/default_version_pm3.c ${CMAKE_BINARY_DIR}/version_pm3.c
     DEPENDS ${PM3_ROOT}/common/default_version_pm3.c
 )
 
@@ -883,7 +883,7 @@ if ((NOT SKIPQT EQUAL 1) AND Qt6_FOUND)
     target_include_directories(proxmark3 PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
-target_compile_options(proxmark3 PUBLIC -Wall -Wno-missing-braces -O3)
+target_compile_options(proxmark3 PUBLIC -Wall -Werror -Wno-missing-braces -O3)
 if (EMBED_READLINE)
     if (NOT SKIPREADLINE EQUAL 1)
         add_dependencies(proxmark3 ncurses readline)

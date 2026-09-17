@@ -222,7 +222,7 @@ endif (NOT SKIPWHEREAMISYSTEM EQUAL 1)
 # These must be set BEFORE add_subdirectory(deps): CMake copies the
 # current variable scope into a subdirectory at that point, so flags set
 # further down never reach the bundled deps and jansson fails the
-#=stringop-overflow false positive on its own.
+# -Werror=stringop-overflow false positive on its own.
 # GCC 10 has issues with false positives on stringop-overflow,
 # let's disable them for now (cf https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92955, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94335)
 # beware these flags didn't exist for GCC < 7
@@ -462,7 +462,7 @@ set (TARGET_SOURCES
 
 add_custom_command(
     OUTPUT  ${CMAKE_BINARY_DIR}/version_pm3.c
-    COMMAND ${CMAKE_COMMAND} -E copy ${PM3_ROOT}/common/default_version_pm3.c ${CMAKE_BINARY_DIR}/version_pm3.c
+    COMMAND sh ${PM3_ROOT}/tools/mkversion.sh ${CMAKE_BINARY_DIR}/version_pm3.c || ${CMAKE_COMMAND} -E copy ${PM3_ROOT}/common/default_version_pm3.c ${CMAKE_BINARY_DIR}/version_pm3.c
     DEPENDS ${PM3_ROOT}/common/default_version_pm3.c
 )
 
@@ -717,7 +717,7 @@ add_library(pm3rrg_rdv4_static STATIC
 set(PM3_LIBRARY_TARGETS pm3rrg_rdv4 pm3rrg_rdv4_static)
 foreach (target IN LISTS PM3_LIBRARY_TARGETS)
     target_compile_definitions(${target} PRIVATE LIBPM3)
-    target_compile_options(${target} PUBLIC -Wall -O3)
+    target_compile_options(${target} PUBLIC -Wall -Werror -O3)
     target_include_directories(${target} PRIVATE
             ${PM3_ROOT}/common
             ${PM3_ROOT}/common_fpga
