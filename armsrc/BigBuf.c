@@ -23,7 +23,12 @@
 #include "util.h" // nbytes
 
 #define BIGBUF_ALIGN_BYTES (4)
-#define BIGBUF_ALIGN_MASK  (0xFFFF + 1 - BIGBUF_ALIGN_BYTES)
+// mask of the bits kept when rounding a size down to a BIGBUF_ALIGN_BYTES
+// boundary. Must span the whole uint32_t: the old (0xFFFF + 1 - 4) form was only
+// 16 bits wide, so on a PM5 (BigBuf ~498KB) it dropped the top bits of every size
+// masked through it -- BigBuf_max_traceLen() reported 39276 of 498028, and
+// BigBuf_malloc() rounded a 70000 byte request down to 4464.
+#define BIGBUF_ALIGN_MASK  (~(uint32_t)(BIGBUF_ALIGN_BYTES - 1))
 
 extern uint32_t _stack_start[], __bss_end__[];
 
