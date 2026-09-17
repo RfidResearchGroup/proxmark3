@@ -753,6 +753,17 @@ static void SendStatus(uint32_t wait) {
             Dbprintf("  BWM fw version...... " _YELLOW_("%s"), "unknown");
         }
     }
+    if (g_dbglevel >= DBG_DEBUG) {
+        // Flow-control diagnostics (since boot). Read before this reply is queued.
+        bwm_fc_stats_t fc;
+        bwm_fwd_fc_stats(&fc);
+        Dbprintf("  BWM fwd frames...... " _YELLOW_("%u") " sent, " _YELLOW_("%u") " acked, " _YELLOW_("%u") " errored",
+                 fc.frames, fc.acks, fc.errors);
+        Dbprintf("  BWM fwd gate........ " _YELLOW_("%u") " timeouts, " _YELLOW_("%u") " forgotten, peak in flight " _YELLOW_("%u") " B",
+                 fc.timeouts, fc.forgotten, fc.bytes_max);
+        Dbprintf("  BWM fwd now......... " _YELLOW_("%u") " frames / " _YELLOW_("%u") " B in flight",
+                 fc.in_flight_frames, fc.in_flight_bytes);
+    }
 #endif
 #ifdef PM5
     pm5_power_print_status();

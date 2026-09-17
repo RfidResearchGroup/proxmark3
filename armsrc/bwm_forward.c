@@ -14,6 +14,7 @@
 #include "bwm_forward.h"
 
 #include "bwm_uart_at32.h"
+#include "bwm_wifi.h"    // BWM_CMD_CMD_ERROR
 #include "pm3_cmd.h"    // PM3_CMD_DATA_SIZE, PM3_* return codes
 #include "ticks_apis.h" // SpinDelay
 #include "string.h"
@@ -49,11 +50,51 @@ static uint16_t bwm_crc16(const uint8_t *data, size_t len, uint16_t crc) {
 
 static void bwm_pump(void);   // fwd decl: TX gate pumps RX to collect forward-frame acks
 
-// --- Flow control (ack window) ---------------------------------------------
-// s_fwd_inflight: forward frames sent but not yet acked by the ESP. Bumped on
-// send, decremented when a SLAVE_RESP echoing cmd=SEND_FORWARD_DATA arrives.
-// We may send while it is below BWM_FC_WINDOW; at the cap we wait for an ack.
-static volatile int16_t s_fwd_inflight = 0;
+// --- Flow control (byte window) --------------------------------------------
+// Forward frames sent but not yet acked by the ESP: their lengths, oldest
+// first (acks arrive in order), and their sum. Bumped on every forward frame,
+// popped by the parser on the ESP's SLAVE_RESP. See BWM_FC_BYTES.
+static volatile uint16_t s_fc_len[BWM_FC_MAX_FRAMES];
+static volatile uint8_t  s_fc_head = 0;
+static volatile uint8_t  s_fc_count = 0;
+static volatile uint32_t s_fc_bytes = 0;
+static bwm_fc_stats_t s_fc_stats;         // diagnostics since boot, see bwm_fwd_fc_stats()
+
+static void fc_reset(void) {
+    s_fc_head = 0;
+    s_fc_count = 0;
+    s_fc_bytes = 0;
+}
+
+static void fc_push(uint16_t len) {
+    s_fc_stats.frames++;
+    s_fc_len[(uint8_t)((s_fc_head + s_fc_count) % BWM_FC_MAX_FRAMES)] = len;
+    s_fc_count++;
+    s_fc_bytes += len;
+    if (s_fc_bytes > s_fc_stats.bytes_max) {
+        s_fc_stats.bytes_max = s_fc_bytes;
+    }
+}
+
+// Release the oldest frame: its ack (or CMD_ERROR) came, or the gate gave up on
+// it. Acks are not matched to frames, so an ack that was eaten elsewhere (bwm_cmd()
+// drains the ring, see #3648) or one that comes after the gate forgot its frame
+// just shifts the window by one frame: the gate is one frame too pessimistic or
+// too optimistic until the window drains, and drains it does after every command.
+static void fc_pop(void) {
+    if (s_fc_count == 0) {
+        return;
+    }
+    s_fc_bytes -= s_fc_len[s_fc_head];
+    s_fc_head = (uint8_t)((s_fc_head + 1) % BWM_FC_MAX_FRAMES);
+    s_fc_count--;
+}
+
+void bwm_fwd_fc_stats(bwm_fc_stats_t *out) {
+    *out = s_fc_stats;
+    out->in_flight_frames = s_fc_count;
+    out->in_flight_bytes = s_fc_bytes;
+}
 
 // Set true by the parser when a SLAVE_RESP echoing BWM_CMD_SET_UART_BAUD arrives
 // (the ESP's ack for a baud-set request). Consumed by bwm_fwd_negotiate_baud().
@@ -83,18 +124,23 @@ int bwm_fwd_writebuffer_sync(const uint8_t *data, size_t len) {
     }
 
     size_t idx = 0;
-    // Flow control: block while the in-flight window is full, waiting for the
-    // ESP to ack an earlier forward frame. bwm_pump() drains the IRQ-filled RX
-    // ring, so acks are collected even while we sit inside a tight download loop
-    // (the reply_old firehose). The spin cap is a safety valve so a dead or
-    // disconnected ESP can't hard-hang us. A window >= 1 means single command
-    // replies never block - only sustained bursts hit the cap.
+    // Flow control: block while this frame would not fit the in-flight byte budget
+    // (or the length FIFO is full). bwm_pump() drains the IRQ-filled RX ring, so
+    // acks land even inside a tight download loop (the reply_old firehose). The
+    // time cap is a safety valve so a dead or disconnected ESP can't hard-hang us.
     {
         uint32_t t0 = GetTickCount();
-        while (s_fwd_inflight >= BWM_FC_WINDOW) {
+        uint32_t need = (uint32_t)len + BWM_TX_OVERHEAD;
+        while ((s_fc_count >= BWM_FC_MAX_FRAMES) || (s_fc_bytes + need > BWM_FC_BYTES)) {
             bwm_pump();
             if (GetTickCountDelta(t0) > BWM_FC_ACK_TIMEOUT_MS) {
-                s_fwd_inflight = 0;   // best-effort: assume the pipe cleared, never hard-hang
+                s_fc_stats.timeouts++;
+                // Never hard-hang: make room for this frame only, so a stalled ESP
+                // gets one frame per timeout on top of its ring, not a second window.
+                while (s_fc_count && ((s_fc_count >= BWM_FC_MAX_FRAMES) || (s_fc_bytes + need > BWM_FC_BYTES))) {
+                    fc_pop();
+                    s_fc_stats.forgotten++;
+                }
                 break;
             }
         }
@@ -115,7 +161,7 @@ int bwm_fwd_writebuffer_sync(const uint8_t *data, size_t len) {
     frame[idx++] = (uint8_t)((crc >> 8) & 0xFF);
 
     int wr = bwm_uart_write(frame, idx);
-    s_fwd_inflight++;   // one more forward frame awaiting its ack
+    fc_push((uint16_t)idx);   // one more forward frame awaiting its ack
     return wr;
 }
 
@@ -253,10 +299,14 @@ static void bwm_feed_byte(bwm_parser_t *p, uint8_t byte) {
                         fifo_push(p->payload[i]);
                     }
                 } else if ((p->is_bcast == false) && p->cmd == BWM_CMD_SEND_FORWARD_DATA) {
-                    // SLAVE_RESP ack for a forward frame -> one slot freed
-                    if (s_fwd_inflight > 0) {
-                        s_fwd_inflight--;
-                    }
+                    // SLAVE_RESP ack for a forward frame -> its bytes leave the budget
+                    s_fc_stats.acks++;
+                    fc_pop();
+                } else if (p->is_bcast && p->cmd == BWM_CMD_CMD_ERROR && p->len >= 2 &&
+                           (((uint16_t)p->payload[0] | ((uint16_t)p->payload[1] << 8)) == BWM_CMD_SEND_FORWARD_DATA)) {
+                    // the ESP could not deliver a forward frame: this is its answer instead of the ack
+                    s_fc_stats.errors++;
+                    fc_pop();
                 } else if ((p->is_bcast == false) && p->cmd == BWM_CMD_SET_UART_BAUD) {
                     // SLAVE_RESP ack for a baud-set request (see negotiate below)
                     s_baud_ack = true;
@@ -406,7 +456,7 @@ static void bwm_link_reset(void) {
     s_p.state      = S_IDLE;
     s_fifo_head    = 0;
     s_fifo_tail    = 0;
-    s_fwd_inflight = 0;
+    fc_reset();
 }
 
 bool bwm_fwd_negotiate_baud(uint32_t target) {

@@ -53,27 +53,29 @@
 // echoing this cmd (len 0) at the OLD baud, then commits to the new baud.
 #define BWM_CMD_SET_UART_BAUD       1011
 #define BWM_CMD_GET_UART_BAUD       1009   // read back the ESP's live baud (negotiation verify)
-// Flow control (ack window) - ARM-side only, no BWM firmware change required.
-// The ESP already replies to every forward frame with a SLAVE_RESP echoing
-// cmd=SEND_FORWARD_DATA, and it sends that ack only *after* app_ble_send() has
-// drained the frame to BLE. So the un-acked count is a live measure of how far
-// ahead of the wireless link we are. We allow up to BWM_FC_WINDOW frames in
-// flight, then block for an ack before sending more - which paces us to the real
-// BLE/WiFi rate and prevents the ESP UART-RX overrun that dropped bulk downloads.
-// WINDOW frames must fit the ESP UART RX FIFO + wireless send buffer.
-// Ceiling on un-acked forward frames. On a download the ESP acks steadily so
-// this never bites; it only matters on a bidirectional UPLOAD, where the ESP
-// defers the small acks while forwarding large incoming chunks. A tight value
-// (4) let inflight hit the cap and stall the AT32 past the client timeout, so
-// keep enough headroom to ride out delayed acks. Only ~1 response is ever
-// really in flight during an upload, so this does not risk an ESP overrun.
-#define BWM_FC_WINDOW               16     // max un-acked forward frames in flight
+// Flow control (byte window). The ESP acks each forward frame with a SLAVE_RESP
+// echoing SEND_FORWARD_DATA once it has taken the frame out of its UART ring
+// (module firmware from the companion PR; older firmware acks after the radio,
+// which also works, just slower), and acks come back in order, so un-acked bytes
+// bound what that ring holds. The window is sized to the ring (UART_RX_BUF_SIZE
+// in the BWM firmware's app_cmd_uart.h): keep BWM_ESP_UART_RX_BUF equal to it.
+// Frames run ~30 B to ~2.1 KB, hence bytes. A frame the ESP cannot deliver is
+// answered with CMD_ERROR instead and leaves the window the same way. When acks
+// stall on a full window the gate waits BWM_FC_ACK_TIMEOUT_MS, then forgets just
+// enough of the oldest frames to send this one. Acks are counted, not matched:
+// a lost or late ack shifts the window by a frame until it drains at idle.
+#define BWM_ESP_UART_RX_BUF         12288
+#define BWM_FC_BYTES                (BWM_ESP_UART_RX_BUF - 1024)   // in-flight bytes allowed; slack for the ESP's FIFO and parser lag
+#define BWM_FC_MAX_FRAMES           64     // depth of the in-flight length FIFO; also caps tiny frames in flight
 #ifndef BWM_FC_ACK_TIMEOUT_MS
 // Hard cap (ms) on how long a forward write may block the main loop waiting for
 // acks. A spin COUNT was unbounded in wall-clock time and could hang the main
 // loop long enough that the client gives up and the device looks dead (USB still
 // enumerates on interrupts). Time-bounded => the main loop is always serviced.
-#define BWM_FC_ACK_TIMEOUT_MS       50     // safety valve: proceed if acks stall, never hard-hang
+// A full window that stays full this long means the ESP is stuck on the radio
+// (a phone scanning stalls BLE for a few hundred ms); every timeout then leaks
+// one frame into a full ring, so wait long enough for the usual stalls to pass.
+#define BWM_FC_ACK_TIMEOUT_MS       200    // safety valve: proceed if acks stall, never hard-hang
 #endif // safety valve: give up waiting for credit (avoid hard hang)
 
 #define BWM_CRC16_POLY  0x1021
@@ -92,6 +94,19 @@ uint32_t bwm_read_ng(uint8_t *data, size_t len);
 
 // >0 when raw bytes are waiting on the FPC USART (gate for receive_ng()).
 uint16_t bwm_fwd_rxdata_available(void);
+
+// Flow-control diagnostics since boot (hw status at debug level).
+typedef struct {
+    uint32_t frames;            // forward frames sent
+    uint32_t acks;              // SLAVE_RESP acks seen
+    uint32_t errors;            // CMD_ERROR answers seen (undeliverable frames)
+    uint32_t timeouts;          // gate waited BWM_FC_ACK_TIMEOUT_MS on a full window
+    uint32_t forgotten;         // frames the gate stopped counting on those timeouts
+    uint32_t bytes_max;         // peak bytes in flight
+    uint8_t  in_flight_frames;  // now
+    uint32_t in_flight_bytes;   // now
+} bwm_fc_stats_t;
+void bwm_fwd_fc_stats(bwm_fc_stats_t *out);
 
 // True while the ESP reports a client on BLE or on its WiFi TCP server (the
 // LINK_STATE broadcast, sent on change only). ESP firmware without it: never true.
