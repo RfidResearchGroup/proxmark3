@@ -53,21 +53,18 @@
 // echoing this cmd (len 0) at the OLD baud, then commits to the new baud.
 #define BWM_CMD_SET_UART_BAUD       1011
 #define BWM_CMD_GET_UART_BAUD       1009   // read back the ESP's live baud (negotiation verify)
-// Flow control (ack window) - ARM-side only, no BWM firmware change required.
-// The ESP already replies to every forward frame with a SLAVE_RESP echoing
-// cmd=SEND_FORWARD_DATA, and it sends that ack only *after* app_ble_send() has
-// drained the frame to BLE. So the un-acked count is a live measure of how far
-// ahead of the wireless link we are. We allow up to BWM_FC_WINDOW frames in
-// flight, then block for an ack before sending more - which paces us to the real
-// BLE/WiFi rate and prevents the ESP UART-RX overrun that dropped bulk downloads.
-// WINDOW frames must fit the ESP UART RX FIFO + wireless send buffer.
-// Ceiling on un-acked forward frames. On a download the ESP acks steadily so
-// this never bites; it only matters on a bidirectional UPLOAD, where the ESP
-// defers the small acks while forwarding large incoming chunks. A tight value
-// (4) let inflight hit the cap and stall the AT32 past the client timeout, so
-// keep enough headroom to ride out delayed acks. Only ~1 response is ever
-// really in flight during an upload, so this does not risk an ESP overrun.
-#define BWM_FC_WINDOW               16     // max un-acked forward frames in flight
+// Flow control (byte window) - ARM side only, no BWM firmware change needed.
+// The ESP acks each forward frame with a SLAVE_RESP echoing SEND_FORWARD_DATA,
+// only after app_ble_send() drained it, and acks come back in order, so un-acked
+// bytes measure how far ahead of the radio we are. The window is sized to the ESP's
+// UART ring (UART_RX_BUF_SIZE in the BWM firmware's app_cmd_uart.h): keep
+// BWM_ESP_UART_RX_BUF equal to it.
+// Frames run ~30 B to ~2.1 KB, hence bytes. The budget protects that ring only
+// while acks flow: on a full window the gate waits BWM_FC_ACK_TIMEOUT_MS, then
+// forgets it and sends anyway.
+#define BWM_ESP_UART_RX_BUF         12288
+#define BWM_FC_BYTES                (BWM_ESP_UART_RX_BUF - 1024)   // in-flight bytes allowed; slack for the ESP's FIFO and parser lag
+#define BWM_FC_MAX_FRAMES           64     // depth of the in-flight length FIFO; also caps tiny frames in flight
 #ifndef BWM_FC_ACK_TIMEOUT_MS
 // Hard cap (ms) on how long a forward write may block the main loop waiting for
 // acks. A spin COUNT was unbounded in wall-clock time and could hang the main
