@@ -336,6 +336,30 @@ int bwm_esp_get_power_save(uint8_t *state, uint32_t timeout_ms) {
     return bwm_esp_u8_cmd(BWM_CMD_GET_SYS_POWER_SAVE, NULL, 0, state, timeout_ms);
 }
 
+int bwm_esp_get_ble_state(uint8_t *state, uint32_t timeout_ms) {
+    return bwm_esp_u8_cmd(BWM_CMD_GET_BLE_SPP_STATUS, NULL, 0, state, timeout_ms);
+}
+
+int bwm_esp_host_value_set(uint8_t id, uint32_t value, uint32_t timeout_ms) {
+    uint8_t req[5] = { id };
+    memcpy(&req[1], &value, sizeof(value));
+    return bwm_cmd(BWM_CMD_SET_SYS_HOST_VALUE, req, sizeof(req), NULL, NULL, timeout_ms);
+}
+
+int bwm_esp_host_value_get(uint8_t id, uint32_t *value, uint32_t timeout_ms) {
+    uint8_t resp[5] = {0};
+    uint16_t len = sizeof(resp);
+    int res = bwm_cmd(BWM_CMD_GET_SYS_HOST_VALUE, &id, 1, resp, &len, timeout_ms);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+    if (len < sizeof(resp) || resp[0] == 0) {
+        return PM3_ENODATA;
+    }
+    memcpy(value, &resp[1], sizeof(*value));
+    return PM3_SUCCESS;
+}
+
 int bwm_esp_set_power_save(bool on, uint8_t *state) {
     // Applied at once on the ESP (no reboot) and saved to its NVS; the reply
     // carries the state the ESP ended up in.

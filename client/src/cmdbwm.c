@@ -35,40 +35,77 @@
 #include "util_posix.h"
 
 static int CmdBwmAutoOff(const char *Cmd) {
-    // Positional sub-action (no dashes): hw bwm autooff on | off
+    // Positional sub-action (no dashes): hw bwm autooff [on|off] [--idle <sec>]
     char verb[16] = {0};
-    sscanf(Cmd, "%15s", verb);
+    int consumed = 0;
+    sscanf(Cmd, "%15s%n", verb, &consumed);
     bool on  = (strcmp(verb, "on")  == 0);
     bool off = (strcmp(verb, "off") == 0);
+    const char *rest = (on || off) ? Cmd + consumed : Cmd;
 
-    if (!on && !off) {
-        // Not a recognised sub-action: render help (also serves -h / empty),
-        // or error on a stray token, then stop.
-        CLIParserContext *ctx;
-        CLIParserInit(&ctx, "hw bwm autooff",
-                      "Toggle automatic power-off when the PM5 is unplugged from USB (BWM only).\n"
-                      "Default is " _GREEN_("on") ". When on, the board powers itself down ~10s after\n"
-                      "USB is removed, so a BWM-equipped PM5 doesn't silently drain the battery.\n"
-                      "Button power-on is unaffected. Disable for standalone/BLE use on battery.\n"
-                      _YELLOW_("Runtime only:") " resets to on at each boot.",
-                      "hw bwm autooff off   --> disable auto power-off\n"
-                      "hw bwm autooff on    --> re-enable auto power-off");
-        void *argtable[] = {
-            arg_param_begin,
-            arg_param_end
-        };
-        CLIExecWithReturn(ctx, Cmd, argtable, true);
-        CLIParserFree(ctx);
-        PrintAndLogEx(WARNING, "specify " _YELLOW_("on") " or " _YELLOW_("off"));
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwm autooff",
+                  "Show or set automatic power-off (PM5 only). Two triggers:\n"
+                  " - USB was present and the cable is pulled: off at once, so a BWM-equipped\n"
+                  "   PM5 doesn't silently drain the battery; --unplug off only restarts the\n"
+                  "   idle clock instead;\n"
+                  " - on battery with no command, button press or BLE/WiFi client for --idle\n"
+                  "   seconds: off (0 = never, the default).\n"
+                  "Button power-on is unaffected. Stored on the BWM; without a module, defaults.",
+                  "hw bwm autooff             --> show the current state\n"
+                  "hw bwm autooff off         --> disable both triggers\n"
+                  "hw bwm autooff on          --> re-enable\n"
+                  "hw bwm autooff --idle 300  --> also off after 5 min idle on battery\n"
+                  "hw bwm autooff --idle 0    --> USB-unplug trigger only (default)\n"
+                  "hw bwm autooff --unplug off --idle 300  --> survive the unplug, off 5 min idle later");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("i", "idle", "<sec>", "idle timeout on battery in seconds, 0 = never"),
+        arg_str0("u", "unplug", "<on|off>", "power off when USB is pulled (default on)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, rest, argtable, true);
+    int idle = arg_get_int_def(ctx, 1, -1);
+    uint8_t ubuf[8] = {0};
+    int ulen = 0;
+    int ures = CLIParamStrToBuf(arg_get_str(ctx, 2), ubuf, sizeof(ubuf) - 1, &ulen);
+    CLIParserFree(ctx);
+    if (ures) {
+        PrintAndLogEx(WARNING, "--unplug takes " _YELLOW_("on") " or " _YELLOW_("off"));
+        return PM3_EINVARG;
+    }
+    uint8_t unplug = BWM_AUTOOFF_KEEP_U8;
+    if (ulen) {
+        if (strcmp((char *)ubuf, "on") == 0) {
+            unplug = 1;
+        } else if (strcmp((char *)ubuf, "off") == 0) {
+            unplug = 0;
+        } else {
+            PrintAndLogEx(WARNING, "--unplug takes " _YELLOW_("on") " or " _YELLOW_("off"));
+            return PM3_EINVARG;
+        }
+    }
+    if ((idle < -1) || (idle > (int)BWM_AUTOOFF_IDLE_MAX_S)) {
+        PrintAndLogEx(WARNING, "idle must be 0 to %lu seconds", (unsigned long)BWM_AUTOOFF_IDLE_MAX_S);
         return PM3_EINVARG;
     }
 
-    uint8_t payload = off ? 0 : 1;   // on -> 1 (enable), off -> 0 (disable)
+    struct {
+        uint8_t action;
+        uint8_t enabled;
+        uint32_t idle_s;
+        uint8_t unplug;
+    } PACKED payload = {
+        .action = (on || off || (idle >= 0) || ulen) ? BWM_AUTOOFF_ACTION_SET : BWM_AUTOOFF_ACTION_GET,
+        .enabled = on ? 1 : (off ? 0 : BWM_AUTOOFF_KEEP_U8),
+        .idle_s = (idle >= 0) ? (uint32_t)idle : BWM_AUTOOFF_KEEP_U32,
+        .unplug = unplug,
+    };
 
     clearCommandBuffer();
-    SendCommandNG(CMD_PM5_BWM_AUTOOFF, &payload, sizeof(payload));
+    SendCommandNG(CMD_PM5_BWM_AUTOOFF, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_PM5_BWM_AUTOOFF, &resp, 2500) == false) {
+    if (WaitForResponseTimeout(CMD_PM5_BWM_AUTOOFF, &resp, 5000) == false) {
         PrintAndLogEx(WARNING, "command timeout (is this a PM5?)");
         return PM3_ETIMEOUT;
     }
@@ -80,7 +117,34 @@ static int CmdBwmAutoOff(const char *Cmd) {
         PrintAndLogEx(FAILED, "failed to set auto power-off");
         return resp.status;
     }
-    PrintAndLogEx(SUCCESS, "Auto power-off %s.", payload ? _GREEN_("enabled") : _YELLOW_("disabled"));
+    bool enabled = (resp.length >= 1) && (resp.data.asBytes[0] != 0);
+    PrintAndLogEx(SUCCESS, "Auto power-off....... %s", enabled ? _GREEN_("on") : _YELLOW_("off"));
+    if (resp.length < 5) {
+        // firmware before the idle timeout: it only reports the switch
+        return PM3_SUCCESS;
+    }
+    uint32_t idle_s;
+    memcpy(&idle_s, &resp.data.asBytes[1], sizeof(idle_s));
+    if (idle_s) {
+        PrintAndLogEx(INFO, "Idle timeout......... " _YELLOW_("%u") " s", idle_s);
+    } else {
+        PrintAndLogEx(INFO, "Idle timeout......... off");
+    }
+    if (resp.length >= sizeof(bwm_autooff_status_t)) {
+        const bwm_autooff_status_t *st = (const bwm_autooff_status_t *)resp.data.asBytes;
+        const char *live = (st->ble_live == 2) ? "client connected" : (st->ble_live == 1) ? "advertising, no client" : (st->ble_live == 0) ? "off" : "no answer";
+        PrintAndLogEx(INFO, "Unplug power-off..... %s", st->unplug ? "on" : _YELLOW_("off") " (an unplug only restarts the idle clock)");
+        PrintAndLogEx(INFO, "Stored on module..... %s", st->persisted ? "yes" : _YELLOW_("no"));
+        PrintAndLogEx(INFO, "USB power............ %s", st->usb ? "present" : "absent");
+        PrintAndLogEx(INFO, "USB seen since boot.. %s", st->usb_seen ? "yes" : "no");
+        PrintAndLogEx(INFO, "Unplug trigger....... %s", (enabled && st->unplug && st->usb_seen) ? _GREEN_("armed") : "not armed");
+        PrintAndLogEx(INFO, "Tracked client....... %s", st->link ? "connected (BLE or WiFi)" : "none");
+        PrintAndLogEx(INFO, "Module BLE state..... %s", live);
+        PrintAndLogEx(INFO, "Idle for............. %u s", st->idle_now_s);
+        if (st->persisted == 0) {
+            PrintAndLogEx(HINT, "no module, or one too old to store it: the defaults return at the next boot");
+        }
+    }
     return PM3_SUCCESS;
 }
 
@@ -842,7 +906,7 @@ static int CmdBwmWifiPower(const char *Cmd) {
 
 static command_t BwmCommandTable[] = {
     {"help",     CmdHelpBwm,    AlwaysAvailable, "This help"},
-    {"autooff",  CmdBwmAutoOff, IfPm5, "Toggle auto power-off on USB unplug"},
+    {"autooff",  CmdBwmAutoOff, IfPm5, "Show/set auto power-off (USB unplug, idle on battery)"},
     {"charge",   CmdBwmCharge,  IfPm5, "Enable/disable battery charging (one-shot)"},
     {"name",     CmdBwmName,    IfPm5, "Get/set the BWM BLE advertising name"},
     {"powersave", CmdBwmPowerSave, IfPm5, "Show/set the BWM power-save switch (DFS, light sleep, slow adv)"},

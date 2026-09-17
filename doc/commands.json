@@ -11038,16 +11038,22 @@
         },
         "hw bwm help": {
             "command": "hw bwm help",
-            "description": "help This help --------------------------------------------------------------------------------------- hw bwm autooff available offline: no Toggle automatic power-off when the PM5 is unplugged from USB (BWM only). Default is on. When on, the board powers itself down ~10s after USB is removed, so a BWM-equipped PM5 doesn't silently drain the battery. Button power-on is unaffected. Disable for standalone/BLE use on battery. Runtime only: resets to on at each boot.",
+            "description": "help This help --------------------------------------------------------------------------------------- hw bwm autooff available offline: no Show or set automatic power-off (PM5 only). Two triggers: - USB was present and the cable is pulled: off at once, so a BWM-equipped PM5 doesn't silently drain the battery; --unplug off only restarts the idle clock instead; - on battery with no command, button press or BLE/WiFi client for --idle seconds: off (0 = never, the default). Button power-on is unaffected. Stored on the BWM; without a module, defaults.",
             "notes": [
-                "hw bwm autooff off -> disable auto power-off",
-                "hw bwm autooff on -> re-enable auto power-off"
+                "hw bwm autooff -> show the current state",
+                "hw bwm autooff off -> disable both triggers",
+                "hw bwm autooff on -> re-enable",
+                "hw bwm autooff --idle 300 -> also off after 5 min idle on battery",
+                "hw bwm autooff --idle 0 -> USB-unplug trigger only (default)",
+                "hw bwm autooff --unplug off --idle 300 -> survive the unplug, off 5 min idle later"
             ],
             "offline": true,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-i, --idle <sec> idle timeout on battery in seconds, 0 = never",
+                "-u, --unplug <on|off> power off when USB is pulled (default on)"
             ],
-            "usage": "hw bwm autooff [-h]"
+            "usage": "hw bwm autooff [-h] [-i <sec>] [-u <on|off>]"
         },
         "hw bwm name": {
             "command": "hw bwm name",
@@ -16689,6 +16695,6 @@
     "metadata": {
         "commands_extracted": 929,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-09-18T21:20:00+00:00"
+        "extracted_on": "2026-09-18T21:20:24+00:00"
     }
 }

@@ -47,6 +47,7 @@
 
 #define BWM_CMD_SEND_FORWARD_DATA   5000   // host cmd: payload -> BLE/WiFi endpoint
 #define BWM_CMD_DATA_FORWARD        8089   // slave bcast: payload came from endpoint
+#define BWM_CMD_LINK_STATE          8092   // slave bcast: [ble u8][wifi u8], 1 = a client is connected
 // System command: set the ESP<->AT32 UART baud (app_com_defs.h, enum @1000).
 // SET is a HOST_CMD carrying u32 LE baud; the ESP replies with a SLAVE_RESP
 // echoing this cmd (len 0) at the OLD baud, then commits to the new baud.
@@ -91,6 +92,12 @@ uint32_t bwm_read_ng(uint8_t *data, size_t len);
 
 // >0 when raw bytes are waiting on the FPC USART (gate for receive_ng()).
 uint16_t bwm_fwd_rxdata_available(void);
+
+// True while the ESP reports a client on BLE or on its WiFi TCP server (the
+// LINK_STATE broadcast, sent on change only). ESP firmware without it: never true.
+bool bwm_fwd_link_connected(void);
+// Seed the BLE half from a status query at boot (a client can outlive an AT32 reset).
+void bwm_fwd_link_seed_ble(bool connected);
 
 // Bring the ESP<->AT32 UART to `target` baud: adopt it if the ESP is already
 // there (its baud survives an AT32-only reset), else negotiate up via app_com
