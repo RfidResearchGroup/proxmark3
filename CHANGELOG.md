@@ -2,7 +2,7 @@
 All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
-## [Frosty Lemon][2026-09-18]
+## [Frosty Lemon.4.23346][2026-09-18]
 - Fixed `hf mfdes sim` - the ATS now advertises 106 kbit/s only, PPS to a higher rate is refused, a selected card ignores REQA/WUPA, and ISO-DEP block recovery now follows the card sequence (@mistial-dev)
 - Added `hf mfdes sim` - answers ISO 7816 SELECT by DF name or file id with real status words, so a reader that opens with a SELECT reaches the card (@mistial-dev)
 - Fixed `hf mfdes sim` - a session opened with the 0x0A legacy authentication now uses the legacy secure messaging: 4 byte DES MAC, CRC16, no MAC on plain answers (@mistial-dev)
