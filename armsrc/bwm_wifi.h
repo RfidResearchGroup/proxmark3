@@ -93,6 +93,18 @@ int bwm_wifi_forward_status(uint8_t *state, uint32_t *ip_out);
 #define BWM_CMD_SET_SYS_POWER_SAVE 1019   // req: u8 0=off 1=on; resp: u8 applied state
 #define BWM_CMD_GET_SYS_POWER_SAVE 1020   // resp: u8 state
 int bwm_esp_get_power_save(uint8_t *state, uint32_t timeout_ms);
+// Host settings the module stores for us (app_host NVS); the ids are ours.
+#define BWM_CMD_SET_SYS_HOST_VALUE 1021   // req: [id u8][value u32]; resp: u32
+#define BWM_CMD_GET_SYS_HOST_VALUE 1022   // req: [id u8]; resp: [present u8][value u32]
+#define BWM_HOSTVAL_AUTOOFF_ENABLED 0
+#define BWM_HOSTVAL_AUTOOFF_IDLE_S  1
+#define BWM_HOSTVAL_AUTOOFF_UNPLUG  2
+int bwm_esp_host_value_set(uint8_t id, uint32_t value, uint32_t timeout_ms);
+// PM3_SUCCESS with the value, PM3_ENODATA if never stored, else the link error.
+int bwm_esp_host_value_get(uint8_t id, uint32_t *value, uint32_t timeout_ms);
+#define BWM_CMD_GET_BLE_SPP_STATUS 4020   // resp: u8 0=stopped 1=advertising 2=client connected
+#define BWM_BLE_STATE_CONNECTED    2
+int bwm_esp_get_ble_state(uint8_t *state, uint32_t timeout_ms);
 // ESP WiFi modem power-save type (0 none, 1 min, 2 max), persisted on the ESP.
 #define BWM_CMD_SET_WIFI_CFG_PS_MODE 2052   // req: u8 mode; resp: u8 applied mode
 #define BWM_CMD_GET_WIFI_CFG_PS_MODE 2053   // resp: u8 mode

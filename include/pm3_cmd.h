@@ -915,8 +915,30 @@ typedef struct {
 #define CMD_PM5_BWM_SET_CAP 0x0179
 // PM5, enable/disable BWM battery charging (AW32001E CEB). Used by `hw bwm charge`.
 #define CMD_PM5_BWM_CHARGE_EN 0x017A
-// PM5, toggle automatic power-off on USB unplug. Used by `hw bwm autooff`.
+// PM5, automatic power-off: USB unplug, and idle on battery. Used by `hw bwm autooff`.
+// req: [action:u8][enabled:u8][idle_s:u32 LE][unplug:u8, optional] (0xFF /
+// 0xFFFFFFFF = keep); a 1-byte req is the old enable flag. resp:
+// bwm_autooff_status_t. Persisted on the BWM.
 #define CMD_PM5_BWM_AUTOOFF 0x017B
+// Both actions are non-zero: an old firmware reads byte 0 as the enable flag,
+// so a new client can only ever leave it enabled.
+#define BWM_AUTOOFF_ACTION_GET  0x01
+#define BWM_AUTOOFF_ACTION_SET  0x02
+#define BWM_AUTOOFF_KEEP_U8     0xFF
+#define BWM_AUTOOFF_KEEP_U32    0xFFFFFFFFUL
+#define BWM_AUTOOFF_IDLE_MAX_S  (7UL * 24 * 3600)   // ms tick wraps at 49 days
+// Reply of CMD_PM5_BWM_AUTOOFF: the setting plus the live inputs of the idle decision.
+typedef struct {
+    uint8_t  enabled;
+    uint32_t idle_s;         // 0 = idle trigger off
+    uint32_t idle_now_s;     // since the last interaction
+    uint8_t  link;           // tracked wireless client (LINK_STATE broadcast)
+    uint8_t  ble_live;       // module's answer right now: 0 off 1 advertising 2 connected, 0xFF no answer
+    uint8_t  usb;            // VUSB now
+    uint8_t  usb_seen;       // VUSB seen since boot (arms the unplug trigger)
+    uint8_t  persisted;      // 1 = the setting was saved on the module, 0 = module absent or too old
+    uint8_t  unplug;         // 1 = power off when USB is pulled (default); 0 = an unplug only restarts the idle clock
+} PACKED bwm_autooff_status_t;
 #define CMD_PM5_BWM_WIFI    0x017C
 #define CMD_PM5_BWM_SET_VCHG 0x017D
 #define CMD_PM5_BWM_ESP_OTA  0x017E

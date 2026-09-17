@@ -63,6 +63,18 @@ static volatile bool s_baud_ack = false;
 // ESP is alive and responding at the baud we just switched to (verify step).
 static volatile bool s_getbaud_ack = false;
 
+// Last LINK_STATE broadcast from the ESP: a client on BLE / on the TCP server.
+static volatile uint8_t s_link_ble = 0;
+static volatile uint8_t s_link_wifi = 0;
+
+bool bwm_fwd_link_connected(void) {
+    return (s_link_ble != 0) || (s_link_wifi != 0);
+}
+
+void bwm_fwd_link_seed_ble(bool connected) {
+    s_link_ble = connected ? 1 : 0;
+}
+
 int bwm_fwd_writebuffer_sync(const uint8_t *data, size_t len) {
     static uint8_t frame[BWM_TX_BUFSZ];   // single-threaded bare-metal: static OK
 
@@ -251,6 +263,9 @@ static void bwm_feed_byte(bwm_parser_t *p, uint8_t byte) {
                 } else if ((p->is_bcast == false) && p->cmd == BWM_CMD_GET_UART_BAUD) {
                     // SLAVE_RESP for our GET_BAUD verify probe
                     s_getbaud_ack = true;
+                } else if (p->is_bcast && p->cmd == BWM_CMD_LINK_STATE && p->len >= 2) {
+                    s_link_ble = p->payload[0];
+                    s_link_wifi = p->payload[1];
                 }
             }
             // valid non-DATA_FORWARD frames and CRC failures alike: just resync

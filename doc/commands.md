@@ -1048,7 +1048,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hw bwm help            `|Y       |`This help`
-|`hw bwm autooff         `|N       |`Toggle auto power-off on USB unplug`
+|`hw bwm autooff         `|N       |`Show/set auto power-off (USB unplug, idle on battery)`
 |`hw bwm charge          `|N       |`Enable/disable battery charging (one-shot)`
 |`hw bwm name            `|N       |`Get/set the BWM BLE advertising name`
 |`hw bwm powersave       `|N       |`Show/set the BWM power-save switch (DFS, light sleep, slow adv)`
