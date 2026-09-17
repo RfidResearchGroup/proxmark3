@@ -1,0 +1,33 @@
+FROM fedora:42
+
+ENV LANG=C.UTF-8
+
+RUN dnf install -y passwd sudo git make cmake gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib readline-devel bzip2-devel lz4-devel zlib-ng-compat-devel bluez-libs-devel python3-devel openssl-devel gd-devel libatomic findutils
+
+RUN yum -y update
+
+ARG SKIPQT=false
+RUN if [ "${SKIPQT}" = "false" ]; then \
+      dnf install -y qt6-qtbase-devel; \
+    fi
+
+RUN yum -y install --allowerasing mesa-libOpenCL ocl-icd-devel
+
+# uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Create rrg user
+RUN useradd -ms /bin/bash rrg
+RUN passwd -d rrg
+ARG UART_GID
+# dialout group may already exist on another numeric ID than on host
+RUN if [ -n "${UART_GID}" ]; then \
+    groupadd -g ${UART_GID} mydialout || true; \
+    usermod -aG ${UART_GID} rrg; \
+  fi
+RUN printf 'rrg ALL=(ALL) ALL\n' | tee -a /etc/sudoers
+
+USER rrg
+WORKDIR "/home/rrg"
+
+CMD ["/bin/bash"]

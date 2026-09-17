@@ -1,0 +1,38 @@
+[Version]
+Signature="$Windows NT$"
+Class=Ports
+ClassGuid={4D36E978-E325-11CE-BFC1-08002BE10318}
+Provider=%ProviderName%
+DriverVer=03/05/2018,1.1.1.0
+
+[MANUFACTURER]
+%ProviderName%=DeviceList, NTx86, NTamd64
+
+[DeviceList.NTx86]
+%DeviceName%=DriverInstall,USB\VID_9AC4&PID_4B8F
+%DeviceName_old%=DriverInstall,USB\VID_2d2d&PID_504d
+%DeviceName_easy%=DriverInstall,USB\VID_502d&PID_502d
+
+[DeviceList.NTamd64]
+%DeviceName%=DriverInstall,USB\VID_9AC4&PID_4B8F
+%DeviceName_old%=DriverInstall,USB\VID_2d2d&PID_504d
+%DeviceName_easy%=DriverInstall,USB\VID_502d&PID_502d
+
+[DriverInstall]
+include=mdmcpq.inf
+CopyFiles=FakeModemCopyFileSection
+AddReg=LowerFilterAddReg,SerialPropPageAddReg
+
+[DriverInstall.Services]
+include = mdmcpq.inf
+AddService = usbser, 0x00000002, LowerFilter_Service_Inst
+
+; This adds the serial port property tab to the device properties dialog
+[SerialPropPageAddReg]
+HKR,,EnumPropPages32,,"MsPorts.dll,SerialPortPropPageProvider"
+
+[Strings]
+ProviderName = "proxmark.org"
+DeviceName = "Proxmark3"
+DeviceName_old = "Proxmark3 (old)"
+DeviceName_easy = "Proxmark3 (easy?)"

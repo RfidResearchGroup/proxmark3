@@ -1,0 +1,60 @@
+//-----------------------------------------------------------------------------
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
+// Flashing utility functions
+//-----------------------------------------------------------------------------
+
+#ifndef __FLASH_H__
+#define __FLASH_H__
+
+#include "common.h"
+#include "elf.h"
+
+#define FLASH_MAX_FILES 4
+
+typedef struct {
+    void *data;
+    uint32_t start;
+    uint32_t length;
+} flash_seg_t;
+
+typedef struct {
+    char *filename;
+    uint8_t *elf;
+    Elf32_Phdr_t *phdrs;
+    uint16_t num_phdrs;
+    struct version_information_t *ver_info; // point to an address in *elf, no need to free.
+    int can_write_bl;
+    int num_segs;
+    flash_seg_t *segments;
+} flash_file_t;
+
+typedef struct {
+    uint32_t chiptype; // see: main_chip_type_t
+    uint32_t block_size;
+    uint32_t flash_start;
+    uint32_t flash_end;
+    uint32_t boot_size; // Boot must be at the top of the flash, so flash_start is boot_start.
+    uint32_t boot_end;
+} flash_dev_t;
+
+int flash_reboot_bootloader(char *serial_port_name, bool wait_appear);
+int flash_load(flash_file_t *ctx, bool force);
+int flash_prepare(flash_file_t *ctx, int can_write_bl, flash_dev_t *flash_dev);
+int flash_start_flashing(int enable_bl_writes, char *serial_port_name, flash_dev_t *flash_dev, flash_file_t *files, uint8_t num_files);
+int flash_write(flash_file_t *ctx, flash_dev_t *flash_dev);
+void flash_free(flash_file_t *ctx);
+int flash_stop_flashing(void);
+#endif

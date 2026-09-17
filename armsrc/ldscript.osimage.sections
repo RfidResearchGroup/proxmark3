@@ -1,0 +1,65 @@
+/*-----------------------------------------------------------------------------
+ * Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * See LICENSE.txt for the text of the license.
+ *-----------------------------------------------------------------------------
+ *-----------------------------------------------------------------------------
+ * Common linker script, for os image for sections.
+ *-----------------------------------------------------------------------------
+ */
+
+SECTIONS
+{
+    .start : {
+        *(.startos)
+    } >osimage :text
+
+    .text : {
+        *(.text)
+        *(.text.*)
+        *(.eh_frame)
+        *(.glue_7)
+        *(.glue_7t)
+    } >osimage :text
+
+    .rodata : {
+        *(.rodata)
+        *(.rodata.*)
+        *(fpga_all_bit.data)
+        . = ALIGN(8);
+    } >osimage :text
+
+    .data : {
+        *(.data)
+        *(.data.*)
+        *(.ramfunc)
+        . = ALIGN(4);
+    } >ram AT>osimage :data
+
+    __data_src_start__ = LOADADDR(.data);
+    __data_start__ = ADDR(.data);
+    __data_end__ = __data_start__ + SIZEOF(.data);
+    __os_size__ = SIZEOF(.text) + SIZEOF(.data) + SIZEOF(.rodata);
+
+    .bss : {
+        __bss_start__ = .;
+        *(.bss)
+        *(.bss.*)
+        . = ALIGN(4);
+        __bss_end__ = .;
+    } >ram AT>ram :bss
+
+    .commonarea (NOLOAD) : {
+        *(.commonarea)
+    } >commonarea :NONE
+}

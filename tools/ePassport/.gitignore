@@ -1,0 +1,18 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Nothing derived from a real document belongs in this tree.  Dumps hold a
+# live portrait and MRZ; screenshots of them are just as identifying.  The
+# sample dumps are generated - see tools_make_sample.py - and the tests build
+# their own copy into a temporary directory.
+samples/
+dumps/
+docs/
+*.log
+*.png
+*.jpg
+*.jpeg
+*.bin
+*.p7b
+*.der

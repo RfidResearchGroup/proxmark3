@@ -1,0 +1,150 @@
+# .gitignore
+# don't push these files to the repository
+
+.history
+.bash_history
+.bash_profile
+.bash_logout
+.bashrc
+.inputrc
+.profile
+*.log
+*.eml
+*.html
+*.o
+*.a
+*.d
+*.elf
+*.s19
+*.map
+*.bin
+*.dll
+*.moc.cpp
+*.z
+*.gz
+*.Td
+*.DS_Store
+*.exe
+*.dsym
+version_pm3.c
+*.json
+*.old
+*.swp
+*.json.bak
+*.pyc
+*.bmp
+originalitysig.csv
+
+# new build file for add-ons.
+Makefile.platform
+Makefile.platform.*
+!Makefile.platform.sample
+
+# Cache for detecting platform def changes
+.Makefile.options.cache
+
+# cmake
+CMakeFiles/
+client/CMakeFiles/
+client/deps/**
+!client/deps/id48/
+!client/deps/id48/**
+# vendored openjpeg, sources only. openjpeg.a and obj/ stay ignored
+!client/deps/openjpeg/
+!client/deps/openjpeg/*.c
+!client/deps/openjpeg/*.h
+!client/deps/openjpeg/Makefile
+!client/deps/openjpeg/LICENSE
+!client/deps/openjpeg/README.pm3
+client/build/
+client/android/build/
+CMakeCache.txt
+*.cmake
+!client/deps/openjpeg.cmake
+.cache
+
+# Coverity
+cov-int/
+.coverity.conf
+
+# profiling
+*.gcno
+
+!client/resources/hardnested/*.bin
+!client/resources/hardnested_tables/*.z
+!client/resources/felica/
+!client/resources/felica/*.json
+!client/resources/calypso/
+!client/resources/calypso/*.json
+client/src/ui/ui_image.h
+client/src/ui/ui_overlays.h
+client/deps/reveng/bmptst
+
+hardnested_stats.txt
+proxmark3
+proxmark3-flasher
+flasher
+!flasher/
+lua
+luac
+tools/fpga_compress/fpga_compress
+tools/cryptorf/cm
+tools/cryptorf/sm
+tools/cryptorf/sma
+tools/cryptorf/sma_multi
+tools/jtag_openocd/openocd_configuration
+tools/mfd_aes_brute/mfd_aes_brute
+tools/mfd_aes_brute/mfd_multi_brute
+tools/mfd_aes_brute/brute_key
+tools/mfulc_des_brute/mfulc_des_brute
+!tools/lena.bmp
+
+fpga/__build*
+
+# offcial dumps folder
+dumps/*
+traces/*
+
+#client/*
+client/traces/*
+client/dumps/*
+*.ice
+*.new
+*- Copy.*
+/EF_*
+
+client/lualibs/mfc_default_keys.lua
+client/lualibs/pm3_cmd.lua
+# recompiled
+fpga_version_info.c
+
+# log / history
+.proxmark3/*
+
+# .tmp files are created during compilation
+*.tmp
+
+# VSCode files
+!.vscode/templates/*.json
+!.vscode/extensions.json
+!.vscode/tasks.json
+
+# IDEA files
+.idea/
+
+# docs
+!doc/*.json
+
+# codeql
+codeql/
+_codeql_detected_source_root
+
+=======
+# local codeql
+_codeql*
+/codeql
+
+# Pyton venvs
+venv/
+#Claude AI files
+CLAUDE.md

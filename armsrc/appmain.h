@@ -1,0 +1,49 @@
+//-----------------------------------------------------------------------------
+// Copyright (C) Jonathan Westhues, Aug 2005
+// Copyright (C) Gerhard de Koning Gans, April 2008
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
+// Definitions internal to the app source.
+//-----------------------------------------------------------------------------
+#ifndef __APPMAIN_H
+#define __APPMAIN_H
+
+#include "common.h"
+
+extern uint8_t g_trigger;
+extern bool g_hf_field_active;
+extern bool g_hf_field_timeout_active;
+void hf_field_off(void);
+int tearoff_hook(void);
+
+// Default connection speed test timeout, used in hw status
+#define CONN_SPEED_TEST_MIN_TIME_DEFAULT 500 // in milliseconds
+
+extern int ToSendMax;
+extern uint8_t ToSend[];
+
+void send_wtx(uint16_t wtx);
+void ReadMem(int addr);
+void __attribute__((noreturn)) AppMain(void);
+
+//void PrintToSendBuffer(void);
+void ToSendStuffBit(int b);
+void ToSendReset(void);
+void ListenReaderField(uint8_t limit);
+void StandAloneMode(void);
+void printStandAloneModes(void);
+void print_stack_usage(void);
+
+#endif

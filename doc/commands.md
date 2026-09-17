@@ -1,0 +1,1832 @@
+
+# Proxmark3 command dump
+
+
+Some commands are available only if a Proxmark3 is actually connected.  
+
+Check column "offline" for their availability.
+
+
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`help                   `|Y       |`Use `<command> help` for details of a command`
+|`auto                   `|N       |`Automated detection process for unknown tags`
+|`clear                  `|Y       |`Clear screen`
+|`hints                  `|Y       |`Turn hints on / off`
+|`msleep                 `|Y       |`Add a pause in milliseconds`
+|`rem                    `|Y       |`Add a text line in log file`
+|`quit                   `|Y       |``
+|`exit                   `|Y       |`Exit program`
+
+
+### prefs
+
+ { Edit client/device preferences... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`prefs help             `|Y       |`This help`
+|`prefs show             `|Y       |`Show all preferences`
+
+
+### prefs get
+
+ { Get a preference }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`prefs get barmode      `|Y       |`Get bar mode preference`
+|`prefs get client.debug `|Y       |`Get client debug level preference`
+|`prefs get client.delay `|Y       |`Get client execution delay preference`
+|`prefs get client.timeout`|Y       |`Get client execution delay preference`
+|`prefs get hf.field.timeout_sec`|Y       |`Get PM3 HF field inactivity timeout preference`
+|`prefs get color        `|Y       |`Get color support preference`
+|`prefs get savepaths    `|Y       |`Get file folder  `
+|`prefs get emoji        `|Y       |`Get emoji display preference`
+|`prefs get hints        `|Y       |`Get hint display preference`
+|`prefs get output       `|Y       |`Get dump output style preference`
+|`prefs get plotsliders  `|Y       |`Get plot slider display preference`
+|`prefs get mqtt         `|Y       |`Get MQTT preference`
+
+
+### prefs set
+
+ { Set a preference }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`prefs set help         `|Y       |`This help`
+|`prefs set barmode      `|Y       |`Set bar mode`
+|`prefs set client.debug `|Y       |`Set client debug level`
+|`prefs set client.delay `|Y       |`Set client execution delay`
+|`prefs set client.timeout`|Y       |`Set client communication timeout`
+|`prefs set hf.field.timeout_sec`|Y       |`Set PM3 HF field inactivity timeout`
+|`prefs set color        `|Y       |`Set color support`
+|`prefs set emoji        `|Y       |`Set emoji display`
+|`prefs set hints        `|Y       |`Set hint display`
+|`prefs set savepaths    `|Y       |`... to be adjusted next ... `
+|`prefs set output       `|Y       |`Set dump output style`
+|`prefs set plotsliders  `|Y       |`Set plot slider display`
+|`prefs set mqtt         `|Y       |`Set MQTT default values`
+
+
+### analyse
+
+ { Analyse utils... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`analyse help           `|Y       |`This help`
+|`analyse lrc            `|Y       |`Generate final byte for XOR LRC`
+|`analyse crc            `|Y       |`Stub method for CRC evaluations`
+|`analyse chksum         `|Y       |`Checksum with adding, masking and one's complement`
+|`analyse dates          `|Y       |`Look for datestamps in a given array of bytes`
+|`analyse lfsr           `|Y       |`LFSR tests`
+|`analyse a              `|Y       |`num bits test`
+|`analyse nuid           `|Y       |`create NUID from 7byte UID`
+|`analyse demodbuff      `|Y       |`Load binary string to DemodBuffer`
+|`analyse freq           `|Y       |`Calc wave lengths`
+|`analyse foo            `|Y       |`muxer`
+|`analyse regex          `|Y       |`Regex utility (subset: ^ $ . * with \\ escape)`
+|`analyse units          `|Y       |`convert ETU <> US <> SSP_CLK (3.39MHz)`
+
+
+### data
+
+ { Plot window / data buffer manipulation... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`data help              `|Y       |`This help`
+|`data clear             `|Y       |`Clears various buffers used by the graph window`
+|`data hide              `|Y       |`Hide the graph window`
+|`data load              `|Y       |`Load contents of file into graph window`
+|`data num               `|Y       |`Converts dec/hex/bin`
+|`data plot              `|Y       |`Show the graph window`
+|`data print             `|Y       |`Print the data in the DemodBuffer`
+|`data save              `|Y       |`Save signal trace data`
+|`data setdebugmode      `|Y       |`Set Debugging Level on client side`
+|`data xor               `|Y       |`Xor a input string`
+|`data biphaserawdecode  `|Y       |`Biphase decode bin stream in DemodBuffer`
+|`data detectclock       `|Y       |`Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer`
+|`data fsktonrz          `|Y       |`Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk)`
+|`data manrawdecode      `|Y       |`Manchester decode binary stream in DemodBuffer`
+|`data modulation        `|Y       |`Identify LF signal for clock and modulation`
+|`data rawdemod          `|Y       |`Demodulate the data in the GraphBuffer and output binary`
+|`data autodemod         `|Y       |`Detect modulation, encoding and clock, then demodulate`
+|`data fft               `|Y       |`Fourier transform of the GraphBuffer`
+|`data fitscore          `|Y       |`Rank matched filter hypotheses for modulation, encoding and clock`
+|`data spectrum          `|Y       |`Spectral peaks, symbol rate and modulation family hint`
+|`data askedgedetect     `|Y       |`Adjust Graph for manual ASK demod`
+|`data autocorr          `|Y       |`Autocorrelation over window`
+|`data convertbitstream  `|Y       |`Convert GraphBuffer's 0/1 values to 127 / -127`
+|`data cthreshold        `|Y       |`Average out all values between`
+|`data dirthreshold      `|Y       |`Max rising higher up-thres/ Min falling lower down-thres`
+|`data decimate          `|Y       |`Decimate samples`
+|`data envelope          `|Y       |`Generate square envelope of samples`
+|`data grid              `|Y       |`overlay grid on graph window`
+|`data getbitstream      `|Y       |`Convert GraphBuffer's >=1 values to 1 and <1 to 0`
+|`data hpf               `|Y       |`Remove DC offset from trace`
+|`data iir               `|Y       |`Apply IIR buttersworth filter on plot data`
+|`data ltrim             `|Y       |`Trim samples from left of trace`
+|`data mtrim             `|Y       |`Trim out samples from the specified start to the specified stop`
+|`data norm              `|Y       |`Normalize max/min to +/-128`
+|`data rtrim             `|Y       |`Trim samples from right of trace`
+|`data setgraphmarkers   `|Y       |`Set the markers in the graph window`
+|`data shiftgraphzero    `|Y       |`Shift 0 for Graphed wave + or - shift value`
+|`data timescale         `|Y       |`Set cursor display timescale`
+|`data undecimate        `|Y       |`Un-decimate samples`
+|`data zerocrossings     `|Y       |`Count time between zero-crossings`
+|`data asn1              `|Y       |`ASN1 decoder`
+|`data atr               `|Y       |`ATR lookup`
+|`data bitsamples        `|N       |`Get raw samples as bitstring`
+|`data bmap              `|Y       |`Convert hex value according a binary template`
+|`data crypto            `|Y       |`Encrypt and decrypt data`
+|`data diff              `|Y       |`Diff of input files`
+|`data hexsamples        `|N       |`Dump big buffer as hex bytes`
+|`data samples           `|N       |`Get raw samples for graph window ( GraphBuffer )`
+|`data qrcode            `|Y       |`Create a QR code`
+|`data gensignal         `|N       |`Generate a synthetic LF waveform into the GraphBuffer`
+|`data test_ss8          `|N       |`Test the implementation of Buffer Save States (8-bit buffer)`
+|`data test_ss32         `|N       |`Test the implementation of Buffer Save States (32-bit buffer)`
+|`data test_ss32s        `|N       |`Test the implementation of Buffer Save States (32-bit signed buffer)`
+
+
+### emv
+
+ { EMV ISO-14443 / ISO-7816... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`emv help               `|Y       |`This help`
+|`emv list               `|Y       |`List ISO7816 history`
+|`emv test               `|Y       |`Perform crypto logic self tests`
+|`emv challenge          `|N       |`Generate challenge`
+|`emv exec               `|N       |`Executes EMV contactless transaction`
+|`emv genac              `|N       |`Generate ApplicationCryptogram`
+|`emv gpo                `|N       |`Execute GetProcessingOptions`
+|`emv intauth            `|N       |`Internal authentication`
+|`emv pse                `|N       |`Execute PPSE. It selects 2PAY.SYS.DDF01 or 1PAY.SYS.DDF01 directory`
+|`emv reader             `|N       |`Act like an EMV reader`
+|`emv readrec            `|N       |`Read files from card`
+|`emv roca               `|N       |`Extract public keys and run ROCA test`
+|`emv scan               `|N       |`Scan EMV card and save it contents to json file for emulator`
+|`emv search             `|N       |`Try to select all applets from applets list and print installed applets`
+|`emv select             `|N       |`Select applet`
+|`emv smart2nfc          `|N       |`Complete transaction as a nfc smart card, using the ISO-7816 interface for auth`
+
+
+### hf
+
+ { High frequency commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf help                `|Y       |`This help`
+|`hf list                `|Y       |`List protocol data in trace buffer`
+|`hf plot                `|N       |`Plot signal`
+|`hf tune                `|N       |`Continuously measure HF antenna tuning`
+|`hf search              `|Y       |`Search for known HF tags`
+|`hf sniff               `|N       |`Generic HF Sniff`
+
+
+### hf 14a
+
+ { ISO14443A RFIDs...                  }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf 14a help            `|Y       |`This help`
+|`hf 14a list            `|Y       |`List ISO 14443-a history`
+|`hf 14a antifuzz        `|N       |`Fuzzing the anticollision phase.  Warning! Readers may react strange`
+|`hf 14a config          `|N       |`Configure 14a settings (use with caution)`
+|`hf 14a cuids           `|N       |`Collect n>0 ISO14443-a UIDs in one go`
+|`hf 14a info            `|N       |`Tag information`
+|`hf 14a sim             `|N       |`Simulate ISO 14443-a tag`
+|`hf 14a simaid          `|N       |`Simulate ISO 14443-a AID Selection`
+|`hf 14a sniff           `|N       |`sniff ISO 14443-a traffic`
+|`hf 14a raw             `|N       |`Send raw hex data to tag`
+|`hf 14a reader          `|N       |`Act like an ISO14443-a reader`
+|`hf 14a apdu            `|N       |`Send ISO 14443-4 APDU to tag`
+|`hf 14a apdufind        `|N       |`Enumerate APDUs - CLA/INS/P1P2`
+|`hf 14a chaining        `|N       |`Control ISO 14443-4 input chaining`
+|`hf 14a ndefformat      `|N       |`Format ISO 14443-A as NFC Type 4 tag`
+|`hf 14a ndefread        `|N       |`Read an NDEF file from ISO 14443-A Type 4 tag`
+|`hf 14a ndefwrite       `|N       |`Write NDEF records to ISO 14443-A tag`
+
+
+### hf 14b
+
+ { ISO14443B RFIDs...                  }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf 14b help            `|Y       |`This help`
+|`hf 14b config          `|N       |`Configure 14b settings (use with caution)`
+|`hf 14b list            `|Y       |`List ISO-14443-B history`
+|`hf 14b apdu            `|N       |`Send ISO 14443-4 APDU to tag`
+|`hf 14b dump            `|N       |`Read all memory pages of an ISO-14443-B tag, save to file`
+|`hf 14b info            `|N       |`Tag information`
+|`hf 14b ndefread        `|N       |`Read NDEF file on tag`
+|`hf 14b raw             `|N       |`Send raw hex data to tag`
+|`hf 14b rdbl            `|N       |`Read SRI512/SRIX4 block`
+|`hf 14b reader          `|N       |`Act as a ISO-14443-B reader to identify a tag`
+|`hf 14b restore         `|N       |`Restore from file to all memory pages of an ISO-14443-B tag`
+|`hf 14b sim             `|N       |`Fake ISO ISO-14443-B tag`
+|`hf 14b sniff           `|N       |`Eavesdrop ISO-14443-B`
+|`hf 14b wrbl            `|N       |`Write data to a SRI512/SRIX4 tag`
+|`hf 14b tearoff         `|N       |`Tear-off attack on ST25TB/SRx counter blocks`
+|`hf 14b view            `|Y       |`Display content from tag dump file`
+|`hf 14b ctdump          `|N       |`Dump ASK CTS/C-ticket`
+|`hf 14b ctrdbl          `|N       |`Read ASK CTS/C-ticket block`
+|`hf 14b setuid          `|N       |`Set UID for magic card`
+
+
+### hf 15
+
+ { ISO15693 RFIDs...                   }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf 15 help             `|Y       |`This help`
+|`hf 15 list             `|Y       |`List ISO-15693 history`
+|`hf 15 demod            `|Y       |`Demodulate ISO-15693 from tag`
+|`hf 15 dump             `|N       |`Read all memory pages of an ISO-15693 tag, save to file`
+|`hf 15 info             `|N       |`Tag information`
+|`hf 15 sniff            `|N       |`Sniff ISO-15693 traffic`
+|`hf 15 raw              `|N       |`Send raw hex data to tag`
+|`hf 15 rdbl             `|N       |`Read a block`
+|`hf 15 rdmulti          `|N       |`Reads multiple blocks`
+|`hf 15 reader           `|N       |`Act like an ISO-15693 reader`
+|`hf 15 restore          `|N       |`Restore from file to all memory pages of an ISO-15693 tag`
+|`hf 15 samples          `|N       |`Acquire samples as reader (enables carrier, sends inquiry)`
+|`hf 15 view             `|Y       |`Display content from tag dump file`
+|`hf 15 wipe             `|N       |`Wipe card to zeros`
+|`hf 15 wrbl             `|N       |`Write a block`
+|`hf 15 sim              `|N       |`Fake an ISO-15693 tag`
+|`hf 15 eload            `|N       |`Upload file into emulator memory`
+|`hf 15 esave            `|N       |`Save emulator memory to file`
+|`hf 15 eview            `|N       |`View emulator memory`
+|`hf 15 slixwritepwd     `|N       |`Writes a password on a SLIX ISO-15693 tag`
+|`hf 15 slixeasdisable   `|N       |`Disable EAS mode on SLIX ISO-15693 tag`
+|`hf 15 slixeasenable    `|N       |`Enable EAS mode on SLIX ISO-15693 tag`
+|`hf 15 slixprivacydisable`|N       |`Disable privacy mode on SLIX ISO-15693 tag`
+|`hf 15 slixprivacyenable`|N       |`Enable privacy mode on SLIX ISO-15693 tag`
+|`hf 15 slixprotectpage  `|N       |`Protect pages on SLIX ISO-15693 tag`
+|`hf 15 passprotectafi   `|N       |`Password protect AFI - Cannot be undone`
+|`hf 15 passprotecteas   `|N       |`Password protect EAS - Cannot be undone`
+|`hf 15 findafi          `|N       |`Brute force AFI of an ISO-15693 tag`
+|`hf 15 writeafi         `|N       |`Writes the AFI on an ISO-15693 tag`
+|`hf 15 writedsfid       `|N       |`Writes the DSFID on an ISO-15693 tag`
+|`hf 15 csetuid          `|N       |`Set UID for magic card`
+|`hf 15 cfinalize        `|N       |`Finalize a magic V3 tag (irreversible)`
+
+
+### hf aliro
+
+ { ALIRO digital access credentials... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf aliro help          `|Y       |`This help`
+|`hf aliro list          `|Y       |`List ISO 14443A/7816 history`
+|`hf aliro info          `|N       |`Get Aliro applet information`
+|`hf aliro read          `|N       |`Run SELECT-AUTH0-AUTH1 and optional step-up document retrieval`
+
+
+### hf calypso
+
+ { Calypso transport cards...          }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf calypso help        `|Y       |`This help`
+|`hf calypso info        `|N       |`Tag information`
+|`hf calypso dump        `|N       |`Dump nodes after application profile scan`
+|`hf calypso probecmdcompat`|N       |`Probe SELECT command compatibility`
+|`hf calypso list        `|Y       |`List Calypso history`
+
+
+### hf cipurse
+
+ { Cipurse transport Cards...          }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf cipurse help        `|Y       |`This help.`
+|`hf cipurse test        `|Y       |`Regression self tests`
+|`hf cipurse auth        `|N       |`Authenticate CIPURSE tag`
+|`hf cipurse aread       `|N       |`Read file attributes`
+|`hf cipurse awrite      `|N       |`Write file attributes`
+|`hf cipurse create      `|N       |`Create file, application, key via DGI record`
+|`hf cipurse delete      `|N       |`Delete file`
+|`hf cipurse default     `|N       |`Set default key and file id for all the other commands`
+|`hf cipurse formatall   `|N       |`Erase all the data from chip`
+|`hf cipurse info        `|N       |`Tag information`
+|`hf cipurse read        `|N       |`Read binary file`
+|`hf cipurse select      `|N       |`Select CIPURSE application or file`
+|`hf cipurse updkey      `|N       |`Update key`
+|`hf cipurse updakey     `|N       |`Update key attributes`
+|`hf cipurse write       `|N       |`Write binary file`
+
+
+### hf epa
+
+ { German Identification Card...       }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf epa help            `|Y       |`This help`
+|`hf epa cnonces         `|N       |`Acquire encrypted PACE nonces of specific size`
+|`hf epa replay          `|N       |`Perform PACE protocol by replaying given APDUs`
+|`hf epa sim             `|N       |`Simulate PACE protocol`
+
+
+### hf emrtd
+
+ { Machine Readable Travel Document... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf emrtd help          `|Y       |`This help`
+|`hf emrtd dump          `|N       |`Dump eMRTD files to binary files`
+|`hf emrtd info          `|Y       |`Tag information`
+|`hf emrtd list          `|Y       |`List ISO 14443A/7816 history`
+|`hf emrtd test          `|Y       |`Regression tests`
+
+
+### hf felica
+
+ { ISO18092 / FeliCa RFIDs...          }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf felica help         `|Y       |`This help`
+|`hf felica list         `|Y       |`List ISO 18092/FeliCa history`
+|`hf felica info         `|N       |`Tag information`
+|`hf felica raw          `|N       |`Send raw hex data to tag`
+|`hf felica rdbl         `|N       |`read block data from authentication-not-required Service.`
+|`hf felica reader       `|N       |`Act like an ISO18092/FeliCa reader`
+|`hf felica sniff        `|N       |`Sniff ISO 18092/FeliCa traffic`
+|`hf felica wrbl         `|N       |`write block data to an authentication-not-required Service.`
+|`hf felica seacauth1    `|N       |`FeliCa SEAC Authentication1`
+|`hf felica dump         `|N       |`Wait for and try dumping FeliCa`
+|`hf felica discnodes    `|N       |`discover Area Code and Service Code nodes.`
+|`hf felica sim          `|N       |`Emulate FeliCa Standard from dump file`
+|`hf felica rqservice    `|N       |`verify the existence of Area and Service, and to acquire Key Version.`
+|`hf felica rqresponse   `|N       |`verify the existence of a card and its Mode.`
+|`hf felica scsvcode     `|N       |`acquire Area Code and Service Code.`
+|`hf felica rqsyscode    `|N       |`acquire System Code registered to the card.`
+|`hf felica auth1        `|N       |`authenticate a card. Start mutual authentication with Auth1`
+|`hf felica auth2        `|N       |`allow a card to authenticate a Reader/Writer. Complete mutual authentication`
+|`hf felica rqspecver    `|N       |`acquire the version of card OS.`
+|`hf felica resetmode    `|N       |`reset Mode to Mode 0.`
+|`hf felica litesim      `|N       |`Emulating ISO/18092 FeliCa Lite tag`
+|`hf felica liteauth     `|N       |`authenticate a card.`
+|`hf felica litedump     `|N       |`Wait for and try dumping FelicaLite`
+
+
+### hf fido
+
+ { FIDO and FIDO2 authenticators...    }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf fido help           `|Y       |`This help.`
+|`hf fido list           `|Y       |`List ISO 14443A history`
+|`hf fido info           `|N       |`Tag information`
+|`hf fido reg            `|N       |`FIDO U2F Registration Message.`
+|`hf fido auth           `|N       |`FIDO U2F Authentication Message.`
+|`hf fido make           `|N       |`FIDO2 MakeCredential command.`
+|`hf fido assert         `|N       |`FIDO2 GetAssertion command.`
+
+
+### hf fmcos
+
+ { FMCOS CPU cards...                  }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf fmcos help          `|Y       |`This help`
+|`hf fmcos info          `|N       |`Detect card and print file-system info`
+|`hf fmcos select        `|N       |`SELECT FILE by 2-byte ID or AID name`
+|`hf fmcos erase         `|N       |`ERASE DF contents`
+|`hf fmcos createdir     `|N       |`CREATE DIRECTORY (DF)`
+|`hf fmcos createfile    `|N       |`CREATE EF (binary / fixed / variable / loop / wallet)`
+|`hf fmcos createkeyfile `|N       |`CREATE KEYFILE`
+|`hf fmcos readbinary    `|N       |`READ BINARY from transparent EF`
+|`hf fmcos readrecord    `|N       |`READ RECORD from record-based EF`
+|`hf fmcos writebinary   `|N       |`UPDATE BINARY in transparent EF`
+|`hf fmcos writerecord   `|N       |`UPDATE RECORD in record-based EF`
+|`hf fmcos append        `|N       |`APPEND RECORD to cyclic / linear EF`
+|`hf fmcos authexternal  `|N       |`EXTERNAL AUTHENTICATE using DES/3DES key`
+|`hf fmcos authinternal  `|N       |`INTERNAL AUTHENTICATE (card proves key knowledge)`
+|`hf fmcos key           `|N       |`WRITE KEY to keyfile`
+|`hf fmcos pinverify     `|N       |`VERIFY PIN (present PIN to card)`
+|`hf fmcos pinchange     `|N       |`CHANGE PIN (old + new, requires old PIN)`
+|`hf fmcos pinreset      `|N       |`RESET PIN (new PIN + change-PIN key MAC)`
+|`hf fmcos pinunblock    `|N       |`UNBLOCK PIN (encrypted new PIN + MAC)`
+|`hf fmcos balance       `|N       |`GET BALANCE (wallet or passbook)`
+|`hf fmcos credit        `|N       |`ADD CREDIT to wallet or passbook`
+|`hf fmcos purchase      `|N       |`PURCHASE from wallet or passbook`
+|`hf fmcos overdraft     `|N       |`UPDATE OVERDRAFT LIMIT`
+|`hf fmcos history       `|N       |`READ transaction history from loop EF`
+|`hf fmcos block         `|N       |`BLOCK card or application`
+|`hf fmcos unblock       `|N       |`UNBLOCK application`
+|`hf fmcos tidsetcard    `|N       |`SET CARD configuration block`
+|`hf fmcos tidsetuid     `|N       |`SET UID`
+|`hf fmcos tidsetauth    `|N       |`SET INTERNAL AUTH key`
+|`hf fmcos tiderase      `|N       |`ERASE TID card file system`
+|`hf fmcos tidprovision  `|N       |`Full TID provisioning sequence`
+|`hf fmcos tidcreatedf   `|N       |`CREATE sub-DF (TID format)`
+|`hf fmcos tidcreatebin  `|N       |`CREATE binary EF (TID format)`
+|`hf fmcos tidcreaterec  `|N       |`CREATE record EF (TID format)`
+
+
+### hf fudan
+
+ { Fudan RFIDs...                      }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf fudan help          `|Y       |`This help`
+|`hf fudan reader        `|N       |`Act like a fudan reader`
+|`hf fudan dump          `|N       |`Dump FUDAN tag to binary file`
+|`hf fudan rdbl          `|N       |`Read a fudan tag`
+|`hf fudan view          `|Y       |`Display content from tag dump file`
+|`hf fudan wrbl          `|N       |`Write a fudan tag`
+
+
+### hf gallagher
+
+ { Gallagher DESFire RFIDs...          }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf gallagher help      `|Y       |`This help`
+|`hf gallagher test      `|Y       |`Test the function of Gallagher Mifare Core`
+|`hf gallagher clone     `|N       |`Clone Gallagher credentials to a DESFire or Classic card`
+|`hf gallagher delete    `|N       |`Delete Gallagher credentials from a DESFire card`
+|`hf gallagher diversifykey`|Y       |`Diversify Gallagher key`
+|`hf gallagher decode    `|Y       |`Decode Gallagher credential block`
+|`hf gallagher encode    `|Y       |`Encode Gallagher credential block`
+|`hf gallagher reader    `|N       |`Read & decode all Gallagher credentials on a DESFire or Classic card`
+
+
+### hf gst
+
+ { Google Smart Tap passes...          }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf gst help            `|Y       |`This help`
+|`hf gst list            `|Y       |`List ISO 14443A/7816 history`
+|`hf gst test            `|Y       |`Perform self tests`
+|`hf gst info            `|N       |`Get Google Smart Tap applet information`
+|`hf gst read            `|N       |`Read and decode Google Smart Tap pass objects`
+
+
+### hf secc
+
+ { iClass SE Config Card Emulator...   }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf secc help           `|Y       |`This help`
+|`hf secc info           `|N       |`Read and decode Card Recognition Data (GP tag 0066)`
+|`hf secc sim            `|N       |`Simulate HID iCLASS SE Config Card`
+|`hf secc sniff          `|N       |`Sniff reader<->card, jam A0 D4 APDU`
+
+
+### hf iclass
+
+ { ICLASS RFIDs...                     }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf iclass help         `|Y       |`This help`
+|`hf iclass list         `|Y       |`List iclass history`
+|`hf iclass dump         `|N       |`Dump Picopass / iCLASS tag to file`
+|`hf iclass info         `|N       |`Tag information`
+|`hf iclass rdbl         `|N       |`Read Picopass / iCLASS block`
+|`hf iclass reader       `|N       |`Act like a Picopass / iCLASS reader`
+|`hf iclass restore      `|N       |`Restore a dump file onto a Picopass / iCLASS tag`
+|`hf iclass sniff        `|N       |`Eavesdrop Picopass / iCLASS communication`
+|`hf iclass view         `|Y       |`Display content from tag dump file`
+|`hf iclass wrbl         `|N       |`Write Picopass / iCLASS block`
+|`hf iclass creditepurse `|N       |`Credit epurse value`
+|`hf iclass tear         `|N       |`Performs tearoff attack on iCLASS block`
+|`hf iclass liberate     `|N       |`Detect and liberate MKF / iCopy-X cloned cards`
+|`hf iclass chk          `|N       |`Check keys`
+|`hf iclass loclass      `|Y       |`Use loclass to perform bruteforce reader attack`
+|`hf iclass lookup       `|Y       |`Uses authentication trace to check for key in dictionary file`
+|`hf iclass legrec       `|N       |`Recovers 24 bits of the diversified key of a legacy card provided a valid nr-mac combination`
+|`hf iclass legbrute     `|Y       |`Bruteforces 40 bits of a partial diversified key, provided 24 bits of the key and two valid nr-macs`
+|`hf iclass unhash       `|Y       |`Reverses a diversified key to retrieve hash0 pre-images after DES encryption`
+|`hf iclass blacktears   `|N       |`Automated tearoff attack on new silicon cards to enable non-secure page mode`
+|`hf iclass sim          `|N       |`Simulate iCLASS tag`
+|`hf iclass tagsim       `|N       |`Simulate a full iCLASS 2K tag from FC/CN and keys`
+|`hf iclass eload        `|N       |`Upload file into emulator memory`
+|`hf iclass esave        `|N       |`Save emulator memory to file`
+|`hf iclass esetblk      `|N       |`Set emulator memory block data`
+|`hf iclass eview        `|N       |`View emulator memory`
+|`hf iclass configcard   `|N       |`Reader configuration card generator`
+|`hf iclass calcnewkey   `|Y       |`Calc diversified keys (blocks 3 & 4) to write new keys`
+|`hf iclass encode       `|Y       |`Encode binary wiegand to block 7`
+|`hf iclass encrypt      `|Y       |`Encrypt given block data`
+|`hf iclass decrypt      `|Y       |`Decrypt given block data or tag dump file`
+|`hf iclass managekeys   `|Y       |`Manage keys to use with iclass commands`
+|`hf iclass permutekey   `|Y       |`Permute function from 'heart of darkness' paper`
+|`hf iclass sam          `|N       |`Extract PACS from a HID SAM`
+
+
+### hf ict
+
+ { ICT MFC/DESfire RFIDs...            }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf ict help            `|Y       |`This help`
+|`hf ict credential      `|N       |`Read ICT credential and decode`
+|`hf ict info            `|N       |`Tag information`
+|`hf ict list            `|Y       |`List ICT history`
+|`hf ict reader          `|Y       |`Act like an IS14443-a reader`
+
+
+### hf jooki
+
+ { Jooki RFIDs...                      }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf jooki help          `|Y       |`This help`
+|`hf jooki clone         `|N       |`Write a Jooki token`
+|`hf jooki decode        `|Y       |`Decode Jooki token`
+|`hf jooki encode        `|Y       |`Encode Jooki token`
+|`hf jooki sim           `|N       |`Simulate Jooki token`
+
+
+### hf ksx6924
+
+ { KS X 6924 (T-Money, Snapper+) RFIDs }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf ksx6924 help        `|Y       |`This help`
+|`hf ksx6924 select      `|N       |`Select application, and leave field up`
+|`hf ksx6924 info        `|N       |`Tag information`
+|`hf ksx6924 balance     `|N       |`Get current purse balance`
+|`hf ksx6924 init        `|N       |`Perform transaction initialization with Mpda`
+|`hf ksx6924 prec        `|N       |`Send proprietary get record command (CLA=90, INS=4C)`
+
+
+### hf legic
+
+ { LEGIC RFIDs...                      }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf legic help          `|Y       |`This help`
+|`hf legic dump          `|N       |`Dump LEGIC Prime tag to binary file`
+|`hf legic info          `|N       |`Display deobfuscated and decoded LEGIC Prime tag data`
+|`hf legic list          `|Y       |`List LEGIC history`
+|`hf legic rdbl          `|N       |`Read bytes from a LEGIC Prime tag`
+|`hf legic reader        `|N       |`LEGIC Prime Reader UID and tag info`
+|`hf legic restore       `|N       |`Restore an exact dump back onto the same LEGIC Prime card family`
+|`hf legic clone         `|N       |`Clone a LEGIC Prime dump to a new MCC or different tag`
+|`hf legic migrate       `|N       |`Clone a LEGIC Prime dump to a tag; DCF stays opt-in`
+|`hf legic wipe          `|N       |`Wipe a LEGIC Prime tag`
+|`hf legic wrbl          `|N       |`Write data to a LEGIC Prime tag`
+|`hf legic sim           `|N       |`Start tag simulator`
+|`hf legic eload         `|N       |`Upload file into emulator memory`
+|`hf legic esave         `|N       |`Save emulator memory to file`
+|`hf legic eview         `|N       |`View emulator memory`
+|`hf legic einfo         `|N       |`Display deobfuscated and decoded emulator memory`
+|`hf legic crc           `|Y       |`Calculate Legic CRC over given bytes`
+|`hf legic view          `|Y       |`Display deobfuscated and decoded content from tag dump file`
+
+
+### hf lto
+
+ { LTO Cartridge Memory RFIDs...       }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf lto help            `|Y       |`This help`
+|`hf lto dump            `|N       |`Dump LTO-CM tag to file`
+|`hf lto info            `|N       |`Tag information`
+|`hf lto list            `|Y       |`List LTO-CM history`
+|`hf lto rdbl            `|N       |`Read block`
+|`hf lto reader          `|N       |`Act like a LTO-CM reader`
+|`hf lto restore         `|N       |`Restore dump file to LTO-CM tag`
+|`hf lto wrbl            `|N       |`Write block`
+
+
+### hf mf
+
+ { MIFARE RFIDs...                     }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf mf help             `|Y       |`This help`
+|`hf mf list             `|Y       |`List MIFARE history`
+|`hf mf darkside         `|N       |`Darkside attack`
+|`hf mf nested           `|N       |`Nested attack`
+|`hf mf hardnested       `|Y       |`Nested attack for hardened MIFARE Classic cards`
+|`hf mf staticnested     `|N       |`Nested attack against static nonce MIFARE Classic cards`
+|`hf mf sen              `|N       |`FM11RF08S Static Encrypted Nonce attack`
+|`hf mf brute            `|N       |`Smart bruteforce to exploit weak key generators`
+|`hf mf autopwn          `|N       |`Automatic key recovery tool for MIFARE Classic`
+|`hf mf nack             `|N       |`Test for MIFARE NACK bug`
+|`hf mf chk              `|N       |`Check keys`
+|`hf mf fchk             `|N       |`Check keys fast, targets all keys on card`
+|`hf mf decrypt          `|Y       |`Decrypt Crypto1 data from sniff or trace`
+|`hf mf supercard        `|N       |`Extract info from a `super card``
+|`hf mf keygen           `|Y       |`Generate key table for some known KDFs`
+|`hf mf auth4            `|N       |`ISO14443-4 AES authentication`
+|`hf mf acl              `|Y       |`Decode and print MIFARE Classic access rights bytes`
+|`hf mf dump             `|N       |`Dump MIFARE Classic tag to binary file`
+|`hf mf info             `|N       |`Tag information`
+|`hf mf isen             `|N       |`Information Static Encrypted Nonces`
+|`hf mf mad              `|Y       |`Checks and prints MAD`
+|`hf mf madread          `|N       |`Read data from MAD AID sectors`
+|`hf mf madwrite         `|N       |`Write data to MAD AID sectors`
+|`hf mf madverify        `|N       |`Verify data in MAD AID sectors`
+|`hf mf personalize      `|N       |`Personalize UID (MIFARE Classic EV1 only)`
+|`hf mf rdbl             `|N       |`Read MIFARE Classic block`
+|`hf mf rdsc             `|N       |`Read MIFARE Classic sector`
+|`hf mf restore          `|N       |`Restore MIFARE Classic binary file to tag`
+|`hf mf setmod           `|N       |`Set MIFARE Classic EV1 load modulation strength`
+|`hf mf value            `|Y       |`Value blocks`
+|`hf mf view             `|Y       |`Display content from tag dump file`
+|`hf mf wipe             `|N       |`Wipe card to zeros and default keys/acc`
+|`hf mf wrbl             `|N       |`Write MIFARE Classic block`
+|`hf mf sim              `|N       |`Simulate MIFARE card`
+|`hf mf ecfill           `|N       |`Fill emulator memory with help of keys from emulator`
+|`hf mf eclr             `|N       |`Clear emulator memory`
+|`hf mf egetblk          `|N       |`Get emulator memory block`
+|`hf mf egetsc           `|N       |`Get emulator memory sector`
+|`hf mf ekeyprn          `|N       |`Print keys from emulator memory`
+|`hf mf eload            `|N       |`Upload file into emulator memory`
+|`hf mf esave            `|N       |`Save emulator memory to file`
+|`hf mf esetblk          `|N       |`Set emulator memory block`
+|`hf mf eview            `|N       |`View emulator memory`
+|`hf mf cgetblk          `|N       |`Read block from card`
+|`hf mf cgetsc           `|N       |`Read sector from card`
+|`hf mf cload            `|N       |`Load dump to card`
+|`hf mf csave            `|N       |`Save dump from card into file or emulator`
+|`hf mf csetblk          `|N       |`Write block to card`
+|`hf mf csetuid          `|N       |`Set UID on card`
+|`hf mf cview            `|N       |`View card`
+|`hf mf cwipe            `|N       |`Wipe card to default UID/Sectors/Keys`
+|`hf mf gen3uid          `|N       |`Set UID without changing manufacturer block`
+|`hf mf gen3blk          `|N       |`Overwrite manufacturer block`
+|`hf mf gen3freeze       `|N       |`Perma lock UID changes. irreversible`
+|`hf mf ginfo            `|Y       |`Info about configuration of the card`
+|`hf mf ggetblk          `|N       |`Read block from card`
+|`hf mf gload            `|N       |`Load dump to card`
+|`hf mf gsave            `|N       |`Save dump from card into file or emulator`
+|`hf mf gsetblk          `|N       |`Write block to card`
+|`hf mf gview            `|N       |`View card`
+|`hf mf gchpwd           `|N       |`Change card access password. Warning!`
+|`hf mf gdmgetcfg        `|N       |`Get configuration data from GDM card`
+|`hf mf gdmsetcfg        `|N       |`Set configuration data on GDM card`
+|`hf mf gdmparsecfg      `|Y       |`Parse configuration data for GDM card`
+|`hf mf gdmgetblk        `|N       |`Read public block from GDM card`
+|`hf mf gdmsetblk        `|N       |`Write public block to GDM card`
+|`hf mf gdmgethidblk     `|N       |`Read hidden block from GDM card`
+|`hf mf gdmsethidblk     `|N       |`Write hidden block to GDM card`
+|`hf mf gdmsetuid        `|N       |`Set UID on GDM card`
+|`hf mf gdmwipe          `|N       |`Wipe GDM card to factory defaults`
+|`hf mf gdmsetsig        `|N       |`Set MFC EV1 signature on GDM card`
+|`hf mf ndefformat       `|N       |`Format MIFARE Classic Tag as NFC Tag`
+|`hf mf ndefread         `|N       |`Read and print NDEF records from card`
+|`hf mf ndefwrite        `|N       |`Write NDEF records to card`
+|`hf mf encodehid        `|N       |`Encode a HID Credential / NDEF record to card`
+
+
+### hf mfp
+
+ { MIFARE Plus RFIDs...                }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf mfp help            `|Y       |`This help`
+|`hf mfp list            `|Y       |`List MIFARE Plus history`
+|`hf mfp acl             `|Y       |`Decode ACL values for Mifare Plus`
+|`hf mfp auth            `|N       |`Authentication`
+|`hf mfp chk             `|N       |`Check keys`
+|`hf mfp dump            `|N       |`Dump MIFARE Plus tag to file`
+|`hf mfp info            `|N       |`Tag information`
+|`hf mfp mad             `|N       |`Check and print MAD`
+|`hf mfp madread         `|N       |`Read data from MAD AID sectors`
+|`hf mfp madwrite        `|N       |`Write data to MAD AID sectors`
+|`hf mfp madverify       `|N       |`Verify data in MAD AID sectors`
+|`hf mfp rdbl            `|N       |`Read blocks from card`
+|`hf mfp rdsc            `|N       |`Read sectors from card`
+|`hf mfp wrbl            `|N       |`Write block to card`
+|`hf mfp chkey           `|N       |`Change key on card`
+|`hf mfp chconf          `|N       |`Change config on card`
+|`hf mfp commitp         `|N       |`Configure security layer (SL1/SL3 mode)`
+|`hf mfp initp           `|N       |`Fill all the card's keys in SL0 mode`
+|`hf mfp wrp             `|N       |`Write Perso command`
+|`hf mfp ndefformat      `|N       |`Format MIFARE Plus Tag as NFC Tag`
+|`hf mfp ndefread        `|N       |`Read and print NDEF records from card`
+|`hf mfp ndefwrite       `|N       |`Write NDEF records to card`
+
+
+### hf mfu
+
+ { MIFARE Ultralight RFIDs...          }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf mfu help            `|Y       |`This help`
+|`hf mfu list            `|Y       |`List MIFARE Ultralight / NTAG history`
+|`hf mfu keygen          `|Y       |`Generate DES/3DES/AES MIFARE diversified keys`
+|`hf mfu pwdgen          `|Y       |`Generate pwd from known algos`
+|`hf mfu otptear         `|N       |`Tear-off test on OTP bits`
+|`hf mfu countertear     `|N       |`Tear-off test on Ev1/NTAG Counter bits`
+|`hf mfu chk             `|N       |`Ultralight C/AES - Authentication dictionary check`
+|`hf mfu cauth           `|N       |`Ultralight-C - Authentication`
+|`hf mfu desbrute        `|Y       |`Ultralight-C - 3DES key segment brute force`
+|`hf mfu aesauth         `|N       |`Ultralight-AES - Authentication`
+|`hf mfu aesgetuid       `|N       |`Ultralight-AES - Get UID when RID in use`
+|`hf mfu setkey          `|N       |`Ultralight C/AES - Set 3DES/AES keys`
+|`hf mfu dump            `|N       |`Dump MIFARE Ultralight family tag to binary file`
+|`hf mfu incr            `|N       |`Increments Ev1/NTAG counter`
+|`hf mfu info            `|N       |`Tag information`
+|`hf mfu ndefformat      `|N       |`Format tag as NDEF, writes the Capability Container`
+|`hf mfu ndefread        `|N       |`Prints NDEF records from card`
+|`hf mfu ndefwrite       `|N       |`Write NDEF records to card`
+|`hf mfu rdbl            `|N       |`Read block`
+|`hf mfu restore         `|N       |`Restore a dump file onto a tag`
+|`hf mfu tamper          `|N       |`NTAG 213TT - Configure the tamper feature`
+|`hf mfu view            `|Y       |`Display content from tag dump file`
+|`hf mfu wipe            `|N       |`Wipe card to zeros and default key`
+|`hf mfu wrbl            `|N       |`Write block`
+|`hf mfu eload           `|N       |`Upload file into emulator memory`
+|`hf mfu esave           `|N       |`Save emulator memory to file`
+|`hf mfu eview           `|N       |`View emulator memory`
+|`hf mfu esetblk         `|N       |`Set emulator memory block`
+|`hf mfu sim             `|N       |`Simulate MIFARE Ultralight from emulator memory`
+|`hf mfu setuid          `|N       |`Set UID - MAGIC tags only`
+|`hf mfu amiibo          `|N       |`Amiibo tag operations`
+
+
+### hf mfdes
+
+ { MIFARE Desfire RFIDs...             }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf mfdes help          `|Y       |`This help`
+|`hf mfdes list          `|Y       |`List DESFire (ISO 14443A) history`
+|`hf mfdes auth          `|N       |`MIFARE DesFire Authentication`
+|`hf mfdes chk           `|N       |`Check keys`
+|`hf mfdes default       `|N       |`Set defaults for all the commands`
+|`hf mfdes detect        `|N       |`Detect key type and tries to find one from the list`
+|`hf mfdes formatpicc    `|N       |`Format PICC`
+|`hf mfdes freemem       `|N       |`Get free memory size`
+|`hf mfdes getversion    `|N       |`Get version/type information`
+|`hf mfdes getuid        `|N       |`Get uid from card`
+|`hf mfdes pc            `|N       |`Run proximity check`
+|`hf mfdes info          `|N       |`Tag information`
+|`hf mfdes mad           `|N       |`Prints MAD records / files from the card`
+|`hf mfdes setconfig     `|N       |`Set card configuration`
+|`hf mfdes lsapp         `|N       |`Show all applications with files list`
+|`hf mfdes getaids       `|N       |`Get Application IDs list`
+|`hf mfdes getappnames   `|N       |`Get Applications list`
+|`hf mfdes bruteaid      `|N       |`Recover AIDs by bruteforce`
+|`hf mfdes brutedamslot  `|N       |`Recover DAM slots to delegated AIDs by bruteforce`
+|`hf mfdes createapp     `|N       |`Create Application`
+|`hf mfdes createdelegateapp`|N       |`Create Delegated Application`
+|`hf mfdes getdelegateappinfo`|N       |`Get Delegated Application info by DAM slot`
+|`hf mfdes deleteapp     `|N       |`Delete Application`
+|`hf mfdes selectapp     `|N       |`Select Application ID`
+|`hf mfdes selectisofid  `|N       |`Select file by ISO ID`
+|`hf mfdes changekey     `|N       |`Change Key`
+|`hf mfdes chkeysettings `|N       |`Change Key Settings`
+|`hf mfdes getkeysettings`|N       |`Get Key Settings`
+|`hf mfdes getkeyversions`|N       |`Get Key Versions`
+|`hf mfdes bruteisofid   `|N       |`Recover file ISO IDs by bruteforce`
+|`hf mfdes getfileids    `|N       |`Get File IDs list`
+|`hf mfdes getfileisoids `|N       |`Get File ISO IDs list`
+|`hf mfdes lsfiles       `|N       |`Show all files list`
+|`hf mfdes dump          `|N       |`Dump all files`
+|`hf mfdes view          `|Y       |`Display content from tag dump file`
+|`hf mfdes eload         `|N       |`Upload file into emulator memory`
+|`hf mfdes esave         `|N       |`Save emulator memory to file`
+|`hf mfdes eview         `|N       |`View emulator memory`
+|`hf mfdes sim           `|N       |`Simulate DESFire card from emulator memory`
+|`hf mfdes etest         `|N       |`Drive the simulation from the host, no RF`
+|`hf mfdes createfile    `|N       |`Create Standard/Backup File`
+|`hf mfdes createvaluefile`|N       |`Create Value File`
+|`hf mfdes createrecordfile`|N       |`Create Linear/Cyclic Record File`
+|`hf mfdes createmacfile `|N       |`Create Transaction MAC File`
+|`hf mfdes deletefile    `|N       |`Delete File`
+|`hf mfdes getfilesettings`|N       |`Get file settings`
+|`hf mfdes chfilesettings`|N       |`Change file settings`
+|`hf mfdes read          `|N       |`Read data from standard/backup/record/value/mac file`
+|`hf mfdes write         `|N       |`Write data to standard/backup/record/value file`
+|`hf mfdes value         `|N       |`Operations with value file (get/credit/limited credit/debit/clear)`
+|`hf mfdes clearrecfile  `|N       |`Clear record File`
+|`hf mfdes makemfclicense`|Y       |`Generate a Mifare Classic license for DESFire EV3C`
+|`hf mfdes createmfcmapping`|N       |`Create a Mifare Classic mapping on a DESFire EV3C`
+|`hf mfdes verifycert    `|N       |`Validate cert from file and verify key possession`
+|`hf mfdes intauth       `|N       |`ISO Internal Authenticate (ECDSA challenge-response)`
+|`hf mfdes vdesign       `|N       |`VDE ECDSASign (EV charging signature over 32-byte challenge)`
+|`hf mfdes test          `|Y       |`Regression crypto tests`
+
+
+### hf ntag424
+
+ { NXP NTAG 4242 DNA RFIDs...          }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf ntag424 help        `|Y       |`This help`
+|`hf ntag424 info        `|N       |`Tag information`
+|`hf ntag424 view        `|Y       |`Display content from tag dump file`
+|`hf ntag424 auth        `|N       |`Test authentication with key`
+|`hf ntag424 read        `|N       |`Read file`
+|`hf ntag424 write       `|N       |`Write file`
+|`hf ntag424 getfs       `|N       |`Get file settings`
+|`hf ntag424 changefs    `|N       |`Change file settings`
+|`hf ntag424 changekey   `|N       |`Change key`
+
+
+### hf saflok
+
+ { Saflok MFC RFIDs...                 }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf saflok help         `|Y       |`This help`
+|`hf saflok test         `|Y       |`Perform self-test`
+|`hf saflok cksum        `|N       |`Generate checksum for data block`
+|`hf saflok encode       `|Y       |`Encode Saflok card data`
+|`hf saflok encrypt      `|Y       |`Encrypt 17-byte decrypted block`
+|`hf saflok decode       `|Y       |`Decode Saflok card data`
+|`hf saflok decrypt      `|Y       |`Decrypt 17-byte encrypted block`
+|`hf saflok interrogate  `|N       |`Interrogate saflok card`
+|`hf saflok provision    `|N       |`Provision Saflok card`
+|`hf saflok modify       `|Y       |`Modify Saflok card data`
+|`hf saflok read         `|N       |`Read Saflok card`
+
+
+### hf seos
+
+ { SEOS RFIDs...                       }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf seos help           `|Y       |`This help`
+|`hf seos list           `|Y       |`List SEOS history`
+|`hf seos sam            `|N       |`SAM tests`
+|`hf seos info           `|N       |`Tag information`
+|`hf seos pacs           `|N       |`Extract PACS Information from card`
+|`hf seos write          `|N       |`Write an ADF to the card`
+|`hf seos adf            `|N       |`Read an ADF from the card`
+|`hf seos gdf            `|N       |`Read an GDF from card`
+|`hf seos sim            `|N       |`Simulate Seos tag`
+|`hf seos managekeys     `|Y       |`Manage keys to use with SEOS commands`
+
+
+### hf st25ta
+
+ { ST25TA RFIDs...                     }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf st25ta help         `|Y       |`This help`
+|`hf st25ta eload        `|N       |`Upload NDEF response into emulator memory`
+|`hf st25ta esave        `|N       |`Save emulator memory to file`
+|`hf st25ta eview        `|N       |`View emulator memory`
+|`hf st25ta info         `|N       |`Tag information`
+|`hf st25ta list         `|Y       |`List ISO 14443A/7816 history`
+|`hf st25ta ndefread     `|Y       |`read NDEF file on tag`
+|`hf st25ta protect      `|N       |`change protection on tag`
+|`hf st25ta pwd          `|N       |`change password on tag`
+|`hf st25ta sim          `|N       |`Fake ISO 14443A/ST tag`
+
+
+### hf tesla
+
+ { TESLA Cards...                      }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf tesla help          `|Y       |`This help`
+|`hf tesla info          `|N       |`Tag information`
+|`hf tesla list          `|Y       |`List ISO 14443A/7816 history`
+
+
+### hf texkom
+
+ { Texkom RFIDs...                     }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf texkom help         `|Y       |`This help`
+|`hf texkom reader       `|N       |`Act like a Texkom reader`
+|`hf texkom sim          `|N       |`Simulate a Texkom tag`
+
+
+### hf thinfilm
+
+ { Thinfilm RFIDs...                   }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf thinfilm help       `|Y       |`This help`
+|`hf thinfilm info       `|N       |`Tag information`
+|`hf thinfilm list       `|Y       |`List NFC Barcode / Thinfilm history`
+|`hf thinfilm sim        `|N       |`Fake Thinfilm tag`
+|`hf thinfilm sniff      `|N       |`Sniff Thinfilm tag communication`
+
+
+### hf topaz
+
+ { TOPAZ (NFC Type 1) RFIDs...         }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf topaz help          `|Y       |`This help`
+|`hf topaz list          `|Y       |`List Topaz history`
+|`hf topaz dump          `|N       |`Dump TOPAZ family tag to file`
+|`hf topaz info          `|N       |`Tag information`
+|`hf topaz raw           `|N       |`Send raw hex data to tag`
+|`hf topaz rdbl          `|N       |`Read block`
+|`hf topaz reader        `|N       |`Act like a Topaz reader`
+|`hf topaz sim           `|N       |`Simulate Topaz tag`
+|`hf topaz sniff         `|N       |`Sniff Topaz reader-tag communication`
+|`hf topaz view          `|Y       |`Display content from tag dump file`
+|`hf topaz wrbl          `|N       |`Write block`
+
+
+### hf vas
+
+ { Apple Value Added Service...        }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf vas help            `|Y       |`This help`
+|`hf vas info            `|N       |`Get VAS applet information`
+|`hf vas reader          `|N       |`Read and decrypt VAS message`
+|`hf vas decrypt         `|Y       |`Decrypt a previously captured VAS cryptogram`
+
+
+### hf waveshare
+
+ { Waveshare NFC ePaper...             }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf waveshare help      `|Y       |`This help`
+|`hf waveshare load      `|Y       |`Load image file to Waveshare NFC ePaper`
+
+
+### hf xerox
+
+ { Fuji/Xerox cartridge RFIDs...       }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf xerox help          `|Y       |`This help`
+|`hf xerox list          `|Y       |`List ISO-14443B history`
+|`hf xerox info          `|N       |`Tag information`
+|`hf xerox dump          `|N       |`Read all memory pages of an Fuji/Xerox tag, save to file`
+|`hf xerox reader        `|N       |`Act like a Fuji/Xerox reader`
+|`hf xerox view          `|Y       |`Display content from tag dump file`
+|`hf xerox rdbl          `|N       |`Read Fuji/Xerox block`
+
+
+### hw
+
+ { Hardware commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hw help                `|Y       |`This help`
+|`hw detectreader        `|N       |`Detect external reader field`
+|`hw status              `|N       |`Show runtime status information about the connected Proxmark3`
+|`hw tearoff             `|N       |`Program a tearoff hook for the next command supporting tearoff`
+|`hw timeout             `|Y       |`Set the communication timeout on the client side`
+|`hw version             `|Y       |`Show version information about the client and Proxmark3`
+|`hw break               `|N       |`Send break loop usb command`
+|`hw bootloader          `|N       |`Reboot into bootloader mode`
+|`hw connect             `|Y       |`Connect to the device via serial port`
+|`hw dbg                 `|N       |`Set device side debug level`
+|`hw fpga                `|N       |`Fpga commands`
+|`hw fpgaoff             `|N       |`Turn off FPGA on device`
+|`hw ant_pm5             `|N       |`Control the antennal of pm5`
+|`hw qc_pm5              `|N       |`Perform QC test (hardware or IO) for the PM5`
+|`hw factorydata         `|N       |`Get/Set the factory data for Device`
+|`hw lcd                 `|N       |`Send command/data to LCD`
+|`hw lcdreset            `|N       |`Hardware reset LCD`
+|`hw ping                `|N       |`Test if the Proxmark3 is responsive`
+|`hw readmem             `|N       |`Read from MCU flash`
+|`hw reset               `|N       |`Reset the device`
+|`hw setlfdivisor        `|N       |`Drive LF antenna at 12MHz / (divisor + 1)`
+|`hw sethfthresh         `|N       |`Set thresholds in HF/14a mode`
+|`hw setmux              `|N       |`Set the ADC mux to a specific value`
+|`hw standalone          `|N       |`Start installed standalone mode on device`
+|`hw tia                 `|N       |`Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider`
+|`hw tune                `|N       |`Measure tuning of device antenna`
+|`hw decay               `|N       |`Measure HF antenna decay after field-off`
+
+
+### hw bwm
+
+ { BWM (battery/wireless module) commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hw bwm help            `|Y       |`This help`
+|`hw bwm autooff         `|N       |`Toggle auto power-off on USB unplug`
+|`hw bwm charge          `|N       |`Enable/disable battery charging (one-shot)`
+|`hw bwm name            `|N       |`Get/set the BWM BLE advertising name`
+|`hw bwm setcap          `|N       |`Set fuel-gauge design capacity (run once after battery change)`
+|`hw bwm upgrade         `|N       |`Reflash BWM (ESP32) firmware over the BWM link, no header`
+|`hw bwm vchg            `|N       |`Set charger charge-voltage target (default 4100 mV)`
+|`hw bwm wifi            `|N       |`Bring up WiFi (STA + TCP server) for a tcp: connection`
+
+
+### lf
+
+ { Low frequency commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf help                `|Y       |`This help`
+|`lf config              `|N       |`Get/Set config for LF sampling, bit/sample, decimation, frequency`
+|`lf cmdread             `|N       |`Modulate LF reader field to send command before read`
+|`lf read                `|N       |`Read LF tag`
+|`lf relay               `|N       |`LF relay between two pm3 devices (tag/rdr mode)`
+|`lf search              `|Y       |`Read and Search for valid known tag`
+|`lf sim                 `|N       |`Simulate LF tag from buffer`
+|`lf simask              `|N       |`Simulate ASK tag`
+|`lf simfsk              `|N       |`Simulate FSK tag`
+|`lf simpsk              `|N       |`Simulate PSK tag`
+|`lf sniff               `|N       |`Sniff LF traffic between reader and tag`
+|`lf tune                `|N       |`Continuously measure LF antenna tuning`
+
+
+### lf awid
+
+ { AWID RFIDs...              }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf awid help           `|Y       |`this help`
+|`lf awid brute          `|N       |`bruteforce card number against reader`
+|`lf awid clone          `|N       |`clone AWID tag to T55x7, Q5/T5555 or EM4305/4469`
+|`lf awid demod          `|Y       |`demodulate an AWID FSK tag from the GraphBuffer`
+|`lf awid reader         `|N       |`attempt to read and extract tag data`
+|`lf awid sim            `|N       |`simulate AWID tag`
+|`lf awid brute          `|N       |`bruteforce card number against reader`
+|`lf awid watch          `|N       |`continuously watch for cards.  Reader mode`
+
+
+### lf cotag
+
+ { COTAG CHIPs...             }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf cotag help          `|Y       |`This help`
+|`lf cotag demod         `|Y       |`demodulate a COTAG tag`
+|`lf cotag reader        `|N       |`attempt to read and extract tag data`
+
+
+### lf destron
+
+ { FDX-A Destron RFIDs...     }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf destron help        `|Y       |`This help`
+|`lf destron demod       `|Y       |`demodulate an Destron tag from the GraphBuffer`
+|`lf destron reader      `|N       |`attempt to read and extract tag data`
+|`lf destron clone       `|N       |`clone Destron tag to T55x7, Q5/T5555 or EM4305/4469`
+|`lf destron sim         `|N       |`simulate Destron tag`
+
+
+### lf em
+
+ { EM CHIPs & RFIDs...        }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf em help             `|Y       |`This help`
+
+
+### lf em 410x
+
+ { EM 4102 commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf em 410x help        `|Y       |`This help`
+|`lf em 410x demod       `|Y       |`demodulate a EM410x tag from the GraphBuffer`
+|`lf em 410x reader      `|N       |`attempt to read and extract tag data`
+|`lf em 410x sim         `|N       |`simulate EM410x tag`
+|`lf em 410x brute       `|N       |`reader bruteforce attack by simulating EM410x tags`
+|`lf em 410x watch       `|N       |`watches for EM410x 125/134 kHz tags`
+|`lf em 410x spoof       `|N       |`watches for EM410x 125/134 kHz tags, and replays them`
+|`lf em 410x clone       `|N       |`clone EM410x Tag ID to T55x7, Q5/T5555 or EM4305/4469`
+
+
+### lf em 4x05
+
+ { EM 4205 / 4305 / 4369 / 4469 commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf em 4x05 help        `|Y       |`This help`
+|`lf em 4x05 clonehelp   `|N       |`Shows the available clone commands`
+|`lf em 4x05 brute       `|N       |`Bruteforce password`
+|`lf em 4x05 chk         `|N       |`Check passwords`
+|`lf em 4x05 config      `|Y       |`Create common configuration words`
+|`lf em 4x05 demod       `|Y       |`Demodulate a EM4x05/EM4x69 tag from the GraphBuffer`
+|`lf em 4x05 dump        `|N       |`Dump EM4x05/EM4x69 tag`
+|`lf em 4x05 info        `|N       |`Tag information`
+|`lf em 4x05 read        `|N       |`Read word data from EM4x05/EM4x69`
+|`lf em 4x05 sniff       `|Y       |`Attempt to recover em4x05 commands from sample buffer`
+|`lf em 4x05 unlock      `|N       |`Execute tear off against EM4x05/EM4x69`
+|`lf em 4x05 view        `|Y       |`Display content from tag dump file`
+|`lf em 4x05 wipe        `|N       |`Wipe EM4x05/EM4x69 tag`
+|`lf em 4x05 write       `|N       |`Write word data to EM4x05/EM4x69`
+
+
+### lf em 4x50
+
+ { EM 4350 / 4450 commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf em 4x50 help        `|Y       |`This help`
+|`lf em 4x50 brute       `|N       |`Bruteforce attack to find password`
+|`lf em 4x50 chk         `|N       |`Check passwords`
+|`lf em 4x50 dump        `|N       |`Dump EM4x50 tag`
+|`lf em 4x50 info        `|N       |`Tag information`
+|`lf em 4x50 login       `|N       |`Login into EM4x50 tag`
+|`lf em 4x50 rdbl        `|N       |`Read EM4x50 word data`
+|`lf em 4x50 reader      `|N       |`Show standard read mode data`
+|`lf em 4x50 restore     `|N       |`Restore EM4x50 dump to tag`
+|`lf em 4x50 view        `|Y       |`Display content from tag dump file`
+|`lf em 4x50 wipe        `|N       |`Wipe EM4x50 tag`
+|`lf em 4x50 wrbl        `|N       |`Write EM4x50 word data`
+|`lf em 4x50 wrpwd       `|N       |`Change EM4x50 password`
+|`lf em 4x50 eload       `|N       |`Upload file into emulator memory`
+|`lf em 4x50 esave       `|N       |`Save emulator memory to file`
+|`lf em 4x50 eview       `|N       |`View emulator memory`
+|`lf em 4x50 sim         `|N       |`Simulate EM4x50 tag`
+
+
+### lf em 4x70
+
+ { EM 4070 / 4170 commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf em 4x70 help        `|Y       |`This help`
+|`lf em 4x70 brute       `|N       |`Bruteforce EM4X70 to find partial key`
+|`lf em 4x70 info        `|N       |`Tag information`
+|`lf em 4x70 write       `|N       |`Write EM4x70`
+|`lf em 4x70 unlock      `|N       |`Unlock EM4x70 for writing`
+|`lf em 4x70 auth        `|N       |`Authenticate EM4x70`
+|`lf em 4x70 setpin      `|N       |`Write PIN`
+|`lf em 4x70 setkey      `|N       |`Write key`
+|`lf em 4x70 calc        `|Y       |`Calculate EM4x70 challenge and response`
+|`lf em 4x70 recover     `|Y       |`Recover remaining key from partial key`
+|`lf em 4x70 autorecover `|N       |`Recover entire key from writable tag`
+
+
+### lf fdxb
+
+ { FDX-B RFIDs...             }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf fdxb help           `|Y       |`this help`
+|`lf fdxb demod          `|Y       |`demodulate a FDX-B ISO11784/85 tag from the GraphBuffer`
+|`lf fdxb reader         `|N       |`attempt to read at 134kHz and extract tag data`
+|`lf fdxb clone          `|N       |`clone animal ID tag to T55x7, Q5/T5555 or EM4305/4469`
+|`lf fdxb sim            `|N       |`simulate Animal ID tag`
+
+
+### lf gallagher
+
+ { GALLAGHER RFIDs...         }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf gallagher help      `|Y       |`This help`
+|`lf gallagher demod     `|Y       |`demodulate an GALLAGHER tag from the GraphBuffer`
+|`lf gallagher reader    `|N       |`attempt to read and extract tag data`
+|`lf gallagher clone     `|N       |`clone GALLAGHER tag to T55x7, Q5/T5555 or EM4305/4469`
+|`lf gallagher sim       `|N       |`simulate GALLAGHER tag`
+
+
+### lf gproxii
+
+ { Guardall Prox II RFIDs...  }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf gproxii help        `|Y       |`this help`
+|`lf gproxii demod       `|Y       |`demodulate a G Prox II tag from the GraphBuffer`
+|`lf gproxii reader      `|N       |`attempt to read and extract tag data`
+|`lf gproxii clone       `|N       |`clone Guardall tag to T55x7 or Q5/T5555`
+|`lf gproxii sim         `|N       |`simulate Guardall tag`
+
+
+### lf hid
+
+ { HID Prox RFIDs...          }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf hid help            `|Y       |`this help`
+|`lf hid demod           `|Y       |`demodulate HID Prox tag from the GraphBuffer`
+|`lf hid reader          `|N       |`attempt to read and extract tag data`
+|`lf hid clone           `|N       |`clone HID tag to T55x7, Q5/T5555 or EM4305/4469`
+|`lf hid sim             `|N       |`simulate HID tag`
+|`lf hid brute           `|N       |`bruteforce facility code or card number against reader`
+|`lf hid watch           `|N       |`continuously watch for cards.  Reader mode`
+
+
+### lf hitag
+
+ { Hitag CHIPs...             }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf hitag help          `|Y       |`This help`
+|`lf hitag list          `|Y       |`List Hitag trace history`
+|`lf hitag info          `|N       |`Tag information`
+|`lf hitag reader        `|N       |`Act like a Hitag 2 reader`
+|`lf hitag test          `|Y       |`Perform self tests`
+|`lf hitag dump          `|N       |`Dump Hitag 2 tag`
+|`lf hitag read          `|N       |`Read Hitag memory`
+|`lf hitag sniff         `|N       |`Eavesdrop Hitag communication`
+|`lf hitag view          `|Y       |`Display content from tag dump file`
+|`lf hitag wrbl          `|N       |`Write a block (page) in Hitag memory`
+|`lf hitag restore       `|N       |`Restore a dump file to a Hitag 2 tag`
+|`lf hitag eload         `|N       |`Upload file into emulator memory`
+|`lf hitag eview         `|N       |`View emulator memory`
+|`lf hitag sim           `|N       |`Simulate Hitag transponder`
+|`lf hitag cc            `|N       |`Hitag S: test all provided challenges`
+|`lf hitag crack2        `|N       |`Recover 2048bits of crypto stream`
+|`lf hitag chk           `|N       |`Check keys`
+|`lf hitag lookup        `|Y       |`Uses authentication trace to check for key in dictionary file`
+|`lf hitag ta            `|N       |`Hitag 2: test all recorded authentications`
+
+
+### lf hitag hts
+
+ { Hitag S/8211 operations }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf hitag hts help      `|Y       |`This help`
+|`lf hitag hts list      `|Y       |`List Hitag S trace history`
+|`lf hitag hts reader    `|N       |`Act like a Hitag S reader`
+|`lf hitag hts rdbl      `|N       |`Read Hitag S page`
+|`lf hitag hts dump      `|N       |`Dump Hitag S pages to a file`
+|`lf hitag hts restore   `|N       |`Restore Hitag S memory from dump file`
+|`lf hitag hts wrbl      `|N       |`Write Hitag S page`
+|`lf hitag hts sim       `|N       |`Simulate Hitag S transponder`
+
+
+### lf hitag htu
+
+ { Hitag µ/8265 operations }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf hitag htu help      `|Y       |`This help`
+|`lf hitag htu list      `|Y       |`List Hitag µ trace history`
+|`lf hitag htu reader    `|N       |`Act like a Hitag µ reader`
+|`lf hitag htu rdbl      `|N       |`Read Hitag µ block`
+|`lf hitag htu dump      `|N       |`Dump Hitag µ blocks to a file`
+|`lf hitag htu wrbl      `|N       |`Write Hitag µ block`
+|`lf hitag htu sim       `|N       |`Simulate Hitag µ transponder`
+
+
+### lf idteck
+
+ { Idteck RFIDs...            }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf idteck help         `|Y       |`This help`
+|`lf idteck demod        `|Y       |`demodulate an Idteck tag from the GraphBuffer`
+|`lf idteck reader       `|N       |`attempt to read and extract tag data`
+|`lf idteck clone        `|N       |`clone Idteck tag to T55x7 or Q5/T5555`
+|`lf idteck sim          `|N       |`simulate Idteck tag`
+
+
+### lf indala
+
+ { Indala RFIDs...            }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf indala help         `|Y       |`This help`
+|`lf indala brute        `|N       |`Bruteforce an Indala reader with a specified facility code`
+|`lf indala demod        `|Y       |`Demodulate an Indala tag (PSK1) from the GraphBuffer`
+|`lf indala altdemod     `|Y       |`Alternative method to demodulate samples for Indala 64 bit UID (option '224' for 224 bit)`
+|`lf indala reader       `|N       |`Read an Indala tag from the antenna`
+|`lf indala clone        `|N       |`Clone Indala tag to T55x7 or Q5/T5555`
+|`lf indala sim          `|N       |`Simulate Indala tag`
+
+
+### lf io
+
+ { ioProx RFIDs...            }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf io help             `|Y       |`this help`
+|`lf io demod            `|Y       |`demodulate an ioProx tag from the GraphBuffer`
+|`lf io reader           `|N       |`attempt to read and extract tag data`
+|`lf io clone            `|N       |`clone ioProx tag to T55x7 or Q5/T5555`
+|`lf io sim              `|N       |`simulate ioProx tag`
+|`lf io watch            `|N       |`continuously watch for cards. Reader mode`
+
+
+### lf jablotron
+
+ { Jablotron RFIDs...         }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf jablotron help      `|Y       |`This help`
+|`lf jablotron demod     `|Y       |`demodulate an Jablotron tag from the GraphBuffer`
+|`lf jablotron reader    `|N       |`attempt to read and extract tag data`
+|`lf jablotron clone     `|N       |`clone jablotron tag to T55x7, Q5/T5555 or EM4305/4469`
+|`lf jablotron sim       `|N       |`simulate jablotron tag`
+
+
+### lf keri
+
+ { KERI RFIDs...              }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf keri help           `|Y       |`This help`
+|`lf keri demod          `|Y       |`demodulate an KERI tag from the GraphBuffer`
+|`lf keri reader         `|N       |`attempt to read and extract tag data`
+|`lf keri clone          `|N       |`clone KERI tag to T55x7, Q5/T5555 or EM4305/4469`
+|`lf keri sim            `|N       |`simulate KERI tag`
+
+
+### lf motorola
+
+ { Motorola Flexpass RFIDs... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf motorola help       `|Y       |`This help`
+|`lf motorola demod      `|Y       |`demodulate an MOTOROLA tag from the GraphBuffer`
+|`lf motorola reader     `|N       |`attempt to read and extract tag data`
+|`lf motorola clone      `|N       |`clone MOTOROLA tag to T55x7`
+|`lf motorola sim        `|N       |`simulate MOTOROLA tag`
+
+
+### lf nedap
+
+ { Nedap RFIDs...             }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf nedap help          `|Y       |`This help`
+|`lf nedap demod         `|Y       |`demodulate Nedap tag from the GraphBuffer`
+|`lf nedap reader        `|N       |`attempt to read and extract tag data`
+|`lf nedap clone         `|N       |`clone Nedap tag to T55x7, Q5/T5555 or EM4305/4469`
+|`lf nedap sim           `|N       |`simulate Nedap tag`
+
+
+### lf nexwatch
+
+ { NexWatch RFIDs...          }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf nexwatch help       `|Y       |`This help`
+|`lf nexwatch demod      `|Y       |`demodulate a NexWatch tag (nexkey, quadrakey) from the GraphBuffer`
+|`lf nexwatch reader     `|N       |`attempt to read and extract tag data`
+|`lf nexwatch clone      `|N       |`clone NexWatch tag to T55x7, Q5/T5555 or EM4305/4469`
+|`lf nexwatch sim        `|N       |`simulate NexWatch tag`
+
+
+### lf noralsy
+
+ { Noralsy RFIDs...           }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf noralsy help        `|Y       |`This help`
+|`lf noralsy demod       `|Y       |`demodulate an Noralsy tag from the GraphBuffer`
+|`lf noralsy reader      `|N       |`attempt to read and extract tag data`
+|`lf noralsy clone       `|N       |`clone Noralsy tag to T55x7, Q5/T5555 or EM4305/4469`
+|`lf noralsy sim         `|N       |`simulate Noralsy tag`
+
+
+### lf pac
+
+ { PAC/Stanley RFIDs...       }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf pac help            `|Y       |`This help`
+|`lf pac demod           `|Y       |`demodulate a PAC tag from the GraphBuffer`
+|`lf pac reader          `|N       |`attempt to read and extract tag data`
+|`lf pac clone           `|N       |`clone PAC tag to T55x7, Q5/T5555 or EM4305/4469`
+|`lf pac sim             `|N       |`simulate PAC tag`
+
+
+### lf paradox
+
+ { Paradox RFIDs...           }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf paradox help        `|Y       |`This help`
+|`lf paradox demod       `|Y       |`demodulate a Paradox FSK tag from the GraphBuffer`
+|`lf paradox reader      `|N       |`attempt to read and extract tag data`
+|`lf paradox clone       `|N       |`clone paradox tag to T55x7, Q5/T5555 or EM4305/4469`
+|`lf paradox sim         `|N       |`simulate paradox tag`
+
+
+### lf pcf7931
+
+ { PCF7931 CHIPs...           }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf pcf7931 help        `|Y       |`This help`
+|`lf pcf7931 reader      `|N       |`Read content of a PCF7931 transponder`
+|`lf pcf7931 write       `|N       |`Write data on a PCF7931 transponder.`
+|`lf pcf7931 config      `|Y       |`Configure the password, the tags initialization delay and time offsets (optional)`
+
+
+### lf presco
+
+ { Presco RFIDs...            }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf presco help         `|Y       |`This help`
+|`lf presco demod        `|Y       |`demodulate Presco tag from the GraphBuffer`
+|`lf presco reader       `|N       |`attempt to read and extract tag data`
+|`lf presco clone        `|N       |`clone presco tag to T55x7, Q5/T5555 or EM4305/4469`
+|`lf presco sim          `|N       |`simulate presco tag`
+
+
+### lf pyramid
+
+ { Farpointe/Pyramid RFIDs... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf pyramid help        `|Y       |`this help`
+|`lf pyramid demod       `|Y       |`demodulate a Pyramid FSK tag from the GraphBuffer`
+|`lf pyramid reader      `|N       |`attempt to read and extract tag data`
+|`lf pyramid clone       `|N       |`clone pyramid tag to T55x7, Q5/T5555 or EM4305/4469`
+|`lf pyramid sim         `|N       |`simulate pyramid tag`
+
+
+### lf securakey
+
+ { Securakey RFIDs...         }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf securakey help      `|Y       |`This help`
+|`lf securakey demod     `|Y       |`demodulate an Securakey tag from the GraphBuffer`
+|`lf securakey reader    `|N       |`attempt to read and extract tag data`
+|`lf securakey clone     `|N       |`clone Securakey tag to T55x7, Q5/T5555 or EM4305/4469`
+|`lf securakey sim       `|N       |`simulate Securakey tag`
+
+
+### lf ti
+
+ { TI CHIPs...                }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf ti help             `|Y       |`This help`
+|`lf ti demod            `|Y       |`Demodulate raw bits for TI LF tag from the GraphBuffer`
+|`lf ti reader           `|N       |`Read and decode a TI 134 kHz tag`
+|`lf ti write            `|N       |`Write new data to a r/w TI 134 kHz tag`
+
+
+### lf t55xx
+
+ { T55xx CHIPs...             }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf t55xx help          `|Y       |`This help`
+|`lf t55xx clonehelp     `|N       |`Shows the available clone commands`
+|`lf t55xx config        `|Y       |`Set/Get T55XX configuration (modulation, inverted, offset, rate)`
+|`lf t55xx dangerraw     `|N       |`Sends raw bitstream. Dangerous, do not use!!`
+|`lf t55xx detect        `|Y       |`Try detecting the tag modulation from reading the configuration block`
+|`lf t55xx deviceconfig  `|N       |`Set/Get T55XX device configuration`
+|`lf t55xx dump          `|N       |`Dump T55xx card Page 0 block 0-7`
+|`lf t55xx info          `|Y       |`Show T55x7 configuration data (page 0/ blk 0)`
+|`lf t55xx p1detect      `|N       |`Try detecting if this is a t55xx tag by reading page 1`
+|`lf t55xx read          `|N       |`Read T55xx block data`
+|`lf t55xx resetread     `|N       |`Send Reset Cmd then lf read the stream to attempt to identify the start`
+|`lf t55xx restore       `|N       |`Restore T55xx card Page 0 / Page 1 blocks`
+|`lf t55xx trace         `|Y       |`Show T55x7 traceability data (page 1/ blk 0-1)`
+|`lf t55xx wakeup        `|N       |`Send AOR wakeup command`
+|`lf t55xx view          `|Y       |`Display content from tag dump file`
+|`lf t55xx write         `|N       |`Write T55xx block data`
+|`lf t55xx bruteforce    `|N       |`Simple bruteforce attack to find password`
+|`lf t55xx chk           `|N       |`Check passwords`
+|`lf t55xx protect       `|N       |`Password protect tag`
+|`lf t55xx recoverpw     `|N       |`Try to recover from bad password write from a cloner`
+|`lf t55xx sniff         `|Y       |`Attempt to recover T55xx commands from sample buffer`
+|`lf t55xx special       `|N       |`Show block changes with 64 different offsets`
+|`lf t55xx wipe          `|N       |`Wipe a T55xx tag and set defaults (will destroy any data on tag)`
+
+
+### lf trovan
+
+ { Trovan animal IDs...       }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf trovan help         `|Y       |`This help`
+|`lf trovan demod        `|Y       |`demodulate a Trovan tag from the GraphBuffer`
+|`lf trovan reader       `|N       |`attempt to read and extract tag data`
+|`lf trovan clone        `|N       |`clone Trovan tag to T55x7 or Q5/T5555`
+
+
+### lf viking
+
+ { Viking RFIDs...            }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf viking help         `|Y       |`This help`
+|`lf viking demod        `|Y       |`demodulate a Viking tag from the GraphBuffer`
+|`lf viking reader       `|N       |`attempt to read and extract tag data`
+|`lf viking clone        `|N       |`clone Viking tag to T55x7, Q5/T5555 or EM4305/4469`
+|`lf viking sim          `|N       |`simulate Viking tag`
+
+
+### lf visa2000
+
+ { Visa2000 RFIDs...          }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf visa2000 help       `|Y       |`This help`
+|`lf visa2000 demod      `|Y       |`demodulate an VISA2000 tag from the GraphBuffer`
+|`lf visa2000 reader     `|N       |`attempt to read and extract tag data`
+|`lf visa2000 clone      `|N       |`clone Visa2000 tag to T55x7, Q5/T5555 or EM4305/4469`
+|`lf visa2000 sim        `|N       |`simulate Visa2000 tag`
+
+
+### mad
+
+ { MAD commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`mad help               `|Y       |`This help`
+|`mad read               `|N       |`Read data from MAD AID sectors`
+|`mad write              `|N       |`Write data to MAD AID sectors`
+|`mad verify             `|N       |`Verify data in MAD AID sectors`
+|`mad decode             `|Y       |`Decode MAD byte array`
+|`mad encode             `|Y       |`Encode MAD byte array from AID mappings`
+|`mad test               `|Y       |`Perform MAD regression self-tests`
+
+
+### mem
+
+ { Flash memory manipulation... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`mem help               `|Y       |`This help`
+|`mem baudrate           `|N       |`Set Flash memory Spi baudrate`
+|`mem dump               `|N       |`Dump data from flash memory`
+|`mem info               `|N       |`Flash memory information`
+|`mem load               `|N       |`Load data to flash memory`
+|`mem wipe               `|N       |`Wipe data from flash memory`
+
+
+### mem spiffs
+
+ { SPI File system }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`mem spiffs help        `|Y       |`This help`
+|`mem spiffs test        `|N       |`Perform SPIFFS Operations tests`
+|`mem spiffs copy        `|N       |`Copy a file to another (destructively) in SPIFFS file system`
+|`mem spiffs check       `|N       |`Check/try to defrag faulty/fragmented file system`
+|`mem spiffs dump        `|N       |`Dump a file from SPIFFS file system`
+|`mem spiffs info        `|N       |`File system information and usage statistics`
+|`mem spiffs mount       `|N       |`Mount the SPIFFS file system if not already mounted`
+|`mem spiffs remove      `|N       |`Remove a file from SPIFFS file system`
+|`mem spiffs rename      `|N       |`Rename/move a file in SPIFFS file system`
+|`mem spiffs tree        `|N       |`Print the Flash memory file system tree`
+|`mem spiffs unmount     `|N       |`Un-mount the SPIFFS file system`
+|`mem spiffs upload      `|N       |`Upload file into SPIFFS file system`
+|`mem spiffs view        `|N       |`View file on SPIFFS file system`
+|`mem spiffs wipe        `|N       |`Wipe all files from SPIFFS file system   * dangerous *`
+
+
+### mqtt
+
+ { MQTT commmands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`mqtt help              `|Y       |`This help`
+|`mqtt send              `|Y       |`Send messages or json file over MQTT`
+|`mqtt receive           `|Y       |`Receive message or json file over MQTT`
+
+
+### nfc
+
+ { NFC commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`nfc help               `|Y       |`This help`
+|`nfc decode             `|Y       |`Decode NDEF records`
+|`nfc encode             `|Y       |`Encode NDEF records`
+
+
+### nfc type1
+
+ { NFC Forum Tag Type 1...             }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`nfc type1 read         `|N       |`read NFC Forum Tag Type 1`
+|`nfc type1 help         `|Y       |`This help`
+
+
+### nfc type2
+
+ { NFC Forum Tag Type 2...             }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`nfc type2 format       `|N       |`format MIFARE Ultralight / NTAG as NFC Forum Tag Type 2`
+|`nfc type2 read         `|N       |`read NFC Forum Tag Type 2`
+|`nfc type2 write        `|N       |`write NFC Forum Tag Type 2`
+|`nfc type2 help         `|Y       |`This help`
+
+
+### nfc type4a
+
+ { NFC Forum Tag Type 4 ISO14443A...   }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`nfc type4a format      `|N       |`format ISO-14443-a tag as NFC Tag`
+|`nfc type4a read        `|N       |`read NFC Forum Tag Type 4 A`
+|`nfc type4a write       `|N       |`write NFC Forum Tag Type 4 A`
+|`nfc type4a st25taread  `|N       |`read ST25TA as NFC Forum Tag Type 4`
+|`nfc type4a help        `|Y       |`This help`
+
+
+### nfc type4b
+
+ { NFC Forum Tag Type 4 ISO14443B...   }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`nfc type4b read        `|N       |`read NFC Forum Tag Type 4 B`
+|`nfc type4b help        `|Y       |`This help`
+
+
+### nfc mf
+
+ { NFC Type MIFARE Classic/Plus Tag... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`nfc mf cformat         `|N       |`format MIFARE Classic Tag as NFC Tag`
+|`nfc mf cread           `|N       |`read NFC Type MIFARE Classic Tag`
+|`nfc mf cwrite          `|N       |`write NFC Type MIFARE Classic Tag`
+|`nfc mf pread           `|N       |`read NFC Type MIFARE Plus Tag`
+|`nfc mf help            `|Y       |`This help`
+
+
+### nfc barcode
+
+ { NFC Barcode Tag...                  }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`nfc barcode read       `|N       |`read NFC Barcode`
+|`nfc barcode sim        `|N       |`simulate NFC Barcode`
+|`nfc barcode help       `|Y       |`This help`
+
+
+### piv
+
+ { PIV commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`piv help               `|Y       |`This help`
+|`piv select             `|N       |`Select the PIV applet`
+|`piv getdata            `|N       |`Gets a container on a PIV card`
+|`piv authsign           `|N       |`Authenticate with the card`
+|`piv scan               `|N       |`Scan PIV card for known containers`
+|`piv list               `|Y       |`List ISO7816 history`
+
+
+### reveng
+
+ { CRC calculations from RevEng software... }
+
+[=] reveng: no mode switch specified. Use reveng -h for help.
+
+### smart
+
+ { Smart card ISO-7816 commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`smart help             `|Y       |`This help`
+|`smart list             `|Y       |`List ISO 7816 history`
+|`smart brute            `|N       |`Bruteforce SFI`
+|`smart info             `|N       |`Tag information`
+|`smart pcsc             `|Y       |`Turn pm3 into pcsc reader and relay to host OS via vpcd`
+|`smart pps              `|N       |`Run an ISO 7816-3 PPS exchange`
+|`smart reader           `|N       |`Act like an IS07816 reader`
+|`smart raw              `|N       |`Send raw hex data to tag`
+|`smart upgrade          `|Y       |`Upgrade sim module firmware`
+|`smart setclock         `|N       |`Set clock speed`
+
+
+### script
+
+ { Scripting commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`script help            `|Y       |`This help`
+|`script list            `|Y       |`List available scripts`
+|`script run             `|Y       |`<name> - execute a script`
+
+
+### trace
+
+ { Trace manipulation... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`trace help             `|Y       |`This help`
+|`trace clear            `|Y       |`Clear the client side trace buffer`
+|`trace extract          `|Y       |`Extract authentication challenges found in trace`
+|`trace list             `|Y       |`List protocol data in trace buffer`
+|`trace load             `|Y       |`Load trace from file`
+|`trace save             `|Y       |`Save trace buffer to file`
+
+
+### usart
+
+ { USART commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`usart help             `|Y       |`This help`
+|`usart btpin            `|N       |`Change BT add-on PIN`
+|`usart btfactory        `|N       |`Reset BT add-on to factory settings`
+|`usart tx               `|N       |`Send string over USART`
+|`usart rx               `|N       |`Receive string over USART`
+|`usart txrx             `|N       |`Send string over USART and wait for response`
+|`usart txhex            `|N       |`Send bytes over USART`
+|`usart rxhex            `|N       |`Receive bytes over USART`
+|`usart config           `|N       |`Configure USART`
+
+
+### wiegand
+
+ { Wiegand format manipulation... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`wiegand help           `|Y       |`This help`
+|`wiegand list           `|Y       |`List available wiegand formats`
+|`wiegand encode         `|Y       |`Encode to wiegand raw hex (currently for HID Prox)`
+|`wiegand decode         `|Y       |`Convert raw hex to decoded wiegand format (currently for HID Prox)`
+
+
+Full help dump done.

@@ -1,0 +1,126 @@
+{
+    "versions": {
+        "01": {
+            "tci": {
+                "000000": {
+                    "id": "tci-vas-or-pay",
+                    "name": "VAS or payment",
+                    "description": "Used when a reader needs a pass or a payment card. Sometimes called VAS over Payment"
+                }, 
+                "000001": {
+                    "id": "tci-vas-and-pay",
+                    "name": "VAS and payment",
+                    "description": "Also called single tap mode. Allows reading multiple passes with different ids in one tap"
+                },
+                "000002": {
+                    "id": "tci-vas-only",
+                    "name": "VAS only",
+                    "description": "Used when a reader requests passes only"
+                },
+                "000003": {
+                    "id": "tci-pay-only",
+                    "name": "VAS only",
+                    "description": "Used when a reader requests payment cards only. Also disables express mode for chinese transit cards"
+                },
+                "cf0000": {
+                    "id": "tci-ignore",
+                    "name": "Ignore",
+                    "description": "iPhones before IOS17 emit this frame so that other apple devices don't react to the field"
+                }
+            }
+        },
+    
+        "02": {
+            "types": {
+                "01": {
+                    "id": "terminal-type-transit",
+                    "name": "Transit",
+                    "description": "Used by express-mode enabled transit terminals",
+                    
+                    "subtypes": {
+                        "00": {
+                            "id": "terminal-subtype-default",
+                            "name": "Default subtype",
+                            "description": "",
+
+                            "tci": {
+                                "030400": {
+                                    "id": "tci-hop-fastpass",
+                                    "name": "HOP Fastpass",
+                                    "description": ""
+                                },
+                                "030002": {
+                                    "id": "tci-transit-for-london",
+                                    "name": "TFL",
+                                    "description": "First publically known TCI, found by Proxmark community member"
+                                },
+                                "030001": {
+                                    "id": "tci-wmata",
+                                    "name": "SmartTrip",
+                                    "description": ""
+                                },
+                                "030005": {
+                                    "id": "tci-la-tapp",
+                                    "name": "LA Tap",
+                                    "description": ""
+                                },
+                                "030007": {
+                                    "id": "tci-clipper",
+                                    "name": "Clipper",
+                                    "description": ""
+                                },
+                                "03095a": {
+                                    "id": "tci-navigo",
+                                    "name": "Navigo",
+                                    "description": ""
+                                }
+                            },
+
+                            "data": {
+                                "length": 5,
+                                "name": "Fallback EMV payment networks",
+                                "description": "Bit mask of allowed EMV open loop payment cards. First byte is responsible for most popular payment networks"
+                            }
+                        }
+                    }
+                },
+                "02": {
+                    "id": "terminal-type-access",
+                    "name": "Access",
+                    "description": "Used by express-mode enabled access and key readers",
+
+                    "subtypes": {
+                        "00": {
+                            "id": "terminal-subtype-venue",
+                            "name": "Venue",
+                            "description": "Used by following venues: Offices, Parks, Universities",
+                            "tci": {
+                                "no-info-add-if-found": ""
+                            }
+                        },
+                        "06": {
+                            "id": "terminal-subtype-home-key",
+                            "name": "Home Key",
+                            "description": "Used by home key",
+                            "tci": {
+                                "021100": {
+                                    "id": "tci-homekey",
+                                    "name": "Home Key",
+                                    "description": ""
+                                }
+                            }
+                        },
+                        "09": {
+                            "id": "terminal-subtype-automotive-pairing",
+                            "name": "Automotive",
+                            "description": "Used by cars for access and setup",
+                            "tci": {
+                                "no-info-add-if-found": ""
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

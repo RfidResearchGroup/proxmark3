@@ -1,0 +1,71 @@
+                                bitlib
+                                ------
+
+                   by Reuben Thomas <rrt@sc3d.org>
+                 http://luaforge.net/projects/bitlib
+
+
+bitlib is a C library for Lua 5.1 that provides bitwise operations. It
+is copyright Reuben Thomas 2000-2009, and is released under the MIT
+license, like Lua (see http://www.lua.org/copyright.html; it's
+basically the same as the BSD license). There is no warranty.
+
+Please report bugs and make suggestions to the email address above, or
+use the LuaForge trackers.
+
+Thanks to John Passaniti for his bitwise operations library, some of
+whose ideas I used, to Shmuel Zeigerman for the test suite, to
+Thatcher Ulrich for portability fixes, and to Enrico Tassi, John
+Stiles and Eduardo Ochs for bug reports.
+
+
+Installation
+------------
+
+As normal:
+
+    ./configure && make [&& make check] [&& make install]
+
+If you get warnings about integer constants being too large, don't
+worry. They won't be used.
+
+The following options may be of interest if you have Lua installed on
+non-default paths (as you are likely to on any system supporting more
+than one version of Lua):
+
+  --libdir=DIR            Install shared library in this directory
+  --with-lua-prefix=DIR   Lua files are in DIR
+  --with-lua-includes=DIR Lua include files are in DIR
+  --with-lua-libraries=DIR
+                          Lua library files are in DIR, or "no" if not used
+  --with-lua-suffix=ARG   Lua binary and library files are suffixed with ARG
+
+For example, on Debian or Ubuntu:
+
+  ./configure --libdir=/usr/local/lib/lua/5.1 --with-lua-includes=/usr/include/lua5.1 --with-lua-suffix=5.1 --with-lua-libraries=no
+
+
+Use
+---
+
+Make sure the library is installed on your LUA_CPATH, and require it.
+
+The library provides the constant bit.bits that gives the number of
+bits that can be used in bitwise operations, and the following
+functions:
+
+bit.cast(a)        cast a to the internally-used integer type
+bit.bnot(a)        returns the one's complement of a
+bit.band(w1, ...)  returns the bitwise and of the w's
+bit.bor(w1, ...)   returns the bitwise or of the w's
+bit.bxor(w1, ...)  returns the bitwise exclusive or of the w's
+bit.lshift(a, b)   returns a shifted left b places
+bit.rshift(a, b)   returns a shifted logically right b places
+bit.arshift(a, b)  returns a shifted arithmetically right b places
+
+All function arguments should be integers that fit into the C type
+lua_Integer.
+
+The logical operations start with "b" for "bit" to avoid clashing with
+reserved words; although "xor" isn't a reserved word, it seemed better
+to use "bxor" for consistency.

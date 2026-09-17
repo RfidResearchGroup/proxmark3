@@ -1,0 +1,29 @@
+/*
+-----------------------------------------------------------------------------
+ This code is licensed to you under the terms of the GNU GPL, version 2 or,
+ at your option, any later version. See the LICENSE.txt file for the text of
+ the license.
+-----------------------------------------------------------------------------
+ Linker script for the ARM binary
+-----------------------------------------------------------------------------
+*/
+
+INCLUDE ../common_arm/ldscript.defs.at32
+INCLUDE ../common_arm/ldscript.common
+
+INCLUDE ./ldscript.osimage.phdrs
+
+ENTRY(Reset_Handler)
+
+SECTIONS
+{
+    /* The startup code goes first into FLASH, AT32 is startup from 'startup_at32f435_437.s' */
+    .isr_vector :
+    {
+        . = ALIGN(4);
+        KEEP(*(.isr_vector)) /* Startup code */
+        . = ALIGN(4);
+    } >osimage :text
+}
+
+INCLUDE ./ldscript.osimage.sections

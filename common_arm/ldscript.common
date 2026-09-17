@@ -1,0 +1,70 @@
+/*-----------------------------------------------------------------------------
+ * Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * See LICENSE.txt for the text of the license.
+ *-----------------------------------------------------------------------------
+ * Memory Layout:
+ *                SRAM START
+ *            ┌─────────────────┐
+ *            │     .data       │
+ *            ├─────────────────┤
+ *            │                 │ ← __bss_start__
+ *            │     .bss        │ ← __bss_end__
+ *            ├─────────────────┤
+ *            │                 │
+ *            │     unused      │ ← BigBuf
+ *            │                 │
+ *            ├─────────────────┤
+ *            │                 │ ← _stack_start
+ *            │     stack       │ ← _stack_end
+ *            ├─────────────────┤
+ *            │   commonarea    │ ← proxmark3_arm.h & common_area_t
+ *            └─────────────────┘
+ *                 SRAM END
+ *-----------------------------------------------------------------------------
+ * Common linker script
+ *-----------------------------------------------------------------------------
+ */
+stacksize = DEFINED(stacksize) ? stacksize : 8488;
+commonareasize = 0x20;
+
+MEMORY
+{
+    /* Phase 1 bootloader: Copies real bootloader to RAM */
+    bootphase1 : ORIGIN = mcu_flash_base_addr                                             , LENGTH = bootphase1_size
+
+    /* Main bootloader code, stored in Flash, run in RAM */
+    bootphase2 : ORIGIN = mcu_flash_base_addr + bootphase1_size                           , LENGTH = bootphase2_size
+
+    /* Place where the main OS will end up */
+    osimage    : ORIGIN = os_image_origin                                                 , LENGTH = os_image_size
+
+    /* RAM, minus small common area */
+    ram        : ORIGIN = mcu_sram_base_addr                                              , LENGTH = mcu_sram_size - commonareasize
+
+    /* Stack */
+    stack      : ORIGIN = mcu_sram_base_addr + mcu_sram_size - stacksize - commonareasize , LENGTH = stacksize
+
+    /* Communication between bootloader and main OS */
+    commonarea : ORIGIN = mcu_sram_base_addr + mcu_sram_size - commonareasize             , LENGTH = commonareasize
+}
+
+/* Export some information that can be used from within the firmware */
+_bootphase1_version_pointer = ORIGIN(bootphase1) + LENGTH(bootphase1) - 0x4;
+_osimage_entry = ORIGIN(osimage);
+_bootrom_start = ORIGIN(bootphase1);
+_bootrom_end = ORIGIN(bootphase2) + LENGTH(bootphase2);
+_flash_start = ORIGIN(bootphase1);
+_flash_end = ORIGIN(osimage) + LENGTH(osimage);
+_stack_start = ORIGIN(stack);
+_stack_end = ORIGIN(ram) + LENGTH(ram) - 8;

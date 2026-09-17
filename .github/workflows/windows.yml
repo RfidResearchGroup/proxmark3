@@ -1,0 +1,233 @@
+name: Windows Build and Test
+
+on:
+  push:
+    paths-ignore:
+      - 'doc/**'
+      - 'docker/**'
+      - 'traces/**'
+      - '.vscode/**'
+      - '**.md'
+  pull_request:
+    paths-ignore:
+      - 'doc/**'
+      - 'docker/**'
+      - 'traces/**'
+      - '.vscode/**'
+      - '**.md'
+
+jobs:
+  proxspace:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      PATH: C:/ProxSpace/msys2/ucrt64/bin;C:/ProxSpace/msys2/usr/local/bin;C:/ProxSpace/msys2/usr/bin;C:/ProxSpace/msys2/bin
+      MSYSTEM: UCRT64
+      PYTHONHOME: /ucrt64
+
+    steps:
+      - name: ProxSpace download
+        run: Invoke-WebRequest "https://github.com/Gator96100/ProxSpace/archive/master.zip" -outfile "C:\proxspace.zip" -Passthru
+
+      - name: ProxSpace extract
+        run: Expand-Archive -LiteralPath "C:\proxspace.zip" -DestinationPath "C:\"
+
+      - name: ProxSpace delete zip
+        run: Remove-Item "C:\proxspace.zip"
+
+      - name: ProxSpace rename folder
+        run: Get-ChildItem -Path "C:\ProxSpace-*" | Rename-Item -NewName (Split-Path C:\ProxSpace -Leaf)
+
+      - name: ProxSpace overwrite packages.txt for UCRT64
+        run: |
+          @'
+          ##############################
+          #         General           #
+          ##############################
+          git
+          make
+          pkg-config
+          mingw-w64-ucrt-x86_64-cmake
+          procps
+          base-devel
+          ##############################
+          #         Proxmark3         #
+          ##############################
+          mingw-w64-ucrt-x86_64-gcc
+          mingw-w64-ucrt-x86_64-arm-none-eabi-gcc
+          mingw-w64-ucrt-x86_64-arm-none-eabi-gdb
+          mingw-w64-ucrt-x86_64-arm-none-eabi-binutils
+          mingw-w64-ucrt-x86_64-arm-none-eabi-newlib
+          mingw-w64-ucrt-x86_64-readline
+          mingw-w64-ucrt-x86_64-libsndfile
+          mingw-w64-ucrt-x86_64-lua
+          mingw-w64-ucrt-x86_64-bzip2
+          mingw-w64-ucrt-x86_64-python
+          mingw-w64-ucrt-x86_64-python-pip
+          mingw-w64-ucrt-x86_64-python-setuptools
+          mingw-w64-ucrt-x86_64-python-cryptography
+          mingw-w64-ucrt-x86_64-jansson
+          mingw-w64-ucrt-x86_64-qt6-base
+          mingw-w64-ucrt-x86_64-gdb
+          mingw-w64-ucrt-x86_64-openocd
+          mingw-w64-ucrt-x86_64-opencl-icd
+          mingw-w64-ucrt-x86_64-lz4
+          mingw-w64-ucrt-x86_64-libgd
+          mingw-w64-ucrt-x86_64-openssl
+          ##############################
+          #       ChameleonMini       #
+          ##############################
+          #mingw-w64-ucrt-x86_64-dfu-programmer
+          #mingw-w64-ucrt-x86_64-avrdude
+          #mingw-w64-ucrt-x86_64-avr-binutils
+          #mingw-w64-ucrt-x86_64-avr-gcc
+          #mingw-w64-ucrt-x86_64-avr-gdb
+          #mingw-w64-ucrt-x86_64-avr-libc
+          '@ | Set-Content -Path "C:\ProxSpace\setup\packages.txt" -Encoding UTF8
+
+      - name: ProxSpace version
+        run: |
+          $psversion = (Select-String -Pattern 'PSVERSION=' -SimpleMatch -Path "C:\ProxSpace\setup\09-proxspace_setup.post").Line.Split("""")[1]
+          Write-Host "ProxSpace version: $psversion"
+
+      - name: ProxSpace initial startup
+        working-directory: C:\ProxSpace
+        run: |
+            $maxAttempts = 3
+            $delay = 20
+            for ($i = 1; $i -le $maxAttempts; $i++) {
+                Write-Host "Attempt $i..."
+                ./runme64.bat -c "exit"
+                if ($LASTEXITCODE -eq 0) { exit 0 }
+                if ($i -lt $maxAttempts) { Start-Sleep -Seconds $delay }
+            }
+            exit 1
+
+      - uses: actions/checkout@v6
+
+      # TODO workaround: "error: linker script file 'xxxx' appears multiple times"
+      # This should be reverted once MSYS2 ships a non-broken version of the linker.
+      - name: Downgrade ARM linker (Windows, temporary)
+        run: pacman -U --noconfirm https://repo.msys2.org/mingw/ucrt64/mingw-w64-ucrt-x86_64-arm-none-eabi-binutils-2.46.1-1-any.pkg.tar.zst
+
+      - name: make clean
+        run: make clean
+
+      - name: Build
+        run: make -j $([System.Environment]::ProcessorCount + 1) V=1
+
+      - name: Test
+        run: make check
+
+      - name: make clean
+        run: make clean
+
+      - name: Build btaddon
+        run: make -j $([System.Environment]::ProcessorCount + 1) V=1 PLATFORM_EXTRAS=BTADDON
+
+      - name: Test btaddon
+        run: make check
+
+      - name: make clean
+        run: make clean
+
+      - name: Prepare cmake build folders
+        run: |
+          mkdir -p client/build
+          ln -s ../cmdscripts client/build/
+          ln -s ../luascripts client/build/
+          ln -s ../pyscripts client/build/
+          ln -s ../lualibs client/build/
+
+      - name: Initiate cmake environment
+        run: cmake -G"MSYS Makefiles" ..
+        working-directory: client/build/
+
+      - name: Build cmake
+        run: make -j $([System.Environment]::ProcessorCount + 1) VERBOSE=1
+        working-directory: client/build/
+
+      - name: Test cmake
+        run: make client/check CHECKARGS="--clientbin ./client/build/proxmark3"
+
+  wsl:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: wsl-bash {0}
+
+    steps:
+      - name: WSL setup
+        uses: Vampire/setup-wsl@v7
+        with:
+          distribution: Ubuntu-24.04
+          update: "true"
+          additional-packages: git
+            ca-certificates
+            build-essential
+            pkg-config
+            libreadline-dev
+            gcc-arm-none-eabi
+            libnewlib-dev
+            libbz2-dev
+            liblz4-dev
+            qt6-base-dev
+            cmake
+            libpython3-dev
+            libssl-dev
+            libgd-dev
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          install -m 0755 /root/.local/bin/uv /usr/local/bin/
+          install -m 0755 /root/.local/bin/uvx /usr/local/bin/
+      - name: Set git to use LF
+        shell: bash
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
+      - uses: actions/checkout@v6
+
+      - name: make clean
+        run: make clean
+
+      - name: Build
+        run: make -j$((`nproc` + 1)) V=1
+
+      - name: Test
+        run: make check
+
+      - name: make clean
+        run: make clean
+
+      - name: Build btaddon
+        run: make -j$((`nproc` + 1)) V=1 PLATFORM_EXTRAS=BTADDON
+
+      - name: Test btaddon
+        run: make check
+
+      - name: make clean
+        run: make clean
+
+      - name: Prepare cmake build folders
+        run: |
+          mkdir -p client/build
+          ln -s ../cmdscripts client/build/
+          ln -s ../luascripts client/build/
+          ln -s ../pyscripts client/build/
+          ln -s ../lualibs client/build/
+
+      - name: Initiate cmake environment
+        run: cmake ..
+        working-directory: client/build/
+
+      - name: Build cmake
+        run: make -j$((`nproc` + 1)) VERBOSE=1
+        working-directory: client/build/
+
+      - name: Test cmake
+        run: make client/check CHECKARGS="--clientbin ./client/build/proxmark3"

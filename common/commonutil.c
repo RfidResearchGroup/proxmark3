@@ -1,0 +1,704 @@
+//-----------------------------------------------------------------------------
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
+// Utility functions used in many places, not specific to any piece of code.
+//-----------------------------------------------------------------------------
+#include "commonutil.h"
+#include "pm3_cmd.h"
+#include <string.h>
+#include "stdbool.h"
+
+// Specific firmware versions correspond to specific main chip types.
+typedef struct {
+    int magic;
+    uint32_t chiptype;
+} version_info_map_chip_type_t;
+
+static version_info_map_chip_type_t g_version_info_map[] = {
+    {.magic = VERSION_INFORMATION_MAGIC_PM5V, .chiptype = MAIN_CHIP_TYPE_AT32},
+    {.magic = VERSION_INFORMATION_MAGIC_PM3V, .chiptype = MAIN_CHIP_TYPE_AT91},
+};
+
+/**
+ * Check version information is valid
+ * @param version_info pointer to the struct version_information_t
+ * @return true is valid, false is invalid.
+ */
+bool CheckValidInformationMagic(const void *version_info) {
+    const struct version_information_t *v = (const struct version_information_t *)version_info;
+    for (int i = 0; i < ARRAYLEN(g_version_info_map); ++i) {
+        if (v->magic == g_version_info_map[i].magic) {
+            return true; // Valid magic found.
+        }
+    }
+    return false;
+}
+
+bool CheckInformationMagicAndChipType(const void *version_info, uint32_t chiptype) {
+    const struct version_information_t *v = (const struct version_information_t *) version_info;
+    for (int i = 0; i < ARRAYLEN(g_version_info_map); ++i) {
+        if (v->magic == g_version_info_map[i].magic) {
+            if (chiptype == g_version_info_map[i].chiptype) {
+                return true;
+            }
+            return false; // Magic matches but chip type does not match.
+        }
+    }
+    return false; // No valid magic found.
+}
+
+/* Similar to FpgaGatherVersion this formats stored version information
+ * into a string representation. It takes a pointer to the struct version_information_t,
+ * verifies the magic properties, then stores a formatted string, prefixed by
+ * prefix in dst.
+ */
+void FormatVersionInformation(char *dst, int len, const char *prefix, const void *version_info) {
+    const struct version_information_t *v = (const struct version_information_t *)version_info;
+    dst[0] = 0;
+    strncat(dst, prefix, len - 1);
+
+    if (!CheckValidInformationMagic(version_info)) {
+        strncat(dst, "Missing/Invalid version information", len - strlen(dst) - 1);
+        return;
+    }
+    if (v->versionversion != 1) {
+        strncat(dst, "Version information not understood", len - strlen(dst) - 1);
+        return;
+    }
+    if (!v->present) {
+        strncat(dst, "Version information not available", len - strlen(dst) - 1);
+        return;
+    }
+
+    strncat(dst, v->gitversion, len - strlen(dst) - 1);
+    if (v->clean == 0) {
+        strncat(dst, "-unclean", len - strlen(dst) - 1);
+    } else if (v->clean == 2) {
+        strncat(dst, "-suspect", len - strlen(dst) - 1);
+    }
+
+    strncat(dst, " ", len - strlen(dst) - 1);
+    strncat(dst, v->buildtime, len - strlen(dst) - 1);
+    strncat(dst, " ", len - strlen(dst) - 1);
+    strncat(dst, v->armsrc, len - strlen(dst) - 1);
+}
+
+void format_version_information_short(char *dst, int len, const void *version_info) {
+    const struct version_information_t *v = (const struct version_information_t *)version_info;
+    dst[0] = 0;
+
+    if (!CheckValidInformationMagic(version_info)) {
+        strncat(dst, "Missing/Invalid version information", len - strlen(dst) - 1);
+        return;
+    }
+    if (v->versionversion != 1) {
+        strncat(dst, "Version information not understood", len - strlen(dst) - 1);
+        return;
+    }
+    if (!v->present) {
+        strncat(dst, "Version information not available", len - strlen(dst) - 1);
+        return;
+    }
+
+    strncat(dst, v->gitversion, len - strlen(dst) - 1);
+    strncat(dst, " ", len - strlen(dst) - 1);
+    strncat(dst, v->buildtime, len - strlen(dst) - 1);
+}
+
+/*
+ ref  http://www.csm.ornl.gov/~dunigan/crc.html
+ Returns the value v with the bottom b [0,32] bits reflected.
+ Example: reflect(0x3e23L,3) == 0x3e26
+*/
+uint32_t reflect(uint32_t v, int b) {
+    uint32_t t = v;
+    for (int i = 0; i < b; ++i) {
+        if (t & 1)
+            v |=  BITMASK((b - 1) - i);
+        else
+            v &= ~BITMASK((b - 1) - i);
+        t >>= 1;
+    }
+    return v;
+}
+
+// https://graphics.stanford.edu/~seander/bithacks.html#BitReverseTable
+
+// Reverse the bits in a byte with 3 operations (64-bit multiply and modulus division):
+uint8_t reflect8(uint8_t b) {
+    return (b * 0x0202020202ULL & 0x010884422010ULL) % 1023;
+}
+
+uint16_t reflect16(uint16_t v) {
+    v = (reflect8(v) << 8) | (reflect8(v >> 8) & 0xFF);
+    return v;
+}
+
+uint32_t reflect32(uint32_t v) {
+    // https://graphics.stanford.edu/~seander/bithacks.html#BitReverseTable
+    // swap odd and even bits
+    v = ((v >> 1) & 0x55555555) | ((v & 0x55555555) << 1);
+    // swap consecutive pairs
+    v = ((v >> 2) & 0x33333333) | ((v & 0x33333333) << 2);
+    // swap nibbles ...
+    v = ((v >> 4) & 0x0F0F0F0F) | ((v & 0x0F0F0F0F) << 4);
+    // swap bytes
+    v = ((v >> 8) & 0x00FF00FF) | ((v & 0x00FF00FF) << 8);
+    // swap 2-byte long pairs
+    v = (v >> 16) | (v               << 16);
+    return v;
+}
+
+uint64_t reflect48(uint64_t v) {
+    uint64_t vhi = reflect16(v >> 32);
+    uint64_t vlo = reflect32(v);
+    v = (vlo << 32) | (vhi & 0xFFFF);
+    return v;
+}
+
+uint64_t reflect64(uint64_t v) {
+    // https://graphics.stanford.edu/~seander/bithacks.html#BitReverseTable
+    // swap 4-byte long pairs
+    uint64_t v1 = reflect32(v >> 32);
+    uint64_t v2 = reflect32(v);
+    v = (v2 << 32) | (v1 & 0xFFFFFFFF);
+    return v;
+}
+
+void num_to_bytes(uint64_t n, size_t len, uint8_t *dest) {
+    while (len--) {
+        dest[len] = (uint8_t) n;
+        n >>= 8;
+    }
+}
+
+uint64_t bytes_to_num(const uint8_t *src, size_t len) {
+    uint64_t num = 0;
+    while (len--) {
+        num = (num << 8) | (*src);
+        src++;
+    }
+    return num;
+}
+
+uint16_t MemLeToUint2byte(const uint8_t *data) {
+    return (uint16_t)(
+               (((uint16_t)(data[1])) << 8) +
+               (((uint16_t)(data[0])) << 0)
+           );
+}
+
+uint32_t MemLeToUint3byte(const uint8_t *data) {
+    return (uint32_t)(
+               (((uint32_t)(data[2])) << 16) +
+               (((uint32_t)(data[1])) << 8) +
+               (((uint32_t)(data[0])) << 0)
+           );
+}
+
+uint32_t MemLeToUint4byte(const uint8_t *data) {
+    return (uint32_t)(
+               (((uint32_t)(data[3])) << 24) +
+               (((uint32_t)(data[2])) << 16) +
+               (((uint32_t)(data[1])) << 8) +
+               (((uint32_t)(data[0])) << 0)
+           );
+}
+
+uint64_t MemLeToUint5byte(const uint8_t *data) {
+    return (uint64_t)(
+               (((uint64_t)(data[4])) << 32) +
+               (((uint64_t)(data[3])) << 24) +
+               (((uint64_t)(data[2])) << 16) +
+               (((uint64_t)(data[1])) << 8) +
+               (((uint64_t)(data[0])) << 0)
+           );
+}
+
+uint64_t MemLeToUint6byte(const uint8_t *data) {
+    return (uint64_t)(
+               (((uint64_t)(data[5])) << 40) +
+               (((uint64_t)(data[4])) << 32) +
+               (((uint64_t)(data[3])) << 24) +
+               (((uint64_t)(data[2])) << 16) +
+               (((uint64_t)(data[1])) << 8) +
+               (((uint64_t)(data[0])) << 0)
+           );
+}
+
+uint64_t MemLeToUint7byte(const uint8_t *data) {
+    return (uint64_t)(
+               (((uint64_t)(data[6])) << 48) +
+               (((uint64_t)(data[5])) << 40) +
+               (((uint64_t)(data[4])) << 32) +
+               (((uint64_t)(data[3])) << 24) +
+               (((uint64_t)(data[2])) << 16) +
+               (((uint64_t)(data[1])) << 8) +
+               (((uint64_t)(data[0])) << 0)
+           );
+}
+
+uint64_t MemLeToUint8byte(const uint8_t *data) {
+    return (uint64_t)(
+               (((uint64_t)(data[7])) << 56) +
+               (((uint64_t)(data[6])) << 48) +
+               (((uint64_t)(data[5])) << 40) +
+               (((uint64_t)(data[4])) << 32) +
+               (((uint64_t)(data[3])) << 24) +
+               (((uint64_t)(data[2])) << 16) +
+               (((uint64_t)(data[1])) << 8) +
+               (((uint64_t)(data[0])) << 0)
+           );
+}
+
+uint16_t MemBeToUint2byte(const uint8_t *data) {
+    return (uint16_t)(
+               (((uint16_t)(data[0])) << 8) +
+               (((uint16_t)(data[1])) << 0)
+           );
+}
+
+uint32_t MemBeToUint3byte(const uint8_t *data) {
+    return (uint32_t)(
+               (((uint32_t)(data[0])) << 16) +
+               (((uint32_t)(data[1])) << 8) +
+               (((uint32_t)(data[2])) << 0)
+           );
+}
+
+uint32_t MemBeToUint4byte(const uint8_t *data) {
+    return (uint32_t)(
+               (((uint32_t)(data[0])) << 24) +
+               (((uint32_t)(data[1])) << 16) +
+               (((uint32_t)(data[2])) << 8) +
+               (((uint32_t)(data[3])) << 0)
+           );
+}
+
+uint64_t MemBeToUint5byte(const uint8_t *data) {
+    return (uint64_t)(
+               (((uint64_t)(data[0])) << 32) +
+               (((uint64_t)(data[1])) << 24) +
+               (((uint64_t)(data[2])) << 16) +
+               (((uint64_t)(data[3])) << 8) +
+               (((uint64_t)(data[4])) << 0)
+           );
+}
+
+uint64_t MemBeToUint6byte(const uint8_t *data) {
+    return (uint64_t)(
+               (((uint64_t)(data[0])) << 40) +
+               (((uint64_t)(data[1])) << 32) +
+               (((uint64_t)(data[2])) << 24) +
+               (((uint64_t)(data[3])) << 16) +
+               (((uint64_t)(data[4])) << 8) +
+               (((uint64_t)(data[5])) << 0)
+           );
+}
+
+uint64_t MemBeToUint7byte(const uint8_t *data) {
+    return (uint64_t)(
+               (((uint64_t)(data[0])) << 48) +
+               (((uint64_t)(data[1])) << 40) +
+               (((uint64_t)(data[2])) << 32) +
+               (((uint64_t)(data[3])) << 24) +
+               (((uint64_t)(data[4])) << 16) +
+               (((uint64_t)(data[5])) << 8) +
+               (((uint64_t)(data[6])) << 0)
+           );
+}
+
+uint64_t MemBeToUint8byte(const uint8_t *data) {
+    return (uint64_t)(
+               (((uint64_t)(data[0])) << 56) +
+               (((uint64_t)(data[1])) << 48) +
+               (((uint64_t)(data[2])) << 40) +
+               (((uint64_t)(data[3])) << 32) +
+               (((uint64_t)(data[4])) << 24) +
+               (((uint64_t)(data[5])) << 16) +
+               (((uint64_t)(data[6])) << 8) +
+               (((uint64_t)(data[7])) << 0)
+           );
+}
+
+void Uint2byteToMemLe(uint8_t *data, uint16_t value) {
+    data[0] = (uint8_t)((value >> 0) & 0xffu);
+    data[1] = (uint8_t)((value >> 8) & 0xffu);
+}
+
+void Uint3byteToMemLe(uint8_t *data, uint32_t value) {
+    data[0] = (uint8_t)((value >> 0) & 0xffu);
+    data[1] = (uint8_t)((value >> 8) & 0xffu);
+    data[2] = (uint8_t)((value >> 16) & 0xffu);
+}
+
+void Uint4byteToMemLe(uint8_t *data, uint32_t value) {
+    data[0] = (uint8_t)((value >> 0) & 0xffu);
+    data[1] = (uint8_t)((value >> 8) & 0xffu);
+    data[2] = (uint8_t)((value >> 16) & 0xffu);
+    data[3] = (uint8_t)((value >> 24) & 0xffu);
+}
+
+void Uint5byteToMemLe(uint8_t *data, uint64_t value) {
+    data[0] = (uint8_t)((value >> 0) & 0xffu);
+    data[1] = (uint8_t)((value >> 8) & 0xffu);
+    data[2] = (uint8_t)((value >> 16) & 0xffu);
+    data[3] = (uint8_t)((value >> 24) & 0xffu);
+    data[4] = (uint8_t)((value >> 32) & 0xffu);
+}
+
+void Uint6byteToMemLe(uint8_t *data, uint64_t value) {
+    data[0] = (uint8_t)((value >> 0) & 0xffu);
+    data[1] = (uint8_t)((value >> 8) & 0xffu);
+    data[2] = (uint8_t)((value >> 16) & 0xffu);
+    data[3] = (uint8_t)((value >> 24) & 0xffu);
+    data[4] = (uint8_t)((value >> 32) & 0xffu);
+    data[5] = (uint8_t)((value >> 40) & 0xffu);
+}
+
+void Uint7byteToMemLe(uint8_t *data, uint64_t value) {
+    data[0] = (uint8_t)((value >> 0) & 0xffu);
+    data[1] = (uint8_t)((value >> 8) & 0xffu);
+    data[2] = (uint8_t)((value >> 16) & 0xffu);
+    data[3] = (uint8_t)((value >> 24) & 0xffu);
+    data[4] = (uint8_t)((value >> 32) & 0xffu);
+    data[5] = (uint8_t)((value >> 40) & 0xffu);
+    data[6] = (uint8_t)((value >> 48) & 0xffu);
+}
+
+void Uint8byteToMemLe(uint8_t *data, uint64_t value) {
+    data[0] = (uint8_t)((value >> 0) & 0xffu);
+    data[1] = (uint8_t)((value >> 8) & 0xffu);
+    data[2] = (uint8_t)((value >> 16) & 0xffu);
+    data[3] = (uint8_t)((value >> 24) & 0xffu);
+    data[4] = (uint8_t)((value >> 32) & 0xffu);
+    data[5] = (uint8_t)((value >> 40) & 0xffu);
+    data[6] = (uint8_t)((value >> 48) & 0xffu);
+    data[7] = (uint8_t)((value >> 56) & 0xffu);
+}
+
+void Uint2byteToMemBe(uint8_t *data, uint16_t value) {
+    data[0] = (uint8_t)((value >> 8) & 0xffu);
+    data[1] = (uint8_t)((value >> 0) & 0xffu);
+}
+
+void Uint3byteToMemBe(uint8_t *data, uint32_t value) {
+    data[0] = (uint8_t)((value >> 16) & 0xffu);
+    data[1] = (uint8_t)((value >> 8) & 0xffu);
+    data[2] = (uint8_t)((value >> 0) & 0xffu);
+}
+
+void Uint4byteToMemBe(uint8_t *data, uint32_t value) {
+    data[0] = (uint8_t)((value >> 24) & 0xffu);
+    data[1] = (uint8_t)((value >> 16) & 0xffu);
+    data[2] = (uint8_t)((value >> 8) & 0xffu);
+    data[3] = (uint8_t)((value >> 0) & 0xffu);
+}
+
+void Uint5byteToMemBe(uint8_t *data, uint64_t value) {
+    data[0] = (uint8_t)((value >> 32) & 0xffu);
+    data[1] = (uint8_t)((value >> 24) & 0xffu);
+    data[2] = (uint8_t)((value >> 16) & 0xffu);
+    data[3] = (uint8_t)((value >> 8) & 0xffu);
+    data[4] = (uint8_t)((value >> 0) & 0xffu);
+}
+
+void Uint6byteToMemBe(uint8_t *data, uint64_t value) {
+    data[0] = (uint8_t)((value >> 40) & 0xffu);
+    data[1] = (uint8_t)((value >> 32) & 0xffu);
+    data[2] = (uint8_t)((value >> 24) & 0xffu);
+    data[3] = (uint8_t)((value >> 16) & 0xffu);
+    data[4] = (uint8_t)((value >> 8) & 0xffu);
+    data[5] = (uint8_t)((value >> 0) & 0xffu);
+}
+
+void Uint7byteToMemBe(uint8_t *data, uint64_t value) {
+    data[0] = (uint8_t)((value >> 48) & 0xffu);
+    data[1] = (uint8_t)((value >> 40) & 0xffu);
+    data[2] = (uint8_t)((value >> 32) & 0xffu);
+    data[3] = (uint8_t)((value >> 24) & 0xffu);
+    data[4] = (uint8_t)((value >> 16) & 0xffu);
+    data[5] = (uint8_t)((value >> 8) & 0xffu);
+    data[6] = (uint8_t)((value >> 0) & 0xffu);
+}
+
+void Uint8byteToMemBe(uint8_t *data, uint64_t value) {
+    data[0] = (uint8_t)((value >> 56) & 0xffu);
+    data[1] = (uint8_t)((value >> 48) & 0xffu);
+    data[2] = (uint8_t)((value >> 40) & 0xffu);
+    data[3] = (uint8_t)((value >> 32) & 0xffu);
+    data[4] = (uint8_t)((value >> 24) & 0xffu);
+    data[5] = (uint8_t)((value >> 16) & 0xffu);
+    data[6] = (uint8_t)((value >> 8) & 0xffu);
+    data[7] = (uint8_t)((value >> 0) & 0xffu);
+}
+
+// Rotate Left - Ultralight, Desfire
+void rol(uint8_t *data, const size_t n) {
+    uint8_t first = data[0];
+    for (size_t i = 0; i < n - 1; i++) {
+        data[i] = data[i + 1];
+    }
+    data[n - 1] = first;
+}
+
+// Rotate Right - Ultralight, Desfire
+void ror(uint8_t *data, const size_t n) {
+    uint8_t last = data[n - 1];
+
+    for (int i = n - 1; i > 0; i--) {
+        data[i] = data[i - 1];
+    }
+
+    data[0] = last;
+}
+
+void xor(uint8_t *dest, const uint8_t *src, size_t n) {
+
+    const uint8_t *s = src;
+    uint8_t *d = dest;
+
+    for (; n > 0; n--) {
+        *d++ ^= *s++;
+    }
+}
+
+// left shift an array of length one bit
+void lsl(uint8_t *d, size_t n) {
+    for (size_t i = 0; i < n - 1; i++) {
+        d[i] = (d[i] << 1) | (d[i + 1] >> 7);
+    }
+    d[n - 1] <<= 1;
+}
+
+void lslx(uint8_t *d, size_t n, uint8_t shifts) {
+    for (uint8_t i = 0; i < shifts; i++) {
+        for (size_t j = 0; j < n - 1; j++) {
+            d[j] = (d[j] << 1) | (d[j + 1] >> 7);
+        }
+        d[n - 1] <<= 1;
+    }
+}
+
+// right shift an array of length one bit
+void rsl(uint8_t *d, size_t n) {
+
+    uint8_t carry = 0;
+
+    for (size_t i = 0; i < n; i++) {
+
+        // Save the LSB before shifting
+        uint8_t new_carry = d[i] & 0x1;
+
+        // Shift current byte right and incorporate previous carry
+        d[i] = (d[i] >> 1) | (carry ? 0x80 : 0);
+
+        // Update carry for next byte
+        carry = new_carry;
+    }
+}
+
+void rslx(uint8_t *d, size_t n, uint8_t shifts) {
+
+    uint8_t carry = 0;
+    for (uint8_t j = 0; j < shifts; j++) {
+
+        for (size_t i = 0; i < n; i++) {
+
+            // Save the LSB before shifting
+            uint8_t new_carry = d[i] & 0x1;
+
+            // Shift current byte right and incorporate previous carry
+            d[i] = (d[i] >> 1) | (carry ? 0x80 : 0);
+
+            // Update carry for next byte
+            carry = new_carry;
+        }
+    }
+}
+
+
+// BSWAP24 of array[3]
+uint32_t le24toh(const uint8_t data[3]) {
+    return (data[2] << 16) | (data[1] << 8) | data[0];
+}
+
+// BSWAP24, take u32, output array
+void htole24(uint32_t val, uint8_t data[3]) {
+    data[0] = (uint8_t) val;
+    data[1] = (uint8_t)(val >> 8);
+    data[2] = (uint8_t)(val >> 16);
+}
+
+
+// ROL on u32
+uint32_t rotl(uint32_t a, uint8_t n) {
+    n &= 31;
+    return (a << n) | (a >> (32 - n));
+}
+
+// ROR on u32
+uint32_t rotr(uint32_t a, uint8_t n) {
+    n &= 31;
+    return (a >> n) | (a << (32 - n));
+}
+
+uint16_t get_sw(const uint8_t *d, uint16_t n) {
+    if (n < 2)
+        return 0;
+
+    n -= 2;
+    return (d[n] << 8 | d[n + 1]);
+}
+
+// reverse same array
+void reverse_array(uint8_t *d, size_t n) {
+    if (d == NULL || n < 2) {
+        return;
+    }
+
+    for (int i = 0, j = n - 1; i < j; ++i, --j) {
+        d[i] ^= d[j];
+        d[j] ^= d[i];
+        d[i] ^= d[j];
+    }
+}
+
+// reverse src array into dest array
+void reverse_array_copy(const uint8_t *src, int src_len, uint8_t *dest) {
+    if (src == NULL || src_len == 0 || dest == NULL) {
+        return;
+    }
+
+    for (int i = 0; i < src_len; i++) {
+        dest[i] = src[(src_len - 1) - i];
+    }
+}
+
+static int hexchar_to_dec(char ch) {
+    if (ch >= '0' && ch <= '9') {
+        return ch - '0';
+    }
+    if (ch >= 'a' && ch <= 'f') {
+        return ch - 'a' + 10;
+    }
+    if (ch >= 'A' && ch <= 'F') {
+        return ch - 'A' + 10;
+    }
+    return -1;
+}
+
+// no spaces allowed for input hex string
+bool hexstr_to_byte_array(const char *hexstr, uint8_t *d, size_t *n) {
+
+    size_t hexstr_len = strlen(hexstr);
+    if (hexstr_len & 1) {
+        return false;
+    }
+
+    *n = (hexstr_len >> 1);
+
+    for (int i = 0; i < *n; i++) {
+
+        char c1 = *hexstr++;
+        char c2 = *hexstr++;
+
+        if (c1 == '\0' || c2 == '\0') {
+            return false;
+        }
+
+        int b = (hexchar_to_dec(c1) << 4) | hexchar_to_dec(c2);
+        if (b < 0) {
+            // Error: invalid hex character
+            return false;
+        }
+        d[i] = (uint8_t) b;
+    }
+    return true;
+}
+
+void reverse_arraybytes(uint8_t *arr, size_t len) {
+    size_t i;
+    for (i = 0; i < len ; i++) {
+        arr[i] = reflect8(arr[i]);
+    }
+}
+
+void reverse_arraybytes_copy(const uint8_t *arr, uint8_t *dest, size_t len) {
+    for (size_t i = 0; i < len ; i++) {
+        dest[i] = reflect8(arr[i]);
+    }
+}
+
+// TODO: Boost performance by copying in chunks of 1, 2, or 4 bytes when feasible.
+/**
+ * @brief Concatenate bits from src to dest, bitstream is stored MSB first
+ * which means that the dest_offset=0 is the MSB of the dest[0]
+ *
+ */
+size_t concatbits(uint8_t *dest, int dest_offset, const uint8_t *src, int src_offset, size_t nbits, bool src_lsb) {
+    int i, end, step;
+
+    // overlap
+    if ((src - dest) * 8 + src_offset - dest_offset > 0) {
+        i = 0;
+        end = nbits;
+        step = 1;
+    } else {
+        i = nbits - 1;
+        end = -1;
+        step = -1;
+    }
+
+    for (; i != end; i += step) {
+        // equiv of dest_bits[dest_offset + i] = src_bits[src_offset + i]
+        CLEAR_BIT_MSB(dest, dest_offset + i);
+        if (src_lsb ? TEST_BIT_LSB(src, src_offset + i) : TEST_BIT_MSB(src, src_offset + i)) SET_BIT_MSB(dest, dest_offset + i);
+    }
+
+    return dest_offset + nbits;
+}
+
+int char2int(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    return -1; // Invalid character for hex
+}
+
+// returns the number of bytes written
+int hexstr2ByteArr(const char *hexstr, unsigned char *array, size_t asize) {
+    size_t n = 0;
+    while (hexstr[n] != '\0') {
+        n++;
+    }
+
+    // Check if the input is valid and fits in the output array
+    if (n % 2 != 0 || asize < n >> 1) {
+        return -1; // Error: invalid length or insufficient byte array size
+    }
+
+    for (size_t i = 0; i < n; i += 2) {
+        int high = char2int(hexstr[i]);
+        int low = char2int(hexstr[i + 1]);
+
+        if (high == -1 || low == -1) {
+            return -1; // Error: invalid hex character
+        }
+
+        array[i >> 1] = (high << 4) | low;
+    }
+    return n >> 1;
+}

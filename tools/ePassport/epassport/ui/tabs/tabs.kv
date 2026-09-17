@@ -1,0 +1,367 @@
+#:import theme epassport.ui.theme
+#:import HexView epassport.ui.widgets.hexview.HexView
+#:import LogPane epassport.ui.widgets.logpane.LogPane
+#:import Portrait epassport.ui.widgets.portrait.Portrait
+
+<BookTab>:
+    font_name: theme.FONT_LABEL_BOLD
+    font_size: sp(10)
+    color: theme.VALUE if self.active else self.palette["text_dim"]
+    halign: "center"
+    valign: "middle"
+    text_size: self.size
+    shorten: True
+    shorten_from: "right"
+    canvas.before:
+        # An inactive tab is tucked down a few pixels so the active one reads
+        # as the front page of the book.
+        Color:
+            rgba: self.palette["tab_active"] if self.active else self.palette["tab"]
+        RoundedRectangle:
+            pos: self.x, self.y
+            size: self.width, self.height - (0 if self.active else dp(3))
+            radius: [dp(6), dp(6), 0, 0]
+        Color:
+            rgba: self.palette["border"]
+        Line:
+            rounded_rectangle: (self.x, self.y, self.width, self.height - (0 if self.active else dp(3)), dp(6))
+            width: 1
+
+<TabStrip>:
+    orientation: "horizontal"
+    size_hint_y: None
+    height: dp(26)
+    spacing: dp(3)
+    padding: dp(2), 0, dp(2), 0
+
+<KeyValueRow>:
+    size_hint_y: None
+    height: max(dp(20), caption.texture_size[1], value.texture_size[1]) + dp(6)
+    spacing: dp(10)
+    padding: 0, dp(3), 0, dp(3)
+    # Both labels are pinned to the top of the row and sized to their own
+    # text.  Letting one fill the row while the other did not left the caption
+    # riding a few pixels above its value.
+    Label:
+        id: caption
+        text: root.key
+        font_name: theme.FONT_LABEL_BOLD
+        font_size: sp(12)
+        color: root.palette["text_dim"]
+        size_hint: None, None
+        width: dp(190)
+        height: self.texture_size[1]
+        pos_hint: {"top": 1}
+        halign: "right"
+        valign: "top"
+        text_size: self.width, None
+    Label:
+        id: value
+        text: root.value
+        font_name: theme.FONT_LABEL
+        font_size: sp(13)
+        color: root.palette["text"]
+        size_hint_y: None
+        height: self.texture_size[1]
+        pos_hint: {"top": 1}
+        halign: "left"
+        valign: "top"
+        text_size: self.width, None
+
+<DetailPage>:
+    orientation: "vertical"
+    padding: dp(12)
+    spacing: dp(6)
+
+    Label:
+        text: root.title
+        font_name: theme.FONT_LABEL_BOLD
+        font_size: sp(16)
+        color: root.palette["accent"]
+        size_hint_y: None
+        height: dp(26)
+        halign: "left"
+        valign: "middle"
+        text_size: self.size
+
+    Label:
+        text: root.empty_text
+        font_name: theme.FONT_LABEL
+        font_size: sp(13)
+        color: root.palette["text_dim"]
+        size_hint_y: None
+        height: dp(24) if not root.rows else 0
+        opacity: 0 if root.rows else 1
+        halign: "left"
+        valign: "middle"
+        text_size: self.size
+
+    ScrollView:
+        do_scroll_x: False
+        bar_width: dp(6)
+        GridLayout:
+            cols: 1
+            size_hint_y: None
+            height: self.minimum_height
+            spacing: dp(2)
+            id: rows_box
+
+<HashRow>:
+    size_hint_y: None
+    height: dp(20)
+    spacing: dp(8)
+    Label:
+        text: root.dg
+        font_name: theme.FONT_MONO
+        font_size: sp(12)
+        color: root.palette["text"]
+        size_hint_x: None
+        width: dp(60)
+        halign: "right"
+        valign: "middle"
+        text_size: self.size
+    Label:
+        text: root.status
+        font_name: theme.FONT_LABEL_BOLD
+        font_size: sp(12)
+        color: root.status_color
+        size_hint_x: None
+        width: dp(110)
+        halign: "left"
+        valign: "middle"
+        text_size: self.size
+    Label:
+        text: root.digest
+        font_name: theme.FONT_MONO
+        font_size: sp(11)
+        color: root.palette["text_dim"]
+        halign: "left"
+        valign: "middle"
+        text_size: self.size
+        shorten: True
+        shorten_from: "right"
+
+<SecurityPage>:
+    orientation: "vertical"
+    padding: dp(12)
+    spacing: dp(6)
+
+    Label:
+        text: root.title
+        font_name: theme.FONT_LABEL_BOLD
+        font_size: sp(16)
+        color: root.palette["accent"]
+        size_hint_y: None
+        height: dp(26)
+        halign: "left"
+        valign: "middle"
+        text_size: self.size
+
+    Label:
+        text: root.headline
+        font_name: theme.FONT_LABEL_BOLD
+        font_size: sp(14)
+        color: root.headline_color
+        size_hint_y: None
+        height: dp(30)
+        halign: "left"
+        valign: "middle"
+        text_size: self.size
+
+    ScrollView:
+        do_scroll_x: False
+        bar_width: dp(6)
+        GridLayout:
+            cols: 1
+            size_hint_y: None
+            height: self.minimum_height
+            spacing: dp(2)
+            id: rows_box
+
+<FileRow>:
+    size_hint_y: None
+    height: dp(22)
+    spacing: dp(6)
+    canvas.before:
+        Color:
+            rgba: (list(root.palette["accent"][:3]) + [0.16]) if root.selected else (0, 0, 0, 0)
+        Rectangle:
+            pos: self.pos
+            size: self.size
+    # Proportional columns: fixed pixel widths pushed the state column off the
+    # edge as soon as the window got narrow.
+    Label:
+        text: root.name
+        font_name: theme.FONT_MONO
+        font_size: sp(11)
+        color: root.palette["text"]
+        size_hint_x: 0.44
+        halign: "left"
+        valign: "middle"
+        text_size: self.size
+        shorten: True
+        shorten_from: "right"
+    Label:
+        text: root.size_text
+        font_name: theme.FONT_MONO
+        font_size: sp(11)
+        color: root.palette["text_dim"]
+        size_hint_x: 0.28
+        halign: "right"
+        valign: "middle"
+        text_size: self.size
+    Label:
+        text: root.state
+        font_name: theme.FONT_LABEL_BOLD
+        font_size: sp(10)
+        color: root.state_color
+        size_hint_x: 0.28
+        halign: "left"
+        valign: "middle"
+        text_size: self.size
+        shorten: True
+        shorten_from: "right"
+
+<FilesPage>:
+    orientation: "vertical"
+    padding: dp(12)
+    spacing: dp(6)
+
+    BoxLayout:
+        size_hint_y: None
+        height: dp(26)
+        Label:
+            text: root.title
+            font_name: theme.FONT_LABEL_BOLD
+            font_size: sp(16)
+            color: root.palette["accent"]
+            halign: "left"
+            valign: "middle"
+            text_size: self.size
+        Label:
+            text: root.status
+            font_name: theme.FONT_LABEL
+            font_size: sp(12)
+            color: root.palette["text_dim"]
+            halign: "right"
+            valign: "middle"
+            text_size: self.size
+
+    BoxLayout:
+        spacing: dp(12)
+
+        BoxLayout:
+            orientation: "vertical"
+            size_hint_x: 0.44
+            spacing: dp(6)
+            ScrollView:
+                do_scroll_x: False
+                bar_width: dp(6)
+                GridLayout:
+                    cols: 1
+                    size_hint_y: None
+                    height: self.minimum_height
+                    id: files_box
+            BoxLayout:
+                size_hint_y: None
+                height: dp(30)
+                spacing: dp(8)
+                Button:
+                    text: "Export…"
+                    font_name: theme.FONT_LABEL
+                    font_size: sp(11)
+                    disabled: not root.selected_name
+                    on_release: app.export_file()
+                Button:
+                    text: "Open folder"
+                    font_name: theme.FONT_LABEL
+                    font_size: sp(11)
+                    disabled: not root.dump_dir
+                    on_release: app.open_dump_dir()
+
+        BoxLayout:
+            orientation: "vertical"
+            spacing: dp(6)
+            Portrait:
+                png: root.selected_image
+                size_hint_y: None
+                height: dp(220) if root.selected_image else 0
+                opacity: 1 if root.selected_image else 0
+            HexView:
+                id: hexview
+                data: root.selected_data
+                title: root.selected_name
+                available_width: self.width
+
+<HexView>:
+    orientation: "vertical"
+    spacing: dp(4)
+    text_color: app.palette["log_text"]
+    Label:
+        text: (root.title + "   " + "{:,} bytes".format(root.byte_count)) if root.title else ""
+        font_name: theme.FONT_LABEL_BOLD
+        font_size: sp(12)
+        color: app.palette["text_dim"]
+        size_hint_y: None
+        height: dp(20)
+        halign: "left"
+        valign: "middle"
+        text_size: self.size
+    ScrollView:
+        bar_width: dp(6)
+        canvas.before:
+            Color:
+                rgba: app.palette["log_bg"]
+            Rectangle:
+                pos: self.pos
+                size: self.size
+        GridLayout:
+            id: dump_box
+            cols: 1
+            padding: dp(8), dp(8)
+            size_hint: None, None
+            size: self.minimum_size
+
+<LogPage>:
+    orientation: "vertical"
+    padding: dp(12)
+    spacing: dp(6)
+    BoxLayout:
+        size_hint_y: None
+        height: dp(26)
+        Label:
+            text: root.title
+            font_name: theme.FONT_LABEL_BOLD
+            font_size: sp(16)
+            color: root.palette["accent"]
+            halign: "left"
+            valign: "middle"
+            text_size: self.size
+        Button:
+            text: "Clear"
+            size_hint_x: None
+            width: dp(80)
+            font_name: theme.FONT_LABEL
+            font_size: sp(12)
+            on_release: app.clear_log()
+    LogPane:
+        id: logpane
+
+<LogPane>:
+    text_color: app.palette["log_text"]
+    ScrollView:
+        id: scroller
+        bar_width: dp(6)
+        canvas.before:
+            Color:
+                rgba: app.palette["log_bg"]
+            Rectangle:
+                pos: self.pos
+                size: self.size
+        GridLayout:
+            id: log_box
+            cols: 1
+            padding: dp(10), dp(8)
+            size_hint: None, None
+            width: scroller.width
+            height: self.minimum_height

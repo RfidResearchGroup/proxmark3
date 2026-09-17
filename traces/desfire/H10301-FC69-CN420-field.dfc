@@ -1,0 +1,36 @@
+Filetype: DFC Credential
+Version: 4
+Card Generation: EV1
+Card Storage: 4096
+UID: 04 A5 AB 54 92 61 76
+UID Provenance: Real
+PICC Key Settings 1: 0F
+PICC Key Settings 2: 01
+PICC Authentication Mode: D40
+PICC Key Count: 0
+PICC File Count: 0
+Application Count: 1
+Application 00 AID: D3 49 4F
+Application 00 ISO File ID: E1 10
+Application 00 DF Name: D2 76 00 00 85 01 00
+Application 00 Key Settings 1: 0B
+Application 00 Key Settings 2: 24
+Application 00 Authentication Mode: ISO
+Application 00 Key Count: 4
+Application 00 Key 00: 24 B8 9A 7E 0E 7E 32 E2 C2 46 80 10 F0 5E 42 C4
+Application 00 Key 00 Version: 00
+Application 00 Key 01: CA FC 2E 94 64 88 14 64 26 CE F0 FC 18 9C E6 86
+Application 00 Key 01 Version: 00
+Application 00 Key 02: B8 3C C2 D2 2C 66 F6 A8 0C 3C F2 12 02 A2 F4 90
+Application 00 Key 02 Version: 00
+Application 00 Key 03: C8 7E 76 D4 CC 98 70 1C A6 FA 52 F4 FC A6 EA C8
+Application 00 Key 03 Version: 00
+Application 00 File Count: 1
+Application 00 File 00 Number: 0F
+Application 00 File 00 Type: Standard Data
+Application 00 File 00 Communication Settings: 01
+Application 00 File 00 Access Rights: 12 30
+Application 00 File 00 ISO File ID: 00 0F
+Application 00 File 00 Size: 54
+Application 00 File 00 Data: 30 32 81 05 01 AD ED B0 6D A5 02 05 00 A6 08 81 01 01 04 03 03 00 09 A7 17 85 15 1E 74 05 5E 18 0E ED 17 A9 2D C4 D9 C7 6C C5 25 E1 9A F3 40 FF A9 02 05 00 05 00
+Application 00 File 00 Data Complete: 1

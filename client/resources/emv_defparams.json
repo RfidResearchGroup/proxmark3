@@ -1,0 +1,58 @@
+[
+  {
+    "name": "Transaction Date",
+    "tag": "9A",
+    "value": "00 00 00",
+    "length": 3,
+    "hint": "format: YYMMDD"
+  },
+  {
+    "name": "Transaction Type",
+    "tag": "9C",
+    "value": "00",
+    "length": 1,
+    "hint": "00: Goods and service, 01: Cash"
+  },
+  {
+    "name": "Amount, authorized",
+    "tag": "9F 02",
+    "value": "00 00 00 00 01 00",
+    "length": 6,
+    "hint": "amount (numberic) in cents"
+  },
+  {
+    "name": "Transaction Currency Code",
+    "tag": "5F 2A",
+    "value": "09 80",
+    "length": 2,
+    "hint": "USD 840, EUR 978, RUB 643, RUR 810(old), UAH 980, AZN 031, n/a 999"
+  },
+  {
+    "name": "Terminal Country Code",
+    "tag": "9F 1A",
+    "value": "72 75",
+    "length": 2,
+    "hint": "ISO3166: de, en (65 6e), uk(75 6b), ru (72 75), us, ua"
+  },
+  {
+    "name": "Terminal Transaction Qualifiers (TTQ)",
+    "tag": "9F 66",
+    "value": "26 00 00 00",
+    "length": 4,
+    "hint": "qVSDC 26 00 00 00, gen AC from GPO 26 80 00 00, MSD 86 00 00 00, VSDC 46 00 00 00"
+  },
+  {
+    "name": "Unpredictable Number",
+    "tag": "9F 37",
+    "value": "01 02 03 04",
+    "length": 4,
+    "hint": "4 byte random number"
+  },
+  {
+    "name": "Unpredictable Number (MSD for UDOL)",
+    "tag": "9F 6A",
+    "value": "01 02 03 05",
+    "length": 4,
+    "hint": "4 byte random number"
+  }
+]

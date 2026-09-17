@@ -1,0 +1,163 @@
+name: MacOS Build and Test
+
+on:
+  push:
+    paths-ignore:
+      - 'doc/**'
+      - 'docker/**'
+      - 'traces/**'
+      - '.vscode/**'
+      - '**.md'
+  pull_request:
+    paths-ignore:
+      - 'doc/**'
+      - 'docker/**'
+      - 'traces/**'
+      - '.vscode/**'
+      - '**.md'
+
+jobs:
+  macos-make:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Set Git http.postBuffer to something high
+        run: git config --global http.postBuffer 524288000
+
+      - name: Handle homebrew quirks
+        run: rm -rf /usr/local/bin/2to3
+
+      - name: Update brew repos
+        run: brew update
+        continue-on-error: true
+
+      - name: Trust brew repo
+        run: brew trust rfidresearchgroup/proxmark3
+
+      - name: Tap RfidResearchGroup/proxmark3
+        run: brew tap RfidResearchGroup/proxmark3
+
+      - name: Install dependencies
+        run: brew install readline coreutils qt RfidResearchGroup/proxmark3/arm-none-eabi-gcc openssl gd
+        continue-on-error: true
+
+      - name: Install Python dependencies
+        run: pip install -r tools/requirements.txt
+
+      - name: make clean
+        run: make clean
+
+      - name: Build
+        env:
+          V: 1
+        run: make -j$((`sysctl -n hw.ncpu` + 1))
+
+      - name: Test
+        run: make check
+
+  macos-make-btaddon:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Set Git http.postBuffer to something high
+        run: git config --global http.postBuffer 524288000
+
+      - name: Handle homebrew quirks
+        run: rm -rf /usr/local/bin/2to3
+
+      - name: Update brew repos
+        run: brew update
+        continue-on-error: true
+
+      - name: Trust brew repo
+        run: brew trust rfidresearchgroup/proxmark3
+
+      - name: Tap RfidResearchGroup/proxmark3
+        run: brew tap RfidResearchGroup/proxmark3
+
+      - name: Install dependencies
+        run: brew install readline coreutils qt RfidResearchGroup/proxmark3/arm-none-eabi-gcc openssl gd
+        continue-on-error: true
+
+      - name: Install Python dependencies
+        run: pip install -r tools/requirements.txt
+
+      - name: make clean
+        run: make clean
+
+      - name: Build
+        env:
+          V: 1
+          PLATFORM_EXTRAS: BTADDON
+        run: make -j$((`sysctl -n hw.ncpu` + 1))
+
+      - name: Test
+        run: make check
+
+  macos-cmake:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Set Git http.postBuffer to something high
+        run: git config --global http.postBuffer 524288000
+
+      - name: Handle homebrew quirks
+        run: rm -rf /usr/local/bin/2to3
+
+      - name: Update brew repos
+        run: brew update
+        continue-on-error: true
+
+      - name: Trust brew repo
+        run: brew trust rfidresearchgroup/proxmark3
+
+      - name: Tap RfidResearchGroup/proxmark3
+        run: brew tap RfidResearchGroup/proxmark3
+
+      - name: Install dependencies
+        run: brew install readline coreutils qt RfidResearchGroup/proxmark3/arm-none-eabi-gcc openssl gd
+        continue-on-error: true
+
+      - name: Install Python dependencies
+        run: pip install -r tools/requirements.txt
+
+      - name: Prepare Build Folders
+        run: |
+          mkdir -p client/build
+          ln -s ../cmdscripts client/build/
+          ln -s ../luascripts client/build/
+          ln -s ../pyscripts client/build/
+          ln -s ../lualibs client/build/
+
+      - name: Initiate cmake environment
+        run: cmake ..
+        working-directory: client/build/
+
+      - name: Build
+        env:
+          VERBOSE: 1
+        run: make -j$((`sysctl -n hw.ncpu` + 1))
+        working-directory: client/build/
+
+      - name: Test
+        env:
+          CHECKARGS: "--clientbin ./client/build/proxmark3"
+        run: make client/check

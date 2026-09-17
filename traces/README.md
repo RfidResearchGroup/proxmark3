@@ -1,0 +1,209 @@
+# Introduction
+
+* `.pm3` are analog signal files to be loaded with `data load` and displayed with `data plot`
+* `.trace` are protocol binary data to be loaded with `trace load` and displayed with `trace list <protocol> 1`
+
+# Analog acquisitions
+
+## LF traces
+
+|filename                                 |description|
+|-----------------------------------------|-----------|
+|lf_AWID-15-259.pm3                       |AWID FSK RF/50 FC: 15 Card: 259 |
+|lf_Casi-12ed825c29.pm3                   |casi rusco 40 bit (EM410x ID: 12ed825c29)|
+|lf_EM4102-1.pm3                          |credit card style card EM4102 tag (ID: 010872e77c)|
+|lf_EM4102-2.pm3                          |credit card style card EM4102 tag (ID: 010872beec)|
+|lf_EM4102-3.pm3                          |credit card style card EM4102 tag (ID: 010872e14f)|
+|lf_EM4102-clamshell.pm3                  |Samy's clamshell EM4102 tag (ID: 1f00d9b3a5)|
+|lf_EM4102-fob.pm3                        |(ID: 0400193cbe)|
+|lf_EM4102-thin.pm3                       |Samy's thin credit-card style EM4102 tag (ID: 1a0041375d)|
+|lf_EM4x05.pm3                            |ear tag FDX-B ISO-11784/5 (ID: 6DB0840800F80001 - Application Identifier:  8000, Country Code:  124 (Canada), National ID:  270601654)|
+|lf_EM4x50.pm3                            |credit card style card EM4x50 tag (ID: DE2A3F00)|
+|lf_FDX_Bio-Thermo.pm3                    |FDX Animal tag with Biosensor|
+|lf_GALLAGHER.pm3                         |GALLAGHER tag|
+|lf_GProx_36_30_14489.pm3                 |G-Prox-II FC: 30 Card: 3949,  Format 36b  ASK/BIPHASE|
+|lf_HID-proxCardII-05512-11432784-1.pm3   |clamshell-style HID ProxCard II card|
+|lf_HID-weak-fob-11647.pm3                |HID 32bit Prox Card#: 11647.  very weak tag/read but just readable.|
+|lf_HomeAgain.pm3                         |HomeAgain animal (cat) tag - ID 985121004515220|
+|lf_HomeAgain1600.pm3                     |HomeAgain animal (cat) tag - ID 985121004515220|
+|lf_IDTECK_4944544BAC40E069.pm3           |IDTECK raw 4944544BAC40E069 , PSK,  printed  "806 082 43084"|
+|lf_IDTECK_4944544B351FBE4B.pm3           |IDTECK raw 4944544B351FBE4B , PSK,  printed  "708 082 14087"|
+|lf_IDTECK_idk50_PSK.pm3                  |IDTECK (?)|
+|lf_Indala-00002-12345678-1A.pm3          |Indala credit-card style card|
+|lf_indala_4041x_234_21801.pm3            |Indala 4041X 26-bit|
+|lf_Indala-504278295.pm3                  |PSK 26 bit indala|
+|lf_IOProx-XSF-01-3B-44725.pm3            |IO Prox FSK RF/64 ID in name|
+|lf_IOProx-XSF-01-BE-03011.pm3            |IO Prox FSK RF/64 ID in name|
+|lf_Keri.pm3                              |Keri PSK-3 Key Ring tag (back of tag: 1460 3411)|
+|lf_Motorola_0437_00072.pm3               |Motorola Grey clamshell card, old.  (RAW: A0000000E308C0C1)|
+|lf_NEXWATCH_Nexkey_74755342.pm3          |NEXWATCH, Nexkey ID: 74755342|
+|lf_NEXWATCH_Quadrakey-521512301.pm3      |NEXWATCH, Quadrakey ID: 521512301|
+|lf_NEXWATCH_Securakey-64169.pm3          |Securakey Tag BitLen: 26, Card ID: 64169, FC: 0x35|
+|lf_PAC-8E4C058E.pm3                      |PAC/Stanley 20204/21020 PAC8 tag (ID: 8E4C058E)|
+|lf_Paradox-96_40426-APJN08.pm3           |PARADOX FC 96 CN 40426|
+|lf_TI.pm3                                |TI HDX FSK 134.2 / 123.2kHz, zerocross line acquisition at 2 MHz|
+|lf_Transit999-best.pm3                   |Transit 999 format (UID 99531670)|
+|lf_VeriChip_1022000000084146.pm3         |VeriChip,  epoxy encased glasschip (ID: 1022-00000000084146) |
+|lf_VISA2000.pm3                          |VISA2000 ASK/MAN RF/64, Card: 480518|
+
+## LF test traces
+
+|filename|description|
+|--------|-----------|
+|lf_Q5_mod-*                              |Q5 configured to emit `00 01 02 03 04 05 06 07 08 09 0A 0B` under various modulation schemes|
+|lf_ATA5577_*                             |ATA5577 configured to emulate various techs as suggested in the Proxmark3 clone commands|
+|lf_ATA5577.txt                           |Description on how lf_ATA5577_* were generated|
+
+## LF sniffed traces
+
+|filename|description|
+|--------|-----------|
+|lf_sniff_blue_cloner_em4100.pm3          |Sniffing of blue cloner writing an EM4100 on T5577 and EM4305|
+|lf_sniff_ht2-BC3B8810-acg-reader.pm3     |Sniffing of Hitag2 being read by an HID ACG LF Multitag reader|
+|lf_sniff_ht2-BC3B8810-frosch-reader.pm3  |Sniffing of Hitag2 being read by a Frosch Hitag reader|
+|lf_sniff_ht2-BC3B8810-rfidler-reader.pm3 |Sniffing of Hitag2 being read by a RFIDler|
+|lf_ht2_pwd_sniff.trace                   |Sniffing of a genuine Hitag2 in password mode being read by a Paxton reader|
+|lf_ht2_crypto_sniff.trace                |Sniffing of a Hitag2 in crypto mode, showing the NrAr exchange|
+|lf_ht2_pwd_sim.trace                     |`lf hitag sim` answering a Paxton reader in password mode, recorded by the simulating Proxmark|
+
+## HF traces
+
+|filename|description|
+|--------|-----------|
+|hf_14b_raw_050008_resp.pm3               |Response of 14b card to `hf 14b raw -c 050008`|
+|hf_14b_raw_0600_st_sri512.pm3            |Response of ST SRI512 to `hf 14b raw -c 0600`|
+|hf_14b_raw_0600_st_sri512_collision.pm3  |Same but with two cards, showing the collisions in answers|
+|hf_14b_raw_10_ask_ctx.pm3                |Response of ASK CTx to `hf 14b raw -c 10`|
+|hf_14b_raw_010fxxxxxxxx_innovatron.pm3   |Response of 14b' card to `hf 14b raw -c -k 010fxxxxxxxx`|
+
+## HF sniffed traces
+
+|filename|description|
+|--------|-----------|
+|hf_sniff_14b_scl3711.pm3                 |`hf sniff 15000 2` <> `nfc-list -t 8`: PUPI: c12c8b1b AppData: 00000000 ProtInfo: 917171|
+
+
+# Demodulated acquisitions
+
+## HF demodulated traces
+
+|filename|description|
+|--------|-----------|
+|hf_14a_reader_4b.trace                   |Execution of `hf 14a reader` against a 4b UID card|
+|hf_14a_reader_4b_rats.trace              |Execution of `hf 14a reader` against a 4b UID card with RATS|
+|hf_14a_reader_7b_rats.trace              |Execution of `hf 14a reader` against a 7b UID card with RATS|
+|hf_14a_mfu.trace                         |Reading of a password-protected MFU|
+|hf_14a_mfuc.trace                        |Reading of a UL-C with 3DES authentication|
+|hf_14a_mfu-sim.trace                     |Trace seen from a Proxmark3 simulating a MFU|
+|hf_14b_reader.trace                      |Execution of `hf 14b reader` against a card|
+|hf_14b_cryptorf_select.trace             |Sniff of libnfc select / anticollision ofa cryptoRF tag|
+|hf_14b_xerox_info.trace                  |Execution of `hf xerox info` against a tag|
+|hf_15_reader.trace                       |Execution of `hf 15 reader` against a card|
+|hf_mfp_mad_sl3.trace                     |`hf mfp mad`|
+|hf_mfp_read_sc0_sl3.trace                |`hf mfp rdsc --sn 0 -k ...`|
+|hf_visa_apple_ecp.trace                  |Sniff of VISA Apple ECP transaction|
+|hf_visa_apple_normal.trace               |Sniff of VISA Apple normal transaction|
+|hf_visa_apple_transit_bypass.trace       |Sniff of VISA Apple transaction bypass|
+|hf_mfdes_sniff.trace                     |Sniff of HID reader reading a MIFARE DESFire SIO card|
+|hf_iclass_sniff.trace                    |Sniff of HID reader reading a Picopass 2k card|
+|hf_mf_hid_sio_sim.trace                  |Simulation of a HID SIO MFC 1K card|
+|hf_14a_mful_aes_defaultkey.trace         |Reading of a UL-AES with AES authentication|
+|hf_14a_mful_aes_defaultkey_secure_message.trace|Reading of a UL-AES with AES authentication, GetVersion with secure message|
+
+## LF demodulated traces
+
+|filename|description|
+|--------|-----------|
+|lf_hitag_crypto_dump.trace              |Execution of `lf hitag dump --crypto` against Hitag2 card in crypto mode|
+
+
+## LF emulator dumps
+
+Tag images for `lf hitag eload`, used to simulate a Hitag 2 in each of its
+operating modes. Byte 0 of page 3 is the configuration byte that selects the
+mode, so the files differ mainly in that one byte.
+
+|filename|description|
+|--------|-----------|
+|lf-hitag-CE129911-dump.bin               |Hitag2 in password mode (config `0x06`), password `BDF5E846`|
+|lf_ht2_crypto.bin                        |Hitag2 in crypto mode (config `0x0E`), key `4F4EBDF5E846`|
+|lf_ht2_crypto_1CAEFD13.bin               |Hitag2 in crypto mode (config `0x0E`)|
+|lf_ht2_publicA.bin                       |Hitag2 in Public Mode A (config `0x02`), Manchester, pages 4-5, carries an EM4102 payload|
+|lf_ht2_publicB.bin                       |Hitag2 in Public Mode B (config `0x00`), biphase 32 T0, pages 4-7|
+|lf_ht2_publicC.bin                       |Hitag2 in Public Mode C (config `0x04`), biphase 64 T0, pages 4-7|
+
+## MIFARE DESFire card images
+
+Card images for `hf mfdes eload`, used by `hf mfdes sim`. All three are in the
+`mfdes v1` dump format documented in `doc/mfdes_dump_format.md`.
+
+The 8K images come off a genuine MIFARE DESFire EV1 8K, UID `04268512A25680`,
+batch `B9 0C 17 49 70`, week 27 / 2017, hardware `04010101001A05`, software
+`04010101041A05`.
+
+|filename|description|
+|--------|-----------|
+|hf-mfdes-ev1-8k-empty.json     |EV1 8K straight after `formatpicc`. PICC only, default 2TDEA key, 7936 bytes free|
+|hf-mfdes-ev1-4k-empty.json     |The same image edited to present as an EV1 4K. **Derived, not dumped from 4K silicon** -- the storage size byte of `VersionHW`/`VersionSW` is changed from `0x1A` to `0x18`, and `FreeMem` set to 3840, the nominal 4096 minus the 256 bytes of overhead the 8K part shows|
+|hf-mfdes-ev1-8k-test.json      |The same card with three applications and all five EV1 file types, for exercising a simulation|
+|hf-mfdes-ev1-8k-test-keys.json |Application keys for the above, in the `mfdes v2` format `hf mfdes chk -j` writes|
+|hf-mfdes-ev1-8k-empty-keys.json|Key file for the empty 8K image. Empty by construction, a blank card has no applications|
+|hf-mfdes-ev1-4k-empty-keys.json|Key file for the empty 4K image. Likewise empty|
+
+### Keys
+
+Every key on this card is the counting sequence `01 02 03 .. 10`, extended to
+`.. 18` for the 24 byte 3TDEA keys. The PICC master key is 2TDEA
+`0102030405060708090A0B0C0D0E0F10`; each application uses its own algorithm,
+and all of its keys are that algorithm's length of the same sequence.
+
+Deliberately not the all-zero key, and not a key whose two halves match. A
+16 byte DES/2TDEA key string whose second half equals the first is handled as a
+single DES key by the PICC -- during authentication *and* session key
+generation (M134034 8.1) -- and the all-zero key is the common case of that. A
+card image keyed with it exercises only the degenerate path: an implementation
+that derives the wrong session key still authenticates, and only fails later on
+the first MACed or enciphered frame. This sequence has distinct halves, so a
+wrong derivation shows up immediately.
+
+The `mfdes v2` key files carry **application** keys only -- that format has no
+place for the PICC master key, because `hf mfdes chk` only walks the application
+list and takes the PICC key from `-k`. Hand it in explicitly:
+
+```
+hf mfdes dump -n 0 -t 2TDEA -k 0102030405060708090A0B0C0D0E0F10 --keys traces/mifare/hf-mfdes-ev1-8k-test-keys.json
+```
+
+Note that every key is also stored inside the dump itself, under each
+application's `Keys` object, so `eload` and `sim` need no key file at all --
+the key files are for reading or rebuilding the physical card.
+
+`hf-mfdes-ev1-8k-test.json` holds:
+
+|AID|keys|ISO DF name|files|
+|---|----|-----------|-----|
+|`010203`|AES, 3      |`test1`|`01` standard 256 B free access, `02` backup 128 B MAC mode, rights `1200`|
+|`112233`|2TDEA, 2    |`test2`|`00` value, 1000 with limits [0..10000], `01` linear record, 2 of 8 records, 16 B each|
+|`AABBCC`|3TDEA, 5    |`test3`|`05` cyclic record, 1 of 4 records, 24 B each, `03` standard 64 B free access|
+
+```
+hf mfdes eload -f traces/mifare/hf-mfdes-ev1-8k-test.json
+hf mfdes sim
+```
+
+## ST25TB card images
+
+`14b v2` dump format, 128 EEPROM blocks of four bytes followed by the system
+block. The file name has to carry the UID, `hf 14b view` reads it from there to
+work out the chip type and, for MyKey, to derive the session key.
+
+|filename|description|
+|--------|-----------|
+|hf-14b-D0021F673CB26556-dump.json        |ST25TB04K carrying a COGES v3 MyKey, reset state: no vendor bound, zero credit, empty transaction ring. Blocks 7 and 8 are write protected|
+
+```
+hf 14b view -f traces/hf-14b-D0021F673CB26556-dump.json
+```
+
+This is the vector behind `hf 14b view --selftest`, which checks the block
+scrambler, the session key and all 48 block checksums against it.

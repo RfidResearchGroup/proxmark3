@@ -1,0 +1,171 @@
+#!/usr/bin/env python3
+
+import re
+import pm3
+# optional color support
+try:
+    # pip install ansicolors
+    from colors import color
+except ModuleNotFoundError:
+    def color(s, fg=None):
+        _ = fg
+        return str(s)
+
+spi = {
+    0x68:{
+        "manufacturer": "Boya",
+        "jedec" : {
+            0x40: {
+                0x15: {
+                    "part": "BY25Q16BS",
+                    "size": "16mbits",
+                    "sizeB": "2MB",
+                    },
+                },
+            },
+        },
+    0x85:{
+        "manufacturer": "Puya",
+        "jedec" : {
+            0x60: {
+                0x15: {
+                    "part": "P25Q16H",
+                    "size": "16mbits",
+                    "sizeB": "2MB",
+                    },
+                0x16: {
+                    "part": "P25Q32H",
+                    "size": "32mbits",
+                    "sizeB": "4MB",
+                    },
+                0x17: {
+                    "part": "P25Q64H",
+                    "size": "64mbits",
+                    "sizeB": "8MB",
+                    },
+                },
+            },
+        },
+    0xEF:{
+        "manufacturer": "Winbond",
+        "jedec" : {
+            0x30: {
+                0x11: {
+                    "part": "W25X10BV",
+                    "size": "1mbits",
+                    "sizeB": "128KB",
+                    },
+                0x12: {
+                    "part": "W25X20BV",
+                    "size": "2mbits",
+                    "sizeB": "256KB",
+                    },
+                0x13: {
+                    "part": "W25X40BV",
+                    "size": "4mbits",
+                    "sizeB": "512KB",
+                    },
+                },
+            0x40: {
+                0x12: {
+                    "part": "W25Q20BV",
+                    "size": "2mbits",
+                    "sizeB": "256KB",
+                    },
+                0x13: {
+                    "part": "W25Q40BV",
+                    "size": "4mbits",
+                    "sizeB": "512KB",
+                    },
+                0x14: {
+                    "part": "W25Q80BV",
+                    "size": "8mbits",
+                    "sizeB": "1MB",
+                    },
+                0x15: {
+                    "part": "W25Q16BV",
+                    "size": "16mbits",
+                    "sizeB": "2MB",
+                    },
+                0x16: {
+                    "part": "W25Q32BV",
+                    "size": "32mbits",
+                    "sizeB": "4MB",
+                    },
+                0x17: {
+                    "part": "W25Q64BV",
+                    "size": "64mbits",
+                    "sizeB": "8MB",
+                    },
+                },
+            0x70: {
+                0x14: {
+                    "part": "W25Q80JV",
+                    "size": "8mbits",
+                    "sizeB": "1MB",
+                    },
+                0x15: {
+                    "part": "W25Q16JV",
+                    "size": "16mbits",
+                    "sizeB": "2MB",
+                    },
+                0x16: {
+                    "part": "W25Q32JV",
+                    "size": "32mbits",
+                    "sizeB": "4MB",
+                    },
+                0x17: {
+                    "part": "W25Q64JV",
+                    "size": "64mbits",
+                    "sizeB": "8MB",
+                    },
+                0x22: {
+                    "part": "W25Q02JV-IM",
+                    "size": "2mbits",
+                    "sizeB": "256KB",
+                    },
+                },
+            },
+        },
+    }
+
+p = pm3.pm3()
+
+p.console("hw status")
+
+rex = re.compile("...\\s([0-9a-fA-F]{2})\\s/\\s([0-9a-fA-F]{4})")
+
+for line in p.grabbed_output.split('\n'):
+    # [#]   JEDEC Mfr ID / Dev ID... 85 / 6015
+    if " JEDEC " not in line:
+        continue
+
+    match = re.findall(rex, line)
+    mid = int(match[0][0], 16)
+    did = int(match[0][1], 16)
+    did_h = did >> 8
+    did_l = did & 0xff
+    t = None
+    print(f"\n JEDEC ID....... 0x{mid:X} / 0x{did:X}")
+    if mid in spi:
+
+        mfr = spi[mid]['manufacturer']
+
+        if did_h in spi[mid]['jedec']:
+
+            if did_l in spi[mid]['jedec'][did_h]:
+
+                t = spi[mid]['jedec'][did_h][did_l]
+                print("\n Manufacturer... " + color(f"{mfr}", fg="green") +
+                     "\n Device......... " + color(f"{t['part']}", fg="green") +
+                     "\n Size........... " + color(f"{t['size']} ({t['sizeB']})", fg="yellow")
+                     )
+            else:
+                print("\n Manufacturer... " + color(f"{mfr}", fg="green") +
+                     "\n Device ID...... " + color(f"{did:04X}h (unknown)", fg="red"))
+        else:
+            print("\n Manufacturer... " + color(f"{mfr}", fg="green") +
+                 "\n Device ID...... " + color(f"{did:04X}h (unknown)", fg="red"))
+    else:
+        print("\n Manufacturer... " + color(f"{mid:02X}h (unknown)", fg="red") +
+             "\n Device ID...... " + color(f"{did:04X}h (unknown)", fg="red"))

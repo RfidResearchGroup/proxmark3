@@ -1,0 +1,37 @@
+FROM archlinux:base
+
+ENV LANG=C.UTF-8
+RUN pacman -Syu --noconfirm
+RUN pacman-db-upgrade
+
+# bluez skipped, can't be installed in docker
+RUN pacman -S --noconfirm sudo git base-devel cmake libusb readline bzip2 lz4 zlib gd arm-none-eabi-gcc arm-none-eabi-newlib --needed
+
+# OpenCL for hitag2crack
+RUN pacman -S --noconfirm ocl-icd
+
+ARG SKIPQT=false
+RUN if [ "${SKIPQT}" = "false" ]; then \
+      pacman -S --noconfirm qt6-base; \
+    fi
+
+# Create rrg user
+RUN useradd -ms /bin/bash rrg
+RUN passwd -d rrg
+ARG UART_GID
+# dialout group may already exist on another numeric ID than on host
+RUN if [ -n "${UART_GID}" ]; then \
+    groupadd -g ${UART_GID} mydialout || true; \
+    usermod -aG ${UART_GID} rrg; \
+  fi
+RUN printf 'rrg ALL=(ALL) ALL\n' | tee -a /etc/sudoers
+
+# uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+USER rrg
+WORKDIR "/home/rrg"
+
+RUN git clone https://aur.archlinux.org/package-query.git && cd package-query && makepkg -si --noconfirm --needed && cd .. && rm -rf package-query
+
+CMD ["/bin/bash"]

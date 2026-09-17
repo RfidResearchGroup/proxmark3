@@ -1,0 +1,171 @@
+# most common mistake
+00000000
+# known cloners
+# ref. http://www.proxmark.org/forum/viewtopic.php?id=2022
+51243648
+000D8787
+19920427
+# White Chinese cloner, circa 2019, firmware v5.04.16.0727 (eBay)
+002BCFCF
+# ZX-copy3  T55xx / EM4305
+# ref. http://www.proxmark.org/forum/viewtopic.php?pid=40662#p40662
+# default PROX
+50524F58
+# blue gun EM4305
+F9DCEBA0
+# chinese "handheld RFID writer" blue cloner from circa 2013 (also sold by xfpga.com)
+# ID/HID CARD COPER SK-663
+65857569
+# ref. http://kazus.ru/forums/showpost.php?p=1045937&postcount=77
+05D73B9F
+# ref. http://www.proxmark.org/forum/viewtopic.php?=
+89A69E60
+# ref lock
+314159E0
+#Zonsin ZX-COPY10
+7B3D5C48
+# ref. http://www.proxmark.org/forum/viewtopic.php?pid=28115#p28115
+AA55BBBB
+# ref. http://www.proxmark.org/forum/viewtopic.php?pid=33376#p33376
+A5B4C3D2
+# ref. http://www.proxmark.org/forum/viewtopic.php?pid=30379#p30379
+1C0B5848
+# ref. http://www.proxmark.org/forum/viewtopic.php?pid=35075#p35075
+00434343
+# default PASS
+50415353
+# DNGR - DT default pwd
+444E4752
+4E457854
+44B44CAE
+88661858
+# MKF fobs
+E9920427
+# paxton bullit?
+575F4F4B
+# Hotel system
+50520901
+# iCopy-X
+20206666
+# password found on discord
+5469616E
+# wCopy NSR102-IDIC
+# ref. http://www.proxmark.org/forum/viewtopic.php?pid=43670#p43670
+7686962A
+C0F5009A
+07CEE75D
+#
+# prefered pwds of members in the community
+FEEDBEEF
+DEADC0DE
+# derived from BCARD key B
+A9EF2AFC
+# Default pwd, simple:
+11111111
+22222222
+33333333
+44444444
+55555555
+66666666
+77777777
+88888888
+99999999
+AAAAAAAA
+BBBBBBBB
+CCCCCCCC
+DDDDDDDD
+EEEEEEEE
+FFFFFFFF
+A0A1A2A3
+B0B1B2B3
+00000001
+00000002
+0000000A
+0000000B
+01020304
+02030405
+03040506
+04050607
+05060708
+06070809
+0708090A
+08090A0B
+090A0B0C
+0A0B0C0D
+0B0C0D0E
+0C0D0E0F
+01234567
+12345678
+10000000
+20000000
+30000000
+40000000
+50000000
+60000000
+70000000
+80000000
+90000000
+A0000000
+B0000000
+C0000000
+D0000000
+E0000000
+F0000000
+10101010
+01010101
+11223344
+22334455
+33445566
+44556677
+55667788
+66778899
+778899AA
+8899AABB
+99AABBCC
+AABBCCDD
+BBCCDDEE
+CCDDEEFF
+# rfidler?
+0CB7E7FC
+# china?
+FABADA11
+# 20 most common len==8
+87654321
+12341234
+69696969
+12121212
+12344321
+1234ABCD
+11112222
+13131313
+10041004
+# pii
+31415926
+#
+ABCD1234
+20002000
+19721972
+# rev amiboo
+AA55AA55
+55AA55AA
+# seeds ul-ev1
+4F271149
+07D7BB0B
+9636EF8F
+B5F44686
+# TEA
+9E3779B9
+C6EF3720
+#
+# xbox tea constant :)
+7854794A
+# burtle
+F1EA5EED
+# ln2
+69314718
+# euler constant (dec)
+57721566
+# euler constant (hex)
+93C467E3
+# natural log
+27182818
