@@ -9852,6 +9852,20 @@
             ],
             "usage": "hf ntag424 getfs [-h] --fileno <dec>"
         },
+        "hf ntag424 gettt": {
+            "command": "hf ntag424 gettt",
+            "description": "Read and print Tag Tamper status. Will authenticate if key information is provided.",
+            "notes": [
+                "hf ntag424 gettt --keyno 0 -k 00000000000000000000000000000000"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--keyno <dec> Key number",
+                "-k, --key <hex> Key for authentication (HEX 16 bytes)"
+            ],
+            "usage": "hf ntag424 gettt [-h] [--keyno <dec>] [-k <hex>]"
+        },
         "hf ntag424 help": {
             "command": "hf ntag424 help",
             "description": "help This help view Display content from tag dump file --------------------------------------------------------------------------------------- hf ntag424 info available offline: no Get info about NXP NTAG424 DNA Family styled tag.",
@@ -9883,6 +9897,21 @@
                 "-m, --cmode <plain|mac|encrypt> Communication mode"
             ],
             "usage": "hf ntag424 read [-h] --fileno <1|2|3> [--keyno <dec>] [-k <hex>] [-o <dec>] -l <dec> [-m <plain|mac|encrypt>]"
+        },
+        "hf ntag424 setconfig": {
+            "command": "hf ntag424 setconfig",
+            "description": "Change a PICC configuration option. Several options are one-way, see the datasheet before using this.",
+            "notes": [
+                "hf ntag424 setconfig -k 00000000000000000000000000000000 --option 07 -d 0100"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-k, --key0 <hex> Authentication key (must be key 0, HEX 16 bytes)",
+                "--option <hex> Configuration option (HEX 1 byte)",
+                "-d, --data <hex> Option data (HEX, 1..47 bytes)"
+            ],
+            "usage": "hf ntag424 setconfig [-h] -k <hex> --option <hex> -d <hex> [-d <hex>]..."
         },
         "hf ntag424 view": {
             "command": "hf ntag424 view",
@@ -16615,8 +16644,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 924,
+        "commands_extracted": 926,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-09-16T22:14:12+00:00"
+        "extracted_on": "2026-09-18T16:52:04+00:00"
     }
 }
