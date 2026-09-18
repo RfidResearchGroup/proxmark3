@@ -855,6 +855,8 @@ Check column "offline" for their availability.
 |`hf ntag424 getfs       `|N       |`Get file settings`
 |`hf ntag424 changefs    `|N       |`Change file settings`
 |`hf ntag424 changekey   `|N       |`Change key`
+|`hf ntag424 gettt       `|N       |`Get Tag Tamper status`
+|`hf ntag424 setconfig   `|N       |`Set PICC configuration option`
 
 
 ### hf saflok
@@ -1044,7 +1046,7 @@ Check column "offline" for their availability.
 
 |command                  |offline |description
 |-------                  |------- |-----------
-|`hw bwm help            `|Y       |`This help`
+|`hw bwm help            `|N       |`This help`
 |`hw bwm autooff         `|N       |`Toggle auto power-off on USB unplug`
 |`hw bwm charge          `|N       |`Enable/disable battery charging (one-shot)`
 |`hw bwm name            `|N       |`Get/set the BWM BLE advertising name`

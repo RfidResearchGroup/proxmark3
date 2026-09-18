@@ -6994,7 +6994,9 @@
                 "hf mf sen",
                 "hf mf sen --keep-nonces",
                 "hf mf sen --no-oob",
-                "hf mf sen --reader"
+                "hf mf sen --reader",
+                "hf mf sen --suffix mycard",
+                "hf mf sen --ns"
             ],
             "offline": false,
             "options": [
@@ -7005,9 +7007,11 @@
                 "--offline-only stop after offline filtering, do not verify online",
                 "--online-confirm only do online confirmation (skip generation if nonces loaded)",
                 "--max-online-candidates <n> abort online phase if total candidates exceed this limit",
-                "--parity-mask <hex> parity filter mask 1..F (default 1 = vetted staticnested_1nt behavior)"
+                "--parity-mask <hex> parity filter mask 1..F (default 1 = vetted staticnested_1nt behavior)",
+                "--suffix <txt> Add this suffix to generated files",
+                "--ns no save to file (--keep-nonces still writes its evidence file)"
             ],
-            "usage": "hf mf sen [-h] [--keep-nonces] [--no-oob] [--reader] [--offline-only] [--online-confirm] [--max-online-candidates <n>] [--parity-mask <hex>]"
+            "usage": "hf mf sen [-h] [--keep-nonces] [--no-oob] [--reader] [--offline-only] [--online-confirm] [--max-online-candidates <n>] [--parity-mask <hex>] [--suffix <txt>] [--ns]"
         },
         "hf mf setmod": {
             "command": "hf mf setmod",
@@ -8699,7 +8703,7 @@
                 "--dfname <hex> Certificate application DF name (1-16 bytes)",
                 "--fid <hex> Certificate file ID (1 byte)",
                 "--no-auth Read certificate file without authentication",
-                "--ca <name|cert|pubkey|path|skip> CA input, or `skip` to skip certificate signature validation. Repeat --ca for multiple entries",
+                "--ca <name|cert|pubkey|path|skip> CA input, or `skip` to skip validation",
                 "--keyaid <hex> Key application ID (default: cert app)",
                 "--keyisoid <hex> Key application ISO DF ID (2 bytes)",
                 "--keydfname <hex> Key application DF name (default: cert app)",
@@ -8713,15 +8717,17 @@
             "command": "hf mfdes view",
             "description": "Print a DESFire card dump file (json)",
             "notes": [
-                "hf mfdes view -f hf-mfdes-01020304050607-dump.json"
+                "hf mfdes view -f hf-mfdes-01020304050607-dump.json",
+                "hf mfdes view --selftest"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> Filename of dump",
-                "-v, --verbose Verbose output"
+                "-v, --verbose Verbose output",
+                "--selftest Run the dump parsers self tests and exit"
             ],
-            "usage": "hf mfdes view [-hv] -f <fn>"
+            "usage": "hf mfdes view [-hv] [-f <fn>] [--selftest]"
         },
         "hf mfdes write": {
             "command": "hf mfdes write",
@@ -9853,6 +9859,20 @@
             ],
             "usage": "hf ntag424 getfs [-h] --fileno <dec>"
         },
+        "hf ntag424 gettt": {
+            "command": "hf ntag424 gettt",
+            "description": "Read and print Tag Tamper status. Will authenticate if key information is provided.",
+            "notes": [
+                "hf ntag424 gettt --keyno 0 -k 00000000000000000000000000000000"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--keyno <dec> Key number",
+                "-k, --key <hex> Key for authentication (HEX 16 bytes)"
+            ],
+            "usage": "hf ntag424 gettt [-h] [--keyno <dec>] [-k <hex>]"
+        },
         "hf ntag424 help": {
             "command": "hf ntag424 help",
             "description": "help This help view Display content from tag dump file --------------------------------------------------------------------------------------- hf ntag424 info available offline: no Get info about NXP NTAG424 DNA Family styled tag.",
@@ -9884,6 +9904,21 @@
                 "-m, --cmode <plain|mac|encrypt> Communication mode"
             ],
             "usage": "hf ntag424 read [-h] --fileno <1|2|3> [--keyno <dec>] [-k <hex>] [-o <dec>] -l <dec> [-m <plain|mac|encrypt>]"
+        },
+        "hf ntag424 setconfig": {
+            "command": "hf ntag424 setconfig",
+            "description": "Change a PICC configuration option. Several options are one-way, see the datasheet before using this.",
+            "notes": [
+                "hf ntag424 setconfig -k 00000000000000000000000000000000 --option 07 -d 0100"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-k, --key0 <hex> Authentication key (must be key 0, HEX 16 bytes)",
+                "--option <hex> Configuration option (HEX 1 byte)",
+                "-d, --data <hex> Option data (HEX, 1..47 bytes)"
+            ],
+            "usage": "hf ntag424 setconfig [-h] -k <hex> --option <hex> -d <hex> [-d <hex>]..."
         },
         "hf ntag424 view": {
             "command": "hf ntag424 view",
@@ -11010,12 +11045,12 @@
         },
         "hw bwm help": {
             "command": "hw bwm help",
-            "description": "help This help --------------------------------------------------------------------------------------- hw bwm autooff available offline: no Toggle automatic power-off when the PM5 is unplugged from USB (BWM only). Default is on. When on, the board powers itself down ~10s after USB is removed, so a BWM-equipped PM5 doesn't silently drain the battery. Button power-on is unaffected. Disable for standalone/BLE use on battery. Runtime only: resets to on at each boot.",
+            "description": "--------------------------------------------------------------------------------------- hw bwm autooff available offline: no Toggle automatic power-off when the PM5 is unplugged from USB (BWM only). Default is on. When on, the board powers itself down ~10s after USB is removed, so a BWM-equipped PM5 doesn't silently drain the battery. Button power-on is unaffected. Disable for standalone/BLE use on battery. Runtime only: resets to on at each boot.",
             "notes": [
                 "hw bwm autooff off -> disable auto power-off",
                 "hw bwm autooff on -> re-enable auto power-off"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help This help"
             ],
@@ -12776,7 +12811,7 @@
                 "-1, --ht1 Card type Hitag 1",
                 "-2, --ht2 Card type Hitag 2",
                 "-s, --hts Card type Hitag S",
-                "-m, --htm Card type Hitag \u03bc"
+                "-m, --htm Card type Hitag \u00b5"
             ],
             "usage": "lf hitag eload [-h12sm] -f <fn>"
         },
@@ -12794,7 +12829,7 @@
                 "-1, --ht1 Card type Hitag 1",
                 "-2, --ht2 Card type Hitag 2 (default)",
                 "-s, --hts Card type Hitag S",
-                "-m, --htm Card type Hitag \u03bc"
+                "-m, --htm Card type Hitag \u00b5"
             ],
             "usage": "lf hitag eview [-hv12sm]"
         },
@@ -16616,8 +16651,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 924,
+        "commands_extracted": 926,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-09-16T22:14:12+00:00"
+        "extracted_on": "2026-09-24T08:29:19+00:00"
     }
 }
