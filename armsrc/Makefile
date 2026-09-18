@@ -138,6 +138,13 @@ else
     SRC_BUZZER =
 endif
 
+# PM5 low-power idle (core clock scaling + WFI)
+ifeq ($(PLATFORM),PM5)
+    SRC_PM5_POWER = pm5_power.c
+else
+    SRC_PM5_POWER =
+endif
+
 # PM5 antenna-RGB power/battery indicator
 ifneq (,$(findstring WITH_PM5_PWR_LED,$(APP_CFLAGS)))
     SRC_RGB_INDICATOR = rgb_indicator.c
@@ -204,6 +211,7 @@ THUMBSRC = start.c \
     $(SRC_BWM) \
     $(SRC_BWM_CHARGER) \
     $(SRC_BUZZER) \
+    $(SRC_PM5_POWER) \
     $(SRC_RGB_INDICATOR) \
     $(SRC_HITAG) \
     $(SRC_EM4x50) \

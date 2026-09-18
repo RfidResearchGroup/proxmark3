@@ -10,6 +10,7 @@
 #define BWM_WIFI_H
 
 #include "common.h"
+#include "pm3_cmd.h"   // bwm_ble_status_t
 
 // app_com command codes (authoritative, from BWM main/app_com_defs.h)
 #define BWM_CMD_SET_TO_WIFI_DISABLE_MODE   2000   // no payload: tear down WiFi, back to BLE-only
@@ -88,7 +89,55 @@ int bwm_wifi_forward_status(uint8_t *state, uint32_t *ip_out);
 #define BWM_CMD_START_BLE_SPP      4021   // no payload: restore BLE after OTA
 #define BWM_CMD_SET_BLE_DEVICE_NAME 4002   // req: name bytes
 #define BWM_CMD_GET_BLE_DEVICE_NAME 4003   // resp: current BLE device name string
-int bwm_esp_get_version(uint8_t *buf, uint16_t *buflen);
+// ESP power-save switch (DFS + light sleep + low-duty advertising), persisted on
+// the ESP. Both return the ESP's applied state in *state.
+#define BWM_CMD_SET_SYS_POWER_SAVE 1019   // req: u8 0=off 1=on; resp: u8 applied state
+#define BWM_CMD_GET_SYS_POWER_SAVE 1020   // resp: u8 state
+int bwm_esp_get_power_save(uint8_t *state, uint32_t timeout_ms);
+// Host settings the module stores for us (app_host NVS); the ids are ours.
+#define BWM_CMD_SET_SYS_HOST_VALUE 1021   // req: [id u8][value u32]; resp: u32
+#define BWM_CMD_GET_SYS_HOST_VALUE 1022   // req: [id u8]; resp: [present u8][value u32]
+#define BWM_HOSTVAL_AUTOOFF_ENABLED 0
+#define BWM_HOSTVAL_AUTOOFF_IDLE_S  1
+#define BWM_HOSTVAL_AUTOOFF_UNPLUG  2
+int bwm_esp_host_value_set(uint8_t id, uint32_t value, uint32_t timeout_ms);
+// PM3_SUCCESS with the value, PM3_ENODATA if never stored, else the link error.
+int bwm_esp_host_value_get(uint8_t id, uint32_t *value, uint32_t timeout_ms);
+#define BWM_CMD_GET_BLE_SPP_STATUS 4020   // resp: u8 0=stopped 1=advertising 2=client connected
+#define BWM_BLE_STATE_CONNECTED    2
+int bwm_esp_get_ble_state(uint8_t *state, uint32_t timeout_ms);
+
+// BLE settings behind `hw bwm ble` (app_com_defs.h, BLE block @4000).
+#define BWM_CMD_GET_BLE_DEVICE_ADDR    4007   // resp: 6 bytes
+#define BWM_CMD_SET_BLE_BONDING_ENABLE 4008   // req: u8; takes effect at the next stack start
+#define BWM_CMD_GET_BLE_BONDING_ENABLE 4009   // resp: u8
+#define BWM_CMD_SET_BLE_BONDING_KEY    4010   // req: 6 ASCII digits
+#define BWM_CMD_GET_BLE_BONDING_KEY    4011   // resp: 6 ASCII digits
+#define BWM_CMD_GET_BLE_BONDED_NUMS    4012   // resp: u8 count
+#define BWM_CMD_GET_BLE_BONDED_ADDR    4013   // req: u8 index; resp: addr[6] + type
+#define BWM_CMD_DEL_BLE_BONDED         4014   // req: u8 index
+#define BWM_CMD_CLEAR_BLE_BONDED       4015   // no payload
+#define BWM_CMD_SET_BLE_TX_POWER       4018   // req: [type][level]
+#define BWM_CMD_GET_BLE_TX_POWER       4019   // req: u8 type; resp: u8 level
+#define BWM_CMD_SET_BLE_ENABLE         4023   // req: u8 (persisted, applied at once); resp: u8 stored. Newer ESP fw only
+#define BWM_CMD_GET_BLE_ENABLE         4024   // resp: u8
+int bwm_esp_set_ble_enable(bool on, uint8_t *stored);
+int bwm_esp_set_ble_bonding(bool on);
+int bwm_esp_set_ble_key(const uint8_t key[6]);
+int bwm_esp_ble_forget(uint8_t idx);        // 0xFF = all
+int bwm_esp_set_ble_txpower(uint8_t type, uint8_t level);
+// Stop + start the stack so a bonding change applies; no-op while it is stopped.
+int bwm_esp_ble_restart(void);
+// Best-effort snapshot for `hw bwm ble`; fields the module cannot answer read 0xFF.
+// PM3_ETIMEOUT (nothing filled in) when the module does not answer the first query.
+int bwm_esp_ble_status(bwm_ble_status_t *st);
+// ESP WiFi modem power-save type (0 none, 1 min, 2 max), persisted on the ESP.
+#define BWM_CMD_SET_WIFI_CFG_PS_MODE 2052   // req: u8 mode; resp: u8 applied mode
+#define BWM_CMD_GET_WIFI_CFG_PS_MODE 2053   // resp: u8 mode
+int bwm_esp_get_wifi_ps(uint8_t *mode);
+int bwm_esp_set_wifi_ps(uint8_t mode, uint8_t *applied);
+int bwm_esp_set_power_save(bool on, uint8_t *state);
+int bwm_esp_get_version(uint8_t *buf, uint16_t *buflen, uint32_t timeout_ms);
 int bwm_esp_get_ble_name(uint8_t *buf, uint16_t *buflen);
 int bwm_esp_set_ble_name(const uint8_t *name, uint16_t len);
 int bwm_esp_ota_begin(uint32_t total_size);

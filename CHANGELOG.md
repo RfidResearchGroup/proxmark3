@@ -2,6 +2,13 @@
 All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
+## [unreleased][unreleased]
+- Added `hw bwm ble` - the BWM's BLE settings: `on`/`off` (persisted radio switch), `pairing` (require a 6-digit passkey, LE Secure Connections; the module ships open), `forget` bonded devices, `txpower`, `status` (@Msprg)
+- Changed `hw bwm autooff` - `--idle <sec>` adds an opt-in power-off after that long idle on battery (no command, button press or BLE/WiFi client), off by default; `--unplug off` makes an unplug only restart that idle clock instead of powering off at once; all stored on the BWM, `hw status` shows it (@Msprg)
+- Added `hw bwm wifipower` - turn the BWM WiFi fully off, or set its modem power-save type (none/min/max), persisted on the module (@Msprg)
+- Added `hw bwm powersave` - show/set the BWM (ESP32) power-save switch: DFS, light sleep and slow advertising after 30 s, or the stock always-on behaviour, persisted on the module (@Msprg)
+- Added `hw powersave` - PM5 low-power idle, on by default: between commands the core drops to 48 MHz with the PLL off, the FPGA clock stopped and the CPU halted (WFI); USB now runs crystal-less off HICK. Ported from the Fantasi firmware (@Msprg)
+
 ## [Frosty Lemon.4.23346][2026-09-18]
 - Fixed `hf mfdes sim` - the ATS now advertises 106 kbit/s only, PPS to a higher rate is refused, a selected card ignores REQA/WUPA, and ISO-DEP block recovery now follows the card sequence (@mistial-dev)
 - Added `hf mfdes sim` - answers ISO 7816 SELECT by DF name or file id with real status words, so a reader that opens with a SELECT reaches the card (@mistial-dev)

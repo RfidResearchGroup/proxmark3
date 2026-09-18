@@ -855,6 +855,8 @@ Check column "offline" for their availability.
 |`hf ntag424 getfs       `|N       |`Get file settings`
 |`hf ntag424 changefs    `|N       |`Change file settings`
 |`hf ntag424 changekey   `|N       |`Change key`
+|`hf ntag424 gettt       `|N       |`Get Tag Tamper status`
+|`hf ntag424 setconfig   `|N       |`Set PICC configuration option`
 
 
 ### hf saflok
@@ -1027,6 +1029,7 @@ Check column "offline" for their availability.
 |`hw lcd                 `|N       |`Send command/data to LCD`
 |`hw lcdreset            `|N       |`Hardware reset LCD`
 |`hw ping                `|N       |`Test if the Proxmark3 is responsive`
+|`hw powersave           `|N       |`Enable/disable the PM5 power-save idle`
 |`hw readmem             `|N       |`Read from MCU flash`
 |`hw reset               `|N       |`Reset the device`
 |`hw setlfdivisor        `|N       |`Drive LF antenna at 12MHz / (divisor + 1)`
@@ -1045,13 +1048,30 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hw bwm help            `|Y       |`This help`
-|`hw bwm autooff         `|N       |`Toggle auto power-off on USB unplug`
+|`hw bwm autooff         `|N       |`Show/set auto power-off (USB unplug, idle on battery)`
 |`hw bwm charge          `|N       |`Enable/disable battery charging (one-shot)`
 |`hw bwm name            `|N       |`Get/set the BWM BLE advertising name`
+|`hw bwm powersave       `|N       |`Show/set the BWM power-save switch (DFS, light sleep, slow adv)`
 |`hw bwm setcap          `|N       |`Set fuel-gauge design capacity (run once after battery change)`
 |`hw bwm upgrade         `|N       |`Reflash BWM (ESP32) firmware over the BWM link, no header`
 |`hw bwm vchg            `|N       |`Set charger charge-voltage target (default 4100 mV)`
 |`hw bwm wifi            `|N       |`Bring up WiFi (STA + TCP server) for a tcp: connection`
+|`hw bwm wifipower       `|N       |`WiFi fully off, or the modem power-save type (none/min/max)`
+
+
+### hw bwm ble
+
+ { BLE: on/off, pairing, bonded devices, TX power... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hw bwm ble help        `|Y       |`This help`
+|`hw bwm ble status      `|N       |`Show BLE settings: on/off, pairing, bonded devices, TX power`
+|`hw bwm ble on          `|N       |`Switch BLE on (persisted)`
+|`hw bwm ble off         `|N       |`Switch BLE off (persisted) - nothing can connect`
+|`hw bwm ble pairing     `|N       |`Require pairing with a passkey, set the passkey`
+|`hw bwm ble forget      `|N       |`Remove bonded devices`
+|`hw bwm ble txpower     `|N       |`Set advertising / connection TX power`
 
 
 ### lf
