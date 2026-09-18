@@ -4453,6 +4453,67 @@ static void PacketReceived(PacketCommandNG *packet) {
 #endif
             break;
         }
+        case CMD_PM5_BWM_BLE: {
+#ifdef WITH_BWM_FORWARD
+            // BLE settings on the module: one action, then a full status snapshot back.
+            if (packet->length < 1) {
+                reply_ng(CMD_PM5_BWM_BLE, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            uint8_t action = packet->data.asBytes[0];
+            const uint8_t *arg = &packet->data.asBytes[1];
+            uint16_t alen = packet->length - 1;
+            int res = PM3_SUCCESS;
+            bool restart = false;   // a bonding change applies at the next stack start
+            switch (action) {
+                case BWM_BLE_ACTION_STATUS:
+                    break;
+                case BWM_BLE_ACTION_ENABLE: {
+                    uint8_t stored = 0;
+                    res = (alen >= 1) ? bwm_esp_set_ble_enable(arg[0] != 0, &stored) : PM3_EINVARG;
+                    break;
+                }
+                case BWM_BLE_ACTION_PAIRING:
+                    res = (alen >= 1) ? bwm_esp_set_ble_bonding(arg[0] != 0) : PM3_EINVARG;
+                    restart = (res == PM3_SUCCESS);
+                    break;
+                case BWM_BLE_ACTION_KEY:
+                    res = (alen >= 6) ? bwm_esp_set_ble_key(arg) : PM3_EINVARG;
+                    break;
+                case BWM_BLE_ACTION_FORGET:
+                    res = (alen >= 1) ? bwm_esp_ble_forget(arg[0]) : PM3_EINVARG;
+                    break;
+                case BWM_BLE_ACTION_TXPOWER:
+                    res = (alen >= 2) ? bwm_esp_set_ble_txpower(arg[0], arg[1]) : PM3_EINVARG;
+                    break;
+                default:
+                    res = PM3_EINVARG;
+                    break;
+            }
+            if (res != PM3_SUCCESS) {
+                reply_ng(CMD_PM5_BWM_BLE, res, NULL, 0);
+                break;
+            }
+            bwm_ble_status_t st;
+            res = bwm_esp_ble_status(&st);
+            if (res != PM3_SUCCESS) {
+                reply_ng(CMD_PM5_BWM_BLE, res, NULL, 0);
+                if (restart) {
+                    (void)bwm_esp_ble_restart();
+                }
+                break;
+            }
+            reply_ng(CMD_PM5_BWM_BLE, PM3_SUCCESS, (uint8_t *)&st, sizeof(st));
+            if (restart) {
+                // Reply first: over BLE the restart drops the client's own link.
+                SpinDelay(500);
+                (void)bwm_esp_ble_restart();
+            }
+#else
+            reply_ng(CMD_PM5_BWM_BLE, PM3_ENOTIMPL, NULL, 0);
+#endif
+            break;
+        }
         case CMD_PM5_BWM_WIFI_PS: {
 #ifdef WITH_BWM_FORWARD
             // Payload / reply layout: pm3_cmd.h. wifi_state rides along so the host

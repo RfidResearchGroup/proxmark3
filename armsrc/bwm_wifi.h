@@ -10,6 +10,7 @@
 #define BWM_WIFI_H
 
 #include "common.h"
+#include "pm3_cmd.h"   // bwm_ble_status_t
 
 // app_com command codes (authoritative, from BWM main/app_com_defs.h)
 #define BWM_CMD_SET_TO_WIFI_DISABLE_MODE   2000   // no payload: tear down WiFi, back to BLE-only
@@ -105,6 +106,31 @@ int bwm_esp_host_value_get(uint8_t id, uint32_t *value, uint32_t timeout_ms);
 #define BWM_CMD_GET_BLE_SPP_STATUS 4020   // resp: u8 0=stopped 1=advertising 2=client connected
 #define BWM_BLE_STATE_CONNECTED    2
 int bwm_esp_get_ble_state(uint8_t *state, uint32_t timeout_ms);
+
+// BLE settings behind `hw bwm ble` (app_com_defs.h, BLE block @4000).
+#define BWM_CMD_GET_BLE_DEVICE_ADDR    4007   // resp: 6 bytes
+#define BWM_CMD_SET_BLE_BONDING_ENABLE 4008   // req: u8; takes effect at the next stack start
+#define BWM_CMD_GET_BLE_BONDING_ENABLE 4009   // resp: u8
+#define BWM_CMD_SET_BLE_BONDING_KEY    4010   // req: 6 ASCII digits
+#define BWM_CMD_GET_BLE_BONDING_KEY    4011   // resp: 6 ASCII digits
+#define BWM_CMD_GET_BLE_BONDED_NUMS    4012   // resp: u8 count
+#define BWM_CMD_GET_BLE_BONDED_ADDR    4013   // req: u8 index; resp: addr[6] + type
+#define BWM_CMD_DEL_BLE_BONDED         4014   // req: u8 index
+#define BWM_CMD_CLEAR_BLE_BONDED       4015   // no payload
+#define BWM_CMD_SET_BLE_TX_POWER       4018   // req: [type][level]
+#define BWM_CMD_GET_BLE_TX_POWER       4019   // req: u8 type; resp: u8 level
+#define BWM_CMD_SET_BLE_ENABLE         4023   // req: u8 (persisted, applied at once); resp: u8 stored. Newer ESP fw only
+#define BWM_CMD_GET_BLE_ENABLE         4024   // resp: u8
+int bwm_esp_set_ble_enable(bool on, uint8_t *stored);
+int bwm_esp_set_ble_bonding(bool on);
+int bwm_esp_set_ble_key(const uint8_t key[6]);
+int bwm_esp_ble_forget(uint8_t idx);        // 0xFF = all
+int bwm_esp_set_ble_txpower(uint8_t type, uint8_t level);
+// Stop + start the stack so a bonding change applies; no-op while it is stopped.
+int bwm_esp_ble_restart(void);
+// Best-effort snapshot for `hw bwm ble`; fields the module cannot answer read 0xFF.
+// PM3_ETIMEOUT (nothing filled in) when the module does not answer the first query.
+int bwm_esp_ble_status(bwm_ble_status_t *st);
 // ESP WiFi modem power-save type (0 none, 1 min, 2 max), persisted on the ESP.
 #define BWM_CMD_SET_WIFI_CFG_PS_MODE 2052   // req: u8 mode; resp: u8 applied mode
 #define BWM_CMD_GET_WIFI_CFG_PS_MODE 2053   // resp: u8 mode

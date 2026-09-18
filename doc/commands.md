@@ -1059,6 +1059,21 @@ Check column "offline" for their availability.
 |`hw bwm wifipower       `|N       |`WiFi fully off, or the modem power-save type (none/min/max)`
 
 
+### hw bwm ble
+
+ { BLE: on/off, pairing, bonded devices, TX power... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hw bwm ble help        `|Y       |`This help`
+|`hw bwm ble status      `|N       |`Show BLE settings: on/off, pairing, bonded devices, TX power`
+|`hw bwm ble on          `|N       |`Switch BLE on (persisted)`
+|`hw bwm ble off         `|N       |`Switch BLE off (persisted) - nothing can connect`
+|`hw bwm ble pairing     `|N       |`Require pairing with a passkey, set the passkey`
+|`hw bwm ble forget      `|N       |`Remove bonded devices`
+|`hw bwm ble txpower     `|N       |`Set advertising / connection TX power`
+
+
 ### lf
 
  { Low frequency commands... }

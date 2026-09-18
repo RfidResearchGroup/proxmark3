@@ -957,6 +957,28 @@ typedef struct {
 #define BWM_WIFI_PS_MIN        1      // sleeps between DTIM beacons (ESP-IDF default)
 #define BWM_WIFI_PS_MAX        2      // sleeps for the listen interval
 #define BWM_WIFI_STATE_OFF     0xFF   // wifi_state byte: WiFi stack down (BLE-only)
+// PM5, BWM BLE settings (`hw bwm ble`). req: [action:u8][args]; resp: bwm_ble_status_t
+// on success. Unknown fields (module firmware without the command) read 0xFF.
+#define CMD_PM5_BWM_BLE       0x0183
+#define BWM_BLE_ACTION_STATUS   0x00
+#define BWM_BLE_ACTION_ENABLE   0x01   // [on:u8], persisted on the module
+#define BWM_BLE_ACTION_PAIRING  0x02   // [on:u8], persisted; restarts the stack (drops a BLE client)
+#define BWM_BLE_ACTION_KEY      0x03   // [6 ASCII digits], persisted
+#define BWM_BLE_ACTION_FORGET   0x04   // [idx:u8, 0xFF = all bonded devices]
+#define BWM_BLE_ACTION_TXPOWER  0x05   // [type:u8 0 adv 1 conn][level:u8 esp_power_level_t 0..15, -24 dBm + 3/step, 15 = 20 dBm]
+#define BWM_BLE_BONDED_MAX      8
+typedef struct {
+    uint8_t enabled;       // persisted switch
+    uint8_t state;         // 0 off, 1 advertising, 2 client connected
+    uint8_t bonding;       // 1 = pairing with passkey required, SPP characteristic encrypted
+    char    passkey[6];    // ASCII digits, not NUL-terminated
+    uint8_t txp_adv;       // esp_power_level_t index
+    uint8_t txp_conn;
+    uint8_t addr[6];       // as the module reports it (big-endian display order)
+    char    name[16];      // NUL-padded
+    uint8_t bonded_count;
+    uint8_t bonded[BWM_BLE_BONDED_MAX][7];   // addr[6] + type, first bonded_count valid
+} PACKED bwm_ble_status_t;
 #define BWM_OTA_ACTION_BEGIN 0x00
 #define BWM_OTA_ACTION_WRITE 0x01
 #define BWM_OTA_ACTION_END   0x02

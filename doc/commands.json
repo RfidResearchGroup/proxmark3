@@ -11023,6 +11023,88 @@
             ],
             "usage": "hw break [-h]"
         },
+        "hw bwm ble forget": {
+            "command": "hw bwm ble forget",
+            "description": "Remove bonded (paired) devices from the module, so they must pair again with the passkey. Indexes are the ones `hw bwm ble status` lists.",
+            "notes": [
+                "hw bwm ble forget --all",
+                "hw bwm ble forget -i 0"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-i, --idx <dec> index of the bonded device to remove",
+                "--all remove all bonded devices"
+            ],
+            "usage": "hw bwm ble forget [-h] [-i <dec>] [--all]"
+        },
+        "hw bwm ble help": {
+            "command": "hw bwm ble help",
+            "description": "help This help --------------------------------------------------------------------------------------- hw bwm ble status available offline: no Show the module's BLE settings: on/off, name, address, pairing and passkey, bonded devices, TX power.",
+            "notes": [
+                "hw bwm ble status"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hw bwm ble status [-h]"
+        },
+        "hw bwm ble off": {
+            "command": "hw bwm ble off",
+            "description": "Switch the module's BLE radio on or off. Persisted on the module, applied at once. Off means nothing can connect over BLE at all; the PM5 stays reachable over USB (and WiFi if configured). Needs a BWM firmware with the BLE switch. Over BLE, `off` cuts your own connection.",
+            "notes": [
+                "hw bwm ble off"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hw bwm ble off [-h]"
+        },
+        "hw bwm ble on": {
+            "command": "hw bwm ble on",
+            "description": "Switch the module's BLE radio on or off. Persisted on the module, applied at once. Off means nothing can connect over BLE at all; the PM5 stays reachable over USB (and WiFi if configured). Needs a BWM firmware with the BLE switch. Over BLE, `off` cuts your own connection.",
+            "notes": [
+                "hw bwm ble on"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hw bwm ble on [-h]"
+        },
+        "hw bwm ble pairing": {
+            "command": "hw bwm ble pairing",
+            "description": "Require pairing before a BLE client can use the device. The module ships with pairing off: anyone in range can connect and run commands. With it on, a client must pair once with the 6-digit passkey (LE Secure Connections, MITM) and the data characteristic only works over the encrypted link; paired (bonded) devices reconnect without the key until you forget them. Both settings persist on the module. A change of on/off restarts the BLE stack, which drops a connected client - reconnect (and pair) afterwards. The factory passkey is 123456; set your own.",
+            "notes": [
+                "hw bwm ble pairing on -> require pairing",
+                "hw bwm ble pairing on -k 482913 -> require pairing with this passkey",
+                "hw bwm ble pairing -k 482913 -> change the passkey only",
+                "hw bwm ble pairing off -> open access again"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-k, --key <6 digits> passkey a client must enter"
+            ],
+            "usage": "hw bwm ble pairing [-h] [-k <6 digits>]"
+        },
+        "hw bwm ble txpower": {
+            "command": "hw bwm ble txpower",
+            "description": "Set the module's BLE transmit power for advertising and/or connections. Steps of 3 dB from -24 to 18 dBm, plus 20. Lower saves a little battery and shrinks the range at which the device can be found. Persisted on the module.",
+            "notes": [
+                "hw bwm ble txpower -a 0 -c 0 -> 0 dBm for both",
+                "hw bwm ble txpower -a -6 -> quieter advertising only"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-a, --adv <dBm> advertising power",
+                "-c, --conn <dBm> connection power"
+            ],
+            "usage": "hw bwm ble txpower [-h] [-a <dBm>] [-c <dBm>]"
+        },
         "hw bwm charge": {
             "command": "hw bwm charge",
             "description": "Enable or disable BWM battery charging by clearing/setting the AW32001E charge-enable bit (CEB, REG01[3]). PM5 only. One-shot: the charger watchdog reverts this after ~160 s unless serviced, so charging may stop on its own. Use to nudge a top-up.",
@@ -16693,8 +16775,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 929,
+        "commands_extracted": 935,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-09-18T21:20:24+00:00"
+        "extracted_on": "2026-09-18T21:20:54+00:00"
     }
 }

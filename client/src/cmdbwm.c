@@ -904,9 +904,312 @@ static int CmdBwmWifiPower(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+
+// ---------------------------------------------------------------------------
+// hw bwm ble: the module's BLE settings (CMD_PM5_BWM_BLE)
+// ---------------------------------------------------------------------------
+
+static const char *ble_state_str(uint8_t state) {
+    switch (state) {
+        case 0: return "off";
+        case 1: return "advertising, no client";
+        case 2: return "client connected";
+        default: return "unknown";
+    }
+}
+
+// esp_power_level_t index <-> dBm: -24 dBm + 3 dB per step, index 15 = +20 dBm
+static int ble_level_to_dbm(uint8_t level) {
+    if (level == 15) return 20;
+    return -24 + 3 * (int)level;
+}
+
+static int ble_dbm_to_level(int dbm) {
+    if (dbm == 20) return 15;
+    if (dbm < -24 || dbm > 18 || ((dbm + 24) % 3) != 0) return -1;
+    return (dbm + 24) / 3;
+}
+
+static void ble_print_status(const bwm_ble_status_t *st) {
+    PrintAndLogEx(INFO, "--- " _CYAN_("BWM BLE") " ---------------------------");
+    if (st->enabled == 0xFF) {
+        PrintAndLogEx(INFO, "BLE................ %s " _YELLOW_("(module firmware without the on/off switch)"), ble_state_str(st->state));
+    } else if (st->enabled == 0) {
+        PrintAndLogEx(INFO, "BLE................ " _YELLOW_("off") " (persisted; radio silent, USB/WiFi only)");
+    } else {
+        PrintAndLogEx(INFO, "BLE................ " _GREEN_("on") ", %s", ble_state_str(st->state));
+    }
+    if (st->name[0]) {
+        PrintAndLogEx(INFO, "Name............... " _YELLOW_("%s"), st->name);
+    }
+    if (st->addr[0] != 0xFF || st->addr[5] != 0xFF) {
+        PrintAndLogEx(INFO, "Address............ %02X:%02X:%02X:%02X:%02X:%02X",
+                      st->addr[0], st->addr[1], st->addr[2], st->addr[3], st->addr[4], st->addr[5]);
+    }
+    if (st->bonding == 1) {
+        PrintAndLogEx(INFO, "Pairing............ " _GREEN_("required") " (LE Secure Connections, passkey " _YELLOW_("%.6s") ")", st->passkey);
+        if (memcmp(st->passkey, "123456", 6) == 0) {
+            PrintAndLogEx(WARNING, "the passkey is the factory default, change it: " _YELLOW_("hw bwm ble pairing -k <6 digits>"));
+        }
+    } else if (st->bonding == 0) {
+        PrintAndLogEx(INFO, "Pairing............ " _RED_("not required") " - anyone in range can connect and use the device");
+        PrintAndLogEx(HINT, "enable it with " _YELLOW_("hw bwm ble pairing on"));
+    }
+    if (st->bonded_count != 0xFF) {
+        PrintAndLogEx(INFO, "Bonded devices..... %u%s", st->bonded_count, (st->bonded_count == BWM_BLE_BONDED_MAX) ? " (or more)" : "");
+        for (uint8_t i = 0; i < st->bonded_count; i++) {
+            const uint8_t *a = st->bonded[i];
+            PrintAndLogEx(INFO, "  [%u] %02X:%02X:%02X:%02X:%02X:%02X (%s)", i,
+                          a[0], a[1], a[2], a[3], a[4], a[5], (a[6] == 0) ? "public" : "random");
+        }
+    }
+    if (st->txp_adv != 0xFF && st->txp_conn != 0xFF) {
+        PrintAndLogEx(INFO, "TX power........... advertising %d dBm, connection %d dBm",
+                      ble_level_to_dbm(st->txp_adv), ble_level_to_dbm(st->txp_conn));
+    }
+}
+
+// One CMD_PM5_BWM_BLE round trip. Prints the status on success unless quiet.
+static int ble_action(uint8_t action, const uint8_t *arg, size_t alen, bool quiet) {
+    uint8_t payload[1 + 8] = { action };
+    if (alen > sizeof(payload) - 1) {
+        return PM3_EINVARG;
+    }
+    if (alen) {
+        memcpy(&payload[1], arg, alen);
+    }
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_BLE, payload, 1 + alen);
+    PacketResponseNG resp;
+    // Up to a dozen module round trips behind one reply, plus a light-sleep wake.
+    if (WaitForResponseTimeout(CMD_PM5_BWM_BLE, &resp, 8000) == false) {
+        PrintAndLogEx(WARNING, "command timeout (is this a PM5? over BLE, a pairing or on/off change drops your own link)");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status == PM3_ENOTIMPL) {
+        PrintAndLogEx(WARNING, "firmware built without the BWM link");
+        return resp.status;
+    }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "module refused or did not answer (%s)", (resp.status == PM3_ETIMEOUT) ? "timeout" : "error");
+        return resp.status;
+    }
+    if (resp.length < sizeof(bwm_ble_status_t)) {
+        PrintAndLogEx(FAILED, "short reply (%u bytes)", resp.length);
+        return PM3_EFAILED;
+    }
+    if (quiet == false) {
+        ble_print_status((const bwm_ble_status_t *)resp.data.asBytes);
+    }
+    return PM3_SUCCESS;
+}
+
+static int CmdBwmBleStatus(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwm ble status",
+                  "Show the module's BLE settings: on/off, name, address, pairing and passkey,\n"
+                  "bonded devices, TX power.",
+                  "hw bwm ble status");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    return ble_action(BWM_BLE_ACTION_STATUS, NULL, 0, false);
+}
+
+static int ble_set_enable(const char *Cmd, bool on) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, on ? "hw bwm ble on" : "hw bwm ble off",
+                  "Switch the module's BLE radio on or off. Persisted on the module, applied at\n"
+                  "once. Off means nothing can connect over BLE at all; the PM5 stays reachable\n"
+                  "over USB (and WiFi if configured). Needs a BWM firmware with the BLE switch.\n"
+                  _YELLOW_("Over BLE, `off` cuts your own connection."),
+                  on ? "hw bwm ble on" : "hw bwm ble off");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+    uint8_t v = on ? 1 : 0;
+    return ble_action(BWM_BLE_ACTION_ENABLE, &v, 1, false);
+}
+
+static int CmdBwmBleOn(const char *Cmd) {
+    return ble_set_enable(Cmd, true);
+}
+
+static int CmdBwmBleOff(const char *Cmd) {
+    return ble_set_enable(Cmd, false);
+}
+
+static int CmdBwmBlePairing(const char *Cmd) {
+    // Positional sub-action (no dashes): hw bwm ble pairing [on|off] [-k <digits>]
+    char verb[16] = {0};
+    int consumed = 0;
+    sscanf(Cmd, "%15s%n", verb, &consumed);
+    bool on  = (strcmp(verb, "on")  == 0);
+    bool off = (strcmp(verb, "off") == 0);
+    const char *rest = (on || off) ? Cmd + consumed : Cmd;
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwm ble pairing",
+                  "Require pairing before a BLE client can use the device. The module ships with\n"
+                  "pairing " _RED_("off") ": anyone in range can connect and run commands. With it on, a\n"
+                  "client must pair once with the 6-digit passkey (LE Secure Connections, MITM)\n"
+                  "and the data characteristic only works over the encrypted link; paired\n"
+                  "(bonded) devices reconnect without the key until you forget them.\n"
+                  "Both settings persist on the module. A change of on/off restarts the BLE\n"
+                  "stack, which " _YELLOW_("drops a connected client - reconnect (and pair) afterwards.") "\n"
+                  "The factory passkey is 123456; set your own.",
+                  "hw bwm ble pairing on                --> require pairing\n"
+                  "hw bwm ble pairing on -k 482913      --> require pairing with this passkey\n"
+                  "hw bwm ble pairing -k 482913         --> change the passkey only\n"
+                  "hw bwm ble pairing off               --> open access again");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("k", "key", "<6 digits>", "passkey a client must enter"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, rest, argtable, true);
+    uint8_t key[8] = {0};
+    int keylen = 0;
+    int kres = CLIParamStrToBuf(arg_get_str(ctx, 1), key, sizeof(key) - 1, &keylen);
+    CLIParserFree(ctx);
+    if (kres) {
+        PrintAndLogEx(WARNING, "the passkey must be exactly 6 digits");
+        return PM3_EINVARG;
+    }
+
+    if (keylen) {
+        bool ok = (keylen == 6);
+        for (int i = 0; ok && i < 6; i++) {
+            ok = isdigit(key[i]);
+        }
+        if (ok == false) {
+            PrintAndLogEx(WARNING, "the passkey must be exactly 6 digits");
+            return PM3_EINVARG;
+        }
+        int res = ble_action(BWM_BLE_ACTION_KEY, key, 6, (on || off));
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+        if (!on && !off) {
+            PrintAndLogEx(SUCCESS, "passkey set");
+            return PM3_SUCCESS;
+        }
+    } else if (!on && !off) {
+        PrintAndLogEx(WARNING, "specify " _YELLOW_("on") ", " _YELLOW_("off") " and/or " _YELLOW_("-k <6 digits>"));
+        return PM3_EINVARG;
+    }
+    uint8_t v = on ? 1 : 0;
+    int res = ble_action(BWM_BLE_ACTION_PAIRING, &v, 1, false);
+    if (res == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "pairing %s; the BLE stack is restarting, a connected client is dropped", on ? _GREEN_("required") : _YELLOW_("not required"));
+    }
+    return res;
+}
+
+static int CmdBwmBleForget(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwm ble forget",
+                  "Remove bonded (paired) devices from the module, so they must pair again with\n"
+                  "the passkey. Indexes are the ones `hw bwm ble status` lists.",
+                  "hw bwm ble forget --all\n"
+                  "hw bwm ble forget -i 0");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("i", "idx", "<dec>", "index of the bonded device to remove"),
+        arg_lit0(NULL, "all", "remove all bonded devices"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int idx = arg_get_int_def(ctx, 1, -1);
+    bool all = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+    if ((all && idx >= 0) || (!all && idx < 0)) {
+        PrintAndLogEx(WARNING, "specify either " _YELLOW_("-i <idx>") " or " _YELLOW_("--all"));
+        return PM3_EINVARG;
+    }
+    if (idx > 254) {
+        PrintAndLogEx(WARNING, "index out of range");
+        return PM3_EINVARG;
+    }
+    uint8_t v = all ? 0xFF : (uint8_t)idx;
+    return ble_action(BWM_BLE_ACTION_FORGET, &v, 1, false);
+}
+
+static int CmdBwmBleTxPower(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwm ble txpower",
+                  "Set the module's BLE transmit power for advertising and/or connections.\n"
+                  "Steps of 3 dB from -24 to 18 dBm, plus 20. Lower saves a little battery and\n"
+                  "shrinks the range at which the device can be found. Persisted on the module.",
+                  "hw bwm ble txpower -a 0 -c 0        --> 0 dBm for both\n"
+                  "hw bwm ble txpower -a -6            --> quieter advertising only");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0("a", "adv", "<dBm>", "advertising power"),
+        arg_int0("c", "conn", "<dBm>", "connection power"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool has_adv = (arg_get_int_count(ctx, 1) > 0);
+    bool has_conn = (arg_get_int_count(ctx, 2) > 0);
+    int adv = arg_get_int_def(ctx, 1, 0);
+    int conn = arg_get_int_def(ctx, 2, 0);
+    CLIParserFree(ctx);
+    if ((has_adv == false) && (has_conn == false)) {
+        PrintAndLogEx(WARNING, "specify " _YELLOW_("-a <dBm>") " and/or " _YELLOW_("-c <dBm>"));
+        return PM3_EINVARG;
+    }
+    int la = has_adv ? ble_dbm_to_level(adv) : 0;
+    int lc = has_conn ? ble_dbm_to_level(conn) : 0;
+    if (la < 0 || lc < 0) {
+        PrintAndLogEx(WARNING, "valid values: -24, -21, ... 15, 18, 20 dBm");
+        return PM3_EINVARG;
+    }
+    int res = PM3_SUCCESS;
+    if (has_adv) {
+        uint8_t v[2] = { 0, (uint8_t)la };
+        res = ble_action(BWM_BLE_ACTION_TXPOWER, v, 2, has_conn);
+    }
+    if (res == PM3_SUCCESS && has_conn) {
+        uint8_t v[2] = { 1, (uint8_t)lc };
+        res = ble_action(BWM_BLE_ACTION_TXPOWER, v, 2, false);
+    }
+    return res;
+}
+
+static int CmdHelpBwmBle(const char *Cmd);
+static command_t BwmBleCommandTable[] = {
+    {"help",    CmdHelpBwmBle,     AlwaysAvailable, "This help"},
+    {"status",  CmdBwmBleStatus,   IfPm5, "Show BLE settings: on/off, pairing, bonded devices, TX power"},
+    {"on",      CmdBwmBleOn,       IfPm5, "Switch BLE on (persisted)"},
+    {"off",     CmdBwmBleOff,      IfPm5, "Switch BLE off (persisted) - nothing can connect"},
+    {"pairing", CmdBwmBlePairing,  IfPm5, "Require pairing with a passkey, set the passkey"},
+    {"forget",  CmdBwmBleForget,   IfPm5, "Remove bonded devices"},
+    {"txpower", CmdBwmBleTxPower,  IfPm5, "Set advertising / connection TX power"},
+    {NULL, NULL, NULL, NULL}
+};
+
+static int CmdHelpBwmBle(const char *Cmd) {
+    (void)Cmd;
+    CmdsHelp(BwmBleCommandTable);
+    return PM3_SUCCESS;
+}
+
+static int CmdBwmBle(const char *Cmd) {
+    clearCommandBuffer();
+    return CmdsParse(BwmBleCommandTable, Cmd);
+}
+
 static command_t BwmCommandTable[] = {
     {"help",     CmdHelpBwm,    AlwaysAvailable, "This help"},
     {"autooff",  CmdBwmAutoOff, IfPm5, "Show/set auto power-off (USB unplug, idle on battery)"},
+    {"ble",      CmdBwmBle,     IfPm5, "{ BLE: on/off, pairing, bonded devices, TX power... }"},
     {"charge",   CmdBwmCharge,  IfPm5, "Enable/disable battery charging (one-shot)"},
     {"name",     CmdBwmName,    IfPm5, "Get/set the BWM BLE advertising name"},
     {"powersave", CmdBwmPowerSave, IfPm5, "Show/set the BWM power-save switch (DFS, light sleep, slow adv)"},
