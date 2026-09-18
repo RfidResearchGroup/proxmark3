@@ -5,7 +5,6 @@
 #include "gpio_apis.h"
 #include "dbprint.h"
 #include "pm3_cmd.h"
-#include "string.h"
 
 uint16_t g_ssc_dma_rx_count;
 uint8_t g_ssc_data_byte_width;
@@ -263,12 +262,20 @@ static void spi_cmd_setup(void) {
 void FpgaSendCommand(uint16_t cmd, uint16_t v) {
     // Init spi
     spi_cmd_setup();
+
+    // Before switching modes, disable SPI_SSC to prevent signal changes from triggering a CSPAS event,
+    // which would cause the SPI to hang.
+    SPI_SSC->ctrl1_bit.spien = FALSE;
+
     // Send data
     gpio_bits_reset(AT32_GPIO_SPI_CS, AT32_GPIO_SPI_CS_PIN); // CS LOW
     while (spi_i2s_flag_get(SPI_CMD, SPI_I2S_TDBE_FLAG) == RESET) {}
     spi_i2s_data_transmit(SPI_CMD, cmd | v);
     while (spi_i2s_flag_get(SPI_CMD, SPI_I2S_BF_FLAG) != RESET) {} // Waiting for SPI transmit finish.
     gpio_bits_set(AT32_GPIO_SPI_CS, AT32_GPIO_SPI_CS_PIN); // CS HIGH
+
+    // Re-enable SPI_SSC after sending the command
+    SPI_SSC->ctrl1_bit.spien = TRUE;
 }
 
 void Fpga_print_status(void) {
