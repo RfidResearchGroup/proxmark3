@@ -281,6 +281,7 @@ static int EmSendCmdThinfilmRaw(const uint8_t *resp, uint16_t respLen) {
     while ((ThisTransferTime = GetCountSspClk()) & 0x00000007);
 
     // Clear TXRDY:
+    while (!FPGA_SSC_TX_Ready()) {}
     FPGA_SSC_TX_Value(SEC_F);
 
     uint16_t FpgaSendQueueDelay = 0;
