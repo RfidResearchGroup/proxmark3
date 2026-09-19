@@ -1550,6 +1550,9 @@ typedef struct {
 /* Set if this device understands the chip type command */
 #define DEVICE_INFO_FLAG_UNDERSTANDS_CHIP_TYPE (1<<8)
 
+/* Bootrom de-frames BWM DATA_FORWARD as a byte stream (OLD cmds may span frames) */
+#define DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM (1 << 9)
+
 #define BL_VERSION_MAJOR(version) ((uint32_t)(version) >> 22)
 #define BL_VERSION_MINOR(version) (((uint32_t)(version) >> 12) & 0x3ff)
 #define BL_VERSION_PATCH(version) ((uint32_t)(version) & 0xfff)

@@ -35,7 +35,9 @@
 #define BWM_CMD_SET_TCP_SERVER_PORT        2205   // payload: uint16 LE port
 
 #define BWM_WIFI_FORWARD_TCP_SERVER        0      // wifi_forward_type_t::WIFI_FORWARD_TCP_SERVER
+#ifndef BWM_CMD_CMD_ERROR
 #define BWM_CMD_CMD_ERROR                  8091   // slave bcast: command error report
+#endif
 #define BWM_CMD_LOG_FORWARD_ENABLE         1014   // payload: u8 (0=stop, non-zero=start)
 #define BWM_CMD_LOG_MESSAGE                8090   // slave bcast: ESP_LOGx output (string)
 

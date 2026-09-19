@@ -13,19 +13,19 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-#ifndef LIBPM3_H
-#define LIBPM3_H
+// PM5 bootrom BWM UART: DATA_FORWARD is a byte stream of PacketCommandOLD.
+//-----------------------------------------------------------------------------
+#ifndef BWM_BOOT_H
+#define BWM_BOOT_H
 
-#include <stdbool.h>
+#include "common.h"
 
-typedef struct pm3_device pm3;
+void bwm_boot_init(void);
+void bwm_boot_pump(void);
+bool bwm_boot_poll(uint8_t *out, size_t outlen);
+int bwm_boot_write(const uint8_t *data, size_t len);
 
-pm3 *pm3_open(const char *port);
-int pm3_console(pm3 *dev, const char *cmd, bool capture, bool quiet);
-const char *pm3_grabbed_output_get(pm3 *dev);
-const char *pm3_name_get(pm3 *dev);
-void pm3_close(pm3 *dev);
-pm3 *pm3_get_current_dev(void);
-int pm3_flash(const char *port, const char *const *images, int nimages,
-              bool unlock_bootloader, bool force);
-#endif // LIBPM3_H
+// Baud the ESP answered on, or 0 if none did.
+uint32_t bwm_boot_baud(void);
+
+#endif
