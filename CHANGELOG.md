@@ -2,6 +2,9 @@
 All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
+## [unreleased][unreleased]
+- Changed `hf iclass view` - SIO Insights now surfaces unhandled TLV tags (e.g. the [5]/[9] context tags seen on SR credentials) instead of silently dropping them (@youngh82)
+
 ## [Frosty Lemon.4.23346][2026-09-18]
 - Fixed `hf mfdes sim` - the ATS now advertises 106 kbit/s only, PPS to a higher rate is refused, a selected card ignores REQA/WUPA, and ISO-DEP block recovery now follows the card sequence (@mistial-dev)
 - Added `hf mfdes sim` - answers ISO 7816 SELECT by DF name or file id with real status words, so a reader that opens with a SELECT reaches the card (@mistial-dev)
