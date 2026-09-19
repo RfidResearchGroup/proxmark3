@@ -51,7 +51,6 @@ set(INC_DIRS
         ../common_arm/sys
         ../common_arm/fpga
         ../common_arm/wdt
-        ../common_arm/bwm
         ../common_fpga
         ../common
         ../common/lz4
@@ -189,7 +188,7 @@ else ()
 endif ()
 
 if ("${APP_CFLAGS}" MATCHES "WITH_BWM_FORWARD")
-    set(SRC_BWM bwm_uart_at32.c bwm_forward.c bwm_wifi.c ../common_arm/bwm/bwm_frame.c)
+    set(SRC_BWM bwm_uart_at32.c bwm_forward.c bwm_wifi.c bwm_frame.c)
 else ()
     set(SRC_BWM)
 endif ()

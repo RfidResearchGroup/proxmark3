@@ -30,7 +30,6 @@ set(INC_DIRS
         ${CMAKE_CURRENT_LIST_DIR}/../common_arm/gpio
         ${CMAKE_CURRENT_LIST_DIR}/../common_arm/usb
         ${CMAKE_CURRENT_LIST_DIR}/../common_arm/ticks
-        ${CMAKE_CURRENT_LIST_DIR}/../common_arm/bwm
 )
 
 set(THUMBSRC
@@ -48,8 +47,9 @@ if (PM5)
     )
     set(ASMSRC flash-reset-at32.s ram-reset-at32.s)
     if ("${PLATFORM_DEFS}" MATCHES "WITH_BWM_FORWARD")
+        set(INC_DIRS ${INC_DIRS} ${CMAKE_CURRENT_LIST_DIR}/../armsrc)
         set(THUMBSRC ${THUMBSRC} ${CMAKE_CURRENT_LIST_DIR}/bwm_boot.c
-                ${CMAKE_CURRENT_LIST_DIR}/../common_arm/bwm/bwm_frame.c)
+                ${CMAKE_CURRENT_LIST_DIR}/../armsrc/bwm_frame.c)
     endif ()
 else ()
     set(THUMBSRC ${THUMBSRC}
