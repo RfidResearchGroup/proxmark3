@@ -5293,6 +5293,10 @@ static void print_iclass_sio_decoded(uint8_t *sio, size_t sio_len) {
                 break;
             }
             default:
+                // Surface tags we don't decode yet instead of dropping them silently.
+                // Real credentials (e.g. SR) carry context tags such as [5]/[9] that
+                // would otherwise be invisible here; `--verbose` shows the full ASN1 TLV.
+                PrintAndLogEx(INFO, "  Unknown tag 0x%02X   : " _YELLOW_("%s"), tag, sprint_hex_inrow(val, len));
                 break;
         }
     }
