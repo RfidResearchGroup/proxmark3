@@ -187,6 +187,12 @@ else ()
     set(SRC_FPC)
 endif ()
 
+if ("${APP_CFLAGS}" MATCHES "WITH_BWM_FORWARD")
+    set(SRC_BWM bwm_uart_at32.c bwm_forward.c bwm_wifi.c bwm_frame.c)
+else ()
+    set(SRC_BWM)
+endif ()
+
 # BWM charger (AW32001) + fuel gauge (BQ27427), incl. the optional low-batt beep
 if ("${APP_CFLAGS}" MATCHES "WITH_BWM_STATUS" OR "${APP_CFLAGS}" MATCHES "WITH_BWM_CHARGERKICK")
     set(SRC_BWM_CHARGER bwm_charger.c)
@@ -271,6 +277,7 @@ set(THUMBSRC
         ${SRC_FLASH}
         ${SRC_SMARTCARD}
         ${SRC_FPC}
+        ${SRC_BWM}
         ${SRC_HITAG}
         ${SRC_EM4x50}
         ${SRC_EM4x70}
