@@ -62,6 +62,7 @@ ARMSRC =
 THUMBSRC = bootrom.c $(SRC_SYS) $(SRC_TICKS) $(SRC_GPIO) $(SRC_USB_CDC) $(SRC_FLASH_CODE) usb_cdc_desc.c
 ifneq (,$(findstring WITH_BWM_FORWARD,$(PLATFORM_DEFS)))
     THUMBSRC += bwm_boot.c bwm_frame.c
+    APP_CFLAGS += -I../armsrc
 endif
 
 ASMSRC = $(SRC_STARTUP)
@@ -100,6 +101,10 @@ endif
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common_arm/Makefile.common
+
+ifneq (,$(findstring WITH_BWM_FORWARD,$(PLATFORM_DEFS)))
+    VPATH += ../armsrc
+endif
 
 INSTALLFW = $(OBJDIR)/bootrom.elf
 
