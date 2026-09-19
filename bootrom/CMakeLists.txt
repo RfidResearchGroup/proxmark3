@@ -21,6 +21,7 @@ set(DEFAULT_VERSION_C ${CMAKE_CURRENT_LIST_DIR}/../common/default_version_pm3.c)
 set(VERSION_PM3_C ${CMAKE_CURRENT_BINARY_DIR}/version_pm3.c)
 
 set(INC_DIRS
+        ${CMAKE_CURRENT_LIST_DIR}
         ${CMAKE_CURRENT_LIST_DIR}/../include
         ${CMAKE_CURRENT_LIST_DIR}/../common
         ${CMAKE_CURRENT_LIST_DIR}/../common_arm/sys
@@ -29,6 +30,7 @@ set(INC_DIRS
         ${CMAKE_CURRENT_LIST_DIR}/../common_arm/gpio
         ${CMAKE_CURRENT_LIST_DIR}/../common_arm/usb
         ${CMAKE_CURRENT_LIST_DIR}/../common_arm/ticks
+        ${CMAKE_CURRENT_LIST_DIR}/../common_arm/bwm
 )
 
 set(THUMBSRC
@@ -45,6 +47,10 @@ if (PM5)
             ${CMAKE_CURRENT_LIST_DIR}/../common_arm/flash_code/flash_code_hw_at32.c
     )
     set(ASMSRC flash-reset-at32.s ram-reset-at32.s)
+    if ("${PLATFORM_DEFS}" MATCHES "WITH_BWM_FORWARD")
+        set(THUMBSRC ${THUMBSRC} ${CMAKE_CURRENT_LIST_DIR}/bwm_boot.c
+                ${CMAKE_CURRENT_LIST_DIR}/../common_arm/bwm/bwm_frame.c)
+    endif ()
 else ()
     set(THUMBSRC ${THUMBSRC}
             ${CMAKE_CURRENT_LIST_DIR}/../common_arm/sys/sys_hw_at91.c

@@ -17,6 +17,18 @@
 # Makefile for bootrom, see ../common_arm/Makefile.common for common settings
 #-----------------------------------------------------------------------------
 
+# This Makefile might have been called directly, not via the root Makefile, so:
+ifeq ($(PLTNAME),)
+    PLATFORM_FILE ?= ../Makefile.platform
+    -include $(PLATFORM_FILE)
+    -include ../.Makefile.options.cache
+    -include ../armsrc/Standalone/Makefile.hal
+    include ../common_arm/Makefile.hal
+    ifeq ($(PLATFORM_CHANGED), true)
+        $(error platform definitions have been changed, please "make clean" at the root of the project)
+    endif
+endif
+
 # Proxmark5 requires armlib.
 include ../armlib/Exports.mk
 
@@ -48,6 +60,9 @@ endif
 # DO NOT use thumb mode in the phase 1 bootloader since that generates a section with glue code
 ARMSRC =
 THUMBSRC = bootrom.c $(SRC_SYS) $(SRC_TICKS) $(SRC_GPIO) $(SRC_USB_CDC) $(SRC_FLASH_CODE) usb_cdc_desc.c
+ifneq (,$(findstring WITH_BWM_FORWARD,$(PLATFORM_DEFS)))
+    THUMBSRC += bwm_boot.c bwm_frame.c
+endif
 
 ASMSRC = $(SRC_STARTUP)
 VERSIONSRC = version_pm3.c
@@ -67,9 +82,20 @@ APP_CFLAGS += -fno-common
 APP_CFLAGS += $(ARMLIB_EXPORT_CFLAGS)
 
 ifneq (,$(findstring WITH_FLASH,$(PLATFORM_DEFS)))
-	APP_CFLAGS += -DWITH_FLASH
-	APP_CFLAGS += -I../common_arm
+    APP_CFLAGS += -DWITH_FLASH
+    APP_CFLAGS += -I../common_arm
     THUMBSRC += ticks_core.c flashmem_core.c $(SRC_FLASH_DATA)
+endif
+
+ifneq (,$(findstring WITH_BWM_FORWARD,$(PLATFORM_DEFS)))
+    APP_CFLAGS += -DWITH_BWM_FORWARD
+endif
+
+# PLATFORM_EXTRAS=BWM is a no-op unless Makefile.hal filled PLATFORM_DEFS.
+ifneq (,$(findstring BWM,$(PLATFORM_EXTRAS)))
+ifeq (,$(findstring WITH_BWM_FORWARD,$(PLATFORM_DEFS)))
+    $(error PLATFORM_EXTRAS=BWM did not set WITH_BWM_FORWARD. Build bootrom from the repo root (`make bootrom`) or let this Makefile include common_arm/Makefile.hal.)
+endif
 endif
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
