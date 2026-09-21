@@ -23,7 +23,7 @@
 #include "util.h" // nbytes
 
 #define BIGBUF_ALIGN_BYTES (4)
-#define BIGBUF_ALIGN_MASK  (0xFFFF + 1 - BIGBUF_ALIGN_BYTES)
+#define BIGBUF_ALIGN_MASK  (~(uint32_t)(BIGBUF_ALIGN_BYTES - 1))
 
 extern uint32_t _stack_start[], __bss_end__[];
 
