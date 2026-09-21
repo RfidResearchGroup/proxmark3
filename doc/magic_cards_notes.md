@@ -2772,8 +2772,10 @@ hf 15 raw -acw -d 022114A52B442C
 hf 15 raw -acw -d 02211569E25D00
 ```
 
-**WARNING!** Writing anything other than these two finalize values to blocks `0x14` and `0x15` bricks the tag.
-
+> [!WARNING]
+> Writing anything other than these two finalize values to blocks `0x14` and `0x15` bricks the tag.
+>
+> `hf 15 wipe` may brick v3 tag.
 
 ### Proxmark3 commands
 
