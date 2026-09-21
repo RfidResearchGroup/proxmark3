@@ -1294,6 +1294,8 @@ typedef struct {
 } ct_meas_t;
 
 #define CT_DECAY_US     200
+// Measured HF cards dropped 3.2 to 5.5 %, a metal object 14.6 %
+#define CT_HF_METAL_PCT 10.0
 // Measured: empty antenna 1.9 to 2.7, a bag of screws 4.1, real cards 16.9 to
 // 29.1. A bag of screws reaching 4.1 is why this is not set lower.
 #define CT_LOCALIZATION_MIN 8.0
@@ -1649,6 +1651,7 @@ static int CmdAnalyseCard(const char *Cmd) {
         arg_dbl0(NULL, "depth", "<pct>", "minimum notch depth, percent of peak (def 2.0)"),
         arg_lit0("l", "live", "keep re-measuring the card, for tuning a coil"),
         arg_lit0("v", "verbose", "show the per frequency LF deltas"),
+        arg_lit0("g", "graph", "plot the baseline minus card difference curve"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1673,6 +1676,7 @@ static int CmdAnalyseCard(const char *Cmd) {
     double min_notch_pct = arg_get_dbl_def(ctx, 10, 2.0);
     bool live = arg_get_lit(ctx, 11);
     bool verbose = arg_get_lit(ctx, 12);
+    bool graph = arg_get_lit(ctx, 13);
     CLIParserFree(ctx);
 
     if (rounds < 1 || rounds > 10) {
@@ -1960,6 +1964,19 @@ static int CmdAnalyseCard(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "Looks like an " _GREEN_("HF card") " (13.56 MHz)");
             PrintAndLogEx(INFO, "Try " _YELLOW_("hf search") ", " _YELLOW_("hf 14a info") " and " _YELLOW_("hf 15 info"));
 
+            // The HF carrier is a fixed oscillator, so there is no sweep, no
+            // notch and no lift on this side -- only amplitude. Metal absorbs
+            // it too, and eddy loss rises with frequency, so a small metal
+            // object can gut the HF field while leaving LF untouched. Measured
+            // HF cards dropped 3.2 to 5.5 %%; metal has been seen at 14.6 %%.
+            if (hf_drop >= CT_HF_METAL_PCT) {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(WARNING, "That is a big HF drop, larger than the 3-5 %% a card usually gives.");
+                PrintAndLogEx(INFO, "Metal absorbs HF strongly while barely touching LF, so this could");
+                PrintAndLogEx(INFO, "equally be a coin, a key or a foil backing. HF cannot be swept, so");
+                PrintAndLogEx(INFO, "this side has amplitude only and cannot tell the two apart.");
+            }
+
         } else {
 
             if (notch) {
@@ -1983,18 +2000,26 @@ static int CmdAnalyseCard(const char *Cmd) {
                       , min_lift_pct, min_lift, lift);
         PrintAndLogEx(INFO, "Run once with no card at all to see this setup's noise floor");
 
-        // difference curve into the graph window
-        for (int i = 0; i < 256; i++) {
-            g_GraphBuffer[i] = (int)delta[i];
+        // difference curve into the graph window, only when asked for -- the
+        // verdict stands on its own and an unwanted plot window is a nuisance
+        if (graph) {
+            for (int i = 0; i < 256; i++) {
+                g_GraphBuffer[i] = (int)delta[i];
+            }
+            g_GraphTraceLen = 256;
+            g_MarkerC.pos = LF_DIVISOR_125;
+            g_MarkerD.pos = LF_DIVISOR_134;
+            ShowGraphWindow();
+            RepaintGraphWindow();
+
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "Graph shows baseline minus card in mV. The peak is the card's resonance.");
         }
-        g_GraphTraceLen = 256;
-        g_MarkerC.pos = LF_DIVISOR_125;
-        g_MarkerD.pos = LF_DIVISOR_134;
-        ShowGraphWindow();
-        RepaintGraphWindow();
 
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "Graph shows baseline minus card in mV. The peak is the card's resonance.");
+        if (keep == false) {
+            PrintAndLogEx(INFO, "Use " _YELLOW_("analyse card -k") " to test the next card against this same baseline");
+        }
         PrintAndLogEx(NORMAL, "");
 
     } while (live && kbd_enter_pressed() == false);
