@@ -1296,9 +1296,21 @@ typedef struct {
 #define CT_DECAY_US     200
 // Measured HF cards dropped 3.2 to 5.5 %, a metal object 14.6 %
 #define CT_HF_METAL_PCT 10.0
-// Measured: empty antenna 1.9 to 2.7, a bag of screws 4.1, real cards 16.9 to
-// 29.1. A bag of screws reaching 4.1 is why this is not set lower.
-#define CT_LOCALIZATION_MIN 8.0
+
+// A large conductor is a shorted turn: it cuts the antenna's inductance, so
+// the reader's OWN resonance moves a long way and its peak collapses. A card
+// only nudges it. Measured: every card shifted 0 to 2 divisors and lost 2.4
+// to 6.7 % of peak, while a metal object on a PM3 shifted 5 divisors and lost
+// 19.2 %. Based on one metal sample, so deliberately set well clear of it.
+#define CT_METAL_SHIFT_DIV  4
+#define CT_METAL_PEAK_PCT   12.0
+
+// Lift as a fraction of notch depth separates absorption from pure reactance.
+// A card's chip is a resistive load, so it DISSIPATES: deep notch, modest
+// lift. A conductor couples reactively and gives a near symmetric dispersion,
+// lift almost equal to notch. Measured: cards 0.22, 0.24, 0.28, 0.29; a metal
+// object 0.45; a heavy lock cylinder 0.94.
+#define CT_LIFT_RATIO_MAX   0.35
 // An empty-antenna control run still peaks at some tens of mV from drift
 // between the two sweeps, while the median sits near zero. So a notch has to
 // clear an absolute depth as well as the ratio, and the default sits between
@@ -1847,17 +1859,36 @@ static int CmdAnalyseCard(const char *Cmd) {
             decay_drop = ct_drop_pct(base.decay, card.decay);
         }
 
-        // A card notch is deep, localized, AND reactive. A bag of screws managed
-        // a 279 mV notch at localization 4.1, so no single one of these is
-        // enough on its own.
+        // A card notch is deep AND reactive. A bag of screws managed a 279 mV
+        // notch, and empty-antenna drift reaches 80 mV of lift, so neither is
+        // enough alone.
         //
-        // Notch/noise is deliberately NOT part of this. Measured, the screws
-        // scored 8.0 on it and the weakest real card 4.6 -- it ranks metal
-        // above cards, because the noise it divides by grows with coupling.
-        // It stays printed as a diagnostic only.
+        // Two ratios are deliberately NOT part of this, both printed as
+        // diagnostics only:
+        //
+        //   notch/noise  ranks metal above cards -- screws scored 8.0 and the
+        //                weakest card 4.6, because the noise it divides by
+        //                grows with coupling strength.
+        //   localization max over mean drop, which fails whichever way the
+        //                mean is summed: signed, a metal resonance shift's
+        //                opposing lobes cancel and it hit 95.5; absolute, a
+        //                card's own lobes count and a real dual-tech card
+        //                scored 4.8 against an empty antenna's 2.0.
+        // lift must be PRESENT (something resonant or reactive is there) but not
+        // DOMINANT (a card absorbs, metal mostly reflects)
+        double lift_ratio = (delta_max > 0) ? (lift / delta_max) : 0;
+
         bool notch_hit = (delta_max >= min_notch)
-                         && (localization >= CT_LOCALIZATION_MIN)
-                         && (lift >= min_lift);
+                         && (lift >= min_lift)
+                         && (lift_ratio <= CT_LIFT_RATIO_MAX);
+
+        // Metal overrides it: if the reader's own tuning has been rewritten,
+        // what loaded the antenna was a conductor, not a coil.
+        bool reader_wrecked = (abs(shift) >= CT_METAL_SHIFT_DIV)
+                              || (drop_peak >= CT_METAL_PEAK_PCT);
+        if (reader_wrecked) {
+            notch_hit = false;
+        }
         bool lf_hit = (lf_score >= lf_thresh) || notch_hit;
         bool hf_hit = (hf_drop >= hf_thresh);
         bool notch = notch_hit;
@@ -1888,10 +1919,12 @@ static int CmdAnalyseCard(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Largest drop.......... " _YELLOW_("%.2f") " %% at %.2f kHz"
                       , lf_max_drop, LF_DIV2FREQ(lf_max_i));
         PrintAndLogEx(SUCCESS, "Average deviation..... %.2f %%", lf_mean_drop);
-        PrintAndLogEx(SUCCESS, "Localization.......... " _YELLOW_("%.1f") "  (>%.0f = notch, ~1 = broadband)"
-                      , localization, CT_LOCALIZATION_MIN);
-        PrintAndLogEx(SUCCESS, "Reactive lift......... " _YELLOW_("%.0f") " mV  (>%.0f = resonant, metal stays flat)"
+        PrintAndLogEx(SUCCESS, "Localization.......... %.1f  (diagnostic only, unreliable both ways)"
+                      , localization);
+        PrintAndLogEx(SUCCESS, "Reactive lift......... " _YELLOW_("%.0f") " mV  (>%.0f = something reactive)"
                       , lift, min_lift);
+        PrintAndLogEx(SUCCESS, "Lift / notch.......... " _YELLOW_("%.2f") "  (<%.2f = absorbing like a card)"
+                      , lift_ratio, CT_LIFT_RATIO_MAX);
 
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "-------- " _CYAN_("Card coil") " --------");
@@ -1958,6 +1991,18 @@ static int CmdAnalyseCard(const char *Cmd) {
             if (notch) {
                 PrintAndLogEx(SUCCESS, "Looks like an " _GREEN_("LF card") ", coil resonates at %.2f kHz", f_res);
                 PrintAndLogEx(INFO, "Try " _YELLOW_("lf search -u") " and " _YELLOW_("lf t55xx detect"));
+            } else if (lift_ratio > CT_LIFT_RATIO_MAX) {
+                PrintAndLogEx(WARNING, "Looks like " _YELLOW_("metal") ", not a card");
+                PrintAndLogEx(INFO, "The lift is %.0f %% of the notch. A card's chip is a resistive load,",
+                              lift_ratio * 100);
+                PrintAndLogEx(INFO, "so it absorbs and the notch dominates. A conductor couples reactively");
+                PrintAndLogEx(INFO, "and pushes back nearly as hard as it pulls.");
+            } else if (reader_wrecked) {
+                PrintAndLogEx(WARNING, "Looks like " _YELLOW_("metal") ", not a card");
+                PrintAndLogEx(INFO, "The reader's own resonance moved %d divisors and lost %.1f %% of its",
+                              abs(shift), drop_peak);
+                PrintAndLogEx(INFO, "peak. A conductor does that by cutting the antenna's inductance;");
+                PrintAndLogEx(INFO, "a card only nudges it.");
             } else {
                 PrintAndLogEx(WARNING, "LF antenna loaded, but with no resonance notch");
                 PrintAndLogEx(INFO, "That is what metal does. Could also be an LF card coupling badly,");
@@ -1999,10 +2044,10 @@ static int CmdAnalyseCard(const char *Cmd) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "Thresholds: LF %.1f %% (score %.2f), HF %.1f %% (score %.2f)"
                       , lf_thresh, lf_score, hf_thresh, hf_drop);
-        PrintAndLogEx(INFO, "            depth %.1f %% = %.0f mV (score %.0f), localization %.0f (score %.1f)"
-                      , min_notch_pct, min_notch, delta_max, CT_LOCALIZATION_MIN, localization);
-        PrintAndLogEx(INFO, "            lift %.1f %% = %.0f mV (score %.0f)"
-                      , min_lift_pct, min_lift, lift);
+        PrintAndLogEx(INFO, "            depth %.1f %% = %.0f mV (score %.0f), lift %.1f %% = %.0f mV (score %.0f)"
+                      , min_notch_pct, min_notch, delta_max, min_lift_pct, min_lift, lift);
+        PrintAndLogEx(INFO, "            lift/notch < %.2f (is %.2f), reader intact: shift < %d div (is %d), peak drop < %.0f %% (is %.1f %%)"
+                      , CT_LIFT_RATIO_MAX, lift_ratio, CT_METAL_SHIFT_DIV, abs(shift), CT_METAL_PEAK_PCT, drop_peak);
         PrintAndLogEx(INFO, "Run once with no card at all to see this setup's noise floor");
 
         // difference curve into the graph window, only when asked for -- the
