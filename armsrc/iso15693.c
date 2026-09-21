@@ -3202,51 +3202,277 @@ void LockPassSlixIso15693(uint32_t pass_id, uint32_t password) {
 //
 //-----------------------------------------------------------------------------
 
+// Backdoor blocks of a magic "Gen1" tag, see doc/magic_cards_notes.md
+#define ISO15_MAGIC_GEN1_BLK_UID_LO     0x38
+#define ISO15_MAGIC_GEN1_BLK_UID_HI     0x39
+#define ISO15_MAGIC_GEN1_BLK_UNLOCK_A   0x3E
+#define ISO15_MAGIC_GEN1_BLK_UNLOCK_B   0x3F
+
+static const uint8_t g_magic_gen1_blank[4] = {0x00, 0x00, 0x00, 0x00};
+static const uint8_t g_magic_gen1_unlock_b[4] = {0x69, 0x96, 0x00, 0x00};
+
+// Unaddressed block read, leaves the field on for the next command
+static int magic_15_read_blk(uint8_t blockno, uint8_t *out, uint32_t *start_time, uint32_t *eof_time) {
+
+    uint8_t cmd[5] = {ISO15_REQ_DATARATE_HIGH | ISO15_REQ_OPTION, ISO15693_READBLOCK, blockno, 0x00, 0x00};
+    AddCrc15(cmd, 3);
+
+    uint16_t recvlen = 0;
+    int res = SendDataTag(cmd, sizeof(cmd), false, true, s_iso15_recvbuf, sizeof(s_iso15_recvbuf),
+                          *start_time, ISO15693_READER_TIMEOUT, eof_time, &recvlen);
+
+    *start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    // 8 bytes when the tag honours the option flag and prepends a lock byte, 7 when it doesn't
+    if (recvlen != 7 && recvlen != 8) {
+        return PM3_EWRONGANSWER;
+    }
+
+    if ((s_iso15_recvbuf[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) {
+        return PM3_EWRONGANSWER;
+    }
+
+    memcpy(out, s_iso15_recvbuf + ((recvlen == 8) ? 2 : 1), 4);
+    return PM3_SUCCESS;
+}
+
+// Unaddressed block write, leaves the field on for the next command
+static int magic_15_write_blk(uint8_t blockno, const uint8_t *data, uint32_t *start_time, uint32_t *eof_time) {
+
+    uint8_t cmd[9] = {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, blockno, data[0], data[1], data[2], data[3], 0x00, 0x00};
+    AddCrc15(cmd, 7);
+
+    uint16_t recvlen = 0;
+    int res = SendDataTag(cmd, sizeof(cmd), false, true, s_iso15_recvbuf, sizeof(s_iso15_recvbuf),
+                          *start_time, ISO15693_READER_TIMEOUT_WRITE, eof_time, &recvlen);
+
+    *start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    if (recvlen < 3 || (s_iso15_recvbuf[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) {
+        return PM3_EWRONGANSWER;
+    }
+    return PM3_SUCCESS;
+}
+
+// On a real Gen1 tag these four blocks sit outside the readable memory and the read fails.
+// A tag that answers with data is a normal tag and we must not overwrite it.
+static bool magic_gen1_is_backdoor(uint32_t *start_time, uint32_t *eof_time) {
+
+    static const uint8_t blocks[4] = {
+        ISO15_MAGIC_GEN1_BLK_UID_LO,
+        ISO15_MAGIC_GEN1_BLK_UID_HI,
+        ISO15_MAGIC_GEN1_BLK_UNLOCK_A,
+        ISO15_MAGIC_GEN1_BLK_UNLOCK_B
+    };
+
+    for (uint8_t i = 0; i < ARRAYLEN(blocks); i++) {
+
+        uint8_t buf[4] = {0};
+        if (magic_15_read_blk(blocks[i], buf, start_time, eof_time) != PM3_SUCCESS) {
+            continue;
+        }
+
+        if (memcmp(buf, g_magic_gen1_blank, 4) == 0) {
+            continue;
+        }
+
+        // leftover of the unlock write of an earlier attempt on this same tag
+        if (blocks[i] == ISO15_MAGIC_GEN1_BLK_UNLOCK_B && memcmp(buf, g_magic_gen1_unlock_b, 4) == 0) {
+            continue;
+        }
+
+        if (g_dbglevel >= DBG_ERROR) {
+            Dbprintf("SetTag15693Uid: block 0x%02X holds data, not a magic Gen1 tag", blocks[i]);
+        }
+        return false;
+    }
+    return true;
+}
+
+// Blank the four blocks again so a failed attempt leaves no unlock values behind
+static void magic_gen1_rollback(uint32_t *start_time, uint32_t *eof_time) {
+    magic_15_write_blk(ISO15_MAGIC_GEN1_BLK_UID_LO, g_magic_gen1_blank, start_time, eof_time);
+    magic_15_write_blk(ISO15_MAGIC_GEN1_BLK_UID_HI, g_magic_gen1_blank, start_time, eof_time);
+    magic_15_write_blk(ISO15_MAGIC_GEN1_BLK_UNLOCK_A, g_magic_gen1_blank, start_time, eof_time);
+    magic_15_write_blk(ISO15_MAGIC_GEN1_BLK_UNLOCK_B, g_magic_gen1_blank, start_time, eof_time);
+}
+
 // Set the UID on Magic ISO15693 tag (based on Iceman's LUA-script).
 void SetTag15693Uid(const uint8_t *uid) {
 
     LED_A_ON();
-    uint8_t cmd[4][9] = {
-        {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x3e, 0x00, 0x00, 0x00, 0x00, 0xE9, 0x8F},
-        {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x3f, 0x69, 0x96, 0x00, 0x00, 0x8A, 0xBB},
-
-        // Command 3 : 02 21 38 u8u7u6u5 (where uX = uid byte X)
-        {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x38, uid[7], uid[6], uid[5], uid[4]},
-
-        // Command 4 : 02 21 39 u4u3u2u1 (where uX = uid byte X)
-        {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x39, uid[3], uid[2], uid[1], uid[0]}
-    };
-
-
-    AddCrc15(cmd[2], 7);
-    AddCrc15(cmd[3], 7);
-
     memset(s_iso15_recvbuf, 0, sizeof(s_iso15_recvbuf));
 
-    uint32_t start_time = 0;
-    uint32_t eof_time = 0;
-    uint16_t recvlen = 0;
+    Iso15693InitReader();
+    StartCountSspClk();
+    uint32_t start_time = 0, eof_time = 0;
 
-    int res = PM3_SUCCESS;
+    uint8_t origuid[8] = {0};
+    if (get_uid_slix(start_time, &eof_time, origuid) != PM3_SUCCESS) {
+        reply_ng(CMD_HF_ISO15693_CSETUID, PM3_ETIMEOUT, NULL, 0);
+        switch_off();
+        return;
+    }
+    start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
 
-    for (int i = 0; i < 4; i++) {
-        res = SendDataTag(
-                  cmd[i],
-                  sizeof(cmd[i]),
-                  (i == 0) ? true : false,
-                  true,
-                  s_iso15_recvbuf,
-                  sizeof(s_iso15_recvbuf),
-                  start_time,
-                  ISO15693_READER_TIMEOUT_WRITE,
-                  &eof_time,
-                  &recvlen
-              );
-
-        start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+    if (magic_gen1_is_backdoor(&start_time, &eof_time) == false) {
+        reply_ng(CMD_HF_ISO15693_CSETUID, PM3_EWRONGANSWER, NULL, 0);
+        switch_off();
+        return;
     }
 
-    reply_ng(CMD_HF_ISO15693_CSETUID, res, NULL, 0);
+    const uint8_t uid_lo[4] = {uid[7], uid[6], uid[5], uid[4]};
+    const uint8_t uid_hi[4] = {uid[3], uid[2], uid[1], uid[0]};
+
+    // the unlock writes are best-effort, a tag already unlocked rejects them
+    magic_15_write_blk(ISO15_MAGIC_GEN1_BLK_UNLOCK_A, g_magic_gen1_blank, &start_time, &eof_time);
+    magic_15_write_blk(ISO15_MAGIC_GEN1_BLK_UNLOCK_B, g_magic_gen1_unlock_b, &start_time, &eof_time);
+
+    int res = magic_15_write_blk(ISO15_MAGIC_GEN1_BLK_UID_LO, uid_lo, &start_time, &eof_time);
+    if (res == PM3_SUCCESS) {
+        res = magic_15_write_blk(ISO15_MAGIC_GEN1_BLK_UID_HI, uid_hi, &start_time, &eof_time);
+    }
+
+    // get_uid_slix answers LSB first, the requested uid is MSB first
+    uint8_t newuid[8] = {0}, revuid[8] = {0};
+    int res_uid = get_uid_slix(start_time, &eof_time, newuid);
+    reverse_array_copy(newuid, sizeof(newuid), revuid);
+    start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+
+    if (res == PM3_SUCCESS && res_uid == PM3_SUCCESS && memcmp(revuid, uid, sizeof(revuid)) == 0) {
+        reply_ng(CMD_HF_ISO15693_CSETUID, PM3_SUCCESS, NULL, 0);
+        switch_off();
+        return;
+    }
+
+    // only roll back while the tag still shows its original UID, blanking the
+    // blocks after a UID change would destroy what we just wrote
+    if (res_uid == PM3_SUCCESS && memcmp(newuid, origuid, sizeof(newuid)) == 0) {
+        magic_gen1_rollback(&start_time, &eof_time);
+    }
+
+    reply_ng(CMD_HF_ISO15693_CSETUID, PM3_ESOFT, NULL, 0);
+    switch_off();
+}
+
+// Magic "V3" tags answer with a signature in 0x14/0x15 while the UID is still changeable
+#define ISO15_MAGIC_V3_BLK_UID_LO       0x10
+#define ISO15_MAGIC_V3_BLK_UID_HI       0x11
+#define ISO15_MAGIC_V3_BLK_SIG_A        0x14
+#define ISO15_MAGIC_V3_BLK_SIG_B        0x15
+
+static const uint8_t g_magic_v3_sig_a[4] = {0xA5, 0x2B, 0x44, 0x2C};
+static const uint8_t g_magic_v3_sig_b[4] = {0x21, 0xAE, 0x93, 0x00};
+static const uint8_t g_magic_v3_fin_a[4] = {0xA5, 0x2B, 0x44, 0x2C};
+static const uint8_t g_magic_v3_fin_b[4] = {0x69, 0xE2, 0x5D, 0x00};
+
+// Writing the finalize values to anything that is not an un-finalized V3 tag bricks it
+static bool magic_v3_in_config_mode(uint32_t *start_time, uint32_t *eof_time) {
+
+    uint8_t a[4] = {0};
+    uint8_t b[4] = {0};
+
+    if (magic_15_read_blk(ISO15_MAGIC_V3_BLK_SIG_A, a, start_time, eof_time) != PM3_SUCCESS) {
+        return false;
+    }
+
+    if (magic_15_read_blk(ISO15_MAGIC_V3_BLK_SIG_B, b, start_time, eof_time) != PM3_SUCCESS) {
+        return false;
+    }
+
+    return (memcmp(a, g_magic_v3_sig_a, 4) == 0) && (memcmp(b, g_magic_v3_sig_b, 4) == 0);
+}
+
+// Set the UID on a magic "V3" tag, repeatable until the tag is finalized
+void SetTag15693Uid_v3(const uint8_t *uid) {
+
+    LED_A_ON();
+    memset(s_iso15_recvbuf, 0, sizeof(s_iso15_recvbuf));
+
+    Iso15693InitReader();
+    StartCountSspClk();
+    uint32_t start_time = 0, eof_time = 0;
+
+    uint8_t curuid[8] = {0};
+    if (get_uid_slix(start_time, &eof_time, curuid) != PM3_SUCCESS) {
+        reply_ng(CMD_HF_ISO15693_CSETUID_V3, PM3_ETIMEOUT, NULL, 0);
+        switch_off();
+        return;
+    }
+    start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+
+    if (magic_v3_in_config_mode(&start_time, &eof_time) == false) {
+        reply_ng(CMD_HF_ISO15693_CSETUID_V3, PM3_EWRONGANSWER, NULL, 0);
+        switch_off();
+        return;
+    }
+
+    const uint8_t uid_lo[4] = {uid[7], uid[6], uid[5], uid[4]};
+    const uint8_t uid_hi[4] = {uid[3], uid[2], uid[1], uid[0]};
+
+    int res = magic_15_write_blk(ISO15_MAGIC_V3_BLK_UID_LO, uid_lo, &start_time, &eof_time);
+    if (res == PM3_SUCCESS) {
+        res = magic_15_write_blk(ISO15_MAGIC_V3_BLK_UID_HI, uid_hi, &start_time, &eof_time);
+    }
+
+    if (res == PM3_SUCCESS) {
+        // get_uid_slix answers LSB first, the requested uid is MSB first
+        uint8_t newuid[8] = {0}, revuid[8] = {0};
+        res = get_uid_slix(start_time, &eof_time, newuid);
+        reverse_array_copy(newuid, sizeof(newuid), revuid);
+
+        if (res == PM3_SUCCESS && memcmp(revuid, uid, sizeof(revuid)) != 0) {
+            res = PM3_ESOFT;
+        }
+    }
+
+    reply_ng(CMD_HF_ISO15693_CSETUID_V3, (res == PM3_SUCCESS) ? PM3_SUCCESS : PM3_ESOFT, NULL, 0);
+    switch_off();
+}
+
+// Lock the UID of a magic "V3" tag, irreversible
+void FinalizeTag15693_v3(void) {
+
+    LED_A_ON();
+    memset(s_iso15_recvbuf, 0, sizeof(s_iso15_recvbuf));
+
+    Iso15693InitReader();
+    StartCountSspClk();
+    uint32_t start_time = 0, eof_time = 0;
+
+    uint8_t curuid[8] = {0};
+    if (get_uid_slix(start_time, &eof_time, curuid) != PM3_SUCCESS) {
+        reply_ng(CMD_HF_ISO15693_CFINALIZE_V3, PM3_ETIMEOUT, NULL, 0);
+        switch_off();
+        return;
+    }
+    start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+
+    if (magic_v3_in_config_mode(&start_time, &eof_time) == false) {
+        reply_ng(CMD_HF_ISO15693_CFINALIZE_V3, PM3_EWRONGANSWER, NULL, 0);
+        switch_off();
+        return;
+    }
+
+    int res = magic_15_write_blk(ISO15_MAGIC_V3_BLK_SIG_A, g_magic_v3_fin_a, &start_time, &eof_time);
+    if (res == PM3_SUCCESS) {
+        res = magic_15_write_blk(ISO15_MAGIC_V3_BLK_SIG_B, g_magic_v3_fin_b, &start_time, &eof_time);
+    }
+
+    // the signature must be gone now, otherwise the tag is still changeable
+    if (res == PM3_SUCCESS && magic_v3_in_config_mode(&start_time, &eof_time)) {
+        res = PM3_ESOFT;
+    }
+
+    reply_ng(CMD_HF_ISO15693_CFINALIZE_V3, (res == PM3_SUCCESS) ? PM3_SUCCESS : PM3_ESOFT, NULL, 0);
     switch_off();
 }
 

@@ -3324,180 +3324,6 @@ static int CmdHF15Restore(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-// ISO15693 magic "V3" tag support
-#define ISO15_MAGIC_V3_BLK_UID_LO   0x10
-#define ISO15_MAGIC_V3_BLK_UID_HI   0x11
-#define ISO15_MAGIC_V3_BLK_SIG_A    0x14
-#define ISO15_MAGIC_V3_BLK_SIG_B    0x15
-
-// signature check in block 0x14/0x15
-static const uint8_t iso15_magic_v3_sig_a[4] = {0xA5, 0x2B, 0x44, 0x2C};
-static const uint8_t iso15_magic_v3_sig_b[4] = {0x21, 0xAE, 0x93, 0x00};
-
-// finalize command write in block 0x14/0x15
-// hf 15 raw -wac -d 022114A52B442C
-// hf 15 raw -wac -d 02211569E25D00
-static const uint8_t iso15_magic_v3_fin_a[4] = {0xA5, 0x2B, 0x44, 0x2C};
-static const uint8_t iso15_magic_v3_fin_b[4] = {0x69, 0xE2, 0x5D, 0x00};
-
-// Unaddressed 4-byte block read, silent because failed probes are expected
-static int hf15_magic_read_blk(uint8_t blockno, uint8_t out[4]) {
-
-    uint16_t approxlen = 2 + 1 + 2;
-    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
-    if (packet == NULL) {
-        return PM3_EMALLOC;
-    }
-
-    // enforce OPTION flag so we get the lock byte, keeping data at offset 2
-    packet->raw[packet->rawlen++] = arg_get_raw_flag(0, true, false, true);
-    packet->raw[packet->rawlen++] = ISO15693_READBLOCK;
-    packet->raw[packet->rawlen++] = blockno;
-    AddCrc15(packet->raw, packet->rawlen);
-    packet->rawlen += 2;
-    packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE);
-
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
-    free(packet);
-
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
-        return PM3_ETIMEOUT;
-    }
-
-    if (resp.status == PM3_ETEAROFF) {
-        return resp.status;
-    }
-    if (resp.length < 2) {
-        return PM3_EWRONGANSWER;
-    }
-
-    uint8_t *d = resp.data.asBytes;
-
-    if (check_crc(CRC_15693, d, resp.length) == false) {
-        return PM3_ECRC;
-    }
-    if ((d[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) {
-        if (d[1] == 0x0F || d[1] == 0x10) {
-            return PM3_EOUTOFBOUND;
-        }
-        return PM3_EFAILED;
-    }
-
-    memcpy(out, d + 2, 4);
-    return PM3_SUCCESS;
-}
-
-// Write one 4-byte block to a magic tag in unaddressed mode.
-static int hf15_magic_write_blk(uint8_t blockno, const uint8_t *data, const uint8_t *pm3flags) {
-    uint16_t flags = arg_get_raw_flag(0, true, false, false);
-    return hf_15_write_blk(pm3flags, flags, NULL, true, blockno, data, 4);
-}
-
-// Detect an un-finalized magic V3 tag by its configuration-mode signature.
-static bool hf15_magic_v3_is_config_mode(void) {
-    uint8_t a[4] = {0};
-    uint8_t b[4] = {0};
-    if (hf15_magic_read_blk(ISO15_MAGIC_V3_BLK_SIG_A, a) != PM3_SUCCESS) {
-        return false;
-    }
-    if (hf15_magic_read_blk(ISO15_MAGIC_V3_BLK_SIG_B, b) != PM3_SUCCESS) {
-        return false;
-    }
-    return (memcmp(a, iso15_magic_v3_sig_a, 4) == 0) && (memcmp(b, iso15_magic_v3_sig_b, 4) == 0);
-}
-
-// ISO15693 magic "Gen1" (backdoor) tag support
-#define ISO15_MAGIC_GEN1_BLK_UID_LO     0x38
-#define ISO15_MAGIC_GEN1_BLK_UID_HI     0x39
-#define ISO15_MAGIC_GEN1_BLK_UNLOCK_A   0x3E
-#define ISO15_MAGIC_GEN1_BLK_UNLOCK_B   0x3F
-
-// Gen1 unlock values for blocks 0x3E/0x3F
-static const uint8_t iso15_magic_gen1_unlock_a[4] = {0x00, 0x00, 0x00, 0x00};
-static const uint8_t iso15_magic_gen1_unlock_b[4] = {0x69, 0x96, 0x00, 0x00};
-
-// Gen1 backdoor blocks
-static const uint8_t iso15_magic_gen1_blocks[] = {
-    ISO15_MAGIC_GEN1_BLK_UID_LO,
-    ISO15_MAGIC_GEN1_BLK_UID_HI,
-    ISO15_MAGIC_GEN1_BLK_UNLOCK_A,
-    ISO15_MAGIC_GEN1_BLK_UNLOCK_B,
-};
-
-// Refuse if a Gen1 backdoor block reads real data or fails in an unexpected way
-static bool hf15_magic_gen1_is_safe_to_write(void) {
-    uint8_t buf[4] = {0};
-    static const uint8_t zero[4] = {0x00, 0x00, 0x00, 0x00};
-    for (size_t i = 0; i < ARRAYLEN(iso15_magic_gen1_blocks); i++) {
-        uint8_t blockno = iso15_magic_gen1_blocks[i];
-        int res = hf15_magic_read_blk(blockno, buf);
-
-        // no answer or block not available is what a Gen1 backdoor block does
-        if (res == PM3_EWRONGANSWER || res == PM3_EOUTOFBOUND) {
-            continue;
-        }
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "block 0x%02X read failed unexpectedly ( " _RED_("%d") " )", blockno, res);
-            return false;
-        }
-
-        // blank, or 69960000 in 0x3F which an earlier unlock write left behind
-        if (memcmp(buf, zero, 4) == 0 ||
-                (blockno == ISO15_MAGIC_GEN1_BLK_UNLOCK_B && memcmp(buf, iso15_magic_gen1_unlock_b, 4) == 0)) {
-            continue;
-        }
-        PrintAndLogEx(WARNING, "block 0x%02X reads back real data ( " _RED_("%s") " )", blockno, sprint_hex(buf, 4));
-        return false;
-    }
-    return true;
-}
-
-// Silent write, real Gen1 tags reject 0x3E/0x3F once they were written before
-static void hf15_magic_write_blk_quiet(uint8_t blockno, const uint8_t *data, const uint8_t *pm3flags) {
-    uint8_t old_printAndLog = g_printAndLog;
-    g_printAndLog &= ~PRINTANDLOG_PRINT;
-    hf15_magic_write_blk(blockno, data, pm3flags);
-    g_printAndLog = old_printAndLog;
-}
-
-// One RF session for all four writes, the unlock writes are best-effort
-static int hf15_magic_gen1_write_uid(const uint8_t *uid) {
-    uint8_t blk_lo[4] = {0};
-    uint8_t blk_hi[4] = {0};
-    reverse_array_copy(uid + 4, 4, blk_lo);
-    reverse_array_copy(uid, 4, blk_hi);
-
-    uint8_t pm3flags = (ISO15_CONNECT | ISO15_READ_RESPONSE | ISO15_LONG_WAIT | ISO15_HIGH_SPEED | ISO15_NO_DISCONNECT);
-    hf15_magic_write_blk_quiet(ISO15_MAGIC_GEN1_BLK_UNLOCK_A, iso15_magic_gen1_unlock_a, &pm3flags);
-    pm3flags &= ~ISO15_CONNECT;
-    hf15_magic_write_blk_quiet(ISO15_MAGIC_GEN1_BLK_UNLOCK_B, iso15_magic_gen1_unlock_b, &pm3flags);
-
-    int res = hf15_magic_write_blk(ISO15_MAGIC_GEN1_BLK_UID_LO, blk_lo, &pm3flags);
-    if (res == PM3_SUCCESS) {
-        res = hf15_magic_write_blk(ISO15_MAGIC_GEN1_BLK_UID_HI, blk_hi, &pm3flags);
-    }
-    DropField();
-    return (res == PM3_SUCCESS) ? PM3_SUCCESS : PM3_ESOFT;
-}
-
-// Blank the four blocks again, only if the tag still shows its original UID
-static void hf15_magic_gen1_rollback_uid(const uint8_t *origuid) {
-    uint8_t curuid[ISO15693_UID_LENGTH] = {0};
-    if (getUID(false, false, curuid) != PM3_SUCCESS || memcmp(curuid, origuid, ISO15693_UID_LENGTH) != 0) {
-        PrintAndLogEx(WARNING, "UID changed or tag not found, skipping rollback");
-        return;
-    }
-
-    PrintAndLogEx(INFO, "Rolling back block 0x38/0x39/0x3E/0x3F to blank...");
-    uint8_t zero[4] = {0x00, 0x00, 0x00, 0x00};
-    hf15_magic_write_blk(ISO15_MAGIC_GEN1_BLK_UID_LO, zero, NULL);
-    hf15_magic_write_blk(ISO15_MAGIC_GEN1_BLK_UID_HI, zero, NULL);
-    hf15_magic_write_blk_quiet(ISO15_MAGIC_GEN1_BLK_UNLOCK_A, zero, NULL);
-    hf15_magic_write_blk_quiet(ISO15_MAGIC_GEN1_BLK_UNLOCK_B, zero, NULL);
-}
-
 /**
  * Commandline handling: HF15 CMD CSETUID
  * Set UID for magic Chinese card
@@ -3507,7 +3333,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 csetuid",
                   "Set UID for magic Chinese card (only works with such cards)\n"
-                  "Gen1 and V3 first probe their backdoor blocks and refuse to write if they\n"
+                  "Gen1 and V3 probe their backdoor blocks first and refuse to write if they\n"
                   "read back real data, to avoid corrupting a normal (non-magic) tag.\n"
                   "For magic 'V3' tags this writes the UID configuration only and is repeatable;\n"
                   "run `" _YELLOW_("hf 15 cfinalize") "` afterwards to lock the UID permanently.",
@@ -3560,66 +3386,36 @@ static int CmdHF15CSetUID(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    uint8_t origuid[ISO15693_UID_LENGTH] = {0};
-    memcpy(origuid, carduid, sizeof(origuid));
-
     PrintAndLogEx(INFO, "Writing...");
 
-    bool used_gen1 = false;
+    PacketResponseNG resp;
+    clearCommandBuffer();
 
-    if (use_v3) {
-        // Only proceed on an un-finalized magic V3 tag
-        if (hf15_magic_v3_is_config_mode() == false) {
+    uint16_t cmd = CMD_HF_ISO15693_CSETUID;
+    if (use_v2) {
+        cmd = CMD_HF_ISO15693_CSETUID_V2;
+    } else if (use_v3) {
+        cmd = CMD_HF_ISO15693_CSETUID_V3;
+    }
+
+    SendCommandNG(cmd, (uint8_t *)&payload, sizeof(payload));
+    if (WaitForResponseTimeout(cmd, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    // the device identifies the tag before it writes, V2 has no such check
+    if (resp.status == PM3_EWRONGANSWER) {
+        if (use_v3) {
             PrintAndLogEx(FAILED, "tag is not an un-finalized magic " _YELLOW_("V3") " tag");
             PrintAndLogEx(HINT, "Hint: signature in blocks 0x14/0x15 not found - already finalized or not a V3 tag");
-            return PM3_ESOFT;
-        }
-
-        /*
-        for example id: E011223344556677
-        [=]   16 | 77 66 55 44 | 0 | wfUD
-        [=]   17 | 33 22 11 E0 | 0 | 3"..
-        */
-        uint8_t blk_lo[4] = {0};
-        uint8_t blk_hi[4] = {0};
-        reverse_array_copy(payload.uid + 4, 4, blk_lo);
-        reverse_array_copy(payload.uid, 4, blk_hi);
-
-        if (hf15_magic_write_blk(ISO15_MAGIC_V3_BLK_UID_LO, blk_lo, NULL) != PM3_SUCCESS ||
-                hf15_magic_write_blk(ISO15_MAGIC_V3_BLK_UID_HI, blk_hi, NULL) != PM3_SUCCESS) {
-            PrintAndLogEx(FAILED, "Setting new UID ( " _RED_("fail") " )");
-            PrintAndLogEx(NORMAL, "");
-            return PM3_ESOFT;
-        }
-
-    } else if (use_v2) {
-        PacketResponseNG resp;
-        clearCommandBuffer();
-
-        SendCommandNG(CMD_HF_ISO15693_CSETUID_V2, (uint8_t *)&payload, sizeof(payload));
-        if (WaitForResponseTimeout(CMD_HF_ISO15693_CSETUID_V2, &resp, 2000) == false) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply");
-            DropField();
-            return PM3_ESOFT;
-        }
-
-    } else {
-        // Bail out before writing if the Gen1 backdoor blocks hold real data
-        if (hf15_magic_gen1_is_safe_to_write() == false) {
+        } else {
             PrintAndLogEx(FAILED, "tag doesn't look like a blank/magic " _YELLOW_("Gen1") " tag ( " _RED_("fail") " )");
             PrintAndLogEx(HINT, "Hint: block 0x38/0x39/0x3E/0x3F must be unreadable or blank");
             PrintAndLogEx(HINT, "refusing to risk overwriting a normal tag");
-            return PM3_ESOFT;
         }
-
-        used_gen1 = true;
-
-        if (hf15_magic_gen1_write_uid(payload.uid) != PM3_SUCCESS) {
-            hf15_magic_gen1_rollback_uid(origuid);
-            PrintAndLogEx(FAILED, "Setting new UID ( " _RED_("fail") " )");
-            PrintAndLogEx(NORMAL, "");
-            return PM3_ESOFT;
-        }
+        return PM3_ESOFT;
     }
 
     PrintAndLogEx(INFO, "Verifying...");
@@ -3637,10 +3433,6 @@ static int CmdHF15CSetUID(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Setting new UID ( " _GREEN_("ok") " )");
         PrintAndLogEx(NORMAL, "");
         return PM3_SUCCESS;;
-    }
-
-    if (used_gen1) {
-        hf15_magic_gen1_rollback_uid(origuid);
     }
 
     PrintAndLogEx(FAILED, "Setting new UID ( " _RED_("fail") " )");
@@ -3672,24 +3464,6 @@ static int CmdHF15CFinalize(const char *Cmd) {
     bool confirmed = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
 
-    PrintAndLogEx(INFO, "Get current tag");
-
-    uint8_t carduid[ISO15693_UID_LENGTH] = {0x00};
-    if (getUID(true, false, carduid) != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "no tag found");
-        return PM3_ESOFT;
-    }
-
-    // Safety: only proceed on a tag that is actually an un-finalized magic V3.
-    // Writing the finalize values to any other tag may permanently brick it.
-    if (hf15_magic_v3_is_config_mode() == false) {
-        PrintAndLogEx(FAILED, "tag is not an un-finalized magic " _YELLOW_("V3") " tag");
-        PrintAndLogEx(HINT, "Hint: signature in blocks 0x14/0x15 not found - already finalized or not a V3 tag");
-        return PM3_ESOFT;
-    }
-
-    PrintAndLogEx(SUCCESS, "Magic " _GREEN_("V3") " tag in configuration mode ( " _GREEN_("ok") " )");
-
     if (confirmed == false) {
         PrintAndLogEx(WARNING, _RED_("This operation is irreversible!") " The UID will be locked permanently.");
         PrintAndLogEx(WARNING, "Add " _YELLOW_("-y") " to confirm and proceed.");
@@ -3698,8 +3472,28 @@ static int CmdHF15CFinalize(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Finalizing...");
 
-    if (hf15_magic_write_blk(ISO15_MAGIC_V3_BLK_SIG_A, iso15_magic_v3_fin_a, NULL) != PM3_SUCCESS ||
-            hf15_magic_write_blk(ISO15_MAGIC_V3_BLK_SIG_B, iso15_magic_v3_fin_b, NULL) != PM3_SUCCESS) {
+    PacketResponseNG resp;
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO15693_CFINALIZE_V3, NULL, 0);
+    if (WaitForResponseTimeout(CMD_HF_ISO15693_CFINALIZE_V3, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (resp.status == PM3_ETIMEOUT) {
+        PrintAndLogEx(FAILED, "no tag found");
+        return PM3_ESOFT;
+    }
+
+    if (resp.status == PM3_EWRONGANSWER) {
+        PrintAndLogEx(FAILED, "tag is not an un-finalized magic " _YELLOW_("V3") " tag");
+        PrintAndLogEx(HINT, "Hint: signature in blocks 0x14/0x15 not found");
+        PrintAndLogEx(HINT, "already finalized or not a V3 tag");
+        return PM3_ESOFT;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "Finalize ( " _RED_("fail") " )");
         PrintAndLogEx(NORMAL, "");
         return PM3_ESOFT;
