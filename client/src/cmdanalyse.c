@@ -1790,7 +1790,12 @@ static int CmdAnalyseCard(const char *Cmd) {
             }
 
             double d = ct_drop_pct(base.curve[i], card.curve[i]);
-            lf_sum_drop += d;
+            // Accumulate the MAGNITUDE. A large conductor shifts the reader's
+            // resonance, throwing up a big negative lobe on one side and a big
+            // positive one on the other; summing them signed cancels to near
+            // zero and makes the localization ratio explode. Metal scored 95.5
+            // that way, higher than any real card.
+            lf_sum_drop += fabs(d);
             lf_cnt++;
 
             if (d > lf_max_drop) {
@@ -1882,7 +1887,7 @@ static int CmdAnalyseCard(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Peak amplitude........ " _YELLOW_("%+.2f") " %%", -drop_peak);
         PrintAndLogEx(SUCCESS, "Largest drop.......... " _YELLOW_("%.2f") " %% at %.2f kHz"
                       , lf_max_drop, LF_DIV2FREQ(lf_max_i));
-        PrintAndLogEx(SUCCESS, "Average drop.......... %.2f %%", lf_mean_drop);
+        PrintAndLogEx(SUCCESS, "Average deviation..... %.2f %%", lf_mean_drop);
         PrintAndLogEx(SUCCESS, "Localization.......... " _YELLOW_("%.1f") "  (>%.0f = notch, ~1 = broadband)"
                       , localization, CT_LOCALIZATION_MIN);
         PrintAndLogEx(SUCCESS, "Reactive lift......... " _YELLOW_("%.0f") " mV  (>%.0f = resonant, metal stays flat)"
