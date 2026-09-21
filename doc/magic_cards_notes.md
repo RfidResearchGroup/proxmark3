@@ -2685,9 +2685,95 @@ More commands to follow. Be careful with some.
 
 ^[Top](#top)
 
+Three kinds of UID changeable ISO15693 tags are known, called V1 (Gen1), V2 (Gen2) and V3 (Gen3) here.
+`hf 15 info` only matches the UID prefix against its vendor list, so it can't tell them apart from genuine tags.
+
 ### Identify
 
-**TODO**
+^[Top](#top)
+
+| Kind | Blocks on tags tested | Set UID with |
+|------|-----------------------|--------------|
+| V1 (Gen1) | 28/40/56 | `hf 15 csetuid` |
+| V2 (Gen2) | 64 | `hf 15 csetuid --v2` |
+| V3 (Gen3) | 80 | `hf 15 csetuid --v3`, then `hf 15 cfinalize` |
+
+The block counts come from the few tags tested, they are only a hint.
+
+The same kind of magic can behave a bit differently between manufacturers, for example the block layout,
+or how the V1 backdoor blocks answer to read and write commands. What is described here comes from the tags tested.
+
+V1: no reliable way to identify it, the only sure check is to set a UID and see if it changes.
+On the V1 tags tested, reading blocks `0x38`, `0x39`, `0x3E` and `0x3F` fails while writing `0x38` and `0x39` works. That may be a hint but it is not confirmed. 
+
+```
+hf 15 raw -ac -d 022038     # command failed on the V1 tags tested
+```
+
+V2: no passive identification known. It uses the custom command `0xE0`, which genuine tags do not implement.
+
+V3: blocks `0x14` and `0x15` hold a signature while the tag is not finalized.
+
+```
+hf 15 raw -ac -d 022014     # A5 2B 44 2C
+hf 15 raw -ac -d 022015     # 21 AE 93 00 (69 E2 5D 00 after finalize)
+```
+
+
+
+### V1 (Gen1)
+
+^[Top](#top)
+
+The UID is written to blocks `0x38` and `0x39` with plain `WRITEBLOCK`, each holding four UID bytes in reverse order.
+Blocks `0x3E` and `0x3F` are written first as an unlock, this is what `hf 15 csetuid` sends for `E011223344556677`:
+
+```
+hf 15 raw -acw -d 02213E00000000
+hf 15 raw -acw -d 02213F69960000
+hf 15 raw -acw -d 02213877665544
+hf 15 raw -acw -d 022139332211E0
+```
+
+On the tags tested, writing only `0x38` and `0x39` is enough, the new UID is active immediately.
+`0x3E` and `0x3F` accept the unlock values once, later writes fail with `command failed`.
+
+### V2 (Gen2)
+
+^[Top](#top)
+
+Uses the custom command `0xE0`, this is what `hf 15 csetuid --v2` sends for `E011223344556677`:
+
+```
+hf 15 raw -acw -d 02E009473F038B00
+hf 15 raw -acw -d 02E0095200000000
+hf 15 raw -acw -d 02E0094077665544
+hf 15 raw -acw -d 02E00941332211E0
+```
+
+On the V2 tag tested, block `0x38` reads as normal memory, a `WRITEBLOCK` to it is refused with error code 3 (option not supported) unless the request flags carry the option flag (`42` instead of `02`).
+
+### V3 (Gen3)
+
+^[Top](#top)
+
+The UID sits in blocks `0x10` (last four bytes, reversed) and `0x11` (first four bytes, reversed).
+It can be rewritten as often as needed until the tag is finalized:
+
+```
+hf 15 raw -acw -d 02211077665544
+hf 15 raw -acw -d 022111332211E0
+```
+
+Finalize locks the UID for good and can't be undone, block `0x15` changes to `69 E2 5D 00`:
+
+```
+hf 15 raw -acw -d 022114A52B442C
+hf 15 raw -acw -d 02211569E25D00
+```
+
+**WARNING!** Writing anything other than these two finalize values to blocks `0x14` and `0x15` bricks the tag.
+
 
 ### Proxmark3 commands
 
@@ -2696,8 +2782,19 @@ More commands to follow. Be careful with some.
 Always set a UID starting with `E0`.
 
 ```
-hf 15 csetuid E011223344556677
+hf 15 csetuid -u E011223344556677           # V1
+hf 15 csetuid -u E011223344556677 --v2      # V2
+hf 15 csetuid -u E011223344556677 --v3      # V3
+hf 15 cfinalize -y                          # V3, irreversible
 ```
+
+Before writing, `csetuid` checks that the tag looks like the selected kind:
+
+* V1 reads blocks `0x38`, `0x39`, `0x3E`, `0x3F` and stops if one holds data other than `00000000` (or `69960000` in `0x3F`),
+  or if a read fails other than with no answer / block not available.
+  If the write or the UID check fails and the tag still shows its original UID, it writes those four blocks back to `00000000`.
+* V3 stops unless blocks `0x14` and `0x15` still hold the un-finalized signature, `cfinalize` does the same.
+* V2 has no check, the `0xE0` command is ignored by genuine tags.
 
 or (ignore errors):
 
