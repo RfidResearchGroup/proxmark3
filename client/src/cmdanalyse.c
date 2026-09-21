@@ -21,6 +21,7 @@
 #include <string.h>
 #include <ctype.h>        // tolower
 #include <math.h>
+#include <time.h>
 #include <inttypes.h>     // PRIx64 macro
 #include "commonutil.h"   // reflect...
 #include "comms.h"        // clearCommandBuffer
@@ -1291,11 +1292,19 @@ typedef struct {
     uint32_t peak_f;        // divisor of the peak
     double decay;           // HF decay area, loaded Q proxy
     bool has_decay;
+    double round_min;       // peak of the weakest repeat, for stability
+    double round_max;       // peak of the strongest repeat
 } ct_meas_t;
 
 #define CT_DECAY_US     200
 // Measured HF cards dropped 3.2 to 5.5 %, a metal object 14.6 %
 #define CT_HF_METAL_PCT 10.0
+
+// Below the detection threshold but above the +-0.2 % a fresh baseline jitters
+// by. Worth reporting, not worth deciding on: drift reaches this on its own
+// once a cached baseline is a couple of minutes old, and so does a baseline
+// taken with the card already near the antenna.
+#define CT_HF_WEAK_PCT  0.5
 
 // A large conductor is a shorted turn: it cuts the antenna's inductance, so
 // the reader's OWN resonance moves a long way and its peak collapses. A card
@@ -1311,6 +1320,14 @@ typedef struct {
 // lift almost equal to notch. Measured: cards 0.22, 0.24, 0.28, 0.29; a metal
 // object 0.45; a heavy lock cylinder 0.94.
 #define CT_LIFT_RATIO_MAX   0.35
+
+// Notch width does NOT separate a card from metal, despite the physics
+// suggesting it should. Measured: small metal 18.0 and 18.2 kHz at Q 7, and a
+// real dual-tech card 18.3 kHz at Q 7 as well. The card is only observable
+// through the reader's own resonance, so the width we can see is set by the
+// reader's bandwidth and the coupling envelope, not by the tag's tank. It is
+// printed as a diagnostic because it is a real measurement, but it carries no
+// information about what is on the antenna.
 // An empty-antenna control run still peaks at some tens of mV from drift
 // between the two sweeps, while the median sits near zero. So a notch has to
 // clear an absolute depth as well as the ratio, and the default sits between
@@ -1319,6 +1336,14 @@ typedef struct {
 static bool g_ct_legacy = false;      // device has no sweep command
 static bool g_ct_has_baseline = false;
 static ct_meas_t g_ct_baseline;
+static time_t g_ct_baseline_time = 0;
+
+// A cached baseline goes stale. Measured: the same small metal object read a
+// 256 mV notch and 47 mV lift against a fresh baseline, and 685 mV / 175 mV
+// against a cached one -- 2.7x and 3.7x inflation, enough to turn a correct
+// "nothing there" into a confident "LF card". Drift is the antenna warming,
+// the device being nudged, anything nearby moving.
+#define CT_BASELINE_STALE_S 120
 
 static void ct_wait_enter(const char *msg) {
     PrintAndLogEx(INFO, "%s, then press " _GREEN_("<Enter>"), msg);
@@ -1331,7 +1356,7 @@ static void ct_wait_enter(const char *msg) {
 
 // full precision sweep, mV per divisor
 static int ct_sweep(ct_meas_t *m, uint8_t div_start, uint8_t div_end,
-                    uint8_t averages, uint8_t settle_ms, bool with_hf) {
+                    uint8_t averages, uint8_t settle_ms, bool with_hf, double *round_peak) {
 
     lf_sweep_params_t params = {
         .div_start = div_start,
@@ -1367,6 +1392,8 @@ static int ct_sweep(ct_meas_t *m, uint8_t div_start, uint8_t div_end,
     uint16_t v_hf;
     memcpy(&v_hf, &r->v_hf, sizeof(uint16_t));
 
+    double peak = 0;
+
     for (uint16_t i = 0; i < n; i++) {
         uint16_t mv;
         memcpy(&mv, &r->v_mv[i], sizeof(uint16_t));
@@ -1376,6 +1403,13 @@ static int ct_sweep(ct_meas_t *m, uint8_t div_start, uint8_t div_end,
         }
         m->curve[d] += mv;
         m->valid[d] = true;
+        if (mv > peak) {
+            peak = mv;
+        }
+    }
+
+    if (round_peak) {
+        *round_peak = peak;
     }
 
     if (with_hf) {
@@ -1464,10 +1498,11 @@ static int ct_measure(ct_meas_t *m, uint8_t div_start, uint8_t div_end, uint8_t 
     for (uint8_t r = 0; r < rounds; r++) {
 
         int res;
+        double round_peak = 0;
         if (g_ct_legacy) {
             res = ct_sweep_legacy(m);
         } else {
-            res = ct_sweep(m, div_start, div_end, averages, settle_ms, with_hf);
+            res = ct_sweep(m, div_start, div_end, averages, settle_ms, with_hf, &round_peak);
             if (res == PM3_ETIMEOUT && r == 0) {
                 PrintAndLogEx(INFO, "Device has no sweep command, falling back to " _YELLOW_("hw tune") " resolution");
                 PrintAndLogEx(INFO, "Flash the matching firmware for full precision");
@@ -1479,6 +1514,19 @@ static int ct_measure(ct_meas_t *m, uint8_t div_start, uint8_t div_end, uint8_t 
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Antenna measurement failed");
             return res;
+        }
+
+        // Spread between repeats says whether anything moved while measuring.
+        // A baseline taken with a card still hovering near the antenna reads
+        // low, and everything derived from it is then wrong -- a dual-tech ring
+        // measured 0.65 % HF that way against its true 5.34 %.
+        if (round_peak > 0) {
+            if (m->round_min == 0 || round_peak < m->round_min) {
+                m->round_min = round_peak;
+            }
+            if (round_peak > m->round_max) {
+                m->round_max = round_peak;
+            }
         }
 
         if (try_decay) {
@@ -1583,6 +1631,76 @@ static double ct_noise_floor(const double *delta, const bool *valid,
     return v[idx];
 }
 
+// Width of the notch at half depth, and the Q it implies.
+//
+// This is the one thing a card has that no lump of metal does: a coil and a
+// capacitor absorb in a narrow band, Q typically 20-80, a few kHz wide at
+// 125 kHz. Metal has no resonance, so its loading varies slowly across the
+// whole sweep. Magnitude-based metrics cannot see that difference, which is
+// why lossy metal keeps imitating a card.
+//
+// Returns the width in kHz, 0 if the curve never falls to half depth inside
+// the swept band.
+static double ct_notch_width(const double *delta, const bool *valid, int notch_i, double *q) {
+
+    *q = 0;
+
+    if (notch_i <= 0 || delta[notch_i] <= 0) {
+        return 0;
+    }
+
+    double half = delta[notch_i] / 2.0;
+
+    // walk to lower frequency, which is a HIGHER divisor
+    int lo = -1;
+    for (int i = notch_i + 1; i < 256; i++) {
+        if (valid[i] == false) {
+            break;
+        }
+        if (delta[i] <= half) {
+            lo = i;
+            break;
+        }
+    }
+
+    // walk to higher frequency, a LOWER divisor
+    int hi = -1;
+    for (int i = notch_i - 1; i >= 0; i--) {
+        if (valid[i] == false) {
+            break;
+        }
+        if (delta[i] <= half) {
+            hi = i;
+            break;
+        }
+    }
+
+    if (lo < 0 || hi < 0) {
+        return 0;   // never came back down inside the band, so it is not a peak
+    }
+
+    // linear interpolation onto the half-depth crossing
+    double f_lo = LF_DIV2FREQ(lo);
+    if (delta[lo - 1] > delta[lo]) {
+        double t = (delta[lo - 1] - half) / (delta[lo - 1] - delta[lo]);
+        f_lo = LF_DIV2FREQ(lo - 1) + t * (LF_DIV2FREQ(lo) - LF_DIV2FREQ(lo - 1));
+    }
+
+    double f_hi = LF_DIV2FREQ(hi);
+    if (delta[hi + 1] > delta[hi]) {
+        double t = (delta[hi + 1] - half) / (delta[hi + 1] - delta[hi]);
+        f_hi = LF_DIV2FREQ(hi + 1) + t * (LF_DIV2FREQ(hi) - LF_DIV2FREQ(hi + 1));
+    }
+
+    double width = f_hi - f_lo;
+    if (width <= 0) {
+        return 0;
+    }
+
+    *q = LF_DIV2FREQ(notch_i) / width;
+    return width;
+}
+
 static double ct_drop_pct(double base, double card) {
     if (base <= 0) {
         return 0;
@@ -1660,7 +1778,7 @@ static int CmdAnalyseCard(const char *Cmd) {
         arg_dbl0(NULL, "lf", "<pct>", "LF detection threshold in percent (def 3)"),
         arg_dbl0(NULL, "hf", "<pct>", "HF detection threshold in percent (def 1)"),
         arg_dbl0(NULL, "lift", "<pct>", "minimum reactive lift, percent of peak (def 0.6)"),
-        arg_dbl0(NULL, "depth", "<pct>", "minimum notch depth, percent of peak (def 2.0)"),
+        arg_dbl0(NULL, "depth", "<pct>", "minimum notch depth, percent of peak (def 3.5)"),
         arg_lit0("l", "live", "keep re-measuring the card, for tuning a coil"),
         arg_lit0("v", "verbose", "show the per frequency LF deltas"),
         arg_lit0("g", "graph", "plot the baseline minus card difference curve"),
@@ -1682,10 +1800,11 @@ static int CmdAnalyseCard(const char *Cmd) {
     // 58 mV twice, real cards 302, 336 and 604 mV. The cleanest separation of
     // the lot. Held as a fraction of peak so it carries to another antenna.
     double min_lift_pct = arg_get_dbl_def(ctx, 9, 0.6);
-    // Measured against a 25 V peak: empty antenna 47 to 69 mV, a bag of screws
-    // 220 to 244 mV, real cards 808 to 2079 mV. 2 %% of peak sits in the gap
-    // with better than 2x margin on both sides.
-    double min_notch_pct = arg_get_dbl_def(ctx, 10, 2.0);
+    // Measured against a 25 V peak, all with a FRESH baseline: empty antenna 47
+    // to 70 mV, a bag of screws 220 to 244 mV, a small metal object 256 to 696
+    // mV, real cards 1265 to 2021 mV. 3.5 %% of peak = 878 mV sits in the gap.
+    // A cached baseline inflates this badly, hence the staleness warning.
+    double min_notch_pct = arg_get_dbl_def(ctx, 10, 3.5);
     bool live = arg_get_lit(ctx, 11);
     bool verbose = arg_get_lit(ctx, 12);
     bool graph = arg_get_lit(ctx, 13);
@@ -1744,7 +1863,14 @@ static int CmdAnalyseCard(const char *Cmd) {
 
     if (keep) {
         memcpy(&base, &g_ct_baseline, sizeof(ct_meas_t));
-        PrintAndLogEx(INFO, "Using cached baseline");
+
+        long age = (long)(time(NULL) - g_ct_baseline_time);
+        if (age >= CT_BASELINE_STALE_S) {
+            PrintAndLogEx(WARNING, "Cached baseline is %ld s old and drift inflates every reading.", age);
+            PrintAndLogEx(INFO, "Re-run without " _YELLOW_("-k") " before trusting a marginal verdict.");
+        } else {
+            PrintAndLogEx(INFO, "Using cached baseline, %ld s old", age);
+        }
     } else {
         ct_wait_enter("Remove everything from the antenna");
         PrintAndLogEx(INFO, "Measuring baseline...");
@@ -1754,6 +1880,15 @@ static int CmdAnalyseCard(const char *Cmd) {
         }
         memcpy(&g_ct_baseline, &base, sizeof(ct_meas_t));
         g_ct_has_baseline = true;
+        g_ct_baseline_time = time(NULL);
+
+        if (rounds > 1 && base.round_min > 0) {
+            double spread = (base.round_max - base.round_min) * 100.0 / base.round_max;
+            if (spread >= 1.0) {
+                PrintAndLogEx(WARNING, "Baseline repeats disagree by %.1f %%, something was moving.", spread);
+                PrintAndLogEx(INFO, "Measure it again with a clear, still antenna.");
+            }
+        }
     }
 
     if (base.peak_v <= 0) {
@@ -1849,6 +1984,9 @@ static int CmdAnalyseCard(const char *Cmd) {
         // than dividing by ~0, otherwise the best measurements score worst.
         double notch_snr = delta_max / MAX(noise, 1.0);
 
+        double notch_q = 0;
+        double notch_width = ct_notch_width(delta, base.valid, delta_max_i, &notch_q);
+
         double f_res = (delta_max_i > 0) ? ct_interpolate_peak(delta, base.valid, delta_max_i) : 0;
         int shift = (int)card.peak_f - (int)base.peak_f;
 
@@ -1884,8 +2022,17 @@ static int CmdAnalyseCard(const char *Cmd) {
 
         // Metal overrides it: if the reader's own tuning has been rewritten,
         // what loaded the antenna was a conductor, not a coil.
-        bool reader_wrecked = (abs(shift) >= CT_METAL_SHIFT_DIV)
-                              || (drop_peak >= CT_METAL_PEAK_PCT);
+        // Direction matters. Eddy currents oppose the flux, so a conductor can
+        // only REDUCE the antenna's inductance and push its resonance UP. A
+        // downward shift needs added inductance or a resonant circuit coupling
+        // from above, neither of which a lump of metal does. Measured: every
+        // metal sample moved up or not at all, while a Flipper Zero on the
+        // reader moved it down 8 divisors, 123.71 -> 114.29 kHz.
+        // Fewer divisors == higher frequency, so metal makes shift negative.
+        bool moved_up = (shift < 0);
+        bool reader_wrecked = moved_up
+                              && ((abs(shift) >= CT_METAL_SHIFT_DIV)
+                                  || (drop_peak >= CT_METAL_PEAK_PCT));
         if (reader_wrecked) {
             notch_hit = false;
         }
@@ -1932,6 +2079,12 @@ static int CmdAnalyseCard(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "Notch depth........... " _YELLOW_("%.0f") " mV at %.2f kHz"
                           , delta_max, LF_DIV2FREQ(delta_max_i));
             PrintAndLogEx(SUCCESS, "Resonant frequency.... " _BACK_GREEN_("%.2f") " kHz  (interpolated)", f_res);
+            if (notch_width > 0) {
+                PrintAndLogEx(SUCCESS, "Notch width........... %.2f kHz, Q %.0f  (diagnostic, reader bandwidth not tag Q)"
+                              , notch_width, notch_q);
+            } else {
+                PrintAndLogEx(SUCCESS, "Notch width........... wider than the swept band, no resonance");
+            }
             PrintAndLogEx(SUCCESS, "Noise floor........... %.0f mV", noise);
             PrintAndLogEx(SUCCESS, "Notch / noise......... %.1f  (diagnostic only, ranks metal above cards)"
                           , notch_snr);
@@ -1983,14 +2136,35 @@ static int CmdAnalyseCard(const char *Cmd) {
         if (lf_hit == false && hf_hit == false) {
 
             PrintAndLogEx(WARNING, "No card detected");
-            PrintAndLogEx(INFO, "Neither antenna is loaded. Center the card on the antenna,");
-            PrintAndLogEx(INFO, "or lower the thresholds with --lf / --hf if the card is small.");
+
+            if (delta_max >= min_notch) {
+                // something IS there, it just is not resonant -- do not send
+                // the user off to re-centre a card that is already in place
+                PrintAndLogEx(INFO, "Something is loading the LF antenna, %.0f mV deep, but it does not", delta_max);
+                if (notch_width > 0) {
+                    PrintAndLogEx(INFO, "resonate: %.1f kHz wide, Q %.0f. That is metal, not a coil.", notch_width, notch_q);
+                } else {
+                    PrintAndLogEx(INFO, "resonate at all inside the swept band. That is metal, not a coil.");
+                }
+            } else {
+                PrintAndLogEx(INFO, "Neither antenna is loaded. Center the card on the antenna,");
+                PrintAndLogEx(INFO, "or lower the thresholds with --lf / --hf if the card is small.");
+            }
 
         } else if (lf_hit && hf_hit == false) {
 
             if (notch) {
                 PrintAndLogEx(SUCCESS, "Looks like an " _GREEN_("LF card") ", coil resonates at %.2f kHz", f_res);
                 PrintAndLogEx(INFO, "Try " _YELLOW_("lf search -u") " and " _YELLOW_("lf t55xx detect"));
+
+                if (hf_drop >= CT_HF_WEAK_PCT) {
+                    PrintAndLogEx(NORMAL, "");
+                    PrintAndLogEx(INFO, "HF also dropped %.2f %%, under the %.1f %% needed to call it, but above",
+                                  hf_drop, hf_thresh);
+                    PrintAndLogEx(INFO, "the noise. That is either a weakly coupled HF coil or a baseline");
+                    PrintAndLogEx(INFO, "taken with something already near the antenna. Re-measure with a");
+                    PrintAndLogEx(INFO, "clear antenna, and try " _YELLOW_("hf search") " before ruling it out.");
+                }
             } else if (lift_ratio > CT_LIFT_RATIO_MAX) {
                 PrintAndLogEx(WARNING, "Looks like " _YELLOW_("metal") ", not a card");
                 PrintAndLogEx(INFO, "The lift is %.0f %% of the notch. A card's chip is a resistive load,",
@@ -2033,11 +2207,32 @@ static int CmdAnalyseCard(const char *Cmd) {
                 PrintAndLogEx(SUCCESS, "Looks like a " _GREEN_("dual frequency card") " (LF + HF)");
                 PrintAndLogEx(INFO, "LF coil resonates at %.2f kHz", f_res);
                 PrintAndLogEx(INFO, "Try both " _YELLOW_("lf search -u") " and " _YELLOW_("hf search"));
+
+                if (abs(shift) >= CT_METAL_SHIFT_DIV || drop_peak >= CT_METAL_PEAK_PCT) {
+                    PrintAndLogEx(NORMAL, "");
+                    PrintAndLogEx(INFO, "It couples unusually hard, moving the reader's own resonance %d", abs(shift));
+                    PrintAndLogEx(INFO, "divisors. A plain card does not do that; a large antenna does, so");
+                    PrintAndLogEx(INFO, "this may be another reader or an emulator rather than a tag.");
+                }
+            } else if (reader_wrecked) {
+                PrintAndLogEx(WARNING, "Both antennas loaded, but this looks like " _YELLOW_("metal"));
+                PrintAndLogEx(INFO, "The reader's own resonance moved UP %d divisors and lost %.1f %% of",
+                              abs(shift), drop_peak);
+                PrintAndLogEx(INFO, "its peak. Eddy currents cut the antenna's inductance, which is what a");
+                PrintAndLogEx(INFO, "conductor does. An HF card on a metal backing reads this way too, so");
+                PrintAndLogEx(INFO, "try " _YELLOW_("hf search") " anyway.");
+            } else if (lift_ratio > CT_LIFT_RATIO_MAX) {
+                PrintAndLogEx(WARNING, "Both antennas loaded, but this looks like " _YELLOW_("metal"));
+                PrintAndLogEx(INFO, "The lift is %.0f %% of the notch, so it reflects rather than absorbs.",
+                              lift_ratio * 100);
+                PrintAndLogEx(INFO, "An HF card on a metal backing reads this way too, try "
+                              _YELLOW_("hf search") " anyway.");
             } else {
-                PrintAndLogEx(WARNING, "Both antennas loaded, but the LF loading has no notch");
-                PrintAndLogEx(INFO, "Broadband LF loading is what metal does (keys, a coin, a laptop).");
-                PrintAndLogEx(INFO, "If the HF drop is real this could also be an HF card on a metal");
-                PrintAndLogEx(INFO, "backing, try " _YELLOW_("hf search") " anyway.");
+                PrintAndLogEx(WARNING, "Both antennas loaded, but the LF notch is only %.0f mV", delta_max);
+                PrintAndLogEx(INFO, "That is under the %.0f mV a card gives on this antenna. Broadband", min_notch);
+                PrintAndLogEx(INFO, "loading is what metal does (keys, a coin, a laptop). If the HF drop is");
+                PrintAndLogEx(INFO, "real this could also be an HF card on a metal backing, try "
+                              _YELLOW_("hf search") ".");
             }
         }
 
@@ -2046,8 +2241,9 @@ static int CmdAnalyseCard(const char *Cmd) {
                       , lf_thresh, lf_score, hf_thresh, hf_drop);
         PrintAndLogEx(INFO, "            depth %.1f %% = %.0f mV (score %.0f), lift %.1f %% = %.0f mV (score %.0f)"
                       , min_notch_pct, min_notch, delta_max, min_lift_pct, min_lift, lift);
-        PrintAndLogEx(INFO, "            lift/notch < %.2f (is %.2f), reader intact: shift < %d div (is %d), peak drop < %.0f %% (is %.1f %%)"
-                      , CT_LIFT_RATIO_MAX, lift_ratio, CT_METAL_SHIFT_DIV, abs(shift), CT_METAL_PEAK_PCT, drop_peak);
+        PrintAndLogEx(INFO, "            lift/notch < %.2f (is %.2f)", CT_LIFT_RATIO_MAX, lift_ratio);
+        PrintAndLogEx(INFO, "            reader intact: shift %s %d div (< %d counts), peak drop < %.0f %% (is %.1f %%)"
+                      , moved_up ? "up" : "down", abs(shift), CT_METAL_SHIFT_DIV, CT_METAL_PEAK_PCT, drop_peak);
         PrintAndLogEx(INFO, "Run once with no card at all to see this setup's noise floor");
 
         // difference curve into the graph window, only when asked for -- the
