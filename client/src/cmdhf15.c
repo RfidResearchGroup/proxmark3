@@ -3591,6 +3591,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
         used_gen1 = true;
 
         if (hf15_magic_gen1_write_uid(payload.uid) != PM3_SUCCESS) {
+            hf15_magic_gen1_rollback_uid();
             PrintAndLogEx(FAILED, "Setting new UID ( " _RED_("fail") " )");
             PrintAndLogEx(NORMAL, "");
             return PM3_ESOFT;
