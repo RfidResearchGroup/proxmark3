@@ -355,17 +355,17 @@ style: commands
 		--align-pointer=name {} \;
 
 COMMANDS_UTF8_FILTER := cat
-COMMANDS_PYTHON := python3
+COMMANDS_PYTHON := $(PYTHON3)
 ifdef IS_MINGW
     COMMANDS_UTF8_FILTER := iconv -f CP850 -t UTF-8
-    COMMANDS_PYTHON := PYTHONIOENCODING=utf-8 python3
+    COMMANDS_PYTHON := PYTHONIOENCODING=utf-8 $(PYTHON3)
 endif
 
 commands: client
 	# Update commands.md
 	[ -x client/proxmark3 ] && client/proxmark3 -m | $(COMMANDS_UTF8_FILTER) | tr -d '\r' > doc/commands.md
 	# Make sure python3 is installed
-	@command -v python3 >/dev/null || ( echo "Please install 'python3' package first" ; exit 1 )
+	@command -v $(PYTHON3) >/dev/null || ( echo "Please install '$(PYTHON3)' package first" ; exit 1 )
 	# Update commands.json, patch port in case it was run under Windows
 	[ -x client/proxmark3 ] && client/proxmark3 --fulltext | $(COMMANDS_UTF8_FILTER) | sed 's#com[0-9]#/dev/ttyACM0#'|$(COMMANDS_PYTHON) client/pyscripts/pm3_help2json.py - - | tr -d '\r' > doc/commands.json
 

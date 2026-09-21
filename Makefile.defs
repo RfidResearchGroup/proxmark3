@@ -53,6 +53,7 @@ USERMOD = usermod -aG
 ADDUSER = adduser
 GETENT_BL = getent group bluetooth
 
+PYTHON3 ?=             python3
 PYTHON3_PKGCONFIG ?=   python3
 
 PATHSEP=/
