@@ -3340,7 +3340,7 @@ static const uint8_t iso15_magic_v3_sig_b[4] = {0x21, 0xAE, 0x93, 0x00};
 static const uint8_t iso15_magic_v3_fin_a[4] = {0xA5, 0x2B, 0x44, 0x2C};
 static const uint8_t iso15_magic_v3_fin_b[4] = {0x69, 0xE2, 0x5D, 0x00};
 
-// Read one 4-byte block from a magic tag in unaddressed mode. for probing
+// Unaddressed 4-byte block read, silent because failed probes are expected
 static int hf15_magic_read_blk(uint8_t blockno, uint8_t out[4]) {
 
     uint16_t approxlen = 2 + 1 + 2;
@@ -3414,13 +3414,11 @@ static bool hf15_magic_v3_is_config_mode(void) {
 #define ISO15_MAGIC_GEN1_BLK_UNLOCK_A   0x3E
 #define ISO15_MAGIC_GEN1_BLK_UNLOCK_B   0x3F
 
-// backdoor "unlock" write in block 0x3E/0x3F, see SetTag15693Uid() in armsrc/iso15693.c
+// Gen1 unlock values for blocks 0x3E/0x3F
 static const uint8_t iso15_magic_gen1_unlock_a[4] = {0x00, 0x00, 0x00, 0x00};
 static const uint8_t iso15_magic_gen1_unlock_b[4] = {0x69, 0x96, 0x00, 0x00};
 
-// Blocks touched by the Gen1 backdoor UID sequence. On a genuine Gen1 magic tag these
-// are not real user memory (reading them back fails), so a non-zero readback strongly
-// suggests this is actually a normal tag whose data we are about to overwrite.
+// Gen1 backdoor blocks
 static const uint8_t iso15_magic_gen1_blocks[] = {
     ISO15_MAGIC_GEN1_BLK_UID_LO,
     ISO15_MAGIC_GEN1_BLK_UID_HI,
@@ -3428,12 +3426,7 @@ static const uint8_t iso15_magic_gen1_blocks[] = {
     ISO15_MAGIC_GEN1_BLK_UNLOCK_B,
 };
 
-// Safety: refuse to run the Gen1 backdoor sequence if any of its target blocks read
-// back as real data instead of failing / being blank. Blank (00000000) and the
-// unlock-B pattern (69960000) are both whitelisted: they're either genuinely blank or
-// leftover from our own unlock write on a previous (interrupted / rolled-back) attempt
-// via this same command, which is far more likely than a real tag's user data
-// colliding byte-for-byte with one of these two fixed constants.
+// Refuse if a Gen1 backdoor block reads real data, 00000000 and 69960000 pass
 static bool hf15_magic_gen1_is_safe_to_write(void) {
     uint8_t buf[4] = {0};
     static const uint8_t zero[4] = {0x00, 0x00, 0x00, 0x00};
@@ -3451,19 +3444,23 @@ static bool hf15_magic_gen1_is_safe_to_write(void) {
     return true;
 }
 
-// Write the Gen1 backdoor UID sequence: unlock blocks, then the UID halves.
-// The unlock writes (0x3E/0x3F) are best-effort: on some real Gen1 chips they come
-// back as "command failed" even though the chip is already (permanently) writable,
-// so a failure there must not abort the sequence - only the actual UID blocks matter,
-// and the final UID readback in the caller is what really decides success or failure.
+// Silent write, real Gen1 tags reject 0x3E/0x3F once they were written before
+static void hf15_magic_write_blk_quiet(uint8_t blockno, const uint8_t *data) {
+    uint8_t old_printAndLog = g_printAndLog;
+    g_printAndLog &= ~PRINTANDLOG_PRINT;
+    hf15_magic_write_blk(blockno, data);
+    g_printAndLog = old_printAndLog;
+}
+
+// Unlock writes are best-effort, only the UID blocks and the final UID readback decide
 static int hf15_magic_gen1_write_uid(const uint8_t *uid) {
     uint8_t blk_lo[4] = {0};
     uint8_t blk_hi[4] = {0};
     reverse_array_copy(uid + 4, 4, blk_lo);
     reverse_array_copy(uid, 4, blk_hi);
 
-    hf15_magic_write_blk(ISO15_MAGIC_GEN1_BLK_UNLOCK_A, iso15_magic_gen1_unlock_a);
-    hf15_magic_write_blk(ISO15_MAGIC_GEN1_BLK_UNLOCK_B, iso15_magic_gen1_unlock_b);
+    hf15_magic_write_blk_quiet(ISO15_MAGIC_GEN1_BLK_UNLOCK_A, iso15_magic_gen1_unlock_a);
+    hf15_magic_write_blk_quiet(ISO15_MAGIC_GEN1_BLK_UNLOCK_B, iso15_magic_gen1_unlock_b);
 
     if (hf15_magic_write_blk(ISO15_MAGIC_GEN1_BLK_UID_LO, blk_lo) != PM3_SUCCESS ||
             hf15_magic_write_blk(ISO15_MAGIC_GEN1_BLK_UID_HI, blk_hi) != PM3_SUCCESS) {
@@ -3472,16 +3469,13 @@ static int hf15_magic_gen1_write_uid(const uint8_t *uid) {
     return PM3_SUCCESS;
 }
 
-// Best-effort rollback after a failed verify: blank all four blocks back out,
-// including the unlock blocks - otherwise a failed attempt leaves 0x3E/0x3F holding
-// the unlock pattern, which would need the whitelist above to not falsely trip the
-// safety check on a later run against the same tag.
+// Blank all four blocks again so a failed attempt leaves no unlock residue
 static void hf15_magic_gen1_rollback_uid(void) {
     uint8_t zero[4] = {0x00, 0x00, 0x00, 0x00};
     hf15_magic_write_blk(ISO15_MAGIC_GEN1_BLK_UID_LO, zero);
     hf15_magic_write_blk(ISO15_MAGIC_GEN1_BLK_UID_HI, zero);
-    hf15_magic_write_blk(ISO15_MAGIC_GEN1_BLK_UNLOCK_A, zero);
-    hf15_magic_write_blk(ISO15_MAGIC_GEN1_BLK_UNLOCK_B, zero);
+    hf15_magic_write_blk_quiet(ISO15_MAGIC_GEN1_BLK_UNLOCK_A, zero);
+    hf15_magic_write_blk_quiet(ISO15_MAGIC_GEN1_BLK_UNLOCK_B, zero);
 }
 
 /**
@@ -3551,7 +3545,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
     bool used_gen1 = false;
 
     if (use_v3) {
-        // Safety: only proceed on a tag that is actually an un-finalized magic V3.
+        // Only proceed on an un-finalized magic V3 tag
         if (hf15_magic_v3_is_config_mode() == false) {
             PrintAndLogEx(FAILED, "tag is not an un-finalized magic " _YELLOW_("V3") " tag");
             PrintAndLogEx(HINT, "Hint: signature in blocks 0x14/0x15 not found - already finalized or not a V3 tag");
@@ -3587,8 +3581,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
         }
 
     } else {
-        // Safety: bail out before writing anything if the Gen1 backdoor blocks
-        // read back as real data - that would mean this isn't a blank/magic tag.
+        // Bail out before writing if the Gen1 backdoor blocks hold real data
         if (hf15_magic_gen1_is_safe_to_write() == false) {
             PrintAndLogEx(FAILED, "tag doesn't look like a blank/magic " _YELLOW_("Gen1") " tag ( " _RED_("fail") " )");
             PrintAndLogEx(HINT, "Hint: block 0x38/0x39/0x3E/0x3F read back real data - refusing to risk overwriting a normal tag");
