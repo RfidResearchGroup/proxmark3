@@ -298,6 +298,89 @@ static void MeasureAntennaTuning(void) {
 }
 #endif
 
+#ifdef WITH_LF
+// Full precision LF frequency response sweep.
+//
+// Same idea as MeasureAntennaTuning() but the voltages are reported in mV
+// instead of (mV >> 9), the band is selectable and every point can be
+// oversampled. That resolution is what lets the client subtract a baseline
+// sweep from a sweep taken with a card on the antenna: the difference shows
+// the card's own resonance as a notch, which identifies it as LF and gives
+// its resonant frequency.
+static void MeasureAntennaTuningSweep(const lf_sweep_params_t *params) {
+
+    uint16_t div_start = params->div_start;
+    uint16_t div_end = params->div_end;
+    uint8_t averages = params->averages;
+    uint8_t settle_ms = params->settle_ms;
+
+    if (div_start < LF_SWEEP_DIV_MIN) {
+        div_start = LF_SWEEP_DIV_MIN;
+    }
+    if (div_end > LF_SWEEP_DIV_MAX) {
+        div_end = LF_SWEEP_DIV_MAX;
+    }
+    if (div_end < div_start) {
+        div_end = div_start;
+    }
+    if (averages == 0) {
+        averages = 1;
+    }
+    if (averages > 32) {
+        averages = 32;
+    }
+    if (settle_ms == 0) {
+        settle_ms = 10;
+    }
+
+    lf_sweep_response_t payload;
+    memset(&payload, 0, sizeof(payload));
+    payload.div_start = div_start;
+    payload.div_end = div_end;
+
+    LED_B_ON();
+
+    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD);
+    SpinDelay(50);
+
+    uint16_t idx = 0;
+    for (uint16_t d = div_start; d <= div_end && idx < LF_SWEEP_MAX_POINTS; d++, idx++) {
+
+        WDT_HIT();
+        FpgaSendCommand(FPGA_CMD_SET_DIVISOR, d);
+        SpinDelay(settle_ms);
+
+        uint32_t acc = 0;
+        for (uint8_t a = 0; a < averages; a++) {
+            acc += AdcRssiAvgToMilliVolt(ADC_RSSI_CH_LF);
+        }
+        acc /= averages;
+
+        payload.v_mv[idx] = (acc > UINT16_MAX) ? UINT16_MAX : (uint16_t)acc;
+    }
+
+    payload.num_points = idx;
+
+    if (params->with_hf) {
+        LED_A_ON();
+        FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER);
+        SpinDelay(50);
+
+        uint32_t v_hf = AdcRssiAvgToMilliVolt(ADC_RSSI_CH_HF);
+        payload.v_hf = (v_hf > UINT16_MAX) ? UINT16_MAX : (uint16_t)v_hf;
+    }
+
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+
+    // only send the points we actually filled
+    size_t len = offsetof(lf_sweep_response_t, v_mv) + (idx * sizeof(uint16_t));
+    reply_ng(CMD_MEASURE_ANTENNA_TUNING_SWEEP, PM3_SUCCESS, (uint8_t *)&payload, len);
+    LEDsoff();
+}
+#endif
+
 #ifndef PM5 // TODO DXL: PM5 is temporarily incompatible.
 
 // Measure HF antenna decay after field-off.
@@ -3191,6 +3274,16 @@ static void PacketReceived(PacketCommandNG *packet) {
 #ifdef WITH_LF
         case CMD_MEASURE_ANTENNA_TUNING: {
             MeasureAntennaTuning();
+            break;
+        }
+#endif
+#ifdef WITH_LF
+        case CMD_MEASURE_ANTENNA_TUNING_SWEEP: {
+            if (packet->length != sizeof(lf_sweep_params_t)) {
+                reply_ng(CMD_MEASURE_ANTENNA_TUNING_SWEEP, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            MeasureAntennaTuningSweep((const lf_sweep_params_t *)packet->data.asBytes);
             break;
         }
 #endif

@@ -300,6 +300,31 @@ typedef struct {
 //    uint8_t num_pulses;
 } PACKED hf_decay_params_t;
 
+// For CMD_MEASURE_ANTENNA_TUNING_SWEEP
+// Full precision LF frequency response. Unlike CMD_MEASURE_ANTENNA_TUNING the
+// voltages come back in mV instead of (mV >> 9), the band is selectable and
+// each point can be oversampled, which is what makes the baseline-minus-card
+// difference usable.
+#define LF_SWEEP_DIV_MIN        19      // 600 kHz
+#define LF_SWEEP_DIV_MAX        255     // 46.88 kHz
+#define LF_SWEEP_MAX_POINTS     (LF_SWEEP_DIV_MAX - LF_SWEEP_DIV_MIN + 1)
+
+typedef struct {
+    uint8_t div_start;      // first divisor, highest frequency
+    uint8_t div_end;        // last divisor, lowest frequency
+    uint8_t averages;       // 1..32 readings per point, each already 32 ADC samples
+    uint8_t settle_ms;      // settle time after changing the divisor
+    uint8_t with_hf;        // also measure the 13.56 MHz voltage
+} PACKED lf_sweep_params_t;
+
+typedef struct {
+    uint8_t div_start;
+    uint8_t div_end;
+    uint16_t num_points;
+    uint16_t v_hf;          // mV, 0 if not measured
+    uint16_t v_mv[LF_SWEEP_MAX_POINTS]; // mV, index 0 == div_start
+} PACKED lf_sweep_response_t;
+
 typedef struct {
     uint16_t baseline_mv;
     uint16_t num_samples;
@@ -1117,6 +1142,7 @@ typedef struct {
 #define CMD_MEASURE_ANTENNA_TUNING 0x0400
 #define CMD_MEASURE_ANTENNA_TUNING_HF 0x0401
 #define CMD_MEASURE_ANTENNA_TUNING_LF 0x0402
+#define CMD_MEASURE_ANTENNA_TUNING_SWEEP 0x0403
 #define CMD_LISTEN_READER_FIELD 0x0420
 #define CMD_HF_DROPFIELD 0x0430
 #define CMD_HF_DECAY 0x0440
