@@ -3340,13 +3340,12 @@ static const uint8_t iso15_magic_v3_sig_b[4] = {0x21, 0xAE, 0x93, 0x00};
 static const uint8_t iso15_magic_v3_fin_a[4] = {0xA5, 0x2B, 0x44, 0x2C};
 static const uint8_t iso15_magic_v3_fin_b[4] = {0x69, 0xE2, 0x5D, 0x00};
 
-// Read one 4-byte block from a magic tag in unaddressed mode.
+// Read one 4-byte block from a magic tag in unaddressed mode. for probing
 static int hf15_magic_read_blk(uint8_t blockno, uint8_t out[4]) {
 
     uint16_t approxlen = 2 + 1 + 2;
     iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
     if (packet == NULL) {
-        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -3364,15 +3363,27 @@ static int hf15_magic_read_blk(uint8_t blockno, uint8_t out[4]) {
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
-        PrintAndLogEx(DEBUG, "iso15693 timeout");
         return PM3_ETIMEOUT;
     }
 
-    ISO15_ERROR_HANDLING_RESPONSE
+    if (resp.status == PM3_ETEAROFF) {
+        return resp.status;
+    }
+    if (resp.length < 2) {
+        return PM3_EWRONGANSWER;
+    }
 
     uint8_t *d = resp.data.asBytes;
 
-    ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length)
+    if (check_crc(CRC_15693, d, resp.length) == false) {
+        return PM3_ECRC;
+    }
+    if ((d[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) {
+        if (d[1] == 0x0F || d[1] == 0x10) {
+            return PM3_EOUTOFBOUND;
+        }
+        return PM3_EWRONGANSWER;
+    }
 
     memcpy(out, d + 2, 4);
     return PM3_SUCCESS;
@@ -3418,16 +3429,24 @@ static const uint8_t iso15_magic_gen1_blocks[] = {
 };
 
 // Safety: refuse to run the Gen1 backdoor sequence if any of its target blocks read
-// back as real (non-zero) data instead of failing / being blank.
+// back as real data instead of failing / being blank. Blank (00000000) and the
+// unlock-B pattern (69960000) are both whitelisted: they're either genuinely blank or
+// leftover from our own unlock write on a previous (interrupted / rolled-back) attempt
+// via this same command, which is far more likely than a real tag's user data
+// colliding byte-for-byte with one of these two fixed constants.
 static bool hf15_magic_gen1_is_safe_to_write(void) {
     uint8_t buf[4] = {0};
-    uint8_t zero[4] = {0};
+    static const uint8_t zero[4] = {0x00, 0x00, 0x00, 0x00};
     for (size_t i = 0; i < ARRAYLEN(iso15_magic_gen1_blocks); i++) {
         uint8_t blockno = iso15_magic_gen1_blocks[i];
-        if (hf15_magic_read_blk(blockno, buf) == PM3_SUCCESS && memcmp(buf, zero, 4) != 0) {
-            PrintAndLogEx(WARNING, "block 0x%02X reads back real data ( " _RED_("%s") " )", blockno, sprint_hex(buf, 4));
-            return false;
+        if (hf15_magic_read_blk(blockno, buf) != PM3_SUCCESS) {
+            continue;
         }
+        if (memcmp(buf, zero, 4) == 0 || memcmp(buf, iso15_magic_gen1_unlock_b, 4) == 0) {
+            continue;
+        }
+        PrintAndLogEx(WARNING, "block 0x%02X reads back real data ( " _RED_("%s") " )", blockno, sprint_hex(buf, 4));
+        return false;
     }
     return true;
 }
@@ -3453,11 +3472,16 @@ static int hf15_magic_gen1_write_uid(const uint8_t *uid) {
     return PM3_SUCCESS;
 }
 
-// Best-effort rollback after a failed verify: blank the UID blocks back out.
+// Best-effort rollback after a failed verify: blank all four blocks back out,
+// including the unlock blocks - otherwise a failed attempt leaves 0x3E/0x3F holding
+// the unlock pattern, which would need the whitelist above to not falsely trip the
+// safety check on a later run against the same tag.
 static void hf15_magic_gen1_rollback_uid(void) {
     uint8_t zero[4] = {0x00, 0x00, 0x00, 0x00};
     hf15_magic_write_blk(ISO15_MAGIC_GEN1_BLK_UID_LO, zero);
     hf15_magic_write_blk(ISO15_MAGIC_GEN1_BLK_UID_HI, zero);
+    hf15_magic_write_blk(ISO15_MAGIC_GEN1_BLK_UNLOCK_A, zero);
+    hf15_magic_write_blk(ISO15_MAGIC_GEN1_BLK_UNLOCK_B, zero);
 }
 
 /**
