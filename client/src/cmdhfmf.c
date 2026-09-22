@@ -898,6 +898,10 @@ static int mf_view_dump(uint8_t *dump, size_t bytes_read, uint16_t block_cnt, bo
         (void)proac_parser_parse(dump, bytes_read);
     }
 
+    if (is_valid_rkf_card(dump, bytes_read)) {
+        (void)rkf_parser_parse(dump, bytes_read);
+    }
+
     return PM3_SUCCESS;
 }
 
@@ -8557,7 +8561,11 @@ static int CmdHF14AMfView(const char *Cmd) {
         if (res != PM3_SUCCESS) {
             return res;
         }
-        return hexact_selftest();
+        res = hexact_selftest();
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+        return rkf_selftest();
     }
 
     if (fnlen == 0) {
