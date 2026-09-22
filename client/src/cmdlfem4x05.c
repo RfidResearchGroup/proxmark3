@@ -979,7 +979,9 @@ static void em4x05_print_blocks(em_tech_type_t cardtype, const uint8_t *src, uin
     uint8_t lockbit;
     uint8_t rev[EM4X05_BLOCK_SIZE] = {0};
 
-    if (cardtype == EM_4205 || cardtype == EM_4305) {
+    // EM_UNKNOWN chips (a block0 we don't recognise) still use the EM4305
+    // memory map, so render them the same way instead of printing nothing.
+    if (cardtype == EM_4205 || cardtype == EM_4305 || cardtype == EM_UNKNOWN) {
 
         // which protection block is ACTIVE?
         if ((d[EM4305_PROT1_BLOCK] & 0x00008000) != 0x00) {
