@@ -4076,6 +4076,15 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
             return 0;
         }
 
+        // An ATS is TL, the bytes TL counts, and two CRC bytes on top.
+        // Anything shorter, like a 4 bit NAK is not ATS
+        if (len < 3 || resp[0] != len - 2) {
+            if (g_dbglevel >= DBG_INFO) {
+                Dbprintf("Card answered RATS with %i byte(s), not an ATS. Staying at ISO14443-3", len);
+            }
+            return 2;
+        }
+
         if (p_card) {
             memcpy(p_card->ats, resp, sizeof(p_card->ats));
             p_card->ats_len = len;

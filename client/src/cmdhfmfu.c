@@ -65,6 +65,14 @@
 #define MAX_ST25TN512       0x3F
 #define MAX_ST25TN01K       0x3F
 
+// UL-AES fixed memory map,  MF0AES(H)20
+#define MFU_AES_USER_FIRST  0x04
+#define MFU_AES_USER_LAST   0x27
+#define MFU_AES_LOCK_PAGE   0x28
+#define MFU_AES_CFG0_PAGE   0x29
+#define MFU_AES_CFG1_PAGE   0x2A
+#define MFU_AES_KEY0_PAGE   0x30
+
 #define MIFAREU3P_KEY_SIZE 16
 #define MIFAREULC_KEY_INDEX 3
 #define MFU_DEFAULT_KEY_DIC "mfulc_default_keys.dic"
@@ -4043,6 +4051,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
                   "hf mfu restore -f myfile -s                 -> special write\n"
                   "hf mfu restore -f myfile -k AABBCCDD -s     -> special write, use key\n"
                   "hf mfu restore -f myfile -k AABBCCDD -ser   -> special write, use key, write dump pwd, ...\n"
+                  "hf mfu restore -f myfile -k 00112233445566778899AABBCCDDEEFF -> UL-C / UL-AES, use key\n"
                   "\n"
                   "Note: Restoring a NTAG/UL dump to a UMC will likely result in incorrect PWD and PACK\n"
                  );
@@ -4050,7 +4059,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
-        arg_str0("k", "key", "<hex>", "key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)"),
+        arg_str0("k", "key", "<hex>", "key for authentication (UL-C/UL-AES 16 bytes, EV1/NTAG 4 bytes)"),
         arg_lit0("l", NULL, "swap entered key's endianness"),
         arg_lit0("s", NULL, "enable special write UID -MAGIC TAG ONLY-"),
         arg_lit0("e", NULL, "enable special write version/signature -MAGIC NTAG 21* ONLY-"),
@@ -4142,6 +4151,8 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         return PM3_ESOFT;
     }
 
+    bool is_ulaes = ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES);
+
     if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) {
         if ((has_key == true) && (ak_len != 16)) {
             PrintAndLogEx(ERR, "UL-C key must be 16 bytes");
@@ -4170,12 +4181,6 @@ static int CmdHF14AMfURestore(const char *Cmd) {
             free(dump);
             return PM3_EINVARG;
         }
-    }
-
-    if ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES) {
-        PrintAndLogEx(ERR, "Sorry, UL-AES not yet supported.  Feel free to implement!");
-        free(dump);
-        return PM3_ENOTIMPL;
     }
 
     PrintAndLogEx(INFO, "Restoring " _YELLOW_("%s")" to card", filename);
@@ -4279,7 +4284,19 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     // write all other data
     // Skip block 0,1,2,3 (only magic tags can write to them)
     // Skip last 5 blocks usually is configuration
-    for (uint8_t b = 4; b < pages - 5; b++) {
+    uint8_t first_page = 4;
+    uint8_t last_page = pages - 5;
+
+    if (is_ulaes) {
+        // UL-AES user memory stops before the lock, config and key pages
+        first_page = MFU_AES_USER_FIRST;
+        last_page = MFU_AES_USER_LAST + 1;
+        if (pages < last_page) {
+            last_page = pages;
+        }
+    }
+
+    for (uint8_t b = first_page; b < last_page; b++) {
 
         //Send write Block
         memcpy(packetw.data, mem->data + (b * 4), 4);
@@ -4306,8 +4323,19 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         // otp, uid, lock, dynlockbits, cfg0, cfg1
         uint8_t blocks[] = {3, 0, 1, 2, pages - 5, pages - 4, pages - 3};
 #endif
-        for (uint8_t i = 0; i < ARRAYLEN(blocks); i++) {
-            uint8_t b = blocks[i];
+        // otp, uid, lock, cfg0, cfg1.
+        // RFU pages (0x2B, 0x2C) and the key lock bits (0x2D) are left alone, they are one way
+        uint8_t ulaes_blocks[] = {3, 0, 1, 2, MFU_AES_LOCK_PAGE, MFU_AES_CFG0_PAGE, MFU_AES_CFG1_PAGE};
+
+        uint8_t *pblocks = blocks;
+        uint8_t blockcnt = ARRAYLEN(blocks);
+        if (is_ulaes) {
+            pblocks = ulaes_blocks;
+            blockcnt = ARRAYLEN(ulaes_blocks);
+        }
+
+        for (uint8_t i = 0; i < blockcnt; i++) {
+            uint8_t b = pblocks[i];
             memcpy(packetw.data, mem->data + (b * 4), 4);
             packetw.block_no = b;
             clearCommandBuffer();
@@ -4319,6 +4347,12 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 
     DropField();
     free(dump);
+
+    if (is_ulaes) {
+        PrintAndLogEx(INFO, "Key pages 0x%02X..0x%02X not restored", MFU_AES_KEY0_PAGE, MAX_UL_AES);
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu setkey -k <16 hex bytes>") "` to restore the AES keys");
+    }
+
     PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu dump --ns") "` to verify");
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;

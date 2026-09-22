@@ -2994,9 +2994,11 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             return PM3_ETIMEOUT;
         }
 
-        memcpy(card.ats, resp.data.asBytes, rlen_2863);
-        card.ats_len = rlen_2863; // note: ats_len includes CRC Bytes
-        if (card.ats_len > 3) {
+        // Only a well formed ATS, TL plus the bytes TL counts plus CRC, means the
+        // PICC entered ISO14443-4.  A 4 bit NAK to RATS is not an ATS.
+        if ((rlen_2863 > 3) && (resp.data.asBytes[0] == rlen_2863 - 2)) {
+            memcpy(card.ats, resp.data.asBytes, rlen_2863);
+            card.ats_len = rlen_2863; // note: ats_len includes CRC Bytes
             select_status = 4;
         }
     }

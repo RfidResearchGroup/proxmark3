@@ -514,6 +514,8 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/parsers/parsehexact.c
         ${PM3_ROOT}/client/src/parsers/parsemykey.c
         ${PM3_ROOT}/client/src/parsers/parseproac.c
+        ${PM3_ROOT}/client/src/parsers/parserkf.c
+        ${PM3_ROOT}/client/src/parsers/parsenortic.c
         ${PM3_ROOT}/client/src/parsers/hrtparser/hrtparser.c
         ${PM3_ROOT}/client/src/pla.c
         ${PM3_ROOT}/client/src/preferences.c
@@ -521,7 +523,6 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/pm3_binlib.c
         ${PM3_ROOT}/client/src/pm3_bitlib.c
         ${PM3_ROOT}/client/src/pm3_dsp.c
-
         ${PM3_ROOT}/client/src/pm3_fit.c
         ${PM3_ROOT}/client/src/pm3line.c
         ${PM3_ROOT}/client/src/pm3line_vocabulary.c

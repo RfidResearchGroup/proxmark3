@@ -4,6 +4,11 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Changed `hf iclass view` - SIO Insights now surfaces unhandled TLV tags (e.g. the [5]/[9] context tags seen on SR credentials) instead of silently dropping them (@youngh82)
+- Added `hf mfdes view` - decodes the card issuer header of NORTIC travel cards, the Norwegian national public transport card (@iceman1001)
+- Added `hf mf view` - decodes RKF travel cards, the Nordic public transport card (Resekortsföreningen i Norden) on MIFARE Classic (@iceman1001)
+- Fixed `hf 14a info`  now correctly handles NAK when receiving RATS (@iceman1001)
+- Fixed `hf mfu restore` to support Ultralight AES (@iceman1001)
+- Fixed `hf mfu info` to print UL-AES config pages again (@iceman1001)
 
 ## [Frosty Lemon.4.23346][2026-09-18]
 - Fixed `hf mfdes sim` - the ATS now advertises 106 kbit/s only, PPS to a higher rate is refused, a selected card ignores REQA/WUPA, and ISO-DEP block recovery now follows the card sequence (@mistial-dev)
@@ -80,6 +85,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed `hf 14a sim` - a dynamic response now gets a modulation buffer sized to fit it, instead of one 68 bytes too small (or 1788 too large for ST25TA) (@iceman1001)
 - Fixed `BigBuf_malloc` - takes a uint32_t, so a request of 64KB or more fails instead of wrapping to zero (@iceman1001)
 - Fixed `BigBuf_max_traceLen` - returns a uint32_t, so LF sampling on a device with more than 64KB of BigBuf is not handed a truncated buffer (@iceman1001)
+- Fixed PM5 BigBuf allocation
 - Changed `hf mf view` - now show which VIGIK fields are RSA signed (@iceman1001)
 - Changed `hw status` - now reports EMULATOR memory (@iceman1001)
 - Changed `hf mf view` - Urmet Captiv cards now decode their number field and data regions (@iceman1001)

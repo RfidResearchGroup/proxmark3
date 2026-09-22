@@ -84,6 +84,12 @@ int ExecuteCryptoTests(bool verbose, bool ignore_time, bool include_slow_tests) 
     res = mbedtls_cmac_self_test(verbose);
     if (res) TestFail = true;
 
+    res = des_mac_test(verbose);
+    if (res) {
+        return res;
+    }
+    PrintAndLogEx(NORMAL, "");
+
     res = ecdsa_nist_test(verbose);
     if (res) TestFail = true;
 
