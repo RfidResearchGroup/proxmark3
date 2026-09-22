@@ -496,6 +496,39 @@ static int em4x05_login_ext(uint32_t pwd) {
     return em4x05_demod_resp(&word, true);
 }
 
+// Verify a candidate password. The primary check is the tag's login ACK, but
+// some tags accept the login for reads yet never emit the ACK (so the ACK
+// check just times out for every password). When the login gets no answer,
+// confirm by doing a login+read of block 0 and requiring a parity-valid word.
+// PM3_EFAILED from the login means the tag actively refused it -> wrong pwd.
+static int em4x05_chk_login(uint32_t pwd) {
+    int status = em4x05_login_ext(pwd);
+    if (status == PM3_SUCCESS || status == PM3_EFAILED) {
+        return status;
+    }
+    // No login ACK from this tag. A login+read cannot be trusted on its own:
+    // some tags continuously emit a fixed, demodulable signal regardless of
+    // login, so even a wrong password decodes a word - and that word is the
+    // same for every block address. A *correct* login instead makes reads
+    // address-dependent (real per-block data). So confirm by reading two
+    // different blocks and requiring both to succeed and to differ. Retrying
+    // rides over a marginal response rate; blocks 0 (info) and 1 (serial)
+    // effectively always differ on a configured tag.
+    for (int attempt = 0; attempt < 5; attempt++) {
+        uint32_t w0 = 0, w1 = 0;
+        if (em4x05_read_word_ext(0, pwd, true, &w0) != PM3_SUCCESS) {
+            continue;
+        }
+        if (em4x05_read_word_ext(1, pwd, true, &w1) != PM3_SUCCESS) {
+            continue;
+        }
+        if (w0 != w1) {
+            return PM3_SUCCESS;
+        }
+    }
+    return PM3_ESOFT;
+}
+
 int em4x05_read_word_ext(uint8_t addr, uint32_t pwd, bool use_pwd, uint32_t *word) {
 
     struct {
@@ -1736,7 +1769,7 @@ int CmdEM4x05Chk(const char *Cmd) {
         uint32_t pwd = lf_t55xx_white_pwdgen(card_id & 0xFFFFFFFF);
         PrintAndLogEx(INFO, "testing %08"PRIX32" generated ", pwd);
 
-        int status = em4x05_login_ext(pwd);
+        int status = em4x05_chk_login(pwd);
         if (status == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "found valid password [ " _GREEN_("%08"PRIX32) " ]", pwd);
             found = true;
@@ -1779,7 +1812,7 @@ int CmdEM4x05Chk(const char *Cmd) {
 
             PrintAndLogEx(INFO, "testing %08"PRIX32, curr_password);
 
-            int status = em4x05_login_ext(curr_password);
+            int status = em4x05_chk_login(curr_password);
             if (status == PM3_SUCCESS) {
                 PrintAndLogEx(SUCCESS, "found valid password [ " _GREEN_("%08"PRIX32) " ]", curr_password);
                 found = true;
