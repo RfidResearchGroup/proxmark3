@@ -47,6 +47,7 @@
 #include "parsers/parsevigik.h"
 #include "parsers/parsehexact.h"
 #include "parsers/parseproac.h"
+#include "parsers/parserkf.h"
 #include "generator.h"              // keygens.
 #include "fpga.h"
 #include "mifare/mifarehost.h"
