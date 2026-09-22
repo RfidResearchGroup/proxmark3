@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `lf em 4x05 info` and `lf em 4x05 dump` - the block 0 probe now uses the supplied password, so a tag with "read login required" set no longer fails silently, and a clear message is shown when there is no answer (@nemanjan00)
+- Fixed `lf em 4x05 dump` - a missing login response no longer aborts the dump; it continues with the password and lets the per-block reads decide (@nemanjan00)
 - Fixed `hf mf autopwn` on FM11RF08S - static encrypted nonce is now detected via the backdoor key (@iceman1001)
 - Added `hf mfu view -v` - prints the UL-C 3DES key or UL-AES key stored in the dump file (@iceman1001)
 - Added `hf mf sen --ns` - skip writing the key and dump files (@iceman1001)

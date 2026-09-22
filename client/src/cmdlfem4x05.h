@@ -77,7 +77,7 @@ typedef enum {
 
 int CmdLFEM4X05(const char *Cmd);
 
-bool em4x05_isblock0(uint32_t *word);
+bool em4x05_isblock0(uint32_t *word, uint32_t pwd, bool use_pwd);
 int em4x05_read_word_ext(uint8_t addr, uint32_t pwd, bool use_pwd, uint32_t *word);
 int em4x05_write_word_ext(uint8_t addr, uint32_t pwd, bool use_pwd, uint32_t data);
 int em4x05_clone_tag(uint32_t *blockdata, uint8_t numblocks, uint32_t pwd, bool use_pwd);

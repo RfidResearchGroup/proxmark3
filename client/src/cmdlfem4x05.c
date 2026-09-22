@@ -912,8 +912,10 @@ static void printEM4x05ProtectionBits(uint32_t word, uint8_t addr) {
 }
 
 //quick test for EM4x05/EM4x69 tag
-bool em4x05_isblock0(uint32_t *word) {
-    return (em4x05_read_word_ext(0, 0, false, word) == PM3_SUCCESS);
+// pass the password too: a tag configured "read login required" refuses even
+// block 0 without a preceding login, so a passwordless probe would fail on it.
+bool em4x05_isblock0(uint32_t *word, uint32_t pwd, bool use_pwd) {
+    return (em4x05_read_word_ext(0, pwd, use_pwd, word) == PM3_SUCCESS);
 }
 
 static bool is_cancelled(void) {
@@ -1163,13 +1165,6 @@ int CmdEM4x05Dump(const char *Cmd) {
     CLIParserFree(ctx);
 
     // sanitize checks
-    uint32_t block0 = 0;
-    // read word 0 (chip info)
-    // block 0 can be read even without a password.
-    if (em4x05_isblock0(&block0) == false) {
-        return PM3_ESOFT;
-    }
-
     uint32_t pwd = 0;
     bool usePwd = false;
     if (inputpwd != 0xFFFFFFFFFFFFFFFF) {
@@ -1181,6 +1176,14 @@ int CmdEM4x05Dump(const char *Cmd) {
 
         usePwd = true;
         pwd = (inputpwd & 0xFFFFFFFF);
+    }
+
+    uint32_t block0 = 0;
+    // read word 0 (chip info). If the tag needs a login to be read, the
+    // password (when given) is used here too.
+    if (em4x05_isblock0(&block0, pwd, usePwd) == false) {
+        PrintAndLogEx(FAILED, "No answer from tag (if it is read-login protected, supply the password with -p)");
+        return PM3_ESOFT;
     }
 
     // EM4305 vs EM4469
@@ -1199,8 +1202,10 @@ int CmdEM4x05Dump(const char *Cmd) {
             PrintAndLogEx(WARNING, "Password ( " _RED_("fail") "), will try without password");
             usePwd = false;
         } else {
-            PrintAndLogEx(WARNING, "Login attempt: no answer from tag");
-            return res;
+            // Some tags accept the login for subsequent reads but never send the
+            // login ACK, so a silent pre-check is not proof the password is wrong.
+            // Keep going with the password; the per-block reads will show the truth.
+            PrintAndLogEx(WARNING, "Login attempt: no answer from tag, continuing with password anyway");
         }
     }
 
@@ -1599,9 +1604,10 @@ int CmdEM4x05Info(const char *Cmd) {
 
     uint32_t word = 0, block0 = 0, serial = 0;
 
-    // read word 0 (chip info)
-    // block 0 can be read even without a password.
-    if (em4x05_isblock0(&block0) == false) {
+    // read word 0 (chip info). If the tag needs a login to be read, the
+    // password (when given) is used here too.
+    if (em4x05_isblock0(&block0, pwd, use_pwd) == false) {
+        PrintAndLogEx(FAILED, "No answer from tag (if it is read-login protected, supply the password with -p)");
         return PM3_ESOFT;
     }
 
