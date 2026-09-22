@@ -552,6 +552,14 @@
         "Type": "pacs"
     },
     {
+        "AID": "FE69AE",
+        "Vendor": "Fermax Electronica SAU",
+        "Country": "ES",
+        "Name": "Fermax DESFire entry card",
+        "Description": "Fermax Proximity Card/Keyring DESFire EV2/EV3 2k Credential",
+        "Type": "pacs"
+    },
+    {
         "AID": "F518F0",
         "Vendor": "Telenot Electronic GmbH",
         "Country": "DE",
