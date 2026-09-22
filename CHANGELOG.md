@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mf autopwn` on FM11RF08S - static encrypted nonce is now detected via the backdoor key (@iceman1001)
 - Added `hf mfu view -v` - prints the UL-C 3DES key or UL-AES key stored in the dump file (@iceman1001)
 - Added `hf mf sen --ns` - skip writing the key and dump files (@iceman1001)
 - Fixed `hf mf autopwn --ns` on FM11RF08S - the flag is now honoured by the static encrypted nonce recovery instead of being dropped (@iceman1001)

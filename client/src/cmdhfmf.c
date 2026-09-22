@@ -77,6 +77,18 @@ static int HFMFAutoPwnSEN(sector_t *e_sector, size_t sector_cnt, const char *suf
     return HFMFSENRecover(false, false, false, false, 0, 0x1, true, e_sector, sector_cnt, suffix, no_save);
 }
 
+// look for a known backdoor key which can read block 0
+static bool mf_find_backdoor_key(uint8_t *key) {
+    uint8_t blockdata[MFBLOCK_SIZE] = {0};
+    for (uint8_t i = 0; i < ARRAYLEN(fm11_backdoor_keys); i++) {
+        if (mf_read_block(0, MF_KEY_BD, fm11_backdoor_keys[i], blockdata) == PM3_SUCCESS) {
+            memcpy(key, fm11_backdoor_keys[i], MIFARE_KEY_SIZE);
+            return true;
+        }
+    }
+    return false;
+}
+
 // Static array for Saflok key levels
 static const SaflokKeyLevel saflok_key_levels[] = {
     {1, "Guest Key"},
@@ -3362,7 +3374,12 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         if (known_key) {
             has_staticnonce = detect_classic_static_encrypted_nonce(loopupblk, keytype, key);
         } else {
-            has_staticnonce = detect_classic_static_encrypted_nonce(0, MF_KEY_A, g_mifare_default_key);
+            uint8_t bdkey[MIFARE_KEY_SIZE] = {0};
+            if (mf_find_backdoor_key(bdkey)) {
+                has_staticnonce = detect_classic_static_encrypted_nonce(0, MF_KEY_BD, bdkey);
+            } else {
+                has_staticnonce = detect_classic_static_encrypted_nonce(0, MF_KEY_A, g_mifare_default_key);
+            }
         }
     }
 
