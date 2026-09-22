@@ -65,6 +65,9 @@
 #define MAX_ST25TN512       0x3F
 #define MAX_ST25TN01K       0x3F
 
+// UL-C key pages
+#define MFU_ULC_KEY0_PAGE   0x2C
+
 // UL-AES fixed memory map,  MF0AES(H)20
 #define MFU_AES_USER_FIRST  0x04
 #define MFU_AES_USER_LAST   0x27
@@ -1185,6 +1188,15 @@ static int ulc_print_3deskey(uint8_t *data) {
     PrintAndLogEx(INFO, "    deskey2 [46/0x2E]: %s [%s]", sprint_hex(data + 8, 4), sprint_ascii(data + 8, 4));
     PrintAndLogEx(INFO, "    deskey2 [47/0x2F]: %s [%s]", sprint_hex(data + 12, 4), sprint_ascii(data + 12, 4));
     PrintAndLogEx(INFO, "3des key: " _GREEN_("%s"), sprint_hex_inrow(SwapEndian64(data, 16, 8), 16));
+    return PM3_SUCCESS;
+}
+
+static int ulaes_print_key(uint8_t *data) {
+    PrintAndLogEx(INFO, "    aeskey  [48/0x30]: %s [%s]", sprint_hex(data, 4), sprint_ascii(data, 4));
+    PrintAndLogEx(INFO, "    aeskey  [49/0x31]: %s [%s]", sprint_hex(data + 4, 4), sprint_ascii(data + 4, 4));
+    PrintAndLogEx(INFO, "    aeskey  [50/0x32]: %s [%s]", sprint_hex(data + 8, 4), sprint_ascii(data + 8, 4));
+    PrintAndLogEx(INFO, "    aeskey  [51/0x33]: %s [%s]", sprint_hex(data + 12, 4), sprint_ascii(data + 12, 4));
+    PrintAndLogEx(INFO, "aes key: " _GREEN_("%s"), sprint_hex_inrow(SwapEndian64(data, 16, 16), 16));
     return PM3_SUCCESS;
 }
 
@@ -8322,6 +8334,71 @@ static int CmdHF14AMfuESave(const char *Cmd) {
     return res;
 }
 
+// Derive the tag type from the dump header,  version bytes and page count.
+// Uses the same version byte signatures as ul_select_card() does on a live tag.
+static uint64_t mfu_dump_get_tagtype(const mfu_dump_t *card) {
+
+    if (memcmp(card->version, "\x00\x04\x03\x01\x04\x00\x0F\x03", 8) == 0 ||
+            memcmp(card->version, "\x00\x04\x03\x02\x04\x00\x0F\x03", 8) == 0 ||
+            memcmp(card->version, "\x00\x04\x03\x03\x04\x00\x0F\x03", 8) == 0) {
+        return MFU_TT_UL_AES;
+    }
+
+    // UL-C has no GET_VERSION,  the dump holds zeroes there
+    bool version_zero = true;
+    for (uint8_t i = 0; i < ARRAYLEN(card->version); i++) {
+        if (card->version[i] != 0x00) {
+            version_zero = false;
+            break;
+        }
+    }
+
+    if (version_zero && card->pages == MAX_ULC_BLOCKS) {
+        return MFU_TT_UL_C;
+    }
+
+    return MFU_TT_UNKNOWN;
+}
+
+// `hf mfu dump` appends the authentication key to the dump when one was given.
+// UL-C:   pages 0x2C..0x2F,  stored as SwapEndian64(key, 16, 8)
+// UL-AES: pages 0x30..0x33,  stored as SwapEndian64(key, 16, 16)
+static void mfu_print_dump_keys(mfu_dump_t *card, uint16_t block_cnt) {
+
+    uint64_t tagtype = mfu_dump_get_tagtype(card);
+
+    uint8_t page;
+    if ((tagtype == MFU_TT_UL_C) && (block_cnt > (MFU_ULC_KEY0_PAGE + 3))) {
+        page = MFU_ULC_KEY0_PAGE;
+    } else if ((tagtype == MFU_TT_UL_AES) && (block_cnt > (MFU_AES_KEY0_PAGE + 3))) {
+        page = MFU_AES_KEY0_PAGE;
+    } else {
+        return;
+    }
+
+    uint8_t *key = card->data + (page * MFU_BLOCK_SIZE);
+
+    PrintAndLogEx(NORMAL, "");
+    if (tagtype == MFU_TT_UL_C) {
+        PrintAndLogEx(INFO, "--- " _CYAN_("UL-C 3DES key") " -------------------------");
+    } else {
+        PrintAndLogEx(INFO, "--- " _CYAN_("UL-AES key") " ----------------------------");
+    }
+
+    uint8_t zeros[MIFAREU3P_KEY_SIZE] = {0x00};
+    if (memcmp(key, zeros, sizeof(zeros)) == 0) {
+        PrintAndLogEx(INFO, "    " _RED_("n/a") " - page %u..%u is all zero", page, page + 3);
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu dump -k <key>") "` to store the key in the dump");
+        return;
+    }
+
+    if (tagtype == MFU_TT_UL_C) {
+        ulc_print_3deskey(key);
+    } else {
+        ulaes_print_key(key);
+    }
+}
+
 static int CmdHF14AMfuView(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -8374,6 +8451,10 @@ static int CmdHF14AMfuView(const char *Cmd) {
 
     mfu_dump_t *p = (mfu_dump_t *)dump;
     mfu_print_dump(p, block_cnt, 0, dense_output);
+
+    if (verbose) {
+        mfu_print_dump_keys(p, block_cnt);
+    }
 
     // we need to skip prefix
     if (ndef_detect_message(p->data, block_cnt * MFU_BLOCK_SIZE)) {
