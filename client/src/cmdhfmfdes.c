@@ -1296,6 +1296,18 @@ static void DesFill2bPattern(
     (*startPattern)++;
 }
 
+static void DesChkPrependKey(uint8_t *keyList, size_t stride, uint32_t *keyListLen, const uint8_t *key) {
+
+    uint32_t len = *keyListLen;
+    if (len >= MAX_KEYS_LIST_LEN) {
+        len = MAX_KEYS_LIST_LEN - 1;
+    }
+
+    memmove(keyList + stride, keyList, len * stride);
+    memcpy(keyList, key, stride);
+    *keyListLen = len + 1;
+}
+
 // Try every key in `keyList` against every key number the `usedkeys` map marks as
 // in use on the currently selected application.  Found keys are stored in `found`.
 // Returns PM3_SUCCESS, or an error when the application can no longer be selected.
@@ -1451,9 +1463,12 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
         if (authCmdCheck.auth) {
             des = true;
             tdes = true;
-            if (authCmdCheck.authISO) {
-                k3kdes = true;
-            }
+        }
+
+        // 0x1A covers DES, 2TDEA and 3TDEA alike, so it cannot tell them apart
+        // but it is the only command a 3TDEA application answers at all.
+        if (authCmdCheck.authISO) {
+            k3kdes = true;
         }
 
         if (authCmdCheck.authAES || authCmdCheck.authEV2) {
@@ -1492,45 +1507,26 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
 
     } else if (curaid != 0) {
 
-        // key settings were not readable, so fall back to the key numbers the file
-        // access rights name
-        FileList_t fileList = {{0}};
-        size_t filescount = 0;
-        bool isopresent = 0;
-        res = DesfireFillFileList(dctx, fileList, &filescount, &isopresent);
-        if (res == PM3_SUCCESS) {
-            if (filescount > 0) {
-                for (int i = 0; i < filescount; i++) {
+        // Key settings were not readable, which means the application master key
+        // settings deny it without authentication. The same bit gates GetFileIDs
+        // and GetFileSettings, so the file access rights cannot name the key
+        // numbers either.  GetKeyVersion is not gated by it at all, so ask the
+        // application which key numbers it actually has
+        uint8_t keyvercount = 0;
+        for (uint8_t k = 0; k < DESFIRE_MAX_KEY_COUNT; k++) {
 
-                    if (fileList[i].fileSettingsRead == false) {
-                        for (int k = 0; k < DESFIRE_MAX_KEY_COUNT; k++) {
-                            usedkeys[k] = 1;
-                        }
-                        break;
-                    }
+            uint8_t keyno = k;
+            uint8_t kvbuf[250] = {0};
+            size_t kvbuflen = 0;
 
-                    if (fileList[i].fileSettings.rAccess < 0x0e) {
-                        usedkeys[fileList[i].fileSettings.rAccess] = 1;
-                    }
-
-                    if (fileList[i].fileSettings.wAccess < 0x0e) {
-                        usedkeys[fileList[i].fileSettings.wAccess] = 1;
-                    }
-
-                    if (fileList[i].fileSettings.rwAccess < 0x0e) {
-                        usedkeys[fileList[i].fileSettings.rwAccess] = 1;
-                    }
-
-                    if (fileList[i].fileSettings.chAccess < 0x0e) {
-                        usedkeys[fileList[i].fileSettings.chAccess] = 1;
-                    }
-                }
-            } else {
-                for (int i = 0; i < DESFIRE_MAX_KEY_COUNT; i++) {
-                    usedkeys[i] = 1;
-                }
+            if (DesfireGetKeyVersion(dctx, &keyno, 1, kvbuf, &kvbuflen) == PM3_SUCCESS) {
+                usedkeys[k] = 1;
+                keyvercount++;
             }
-        } else {
+        }
+
+        // the card named none of them, so there is nothing to narrow it down with
+        if (keyvercount == 0) {
             for (int i = 0; i < DESFIRE_MAX_KEY_COUNT; i++) {
                 usedkeys[i] = 1;
             }
@@ -1793,22 +1789,29 @@ static int CmdHF14aDesChk(const char *Cmd) {
     }
 
 
+    // AID 000000 is the PICC level. 
+    // GetApplicationIDs never lists it, so it has to be seeded manually
+    memset(app_ids, 0x00, 3);
+    app_ids_len = 3;
+
     uint8_t aidbuf[250] = {0};
     size_t aidbuflen = 0;
     res = DesfireGetAIDList(&dctx, aidbuf, &aidbuflen);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Can't get list of applications on tag");
-        DropField();
-        return PM3_ESOFT;
-    }
+    if (res == PM3_SUCCESS) {
 
-    if (aidbuflen > sizeof(app_ids)) {
-        PrintAndLogEx(WARNING, "Card returned " _YELLOW_("%zu") " applications, only checking the first " _YELLOW_("%d"), aidbuflen / 3, DESFIRE_MAX_APP_COUNT);
-        aidbuflen = sizeof(app_ids);
-    }
+        if (aidbuflen > sizeof(app_ids) - 3) {
+            PrintAndLogEx(WARNING, "Card returned " _YELLOW_("%zu") " applications, only checking the first " _YELLOW_("%d"), aidbuflen / 3, DESFIRE_MAX_APP_COUNT - 1);
+            aidbuflen = sizeof(app_ids) - 3;
+        }
 
-    memcpy(app_ids, aidbuf, aidbuflen);
-    app_ids_len = aidbuflen;
+        memcpy(&app_ids[3], aidbuf, aidbuflen);
+        app_ids_len += aidbuflen;
+
+    } else {
+        // the application list is gated by PICC key settings bit 1, so a locked
+        // card refuses it without auth. That is no reason to give up on the PICC master key
+        PrintAndLogEx(WARNING, "Can't get list of applications on tag, checking PICC level only");
+    }
 
     if (aidlength != 0) {
         memcpy(&app_ids[0], aid, 3);
@@ -1945,8 +1948,22 @@ static int CmdHF14aDesChk(const char *Cmd) {
                     }
                 }
             } else {
-                // single key given with --key
+                // only the key given with --key, inserted below
+                deskeyListLen = 0;
+                aeskeyListLen = 0;
+                k3kkeyListLen = 0;
                 loadedAllKeys = true;
+            }
+
+            // the fills above reset the lengths and refill from index 0, so the
+            // key given with `--key` goes back to the head of its list every
+            // round.  First tried, and never the one that gets dropped
+            if (vkeylen == 8) {
+                DesChkPrependKey((uint8_t *)deskeyList, sizeof(deskeyList[0]), &deskeyListLen, vkey);
+            } else if (vkeylen == 16) {
+                DesChkPrependKey((uint8_t *)aeskeyList, sizeof(aeskeyList[0]), &aeskeyListLen, vkey);
+            } else if (vkeylen == 24) {
+                DesChkPrependKey((uint8_t *)k3kkeyList, sizeof(k3kkeyList[0]), &k3kkeyListLen, vkey);
             }
 
             if (deskeyListLen || aeskeyListLen || k3kkeyListLen) {
@@ -2017,15 +2034,23 @@ static int DesfireAuthCheck(DesfireContext_t *dctx, DesfireISOSelectWay way, uin
     if (res == PM3_SUCCESS) {
         memcpy(dctx->key, key, desfire_get_key_length(dctx->keyType));
         return PM3_SUCCESS;
-    } else if (res < 7) {
+    }
+
+    //  4 - the challenge the PICC sent is the wrong length for this algo
+    // 50 - PICC didn't answer AES,  51 - PICC didn't answer LRP
+    // the application holds no key of this type, so every key in the list fails
+    // the same way and there is nothing to learn from trying the rest
+    bool wrongalgo = (res == 4 || res == 50 || res == 51);
+
+    if (res < 7) {
         DropField();
-        res = DesfireSelect(dctx, way, appID, NULL);
-        if (res != PM3_SUCCESS) {
+        if (DesfireSelect(dctx, way, appID, NULL) != PM3_SUCCESS) {
             return -10;
         }
-        return -11;
+        return (wrongalgo) ? -12 : -11;
     }
-    return -1;
+
+    return (wrongalgo) ? -12 : -1;
 }
 
 
@@ -2150,10 +2175,13 @@ static int CmdHF14aDesDetect(const char *Cmd) {
             if (authCmdCheck.auth) {
                 keytypes[T_DES] = true;
                 keytypes[T_3DES] = true;
+            }
 
-                if (authCmdCheck.authISO) {
-                    keytypes[T_3K3DES] = true;
-                }
+            // 0x1A covers DES, 2TDEA and 3TDEA alike, so it cannot tell them
+            // apart - but it is the only command a 3TDEA application answers at
+            // all.  Read it on its own or such an application names no key type
+            if (authCmdCheck.authISO) {
+                keytypes[T_3K3DES] = true;
             }
 
             if (authCmdCheck.authAES || authCmdCheck.authEV2) {
@@ -2289,6 +2317,7 @@ static int CmdHF14aDesDetect(const char *Cmd) {
             // errors are counted per key type.  A bad run on one must not cut
             // the next one short before it has tried a single key
             size_t errcount = 0;
+            bool wrongalgo = false;
 
             while (found == false) {
 
@@ -2355,6 +2384,16 @@ static int CmdHF14aDesDetect(const char *Cmd) {
                         break; // we can't select app after invalid 1st auth stages
                     }
 
+                    if (res == -12) {
+                        if (verbose) {
+                            PrintAndLogEx(INFO, "Key type %s is not used by this application, skipping it",
+                                          CLIGetOptionListStr(DesfireAlgoOpts, dctx.keyType));
+                        }
+
+                        wrongalgo = true;
+                        break;
+                    }
+
                     if (res == -11) {
 
                         if (errcount > 10) {
@@ -2370,7 +2409,7 @@ static int CmdHF14aDesDetect(const char *Cmd) {
                     }
                 }
 
-                if (nocard) {
+                if (nocard || wrongalgo) {
                     break;
                 }
 

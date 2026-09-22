@@ -3,6 +3,12 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mfdes chk` - a key given with `--key` is now tried every round instead of being overwritten by the dictionary and pattern fills (@iceman1001)
+- Fixed `hf mfdes chk` - when key settings are unreadable, key numbers are found with GetKeyVersion instead of the file access rights, which are gated by the same bit (@iceman1001)
+- Fixed `hf mfdes chk` - the PICC master key is now checked, and a card that refuses GetApplicationIDs no longer aborts the whole run (@iceman1001)
+- Fixed `hf mfdes chk` and `hf mfdes detect` - AuthenticateISO (0x1A) is read on its own instead of only when Authenticate (0x0A) answered, so an application holding 3TDEA keys is no longer skipped (@iceman1001)
+- Changed `hf mfdes detect` - a key type the application does not hold is dropped on the first answer instead of after the error counter fills (@iceman1001)
+- Changed `hf mfdes view` - now names known applications from the `aid_desfire` dictionary (@iceman1001)
 - Added new entries from Metrodroid project into our AID json (@iceman1001)
 - Changed `hf iclass view` - SIO Insights now surfaces unhandled TLV tags (e.g. the [5]/[9] context tags seen on SR credentials) instead of silently dropping them (@youngh82)
 - Changed `hf mfdes view` - decodes the card issuer header of NORTIC travel cards, the Norwegian national public transport card (@iceman1001)
