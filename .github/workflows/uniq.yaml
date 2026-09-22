@@ -4,9 +4,13 @@ on:
   push:
     paths:
       - 'client/dictionaries/**'
+      - 'client/resources/*.json'
+      - 'tools/check_json_uniq.py'
   pull_request:
     paths:
       - 'client/dictionaries/**'
+      - 'client/resources/*.json'
+      - 'tools/check_json_uniq.py'
   workflow_dispatch:
 
 
@@ -20,3 +24,7 @@ jobs:
         run: |
           find . -type f -name "*.dic" | xargs -I {} sh -c "echo {} && cat {} | sed 's/ *#.*//;/^$/d' | sed 's/\(.*\)/\U\1/' | sort | uniq -i -d -c | sort -n -r "
           if [[ $(find . -type f -name "*.dic" | xargs -I {} sh -c "echo {} && cat {} | sed 's/ *#.*//;/^$/d' | sed 's/\(.*\)/\U\1/' | sort | uniq -i -d -c | sort -n -r " | grep -v '^\./' | wc -l) -gt 0 ]]; then exit 1; fi
+
+      - name: check unique AIDs in resource json files
+        shell: bash
+        run: python3 tools/check_json_uniq.py
