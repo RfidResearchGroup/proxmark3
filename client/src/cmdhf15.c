@@ -3405,18 +3405,34 @@ static int CmdHF15CSetUID(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    // the device identifies the tag before it writes, V2 has no such check
-    if (resp.status == PM3_EWRONGANSWER) {
-        if (use_v3) {
-            PrintAndLogEx(FAILED, "tag is not an un-finalized magic " _YELLOW_("V3") " tag");
-            PrintAndLogEx(HINT, "Hint: signature in blocks 0x14/0x15 not found");
-            PrintAndLogEx(HINT, "already finalized or not a V3 tag");
-        } else {
-            PrintAndLogEx(FAILED, "tag doesn't look like a blank/magic " _YELLOW_("Gen1") " tag ( " _RED_("fail") " )");
-            PrintAndLogEx(HINT, "Hint: block 0x38/0x39/0x3E/0x3F must be unreadable or blank");
-            PrintAndLogEx(HINT, "refusing to risk overwriting a normal tag");
+    // Gen1 and V3 identify the tag and verify the new UID on the device, V2 has neither
+    if (use_v2 == false) {
+
+        switch (resp.status) {
+            case PM3_SUCCESS:
+                break;
+
+            case PM3_ETIMEOUT:
+                PrintAndLogEx(FAILED, "no tag found");
+                return PM3_ESOFT;
+
+            case PM3_EWRONGANSWER:
+                if (use_v3) {
+                    PrintAndLogEx(FAILED, "tag is not an un-finalized magic " _YELLOW_("V3") " tag");
+                    PrintAndLogEx(HINT, "Hint: signature in blocks 0x14/0x15 not found");
+                    PrintAndLogEx(HINT, "already finalized or not a V3 tag");
+                } else {
+                    PrintAndLogEx(FAILED, "tag doesn't look like a blank/magic " _YELLOW_("Gen1") " tag ( " _RED_("fail") " )");
+                    PrintAndLogEx(HINT, "Hint: block 0x38/0x39/0x3E/0x3F must be unreadable or blank");
+                    PrintAndLogEx(HINT, "refusing to risk overwriting a normal tag");
+                }
+                return PM3_ESOFT;
+
+            default:
+                PrintAndLogEx(FAILED, "Setting new UID ( " _RED_("fail") " )");
+                PrintAndLogEx(NORMAL, "");
+                return PM3_ESOFT;
         }
-        return PM3_ESOFT;
     }
 
     PrintAndLogEx(INFO, "Verifying...");
@@ -3450,10 +3466,10 @@ static int CmdHF15CFinalize(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 cfinalize",
                   "Finalize a magic ISO15693 'V3' tag.\n"
-                  _RED_("This operation is irreversible.") " After finalize the configuration\n"
-          "area is erased and the UID can no longer be changed. Set the UID with\n"
-          "`" _YELLOW_("hf 15 csetuid --v3") "` first, then lock it in with this command.",
-          "hf 15 cfinalize -y"
+                  _RED_("This operation is irreversible.") " Finalize erases the whole tag\n"
+                  "memory to 00000000 and locks the UID for good. Set the UID with\n"
+                  "`" _YELLOW_("hf 15 csetuid --v3") "` first, then lock it in with this command.",
+                  "hf 15 cfinalize -y"
                  );
 
     void *argtable[] = {
@@ -3466,7 +3482,7 @@ static int CmdHF15CFinalize(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (confirmed == false) {
-        PrintAndLogEx(WARNING, _RED_("This operation is irreversible!") " The UID will be locked permanently.");
+        PrintAndLogEx(WARNING, _RED_("This operation is irreversible!") " Tag memory is erased and the UID locked.");
         PrintAndLogEx(WARNING, "Add " _YELLOW_("-y") " to confirm and proceed.");
         return PM3_EINVARG;
     }
