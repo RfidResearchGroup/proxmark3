@@ -202,18 +202,32 @@ static int doPreambleSearch(size_t *startIdx) {
 
     // A long time ago, the first two zeros of the preamble were skipped
     // because previous decoders had a probability of missing the first part of the data.
+    // On success *startIdx is advanced to the first data bit (past the preamble).
     uint8_t preamble[EM_PREAMBLE_LEN] = {0, 0, 0, 0, 1, 0, 1, 0};
-    if (!preambleSearchEx(g_DemodBuffer, preamble, EM_PREAMBLE_LEN, &size, startIdx, true)) {
-
-        uint8_t errpreamble[EM_PREAMBLE_LEN] = {0, 0, 0, 0, 0, 0, 0, 1};
-        if (!preambleSearchEx(g_DemodBuffer, errpreamble, EM_PREAMBLE_LEN, &size, startIdx, true)) {
-            PrintAndLogEx(DEBUG, "DEBUG: Error - EM4305 preamble not found :: %zu", *startIdx);
-            return PM3_ESOFT;
-        }
-        return PM3_EFAILED; // Error preamble found
-
+    if (preambleSearchEx(g_DemodBuffer, preamble, EM_PREAMBLE_LEN, &size, startIdx, true)) {
+        *startIdx += EM_PREAMBLE_LEN;
+        return PM3_SUCCESS;
     }
-    return PM3_SUCCESS;
+
+    // Some tags lose the leading zero of the preamble in the ASK/MAN demod, so it
+    // arrives as the 7-bit "0001010". Accept that; parity in em4x05_setdemod_buffer
+    // is the real gate, so a spurious match is rejected there.
+    size = (11 > g_DemodBufferLen) ? g_DemodBufferLen : 11;
+    *startIdx = 0;
+    uint8_t preamble7[7] = {0, 0, 0, 1, 0, 1, 0};
+    if (preambleSearchEx(g_DemodBuffer, preamble7, 7, &size, startIdx, true)) {
+        *startIdx += 7;
+        return PM3_SUCCESS;
+    }
+
+    size = (11 > g_DemodBufferLen) ? g_DemodBufferLen : 11;
+    *startIdx = 0;
+    uint8_t errpreamble[EM_PREAMBLE_LEN] = {0, 0, 0, 0, 0, 0, 0, 1};
+    if (!preambleSearchEx(g_DemodBuffer, errpreamble, EM_PREAMBLE_LEN, &size, startIdx, true)) {
+        PrintAndLogEx(DEBUG, "DEBUG: Error - EM4305 preamble not found :: %zu", *startIdx);
+        return PM3_ESOFT;
+    }
+    return PM3_EFAILED; // Error preamble found
 }
 
 static bool detectFSK(void) {
@@ -313,16 +327,17 @@ static bool detectNRZ(void) {
 // param: idx - start index in demoded data.
 static int em4x05_setdemod_buffer(uint32_t *word, size_t idx) {
 
+    // idx now points at the first data bit (doPreambleSearch advanced past the preamble).
     //test for even parity bits.
     uint8_t parity[45] = {0};
     memcpy(parity, g_DemodBuffer, 45);
-    if (!em4x05_col_parity_test(g_DemodBuffer + idx + EM_PREAMBLE_LEN, 45, 5, 9, 0)) {
+    if (!em4x05_col_parity_test(g_DemodBuffer + idx, 45, 5, 9, 0)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - End Parity check failed");
         return PM3_ESOFT;
     }
 
     // test for even parity bits and remove them. (leave out the end row of parities so 36 bits)
-    if (!removeParity(g_DemodBuffer, idx + EM_PREAMBLE_LEN, 9, 0, 36)) {
+    if (!removeParity(g_DemodBuffer, idx, 9, 0, 36)) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - EM, failed removing parity");
         return PM3_ESOFT;
     }
