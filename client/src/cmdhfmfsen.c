@@ -2743,7 +2743,12 @@ static void fm11_build_filename(char *dst, size_t dst_len, const iso14a_card_sel
 static int fm11_save_recovery_outputs(const iso14a_card_select_t *card, const iso14a_fm11rf08s_nonces_with_data_t *nonces,
                                       const uint64_t keys_found[FM11RF08S_SECTORS][2],
                                       const bool found_key[FM11RF08S_SECTORS][2],
-                                      bool no_oob, bool has_data, const char *suffix) {
+                                      bool no_oob, bool has_data, const char *suffix, bool no_save) {
+
+    if (no_save) {
+        PrintAndLogEx(INFO, "Called with no save option");
+        return PM3_SUCCESS;
+    }
 
     char fn[FILE_PATH_SIZE] = {0};
     fm11_build_filename(fn, sizeof(fn), card, "key", suffix);
@@ -2883,7 +2888,8 @@ static int fm11_select_mifare_classic(iso14a_card_select_t *card_out) {
 
 int HFMFSENRecover(bool keep_nonces, bool no_oob, bool reader_mode, bool offline_only, 
                    int max_online_candidates, uint8_t parity_mask, bool skip_default_key_check, 
-                   const sector_t *known_sectors, size_t known_sector_count, const char *suffix) {
+                   const sector_t *known_sectors, size_t known_sector_count, const char *suffix,
+                   bool no_save) {
 
     iso14a_card_select_t card = {0};
     iso14a_fm11rf08s_nonces_with_data_t nonces = {0};
@@ -3258,7 +3264,7 @@ int HFMFSENRecover(bool keep_nonces, bool no_oob, bool reader_mode, bool offline
     if (offline_only) {
         fm11_sen_progress_footer();
         fm11_print_key_table(keys_found, found_key);
-        retval = fm11_save_recovery_outputs(&card, &nonces, keys_found, found_key, no_oob, collected_with_data, suffix);
+        retval = fm11_save_recovery_outputs(&card, &nonces, keys_found, found_key, no_oob, collected_with_data, suffix, no_save);
         PrintAndLogEx(SUCCESS, "time in sen " _YELLOW_("%.0f") " seconds", (float)(msclock() - t1) / 1000.0);
         goto out;
     }
@@ -3476,7 +3482,7 @@ int HFMFSENRecover(bool keep_nonces, bool no_oob, bool reader_mode, bool offline
 
     fm11_sen_progress_footer();
     fm11_print_key_table(keys_found, found_key);
-    retval = fm11_save_recovery_outputs(&card, &nonces, keys_found, found_key, no_oob, collected_with_data, suffix);
+    retval = fm11_save_recovery_outputs(&card, &nonces, keys_found, found_key, no_oob, collected_with_data, suffix, no_save);
     PrintAndLogEx(SUCCESS, "time in sen " _YELLOW_("%.0f") " seconds", (float)(msclock() - t1) / 1000.0);
 
 out:
@@ -3498,7 +3504,8 @@ int CmdHF14AMfSEN(const char *Cmd) {
                   "hf mf sen --keep-nonces\n"
                   "hf mf sen --no-oob\n"
                   "hf mf sen --reader\n"
-                  "hf mf sen --suffix mycard\n");
+                  "hf mf sen --suffix mycard\n"
+                  "hf mf sen --ns\n");
     void *argtable[] = {
         arg_param_begin,
         arg_lit0(NULL, "keep-nonces", "save collected nonce/data JSON evidence"),
@@ -3509,6 +3516,7 @@ int CmdHF14AMfSEN(const char *Cmd) {
         arg_int0(NULL, "max-online-candidates", "<n>", "abort online phase if total candidates exceed this limit"),
         arg_str0(NULL, "parity-mask", "<hex>", "parity filter mask 1..F (default 1 = vetted staticnested_1nt behavior)"),
         arg_str0(NULL, "suffix", "<txt>", "Add this suffix to generated files"),
+        arg_lit0(NULL, "ns", "no save to file (--keep-nonces still writes its evidence file)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -3541,7 +3549,8 @@ int CmdHF14AMfSEN(const char *Cmd) {
     int sfxlen = 0;
     char suffix[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 8), (uint8_t *)suffix, FILE_PATH_SIZE, &sfxlen);
+    bool no_save = arg_get_lit(ctx, 9);
     CLIParserFree(ctx);
 
-    return HFMFSENRecover(keep_nonces, no_oob, reader_mode, offline_only, max_online_candidates, parity_mask, false, NULL, 0, suffix);
+    return HFMFSENRecover(keep_nonces, no_oob, reader_mode, offline_only, max_online_candidates, parity_mask, false, NULL, 0, suffix, no_save);
 }

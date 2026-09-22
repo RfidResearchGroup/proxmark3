@@ -72,9 +72,9 @@ typedef struct {
 
 static int CmdHelp(const char *Cmd);
 
-static int HFMFAutoPwnSEN(sector_t *e_sector, size_t sector_cnt, const char *suffix) {
+static int HFMFAutoPwnSEN(sector_t *e_sector, size_t sector_cnt, const char *suffix, bool no_save) {
     DropField();
-    return HFMFSENRecover(false, false, false, false, 0, 0x1, true, e_sector, sector_cnt, suffix);
+    return HFMFSENRecover(false, false, false, false, 0, 0x1, true, e_sector, sector_cnt, suffix, no_save);
 }
 
 // Static array for Saflok key levels
@@ -3367,7 +3367,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     }
 
     if (has_staticnonce == NONCE_STATIC_ENC) {
-        int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt, outfnlen ? outfilename : NULL);
+        int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt, outfnlen ? outfilename : NULL, no_save);
         free(e_sector);
         free(fptr);
         return sen_res;
@@ -3537,7 +3537,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     if (known_key && ((has_staticnonce == NONCE_NORMAL) || (has_staticnonce == NONCE_FAIL))) {
         has_staticnonce = detect_classic_static_encrypted_nonce(mfFirstBlockOfSector(sectorno), keytype, key);
         if (has_staticnonce == NONCE_STATIC_ENC) {
-            int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt, outfnlen ? outfilename : NULL);
+            int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt, outfnlen ? outfilename : NULL, no_save);
             free(keyBlock);
             free(e_sector);
             free(fptr);
@@ -3613,7 +3613,7 @@ noValidKeyFound:
     if (known_key && has_staticnonce == NONCE_NORMAL) {
         has_staticnonce = detect_classic_static_encrypted_nonce(mfFirstBlockOfSector(sectorno), keytype, key);
         if (has_staticnonce == NONCE_STATIC_ENC) {
-            int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt, outfnlen ? outfilename : NULL);
+            int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt, outfnlen ? outfilename : NULL, no_save);
             free(keyBlock);
             free(e_sector);
             free(fptr);
@@ -3803,7 +3803,7 @@ tryNested:
                             case PM3_ESTATIC_NONCE: {
                                 e_sector[current_sector_i].Key[current_key_type_i] = 0xffffffffffff;
                                 e_sector[current_sector_i].foundKey[current_key_type_i] = false;
-                                int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt, outfnlen ? outfilename : NULL);
+                                int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt, outfnlen ? outfilename : NULL, no_save);
                                 free(e_sector);
                                 free(fptr);
                                 return sen_res;
@@ -3861,7 +3861,7 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
                                 case PM3_ESTATIC_NONCE: {
                                     e_sector[current_sector_i].Key[current_key_type_i] = 0xffffffffffff;
                                     e_sector[current_sector_i].foundKey[current_key_type_i] = false;
-                                    int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt, outfnlen ? outfilename : NULL);
+                                    int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt, outfnlen ? outfilename : NULL, no_save);
                                     free(e_sector);
                                     free(fptr);
                                     return sen_res;
