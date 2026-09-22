@@ -3466,8 +3466,8 @@ static int CmdHF15CFinalize(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 cfinalize",
                   "Finalize a magic ISO15693 'V3' tag.\n"
-                  _RED_("This operation is irreversible.") " Finalize erases the whole tag\n"
-                  "memory to 00000000 and locks the UID for good. Set the UID with\n"
+                  _RED_("This operation is irreversible.") " It locks the UID for good,\n"
+                  "clears the configuration blocks and shifts the block numbering. Set it with\n"
                   "`" _YELLOW_("hf 15 csetuid --v3") "` first, then lock it in with this command.",
                   "hf 15 cfinalize -y"
                  );
@@ -3482,7 +3482,7 @@ static int CmdHF15CFinalize(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (confirmed == false) {
-        PrintAndLogEx(WARNING, _RED_("This operation is irreversible!") " Tag memory is erased and the UID locked.");
+        PrintAndLogEx(WARNING, _RED_("This operation is irreversible!") " The UID is locked and the blocks move.");
         PrintAndLogEx(WARNING, "Add " _YELLOW_("-y") " to confirm and proceed.");
         return PM3_EINVARG;
     }
