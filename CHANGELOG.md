@@ -3,8 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added new entries from Metrodroid project into our AID json (@iceman1001)
 - Changed `hf iclass view` - SIO Insights now surfaces unhandled TLV tags (e.g. the [5]/[9] context tags seen on SR credentials) instead of silently dropping them (@youngh82)
-- Added `hf mfdes view` - decodes the card issuer header of NORTIC travel cards, the Norwegian national public transport card (@iceman1001)
+- Changed `hf mfdes view` - decodes the card issuer header of NORTIC travel cards, the Norwegian national public transport card (@iceman1001)
 - Added `hf mf view` - decodes RKF travel cards, the Nordic public transport card (Resekortsföreningen i Norden) on MIFARE Classic (@iceman1001)
 - Fixed `hf 14a info`  now correctly handles NAK when receiving RATS (@iceman1001)
 - Fixed `hf mfu restore` to support Ultralight AES (@iceman1001)

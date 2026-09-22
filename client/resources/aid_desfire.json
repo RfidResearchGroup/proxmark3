@@ -1624,6 +1624,30 @@
         "Type": "transport"
     },
     {
+        "AID": "EF2101",
+        "Vendor": "Tampereen seudun joukkoliikenne (Nysse)",
+        "Country": "FI",
+        "Name": "Nysse Card (TMP)",
+        "Description": "Tampere region travel card",
+        "Type": "transport"
+    },
+    {
+        "AID": "AB1000",
+        "Vendor": "Waltti Solutions Oy",
+        "Country": "FI",
+        "Name": "Waltti Card",
+        "Description": "Finnish regional travel card used outside the HSL area",
+        "Type": "transport"
+    },
+    {
+        "AID": "4B5443",
+        "Vendor": "Transports publics fribourgeois (TPF)",
+        "Country": "CH",
+        "Name": "TPF Card (FRI)",
+        "Description": "Fribourg public transport card, AID is ASCII \"KTC\"",
+        "Type": "transport"
+    },
+    {
         "AID": "F001D0",
         "Vendor": "Arabako Foru Aldundia",
         "Country": "ES",
