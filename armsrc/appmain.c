@@ -741,11 +741,17 @@ static void SendCapabilities(void) {
     capabilities.is_pm5_std_ant = true;
     capabilities.hw_available_fpga_flash = true;
     capabilities.hw_available_i2c_eeprom = true;
+    #ifdef WITH_BWM_FORWARD
+    capabilities.hw_available_bwm = true;
+    #else
+    capabilities.hw_available_bwm = false;
+    #endif
 #else
     capabilities.is_pm5 = false;
     capabilities.is_pm5_std_ant = false;
     capabilities.hw_available_fpga_flash = false;
     capabilities.hw_available_i2c_eeprom = false;
+    capabilities.hw_available_bwm = false;
 #endif
 
 #ifdef WITH_FLASH

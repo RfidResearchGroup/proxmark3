@@ -271,6 +271,7 @@ typedef struct {
     bool hw_available_i2c_eeprom : 1;
     bool is_pm5 : 1;
     bool is_pm5_std_ant : 1;
+    bool hw_available_bwm : 1;
 
     // Appended in version 9. Fields must only ever be APPENDED here:
     // the client accepts a shorter struct from older firmware
@@ -289,7 +290,7 @@ typedef struct {
 // firmware refuse to talk instead of misparsing each other.
 //   10: CMD_HF_MIFARE_EML_MEMSET gained a flags byte
 //   11: capabilities_t gained em_size / em_allocated
-#define CAPABILITIES_VERSION 11
+#define CAPABILITIES_VERSION 12
 // what a pre-v9 device would have used, it could not tell us
 #define CAPABILITIES_LEGACY_CMD_DATA_SIZE 512
 extern capabilities_t g_pm3_capabilities;

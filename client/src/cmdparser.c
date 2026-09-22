@@ -150,6 +150,12 @@ bool IfI2cEeprom(void) {
     return g_pm3_capabilities.hw_available_i2c_eeprom;
 }
 
+bool IfPm5Bwm(void) {
+    if (IfPm3Present() == false)
+        return false;
+    return g_pm3_capabilities.hw_available_bwm;
+}
+
 bool IfPm3Lf(void) {
     if (IfPm3Present() == false)
         return false;

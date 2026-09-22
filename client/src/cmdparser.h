@@ -55,6 +55,7 @@ bool IfPm5(void);
 bool IfPm5StdAnt(void);
 bool IfFpgaFlash(void);
 bool IfI2cEeprom(void);
+bool IfPm5Bwm(void);
 bool IfPm3Lf(void);
 bool IfPm3Hitag(void);
 bool IfPm3EM4x50(void);
