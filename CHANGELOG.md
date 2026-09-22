@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 14a info`  now correctly handles NAK when receiving RATS (@iceman1001)
 - Fixed `hf mfu restore` to support Ultralight AES (@iceman1001)
 - Fixed `hf mfu info` to print UL-AES config pages again (@iceman1001)
 

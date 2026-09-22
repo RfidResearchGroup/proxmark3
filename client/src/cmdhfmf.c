@@ -405,9 +405,11 @@ int mf_read_uid(uint8_t *uid, int *uidlen, int *nxptype) {
             return PM3_ETIMEOUT;
         }
 
-        memcpy(card.ats, resp.data.asBytes, rlen_398);
-        card.ats_len = rlen_398; // note: ats_len includes CRC Bytes
-        if (card.ats_len > 3) {
+        // Only a well formed ATS, TL plus the bytes TL counts plus CRC, means the
+        // PICC entered ISO14443-4.  A 4 bit NAK to RATS is not an ATS.
+        if ((rlen_398 > 3) && (resp.data.asBytes[0] == rlen_398 - 2)) {
+            memcpy(card.ats, resp.data.asBytes, rlen_398);
+            card.ats_len = rlen_398; // note: ats_len includes CRC Bytes
             select_status = 4;
         }
     }
@@ -3199,9 +3201,11 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             return PM3_ETIMEOUT;
         }
 
-        memcpy(card.ats, resp.data.asBytes, rlen_3120);
-        card.ats_len = rlen_3120; // note: ats_len includes CRC Bytes
-        if (card.ats_len > 3) {
+        // Only a well formed ATS, TL plus the bytes TL counts plus CRC, means the
+        // PICC entered ISO14443-4.  A 4 bit NAK to RATS is not an ATS.
+        if ((rlen_3120 > 3) && (resp.data.asBytes[0] == rlen_3120 - 2)) {
+            memcpy(card.ats, resp.data.asBytes, rlen_3120);
+            card.ats_len = rlen_3120; // note: ats_len includes CRC Bytes
             select_status = 4;
         }
     }
@@ -11458,9 +11462,11 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             return PM3_ETIMEOUT;
         }
 
-        memcpy(card.ats, resp.data.asBytes, rlen_11266);
-        card.ats_len = rlen_11266; // note: ats_len includes CRC Bytes
-        if (card.ats_len > 3) {
+        // Only a well formed ATS, TL plus the bytes TL counts plus CRC, means the
+        // PICC entered ISO14443-4.  A 4 bit NAK to RATS is not an ATS.
+        if ((rlen_11266 > 3) && (resp.data.asBytes[0] == rlen_11266 - 2)) {
+            memcpy(card.ats, resp.data.asBytes, rlen_11266);
+            card.ats_len = rlen_11266; // note: ats_len includes CRC Bytes
             select_status = 4;
         }
     }
