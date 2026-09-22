@@ -3409,7 +3409,8 @@ static int CmdHF15CSetUID(const char *Cmd) {
     if (resp.status == PM3_EWRONGANSWER) {
         if (use_v3) {
             PrintAndLogEx(FAILED, "tag is not an un-finalized magic " _YELLOW_("V3") " tag");
-            PrintAndLogEx(HINT, "Hint: signature in blocks 0x14/0x15 not found - already finalized or not a V3 tag");
+            PrintAndLogEx(HINT, "Hint: signature in blocks 0x14/0x15 not found");
+            PrintAndLogEx(HINT, "already finalized or not a V3 tag");
         } else {
             PrintAndLogEx(FAILED, "tag doesn't look like a blank/magic " _YELLOW_("Gen1") " tag ( " _RED_("fail") " )");
             PrintAndLogEx(HINT, "Hint: block 0x38/0x39/0x3E/0x3F must be unreadable or blank");
