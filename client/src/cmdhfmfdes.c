@@ -9085,7 +9085,13 @@ static void DesfireViewPrintApp(const desfire_dump_app_t *app) {
     if (app->aid == 0x000000) {
         PrintAndLogEx(INFO, "--- " _CYAN_("AID 000000") " ( PICC level ) ---------------------");
     } else {
-        PrintAndLogEx(INFO, "--- " _CYAN_("AID %06X") " --------------------------------", app->aid);
+        // name it from the aid_desfire dictionary when we know it
+        const char *known = AIDDFGetCommentStr(app->aid);
+        if (known && known[0] != '\0') {
+            PrintAndLogEx(INFO, "--- " _CYAN_("AID %06X") " --- " _YELLOW_("%s"), app->aid, known);
+        } else {
+            PrintAndLogEx(INFO, "--- " _CYAN_("AID %06X") " --------------------------------", app->aid);
+        }
     }
 
     if (app->isofid != 0) {
