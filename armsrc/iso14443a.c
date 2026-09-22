@@ -2739,6 +2739,7 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
     // If further research is needed, an oscilloscope needs to be used to observe the specific DOUT modulation status.
     // ---
     // Clear TXRDY:
+    while (!FPGA_SSC_TX_Ready()) {}
     FPGA_SSC_TX_Value(SEC_Y);
 
     uint16_t c = 0;
@@ -2972,6 +2973,7 @@ int EmSendCmd14443aRaw(const uint8_t *resp, uint16_t respLen) {
     while ((ThisTransferTime = GetCountSspClk()) & 0x00000007);
 
     // Clear TXRDY:
+    while (!FPGA_SSC_TX_Ready()) {}
     FPGA_SSC_TX_Value(SEC_F);
 
     // send cycle

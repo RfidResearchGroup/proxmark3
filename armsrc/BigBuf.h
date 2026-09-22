@@ -20,6 +20,7 @@
 #define __BIGBUF_H
 
 #include "common.h"
+#include "pm3_cmd.h"
 
 #define MAX_FRAME_SIZE          256 // maximum allowed ISO14443 frame
 // The 14a demodulator stores 8 parity bits per 8 received bytes and then flushes
@@ -50,6 +51,11 @@
 
 // 8 data bits and 1 parity bit per payload byte, 1 correction bit, 1 SOC bit, 2 EOC bits
 #define TOSEND_BUFFER_SIZE (9 * MAX_FRAME_SIZE + 1 + 1 + 2)
+// For double buffering, must be at least 2x PM3_CMD_DATA_SIZE
+#if (PM3_CMD_DATA_SIZE * 2) > TOSEND_BUFFER_SIZE
+#undef TOSEND_BUFFER_SIZE
+#define TOSEND_BUFFER_SIZE (PM3_CMD_DATA_SIZE * 2)
+#endif
 
 uint8_t *BigBuf_get_addr(void);
 uint32_t BigBuf_get_size(void);
