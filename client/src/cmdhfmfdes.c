@@ -35,6 +35,7 @@
 #include "crypto/duoxcrypto.h"
 #include "protocols.h"
 #include "parsers/parsehrt.h"
+#include "parsers/parsenortic.h"
 #include "cmdtrace.h"
 #include "cliparser.h"
 #include "iso7816/apduinfo.h"       // APDU manipulation / errorcodes
@@ -9691,12 +9692,14 @@ static int CmdHF14ADesView(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes view",
                   "Print a DESFire card dump file (json)",
-                  "hf mfdes view -f hf-mfdes-01020304050607-dump.json");
+                  "hf mfdes view -f hf-mfdes-01020304050607-dump.json\n"
+                  "hf mfdes view --selftest");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "Filename of dump"),
+        arg_str0("f", "file", "<fn>", "Filename of dump"),
         arg_lit0("v", "verbose", "Verbose output"),
+        arg_lit0(NULL, "selftest", "Run the dump parsers self tests and exit"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -9705,7 +9708,17 @@ static int CmdHF14ADesView(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     bool verbose = arg_get_lit(ctx, 2);
+    bool selftest = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
+
+    if (selftest) {
+        return nortic_selftest();
+    }
+
+    if (fnlen == 0) {
+        PrintAndLogEx(ERR, "Specify a filename with `-f` or run `--selftest`");
+        return PM3_EINVARG;
+    }
 
     desfire_dump_t *dump = calloc(1, sizeof(desfire_dump_t));
     if (dump == NULL) {
@@ -9774,6 +9787,10 @@ static int CmdHF14ADesView(const char *Cmd) {
 
     for (uint8_t i = 0; i < dump->appcount && i < DESFIRE_MAX_APP_COUNT; i++) {
         DesfireViewPrintApp(&dump->app[i]);
+    }
+
+    if (is_valid_nortic_card(dump)) {
+        (void)nortic_parser_parse(dump);
     }
 
     if (verbose) {
@@ -11053,8 +11070,7 @@ static int CmdHF14ADesVerifyCert(const char *Cmd) {
         arg_str0(NULL, "dfname",    "<hex>", "Certificate application DF name (1-16 bytes)"), // 14
         arg_str0(NULL, "fid",       "<hex>", "Certificate file ID (1 byte)"), // 15
         arg_lit0(NULL, "no-auth",   "Read certificate file without authentication"), // 16
-        arg_strn(NULL, "ca", "<name|cert|pubkey|path|skip>", 0, MFDES_VERIFYCERT_MAX_CAS,
-        "CA input, or `skip` to skip certificate signature validation. Repeat --ca for multiple entries"), // 17
+        arg_strn(NULL, "ca", "<name|cert|pubkey|path|skip>", 0, MFDES_VERIFYCERT_MAX_CAS, "CA input, or `skip` to skip validation"), // 17
         arg_str0(NULL, "keyaid",    "<hex>", "Key application ID (default: cert app)"), // 18
         arg_str0(NULL, "keyisoid",  "<hex>", "Key application ISO DF ID (2 bytes)"), // 19
         arg_str0(NULL, "keydfname", "<hex>", "Key application DF name (default: cert app)"), // 20

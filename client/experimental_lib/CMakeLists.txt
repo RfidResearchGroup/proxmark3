@@ -442,6 +442,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/parsers/parsemykey.c
         ${PM3_ROOT}/client/src/parsers/parseproac.c
         ${PM3_ROOT}/client/src/parsers/parserkf.c
+        ${PM3_ROOT}/client/src/parsers/parsenortic.c
         ${PM3_ROOT}/client/src/parsers/hrtparser/hrtparser.c
         ${PM3_ROOT}/client/src/pla.c
         ${PM3_ROOT}/client/src/preferences.c
