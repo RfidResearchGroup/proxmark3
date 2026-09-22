@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `A1856618` (an EM4305 anti-clone card password) to the `t55xx_default_pwds` dictionary used by `lf em 4x05 chk` (@nemanjan00)
 - Fixed `lf em 4x05` read demodulation - a response whose preamble lost its leading zero in the ASK/Manchester demod is now accepted (the 45-bit parity check still gates it), so marginal EM4305 tags read instead of reporting no answer (@nemanjan00)
 - Fixed `lf em 4x05 info` and `lf em 4x05 dump` - the block 0 probe now uses the supplied password, so a tag with "read login required" set no longer fails silently, and a clear message is shown when there is no answer (@nemanjan00)
 - Fixed `lf em 4x05 dump` - a missing login response no longer aborts the dump; it continues with the password and lets the per-block reads decide (@nemanjan00)
