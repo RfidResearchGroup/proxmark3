@@ -1990,32 +1990,16 @@
         "AID": "D040000013000001",
         "Vendor": "Austria Card",
         "Country": "Austria",
-        "Name": "DF_UNI_Kepler1",
-        "Description": "Domestic Loyalty Program (Version 2.0)",
-        "Type": ""
-    },
-    {
-        "AID": "D040000013000001",
-        "Vendor": "Austria Card",
-        "Country": "Austria",
-        "Name": "DF_Schler1",
-        "Description": "Domestic Loyalty Program (Version 1.3)",
+        "Name": "DF_UNI_Kepler1 / DF_Schler1",
+        "Description": "Domestic Loyalty Program (Version 2.0, and DF_Schler1 as version 1.3)",
         "Type": ""
     },
     {
         "AID": "D040000013000002",
         "Vendor": "Austria Card",
         "Country": "Austria",
-        "Name": "DF_UNI_Kepler2",
-        "Description": "Domestic Loyalty Program (Version 2.0)",
-        "Type": ""
-    },
-    {
-        "AID": "D040000013000002",
-        "Vendor": "Austria Card",
-        "Country": "Austria",
-        "Name": "DF_Schler2",
-        "Description": "Domestic Loyalty Program (Version 1.3)",
+        "Name": "DF_UNI_Kepler2 / DF_Schler2",
+        "Description": "Domestic Loyalty Program (Version 2.0, and DF_Schler2 as version 1.3)",
         "Type": ""
     },
     {
@@ -2030,16 +2014,8 @@
         "AID": "D040000015000001",
         "Vendor": "Austria Card",
         "Country": "Austria",
-        "Name": "DF_UNI_Ausweis",
-        "Description": "Domestic Loyalty Program (Version 2.0)",
-        "Type": ""
-    },
-    {
-        "AID": "D040000015000001",
-        "Vendor": "Austria Card",
-        "Country": "Austria",
-        "Name": "DF_Ausweis",
-        "Description": "Domestic Loyalty Program (Version 1.3)",
+        "Name": "DF_UNI_Ausweis / DF_Ausweis",
+        "Description": "Domestic Loyalty Program (Version 2.0, and DF_Ausweis as version 1.3)",
         "Type": ""
     },
     {
