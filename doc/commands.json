@@ -1913,7 +1913,7 @@
         },
         "hf 15 cfinalize": {
             "command": "hf 15 cfinalize",
-            "description": "Finalize a magic ISO15693 'V3' tag. This operation is irreversible. After finalize the configuration area is erased and the UID can no longer be changed. Set the UID with `hf 15 csetuid --v3` first, then lock it in with this command.",
+            "description": "Finalize a magic ISO15693 'V3' tag. This operation is irreversible. Finalize erases the whole tag memory to 00000000 and locks the UID for good. Set the UID with `hf 15 csetuid --v3` first, then lock it in with this command.",
             "notes": [
                 "hf 15 cfinalize -y"
             ],
@@ -1926,7 +1926,7 @@
         },
         "hf 15 csetuid": {
             "command": "hf 15 csetuid",
-            "description": "Set UID for magic Chinese card (only works with such cards) For magic 'V3' tags this writes the UID configuration only and is repeatable; run `hf 15 cfinalize` afterwards to lock the UID permanently.",
+            "description": "Set UID for magic Chinese card (only works with such cards) Gen1 and V3 probe their backdoor blocks first and refuse to write if they read back real data, to avoid corrupting a normal (non-magic) tag. For magic 'V3' tags this writes the UID configuration only and is repeatable; run `hf 15 cfinalize` afterwards to lock the UID permanently.",
             "notes": [
                 "hf 15 csetuid -u E011223344556677 -> use gen1 command",
                 "hf 15 csetuid -u E011223344556677 --v2 -> use gen2 command",
@@ -9853,6 +9853,20 @@
             ],
             "usage": "hf ntag424 getfs [-h] --fileno <dec>"
         },
+        "hf ntag424 gettt": {
+            "command": "hf ntag424 gettt",
+            "description": "Read and print Tag Tamper status. Will authenticate if key information is provided.",
+            "notes": [
+                "hf ntag424 gettt --keyno 0 -k 00000000000000000000000000000000"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--keyno <dec> Key number",
+                "-k, --key <hex> Key for authentication (HEX 16 bytes)"
+            ],
+            "usage": "hf ntag424 gettt [-h] [--keyno <dec>] [-k <hex>]"
+        },
         "hf ntag424 help": {
             "command": "hf ntag424 help",
             "description": "help This help view Display content from tag dump file --------------------------------------------------------------------------------------- hf ntag424 info available offline: no Get info about NXP NTAG424 DNA Family styled tag.",
@@ -9884,6 +9898,21 @@
                 "-m, --cmode <plain|mac|encrypt> Communication mode"
             ],
             "usage": "hf ntag424 read [-h] --fileno <1|2|3> [--keyno <dec>] [-k <hex>] [-o <dec>] -l <dec> [-m <plain|mac|encrypt>]"
+        },
+        "hf ntag424 setconfig": {
+            "command": "hf ntag424 setconfig",
+            "description": "Change a PICC configuration option. Several options are one-way, see the datasheet before using this.",
+            "notes": [
+                "hf ntag424 setconfig -k 00000000000000000000000000000000 --option 07 -d 0100"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-k, --key0 <hex> Authentication key (must be key 0, HEX 16 bytes)",
+                "--option <hex> Configuration option (HEX 1 byte)",
+                "-d, --data <hex> Option data (HEX, 1..47 bytes)"
+            ],
+            "usage": "hf ntag424 setconfig [-h] -k <hex> --option <hex> -d <hex> [-d <hex>]..."
         },
         "hf ntag424 view": {
             "command": "hf ntag424 view",
@@ -12776,7 +12805,7 @@
                 "-1, --ht1 Card type Hitag 1",
                 "-2, --ht2 Card type Hitag 2",
                 "-s, --hts Card type Hitag S",
-                "-m, --htm Card type Hitag \u03bc"
+                "-m, --htm Card type Hitag \u00b5"
             ],
             "usage": "lf hitag eload [-h12sm] -f <fn>"
         },
@@ -12794,7 +12823,7 @@
                 "-1, --ht1 Card type Hitag 1",
                 "-2, --ht2 Card type Hitag 2 (default)",
                 "-s, --hts Card type Hitag S",
-                "-m, --htm Card type Hitag \u03bc"
+                "-m, --htm Card type Hitag \u00b5"
             ],
             "usage": "lf hitag eview [-hv12sm]"
         },
@@ -16616,8 +16645,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 924,
+        "commands_extracted": 926,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-09-16T22:14:12+00:00"
+        "extracted_on": "2026-09-22T13:04:53+00:00"
     }
 }
