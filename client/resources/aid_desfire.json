@@ -291,8 +291,8 @@
         "AID": "F48EF1",
         "Vendor": "Salto Systems",
         "Country": "ES",
-        "Name": "Salto Systems",
-        "Description": "Access Control",
+        "Name": "Salto Systems / Uni Delft",
+        "Description": "Access Control. Also issued as the TU Delft (NL) student card",
         "Type": "pacs"
     },
     {
@@ -451,8 +451,8 @@
         "AID": "F532F0",
         "Vendor": "Schlage via Allegion PLC",
         "Country": "US",
-        "Name": "Schlage Access Credential",
-        "Description": "FKA aptiQ Access Credential",
+        "Name": "Schlage Access Credential / LEAF",
+        "Description": "FKA aptiQ Access Credential. LEAF reuses this AID for backwards compatibility",
         "Type": "pacs"
     },
     {
@@ -509,14 +509,6 @@
         "Country": "US",
         "Name": "LEAF Cc Enterprise (Apple Wallet)",
         "Description": "LEAF Cc Enterprise app found on Apple Wallet credentials",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F532F0",
-        "Vendor": "LEAF",
-        "Country": "US",
-        "Name": "LEAF Backwards Compat",
-        "Description": "LEAF Backwards Compat",
         "Type": "pacs"
     },
     {
@@ -853,14 +845,6 @@
         "Country": "DE",
         "Name": "Visitor's Pass",
         "Description": "Besucherausweis",
-        "Type": "student"
-    },
-    {
-        "AID": "F48EF1",
-        "Vendor": "TU Delft",
-        "Country": "NL",
-        "Name": "Uni Delft",
-        "Description": "",
         "Type": "student"
     },
     {
