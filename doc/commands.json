@@ -1913,7 +1913,7 @@
         },
         "hf 15 cfinalize": {
             "command": "hf 15 cfinalize",
-            "description": "Finalize a magic ISO15693 'V3' tag. This operation is irreversible. Finalize erases the whole tag memory to 00000000 and locks the UID for good. Set the UID with `hf 15 csetuid --v3` first, then lock it in with this command.",
+            "description": "Finalize a magic ISO15693 'V3' tag. This operation is irreversible. It locks the UID for good, clears the configuration blocks and shifts the block numbering. Set it with `hf 15 csetuid --v3` first, then lock it in with this command.",
             "notes": [
                 "hf 15 cfinalize -y"
             ],
@@ -16647,6 +16647,6 @@
     "metadata": {
         "commands_extracted": 926,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-09-22T13:04:53+00:00"
+        "extracted_on": "2026-09-22T14:39:12+00:00"
     }
 }
