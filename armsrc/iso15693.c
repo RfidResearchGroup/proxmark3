@@ -3211,8 +3211,19 @@ void LockPassSlixIso15693(uint32_t pass_id, uint32_t password) {
 static const uint8_t g_magic_gen1_blank[4] = {0x00, 0x00, 0x00, 0x00};
 static const uint8_t g_magic_gen1_unlock_b[4] = {0x69, 0x96, 0x00, 0x00};
 
-// Unaddressed block read, leaves the field on for the next command
-static int magic_15_read_blk(uint8_t blockno, uint8_t *out, uint32_t *start_time, uint32_t *eof_time) {
+// true when every byte is zero
+static bool magic_15_is_blank(const uint8_t *data, uint8_t len) {
+    for (uint8_t i = 0; i < len; i++) {
+        if (data[i] != 0x00) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// PM3_SUCCESS means the tag answered with block data, *data then points into
+// the receive buffer and stays valid until the next command overwrites it.
+static int magic_15_read_blk(uint8_t blockno, uint8_t **data, uint8_t *len, uint32_t *start_time, uint32_t *eof_time) {
 
     uint8_t cmd[5] = {ISO15_REQ_DATARATE_HIGH | ISO15_REQ_OPTION, ISO15693_READBLOCK, blockno, 0x00, 0x00};
     AddCrc15(cmd, 3);
@@ -3227,16 +3238,24 @@ static int magic_15_read_blk(uint8_t blockno, uint8_t *out, uint32_t *start_time
         return res;
     }
 
-    // 8 bytes when the tag honours the option flag and prepends a lock byte, 7 when it doesn't
-    if (recvlen != 7 && recvlen != 8) {
+    // flags + at least four data bytes + crc
+    if (recvlen < 7) {
         return PM3_EWRONGANSWER;
+    }
+
+    // GetIso15693AnswerFromTag() doesn't check the crc, so do it here
+    if (CheckCrc15(s_iso15_recvbuf, recvlen) == false) {
+        return PM3_ECRC;
     }
 
     if ((s_iso15_recvbuf[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) {
         return PM3_EWRONGANSWER;
     }
 
-    memcpy(out, s_iso15_recvbuf + ((recvlen == 8) ? 2 : 1), 4);
+    // the option flag makes the tag prepend a lock byte, blocks can be wider than four bytes
+    uint8_t offset = (recvlen > 7) ? 2 : 1;
+    *data = s_iso15_recvbuf + offset;
+    *len = recvlen - offset - 2;
     return PM3_SUCCESS;
 }
 
@@ -3256,7 +3275,16 @@ static int magic_15_write_blk(uint8_t blockno, const uint8_t *data, uint32_t *st
         return res;
     }
 
-    if (recvlen < 3 || (s_iso15_recvbuf[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) {
+    // flags + crc
+    if (recvlen < 3) {
+        return PM3_EWRONGANSWER;
+    }
+
+    if (CheckCrc15(s_iso15_recvbuf, recvlen) == false) {
+        return PM3_ECRC;
+    }
+
+    if ((s_iso15_recvbuf[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) {
         return PM3_EWRONGANSWER;
     }
     return PM3_SUCCESS;
@@ -3275,17 +3303,20 @@ static bool magic_gen1_is_backdoor(uint32_t *start_time, uint32_t *eof_time) {
 
     for (uint8_t i = 0; i < ARRAYLEN(blocks); i++) {
 
-        uint8_t buf[4] = {0};
-        if (magic_15_read_blk(blocks[i], buf, start_time, eof_time) != PM3_SUCCESS) {
+        uint8_t *data = NULL;
+        uint8_t len = 0;
+
+        if (magic_15_read_blk(blocks[i], &data, &len, start_time, eof_time) != PM3_SUCCESS) {
             continue;
         }
 
-        if (memcmp(buf, g_magic_gen1_blank, 4) == 0) {
+        if (magic_15_is_blank(data, len)) {
             continue;
         }
 
         // leftover of the unlock write of an earlier attempt on this same tag
-        if (blocks[i] == ISO15_MAGIC_GEN1_BLK_UNLOCK_B && memcmp(buf, g_magic_gen1_unlock_b, 4) == 0) {
+        if (blocks[i] == ISO15_MAGIC_GEN1_BLK_UNLOCK_B && len >= 4 &&
+                memcmp(data, g_magic_gen1_unlock_b, 4) == 0) {
             continue;
         }
 
@@ -3374,21 +3405,30 @@ static const uint8_t g_magic_v3_sig_b[4] = {0x21, 0xAE, 0x93, 0x00};
 static const uint8_t g_magic_v3_fin_a[4] = {0xA5, 0x2B, 0x44, 0x2C};
 static const uint8_t g_magic_v3_fin_b[4] = {0x69, 0xE2, 0x5D, 0x00};
 
-// Writing the finalize values to anything that is not an un-finalized V3 tag bricks it
-static bool magic_v3_in_config_mode(uint32_t *start_time, uint32_t *eof_time) {
+// Writing the finalize values to anything that is not an un-finalized V3 tag bricks it.
+// PM3_SUCCESS means both signature blocks were read, *in_config says what they hold.
+static int magic_v3_read_config(bool *in_config, uint32_t *start_time, uint32_t *eof_time) {
 
-    uint8_t a[4] = {0};
-    uint8_t b[4] = {0};
+    uint8_t *data = NULL;
+    uint8_t len = 0;
 
-    if (magic_15_read_blk(ISO15_MAGIC_V3_BLK_SIG_A, a, start_time, eof_time) != PM3_SUCCESS) {
-        return false;
+    *in_config = false;
+
+    // the second read overwrites the buffer, so compare 0x14 before asking for 0x15
+    int res = magic_15_read_blk(ISO15_MAGIC_V3_BLK_SIG_A, &data, &len, start_time, eof_time);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
-    if (magic_15_read_blk(ISO15_MAGIC_V3_BLK_SIG_B, b, start_time, eof_time) != PM3_SUCCESS) {
-        return false;
+    bool sig_a = (len >= 4 && memcmp(data, g_magic_v3_sig_a, 4) == 0);
+
+    res = magic_15_read_blk(ISO15_MAGIC_V3_BLK_SIG_B, &data, &len, start_time, eof_time);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
-    return (memcmp(a, g_magic_v3_sig_a, 4) == 0) && (memcmp(b, g_magic_v3_sig_b, 4) == 0);
+    *in_config = (sig_a && len >= 4 && memcmp(data, g_magic_v3_sig_b, 4) == 0);
+    return PM3_SUCCESS;
 }
 
 // Set the UID on a magic "V3" tag, repeatable until the tag is finalized
@@ -3409,7 +3449,8 @@ void SetTag15693Uid_v3(const uint8_t *uid) {
     }
     start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
 
-    if (magic_v3_in_config_mode(&start_time, &eof_time) == false) {
+    bool in_config = false;
+    if (magic_v3_read_config(&in_config, &start_time, &eof_time) != PM3_SUCCESS || in_config == false) {
         reply_ng(CMD_HF_ISO15693_CSETUID_V3, PM3_EWRONGANSWER, NULL, 0);
         switch_off();
         return;
@@ -3456,7 +3497,8 @@ void FinalizeTag15693_v3(void) {
     }
     start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
 
-    if (magic_v3_in_config_mode(&start_time, &eof_time) == false) {
+    bool in_config = false;
+    if (magic_v3_read_config(&in_config, &start_time, &eof_time) != PM3_SUCCESS || in_config == false) {
         reply_ng(CMD_HF_ISO15693_CFINALIZE_V3, PM3_EWRONGANSWER, NULL, 0);
         switch_off();
         return;
@@ -3467,9 +3509,12 @@ void FinalizeTag15693_v3(void) {
         res = magic_15_write_blk(ISO15_MAGIC_V3_BLK_SIG_B, g_magic_v3_fin_b, &start_time, &eof_time);
     }
 
-    // the signature must be gone now, otherwise the tag is still changeable
-    if (res == PM3_SUCCESS && magic_v3_in_config_mode(&start_time, &eof_time)) {
-        res = PM3_ESOFT;
+    // finalize wipes the memory, so the signature blocks must read back as something
+    // else. a read that fails proves nothing and counts as a failure too
+    if (res == PM3_SUCCESS) {
+        if (magic_v3_read_config(&in_config, &start_time, &eof_time) != PM3_SUCCESS || in_config) {
+            res = PM3_ESOFT;
+        }
     }
 
     reply_ng(CMD_HF_ISO15693_CFINALIZE_V3, (res == PM3_SUCCESS) ? PM3_SUCCESS : PM3_ESOFT, NULL, 0);
