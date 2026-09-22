@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hf mf sen --suffix` - generated files can be named `hf-mf-<uid>-<dump|key|nonces>-<suffix>` (@iceman1001)
+- Fixed `hf mf autopwn --suffix` on FM11RF08S - the suffix is now forwarded to the static encrypted nonce recovery instead of being dropped (@iceman1001)
 - Fixed `hf mf sen` and `hf mf autopwn` on FM11RF08S - the recovered card dump is now saved as JSON as well as BIN (@iceman1001)
 - Fixed `hf mfdes chk` - a key given with `--key` is now tried every round instead of being overwritten by the dictionary and pattern fills (@iceman1001)
 - Fixed `hf mfdes chk` - when key settings are unreadable, key numbers are found with GetKeyVersion instead of the file access rights, which are gated by the same bit (@iceman1001)
