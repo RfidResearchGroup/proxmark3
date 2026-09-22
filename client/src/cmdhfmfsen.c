@@ -2772,7 +2772,7 @@ static int fm11_save_recovery_outputs(const iso14a_card_select_t *card, const is
         num_to_bytes(kb, MIFARE_KEY_SIZE, dump + trailer * MFBLOCK_SIZE + 10);
     }
     snprintf(fn, sizeof(fn), "hf-mf-%s-dump", sprint_hex_inrow(card->uid, card->uidlen));
-    return saveFileEx(fn, ".bin", dump, sizeof(dump), spDump);
+    return pm3_save_mf_dump(fn, dump, sizeof(dump), jsfCardMemory);
 }
 
 static int fm11_select_mifare_classic(iso14a_card_select_t *card_out) {

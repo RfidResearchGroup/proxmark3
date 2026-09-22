@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mf sen` and `hf mf autopwn` on FM11RF08S - the recovered card dump is now saved as JSON as well as BIN (@iceman1001)
 - Fixed `hf mfdes chk` - a key given with `--key` is now tried every round instead of being overwritten by the dictionary and pattern fills (@iceman1001)
 - Fixed `hf mfdes chk` - when key settings are unreadable, key numbers are found with GetKeyVersion instead of the file access rights, which are gated by the same bit (@iceman1001)
 - Fixed `hf mfdes chk` - the PICC master key is now checked, and a card that refuses GetApplicationIDs no longer aborts the whole run (@iceman1001)
