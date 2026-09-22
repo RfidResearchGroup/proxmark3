@@ -381,6 +381,174 @@ static void MeasureAntennaTuningSweep(const lf_sweep_params_t *params) {
 }
 #endif
 
+// Capture the HF field envelope in the time domain, on switch-on or after
+// switch-off.
+//
+// The frequency sweep cannot reach the HF side: ck_1356meg is a fixed
+// oscillator, so all we ever get there is one amplitude, and metal and a card
+// both reduce it. Time is the axis that is still free. A card is reader-talks-
+// first and stays silent, but it must rectify the field to power itself, and
+// that load is not constant: inrush while the reservoir cap charges, a step as
+// the shunt regulator begins dumping, another as the logic starts clocking.
+// Metal has no state -- it loads the antenna within the antenna's own rise
+// time and is flat thereafter.
+//
+// Sampling is paced across the requested window so a few hundred samples can
+// span anything from the antenna's rise (tens of us) to a full power-up
+// (several ms).
+static void MeasureAntennaTuningHfEnvelope(const hf_envelope_params_t *params) {
+
+    uint16_t stabilize_ms = params->stabilize_ms;
+    uint16_t window_us = params->window_us;
+    bool field_on = (params->field_on != 0);
+    uint8_t repeats = params->repeats;
+
+    if (stabilize_ms == 0) {
+        stabilize_ms = 50;
+    }
+    if (window_us == 0) {
+        window_us = 2000;
+    }
+    if (repeats == 0) {
+        repeats = 1;
+    }
+    if (repeats > 64) {
+        repeats = 64;
+    }
+
+    uint16_t drain_ms = params->drain_ms;
+    if (drain_ms == 0) {
+        drain_ms = HF_ENVELOPE_DRAIN_MS;
+    }
+
+    // Skipping the start of the curve puts every sample on the part that
+    // matters. Spread across 2 ms only about 15 samples land on a card's
+    // brown-out; delayed onto it, all 252 do.
+    uint16_t delay_us = params->delay_us;
+
+    hf_decay_response_t payload;
+    memset(&payload, 0, sizeof(payload));
+
+    LED_B_ON();
+
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+
+    if (field_on) {
+        // start from a cold antenna so the switch-on transient is the signal
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        SpinDelay(stabilize_ms);
+    } else {
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER);
+        SpinDelay(stabilize_ms);
+        uint32_t mv = AdcRssiAvgToMilliVolt(ADC_RSSI_CH_HF);
+        payload.baseline_mv = (mv > UINT16_MAX) ? UINT16_MAX : (uint16_t)mv;
+    }
+
+    // Fast ADC. A short sample-and-hold against the ~0.9 MOhm divider reads
+    // only a fraction of the true voltage, which is fine -- the shape is what
+    // carries the information, not the absolute level.
+    AdcRssiSetupFast(ADC_RSSI_CH_HF);
+
+    // pace the samples across the window
+    uint32_t interval_us = window_us / HF_ENVELOPE_MAX_SAMPLES;
+
+    // A card's brown-out jitters in time, so a single capture of it is noisy:
+    // twelve back to back on one card spread over the whole range between an
+    // empty antenna and a strong card. Averaging whole charge/discharge cycles
+    // here rather than in the client keeps the cycle cheap.
+    uint32_t acc[HF_ENVELOPE_MAX_SAMPLES];
+    uint8_t hits[HF_ENVELOPE_MAX_SAMPLES];
+    memset(acc, 0, sizeof(acc));
+    memset(hits, 0, sizeof(hits));
+
+    uint16_t idx = 0;
+    uint32_t elapsed_us = 0;
+
+    for (uint8_t rep = 0; rep < repeats; rep++) {
+
+        WDT_HIT();
+
+        if (rep > 0) {
+            // Drain first. Every cycle has to start from the same state, and a
+            // card that is still part charged from the previous one browns out
+            // sooner and shallower, which is exactly the signal being measured.
+            // The capture window itself is field-off time, but a short window
+            // does not give a card long enough, so wait it out explicitly.
+            FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+            SpinDelay(drain_ms);
+
+            if (field_on == false) {
+                // then charge it back up for the next discharge capture
+                FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER);
+                SpinDelay(stabilize_ms);
+            }
+        }
+
+        StartCountUS();
+        uint32_t t0 = GetCountUS();
+
+        // switch the field the way round the caller asked for
+        FpgaWriteConfWord(field_on ? FPGA_MAJOR_MODE_HF_READER : FPGA_MAJOR_MODE_OFF);
+
+        if (delay_us) {
+            while ((GetCountUS() - (t0 + delay_us)) > (UINT32_MAX / 2)) {};
+            t0 += delay_us;
+        }
+
+        idx = 0;
+        while (idx < HF_ENVELOPE_MAX_SAMPLES) {
+
+            uint32_t due = t0 + (idx * interval_us);
+            if (interval_us > 0) {
+                while ((GetCountUS() - due) > (UINT32_MAX / 2)) {
+                    // not yet, GetCountUS() is before `due`
+                }
+            }
+
+            acc[idx] += AdcRssiReadFast(ADC_RSSI_CH_HF);
+            hits[idx]++;   // cycles can end at different samples, count per bin
+            idx++;
+
+            if ((GetCountUS() - t0) >= window_us) {
+                break;
+            }
+        }
+
+        elapsed_us = GetCountUS() - t0;
+    }
+
+    // keep only the bins every cycle reached, so the average is over a
+    // constant number of cycles across the whole curve
+    uint16_t good = 0;
+    while (good < idx && hits[good] == repeats) {
+        good++;
+    }
+    idx = good;
+
+    for (uint16_t i = 0; i < idx; i++) {
+        uint32_t mv = acc[i] / hits[i];
+        payload.samples_mv[i] = (mv > UINT16_MAX) ? UINT16_MAX : (uint16_t)mv;
+    }
+
+    payload.num_samples = idx;
+    payload.measure_window_us = (elapsed_us > UINT16_MAX) ? UINT16_MAX : (uint16_t)elapsed_us;
+    payload.sample_interval_us = (idx > 1) ? (payload.measure_window_us / (idx - 1)) : 0;
+
+    if (field_on) {
+        // the settled level is the useful reference for a rise capture
+        uint32_t mv = AdcRssiAvgToMilliVolt(ADC_RSSI_CH_HF);
+        payload.baseline_mv = (mv > UINT16_MAX) ? UINT16_MAX : (uint16_t)mv;
+    }
+
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    StopTicks();
+
+    uint16_t response_size = 8 + (idx * sizeof(uint16_t));
+    reply_ng(CMD_HF_ENVELOPE, PM3_SUCCESS, (uint8_t *)&payload, response_size);
+
+    LEDsoff();
+}
+
 #ifndef PM5 // TODO DXL: PM5 is temporarily incompatible.
 
 // Measure HF antenna decay after field-off.
@@ -3287,6 +3455,14 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
 #endif
+        case CMD_HF_ENVELOPE: {
+            if (packet->length != sizeof(hf_envelope_params_t)) {
+                reply_ng(CMD_HF_ENVELOPE, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            MeasureAntennaTuningHfEnvelope((const hf_envelope_params_t *)packet->data.asBytes);
+            break;
+        }
         case CMD_MEASURE_ANTENNA_TUNING_HF: {
             if (packet->length != 1)
                 reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_EINVARG, NULL, 0);

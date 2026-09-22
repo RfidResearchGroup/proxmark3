@@ -53,4 +53,29 @@ STATIC_FORCE_INLINE uint32_t AdcRssiAvgToMilliVolt(adc_rssi_ch_t ch) {
     return (MAX_ADC_LF_VOLTAGE * (AdcRssiSum(ADC_RSSI_CH_LF, 32) >> 1)) >> 14;
 }
 
+
+STATIC_FORCE_INLINE void AdcRssiSetupFast(adc_rssi_ch_t ch) {
+    // Faster ADC clock and a shorter sample-and-hold. Source impedance is
+    // ~0.91 MOhm and the ADC input cap 12 pF, RC = 10.9 us, so at 1.33 us S&H
+    // this reads roughly 11.5 % of the true voltage. Relative shape is intact.
+    AT91C_BASE_ADC->ADC_CR = AT91C_ADC_SWRST;
+    AT91C_BASE_ADC->ADC_MR =
+        ADC_MODE_PRESCALE(7)                // ADC_CLK = MCK / 16 = 3 MHz
+        | ADC_MODE_STARTUP_TIME(8)          // (8+1)*8 / 3MHz = 24us (> 20us min)
+        | ADC_MODE_SAMPLE_HOLD_TIME(3);     // (3+1) / 3MHz = 1.33us S&H
+
+    if (ch == ADC_RSSI_CH_HF) {
+        AT91C_BASE_ADC->ADC_CHER = ADC_CHANNEL(ADC_CHAN_HF);
+    } else {
+        AT91C_BASE_ADC->ADC_CHER = ADC_CHANNEL(ADC_CHAN_LF);
+    }
+}
+
+STATIC_FORCE_INLINE uint16_t AdcRssiReadFast(adc_rssi_ch_t ch) {
+    AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
+    while (AdcRssiDataReady(ch) == false) {};
+    uint32_t mv = AdcRssiDataToMilliVolt((uint16_t)AdcRssiDataRead(ch), ch);
+    return (mv > UINT16_MAX) ? UINT16_MAX : (uint16_t)mv;
+}
+
 #endif

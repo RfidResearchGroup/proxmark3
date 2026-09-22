@@ -41,4 +41,26 @@ STATIC_FORCE_INLINE uint32_t AdcRssiAvgToMilliVolt(adc_rssi_ch_t ch) {
     return AdcRssiDataToMilliVolt(AdcRssiAvg(ch), ch);
 }
 
+STATIC_FORCE_INLINE void AdcRssiSetupFast(adc_rssi_ch_t ch) {
+    // Full init first, it also does the calibration and the vref read, then
+    // drop the sample time from 640.5 cycles to 47.5. At ADCCLK = HCLK/10 that
+    // takes a conversion from ~23 us to ~2 us. The high impedance divider does
+    // not settle in that time, so the reading is a fraction of the true
+    // voltage -- fine for the shape of a transient.
+    AdcSetupRssiChannel(ch);
+
+    if (ch == ADC_RSSI_CH_HF) {
+        adc_ordinary_channel_set(AT32_RSSI_ADC, AT32_RSSI_ADC_HF_CHANNEL, 1, ADC_SAMPLETIME_47_5);
+    } else {
+        adc_ordinary_channel_set(AT32_RSSI_ADC, AT32_RSSI_ADC_LF_CHANNEL, 1, ADC_SAMPLETIME_47_5);
+    }
+}
+
+STATIC_FORCE_INLINE uint16_t AdcRssiReadFast(adc_rssi_ch_t ch) {
+    AdcRssiConversionStart();
+    while (adc_flag_get(AT32_RSSI_ADC, ADC_OCCE_FLAG) == RESET) {};
+    uint32_t mv = AdcRssiDataToMilliVolt(adc_ordinary_conversion_data_get(AT32_RSSI_ADC), ch);
+    return (mv > UINT16_MAX) ? UINT16_MAX : (uint16_t)mv;
+}
+
 #endif // ADC_RSSI_HW_AT32_H

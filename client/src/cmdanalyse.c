@@ -1294,9 +1294,38 @@ typedef struct {
     bool has_decay;
     double round_min;       // peak of the weakest repeat, for stability
     double round_max;       // peak of the strongest repeat
+    double env[HF_ENVELOPE_MAX_SAMPLES];   // HF field rise, mV
+    double env_t[HF_ENVELOPE_MAX_SAMPLES]; // sample times, us
+    uint16_t env_n;
+    double env_final;       // settled level of the rise, mV
 } ct_meas_t;
 
-#define CT_DECAY_US     200
+// HF card vs metal, from the shape of the field switching ON.
+//
+// The HF carrier is a fixed oscillator, so that side cannot be swept, and
+// amplitude alone is useless: measured on one antenna, cards pulled the field
+// DOWN to 31-38 V while a 50 ohm dummy load and a lock cylinder pushed it UP to
+// 41-43 V. Even the sign of the amplitude change is not dependable.
+//
+// The first 20 us of the rise does show something. A tag is a tank tuned to
+// 13.56 MHz and absorbs from the instant the field starts building, so its
+// normalised rise lags; metal has no resonance to absorb into. Measured as the
+// mean residual against an empty antenna over 5-22 us:
+//
+//   cards  -0.71 -0.81 -0.93 -0.99 -1.01      metal  -0.12  +0.37
+//
+// which called seven blind objects correctly.
+//
+// It is reported rather than used as a verdict, because it tracks placement as
+// much as the object: the SAME NTAG213 read -0.99 % in one position and +0.44 %
+// in another, indistinguishable from the lock cylinder's +0.37 %. And a small
+// Fudan tag read +0.07 % in three positions while `hf 14a info` read it
+// perfectly, so flat does not mean "no card".
+#define CT_HF_RISE_US       300
+#define CT_HF_RISE_REPEATS  16
+#define CT_HF_SHAPE_LO_US   5
+#define CT_HF_SHAPE_HI_US   22
+#define CT_HF_SHAPE_CARD    (-0.5)
 // Measured HF cards dropped 3.2 to 5.5 %, a metal object 14.6 %
 #define CT_HF_METAL_PCT 10.0
 
@@ -1448,42 +1477,46 @@ static int ct_sweep_legacy(ct_meas_t *m) {
     return PM3_SUCCESS;
 }
 
-// HF field decay, a loaded Q proxy. A loaded antenna dumps its energy faster,
-// so the area under the decay shrinks. Not available on every platform.
-static int ct_decay(double *area) {
+// Capture the HF field envelope as the field switches on.
+static int ct_rise(ct_meas_t *m) {
 
-    hf_decay_params_t params = {
+    hf_envelope_params_t params = {
         .stabilize_ms = 50,
-        .measure_us = CT_DECAY_US,
+        .window_us = CT_HF_RISE_US,
+        .field_on = 1,
+        .repeats = CT_HF_RISE_REPEATS,
+        .drain_ms = 0,
+        .delay_us = 0,
     };
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_DECAY, (uint8_t *)&params, sizeof(params));
+    SendCommandNG(CMD_HF_ENVELOPE, (uint8_t *)&params, sizeof(params));
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_DECAY, &resp, 3000) == false) {
+    if (WaitForResponseTimeout(CMD_HF_ENVELOPE, &resp, 10000) == false) {
         return PM3_ETIMEOUT;
     }
-
     if (resp.status != PM3_SUCCESS) {
         return PM3_ESOFT;
     }
 
     hf_decay_response_t *r = (hf_decay_response_t *)resp.data.asBytes;
-    uint16_t n;
+
+    uint16_t n, window;
     memcpy(&n, &r->num_samples, sizeof(uint16_t));
-    if (n == 0 || n > 252) {
+    memcpy(&window, &r->measure_window_us, sizeof(uint16_t));
+
+    if (n < 16 || n > HF_ENVELOPE_MAX_SAMPLES) {
         return PM3_ESOFT;
     }
 
-    double sum = 0;
     for (uint16_t i = 0; i < n; i++) {
-        uint16_t s;
-        memcpy(&s, &r->samples_mv[i], sizeof(uint16_t));
-        sum += s;
+        uint16_t mv;
+        memcpy(&mv, &r->samples_mv[i], sizeof(uint16_t));
+        m->env[i] += mv;
+        m->env_t[i] = (n > 1) ? ((double)i * window / (n - 1)) : 0;
     }
-
-    *area = sum / n;
+    m->env_n = n;
     return PM3_SUCCESS;
 }
 
@@ -1492,8 +1525,7 @@ static int ct_measure(ct_meas_t *m, uint8_t div_start, uint8_t div_end, uint8_t 
 
     memset(m, 0, sizeof(ct_meas_t));
 
-    // CMD_HF_DECAY is compiled out of the PM5 firmware, don't ask for it
-    bool try_decay = with_decay && (IfPm5() == false);
+    bool try_decay = with_decay;
 
     for (uint8_t r = 0; r < rounds; r++) {
 
@@ -1530,15 +1562,13 @@ static int ct_measure(ct_meas_t *m, uint8_t div_start, uint8_t div_end, uint8_t 
         }
 
         if (try_decay) {
-            double area;
-            if (ct_decay(&area) == PM3_SUCCESS) {
-                m->decay += area;
+            if (ct_rise(m) == PM3_SUCCESS) {
                 m->has_decay = true;
             } else {
-                // not supported here, don't pay the timeout again
+                // firmware without the envelope capture, don't pay it again
                 try_decay = false;
                 m->has_decay = false;
-                m->decay = 0;
+                m->env_n = 0;
             }
         }
     }
@@ -1547,8 +1577,18 @@ static int ct_measure(ct_meas_t *m, uint8_t div_start, uint8_t div_end, uint8_t 
         m->curve[i] /= rounds;
     }
     m->v_hf /= rounds;
-    if (m->has_decay) {
-        m->decay /= rounds;
+
+    if (m->env_n > 0) {
+        double tail = 0;
+        int tn = 0;
+        for (uint16_t i = 0; i < m->env_n; i++) {
+            m->env[i] /= rounds;
+            if (i + 10 >= m->env_n) {
+                tail += m->env[i];
+                tn++;
+            }
+        }
+        m->env_final = (tn > 0) ? (tail / tn) : 0;
     }
 
     m->peak_v = 0;
@@ -1991,11 +2031,32 @@ static int CmdAnalyseCard(const char *Cmd) {
         int shift = (int)card.peak_f - (int)base.peak_f;
 
         double hf_drop = ct_drop_pct(base.v_hf, card.v_hf);
-        double decay_drop = 0;
-        bool has_decay = base.has_decay && card.has_decay;
+        // HF rise shape. Normalise each curve to its own settled level so the
+        // amplitude loading drops out and only shape remains, then take the
+        // mean residual over the first microseconds, where a resonant tag
+        // absorbs and metal does not.
+        bool has_decay = base.has_decay && card.has_decay
+                         && (base.env_n > 0) && (card.env_n == base.env_n)
+                         && (base.env_final > 0) && (card.env_final > 0);
+        double hf_shape = 0;
+
         if (has_decay) {
-            decay_drop = ct_drop_pct(base.decay, card.decay);
+            double sum = 0;
+            int cnt = 0;
+            for (uint16_t i = 0; i < base.env_n; i++) {
+                if (base.env_t[i] < CT_HF_SHAPE_LO_US || base.env_t[i] > CT_HF_SHAPE_HI_US) {
+                    continue;
+                }
+                sum += (100.0 * card.env[i] / card.env_final)
+                       - (100.0 * base.env[i] / base.env_final);
+                cnt++;
+            }
+            if (cnt > 0) {
+                hf_shape = sum / cnt;
+            }
         }
+
+        bool shape_card = has_decay && (hf_shape <= CT_HF_SHAPE_CARD);
 
         // A card notch is deep AND reactive. A bag of screws managed a 279 mV
         // notch, and empty-antenna drift reaches 80 mV of lift, so neither is
@@ -2037,7 +2098,8 @@ static int CmdAnalyseCard(const char *Cmd) {
             notch_hit = false;
         }
         bool lf_hit = (lf_score >= lf_thresh) || notch_hit;
-        bool hf_hit = (hf_drop >= hf_thresh);
+        // Either the amplitude moved, or the rise shows a resonant absorber.
+        bool hf_hit = (hf_drop >= hf_thresh) || shape_card;
         bool notch = notch_hit;
 
         if (live) {
@@ -2108,10 +2170,13 @@ static int CmdAnalyseCard(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "13.56 MHz............. %5.2f V -> %5.2f V  ( " _YELLOW_("%+.2f") " %% )"
                       , base.v_hf / 1000.0, card.v_hf / 1000.0, -hf_drop);
         if (has_decay) {
-            PrintAndLogEx(SUCCESS, "Field decay area...... %.0f -> %.0f  ( " _YELLOW_("%+.1f") " %% )"
-                          , base.decay, card.decay, -decay_drop);
+            PrintAndLogEx(SUCCESS, "Rise shape............ " _YELLOW_("%+.3f") " %% over %d-%d us  (<%.1f = resonant, like a tag)"
+                          , hf_shape, CT_HF_SHAPE_LO_US, CT_HF_SHAPE_HI_US, CT_HF_SHAPE_CARD);
+            if (shape_card) {
+                PrintAndLogEx(SUCCESS, "                       something resonant at 13.56 MHz is on the antenna");
+            }
         } else {
-            PrintAndLogEx(INFO, "Field decay........... n/a on this platform");
+            PrintAndLogEx(INFO, "Rise shape............ n/a, firmware has no envelope capture");
         }
 
         if (verbose) {
@@ -2187,6 +2252,13 @@ static int CmdAnalyseCard(const char *Cmd) {
 
             PrintAndLogEx(SUCCESS, "Looks like an " _GREEN_("HF card") " (13.56 MHz)");
             PrintAndLogEx(INFO, "Try " _YELLOW_("hf search") ", " _YELLOW_("hf 14a info") " and " _YELLOW_("hf 15 info"));
+
+            if (has_decay && shape_card == false) {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(WARNING, "The amplitude moved but the rise shows nothing resonant (%+.3f %%).", hf_shape);
+                PrintAndLogEx(INFO, "Metal loads HF too, and on some antennas it RAISES the field rather");
+                PrintAndLogEx(INFO, "than lowering it, so this may be a coin, a key or foil.");
+            }
 
             // The HF carrier is a fixed oscillator, so there is no sweep, no
             // notch and no lift on this side -- only amplitude. Metal absorbs
@@ -2276,6 +2348,166 @@ static int CmdAnalyseCard(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// ---------- analyse envelope ------------------------------------------------------
+//
+// Capture the HF field envelope in time, as the field switches on or after it
+// switches off.
+//
+// The frequency sweep `analyse card` uses cannot reach the HF side, because
+// ck_1356meg is a fixed oscillator: all that side offers is one amplitude, and
+// metal and a card both reduce it. Time is the axis that is still free. A card
+// is reader-talks-first and stays silent, but it has to rectify the field to
+// power itself, and that load changes as its reservoir cap charges, as the
+// shunt regulator starts dumping and as the logic begins clocking. Metal has
+// no state, so it loads the antenna within the antenna's own rise time and is
+// flat after that.
+//
+// Whether the envelope detector in front of the ADC preserves any of that is
+// an open question, which is what this command exists to answer.
+
+static int CmdAnalyseEnvelope(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "analyse envelope",
+                  "Capture the HF field envelope over time, on switch-on or after switch-off.\n"
+                  "Run it with a clear antenna, then with a card, then with metal, and compare\n"
+                  "the curves. A card has to charge itself from the field, so its loading should\n"
+                  "change over the first millisecond. Metal's loading is constant.\n"
+                  "Values are relative: the fast sample-and-hold does not let the high impedance\n"
+                  "divider settle, so the shape is meaningful and the absolute level is not.",
+                  "analyse envelope                  -> field switch-on over 2 ms\n"
+                  "analyse envelope --off            -> decay after switch-off\n"
+                  "analyse envelope --us 200         -> a 200 us window, for the antenna's own rise\n"
+                  "analyse envelope --us 10000 -o f.json -> 10 ms, saved for plotting\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "off", "capture the decay after field-off instead of the rise"),
+        arg_int0("u", "us", "<us>", "capture window in microseconds (def 2000)"),
+        arg_int0("s", "stabilize", "<ms>", "settle time before the capture (def 50)"),
+        arg_int0("r", "repeats", "<1-64>", "charge/discharge cycles to average (def 1)"),
+        arg_int0("d", "drain", "<ms>", "field-off time between cycles (def 10)"),
+        arg_int0(NULL, "delay", "<us>", "skip this long after the switch before sampling"),
+        arg_lit0("v", "verbose", "print every sample"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool field_off = arg_get_lit(ctx, 1);
+    int window_us = arg_get_int_def(ctx, 2, 2000);
+    int stabilize_ms = arg_get_int_def(ctx, 3, 50);
+    int repeats = arg_get_int_def(ctx, 4, 1);
+    int drain_ms = arg_get_int_def(ctx, 5, 10);
+    int delay_us = arg_get_int_def(ctx, 6, 0);
+    bool verbose = arg_get_lit(ctx, 7);
+    CLIParserFree(ctx);
+
+    if (repeats < 1 || repeats > 64) {
+        PrintAndLogEx(ERR, "repeats must be between 1 and 64");
+        return PM3_EINVARG;
+    }
+
+    if (window_us < 10 || window_us > 60000) {
+        PrintAndLogEx(ERR, "window must be between 10 and 60000 us");
+        return PM3_EINVARG;
+    }
+
+    hf_envelope_params_t params = {
+        .stabilize_ms = (uint16_t)stabilize_ms,
+        .window_us = (uint16_t)window_us,
+        .field_on = field_off ? 0 : 1,
+        .repeats = (uint8_t)repeats,
+        .drain_ms = (uint16_t)drain_ms,
+        .delay_us = (uint16_t)delay_us,
+    };
+
+    PrintAndLogEx(INFO, "Capturing field %s over %d us...", field_off ? "decay" : "rise", window_us);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ENVELOPE, (uint8_t *)&params, sizeof(params));
+
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_ENVELOPE, &resp, 5000) == false) {
+        PrintAndLogEx(WARNING, "Timeout waiting for the capture");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Capture failed");
+        return PM3_ESOFT;
+    }
+
+    hf_decay_response_t *r = (hf_decay_response_t *)resp.data.asBytes;
+
+    uint16_t n, baseline, interval, window;
+    memcpy(&n, &r->num_samples, sizeof(uint16_t));
+    memcpy(&baseline, &r->baseline_mv, sizeof(uint16_t));
+    memcpy(&interval, &r->sample_interval_us, sizeof(uint16_t));
+    memcpy(&window, &r->measure_window_us, sizeof(uint16_t));
+
+    if (n == 0 || n > HF_ENVELOPE_MAX_SAMPLES) {
+        PrintAndLogEx(WARNING, "No samples captured");
+        return PM3_ESOFT;
+    }
+
+    uint16_t samples[HF_ENVELOPE_MAX_SAMPLES];
+    memcpy(samples, r->samples_mv, n * sizeof(uint16_t));
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "-------- " _CYAN_("HF field %s") " --------", field_off ? "decay" : "rise");
+    PrintAndLogEx(SUCCESS, "Settled level......... %u mV  (%.2f V)", baseline, baseline / 1000.0);
+    PrintAndLogEx(SUCCESS, "Samples............... %u over %u us, one every ~%u us", n, window, interval);
+
+    uint16_t lo = samples[0], hi = samples[0];
+    for (uint16_t i = 0; i < n; i++) {
+        if (samples[i] < lo) {
+            lo = samples[i];
+        }
+        if (samples[i] > hi) {
+            hi = samples[i];
+        }
+    }
+    PrintAndLogEx(SUCCESS, "Range................. %u to %u  (span %u)", lo, hi, (uint16_t)(hi - lo));
+
+    // Where the curve settles. Anything still moving well after the antenna's
+    // own rise is a load that changes on its own, which metal cannot do.
+    uint16_t final = samples[n - 1];
+    uint16_t band = (hi - lo) / 20;     // 5 % of the span
+    int settle_idx = n - 1;
+    for (int i = n - 1; i >= 0; i--) {
+        if ((samples[i] > final + band) || (samples[i] + band < final)) {
+            break;
+        }
+        settle_idx = i;
+    }
+    uint32_t settle_us = (n > 1) ? ((uint32_t)settle_idx * window / (n - 1)) : 0;
+    PrintAndLogEx(SUCCESS, "Settles after......... ~%u us  (sample %d of %u)", settle_us, settle_idx, n);
+
+    if (verbose) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "  idx | time (us) | value");
+        PrintAndLogEx(INFO, "------+-----------+-------");
+        for (uint16_t i = 0; i < n; i++) {
+            uint32_t t = delay_us + ((n > 1) ? ((uint32_t)i * window / (n - 1)) : 0);
+            PrintAndLogEx(INFO, " %4u | %9u | %5u", i, t, samples[i]);
+        }
+    }
+
+    for (uint16_t i = 0; i < n; i++) {
+        g_GraphBuffer[i] = (int)samples[i];
+    }
+    g_GraphTraceLen = n;
+    ShowGraphWindow();
+    RepaintGraphWindow();
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Curve is in the graph window. Capture it empty, with a card and with");
+    PrintAndLogEx(INFO, "metal, and compare: a card should keep moving after the antenna settles.");
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",    CmdHelp,            AlwaysAvailable, "This help"},
     {"lrc",     CmdAnalyseLRC,      AlwaysAvailable, "Generate final byte for XOR LRC"},
@@ -2291,6 +2523,7 @@ static command_t CommandTable[] = {
     {"regex",   CmdAnalyseRegex,    AlwaysAvailable, "Regex utility (subset: ^ $ . * with \\\\ escape)"},
     {"units",   CmdAnalyseUnits,    AlwaysAvailable, "convert ETU <> US <> SSP_CLK (3.39MHz)"},
     {"card",    CmdAnalyseCard,     IfPm3Lf,         "Identify an unreadable card as LF or HF, measure its coil resonance"},
+    {"envelope", CmdAnalyseEnvelope, IfPm3Present,    "Capture the HF field envelope over time"},
     {NULL, NULL, NULL, NULL}
 };
 

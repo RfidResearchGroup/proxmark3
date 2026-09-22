@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [Frosty Lemon.4.23346][2026-09-18]
+- Added `analyse envelope` - capture the HF field envelope over time, on switch-on or after switch-off (@nemanjan00)
 - Added `analyse card` (PM5) - identifies an unreadable card as LF or HF from how it detunes the antenna, and measures its LF coil resonance (@nemanjan00)
 - Fixed `hf mfdes sim` - the ATS now advertises 106 kbit/s only, PPS to a higher rate is refused, a selected card ignores REQA/WUPA, and ISO-DEP block recovery now follows the card sequence (@mistial-dev)
 - Added `hf mfdes sim` - answers ISO 7816 SELECT by DF name or file id with real status words, so a reader that opens with a SELECT reaches the card (@mistial-dev)

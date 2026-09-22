@@ -31,6 +31,16 @@ STATIC_FORCE_INLINE uint32_t AdcRssiDataToMilliVolt(uint16_t data, adc_rssi_ch_t
 //-----------------------------------------------------------------------------
 STATIC_FORCE_INLINE uint32_t AdcRssiAvgToMilliVolt(adc_rssi_ch_t ch);
 
+//-----------------------------------------------------------------------------
+// Fast burst sampling, for capturing the shape of a transient rather than a
+// steady level. A short sample-and-hold against the high impedance divider
+// reads only a fraction of the true voltage, so these values are good for
+// relative shape and not for absolute measurement.
+// Call AdcRssiSetupFast() once, then AdcRssiReadFast() per sample.
+//-----------------------------------------------------------------------------
+STATIC_FORCE_INLINE void AdcRssiSetupFast(adc_rssi_ch_t ch);
+STATIC_FORCE_INLINE uint16_t AdcRssiReadFast(adc_rssi_ch_t ch);
+
 #ifdef PM5
 #include "rssi_hw_at32.h"
 #else

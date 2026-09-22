@@ -333,6 +333,32 @@ typedef struct {
     uint16_t samples_mv[252];
 } PACKED hf_decay_response_t;
 
+// For CMD_HF_ENVELOPE
+// Time domain capture of the HF field envelope, either as the field is
+// switched ON or after it is switched OFF.
+//
+// An HF tag is reader-talks-first and says nothing unprompted, but it still
+// rectifies the field to charge its supply, and that load changes over time:
+// inrush while the reservoir cap fills, a step when the shunt regulator starts
+// dumping, another when the logic begins clocking. A lump of metal has no
+// state -- its loading settles with the antenna and is then flat. So the shape
+// of this curve carries information that the single HF amplitude reading
+// cannot, and it is the only route to telling a card from metal on a side
+// where the carrier is a fixed oscillator and cannot be swept.
+#define HF_ENVELOPE_MAX_SAMPLES 252
+// Field-off time between averaged cycles, so a card starts each one fully
+// drained. A part charged card browns out sooner and shallower.
+#define HF_ENVELOPE_DRAIN_MS    10
+
+typedef struct {
+    uint16_t stabilize_ms;  // settle the field before an OFF capture
+    uint16_t window_us;     // total capture window, paced across the samples
+    uint8_t  field_on;      // 1 = capture the switch ON, 0 = capture after OFF
+    uint8_t  repeats;       // charge/discharge cycles to average, 1..64
+    uint16_t drain_ms;      // field-off time between cycles, 0 = default
+    uint16_t delay_us;      // skip this long after the switch before sampling
+} PACKED hf_envelope_params_t;
+
 // For CMD_LF_T55XX_WRITEBL
 typedef struct {
     uint32_t data;
@@ -1146,6 +1172,7 @@ typedef struct {
 #define CMD_LISTEN_READER_FIELD 0x0420
 #define CMD_HF_DROPFIELD 0x0430
 #define CMD_HF_DECAY 0x0440
+#define CMD_HF_ENVELOPE 0x0441
 
 // For direct FPGA control
 #define CMD_FPGA_MAJOR_MODE_OFF 0x0500
