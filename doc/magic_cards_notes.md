@@ -2716,7 +2716,7 @@ V3: blocks `0x14` and `0x15` hold a signature while the tag is not finalized.
 
 ```
 hf 15 raw -ac -d 022014     # A5 2B 44 2C
-hf 15 raw -ac -d 022015     # 21 AE 93 00 (69 E2 5D 00 after finalize)
+hf 15 raw -ac -d 022015     # 21 AE 93 00 (00 00 00 00 after finalize)
 ```
 
 
@@ -2765,7 +2765,8 @@ hf 15 raw -acw -d 02211077665544
 hf 15 raw -acw -d 022111332211E0
 ```
 
-Finalize locks the UID for good and can't be undone, block `0x15` changes to `69 E2 5D 00`:
+Finalize locks the UID for good and can't be undone. It also erases the whole tag
+memory, every block reads back as `00000000` afterwards:
 
 ```
 hf 15 raw -acw -d 022114A52B442C
