@@ -53,6 +53,7 @@ bool IfPm3FpcUsartDevFromUsb(void);
 bool IfPm3FpcUsartFromUsb(void);
 bool IfPm5(void);
 bool IfPm5StdAnt(void);
+bool IfBwm(void);
 bool IfFpgaFlash(void);
 bool IfI2cEeprom(void);
 bool IfPm3Lf(void);
