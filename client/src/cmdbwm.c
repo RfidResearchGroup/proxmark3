@@ -698,14 +698,14 @@ static int CmdBwmName(const char *Cmd) {
 }
 
 static command_t BwmCommandTable[] = {
-    {"help",     CmdHelpBwm,    AlwaysAvailable, "This help"},
-    {"autooff",  CmdBwmAutoOff, IfPm5, "Toggle auto power-off on USB unplug"},
-    {"charge",   CmdBwmCharge,  IfPm5, "Enable/disable battery charging (one-shot)"},
-    {"name",     CmdBwmName,    IfPm5, "Get/set the BWM BLE advertising name"},
-    {"setcap",   CmdBwmSetCap,  IfPm5, "Set fuel-gauge design capacity (run once after battery change)"},
-    {"upgrade",  CmdBWMUpgrade, IfPm5, "Reflash BWM (ESP32) firmware over the BWM link, no header"},
-    {"vchg",     CmdBwmVchg,    IfPm5, "Set charger charge-voltage target (default 4100 mV)"},
-    {"wifi",     CmdBWMWifi,    IfPm5, "Bring up WiFi (STA + TCP server) for a tcp: connection"},
+    {"help",     CmdHelpBwm,    IfBwm, "This help"},
+    {"autooff",  CmdBwmAutoOff, IfBwm, "Toggle auto power-off on USB unplug"},
+    {"charge",   CmdBwmCharge,  IfBwm, "Enable/disable battery charging (one-shot)"},
+    {"name",     CmdBwmName,    IfBwm, "Get/set the BWM BLE advertising name"},
+    {"setcap",   CmdBwmSetCap,  IfBwm, "Set fuel-gauge design capacity (run once after battery change)"},
+    {"upgrade",  CmdBWMUpgrade, IfBwm, "Reflash BWM (ESP32) firmware over the BWM link, no header"},
+    {"vchg",     CmdBwmVchg,    IfBwm, "Set charger charge-voltage target (default 4100 mV)"},
+    {"wifi",     CmdBWMWifi,    IfBwm, "Bring up WiFi (STA + TCP server) for a tcp: connection"},
     {NULL, NULL, NULL, NULL}
 };
 
