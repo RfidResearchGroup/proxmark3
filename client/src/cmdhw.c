@@ -2061,7 +2061,7 @@ static command_t CommandTable[] = {
     {"setmux", CmdSetMux, IfPm3Present, "Set the ADC mux to a specific value"},
     {"standalone", CmdStandalone, IfPm3Present, "Start installed standalone mode on device"},
     {"tia", CmdTia, IfPm3Present, "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"},
-    {"bwm", CmdBwm, IfPm5, "{ BWM (battery/wireless module) commands... }"},
+    {"bwm", CmdBwm, IfBwm, "{ BWM (battery/wireless module) commands... }"},
     {"tune", CmdTune, IfPm3Lf, "Measure tuning of device antenna"},
     {"decay", CmdDecay, IfPm3Present, "Measure HF antenna decay after field-off"},
     {NULL, NULL, NULL, NULL}
