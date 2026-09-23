@@ -800,6 +800,11 @@ static void SendCapabilities(void) {
 #else
     capabilities.compiled_with_hitag = false;
 #endif
+#if defined(WITH_BWM_STATUS) || defined(WITH_BWM_FORWARD)
+    capabilities.compiled_with_bwm = true;
+#else
+    capabilities.compiled_with_bwm = false;
+#endif
 #ifdef WITH_EM4x50
     capabilities.compiled_with_em4x50 = true;
 #else
