@@ -138,6 +138,12 @@ bool IfPm5StdAnt(void) {
     return g_pm3_capabilities.is_pm5_std_ant;
 }
 
+bool IfBwm(void) {
+    if (IfPm3Present() == false)
+        return false;
+    return g_pm3_capabilities.compiled_with_bwm;
+}
+
 bool IfFpgaFlash(void) {
     if (IfPm3Present() == false)
         return false;
