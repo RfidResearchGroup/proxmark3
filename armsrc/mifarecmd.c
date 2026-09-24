@@ -1015,11 +1015,13 @@ void MifareAcquireNonces(const mf_acquire_nonces_t *payload) {
     while (num_nonces < MFC_MAX_NONCES) {
 
         // Test if the action was cancelled
-        if (BUTTON_PRESS()) {
+        if (BUTTON_PRESS() || data_available()) {
             isOK = PM3_EOPABORTED;
             field_off = true;
             break;
         }
+        
+        WDT_HIT();
 
         if (!have_uid) { // need a full select cycle to get the uid first
             iso14a_card_select_t card_info;
@@ -1144,11 +1146,13 @@ void MifareAcquireEncryptedNonces(const mf_acquire_nonces_t *payload) {
     while (num_pairs < MFC_MAX_NONCE_PAIRS) {
 
         // Test if the action was cancelled
-        if (BUTTON_PRESS()) {
+        if (BUTTON_PRESS() || data_available()) {
             isOK = PM3_EOPABORTED;
             field_off = true;
             break;
         }
+
+        WDT_HIT();
 
         if (have_uid == false) { // need a full select cycle to get the uid first
             iso14a_card_select_t card_info;
