@@ -820,17 +820,22 @@ int T55xxReadBlockEx(uint8_t block, bool page1, bool usepwd, uint8_t override, u
         // override = 1 (override and display)
         // override = 2 (override and no display)
         if (override == 0) {
-            if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, false, 0, downlink_mode) == false)
-                return PM3_ERFTRANS;
+            // A live detect (lf t55xx detect -p) that recovered this password already confirmed the PWD bit is set. 
+            bool detect_confirmed_pwd = (config.pwd_known && config.usepwd && config.pwd == password);
 
-            if (t55xxTryDetectModulationEx(downlink_mode, false, 0, password) == false) {
-                PrintAndLogEx(WARNING, "Safety check: Could not detect if PWD bit is set in config block. Exits.");
-                PrintAndLogEx(HINT, "Hint: Consider using the override parameter to force read.");
-                return PM3_EWRONGANSWER;
-            } else {
-                PrintAndLogEx(WARNING, "Safety check: PWD bit is NOT set in config block. Reading without password...");
-                usepwd = false;
-                page1 = false; // ??
+            if (detect_confirmed_pwd == false) {
+                if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, false, 0, downlink_mode) == false)
+                    return PM3_ERFTRANS;
+
+                if (t55xxTryDetectModulationEx(downlink_mode, false, 0, password) == false) {
+                    PrintAndLogEx(WARNING, "Safety check: Could not detect if PWD bit is set in config block. Exits.");
+                    PrintAndLogEx(HINT, "Hint: Consider using the override parameter to force read.");
+                    return PM3_EWRONGANSWER;
+                } else {
+                    PrintAndLogEx(WARNING, "Safety check: PWD bit is NOT set in config block. Reading without password...");
+                    usepwd = false;
+                    page1 = false;
+                }
             }
         } else if (override == 1) {
             PrintAndLogEx(INFO, "Safety check overridden - proceeding despite risk");
@@ -5100,13 +5105,37 @@ out:
     return PM3_SUCCESS;
 }
 
-// note length of data returned is different for different chips.
-// some return all page 1 (64 bits) and others return just that block (32 bits)
-// unfortunately the 64 bits makes this more likely to get a false positive...
-bool tryDetectP1(bool getData) {
-    uint8_t preamble_atmel[] = {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1};
+// Page-1 trace data opens with allocation class ACL = 0xE0, then a manufacturer code. 
+// Genuine Atmel silicon carries manufacturer 0x15 / 0x39 (the atmel / silicon preambles).
+// Cloned T5577s keep the 0xE0 ACL but use another manufacturer byte, 
+// also accept a bare 8-bit ACL match
+static bool t55xx_trace_preamble_match(void) {
+    uint8_t preamble_atmel[]   = {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1};
     uint8_t preamble_silicon[] = {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1};
+    uint8_t preamble_acl[]     = {1, 1, 1, 0, 0, 0, 0, 0};
     size_t startIdx = 0;
+
+    if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
+            (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+        return true;
+    }
+
+    startIdx = 0;
+    if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
+            (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+        return true;
+    }
+
+    startIdx = 0;
+    if (preambleSearchEx(g_DemodBuffer, preamble_acl, sizeof(preamble_acl), &g_DemodBufferLen, &startIdx, false) &&
+            (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+        return true;
+    }
+
+    return false;
+}
+
+bool tryDetectP1(bool getData) {
     uint8_t fc1 = 0, fc2 = 0, ans = 0;
     int clk = 0, firstClockEdge = 0;
     bool st = true;
@@ -5116,30 +5145,18 @@ bool tryDetectP1(bool getData) {
             return false;
     }
 
-    // try fsk clock detect. if successful it cannot be any other type of modulation...  (in theory...)
+    // try fsk clock detect. if successful it cannot be any other type of modulation.
     ans = fskClocks(&fc1, &fc2, (uint8_t *)&clk, &firstClockEdge);
     if (ans && ((fc1 == 10 && fc2 == 8) || (fc1 == 8 && fc2 == 5))) {
 
         if (FSKrawDemod(0, 0, 0, 0, false) == PM3_SUCCESS) {
-            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
-                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-                return true;
-            }
-
-            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
-                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+            if (t55xx_trace_preamble_match()) {
                 return true;
             }
         }
 
         if (FSKrawDemod(0, 1, 0, 0, false) == PM3_SUCCESS) {
-            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
-                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-                return true;
-            }
-
-            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
-                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+            if (t55xx_trace_preamble_match()) {
                 return true;
             }
         }
@@ -5151,113 +5168,60 @@ bool tryDetectP1(bool getData) {
     if (clk > 0) {
         if (ASKDemod_ext(0, 0, 1, 0, false, false, false, 1, &st) == PM3_SUCCESS) {
 
-            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
-                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-                return true;
-            }
-
-            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
-                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+            if (t55xx_trace_preamble_match()) {
                 return true;
             }
         }
 
         st = true;
         if (ASKDemod_ext(0, 1, 1, 0, false, false, false, 1, &st) == PM3_SUCCESS) {
-            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
-                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-                return true;
-            }
-
-            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
-                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+            if (t55xx_trace_preamble_match()) {
                 return true;
             }
         }
 
         if (ASKbiphaseDemod(0, 0, 0, 2, false) == PM3_SUCCESS) {
-            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
-                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-                return true;
-            }
-
-            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
-                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+            if (t55xx_trace_preamble_match()) {
                 return true;
             }
         }
 
         if (ASKbiphaseDemod(0, 0, 1, 2, false) == PM3_SUCCESS) {
-            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
-                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-                return true;
-            }
-
-            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
-                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+            if (t55xx_trace_preamble_match()) {
                 return true;
             }
         }
     }
 
     // try NRZ clock detect.  it could be another type even if successful.
-    clk = GetNrzClock("", false); //has the most false positives :(
+    clk = GetNrzClock("", false); // has the most false positives
     if (clk > 0) {
         if (NRZrawDemod(0, 0, 1, false) == PM3_SUCCESS) {
-            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
-                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-                return true;
-            }
-
-            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
-                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+            if (t55xx_trace_preamble_match()) {
                 return true;
             }
         }
 
         if (NRZrawDemod(0, 1, 1, false) == PM3_SUCCESS) {
-            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
-                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-                return true;
-            }
-
-            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
-                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+            if (t55xx_trace_preamble_match()) {
                 return true;
             }
         }
     }
 
     // Fewer card uses PSK
-    // try psk clock detect. if successful it cannot be any other type of modulation... (in theory...)
+    // try psk clock detect. if successful it cannot be any other type of modulation.
     clk = GetPskClock("", false);
     if (clk > 0) {
-        // allow undo
-        // save_restoreGB(GRAPH_SAVE);
-        // skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
-        //CmdLtrim("-i 160");
-        if (PSKDemod(0, 0, 6, false) == PM3_SUCCESS) {
-            //save_restoreGB(GRAPH_RESTORE);
-            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
-                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-                return true;
-            }
 
-            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
-                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+        if (PSKDemod(0, 0, 6, false) == PM3_SUCCESS) {
+            if (t55xx_trace_preamble_match()) {
                 return true;
             }
         }
 
         if (PSKDemod(0, 1, 6, false) == PM3_SUCCESS) {
-            //save_restoreGB(GRAPH_RESTORE);
-            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
-                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-                return true;
-            }
-
-            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
-                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+            if (t55xx_trace_preamble_match()) {
                 return true;
             }
         }
@@ -5266,19 +5230,11 @@ bool tryDetectP1(bool getData) {
         if (PSKDemod(0, 0, 6, false) == PM3_SUCCESS) {
             psk1TOpsk2(g_DemodBuffer, g_DemodBufferLen);
 
-            //save_restoreGB(GRAPH_RESTORE);
-            if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
-                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-                return true;
-            }
-
-            if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
-                    (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
+            if (t55xx_trace_preamble_match()) {
                 return true;
             }
         } // inverse waves does not affect PSK2 demod
-        //undo trim samples
-        //save_restoreGB(GRAPH_RESTORE);
+
         // no other modulation clocks = 2 or 4 so quit searching
         if (fc1 != 8) {
             return false;
