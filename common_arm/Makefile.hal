@@ -16,11 +16,11 @@
 # Default platform if no platform specified
 PLATFORM?=PM3RDV4
 
-# Standalone Mode info (path depends if make is called at top or from armsrc)
+# Standalone Mode info (path depends if make is called at top, from armsrc, or from a sibling dir like recovery/bootrom)
 # Guard Makefile.hal against implicit rules: (with % to avoid being first goal)
 %/Makefile.hal: ;
 -include armsrc/Standalone/Makefile.hal
--include Standalone/Makefile.hal
+-include ../armsrc/Standalone/Makefile.hal
 ifndef DEFAULT_STANDALONE
 $(error Could not find armsrc/Standalone/Makefile.hal)
 endif
