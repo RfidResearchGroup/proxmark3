@@ -919,8 +919,30 @@ typedef struct {
 #define CMD_PM5_BWM_SET_CAP 0x0179
 // PM5, enable/disable BWM battery charging (AW32001E CEB). Used by `hw bwm charge`.
 #define CMD_PM5_BWM_CHARGE_EN 0x017A
-// PM5, toggle automatic power-off on USB unplug. Used by `hw bwm autooff`.
+// PM5, automatic power-off: USB unplug, and idle on battery. Used by `hw bwm autooff`.
+// req: [action:u8][enabled:u8][idle_s:u32 LE][unplug:u8, optional] (0xFF /
+// 0xFFFFFFFF = keep); a 1-byte req is the old enable flag. resp:
+// bwm_autooff_status_t. Persisted on the BWM.
 #define CMD_PM5_BWM_AUTOOFF 0x017B
+// Both actions are non-zero: an old firmware reads byte 0 as the enable flag,
+// so a new client can only ever leave it enabled.
+#define BWM_AUTOOFF_ACTION_GET  0x01
+#define BWM_AUTOOFF_ACTION_SET  0x02
+#define BWM_AUTOOFF_KEEP_U8     0xFF
+#define BWM_AUTOOFF_KEEP_U32    0xFFFFFFFFUL
+#define BWM_AUTOOFF_IDLE_MAX_S  (7UL * 24 * 3600)   // ms tick wraps at 49 days
+// Reply of CMD_PM5_BWM_AUTOOFF: the setting plus the live inputs of the idle decision.
+typedef struct {
+    uint8_t  enabled;
+    uint32_t idle_s;         // 0 = idle trigger off
+    uint32_t idle_now_s;     // since the last interaction
+    uint8_t  link;           // tracked wireless client (LINK_STATE broadcast)
+    uint8_t  ble_live;       // module's answer right now: 0 off 1 advertising 2 connected, 0xFF no answer
+    uint8_t  usb;            // VUSB now
+    uint8_t  usb_seen;       // VUSB seen since boot (arms the unplug trigger)
+    uint8_t  persisted;      // 1 = the setting was saved on the module, 0 = module absent or too old
+    uint8_t  unplug;         // 1 = power off when USB is pulled (default); 0 = an unplug only restarts the idle clock
+} PACKED bwm_autooff_status_t;
 #define CMD_PM5_BWM_WIFI    0x017C
 #define CMD_PM5_BWM_SET_VCHG 0x017D
 #define CMD_PM5_BWM_ESP_OTA  0x017E
@@ -928,6 +950,43 @@ typedef struct {
 #define BWM_BLE_NAME_ACTION_GET 0x00  // resp: current BLE device name string
 #define BWM_BLE_NAME_ACTION_SET 0x01  // req: name bytes follow the action byte; BWM reboots to apply
 #define BWM_BLE_NAME_MAX_LEN    15    // usable chars; ESP name buffer is 16 incl NUL
+// PM5, toggle the power-save idle (48 MHz + WFI when idle). Used by `hw powersave`.
+#define CMD_PM5_POWERSAVE    0x0180
+// PM5, BWM power-save switch on the ESP (DFS, light sleep, low-duty advertising;
+// persisted on the BWM). Used by `hw bwm powersave`.
+#define CMD_PM5_BWM_POWERSAVE 0x0181  // payload: [action:u8][state:u8 if SET]; resp: u8 applied state
+#define BWM_POWERSAVE_ACTION_GET 0x00
+#define BWM_POWERSAVE_ACTION_SET 0x01
+// PM5, BWM WiFi modem power-save type (persisted on the ESP). Used by `hw bwm wifipower`.
+#define CMD_PM5_BWM_WIFI_PS   0x0182  // payload: [action:u8][mode:u8 if SET]; resp: [mode:u8][wifi_state:u8, 0xFF = WiFi off]
+#define BWM_WIFI_PS_ACTION_GET 0x00
+#define BWM_WIFI_PS_ACTION_SET 0x01
+#define BWM_WIFI_PS_NONE       0      // modem never sleeps
+#define BWM_WIFI_PS_MIN        1      // sleeps between DTIM beacons (ESP-IDF default)
+#define BWM_WIFI_PS_MAX        2      // sleeps for the listen interval
+#define BWM_WIFI_STATE_OFF     0xFF   // wifi_state byte: WiFi stack down (BLE-only)
+// PM5, BWM BLE settings (`hw bwm ble`). req: [action:u8][args]; resp: bwm_ble_status_t
+// on success. Unknown fields (module firmware without the command) read 0xFF.
+#define CMD_PM5_BWM_BLE       0x0183
+#define BWM_BLE_ACTION_STATUS   0x00
+#define BWM_BLE_ACTION_ENABLE   0x01   // [on:u8], persisted on the module
+#define BWM_BLE_ACTION_PAIRING  0x02   // [on:u8], persisted; restarts the stack (drops a BLE client)
+#define BWM_BLE_ACTION_KEY      0x03   // [6 ASCII digits], persisted
+#define BWM_BLE_ACTION_FORGET   0x04   // [idx:u8, 0xFF = all bonded devices]
+#define BWM_BLE_ACTION_TXPOWER  0x05   // [type:u8 0 adv 1 conn][level:u8 esp_power_level_t 0..15, -24 dBm + 3/step, 15 = 20 dBm]
+#define BWM_BLE_BONDED_MAX      8
+typedef struct {
+    uint8_t enabled;       // persisted switch
+    uint8_t state;         // 0 off, 1 advertising, 2 client connected
+    uint8_t bonding;       // 1 = pairing with passkey required, SPP characteristic encrypted
+    char    passkey[6];    // ASCII digits, not NUL-terminated
+    uint8_t txp_adv;       // esp_power_level_t index
+    uint8_t txp_conn;
+    uint8_t addr[6];       // as the module reports it (big-endian display order)
+    char    name[16];      // NUL-padded
+    uint8_t bonded_count;
+    uint8_t bonded[BWM_BLE_BONDED_MAX][7];   // addr[6] + type, first bonded_count valid
+} PACKED bwm_ble_status_t;
 #define BWM_OTA_ACTION_BEGIN 0x00
 #define BWM_OTA_ACTION_WRITE 0x01
 #define BWM_OTA_ACTION_END   0x02

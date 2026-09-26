@@ -160,7 +160,11 @@ int bwm_cmd(uint16_t cmd, const uint8_t *req, uint16_t req_len,
                                     esp_err = (int32_t)((uint32_t)pbuf[2] | ((uint32_t)pbuf[3] << 8) |
                                                         ((uint32_t)pbuf[4] << 16) | ((uint32_t)pbuf[5] << 24));
                                 }
-                                Dbprintf("[bwm-wifi] cmd 0x%04x failed, esp_err=0x%08x", (unsigned)cmd, (unsigned)esp_err);
+                                // Expected in places (e.g. a status query while WiFi is
+                                // off): only worth seeing when debugging the link.
+                                if (g_dbglevel >= DBG_DEBUG) {
+                                    Dbprintf("[bwm-wifi] cmd 0x%04x failed, esp_err=0x%08x", (unsigned)cmd, (unsigned)esp_err);
+                                }
                                 return PM3_EFAILED;
                             }
                         }
@@ -313,8 +317,139 @@ int bwm_wifi_forward_down(void) {
 // boot slot, so those get generous timeouts.
 // ---------------------------------------------------------------------------
 // Read the ESP's running firmware version string (APP_CMD_GET_VERSION_INFO).
-int bwm_esp_get_version(uint8_t *buf, uint16_t *buflen) {
-    return bwm_cmd(BWM_CMD_GET_VERSION_INFO, NULL, 0, buf, buflen, 3000);
+int bwm_esp_get_version(uint8_t *buf, uint16_t *buflen, uint32_t timeout_ms) {
+    return bwm_cmd(BWM_CMD_GET_VERSION_INFO, NULL, 0, buf, buflen, timeout_ms);
+}
+
+// One u8-in / u8-out ESP setting round trip: send req (NULL/0 for a GET) and
+// expect a one-byte reply in *out. PM3_EFAILED if the ESP acked without a payload.
+static int bwm_esp_u8_cmd(uint16_t cmd, const uint8_t *req, uint16_t req_len, uint8_t *out, uint32_t timeout_ms) {
+    uint16_t len = 1;
+    int r = bwm_cmd(cmd, req, req_len, out, &len, timeout_ms);
+    if (r == PM3_SUCCESS && len < 1) {
+        r = PM3_EFAILED;
+    }
+    return r;
+}
+
+int bwm_esp_get_power_save(uint8_t *state, uint32_t timeout_ms) {
+    return bwm_esp_u8_cmd(BWM_CMD_GET_SYS_POWER_SAVE, NULL, 0, state, timeout_ms);
+}
+
+int bwm_esp_get_ble_state(uint8_t *state, uint32_t timeout_ms) {
+    return bwm_esp_u8_cmd(BWM_CMD_GET_BLE_SPP_STATUS, NULL, 0, state, timeout_ms);
+}
+
+int bwm_esp_host_value_set(uint8_t id, uint32_t value, uint32_t timeout_ms) {
+    uint8_t req[5] = { id };
+    memcpy(&req[1], &value, sizeof(value));
+    return bwm_cmd(BWM_CMD_SET_SYS_HOST_VALUE, req, sizeof(req), NULL, NULL, timeout_ms);
+}
+
+int bwm_esp_host_value_get(uint8_t id, uint32_t *value, uint32_t timeout_ms) {
+    uint8_t resp[5] = {0};
+    uint16_t len = sizeof(resp);
+    int res = bwm_cmd(BWM_CMD_GET_SYS_HOST_VALUE, &id, 1, resp, &len, timeout_ms);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+    if (len < sizeof(resp) || resp[0] == 0) {
+        return PM3_ENODATA;
+    }
+    memcpy(value, &resp[1], sizeof(*value));
+    return PM3_SUCCESS;
+}
+
+int bwm_esp_set_ble_enable(bool on, uint8_t *stored) {
+    uint8_t v = on ? 1 : 0;
+    return bwm_esp_u8_cmd(BWM_CMD_SET_BLE_ENABLE, &v, 1, stored, 3000);
+}
+
+int bwm_esp_set_ble_bonding(bool on) {
+    uint8_t v = on ? 1 : 0;
+    return bwm_cmd(BWM_CMD_SET_BLE_BONDING_ENABLE, &v, 1, NULL, NULL, 3000);
+}
+
+int bwm_esp_set_ble_key(const uint8_t key[6]) {
+    return bwm_cmd(BWM_CMD_SET_BLE_BONDING_KEY, key, 6, NULL, NULL, 3000);
+}
+
+int bwm_esp_ble_forget(uint8_t idx) {
+    if (idx == 0xFF) {
+        return bwm_cmd(BWM_CMD_CLEAR_BLE_BONDED, NULL, 0, NULL, NULL, 3000);
+    }
+    return bwm_cmd(BWM_CMD_DEL_BLE_BONDED, &idx, 1, NULL, NULL, 3000);
+}
+
+int bwm_esp_set_ble_txpower(uint8_t type, uint8_t level) {
+    uint8_t req[2] = { type, level };
+    return bwm_cmd(BWM_CMD_SET_BLE_TX_POWER, req, sizeof(req), NULL, NULL, 3000);
+}
+
+int bwm_esp_ble_restart(void) {
+    uint8_t state = 0;
+    int res = bwm_esp_get_ble_state(&state, 3000);
+    if (res != PM3_SUCCESS || state == 0) {
+        return res;   // stopped (or switched off): nothing to restart
+    }
+    res = bwm_cmd(BWM_CMD_STOP_BLE_SPP, NULL, 0, NULL, NULL, 3000);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+    return bwm_cmd(BWM_CMD_START_BLE_SPP, NULL, 0, NULL, NULL, 3000);
+}
+
+int bwm_esp_ble_status(bwm_ble_status_t *st) {
+    memset(st, 0xFF, sizeof(*st));
+    // The first query wakes a light-sleeping module; the rest land while it is up.
+    // Its timeout is also the only one we pay when no module answers at all.
+    int res = bwm_esp_get_ble_state(&st->state, 1500);
+    if (res == PM3_ETIMEOUT) {
+        return res;
+    }
+    (void)bwm_esp_u8_cmd(BWM_CMD_GET_BLE_ENABLE, NULL, 0, &st->enabled, 800);   // older fw: CMD_ERROR or silence
+    (void)bwm_esp_u8_cmd(BWM_CMD_GET_BLE_BONDING_ENABLE, NULL, 0, &st->bonding, 1500);
+    uint16_t len = sizeof(st->passkey);
+    (void)bwm_cmd(BWM_CMD_GET_BLE_BONDING_KEY, NULL, 0, (uint8_t *)st->passkey, &len, 1500);
+    uint8_t type = 0;
+    (void)bwm_esp_u8_cmd(BWM_CMD_GET_BLE_TX_POWER, &type, 1, &st->txp_adv, 1500);
+    type = 1;
+    (void)bwm_esp_u8_cmd(BWM_CMD_GET_BLE_TX_POWER, &type, 1, &st->txp_conn, 1500);
+    len = sizeof(st->addr);
+    (void)bwm_cmd(BWM_CMD_GET_BLE_DEVICE_ADDR, NULL, 0, st->addr, &len, 1500);
+    memset(st->name, 0, sizeof(st->name));
+    len = sizeof(st->name) - 1;
+    if (bwm_esp_get_ble_name((uint8_t *)st->name, &len) != PM3_SUCCESS) {
+        st->name[0] = 0;
+    }
+    st->bonded_count = 0;
+    uint8_t n = 0;
+    if (bwm_esp_u8_cmd(BWM_CMD_GET_BLE_BONDED_NUMS, NULL, 0, &n, 1500) == PM3_SUCCESS) {
+        for (uint8_t i = 0; i < n && i < BWM_BLE_BONDED_MAX; i++) {
+            len = 7;
+            if (bwm_cmd(BWM_CMD_GET_BLE_BONDED_ADDR, &i, 1, st->bonded[i], &len, 1500) == PM3_SUCCESS && len == 7) {
+                st->bonded_count++;
+            } else {
+                break;
+            }
+        }
+    }
+    return PM3_SUCCESS;
+}
+
+int bwm_esp_set_power_save(bool on, uint8_t *state) {
+    // Applied at once on the ESP (no reboot) and saved to its NVS; the reply
+    // carries the state the ESP ended up in.
+    uint8_t v = on ? 1 : 0;
+    return bwm_esp_u8_cmd(BWM_CMD_SET_SYS_POWER_SAVE, &v, 1, state, 3000);
+}
+
+int bwm_esp_get_wifi_ps(uint8_t *mode) {
+    return bwm_esp_u8_cmd(BWM_CMD_GET_WIFI_CFG_PS_MODE, NULL, 0, mode, 3000);
+}
+
+int bwm_esp_set_wifi_ps(uint8_t mode, uint8_t *applied) {
+    return bwm_esp_u8_cmd(BWM_CMD_SET_WIFI_CFG_PS_MODE, &mode, 1, applied, 3000);
 }
 
 int bwm_esp_get_ble_name(uint8_t *buf, uint16_t *buflen) {

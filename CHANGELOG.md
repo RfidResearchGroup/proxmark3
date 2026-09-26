@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hw bwm ble` - the BWM's BLE settings: `on`/`off` (persisted radio switch), `pairing` (require a 6-digit passkey, LE Secure Connections; the module ships open), `forget` bonded devices, `txpower`, `status` (@Msprg)
+- Changed `hw bwm autooff` - `--idle <sec>` adds an opt-in power-off after that long idle on battery (no command, button press or BLE/WiFi client), off by default; `--unplug off` makes an unplug only restart that idle clock instead of powering off at once; all stored on the BWM, `hw status` shows it (@Msprg)
+- Added `hw bwm wifipower` - turn the BWM WiFi fully off, or set its modem power-save type (none/min/max), persisted on the module (@Msprg)
+- Added `hw bwm powersave` - show/set the BWM (ESP32) power-save switch: DFS, light sleep and slow advertising after 30 s, or the stock always-on behaviour, persisted on the module (@Msprg)
+- Added `hw powersave` - PM5 low-power idle, on by default: between commands the core drops to 48 MHz with the PLL off, the FPGA clock stopped and the CPU halted (WFI); USB now runs crystal-less off HICK. Ported from the Fantasi firmware (@Msprg)
 - Fixed `lf t55xx dump -p` - reuses the password already confirmed by `lf t55xx detect`  (@iceman1001)
 - Fixed `lf t55xx p1detect`, `lf search` - T5577 clones with a non-Atmel manufacturer byte now recognised (@iceman1001)
 - Added `PLATFORM_EXTRAS=CEP` on PM5 - wires up the Flipper Zero link on the Type-C extended port (handshake + NG frames over SPI, independent transport flag so it can run alongside BWM); RF-dependent functionality still needs the FPGA side, tracked in #3667 (@TomHarkness)
