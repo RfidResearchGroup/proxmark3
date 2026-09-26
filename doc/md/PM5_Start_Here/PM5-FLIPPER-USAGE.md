@@ -7,9 +7,6 @@ app, talk to the PM5 over a one-shot UART handshake followed by standard PM3
 NG command/response frames carried over SPI. Everything below is **PM5-only**
 and is compiled in by default when building for PM5.
 
-See [GH issue #3667](https://github.com/RfidResearchGroup/proxmark3/issues/3667)
-for the full protocol writeup and open hardware-verification items.
-
 ## Contents
 
 - [Build](#build)
@@ -23,36 +20,13 @@ for the full protocol writeup and open hardware-verification items.
 
 ## Build
 
-```
-make clean
-make PLATFORM=PM5
-make client        # or your usual client build
-```
-
-CEP is independent of `BWM` — disable it with `SKIP_CEP` if you don't want it,
-with or without BWM:
-
-```
-make PLATFORM=PM5 PLATFORM_EXTRAS="BWM SKIP_CEP"
-```
-
-Or set it persistently in `Makefile.platform`:
-
-```
-PLATFORM=PM5
-PLATFORM_EXTRAS=SKIP_CEP
-```
-
-> [!NOTE]
-> With `PLATFORM_EXTRAS=SKIP_CEP` the firmware ignores the Flipper entirely —
-> the CEP port stays inert, same as before this feature existed.
+Build as usual, CEP is available by default. (`SKIP_CEP=1` to remove CEP support)
 
 ---
 
 ## Physical hookup
 
-- Use the **side** USB-C port (the button-side port stays reserved for
-  flashing/DFU).
+- Use the **side** USB-C port.
 - Attach a Flipper Zero fitted with the Flipper transfer module/cable, running
   the Proxmark5_FlipperZero_FAP app.
 - The Flipper supplies 5V to the PM5 via USB OTG when the app launches.
@@ -62,7 +36,7 @@ PLATFORM_EXTRAS=SKIP_CEP
 ## What works today
 
 - The FAP handshake completing (app leaves "connecting").
-- Standard PM3 NG commands that don't touch the antenna frontend — `hw
+- Standard commands that don't touch the antenna frontend — `hw
   version`, `hw status`, memory/flash operations, etc.
 
 ## What doesn't (yet)
@@ -70,7 +44,7 @@ PLATFORM_EXTRAS=SKIP_CEP
 - Any RF operation over this link — `hf`/`lf` reads, the FAP's "Read Hitag2"
   menu item. These need the real PM5 FPGA/RF configuration, which isn't
   shipped in this repo. Tracked separately, out of scope for the CEP
-  transport itself — see GH issue #3667.
+  transport itself.
 
 ---
 
@@ -89,10 +63,8 @@ PLATFORM_EXTRAS=SKIP_CEP
 
 ## Notes
 
-- CEP uses its own reply-routing flag (`g_reply_via_cep`), independent of
-  BWM's (`g_reply_via_fpc`) — this is what lets both transports run
-  concurrently on hardware that has both fitted.
+- CEP uses its own reply-routing flag (`g_reply_via_cep`).
 - The SPI bit-order/clock-phase settings are a best-effort port from prior
   bring-up code, pending confirmation against real Flipper traffic (logic
   analyzer). If the handshake never completes, this is the first thing to
-  check — see GH issue #3667.
+  check.

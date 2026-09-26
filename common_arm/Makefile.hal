@@ -50,8 +50,6 @@ Known definitions:
 +--------------------------------------------+
 | BWM             | PM5 Battery Wireless Mod |
 +--------------------------------------------+
-| SKIP_CEP        | PM5 disable Flipper Zero (CEP)|
-+--------------------------------------------+
 | NO_LOWBATT_BEEP | PM5 disable low-batt beep|
 +--------------------------------------------+
 |NO_LOWBATT_SHUTDOWN| PM5 no low-batt cutoff |
@@ -73,6 +71,10 @@ or if you have a Proxmark 3 RDV4 with the BT add-on:
 PLATFORM=PM3RDV4
 PLATFORM_EXTRAS=BTADDON
 
+or if you have a Proxmark 5 with the BWM add-on:
+PLATFORM=PM5
+PLATFORM_EXTRAS=BWM
+
 Default standalone mode is $(DEFAULT_STANDALONE).
 To disable standalone modes, set explicitly an empty STANDALONE:
 STANDALONE=
@@ -82,6 +84,7 @@ PLATFORM_SIZE=256
 
 to be warned if the image is too big for your device
 and you can specify which parts to skip in order to reduce the size:
+SKIP_CEP=1
 SKIP_LF=1
 SKIP_HITAG=1
 SKIP_EM4x50=1
@@ -187,7 +190,7 @@ else ifeq ($(PLATFORM),PM5)
     FPGA_BITSTREAMS = fpga_pm3_hf.bit # TODO DXL 虽然可以不把打包比特流，但是还是得把FPGA的版本信息给生成，让EXE依赖。
     SKIP_FPGA_EMBED = true # important!!! disable the fpga bit files pack to arm!
     SKIP_COMPRESSION = true # Skip data section compress. The new mcu has enough flash space.
-    PLATFORM_DEFS = -DWITH_FLASH -DPM5 -DCHIP_AT32F435_37 -DWITH_CEP # TODO 暂时不要编译i2c -DWITH_SMARTCARD
+    PLATFORM_DEFS = -DPM5 -DCHIP_AT32F435_37 -DWITH_FLASH # TODO 暂时不要编译i2c -DWITH_SMARTCARD
     PLTNAME = Proxmark5
     PLATFORM_FPGA = GW1NR-LV2MG49GC6/i5
 else
@@ -229,14 +232,6 @@ ifneq (,$(findstring BWM,$(PLATFORM_EXTRAS_TMP)))
     PLATFORM_DEFS += -DWITH_BWM_FORWARD -DWITH_BWM_STATUS -DWITH_PM5_PWR_LED -DWITH_PM5_AUTOOFF -DWITH_BWM_LOWBATT_BEEP -DWITH_PM5_LOWBATT_SHUTDOWN
     PLATFORM_EXTRAS_TMP := $(strip $(filter-out BWM,$(PLATFORM_EXTRAS_TMP)))
 endif
-# CEP is on by default for PM5 (Flipper Zero USB link); SKIP_CEP disables it
-ifneq (,$(findstring SKIP_CEP,$(PLATFORM_EXTRAS_TMP)))
-    ifneq ($(PLATFORM),PM5)
-        $(error PLATFORM_EXTRAS token SKIP_CEP is only valid on PLATFORM=PM5)
-    endif
-    PLATFORM_DEFS := $(filter-out -DWITH_CEP,$(PLATFORM_DEFS))
-    PLATFORM_EXTRAS_TMP := $(strip $(filter-out SKIP_CEP,$(PLATFORM_EXTRAS_TMP)))
-endif
 ifneq (,$(findstring NO_LOWBATT_SHUTDOWN,$(PLATFORM_EXTRAS_TMP)))
     ifneq ($(PLATFORM),PM5)
         $(error PLATFORM_EXTRAS token NO_LOWBATT_SHUTDOWN is only valid on PLATFORM=PM5)
@@ -254,6 +249,17 @@ ifneq (,$(findstring NO_LOWBATT_BEEP,$(PLATFORM_EXTRAS_TMP)))
 endif
 ifneq (,$(PLATFORM_EXTRAS_TMP))
     $(error Unknown PLATFORM_EXTRAS token(s): $(PLATFORM_EXTRAS_TMP))
+endif
+
+# Proxmark5 specific support
+ifeq ($(SKIP_CEP),1)
+    ifneq ($(PLATFORM),PM5)
+        $(error SKIP_CEP token is only valid on PLATFORM=PM5)
+    endif
+else
+    ifeq ($(PLATFORM),PM5)
+        PLATFORM_DEFS += -DWITH_CEP
+    endif
 endif
 
 # common LF support
@@ -340,8 +346,8 @@ ifneq (,$(findstring WITH_FPC_USART_,$(PLATFORM_DEFS)))
     PLATFORM_DEFS += -DUSART_BAUD_RATE=$(USART_BAUD_RATE)
 endif
 
-PLATFORM_DEFS_INFO = $(strip $(filter-out STANDALONE%, $(subst -DWITH_,,$(PLATFORM_DEFS))))
-PLATFORM_DEFS_INFO_STANDALONE = $(strip $(subst STANDALONE_,, $(filter STANDALONE%, $(subst -DWITH_,,$(PLATFORM_DEFS)))))
+PLATFORM_DEFS_INFO = $(strip $(filter-out STANDALONE%, $(subst -D,,$(subst -DWITH_,,$(PLATFORM_DEFS)))))
+PLATFORM_DEFS_INFO_STANDALONE = $(strip $(subst STANDALONE_,, $(filter STANDALONE%, $(subst -D,,$(subst -DWITH_,,$(PLATFORM_DEFS))))))
 
 # Check that only one Standalone mode has been chosen
 ifneq (,$(word 2, $(PLATFORM_DEFS_INFO_STANDALONE)))

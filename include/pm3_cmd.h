@@ -289,7 +289,7 @@ typedef struct {
     bool compiled_with_bwm : 1;     // PM5 built with PLATFORM_EXTRAS=BWM (battery/wireless module)
 
     // Appended in version 13.
-    bool compiled_with_cep : 1;     // PM5 built with WITH_CEP (Flipper Zero, Type-C extended port; on by default, SKIP_CEP to disable)
+    bool compiled_with_cep : 1;     // PM5 built with CEP (Flipper Zero, Type-C extended port; on by default, SKIP_CEP=1 to disable)
 } PACKED capabilities_t;
 // Bump this whenever a command payload changes shape, so a mismatched client and
 // firmware refuse to talk instead of misparsing each other.
