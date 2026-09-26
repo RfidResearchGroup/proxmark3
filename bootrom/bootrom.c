@@ -28,6 +28,9 @@
 #ifdef WITH_FLASH
 #include "flashmem.h"
 #endif
+#ifdef WITH_BWM_FORWARD
+#include "bwm_boot.h"
+#endif
 
 #define DEBUG 0
 // At present, in the case of at32 with a flash size of 4m byte, a sector is 4096 bytes.
@@ -52,6 +55,11 @@ flash_min_unit_data_t flash_min_unit_data;
 extern uint32_t _bootrom_start[], _bootrom_end[], _flash_start[], _flash_end[], __bss_start__[], __bss_end__[];
 extern uint32_t _osimage_entry[], _stack_start[], _stack_end[];
 
+#ifdef WITH_BWM_FORWARD
+static bool g_pkt_from_bwm;
+static uint32_t s_fw_addr;
+#endif
+
 // Send an old frame response packet.
 static int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
     PacketResponseOLD txcmd;
@@ -73,6 +81,11 @@ static int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, 
         }
     }
 
+#ifdef WITH_BWM_FORWARD
+    if (g_pkt_from_bwm) {
+        return bwm_boot_write((uint8_t *)&txcmd, sizeof(PacketResponseOLD));
+    }
+#endif
     // Send frame and make sure all bytes are transmitted
     return usb_write((uint8_t *)&txcmd, sizeof(PacketResponseOLD));
 }
@@ -99,9 +112,11 @@ static void DbpString(char *str) {
 }
 #endif
 
+#ifndef WITH_BWM_FORWARD
 static void Fatal(void) {
     for (;;) {};
 }
+#endif
 
 static void UsbPacketReceived(uint8_t *packet) {
     bool ack = true;
@@ -122,12 +137,19 @@ static void UsbPacketReceived(uint8_t *packet) {
                    DEVICE_INFO_FLAG_UNDERSTANDS_VERSION |
                    DEVICE_INFO_FLAG_UNDERSTANDS_READ_MEM |
                    DEVICE_INFO_FLAG_UNDERSTANDS_CHIP_TYPE;
+#ifdef WITH_BWM_FORWARD
+            arg0 |= DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM;
+#endif
 
             if (g_common_area.flags.osimage_present) {
                 arg0 |= DEVICE_INFO_FLAG_OSIMAGE_PRESENT;
             }
 
+#ifdef WITH_BWM_FORWARD
+            reply_old(CMD_DEVICE_INFO, arg0, 1, bwm_boot_baud(), 0, 0);
+#else
             reply_old(CMD_DEVICE_INFO, arg0, 1, 2, 0, 0);
+#endif
         }
         break;
 
@@ -240,13 +262,40 @@ static void UsbPacketReceived(uint8_t *packet) {
             // than one erase/write unit (e.g. AT91 pages of 256 bytes), so always copy it in and flush
             // the whole units below instead of assuming the payload is no larger than one unit.
             bool copy_overflow = false;
-            for (int i = 0; i < usb_payload_u32_len; i++) {
-                // Check data buffer is no overflow.
-                if (flash_min_unit_data.count >= ARRAYLEN(flash_min_unit_data.data)) {
-                    copy_overflow = true;
+#ifdef WITH_BWM_FORWARD
+            if (g_pkt_from_bwm) {
+                // arg[2] is the byte offset in the unit. Place, don't append.
+                uint32_t off = (uint32_t)c->arg[2];
+                uint32_t idx = off / sizeof(uint32_t);
+                if ((off % sizeof(c->d)) ||
+                        ((idx + usb_payload_u32_len) > ARRAYLEN(flash_min_unit_data.data))) {
+                    ack = false;
+                    flash_min_unit_data.count = 0;
+                    reply_old(CMD_NACK, 0, PM3_EINVARG, 0, 0, 0);
                     break;
                 }
-                flash_min_unit_data.data[flash_min_unit_data.count++] = c->d.asDwords[i];
+                if (flash_min_unit_data.count && (s_fw_addr != arg0)) {
+                    flash_min_unit_data.count = 0;
+                }
+                s_fw_addr = arg0;
+                for (int i = 0; i < usb_payload_u32_len; i++) {
+                    flash_min_unit_data.data[idx + i] = c->d.asDwords[i];
+                }
+                uint32_t end = idx + usb_payload_u32_len;
+                if (end > flash_min_unit_data.count) {
+                    flash_min_unit_data.count = end;
+                }
+            } else
+#endif
+            {
+                for (int i = 0; i < usb_payload_u32_len; i++) {
+                    // Check data buffer is no overflow.
+                    if (flash_min_unit_data.count >= ARRAYLEN(flash_min_unit_data.data)) {
+                        copy_overflow = true;
+                        break;
+                    }
+                    flash_min_unit_data.data[flash_min_unit_data.count++] = c->d.asDwords[i];
+                }
             }
             if (copy_overflow) {
                 ack = false;
@@ -269,6 +318,9 @@ static void UsbPacketReceived(uint8_t *packet) {
                 // Call the cross-platform flash api to write firmware to flash.
                 uint32_t status = 0x00;
                 bool isok = FlashCodeEWriteMinUnit(flash_address, flash_min_unit_addr, _flash_start, &status);
+#ifdef WITH_BWM_FORWARD
+                bwm_boot_pump();
+#endif
                 if (!isok) {
                     ack = false;
                     reply_old(CMD_NACK, status, 0, 0, 0, 0);
@@ -320,7 +372,11 @@ static void UsbPacketReceived(uint8_t *packet) {
         break;
 
         default: {
+#ifdef WITH_BWM_FORWARD
+            ack = false;
+#else
             Fatal();
+#endif
         }
         break;
     }
@@ -355,22 +411,50 @@ static void flash_mode(void) {
     // wait for reset to be complete?
     SpinDelayUs(300 * 1000); // Wait for 300ms
 
+#ifdef WITH_BWM_FORWARD
+    bwm_boot_init();
+#endif
+
     for (;;) {
         WDT_HIT();
+
+#ifdef WITH_BWM_FORWARD
+        // Before the USB poll, not only after it: UART4 holds a single byte.
+        bwm_boot_pump();
+#endif
 
         // Check if there is a usb packet available
         if (usb_poll_validate_length()) {
             if (usb_read(rx, sizeof(rx))) {
+#ifdef WITH_BWM_FORWARD
+                g_pkt_from_bwm = false;
+#endif
                 UsbPacketReceived(rx);
             }
         }
 
+#ifdef WITH_BWM_FORWARD
+        while (bwm_boot_poll(rx, sizeof(rx))) {
+            g_pkt_from_bwm = true;
+            UsbPacketReceived(rx);
+        }
+#endif
+
         bool button_state = BUTTON_PRESS();
+#ifdef WITH_BWM_FORWARD
+        // UART4 holds one byte and has no DMA. A 10 ms sleep on every loop
+        // would shred an inbound DATA_FORWARD, so only debounce on a press.
+        if (button_state) {
+            SpinDelayUs(10000);
+            button_state = BUTTON_PRESS();
+        }
+#else
         SpinDelayUs(10000); // ~10ms, prevent jitter
         if (button_state != BUTTON_PRESS()) {
             // in jitter state, ignore
             continue;
         }
+#endif
         if (g_common_area.flags.button_pressed && button_state == false) {
             g_common_area.flags.button_pressed = 0;
         }

@@ -462,11 +462,34 @@ fail:
     return res;
 }
 
+static bool port_is_wireless(const char *name) {
+    if (name == NULL) {
+        return false;
+    }
+    return (strncmp(name, "tcp:", 4) == 0) ||
+           (strncmp(name, "udp:", 4) == 0) ||
+           (strncmp(name, "bt:", 3) == 0);
+}
+
 // Get the state of the proxmark, backwards compatible
-static int get_proxmark_state(uint32_t *state) {
-    SendCommandBL(CMD_DEVICE_INFO, 0, 0, 0, NULL, 0);
+static int get_proxmark_state(uint32_t *state, const char *serial_port_name) {
     PacketResponseNG resp;
-    WaitForResponse(CMD_UNKNOWN, &resp);  // wait for any response. No timeout.
+    bool got = false;
+    for (int attempt = 0; (attempt < 3) && (got == false); attempt++) {
+        clearCommandBuffer();
+        SendCommandBL(CMD_DEVICE_INFO, 0, 0, 0, NULL, 0);
+        got = WaitForResponseTimeout(CMD_UNKNOWN, &resp, 3000);
+    }
+    if (got == false) {
+        if (port_is_wireless(serial_port_name)) {
+            PrintAndLogEx(ERR, "No reply from bootloader. Wireless bootrom is not talking BWM.");
+            PrintAndLogEx(INFO, "Flash a BWM-capable bootrom over USB: " _YELLOW_("make clean && make bootrom") " then ./pm3-flash-bootrom");
+        } else {
+            PrintAndLogEx(ERR, "No reply from bootloader.");
+        }
+        PrintAndLogEx(INFO, "Nothing was written. Short-press the button to leave flash mode.");
+        return PM3_ETIMEOUT;
+    }
 
     // Three outcomes:
     // 1. The old bootrom code will ignore CMD_DEVICE_INFO, but respond with an ACK
@@ -485,6 +508,15 @@ static int get_proxmark_state(uint32_t *state) {
         case CMD_DEVICE_INFO: {
             // bootloader replies are OLD frames by design, see doc/new_frame_format.md
             *state = resp.oldarg[0];
+            PrintAndLogEx(DEBUG, "DEVICE_INFO flags 0x%08x", *state);
+            // A BWM bootrom reports the baud it probed in oldarg[2]; 0 means no ESP answered.
+            if ((*state & DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM) == DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM) {
+                if (resp.oldarg[2]) {
+                    PrintAndLogEx(INFO, "Bootloader BWM link at " _YELLOW_("%" PRIu64) " baud", resp.oldarg[2]);
+                } else {
+                    PrintAndLogEx(WARNING, "Bootloader found no BWM module (no ESP answered on 921600 or 460800)");
+                }
+            }
             break;
         }
         default: {
@@ -499,7 +531,7 @@ static int get_proxmark_state(uint32_t *state) {
 static int enter_bootloader(char *serial_port_name, bool wait_appear) {
 
     uint32_t state = 0;
-    int ret = get_proxmark_state(&state);
+    int ret = get_proxmark_state(&state, serial_port_name);
     if (ret != PM3_SUCCESS) {
         return ret;
     }
@@ -547,15 +579,31 @@ static int enter_bootloader(char *serial_port_name, bool wait_appear) {
 
 // Wait for the device to respond with either ACK or NACK.
 static int wait_for_ack(PacketResponseNG *ack) {
-    WaitForResponse(CMD_UNKNOWN, ack);
-    if (ack->cmd != CMD_ACK) {
+    // Timeout + skip stale replies (a lost byte can yield cmd 0x0000).
+    uint64_t deadline = msclock() + 15000;
+    for (;;) {
+        uint64_t now = msclock();
+        if (now >= deadline) {
+            PrintAndLogEx(ERR, "No ACK from bootloader (timeout)");
+            return PM3_ETIMEOUT;
+        }
+        if (WaitForResponseTimeout(CMD_UNKNOWN, ack, deadline - now) == false) {
+            PrintAndLogEx(ERR, "No ACK from bootloader (timeout)");
+            return PM3_ETIMEOUT;
+        }
+        if (ack->cmd == CMD_ACK) {
+            return PM3_SUCCESS;
+        }
+        if (ack->cmd != CMD_NACK) {
+            PrintAndLogEx(DEBUG, "Discarding stale reply 0x%04x while waiting for ACK", ack->cmd);
+            continue;
+        }
         PrintAndLogEx(ERR, "\nError: Unexpected reply 0x%04x %s (expected ACK)",
                       ack->cmd,
                       (ack->cmd == CMD_NACK) ? "NACK" : ""
                      );
         return PM3_ESOFT;
     }
-    return PM3_SUCCESS;
 }
 
 // If the BOOTLOADER is too old or damaged, we can suggest that the user update the BOOT.
@@ -664,10 +712,15 @@ static bool files_target_bootloader(flash_file_t *files, uint8_t num_files, uint
 
 // Sending simple cmd without any parameters or data payload, just for arg0.
 static void send_cmd_for_arg0(const uint64_t cmd, uint32_t *arg0) {
-    SendCommandBL(cmd, 0, 0, 0, NULL, 0);
-    PacketResponseNG resp;
-    WaitForResponse(cmd, &resp);
-    *arg0 = resp.oldarg[0];
+    for (int attempt = 0; attempt < 2; attempt++) {
+        clearCommandBuffer();
+        SendCommandBL(cmd, 0, 0, 0, NULL, 0);
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(cmd, &resp, 8000)) {
+            *arg0 = resp.oldarg[0];
+            return;
+        }
+    }
 }
 
 // Go into flashing mode
@@ -679,9 +732,17 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, flash_dev
     }
 
     uint32_t state = 0;
-    ret = get_proxmark_state(&state);
+    ret = get_proxmark_state(&state, serial_port_name);
     if (ret != PM3_SUCCESS) {
         return ret;
+    }
+
+    if (port_is_wireless(serial_port_name) &&
+            ((state & DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM) != DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM)) {
+        PrintAndLogEx(ERR, "This bootloader cannot flash over a wireless link (flags 0x%08x)", state);
+        PrintAndLogEx(INFO, "Flash the bootrom over USB once, then retry.");
+        PrintAndLogEx(INFO, "Nothing was written. Short-press the button to leave flash mode.");
+        return PM3_EOPABORTED;
     }
 
     flash_dev->chiptype = MAIN_CHIP_TYPE_NONE;
@@ -834,13 +895,15 @@ static void flash_write_err_software(int pm3_err) {
 
 // Send finish write cmd and waiting for response.
 // The send_buf length is always 512byte(PM3_CMD_DATA_SIZE_OLD)
-static int send_finish_write_cmd(uint32_t address, int magic, uint8_t *send_buf, PacketResponseNG *resp) {
+// block_off is the byte offset within the erase/write unit (unused on ICOPYX).
+static int send_finish_write_cmd(uint32_t address, int magic, uint32_t block_off, uint8_t *send_buf, PacketResponseNG *resp) {
     // The sending length is always PM3_CMD_DATA_SIZE_OLD, which is 512 bytes, because of the limitation of the old frame.
     const int send_len = PM3_CMD_DATA_SIZE_OLD;
 #if defined ICOPYX
     // To prevent users from flashing unsupported firmware, icopyx checks arg1 and arg2 in this command.
     // Therefore, when sending magic to the device, we should not choose a value that happens to be the same as icopyx.
     // In fact, neither PM3V nor PM5V will be 0xff or 0x1fd, so this should have strong robustness.
+    (void)block_off;
     SendCommandBL(CMD_FINISH_WRITE, address, 0xff, 0x1fd, send_buf, send_len);
 #else
     // If it's an older version of the flasher or a flasher specific to icopyx, then arg1 should be 0x00 or 0xff,
@@ -859,7 +922,8 @@ static int send_finish_write_cmd(uint32_t address, int magic, uint8_t *send_buf,
     // ---
     // The new client version can always continue to OTA update the device version,
     //  and can also OTA update the latest version of PM5.
-    SendCommandBL(CMD_FINISH_WRITE, address, magic, 0, send_buf, send_len);
+    // arg[2] is the byte offset within the unit. Old bootroms ignore it; BWM bootroms place at arg[2]/4.
+    SendCommandBL(CMD_FINISH_WRITE, address, magic, block_off, send_buf, send_len);
 #endif
     return wait_for_ack(resp);
 }
@@ -884,27 +948,40 @@ static int write_block(uint32_t address, int magic, uint8_t *data, uint32_t leng
     memcpy(block_buf, data, length); // copy data by valid length
     // Send in packets
     int ret = PM3_SUCCESS;
-    uint32_t sent = 0;
-    while (sent < aligned_len) {
-        PacketResponseNG resp;
-        ret = send_finish_write_cmd(address, magic, block_buf + sent, &resp);
-        if (ret) {
-            // On new version of flasher, the arg1 is error code of PM3_E*, old version is 0x00, so we can always check it.
-            if (resp.oldarg[1]) { // 0x00 == PM3_SUCCESS
-                flash_write_err_software(resp.oldarg[1]);
-            } else {
-                // If not PM3_E*, maybe some errors of flash write occurred. Or is old version boot.
-                if (flash_dev->chiptype == MAIN_CHIP_TYPE_AT91) {
-                    flash_write_err_on_at91(resp.oldarg[0]);
-                } else if (flash_dev->chiptype == MAIN_CHIP_TYPE_AT32) {
-                    flash_write_err_on_at32(resp.oldarg[0]);
-                } else {
-                    PrintAndLogEx(ERR, "Unknown chip type, cannot decode error information");
+    for (int attempt = 0; attempt < 4; attempt++) {
+        uint32_t sent = 0;
+        ret = PM3_SUCCESS;
+        while (sent < aligned_len) {
+            PacketResponseNG resp;
+            ret = send_finish_write_cmd(address, magic, sent, block_buf + sent, &resp);
+            if (ret) {
+                if (ret == PM3_ETIMEOUT) {
+                    PrintAndLogEx(WARNING, "No ACK at 0x%08x (packet %u), retrying block",
+                                  address, sent / PM3_CMD_DATA_SIZE_OLD);
+                    msleep(400);
+                    break;
                 }
+                // On new version of flasher, the arg1 is error code of PM3_E*, old version is 0x00, so we can always check it.
+                if (resp.oldarg[1]) { // 0x00 == PM3_SUCCESS
+                    flash_write_err_software(resp.oldarg[1]);
+                } else {
+                    // If not PM3_E*, maybe some errors of flash write occurred. Or is old version boot.
+                    if (flash_dev->chiptype == MAIN_CHIP_TYPE_AT91) {
+                        flash_write_err_on_at91(resp.oldarg[0]);
+                    } else if (flash_dev->chiptype == MAIN_CHIP_TYPE_AT32) {
+                        flash_write_err_on_at32(resp.oldarg[0]);
+                    } else {
+                        PrintAndLogEx(ERR, "Unknown chip type, cannot decode error information");
+                    }
+                }
+                free(block_buf); // remember to free buffer
+                return ret;
             }
+            sent += PM3_CMD_DATA_SIZE_OLD;
+        }
+        if (ret == PM3_SUCCESS && sent >= aligned_len) {
             break;
         }
-        sent += PM3_CMD_DATA_SIZE_OLD;
     }
     free(block_buf); // remember to free buffer
     return ret;
