@@ -987,6 +987,10 @@ typedef struct {
     uint8_t bonded_count;
     uint8_t bonded[BWM_BLE_BONDED_MAX][7];   // addr[6] + type, first bonded_count valid
 } PACKED bwm_ble_status_t;
+// PM5, read compact BWM battery telemetry (bwm_battery_info_t). Used by `hw status`'s
+// underlying data source and by clients (e.g. the Flipper Zero FAP) that want the raw
+// numbers instead of hw status's free-text Dbprintf lines.
+#define CMD_PM5_BWM_GET_BATTERY 0x0184
 #define BWM_OTA_ACTION_BEGIN 0x00
 #define BWM_OTA_ACTION_WRITE 0x01
 #define BWM_OTA_ACTION_END   0x02

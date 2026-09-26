@@ -51,6 +51,29 @@ void bwm_detect_and_init(void);
 // detected by bwm_detect_and_init().
 void bwm_print_battery_status(void);
 
+// Compact battery telemetry for CMD_PM5_BWM_GET_BATTERY - a machine-readable
+// subset of what bwm_print_battery_status() prints (same underlying reads,
+// so the two can't drift on the numbers they share). All fields zeroed if
+// bwm_present is false or gauge_ok is false.
+typedef struct {
+    bool bwm_present;
+    bool gauge_ok;
+    uint16_t soc_pct;
+    uint16_t voltage_mv;
+    int16_t  current_ma;      // +charge / -discharge
+    uint16_t remaining_mah;
+    uint16_t full_charge_mah;
+    uint16_t design_cap_mah;
+    int16_t  temp_c10;        // tenths of a degree C
+    uint8_t  charger_fault;   // 0 = none, else AW32001E REG09 bits masked 0x3F
+    uint8_t  charge_status;   // 0=not charging,1=pre-charge,2=charging,3=done
+    uint8_t  health_pct;
+} PACKED bwm_battery_info_t;
+
+// Returns false (all fields zeroed) if no BWM was detected. A false gauge_ok
+// with bwm_present true means the charger ACKed but the fuel gauge didn't.
+bool bwm_read_battery_info(bwm_battery_info_t *out);
+
 // One-time BQ27427 Design Capacity provisioning (CMD_PM5_BWM_SET_CAP /
 // `hw bwm setcap`). Idempotent - returns true without a CFGUPDATE cycle if the
 // value is already correct. Assumes the gauge is UNSEALED (factory default).
