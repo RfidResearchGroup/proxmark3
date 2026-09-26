@@ -66,7 +66,7 @@
 #define FELICA_OPTIONAL_CMD_RETRIES 3U
 // Per FeliCa spec, Polling max response at 16 timeslots is ~25ms; keep extra margin.
 #define FELICA_POLLING_TIMEOUT_MS 100U
-#define FELICA_READER_SYSTEM_POLL_TIMEOUT_MS 1000U
+#define FELICA_READER_SYSTEM_POLL_TIMEOUT_MS 2500U
 #define FELICA_READER_SYSTEM_POLL_ATTEMPTS 4U
 #define FELICA_SEAC_POLL_TIMEOUT_MS 200U
 #define FELICA_SEAC_POLL_RETRY_COUNT 5U
@@ -468,6 +468,7 @@ typedef enum {
 
 static int CmdHelp(const char *Cmd);
 static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose);
+static void clear_and_send_command_ex(uint8_t flags, uint16_t datalen, uint8_t *data, uint16_t numbits, bool verbose, bool normalize_frame);
 static int send_felica_payload_with_retries(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
                                             int expected_response_cmd, uint32_t timeout_ms, uint32_t retries, uint32_t backoff_ms, bool logging,
                                             PacketResponseNG *resp, const char *request_name);
@@ -2688,20 +2689,21 @@ int read_felica_uid(bool loop, bool verbose) {
 }
 
 static int read_felica_system(uint16_t system_code, bool loop, bool verbose) {
-    uint8_t idm[8];
-    uint8_t flags = FELICA_CONNECT | FELICA_CLEARTRACE | FELICA_NO_SELECT |
-                    FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
+    uint8_t system_bytes[2];
+    felica_system_code_to_bytes(system_code, system_bytes);
+    const uint8_t flags = FELICA_CONNECT | FELICA_CLEARTRACE | FELICA_NO_DISCONNECT | FELICA_SYSTEM_SELECT;
     int res = PM3_ETIMEOUT;
 
     for (uint32_t attempt = 0; loop || attempt < FELICA_READER_SYSTEM_POLL_ATTEMPTS; attempt++) {
-        int status = send_polling(flags, system_code, FELICA_POLLING_REQUEST_SYSTEM_CODE,
-                                  FELICA_READER_SYSTEM_POLL_TIMEOUT_MS, 0, false,
-                                  idm, NULL, NULL);
-        flags &= ~(FELICA_CONNECT | FELICA_CLEARTRACE);
-
-        if (status == PM3_SUCCESS) {
+        clear_and_send_command_ex(flags, sizeof(system_bytes), system_bytes, 0, false, false);
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_HF_FELICA_COMMAND, &resp, FELICA_READER_SYSTEM_POLL_TIMEOUT_MS) &&
+                resp.status == PM3_SUCCESS && resp.length >= sizeof(felica_card_select_t)) {
+            felica_card_select_t card;
+            memcpy(&card, resp.data.asBytes, sizeof(card));
+            set_last_known_card(card);
             if (verbose) {
-                PrintAndLogEx(SUCCESS, "IDm: " _GREEN_("%s"), sprint_hex_inrow(idm, sizeof(idm)));
+                PrintAndLogEx(SUCCESS, "IDm: " _GREEN_("%s"), sprint_hex_inrow(card.IDm, sizeof(card.IDm)));
             }
             res = PM3_SUCCESS;
             if (loop == false) {
