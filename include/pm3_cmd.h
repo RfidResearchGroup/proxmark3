@@ -287,13 +287,17 @@ typedef struct {
 
     // Appended in version 12.
     bool compiled_with_bwm : 1;     // PM5 built with PLATFORM_EXTRAS=BWM (battery/wireless module)
+
+    // Appended in version 13.
+    bool compiled_with_cep : 1;     // PM5 built with PLATFORM_EXTRAS=CEP (Flipper Zero, Type-C extended port)
 } PACKED capabilities_t;
 // Bump this whenever a command payload changes shape, so a mismatched client and
 // firmware refuse to talk instead of misparsing each other.
 //   10: CMD_HF_MIFARE_EML_MEMSET gained a flags byte
 //   11: capabilities_t gained em_size / em_allocated
 //   12: capabilities_t gained compiled_with_bwm
-#define CAPABILITIES_VERSION 12
+//   13: capabilities_t gained compiled_with_cep
+#define CAPABILITIES_VERSION 13
 // what a pre-v9 device would have used, it could not tell us
 #define CAPABILITIES_LEGACY_CMD_DATA_SIZE 512
 extern capabilities_t g_pm3_capabilities;

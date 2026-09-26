@@ -20,6 +20,9 @@
 #ifdef WITH_BWM_FORWARD
 #include "bwm_forward.h"
 #endif
+#ifdef WITH_CEP
+#include "pm5_cep.h"
+#endif
 #include "crc16.h"
 #include "string.h"
 #include "BigBuf.h"
@@ -29,6 +32,8 @@ bool g_reply_with_crc_on_usb = false;
 bool g_reply_with_crc_on_fpc = true;
 // "Session" flag, to tell via which interface next msgs should be sent: USB or FPC USART
 bool g_reply_via_fpc = false;
+// Independent of via_fpc - CEP (Flipper Zero, over SPI1) may be live at the same time as BWM/FPC.
+bool g_reply_via_cep = false;
 
 // Largest NG payload the device will put on the CURRENT reply link. Over FPC the
 // BWM buffers are smaller than a full frame, so cap there; USB uses the full size.
@@ -64,6 +69,9 @@ int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const v
 #if defined(WITH_FPC_USART_HOST) || defined(WITH_BWM_FORWARD)
     int resultfpc = PM3_EUNDEF;
 #endif
+#if defined(WITH_CEP)
+    int resultcep = PM3_EUNDEF;
+#endif
     int resultusb = PM3_EUNDEF;
     // Send frame and make sure all bytes are transmitted
 
@@ -80,16 +88,23 @@ int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const v
         return PM3_EDEVNOTSUPP;
 #endif
     }
-    // we got two results, let's prioritize the faulty one and USB over FPC.
+    if (g_reply_via_cep) {
+#if defined(WITH_CEP)
+        resultcep = cep_spi_write_sync((uint8_t *)&txcmd, sizeof(PacketResponseOLD));
+#else
+        return PM3_EDEVNOTSUPP;
+#endif
+    }
+    // we got multiple results, let's prioritize the faulty one and USB over FPC over CEP.
     if (g_reply_via_usb && (resultusb != PM3_SUCCESS)) return resultusb;
 #if defined(WITH_FPC_USART_HOST) || defined(WITH_BWM_FORWARD)
     if (g_reply_via_fpc && (resultfpc != PM3_SUCCESS)) return resultfpc;
 #endif
+#if defined(WITH_CEP)
+    if (g_reply_via_cep && (resultcep != PM3_SUCCESS)) return resultcep;
+#endif
     return PM3_SUCCESS;
 }
-
-// TODO DXL 测试阶段，暂时通过SPI应答
-extern int cep_spi_write_sync(uint8_t *data, size_t len);
 
 static int reply_ng_internal(uint16_t cmd, int8_t status, uint8_t reason, const uint8_t *data, size_t len, bool ng) {
     // The NG preamble is 10 bytes, so data[] would sit 2 past a word boundary
@@ -137,6 +152,9 @@ static int reply_ng_internal(uint16_t cmd, int8_t status, uint8_t reason, const 
 #if defined(WITH_FPC_USART_HOST) || defined(WITH_BWM_FORWARD)
     int resultfpc = PM3_EUNDEF;
 #endif
+#if defined(WITH_CEP)
+    int resultcep = PM3_EUNDEF;
+#endif
     int resultusb = PM3_EUNDEF;
     // Send frame and make sure all bytes are transmitted
 
@@ -144,10 +162,6 @@ static int reply_ng_internal(uint16_t cmd, int8_t status, uint8_t reason, const 
         resultusb = usb_write((uint8_t *)tx, txBufferNGLen);
     }
     if (g_reply_via_fpc) {
-
-        // TODO DXL 测试阶段，暂时通过SPI应答
-        // resultusb = cep_spi_write_sync((uint8_t *)tx, txBufferNGLen);
-
 #if defined(WITH_BWM_FORWARD)
         resultfpc = bwm_fwd_writebuffer_sync((uint8_t *)tx, txBufferNGLen);
 #elif defined(WITH_FPC_USART_HOST)
@@ -156,7 +170,14 @@ static int reply_ng_internal(uint16_t cmd, int8_t status, uint8_t reason, const 
         return PM3_EDEVNOTSUPP;
 #endif
     }
-    // we got two results, let's prioritize the faulty one and USB over FPC.
+    if (g_reply_via_cep) {
+#if defined(WITH_CEP)
+        resultcep = cep_spi_write_sync((uint8_t *)tx, txBufferNGLen);
+#else
+        return PM3_EDEVNOTSUPP;
+#endif
+    }
+    // we got multiple results, let's prioritize the faulty one and USB over FPC over CEP.
     if (g_reply_via_usb && (resultusb != PM3_SUCCESS)) {
         return resultusb;
     }
@@ -164,6 +185,11 @@ static int reply_ng_internal(uint16_t cmd, int8_t status, uint8_t reason, const 
 #if defined(WITH_FPC_USART_HOST) || defined(WITH_BWM_FORWARD)
     if (g_reply_via_fpc && (resultfpc != PM3_SUCCESS)) {
         return resultfpc;
+    }
+#endif
+#if defined(WITH_CEP)
+    if (g_reply_via_cep && (resultcep != PM3_SUCCESS)) {
+        return resultcep;
     }
 #endif
     return PM3_SUCCESS;
@@ -178,7 +204,7 @@ int reply_reason(uint16_t cmd, int8_t status, int8_t reason, const uint8_t *data
     return reply_ng_internal(cmd, status, reason, data, len, true);
 }
 
-static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *data, size_t len), bool usb, bool fpc) {
+static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *data, size_t len), bool usb, bool fpc, bool cep) {
 
     PacketCommandNGRaw rx_raw;
     size_t bytes = read_ng((uint8_t *)&rx_raw.pre, sizeof(PacketCommandNGPreamble));
@@ -250,6 +276,7 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
 
         g_reply_via_usb = usb;
         g_reply_via_fpc = fpc;
+        g_reply_via_cep = cep;
 
     } else {                               // Old style command
         PacketCommandOLD rx_old;
@@ -261,6 +288,7 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
 
         g_reply_via_usb = usb;
         g_reply_via_fpc = fpc;
+        g_reply_via_cep = cep;
         rx->ng = false;
         rx->magic = 0;
         rx->crc = 0;
@@ -274,29 +302,28 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
     return PM3_SUCCESS;
 }
 
-// TODO DXL 临时在此处定义外部实现的CEP端口的SPI通信实现，做视频通信测试用的，后期需要重构设计
-// extern uint32_t cep_spi_read_ng(uint8_t *data, size_t len);
-// extern bool cep_spi_data_available(void);
-
 int receive_ng(PacketCommandNG *rx) {
 
     // Check if there is a packet available
     if (usb_poll_validate_length()) {
-        return receive_ng_internal(rx, usb_read_ng, true, false);
+        return receive_ng_internal(rx, usb_read_ng, true, false, false);
     }
 
-    // if (cep_spi_data_available()) {
-    //     return receive_ng_internal(rx, cep_spi_read_ng, false, true); // TODO DXL 临时用fpc这种标志
-    // }
+#if defined(WITH_CEP)
+    // cep_is_active() gates this so an unattached/idle CEP link doesn't cost
+    // an SPI-timeout poll every single main-loop iteration.
+    if (cep_is_active() && cep_spi_data_available())
+        return receive_ng_internal(rx, cep_spi_read_ng, false, false, true);
+#endif
 
 #if defined(WITH_BWM_FORWARD)
     // De-frame inbound BWM app_com DATA_FORWARD packets into a raw NG stream.
     if (bwm_fwd_rxdata_available() > 0)
-        return receive_ng_internal(rx, bwm_read_ng, false, true);
+        return receive_ng_internal(rx, bwm_read_ng, false, true, false);
 #elif defined(WITH_FPC_USART_HOST)
     // Check if there is a FPC packet available
     if (usart_rxdata_available() > 0)
-        return receive_ng_internal(rx, usart_read_ng, false, true);
+        return receive_ng_internal(rx, usart_read_ng, false, true, false);
 #endif
     return PM3_ENODATA;
 }
