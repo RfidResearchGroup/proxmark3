@@ -16,11 +16,11 @@
 # Default platform if no platform specified
 PLATFORM?=PM3RDV4
 
-# Standalone Mode info (path depends if make is called at top or from armsrc)
+# Standalone Mode info (path depends if make is called at top, from armsrc, or from a sibling dir like recovery/bootrom)
 # Guard Makefile.hal against implicit rules: (with % to avoid being first goal)
 %/Makefile.hal: ;
 -include armsrc/Standalone/Makefile.hal
--include Standalone/Makefile.hal
+-include ../armsrc/Standalone/Makefile.hal
 ifndef DEFAULT_STANDALONE
 $(error Could not find armsrc/Standalone/Makefile.hal)
 endif
@@ -49,6 +49,8 @@ Known definitions:
 | BTADDON         | Proxmark3 RDV4 BT add-on |
 +--------------------------------------------+
 | BWM             | PM5 Battery Wireless Mod |
++--------------------------------------------+
+| CEP             | PM5 Flipper Zero (CEP)   |
 +--------------------------------------------+
 | NO_LOWBATT_BEEP | PM5 disable low-batt beep|
 +--------------------------------------------+
@@ -226,6 +228,15 @@ ifneq (,$(findstring BWM,$(PLATFORM_EXTRAS_TMP)))
     endif
     PLATFORM_DEFS += -DWITH_BWM_FORWARD -DWITH_BWM_STATUS -DWITH_PM5_PWR_LED -DWITH_PM5_AUTOOFF -DWITH_BWM_LOWBATT_BEEP -DWITH_PM5_LOWBATT_SHUTDOWN
     PLATFORM_EXTRAS_TMP := $(strip $(filter-out BWM,$(PLATFORM_EXTRAS_TMP)))
+endif
+# Flipper Zero over the Type-C extended port (CEP). Independent of BWM - both
+# may be enabled together (unlike e.g. BTADDON/FPC_USART_DEV above).
+ifneq (,$(findstring CEP,$(PLATFORM_EXTRAS_TMP)))
+    ifneq ($(PLATFORM),PM5)
+        $(error PLATFORM_EXTRAS token CEP is only valid on PLATFORM=PM5)
+    endif
+    PLATFORM_DEFS += -DWITH_CEP
+    PLATFORM_EXTRAS_TMP := $(strip $(filter-out CEP,$(PLATFORM_EXTRAS_TMP)))
 endif
 ifneq (,$(findstring NO_LOWBATT_SHUTDOWN,$(PLATFORM_EXTRAS_TMP)))
     ifneq ($(PLATFORM),PM5)

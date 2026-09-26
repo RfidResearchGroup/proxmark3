@@ -1913,7 +1913,7 @@
         },
         "hf 15 cfinalize": {
             "command": "hf 15 cfinalize",
-            "description": "Finalize a magic ISO15693 'V3' tag. This operation is irreversible. After finalize the configuration area is erased and the UID can no longer be changed. Set the UID with `hf 15 csetuid --v3` first, then lock it in with this command.",
+            "description": "Finalize a magic ISO15693 'V3' tag. This operation is irreversible. It locks the UID for good, clears the configuration blocks and shifts the block numbering. Set it with `hf 15 csetuid --v3` first, then lock it in with this command.",
             "notes": [
                 "hf 15 cfinalize -y"
             ],
@@ -1926,7 +1926,7 @@
         },
         "hf 15 csetuid": {
             "command": "hf 15 csetuid",
-            "description": "Set UID for magic Chinese card (only works with such cards) For magic 'V3' tags this writes the UID configuration only and is repeatable; run `hf 15 cfinalize` afterwards to lock the UID permanently.",
+            "description": "Set UID for magic Chinese card (only works with such cards) Gen1 and V3 probe their backdoor blocks first and refuse to write if they read back real data, to avoid corrupting a normal (non-magic) tag. For magic 'V3' tags this writes the UID configuration only and is repeatable; run `hf 15 cfinalize` afterwards to lock the UID permanently.",
             "notes": [
                 "hf 15 csetuid -u E011223344556677 -> use gen1 command",
                 "hf 15 csetuid -u E011223344556677 --v2 -> use gen2 command",
