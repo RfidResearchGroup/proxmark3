@@ -10,7 +10,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added `hw powersave` - PM5 low-power idle, on by default: between commands the core drops to 48 MHz with the PLL off, the FPGA clock stopped and the CPU halted (WFI); USB now runs crystal-less off HICK. Ported from the Fantasi firmware (@Msprg)
 - Fixed `lf t55xx dump -p` - reuses the password already confirmed by `lf t55xx detect`  (@iceman1001)
 - Fixed `lf t55xx p1detect`, `lf search` - T5577 clones with a non-Atmel manufacturer byte now recognised (@iceman1001)
-- Added `PLATFORM_EXTRAS=CEP` on PM5 - wires up the Flipper Zero link on the Type-C extended port (handshake + NG frames over SPI, independent transport flag so it can run alongside BWM); RF-dependent functionality still needs the FPGA side, tracked in #3667 (@TomHarkness)
+- Added Flipper Zero link on PM5's Type-C extended port (handshake + NG frames over SPI) - on by default, `PLATFORM_EXTRAS=SKIP_CEP` to disable, independent so it can run alongside BWM; RF-dependent functionality still needs the FPGA side, tracked in #3667 (@TomHarkness)
 - Fixed `hf mf autopwn` on FM11RF08S - static encrypted nonce is now detected via the backdoor key (@iceman1001)
 - Added `hf mfu view -v` - prints the UL-C 3DES key or UL-AES key stored in the dump file (@iceman1001)
 - Added `hf mf sen --ns` - skip writing the key and dump files (@iceman1001)

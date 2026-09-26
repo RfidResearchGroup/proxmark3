@@ -5,7 +5,7 @@ The **CEP (Type-C Extended Port)** is the side USB-C port on the PM5 — the one
 [Proxmark5_FlipperZero_FAP](https://github.com/RfidResearchGroup/Proxmark5_FlipperZero_FAP)
 app, talk to the PM5 over a one-shot UART handshake followed by standard PM3
 NG command/response frames carried over SPI. Everything below is **PM5-only**
-and is compiled in with the `CEP` platform extra.
+and is compiled in by default when building for PM5.
 
 See [GH issue #3667](https://github.com/RfidResearchGroup/proxmark3/issues/3667)
 for the full protocol writeup and open hardware-verification items.
@@ -25,26 +25,27 @@ for the full protocol writeup and open hardware-verification items.
 
 ```
 make clean
-make PLATFORM=PM5 PLATFORM_EXTRAS=CEP
+make PLATFORM=PM5
 make client        # or your usual client build
 ```
 
-`CEP` is independent of `BWM` — both may be enabled together:
+CEP is independent of `BWM` — disable it with `SKIP_CEP` if you don't want it,
+with or without BWM:
 
 ```
-make PLATFORM=PM5 PLATFORM_EXTRAS="BWM CEP"
+make PLATFORM=PM5 PLATFORM_EXTRAS="BWM SKIP_CEP"
 ```
 
 Or set it persistently in `Makefile.platform`:
 
 ```
 PLATFORM=PM5
-PLATFORM_EXTRAS=CEP
+PLATFORM_EXTRAS=SKIP_CEP
 ```
 
 > [!NOTE]
-> Without `PLATFORM_EXTRAS=CEP` the firmware ignores the Flipper entirely — the
-> CEP port stays inert, same as before this feature existed.
+> With `PLATFORM_EXTRAS=SKIP_CEP` the firmware ignores the Flipper entirely —
+> the CEP port stays inert, same as before this feature existed.
 
 ---
 

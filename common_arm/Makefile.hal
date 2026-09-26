@@ -50,7 +50,7 @@ Known definitions:
 +--------------------------------------------+
 | BWM             | PM5 Battery Wireless Mod |
 +--------------------------------------------+
-| CEP             | PM5 Flipper Zero (CEP)   |
+| SKIP_CEP        | PM5 disable Flipper Zero (CEP)|
 +--------------------------------------------+
 | NO_LOWBATT_BEEP | PM5 disable low-batt beep|
 +--------------------------------------------+
@@ -187,7 +187,7 @@ else ifeq ($(PLATFORM),PM5)
     FPGA_BITSTREAMS = fpga_pm3_hf.bit # TODO DXL 虽然可以不把打包比特流，但是还是得把FPGA的版本信息给生成，让EXE依赖。
     SKIP_FPGA_EMBED = true # important!!! disable the fpga bit files pack to arm!
     SKIP_COMPRESSION = true # Skip data section compress. The new mcu has enough flash space.
-    PLATFORM_DEFS = -DWITH_FLASH -DPM5 -DCHIP_AT32F435_37 # TODO 暂时不要编译i2c -DWITH_SMARTCARD
+    PLATFORM_DEFS = -DWITH_FLASH -DPM5 -DCHIP_AT32F435_37 -DWITH_CEP # TODO 暂时不要编译i2c -DWITH_SMARTCARD
     PLTNAME = Proxmark5
     PLATFORM_FPGA = GW1NR-LV2MG49GC6/i5
 else
@@ -229,14 +229,13 @@ ifneq (,$(findstring BWM,$(PLATFORM_EXTRAS_TMP)))
     PLATFORM_DEFS += -DWITH_BWM_FORWARD -DWITH_BWM_STATUS -DWITH_PM5_PWR_LED -DWITH_PM5_AUTOOFF -DWITH_BWM_LOWBATT_BEEP -DWITH_PM5_LOWBATT_SHUTDOWN
     PLATFORM_EXTRAS_TMP := $(strip $(filter-out BWM,$(PLATFORM_EXTRAS_TMP)))
 endif
-# Flipper Zero over the Type-C extended port (CEP). Independent of BWM - both
-# may be enabled together (unlike e.g. BTADDON/FPC_USART_DEV above).
-ifneq (,$(findstring CEP,$(PLATFORM_EXTRAS_TMP)))
+# CEP is on by default for PM5 (Flipper Zero USB link); SKIP_CEP disables it
+ifneq (,$(findstring SKIP_CEP,$(PLATFORM_EXTRAS_TMP)))
     ifneq ($(PLATFORM),PM5)
-        $(error PLATFORM_EXTRAS token CEP is only valid on PLATFORM=PM5)
+        $(error PLATFORM_EXTRAS token SKIP_CEP is only valid on PLATFORM=PM5)
     endif
-    PLATFORM_DEFS += -DWITH_CEP
-    PLATFORM_EXTRAS_TMP := $(strip $(filter-out CEP,$(PLATFORM_EXTRAS_TMP)))
+    PLATFORM_DEFS := $(filter-out -DWITH_CEP,$(PLATFORM_DEFS))
+    PLATFORM_EXTRAS_TMP := $(strip $(filter-out SKIP_CEP,$(PLATFORM_EXTRAS_TMP)))
 endif
 ifneq (,$(findstring NO_LOWBATT_SHUTDOWN,$(PLATFORM_EXTRAS_TMP)))
     ifneq ($(PLATFORM),PM5)
