@@ -9,6 +9,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added `hw bwm wifipower` - turn the BWM WiFi fully off, or set its modem power-save type (none/min/max), persisted on the module (@Msprg)
 - Added `hw bwm powersave` - show/set the BWM (ESP32) power-save switch: DFS, light sleep and slow advertising after 30 s, or the stock always-on behaviour, persisted on the module (@Msprg)
 - Added `hw powersave` - PM5 low-power idle, on by default: between commands the core drops to 48 MHz with the PLL off, the FPGA clock stopped and the CPU halted (WFI); USB now runs crystal-less off HICK. Ported from the Fantasi firmware (@Msprg)
+- Added `CMD_PM5_BWM_GET_BATTERY` on PM5 - compact structured battery/charger telemetry (SoC, voltage, current, remaining/full capacity, temp, health, charger fault/status) for clients that want the raw numbers instead of `hw status`'s free-text lines; `bwm_print_battery_status()` now sources its numbers from the same shared read so the two can't drift (@TomHarkness)
 - Fixed `lf t55xx dump -p` - reuses the password already confirmed by `lf t55xx detect`  (@iceman1001)
 - Fixed `lf t55xx p1detect`, `lf search` - T5577 clones with a non-Atmel manufacturer byte now recognised (@iceman1001)
 - Added Flipper Zero link on PM5's Type-C extended port (handshake + NG frames over SPI) - on by default, `PLATFORM_EXTRAS=SKIP_CEP` to disable, independent so it can run alongside BWM; RF-dependent functionality still needs the FPGA side, tracked in #3667 (@TomHarkness)

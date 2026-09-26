@@ -195,35 +195,31 @@ void bwm_print_battery_status(void) {
         }
     }
 
-    // --- fuel gauge (BQ27427) ---
-    uint16_t soc = 0, mv = 0, rem = 0, temp = 0, raw_i = 0;
-    if (bwm_gauge_read16(BWM_GAUGE_SOC, &soc) && bwm_gauge_read16(BWM_GAUGE_VOLTAGE, &mv)) {
-        bwm_gauge_read16(BWM_GAUGE_REMCAP, &rem);
-        bwm_gauge_read16(BWM_GAUGE_TEMP, &temp);
-        bwm_gauge_read16(BWM_GAUGE_CURRENT, &raw_i);
-
-        int16_t cur = (int16_t)raw_i;      // +charge / -discharge (verify polarity on hw)
-        int tempC10 = (int)temp - 2732;    // 0.1 K -> 0.1 C
-        int tabs = (tempC10 < 0) ? -tempC10 : tempC10;
-
-        Dbprintf("  Battery SoC......... %u %%", soc);
-        Dbprintf("  Battery voltage..... %u mV", mv);
-        Dbprintf("  Battery current..... %d mA %s", cur,
-                 (cur > 5)  ? _GREEN_("(charging)") :
-                 (cur < -5) ? _YELLOW_("(discharging)") : "(idle)");
-        Dbprintf("  Remaining capacity.. %u mAh", rem);
+    // --- fuel gauge (BQ27427) --- shared with bwm_read_battery_info() below,
+    // so the numbers hw status prints and CMD_PM5_BWM_GET_BATTERY returns
+    // can't drift apart.
+    bwm_battery_info_t info;
+    bwm_read_battery_info(&info);
+    if (info.gauge_ok) {
+        Dbprintf("  Battery SoC......... %u %%", info.soc_pct);
+        Dbprintf("  Battery voltage..... %u mV", info.voltage_mv);
+        Dbprintf("  Battery current..... %d mA %s", info.current_ma,
+                 (info.current_ma > 5)  ? _GREEN_("(charging)") :
+                 (info.current_ma < -5) ? _YELLOW_("(discharging)") : "(idle)");
+        Dbprintf("  Remaining capacity.. %u mAh", info.remaining_mah);
         // Measured drain / projected runtime: when running on battery the gauge
         // Current is negative (discharging); |cur| is the real system draw, so
         // remaining runtime ~= RemainingCapacity / draw. Only meaningful while
         // discharging - on charge or idle there is no drain figure to report.
         // (Projection is only as good as RemCap - provision Design Capacity first.)
-        if (cur < -5) {
-            uint16_t draw = (uint16_t)(-cur);            // mA drawn from the battery
-            uint32_t mins = ((uint32_t)rem * 60) / draw; // RemCap/draw -> hours, *60 -> mins
+        if (info.current_ma < -5) {
+            uint16_t draw = (uint16_t)(-info.current_ma);              // mA drawn from the battery
+            uint32_t mins = ((uint32_t)info.remaining_mah * 60) / draw; // RemCap/draw -> hours, *60 -> mins
             Dbprintf("  Battery drain....... %u mA (approx %u h %u min left)",
                      draw, (unsigned)(mins / 60), (unsigned)(mins % 60));
         }
-        Dbprintf("  Temp (gauge)........ %d.%d C", tempC10 / 10, tabs % 10);
+        int tabs = (info.temp_c10 < 0) ? -info.temp_c10 : info.temp_c10;
+        Dbprintf("  Temp (gauge)........ %d.%d C", info.temp_c10 / 10, tabs % 10);
 
         // Battery health: FullChargeCapacity (0x0E) vs the gauge's programmed Design
         // Capacity. FCC is the gauge's learned present full capacity; health = FCC/design.
@@ -231,18 +227,64 @@ void bwm_print_battery_status(void) {
         // (a full charge/discharge). Before that it is an unconverged estimate. If Design
         // Capacity was never provisioned (hw bwm setcap), the ratio is against the gauge
         // default, not the fitted cell - so it can read wildly wrong.
-        uint16_t fcc = 0, design = 0;
-        if (bwm_gauge_read16(BWM_GAUGE_FCC, &fcc) && fcc > 0) {
-            if (bq_read_design_cap(&design) == false || design == 0) {
-                design = BWM_DEFAULT_DESIGN_CAP_MAH;   // fall back to the fitted-cell rating
-            }
-            unsigned health = (unsigned)(((uint32_t)fcc * 100) / design);
-            Dbprintf("  Full charge cap..... %u mAh (design %u)", fcc, design);
-            Dbprintf("  Battery health...... %u", health);
+        if (info.full_charge_mah > 0) {
+            Dbprintf("  Full charge cap..... %u mAh (design %u)", info.full_charge_mah, info.design_cap_mah);
+            Dbprintf("  Battery health...... %u", info.health_pct);
         }
     } else {
         Dbprintf("  Fuel gauge.......... " _YELLOW_("not responding") " (BQ27427 absent or I2C down)");
     }
+}
+
+// See bwm_charger.h. Shares the fuel-gauge reads with bwm_print_battery_status()
+// above; only adds two small charger-side reads (fault, charge status) that
+// print doesn't already source from elsewhere.
+bool bwm_read_battery_info(bwm_battery_info_t *out) {
+    bwm_battery_info_t info = {0};
+    info.bwm_present = g_bwm_present;
+
+    if (g_bwm_present) {
+        StartTicks();
+        I2C_init(true);
+        WaitMS(2);   // let the bus settle
+
+        // Charger fault (REG09): read-on-clear, latched history on the 1st read,
+        // live state on the 2nd - see bwm_print_battery_status()'s fuller comment.
+        uint8_t f1 = 0, fault = 0, sysstat = 0;
+        I2C_BufferReadRaw(&f1, 1, BWM_CHG_REG_FAULT, BWM_CHG_ADDR);
+        if (I2C_BufferReadRaw(&fault, 1, BWM_CHG_REG_FAULT, BWM_CHG_ADDR) > 0) {
+            info.charger_fault = fault & 0x3F;
+        }
+        if (I2C_BufferReadRaw(&sysstat, 1, BWM_CHG_REG_SYSSTAT, BWM_CHG_ADDR) > 0) {
+            info.charge_status = (sysstat >> 3) & 0x03;
+        }
+
+        uint16_t soc = 0, mv = 0, rem = 0, temp = 0, raw_i = 0;
+        info.gauge_ok = bwm_gauge_read16(BWM_GAUGE_SOC, &soc) && bwm_gauge_read16(BWM_GAUGE_VOLTAGE, &mv);
+        if (info.gauge_ok) {
+            bwm_gauge_read16(BWM_GAUGE_REMCAP, &rem);
+            bwm_gauge_read16(BWM_GAUGE_TEMP, &temp);
+            bwm_gauge_read16(BWM_GAUGE_CURRENT, &raw_i);
+            info.soc_pct = soc;
+            info.voltage_mv = mv;
+            info.current_ma = (int16_t)raw_i;
+            info.remaining_mah = rem;
+            info.temp_c10 = (int16_t)((int)temp - 2732);   // 0.1 K -> 0.1 C
+
+            uint16_t fcc = 0, design = 0;
+            if (bwm_gauge_read16(BWM_GAUGE_FCC, &fcc) && fcc > 0) {
+                if (bq_read_design_cap(&design) == false || design == 0) {
+                    design = BWM_DEFAULT_DESIGN_CAP_MAH;
+                }
+                info.full_charge_mah = fcc;
+                info.design_cap_mah = design;
+                info.health_pct = (uint8_t)(((uint32_t)fcc * 100) / design);
+            }
+        }
+    }
+
+    *out = info;
+    return g_bwm_present;
 }
 
 // --- BQ27427 provisioning: set Design Capacity for the fitted cell -------------

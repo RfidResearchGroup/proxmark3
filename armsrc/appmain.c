@@ -4614,6 +4614,12 @@ static void PacketReceived(PacketCommandNG *packet) {
 #endif
             break;
         }
+        case CMD_PM5_BWM_GET_BATTERY: {
+            bwm_battery_info_t info;
+            bwm_read_battery_info(&info);
+            reply_ng(CMD_PM5_BWM_GET_BATTERY, PM3_SUCCESS, (uint8_t *)&info, sizeof(info));
+            break;
+        }
 #endif // WITH_BWM_STATUS
         case CMD_PM5_POWERSAVE: {
             // Payload: 1 byte, non-zero = enable (the default), zero = disable.
