@@ -27,6 +27,9 @@
 #include "bwm_forward.h"   // bwm_fwd_negotiate_baud()
 #include "bwm_wifi.h"
 #endif
+#ifdef WITH_CEP
+#include "pm5_cep.h"
+#endif
 #include "pm3_cmd.h"
 #include "proxmark3_arm.h"
 #include "dbprint.h"
@@ -606,6 +609,9 @@ static void SendStatus(uint32_t wait) {
         }
     }
 #endif
+#ifdef WITH_CEP
+    Dbprintf("  CEP (Flipper) link.. " _YELLOW_("%s"), cep_is_active() ? "attached" : "not attached");
+#endif
     printConnSpeed(wait);
     DbpString(_CYAN_("Various"));
 
@@ -804,6 +810,11 @@ static void SendCapabilities(void) {
     capabilities.compiled_with_bwm = true;
 #else
     capabilities.compiled_with_bwm = false;
+#endif
+#ifdef WITH_CEP
+    capabilities.compiled_with_cep = true;
+#else
+    capabilities.compiled_with_cep = false;
 #endif
 #ifdef WITH_EM4x50
     capabilities.compiled_with_em4x50 = true;
@@ -4383,6 +4394,10 @@ void __attribute__((noreturn)) AppMain(void) {
     bwm_charger_kick();
 #endif
 
+#ifdef WITH_CEP
+    cep_init();              // USART1/SPI1 + CC-controller I2C bring-up; AFTER usb_enable()
+#endif
+
     for (;;) {
         WDT_HIT();
 
@@ -4394,6 +4409,9 @@ void __attribute__((noreturn)) AppMain(void) {
 #endif
 #ifdef WITH_BWM_LOWBATT_BEEP
         bwm_lowbatt_check();
+#endif
+#ifdef WITH_CEP
+        cep_attach_poll();
 #endif
 
         if (*_stack_start != 0xdeadbeef) {

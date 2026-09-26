@@ -124,6 +124,12 @@ else
     SRC_BWM =
 endif
 
+ifneq (,$(findstring WITH_CEP,$(APP_CFLAGS)))
+    SRC_CEP = pm5_cep.c
+else
+    SRC_CEP =
+endif
+
 # BWM charger (AW32001) + fuel gauge (BQ27427), incl. the optional low-batt beep
 ifneq (,$(findstring WITH_BWM_STATUS,$(APP_CFLAGS))$(findstring WITH_BWM_CHARGERKICK,$(APP_CFLAGS)))
     SRC_BWM_CHARGER = bwm_charger.c
@@ -202,6 +208,7 @@ THUMBSRC = start.c \
     $(SRC_SMARTCARD) \
     $(SRC_FPC) \
     $(SRC_BWM) \
+    $(SRC_CEP) \
     $(SRC_BWM_CHARGER) \
     $(SRC_BUZZER) \
     $(SRC_RGB_INDICATOR) \
