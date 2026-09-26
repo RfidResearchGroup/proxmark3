@@ -66,6 +66,8 @@
 #define FELICA_OPTIONAL_CMD_RETRIES 3U
 // Per FeliCa spec, Polling max response at 16 timeslots is ~25ms; keep extra margin.
 #define FELICA_POLLING_TIMEOUT_MS 100U
+#define FELICA_READER_SYSTEM_POLL_TIMEOUT_MS 1000U
+#define FELICA_READER_SYSTEM_POLL_ATTEMPTS 4U
 #define FELICA_SEAC_POLL_TIMEOUT_MS 200U
 #define FELICA_SEAC_POLL_RETRY_COUNT 5U
 #define FELICA_SEAC_POLL_FRAME_LEN 6U
@@ -2685,27 +2687,78 @@ int read_felica_uid(bool loop, bool verbose) {
     return res;
 }
 
+static int read_felica_system(uint16_t system_code, bool loop, bool verbose) {
+    uint8_t idm[8];
+    uint8_t flags = FELICA_CONNECT | FELICA_CLEARTRACE | FELICA_NO_SELECT |
+                    FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
+    int res = PM3_ETIMEOUT;
+
+    for (uint32_t attempt = 0; loop || attempt < FELICA_READER_SYSTEM_POLL_ATTEMPTS; attempt++) {
+        int status = send_polling(flags, system_code, FELICA_POLLING_REQUEST_SYSTEM_CODE,
+                                  FELICA_READER_SYSTEM_POLL_TIMEOUT_MS, 0, false,
+                                  idm, NULL, NULL);
+        flags &= ~(FELICA_CONNECT | FELICA_CLEARTRACE);
+
+        if (status == PM3_SUCCESS) {
+            if (verbose) {
+                PrintAndLogEx(SUCCESS, "IDm: " _GREEN_("%s"), sprint_hex_inrow(idm, sizeof(idm)));
+            }
+            res = PM3_SUCCESS;
+            if (loop == false) {
+                break;
+            }
+        }
+        if (kbd_enter_pressed()) {
+            if (res != PM3_SUCCESS) {
+                res = PM3_EOPABORTED;
+            }
+            break;
+        }
+    }
+
+    DropField();
+    return res;
+}
+
 static int CmdHFFelicaReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf felica reader",
                   "Act as a ISO 18092 / FeliCa reader. Look for FeliCa tags until Enter or the pm3 button is pressed",
-                  "hf felica reader -@    -> Continuous mode");
+                  "hf felica reader -@\n"
+                  "hf felica reader --sys 0003 -@    -> Continuous polling for system 0003");
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("s", "silent", "silent (no messages)"),
         arg_lit0("@", NULL, "optional - continuous reader mode"),
+        arg_str0(NULL, "sys", "<hex>", "poll a specific 2-byte system code (4 attempts, or continuous with -@)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool verbose = (arg_get_lit(ctx, 1) == false);
     bool cm = arg_get_lit(ctx, 2);
+    struct arg_str *system_arg = arg_get_str(ctx, 3);
+    bool has_system = system_arg->count > 0;
+    uint8_t system_bytes[2] = {0};
+    int system_len = 0;
+    int parse_status = has_system ? CLIParamHexToBuf(system_arg, system_bytes, sizeof(system_bytes), &system_len) : PM3_SUCCESS;
+    bool invalid_system = parse_status != PM3_SUCCESS ||
+                          (has_system && (strlen(system_arg->sval[0]) != 4 || system_len != 2));
     CLIParserFree(ctx);
+
+    if (invalid_system) {
+        PrintAndLogEx(ERR, "System code must be exactly 4 hex digits");
+        return PM3_EINVARG;
+    }
 
     if (cm) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
 
+    if (has_system) {
+        uint16_t system_code = felica_system_code_from_bytes(system_bytes);
+        return read_felica_system(system_code, cm, verbose);
+    }
     return read_felica_uid(cm, verbose);
 }
 
