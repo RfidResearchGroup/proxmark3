@@ -258,9 +258,7 @@ ifeq ($(SKIP_CEP),1)
     endif
 else
     ifeq ($(PLATFORM),PM5)
-# Temporary measure as CEP seems to break things...
-#        PLATFORM_DEFS += -DWITH_CEP
-        $(warning Note: CEP is temporarely deactivated, until bugfix)
+        PLATFORM_DEFS += -DWITH_CEP
     endif
 endif
 
