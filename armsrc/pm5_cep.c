@@ -158,6 +158,11 @@ static void cep_spi_init(void) {
 void cep_init(void) {
     cep_usart_init();
     cep_spi_init();
+    // I2C_init(true) needs the ticks timer running (see cep_attach_poll()'s
+    // comment) - nothing in AppMain()'s boot sequence has started it yet at
+    // this point, so start it ourselves, matching bwm_charger_kick()'s
+    // identical boot-time I2C bring-up in armsrc/bwm_charger.c.
+    StartTicks();
     I2C_init(true);
 }
 
@@ -232,6 +237,20 @@ void cep_attach_poll(void) {
         return;
     }
     last_tick = GetTickCount();
+
+    // The shared ticks timer (GetTicks()/WaitUS()/WaitMS(), which
+    // I2C_BufferReadRaw() spins on) is routinely stopped by LF/HF protocol
+    // code once it's done with precision timing (see e.g. em4x50.c,
+    // legicrf.c, hitag_common.c's StopTicks() calls). Landing here with the
+    // timer stopped turns WaitTicks()'s `while (GetTicks() < target)` into an
+    // infinite loop - a full, unrecoverable main-loop hang (this was the
+    // "hf search hangs the device" regression: it cycles through several
+    // such probes, giving this 50ms poll many chances to land in that
+    // window). Mirror bwm_lowbatt_poll()'s pattern (armsrc/bwm_charger.c)
+    // and (re)start the timer ourselves every time, exactly like every other
+    // periodic main-loop I2C poller in this codebase already does.
+    StartTicks();
+    I2C_init(true);
 
     uint8_t cc_ctrl_data;
     bool ret = I2C_BufferReadRaw(&cc_ctrl_data, 1, CEP_CC_STATUS_REG, CEP_CC_CONTROLLER_ADDR << 1);
