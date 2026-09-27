@@ -29,7 +29,7 @@
 #include "iso18.h"
 
 #define AddCrc(data, len) compute_crc(CRC_FELICA, (data), (len), (data)+(len)+1, (data)+(len))
-static uint8_t felica_select_card(felica_card_select_t *card);
+static uint8_t felica_select_card(felica_card_select_t *card, uint16_t system_code, uint8_t request_code);
 
 //structure to hold outgoing NFC frame
 static uint8_t frameSpace[FELICA_MAX_RF_FRAME_SIZE];
@@ -244,15 +244,15 @@ void Process18092Byte(felica_frame_t *f, uint8_t bt, uint32_t byte_start_time) {
  * It expects 0-1 cards in the device's range.
  * return 0 if selection was successful
  */
-static uint8_t felica_select_card(felica_card_select_t *card) {
+static uint8_t felica_select_card(felica_card_select_t *card, uint16_t system_code, uint8_t request_code) {
 
     // POLL command
     // 0xB2 0x4B = sync code
     // 0x06 = len
     // 0x00 = rfu
-    // 0xff = system code service
-    // 0xff = system code service
-    // 0x00  = request code
+    // system code service (high byte)
+    // system code service (low byte)
+    // request code
     // b7    = automatic switching of data rate
     // b6-b2 = reserved
     // b1    = fc/32 (414kbps)
@@ -260,6 +260,9 @@ static uint8_t felica_select_card(felica_card_select_t *card) {
     // 0x00 = timeslot
     // 0x09 0x21 = crc
     uint8_t poll[10] = {0xb2, 0x4d, 0x06, FELICA_POLLING_REQ, 0xFF, 0xFF, 0x00, 0x00, 0x09, 0x21};
+    poll[4] = (uint8_t)(system_code >> 8);
+    poll[5] = (uint8_t)system_code;
+    poll[6] = request_code;
 
     // Number of time slots offered to the card(s), the FeliCa polling TSN field.
     // Slot 0 only is what a single card wants, but when several cards share the
@@ -692,7 +695,13 @@ void felica_sendraw(const PacketCommandNG *c) {
 
     bool do_connect = ((param & FELICA_CONNECT) == FELICA_CONNECT);
     bool no_disconnect = ((param & FELICA_NO_DISCONNECT) == FELICA_NO_DISCONNECT);
+    bool system_select = ((param & FELICA_SYSTEM_SELECT) == FELICA_SYSTEM_SELECT);
     bool replied = false;
+
+    if (system_select && (len != 2 || !do_connect || (param & (FELICA_RAW | FELICA_NO_SELECT)))) {
+        reply_ng(CMD_HF_FELICA_COMMAND, PM3_EINVARG, NULL, 0);
+        return;
+    }
 
     // Signal probe. The FPGA hands us envelope peak-to-peak per 8 bit periods
     // instead of demodulated bits, so nothing will decode while this is on.
@@ -708,16 +717,17 @@ void felica_sendraw(const PacketCommandNG *c) {
 
     // Preserve compatibility with existing commands that do not send CONNECT:
     // set up reader path when starting from field-off state.
-    if (do_connect || felica_field_is_active() == false) {
+    if (!felica_field_is_active() || (do_connect && !system_select)) {
         iso18092_setup(FPGA_HF_ISO18092_FLAG_READER | FPGA_HF_ISO18092_FLAG_NOMOD);
     }
 
     if (do_connect && ((param & FELICA_NO_SELECT) != FELICA_NO_SELECT)) {
 
         // notify client selecting status.
-        // if failed selecting, turn off antenna and quit.
+        // on failed selection, retain the field only for system-specific polling.
         felica_card_select_t card = {0};
-        uint8_t select_result = felica_select_card(&card);
+        uint16_t system_code = system_select ? ((uint16_t)payload[0] << 8) | payload[1] : 0xFFFF;
+        uint8_t select_result = felica_select_card(&card, system_code, system_select ? 0x01 : 0x00);
 
         int select_status = PM3_SUCCESS;
         switch (select_result) {
@@ -744,7 +754,9 @@ void felica_sendraw(const PacketCommandNG *c) {
         reply_ng(CMD_HF_FELICA_COMMAND, select_status, (uint8_t *)&card, sizeof(felica_card_select_t));
         replied = true;
         if (select_status != PM3_SUCCESS) {
-            felica_reset_frame_mode();
+            if (!system_select || !no_disconnect) {
+                felica_reset_frame_mode();
+            }
             return;
         }
     }

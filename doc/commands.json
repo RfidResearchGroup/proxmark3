@@ -3208,15 +3208,17 @@
             "command": "hf felica reader",
             "description": "Act as a ISO 18092 / FeliCa reader. Look for FeliCa tags until Enter or the pm3 button is pressed",
             "notes": [
-                "hf felica reader -@ -> Continuous mode"
+                "hf felica reader -@",
+                "hf felica reader --sys 0003 -@ -> Continuous polling for system 0003"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-s, --silent silent (no messages)",
-                "-@ optional - continuous reader mode"
+                "-@ optional - continuous reader mode",
+                "--sys <hex> poll a specific 2-byte system code (4 attempts, or continuous with -@)"
             ],
-            "usage": "hf felica reader [-hs@]"
+            "usage": "hf felica reader [-hs@] [--sys <hex>]"
         },
         "hf felica resetmode": {
             "command": "hf felica resetmode",
@@ -16784,6 +16786,6 @@
     "metadata": {
         "commands_extracted": 935,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-09-24T08:32:19+00:00"
+        "extracted_on": "2026-09-26T16:59:35+00:00"
     }
 }
