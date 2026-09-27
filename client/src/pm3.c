@@ -27,6 +27,7 @@
 #include "util_posix.h"
 #include "comms.h"
 #include "preferences.h"
+#include "flash.h"
 
 pm3_device_t *pm3_open(const char *port) {
     pm3_init();
@@ -91,4 +92,25 @@ const char *pm3_grabbed_output_get(pm3_device_t *dev) {
 
 pm3_device_t *pm3_get_current_dev(void) {
     return g_session.current_device;
+}
+
+int pm3_flash(const char *port, const char *const *images, int nimages,
+              bool unlock_bootloader, bool force) {
+    if ((port == NULL) || (images == NULL) || (nimages < 1) || (nimages > FLASH_MAX_FILES)) {
+        return PM3_EINVARG;
+    }
+
+    const char *files[FLASH_MAX_FILES] = {0};
+    for (int i = 0; i < nimages; ++i) {
+        if (images[i] == NULL) {
+            return PM3_EINVARG;
+        }
+        files[i] = images[i];
+    }
+
+    // Don't send CMD_QUIT_SESSION — we're about to reset into bootrom.
+    if (g_session.pm3_present) {
+        CloseProxmark(g_session.current_device);
+    }
+    return flash_pm3((char *)port, (uint8_t)nimages, files, unlock_bootloader, force);
 }

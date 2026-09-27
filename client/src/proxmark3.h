@@ -60,6 +60,7 @@ extern "C" {
 #endif
 
 int push_cmdscriptfile(char *path, bool stayafter);
+int flash_pm3(char *serial_port_name, uint8_t num_files, const char *filenames[], bool can_write_bl, bool force);
 const char *get_my_executable_path(void);
 const char *get_my_executable_directory(void);
 const char *get_my_user_directory(void);
