@@ -119,7 +119,7 @@ void mbedtls_ctr_drbg_set_reseed_interval(mbedtls_ctr_drbg_context *ctx,
 static int block_cipher_df(unsigned char *output,
                            const unsigned char *data, size_t data_len) {
     unsigned char buf[MBEDTLS_CTR_DRBG_MAX_SEED_INPUT +
-                      MBEDTLS_CTR_DRBG_BLOCKSIZE + 16];
+                                                      MBEDTLS_CTR_DRBG_BLOCKSIZE + 16];
     unsigned char tmp[MBEDTLS_CTR_DRBG_SEEDLEN];
     unsigned char key[MBEDTLS_CTR_DRBG_KEYSIZE];
     unsigned char chain[MBEDTLS_CTR_DRBG_BLOCKSIZE];

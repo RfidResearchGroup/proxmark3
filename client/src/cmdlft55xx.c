@@ -820,7 +820,7 @@ int T55xxReadBlockEx(uint8_t block, bool page1, bool usepwd, uint8_t override, u
         // override = 1 (override and display)
         // override = 2 (override and no display)
         if (override == 0) {
-            // A live detect (lf t55xx detect -p) that recovered this password already confirmed the PWD bit is set. 
+            // A live detect (lf t55xx detect -p) that recovered this password already confirmed the PWD bit is set.
             bool detect_confirmed_pwd = (config.pwd_known && config.usepwd && config.pwd == password);
 
             if (detect_confirmed_pwd == false) {
@@ -873,9 +873,9 @@ static int CmdT55xxReadBlock(const char *Cmd) {
                   _CYAN_("Use of read with password on a tag not configured") "\n"
                   _CYAN_("for a password can damage the tag") "\n"
                   _RED_("           * * * * * * * * * *"),
-           "lf t55xx read -b 0                   --> read data from block 0\n"
-           "lf t55xx read -b 0 --pwd 01020304    --> read data from block 0, pwd 01020304\n"
-           "lf t55xx read -b 0 --pwd 01020304 -o --> read data from block 0, pwd 01020304, override\n"
+                  "lf t55xx read -b 0                   --> read data from block 0\n"
+                  "lf t55xx read -b 0 --pwd 01020304    --> read data from block 0, pwd 01020304\n"
+                  "lf t55xx read -b 0 --pwd 01020304 -o --> read data from block 0, pwd 01020304, override\n"
                  );
 
     // 1 (help) + 4(four user specified params) + (5 T55XX_DLMODE_SINGLE)
@@ -5105,9 +5105,9 @@ out:
     return PM3_SUCCESS;
 }
 
-// Page-1 trace data opens with allocation class ACL = 0xE0, then a manufacturer code. 
+// Page-1 trace data opens with allocation class ACL = 0xE0, then a manufacturer code.
 // Genuine Atmel silicon carries manufacturer 0x15 / 0x39 (the atmel / silicon preambles).
-// Cloned T5577s keep the 0xE0 ACL but use another manufacturer byte, 
+// Cloned T5577s keep the 0xE0 ACL but use another manufacturer byte,
 // also accept a bare 8-bit ACL match
 static bool t55xx_trace_preamble_match(void) {
     uint8_t preamble_atmel[]   = {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1};

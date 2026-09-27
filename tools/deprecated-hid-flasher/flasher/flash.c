@@ -71,7 +71,7 @@ static int build_segs_from_phdrs(flash_file_t *ctx, FILE *fd, Elf32_Phdr *phdrs,
                 offset);
         if (filesz != memsz) {
             fprintf(stderr, "Error: PHDR file size does not equal memory size\n"
-                            "(DATA+BSS PHDRs do not make sense on ROM platforms!)\n");
+                    "(DATA+BSS PHDRs do not make sense on ROM platforms!)\n");
             return -1;
         }
         if (paddr < last_end) {

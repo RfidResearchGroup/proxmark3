@@ -1020,7 +1020,7 @@ void MifareAcquireNonces(const mf_acquire_nonces_t *payload) {
             field_off = true;
             break;
         }
-        
+
         WDT_HIT();
 
         if (!have_uid) { // need a full select cycle to get the uid first

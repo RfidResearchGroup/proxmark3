@@ -1789,7 +1789,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
     }
 
 
-    // AID 000000 is the PICC level. 
+    // AID 000000 is the PICC level.
     // GetApplicationIDs never lists it, so it has to be seeded manually
     memset(app_ids, 0x00, 3);
     app_ids_len = 3;

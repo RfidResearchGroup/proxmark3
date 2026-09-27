@@ -327,9 +327,9 @@ static int CmdBwmCharge(const char *Cmd) {
                       "Enable or disable BWM battery charging by clearing/setting the\n"
                       "AW32001E charge-enable bit (CEB, REG01[3]). PM5 only.\n"
                       _RED_("One-shot:") " the charger watchdog reverts this after ~160 s unless\n"
-              "serviced, so charging may stop on its own. Use to nudge a top-up.",
-              "hw bwm charge off    --> disable charging\n"
-              "hw bwm charge on     --> enable charging");
+                      "serviced, so charging may stop on its own. Use to nudge a top-up.",
+                      "hw bwm charge off    --> disable charging\n"
+                      "hw bwm charge on     --> enable charging");
         void *argtable[] = {
             arg_param_begin,
             arg_param_end
@@ -786,12 +786,18 @@ static int bwm_setting_txn(uint16_t cmd, uint8_t action, uint8_t value, bool has
 
 static const char *bwm_wifi_state_name(uint8_t state) {
     switch (state) {
-        case 0:  return "disconnected";
-        case 1:  return "connecting";
-        case 2:  return "connected";
-        case 3:  return "reconnecting";
-        case 4:  return "connect task stopped";
-        default: return "unknown state";
+        case 0:
+            return "disconnected";
+        case 1:
+            return "connecting";
+        case 2:
+            return "connected";
+        case 3:
+            return "reconnecting";
+        case 4:
+            return "connect task stopped";
+        default:
+            return "unknown state";
     }
 }
 
@@ -839,10 +845,14 @@ static int CmdBwmPowerSave(const char *Cmd) {
 
 static const char *bwm_wifi_ps_name(uint8_t mode) {
     switch (mode) {
-        case BWM_WIFI_PS_NONE: return "none";
-        case BWM_WIFI_PS_MIN:  return "min";
-        case BWM_WIFI_PS_MAX:  return "max";
-        default:               return "?";
+        case BWM_WIFI_PS_NONE:
+            return "none";
+        case BWM_WIFI_PS_MIN:
+            return "min";
+        case BWM_WIFI_PS_MAX:
+            return "max";
+        default:
+            return "?";
     }
 }
 
@@ -911,10 +921,14 @@ static int CmdBwmWifiPower(const char *Cmd) {
 
 static const char *ble_state_str(uint8_t state) {
     switch (state) {
-        case 0: return "off";
-        case 1: return "advertising, no client";
-        case 2: return "client connected";
-        default: return "unknown";
+        case 0:
+            return "off";
+        case 1:
+            return "advertising, no client";
+        case 2:
+            return "client connected";
+        default:
+            return "unknown";
     }
 }
 

@@ -2733,11 +2733,11 @@ static void fm11_print_key_table(const uint64_t keys_found[FM11RF08S_SECTORS][2]
 static void fm11_build_filename(char *dst, size_t dst_len, const iso14a_card_select_t *card,  const char *base, const char *suffix) {
 
     snprintf(dst, dst_len, "hf-mf-%s-%s%s%s"
-            , sprint_hex_inrow(card->uid, card->uidlen)
-            , base
-            , (suffix != NULL && suffix[0] != '\0') ? "-" : ""
-            , (suffix != NULL) ? suffix : ""
-    );
+             , sprint_hex_inrow(card->uid, card->uidlen)
+             , base
+             , (suffix != NULL && suffix[0] != '\0') ? "-" : ""
+             , (suffix != NULL) ? suffix : ""
+            );
 }
 
 static int fm11_save_recovery_outputs(const iso14a_card_select_t *card, const iso14a_fm11rf08s_nonces_with_data_t *nonces,
@@ -2886,8 +2886,8 @@ static int fm11_select_mifare_classic(iso14a_card_select_t *card_out) {
     return PM3_SUCCESS;
 }
 
-int HFMFSENRecover(bool keep_nonces, bool no_oob, bool reader_mode, bool offline_only, 
-                   int max_online_candidates, uint8_t parity_mask, bool skip_default_key_check, 
+int HFMFSENRecover(bool keep_nonces, bool no_oob, bool reader_mode, bool offline_only,
+                   int max_online_candidates, uint8_t parity_mask, bool skip_default_key_check,
                    const sector_t *known_sectors, size_t known_sector_count, const char *suffix,
                    bool no_save) {
 
@@ -2952,10 +2952,10 @@ int HFMFSENRecover(bool keep_nonces, bool no_oob, bool reader_mode, bool offline
     uint32_t nonce_count = FM11RF08S_SECTORS * 2;
     char activity[80] = {0};
     snprintf(activity, sizeof(activity), "Loaded card UID %08X using %s key %s"
-            , uid
-            , collected_with_backdoor ? "backdoor" : "dictionary"
-            , sprint_hex_inrow(active_key, MIFARE_KEY_SIZE)
-    );
+             , uid
+             , collected_with_backdoor ? "backdoor" : "dictionary"
+             , sprint_hex_inrow(active_key, MIFARE_KEY_SIZE)
+            );
 
     fm11_sen_progress(nonce_count, activity, 0, 0);
 
@@ -3103,10 +3103,10 @@ int HFMFSENRecover(bool keep_nonces, bool no_oob, bool reader_mode, bool offline
             fm11_prioritize_0000_prefix(&candidates[sec][1]);
         }
         snprintf(activity, sizeof(activity), "Prepared sec %03u candidates (A %u / B %u)"
-                , real_sec
-                , candidates[sec][0].count
-                , candidates[sec][1].count
-        );
+                 , real_sec
+                 , candidates[sec][0].count
+                 , candidates[sec][1].count
+                );
         fm11_sen_progress(nonce_count, activity, candidates[sec][0].count + candidates[sec][1].count, 0);
     }
 
@@ -3288,7 +3288,7 @@ int HFMFSENRecover(bool keep_nonces, bool no_oob, bool reader_mode, bool offline
             goto out;
         }
 
-        // find the cheapest unfound, non-exhausted (sec, kt) pair 
+        // find the cheapest unfound, non-exhausted (sec, kt) pair
         uint8_t best_sec = 0xFF, best_kt = 0;
         uint32_t best_cost = UINT32_MAX;
         uint32_t best_count = UINT32_MAX;
