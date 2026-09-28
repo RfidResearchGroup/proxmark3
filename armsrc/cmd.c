@@ -217,13 +217,6 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
         return PM3_EIO;
     }
 
-    // Zero the payload only once a packet is really coming in: doing it for
-    // every idle poll of the main loop cost more than the rest of the loop.
-    // Both branches below leave the tail of data untouched -- an NG command
-    // fills only its own length, and an old style one only PM3_CMD_DATA_SIZE_OLD
-    // -- so what is not written has to start at zero.
-    memset(&rx->data, 0, sizeof(rx->data));
-
     rx->magic = rx_raw.pre.magic;
     rx->ng = rx_raw.pre.ng;
     rx->cmd = rx_raw.pre.cmd;
@@ -241,6 +234,30 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
             return PM3_EIO;
         }
 
+        // Get the postamble
+        bytes = read_ng((uint8_t *)&rx_raw.foopost, sizeof(PacketCommandNGPostamble));
+        if (bytes != sizeof(PacketCommandNGPostamble)) {
+            return PM3_EIO;
+        }
+
+        // Check CRC, accept MAGIC as placeholder
+        rx->crc = rx_raw.foopost.crc;
+        if (rx->crc != COMMANDNG_POSTAMBLE_MAGIC) {
+            uint8_t first, second;
+            compute_crc(CRC_14443_A, (uint8_t *)&rx_raw, sizeof(PacketCommandNGPreamble) + length, &first, &second);
+            if ((first << 8) + second != rx->crc) {
+                return PM3_EIO;
+            }
+        }
+
+        // Zero the payload only once a packet is really coming in, and only
+        // after all wire reads: CEP's SPI receiver has no FIFO, so a stall
+        // between reads (this memset touches up to PM3_CMD_DATA_SIZE bytes)
+        // loses data. Both branches leave the tail of data untouched -- an
+        // NG command fills only its own length, an old style one only
+        // PM3_CMD_DATA_SIZE_OLD -- so what is not written has to start zero.
+        memset(&rx->data, 0, sizeof(rx->data));
+
         if (rx->ng) {
             memcpy(rx->data.asBytes, rx_raw.data, length);
             rx->length = length;
@@ -256,22 +273,6 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
             rx->oldarg[2] = arg[2];
             memcpy(rx->data.asBytes, rx_raw.data + sizeof(arg), length - sizeof(arg));
             rx->length = length - sizeof(arg);
-        }
-
-        // Get the postamble
-        bytes = read_ng((uint8_t *)&rx_raw.foopost, sizeof(PacketCommandNGPostamble));
-        if (bytes != sizeof(PacketCommandNGPostamble)) {
-            return PM3_EIO;
-        }
-
-        // Check CRC, accept MAGIC as placeholder
-        rx->crc = rx_raw.foopost.crc;
-        if (rx->crc != COMMANDNG_POSTAMBLE_MAGIC) {
-            uint8_t first, second;
-            compute_crc(CRC_14443_A, (uint8_t *)&rx_raw, sizeof(PacketCommandNGPreamble) + length, &first, &second);
-            if ((first << 8) + second != rx->crc) {
-                return PM3_EIO;
-            }
         }
 
         g_reply_via_usb = usb;
@@ -297,6 +298,7 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
         rx->oldarg[1] = rx_old.arg[1];
         rx->oldarg[2] = rx_old.arg[2];
         rx->length = PM3_CMD_DATA_SIZE_OLD;
+        memset(&rx->data, 0, sizeof(rx->data));
         memcpy(&rx->data, &rx_old.d.asBytes, rx->length);
     }
     return PM3_SUCCESS;
