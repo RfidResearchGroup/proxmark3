@@ -12,6 +12,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed `lf t55xx p1detect`, `lf search` - T5577 clones with a non-Atmel manufacturer byte now recognised (@iceman1001)
 - Added Flipper Zero link on PM5's Type-C extended port (handshake + NG frames over SPI) - on by default, `PLATFORM_EXTRAS=SKIP_CEP` to disable, independent so it can run alongside BWM; RF-dependent functionality still needs the FPGA side, tracked in #3667 (@TomHarkness)
 - Fixed PM5 CEP hang - missing `StartTicks()` before `I2C_init()` in `cep_attach_poll()`/`cep_init()` could freeze the main loop, e.g. during `hf search` (@TomHarkness)
+- Fixed PM5 CEP reply corruption - `receive_ng()` zeroed the payload buffer between two time-critical SPI reads, losing bytes on CEP's FIFO-less receiver (@TomHarkness)
 - Fixed `hf mf autopwn` on FM11RF08S - static encrypted nonce is now detected via the backdoor key (@iceman1001)
 - Added `hf mfu view -v` - prints the UL-C 3DES key or UL-AES key stored in the dump file (@iceman1001)
 - Added `hf mf sen --ns` - skip writing the key and dump files (@iceman1001)
