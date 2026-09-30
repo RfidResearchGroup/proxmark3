@@ -193,6 +193,7 @@ int EmSend4bit(uint8_t resp);
 int EmSendCmd(uint8_t *resp, uint16_t respLen);
 int EmSendCmdEx(uint8_t *resp, uint16_t respLen, bool collision);
 int EmGetCmd(uint8_t *received, uint16_t received_max_len, uint16_t *len, uint8_t *par);
+int EmGetCmdTimeout(uint8_t *received, uint16_t received_max_len, uint16_t *len, uint8_t *par, uint32_t timeout_ms);
 int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par);
 int EmSendCmdParEx(uint8_t *resp, uint16_t respLen, uint8_t *par, bool collision);
 int EmSendPrecompiledCmd(tag_response_info_t *p_response);

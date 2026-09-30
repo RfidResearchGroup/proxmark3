@@ -2746,7 +2746,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
 #ifdef WITH_DESFIRE_SIM
         case CMD_HF_DESFIRE_SIMULATE: {
-            SimulateDesfireTag();
+            SimulateDesfireTag(packet);
             break;
         }
 #ifdef ENABLE_HFMFDESETEST

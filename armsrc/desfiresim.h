@@ -33,7 +33,7 @@
 // than hooking into SimulateIso14443aTag(), which is busy enough already.
 // Runs until the button is pressed or the client breaks the loop, and answers
 // on CMD_HF_DESFIRE_SIMULATE.
-void SimulateDesfireTag(void);
+void SimulateDesfireTag(PacketCommandNG *packet);
 
 // Drive the same simulation from the host, one operation per packet and no
 // RF: the command bytes arrive over USB and the answer goes back the same way.
