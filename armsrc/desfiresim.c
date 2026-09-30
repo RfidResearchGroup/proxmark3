@@ -144,6 +144,30 @@ typedef struct {
 static desfire_sim_state_t s_st;
 static bool s_ready = false;
 
+typedef struct {
+    bool enabled;
+    bool done;
+    desfire_sim_probe_cmd_t config;
+    desfire_sim_probe_result_t result;
+} desfire_sim_probe_state_t;
+
+static desfire_sim_probe_state_t g_desfire_probe;
+
+static void desfire_sim_probe_configure(const desfire_sim_probe_cmd_t *config) {
+    memset(&g_desfire_probe, 0, sizeof(g_desfire_probe));
+    if (config == NULL) {
+        return;
+    }
+    g_desfire_probe.enabled = true;
+    g_desfire_probe.config = *config;
+    g_desfire_probe.result.version = DESFIRE_SIM_PROBE_VERSION;
+    g_desfire_probe.result.outcome = DESFIRE_SIM_PROBE_DISCOVERY_FAILED;
+    memcpy(g_desfire_probe.result.aid, config->aid, sizeof(config->aid));
+    g_desfire_probe.result.keyno = config->keyno;
+    g_desfire_probe.result.algorithm = config->algorithm;
+    g_desfire_probe.result.candidate_id = config->candidate_id;
+}
+
 // ---------------------------------------------------------------- image walk
 
 static bool desfire_sim_load(desfire_sim_state_t *st) {
@@ -199,6 +223,30 @@ static int desfire_sim_find_app(const desfire_sim_state_t *st, uint32_t aid) {
         }
     }
     return -1;
+}
+
+static bool desfire_sim_probe_target_selected(const desfire_sim_state_t *st) {
+    return g_desfire_probe.enabled
+           && st->selected >= 0
+           && memcmp(st->apps[st->selected].aid, g_desfire_probe.config.aid, 3) == 0;
+}
+
+static bool desfire_sim_probe_discovery_selected(const desfire_sim_state_t *st) {
+    static const uint8_t empty_aid[3] = {0};
+    return g_desfire_probe.enabled
+           && st->selected >= 0
+           && memcmp(g_desfire_probe.config.discovery_aid, empty_aid, 3) != 0
+           && memcmp(st->apps[st->selected].aid, g_desfire_probe.config.discovery_aid, 3) == 0;
+}
+
+static void desfire_sim_probe_mark_selected(const desfire_sim_state_t *st) {
+    if (desfire_sim_probe_discovery_selected(st)) {
+        g_desfire_probe.result.flags |= DESFIRE_SIM_PROBE_DISCOVERY_SELECTED;
+    }
+    if (desfire_sim_probe_target_selected(st)) {
+        g_desfire_probe.result.flags |= DESFIRE_SIM_PROBE_SELECTED;
+        g_desfire_probe.result.outcome = DESFIRE_SIM_PROBE_NO_RESPONSE;
+    }
 }
 
 // --------------------------------------------------------------- the answers
@@ -453,6 +501,27 @@ static void desfire_sim_auth_clear(desfire_sim_state_t *st) {
 static uint16_t desfire_sim_auth_start(desfire_sim_state_t *st, uint8_t cmd,
                                        const uint8_t *in, uint16_t inlen, uint8_t *out) {
 
+    bool probe_target = desfire_sim_probe_target_selected(st);
+    if (probe_target) {
+        g_desfire_probe.result.flags |= DESFIRE_SIM_PROBE_AUTH_REQUEST;
+        g_desfire_probe.result.last_command = cmd;
+        g_desfire_probe.result.keyno = inlen ? (in[0] & 0x0F) : DESFIRE_SIM_PROBE_KEY_ANY;
+        if (g_desfire_probe.result.flags & DESFIRE_SIM_PROBE_CHALLENGE) {
+            g_desfire_probe.result.outcome = DESFIRE_SIM_PROBE_NO_RESPONSE;
+            g_desfire_probe.done = true; // never reuse the host nonce for a second target challenge
+            return 0;
+        }
+        if (inlen < 1
+                || (g_desfire_probe.config.keyno != DESFIRE_SIM_PROBE_KEY_ANY
+                    && g_desfire_probe.result.keyno != g_desfire_probe.config.keyno)
+                || cmd != MFDES_AUTHENTICATE_AES
+                || g_desfire_probe.config.algorithm != T_AES) {
+            g_desfire_probe.result.outcome = DESFIRE_SIM_PROBE_UNSUPPORTED;
+            g_desfire_probe.done = true;
+            return 0;
+        }
+    }
+
     if (inlen < 1) {
         return desfire_sim_status(out, MFDES_E_LENGTH);
     }
@@ -461,16 +530,32 @@ static uint16_t desfire_sim_auth_start(desfire_sim_state_t *st, uint8_t cmd,
     const desfire_em_app_t *app = &st->apps[st->selected];
 
     if (keyno >= (app->numkeysraw & 0x0F) && keyno != 0) {
+        if (probe_target) {
+            g_desfire_probe.result.outcome = DESFIRE_SIM_PROBE_UNSUPPORTED;
+            g_desfire_probe.done = true;
+            return 0;
+        }
         return desfire_sim_status(out, MFDES_E_NO_SUCH_KEY);
     }
 
     const desfire_em_key_t *k = desfire_sim_find_key(st, st->selected, keyno);
     if (k == NULL) {
+        if (probe_target) {
+            g_desfire_probe.result.outcome = DESFIRE_SIM_PROBE_UNSUPPORTED;
+            g_desfire_probe.done = true;
+            return 0;
+        }
         // we do not hold this key, so we cannot play the other half
         if (g_dbglevel >= DBG_EXTENDED) {
             Dbprintf("DESFire sim: no key %u for app index %d in the image", keyno, st->selected);
         }
         return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
+    }
+    if (g_desfire_probe.enabled && probe_target == false) {
+        g_desfire_probe.result.outcome = DESFIRE_SIM_PROBE_UNSUPPORTED;
+        g_desfire_probe.result.last_command = cmd;
+        g_desfire_probe.done = true; // no preliminary application may complete authentication
+        return 0;
     }
 
     // the command has to match the application's key algorithm
@@ -479,6 +564,11 @@ static uint16_t desfire_sim_auth_start(desfire_sim_state_t *st, uint8_t cmd,
                (cmd == MFDES_AUTHENTICATE_ISO && (algo == T_DES || algo == T_3DES || algo == T_3K3DES)) ||
                (cmd == MFDES_AUTHENTICATE_AES && algo == T_AES));
     if (ok == false) {
+        if (probe_target) {
+            g_desfire_probe.result.outcome = DESFIRE_SIM_PROBE_UNSUPPORTED;
+            g_desfire_probe.done = true;
+            return 0;
+        }
         return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
     }
 
@@ -486,7 +576,9 @@ static uint16_t desfire_sim_auth_start(desfire_sim_state_t *st, uint8_t cmd,
     desfire_sim_make_key(&st->authkey, algo, k->key);
 
     st->rndlen = desfire_sim_rndlen(algo);
-    if (desfire_sim_random(st->rndb, st->rndlen) == false) {
+    if (probe_target) {
+        memcpy(st->rndb, g_desfire_probe.config.rndb, st->rndlen);
+    } else if (desfire_sim_random(st->rndb, st->rndlen) == false) {
         memcpy(st->rndb, s_sim_rndb, st->rndlen);
     }
 
@@ -502,6 +594,12 @@ static uint16_t desfire_sim_auth_start(desfire_sim_state_t *st, uint8_t cmd,
 
     st->auth_cmd = cmd;
     st->auth_keynum = keyno;
+    if (probe_target) {
+        g_desfire_probe.result.flags |= DESFIRE_SIM_PROBE_CHALLENGE;
+        g_desfire_probe.result.outcome = DESFIRE_SIM_PROBE_NO_RESPONSE;
+        g_desfire_probe.result.challenge_ms = GetTickCount();
+        memcpy(g_desfire_probe.result.rndb, st->rndb, st->rndlen);
+    }
     return desfire_sim_payload(out, MFDES_ADDITIONAL_FRAME, encrndb, st->rndlen);
 }
 
@@ -510,8 +608,21 @@ static uint16_t desfire_sim_auth_start(desfire_sim_state_t *st, uint8_t cmd,
 static uint16_t desfire_sim_auth_finish(desfire_sim_state_t *st, const uint8_t *in, uint16_t inlen, uint8_t *out) {
 
     uint16_t want = st->rndlen * 2;
+    bool probe_target = desfire_sim_probe_target_selected(st);
+    if (probe_target) {
+        g_desfire_probe.result.flags |= DESFIRE_SIM_PROBE_CONTINUATION;
+        g_desfire_probe.result.continuation_ms = GetTickCount();
+        g_desfire_probe.result.continuation_len = MIN(inlen, sizeof(g_desfire_probe.result.continuation));
+        memcpy(g_desfire_probe.result.continuation, in, g_desfire_probe.result.continuation_len);
+        g_desfire_probe.result.last_command = MFDES_ADDITIONAL_FRAME;
+    }
     if (inlen < want) {
         desfire_sim_auth_clear(st);
+        if (probe_target) {
+            g_desfire_probe.result.outcome = DESFIRE_SIM_PROBE_NO_MATCH;
+            g_desfire_probe.done = true;
+            return 0;
+        }
         return desfire_sim_status(out, MFDES_E_LENGTH);
     }
 
@@ -520,6 +631,9 @@ static uint16_t desfire_sim_auth_finish(desfire_sim_state_t *st, const uint8_t *
         desfire_sim_d40_receive(&st->authkey, in, both, want);
     } else {
         desfire_sim_crypt(&st->authkey, in, both, want, st->iv, false);
+    }
+    if (probe_target) {
+        g_desfire_probe.result.flags |= DESFIRE_SIM_PROBE_DECRYPTED;
     }
 
     const uint8_t *rnda = both;
@@ -532,7 +646,20 @@ static uint16_t desfire_sim_auth_finish(desfire_sim_state_t *st, const uint8_t *
     if (memcmp(expect, rndbprime, st->rndlen) != 0) {
         // the reader does not hold the key
         desfire_sim_auth_clear(st);
+        if (probe_target) {
+            g_desfire_probe.result.outcome = DESFIRE_SIM_PROBE_NO_MATCH;
+            g_desfire_probe.done = true;
+            return 0;
+        }
         return desfire_sim_status(out, MFDES_E_AUTHENTICATION_ERROR);
+    }
+
+    if (probe_target) {
+        g_desfire_probe.result.flags |= DESFIRE_SIM_PROBE_RNDB_MATCH;
+        g_desfire_probe.result.outcome = DESFIRE_SIM_PROBE_MATCH;
+        g_desfire_probe.done = true;
+        desfire_sim_auth_clear(st);
+        return 0;              // no final E(RndA') goes over the air
     }
 
     uint8_t rndaprime[16] = {0};
@@ -2137,6 +2264,17 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
 
     const desfire_em_hdr_t *hdr = st->hdr;
 
+    if (g_desfire_probe.enabled
+            && desfire_sim_probe_target_selected(st)
+            && (cmd == MFDES_AUTHENTICATE_EV2F || cmd == MFDES_AUTHENTICATE_EV2NF)) {
+        g_desfire_probe.result.flags |= DESFIRE_SIM_PROBE_AUTH_REQUEST;
+        g_desfire_probe.result.last_command = cmd;
+        g_desfire_probe.result.keyno = inlen ? (in[0] & 0x0F) : DESFIRE_SIM_PROBE_KEY_ANY;
+        g_desfire_probe.result.outcome = DESFIRE_SIM_PROBE_UNSUPPORTED;
+        g_desfire_probe.done = true;
+        return 0;
+    }
+
     // an additional frame only means anything while a command is being chained,
     // a write is being gathered, or an authentication is half done
     if (cmd == MFDES_ADDITIONAL_FRAME && st->chain_cmd == 0 && st->auth_cmd == 0 && st->wcmd == 0) {
@@ -2326,6 +2464,7 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
             }
 
             st->selected = idx;
+            desfire_sim_probe_mark_selected(st);
 
             // "each SelectApplication command invalidates the current
             // authentication status" -- M134034 9.4.5
@@ -2601,7 +2740,14 @@ static uint16_t desfire_sim_command(desfire_sim_state_t *st, uint8_t cmd, const 
             uint32_t off = in[1] | (in[2] << 8) | (in[3] << 16);
             uint32_t len = in[4] | (in[5] << 8) | (in[6] << 16);
 
-            return desfire_sim_read_start(st, f, off, len, 1, f->u.data.size, comm, out);
+            uint16_t response_len = desfire_sim_read_start(st, f, off, len, 1, f->u.data.size, comm, out);
+            if (desfire_sim_probe_discovery_selected(st)
+                    && in[0] == g_desfire_probe.config.discovery_file
+                    && response_len > 1
+                    && (out[0] == MFDES_S_OPERATION_OK || out[0] == MFDES_ADDITIONAL_FRAME)) {
+                g_desfire_probe.result.flags |= DESFIRE_SIM_PROBE_DISCOVERY_READ;
+            }
+            return response_len;
         }
 
         case MFDES_READ_RECORDS:
@@ -3543,6 +3689,7 @@ static uint16_t desfire_sim_iso7816(desfire_sim_state_t *st, const uint8_t *in, 
 
     // selecting an application this way ends the session like SelectApplication does
     st->selected = idx;
+    desfire_sim_probe_mark_selected(st);
     desfire_sim_auth_clear(st);
     return desfire_sim_sw(out, ISO7816_SW_OK);
 }
@@ -3655,7 +3802,23 @@ typedef enum {
 // enough for a 2 byte ATQA: 9 bytes of modulation per byte, plus framing
 #define ATQA_MODULATION_BUFFER_SIZE  32
 
-void SimulateDesfireTag(void) {
+void SimulateDesfireTag(PacketCommandNG *packet) {
+
+    const desfire_sim_probe_cmd_t *probe = NULL;
+    if (packet->length != 0) {
+        if (packet->ng == false || packet->length != sizeof(desfire_sim_probe_cmd_t)) {
+            reply_ng(CMD_HF_DESFIRE_SIMULATE, PM3_EINVARG, NULL, 0);
+            return;
+        }
+        probe = (const desfire_sim_probe_cmd_t *)packet->data.asBytes;
+        if (probe->version != DESFIRE_SIM_PROBE_VERSION
+                || probe->algorithm != T_AES
+                || (probe->keyno >= DESFIRE_MAX_KEY_COUNT && probe->keyno != DESFIRE_SIM_PROBE_KEY_ANY)) {
+            reply_ng(CMD_HF_DESFIRE_SIMULATE, PM3_EINVARG, NULL, 0);
+            return;
+        }
+    }
+    desfire_sim_probe_configure(probe);
 
     //-------------------------------------------------------------------------
     // Get the bitstream in place before anything is allocated. iso14443a_setup()
@@ -3777,6 +3940,7 @@ void SimulateDesfireTag(void) {
 
     int retval = PM3_SUCCESS;
     uint32_t cmdcount = 0;
+    uint32_t probe_started = GetTickCount();
 
     // Field state. A DESFire is passively powered, so when the field goes away
     // it loses the selected application, the authentication and anything a
@@ -3794,6 +3958,13 @@ void SimulateDesfireTag(void) {
     for (;;) {
 
         WDT_HIT();
+
+        if (g_desfire_probe.enabled
+                && (((g_desfire_probe.result.flags & DESFIRE_SIM_PROBE_CHALLENGE)
+                     && GetTickCountDelta(g_desfire_probe.result.challenge_ms) >= 5000)
+                    || GetTickCountDelta(probe_started) >= 30000)) {
+            break;
+        }
 
         // Watch for the client asking us to stop, in this loop rather than
         // relying on the one inside EmGetCmd(). With no field EmGetCmd()
@@ -3821,6 +3992,9 @@ void SimulateDesfireTag(void) {
 
         if (res == 2) {
             // the reader took its field away, so the PICC lost power
+            if (g_desfire_probe.enabled && (g_desfire_probe.result.flags & DESFIRE_SIM_PROBE_CHALLENGE)) {
+                break;
+            }
             if (field_on) {
                 field_on = false;
                 pstate = DESF_NOFIELD;
@@ -4020,6 +4194,14 @@ void SimulateDesfireTag(void) {
             picc_block ^= 1;
 
             uint16_t n = desfire_sim_apdu(receivedCmd + prologue, len - prologue - 2, answer + prologue);
+            if (g_desfire_probe.done) {
+                const tUart14a *uart = GetUart14a();
+                LogTrace(receivedCmd, len,
+                         uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG,
+                         uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG,
+                         receivedCmdPar, true);
+                break;          // the final card authentication response is never transmitted
+            }
             if (n == 0) {
                 continue;
             }
@@ -4056,7 +4238,12 @@ void SimulateDesfireTag(void) {
     set_tracing(false);
     BigBuf_free_keep_EM();
 
-    reply_ng(CMD_HF_DESFIRE_SIMULATE, retval, NULL, 0);
+    if (g_desfire_probe.enabled && retval == PM3_SUCCESS) {
+        reply_ng(CMD_HF_DESFIRE_SIMULATE, retval,
+                 (uint8_t *)&g_desfire_probe.result, sizeof(g_desfire_probe.result));
+    } else {
+        reply_ng(CMD_HF_DESFIRE_SIMULATE, retval, NULL, 0);
+    }
 }
 
 //------------------------------------------------------- host driven simulation
@@ -4091,12 +4278,14 @@ void DesfireSimTest(PacketCommandNG *packet) {
         // check the image is there, then wait for SCAN like a card waits for a field
         case DESFIRE_SIM_TEST_BEGIN:
             desfire_sim_random_clear();
+            desfire_sim_probe_configure(NULL);
             status = desfire_sim_init() ? PM3_SUCCESS : PM3_ENODATA;
             s_ready = false;
             break;
 
         case DESFIRE_SIM_TEST_END:
             desfire_sim_random_clear();
+            desfire_sim_probe_configure(NULL);
             memset(&s_st, 0, sizeof(s_st));
             s_ready = false;
             status = PM3_SUCCESS;
@@ -4128,6 +4317,10 @@ void DesfireSimTest(PacketCommandNG *packet) {
             if (s_ready == false || p->len == 0) {
                 break;
             }
+            if (g_desfire_probe.done) {
+                status = PM3_SUCCESS;
+                break; // RF probe has exited; no later APDU can receive a card answer
+            }
             n = desfire_sim_apdu(p->data, p->len, out);
             data = out;
             status = PM3_SUCCESS;
@@ -4150,6 +4343,30 @@ void DesfireSimTest(PacketCommandNG *packet) {
             }
             data = (uint8_t *)&st;
             n = sizeof(st);
+            status = PM3_SUCCESS;
+            break;
+
+        case DESFIRE_SIM_TEST_PROBE_CONFIG: {
+            if (p->len != sizeof(desfire_sim_probe_cmd_t)) {
+                break;
+            }
+            const desfire_sim_probe_cmd_t *config = (const desfire_sim_probe_cmd_t *)p->data;
+            if (config->version != DESFIRE_SIM_PROBE_VERSION
+                    || config->algorithm != T_AES
+                    || (config->keyno >= DESFIRE_MAX_KEY_COUNT && config->keyno != DESFIRE_SIM_PROBE_KEY_ANY)) {
+                break;
+            }
+            desfire_sim_probe_configure(config);
+            status = PM3_SUCCESS;
+            break;
+        }
+
+        case DESFIRE_SIM_TEST_PROBE_RESULT:
+            if (g_desfire_probe.enabled == false) {
+                break;
+            }
+            data = (uint8_t *)&g_desfire_probe.result;
+            n = sizeof(g_desfire_probe.result);
             status = PM3_SUCCESS;
             break;
 
