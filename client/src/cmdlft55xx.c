@@ -1090,19 +1090,24 @@ static int CmdT55xxWakeUp(const char *Cmd) {
 static int CmdT55xxDetect(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf t55xx detect",
-                  "Try detecting the tag modulation from reading the configuration block",
+                  "Try detecting the tag modulation from reading the configuration block.\n\n"
+                  _RED_("           * * * WARNING * * *") "\n"
+                  _CYAN_("Use of detect with password on a tag not configured") "\n"
+                  _CYAN_("for a password can damage the tag") "\n"
+                  _RED_("           * * * * * * * * * *"),
                   "lf t55xx detect\n"
                   "lf t55xx detect -1\n"
-                  "lf t55xx detect -p 11223344\n"
+                  "lf t55xx detect -p 11223344 -o\n"
                  );
 
-    // 1 (help) + 2 (two user specified params) + (6 T55XX_DLMODE_ALL)
-    void *argtable[3 + 6] = {
+    // 1 (help) + 3 (three user specified params) + (6 T55XX_DLMODE_ALL)
+    void *argtable[4 + 6] = {
         arg_param_begin,
         arg_lit0("1", NULL, "extract using data from graphbuffer"),
         arg_str0("p", "pwd", "<hex>", "password (4 hex bytes)"),
+        arg_lit0("o", "override", "override safety check"),
     };
-    uint8_t idx = 3;
+    uint8_t idx = 4;
     arg_add_t55xx_downloadlink(argtable, &idx, T55XX_DLMODE_ALL, config.downlink_mode);
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
@@ -1122,16 +1127,26 @@ static int CmdT55xxDetect(const char *Cmd) {
         password = tmp_pwd;
     }
 
-    bool r0 = arg_get_lit(ctx, 3);
-    bool r1 = arg_get_lit(ctx, 4);
-    bool r2 = arg_get_lit(ctx, 5);
-    bool r3 = arg_get_lit(ctx, 6);
-    bool ra = arg_get_lit(ctx, 7);
+    bool override = arg_get_lit(ctx, 3);
+
+    bool r0 = arg_get_lit(ctx, 4);
+    bool r1 = arg_get_lit(ctx, 5);
+    bool r2 = arg_get_lit(ctx, 6);
+    bool r3 = arg_get_lit(ctx, 7);
+    bool ra = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
 
     if ((r0 + r1 + r2 + r3 + ra) > 1) {
         PrintAndLogEx(FAILED, "Error multiple downlink encoding");
         return PM3_EINVARG;
+    }
+
+    // A password frame on an unprotected tag can land as a write, and detect cannot
+    // check the PWD bit first the way read does -- finding the config is its job.
+    if (usepwd && (override == false)) {
+        PrintAndLogEx(WARNING, "Safety check: Could not confirm PWD bit is set. Detecting without password...");
+        PrintAndLogEx(HINT, "Hint: Consider using the override parameter to force detect with password.");
+        usepwd = false;
     }
 
     bool try_all_dl_modes = false;
