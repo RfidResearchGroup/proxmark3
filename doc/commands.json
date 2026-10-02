@@ -11222,7 +11222,7 @@
             "notes": [
                 "hw bwm wifi status -> show connection state + IP",
                 "hw bwm wifi stop -> tear down WiFi, back to BLE-only",
-                "hw bwm wifi --ssid Home --pwd secret -> bring up, port 7777",
+                "hw bwm wifi --ssid Home --pwd secret -> bring up, port 18888",
                 "hw bwm wifi --ssid Home --pwd secret --port 9000"
             ],
             "offline": false,
@@ -11230,7 +11230,7 @@
                 "-h, --help This help",
                 "--ssid <ssid> WiFi SSID to join",
                 "--pwd <pwd> WiFi password (omit for open network)",
-                "--port <dec> TCP server listen port (default 7777)",
+                "--port <dec> TCP server listen port (default 18888)",
                 "--hostname <name> DHCP hostname (default Proxmark5)"
             ],
             "usage": "hw bwm wifi [-h] [--ssid <ssid>] [--pwd <pwd>] [--port <dec>] [--hostname <name>]"

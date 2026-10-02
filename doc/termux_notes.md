@@ -150,11 +150,11 @@ Install [this free TCPUART app](https://play.google.com/store/apps/details?id=co
 
 The app lets you choose the baudrate. Default value (115 200 baud) is fine.
 Plug the PM3 in and click connect.
-Set the toggle in server mode and choose a random port not used by system (e.g. 4321) and start the server.
+Set the toggle in server mode and choose a random port not used by system (client default port is 18888) and start the server.
 
 Alternatively, use the [paid version of the BT/USB/TCP Bridge app](https://play.google.com/store/apps/details?id=masar.bluetoothbridge.pro) which includes USB bridge as well.
 
-In this app, select TCP server as 'Device A' and choose an unused port (e.g. 4321).
+In this app, select TCP server as 'Device A' and choose an unused port (client default port is 18888).
 Choose your registered PM3 device as 'Device B' -> 'Connect to USB device'.
 Ensure 'Retransmission' is set to 'both ways'.
 It is possible to record the config as autostart, cf 'Settings' -> 'Autostart setting'.
@@ -167,7 +167,7 @@ You can download the apk on this website without installing F-Droid.
 
 The app lets you choose the baudrate. Default value (115 200 baud) is fine.
 Plug the PM3 in and click `Connect`.
-Choose a random port not used by system (e.g. 4321) and click `Start Server`.
+Choose a random port not used by system (client default port is 18888) and click `Start Server`.
 
 Note: This app uses foreground service to keep the connection alive, so you can safely put it in the background without suspending the transmission. However, you will see a dummy notification in the status bar which is required for foreground service.
 
@@ -180,7 +180,7 @@ Note: This app uses foreground service to keep the connection alive, so you can 
 Install [this free app](https://play.google.com/store/apps/details?id=masar.bb) or [the paid version](https://play.google.com/store/apps/details?id=masar.bluetoothbridge.pro) (which includes usb bridge)
 
 You need to pair the proxmark3 in the Android settings.
-In the app, select TCP server as 'Device A' and choose an unused port (e.g. 4321).
+In the app, select TCP server as 'Device A' and choose an unused port (client default port is 18888).
 Choose your registered PM3 device as 'Device B' -> 'Connect to classic Bluetooth device'.
 Ensure 'Retransmission' is set to 'both ways'.
 It is possible to record the config as autostart, cf 'Settings' -> 'Autostart setting'.
@@ -191,10 +191,10 @@ It is possible to record the config as autostart, cf 'Settings' -> 'Autostart se
 The Proxmark5 Battery Wireless Module (BWM) uses BLE, not classic Bluetooth.
 The [paid version of the BT/USB/TCP Bridge app](https://play.google.com/store/apps/details?id=masar.bluetoothbridge.pro) handles it (the free version works with 10 minute time limit, can be reset by restarting the app):
 
-In the app, select TCP server as 'Device A' (default port 54321).
+In the app, select TCP server as 'Device A', port 18888 to use the client default port.
 Choose 'Device B' -> 'Connect to BLE device' -> `Proxmark5`.
 When asked for the characteristic, choose: service UUID starting with `0000ae86`, characteristic starting with `0000ae88`, for RX+TX.
-No pairing is needed. Then connect from Termux as in [TCP connection](#tcp-connection) using port 54321.
+No pairing is needed. Then connect from Termux as in [TCP connection](#tcp-connection) using port 18888.
 
 See [PM5-BWM-USAGE.md](md/PM5_Start_Here/PM5-BWM-USAGE.md) for the BWM firmware build flag and the WiFi alternative, which needs no bridge app at all.
 
@@ -252,10 +252,10 @@ proxmark3 udp:localhost:12345
 ^[Top](#top)
 
 1. Phone and pm3 are connected, blue led is on and *not* blinking
-2. BTUART Tool TCP Server at Port 4321 
+2. BTUART Tool TCP Server at Port 18888 
 3. Using proxmark3 in termux shows the following error message:
 ```
-$ proxmark3 tcp:localhost:4321
+$ proxmark3 tcp:localhost:18888
 
 [=] Session log /data/data/com.termux/files/home/.suroot /.proxmark3/log_20210519.txt
 
@@ -263,7 +263,7 @@ $ proxmark3 tcp:localhost:4321
 
 [+] loaded from JSON file /data/data/com.termux/files/ho me/.suroot/.proxmark3/preferences.json
 
-Using UART port tcp:localhost:4321
+Using UART port tcp:localhost:18888
 
 [!!] ERROR: cannot communicate with the Proxmark3
 ```
