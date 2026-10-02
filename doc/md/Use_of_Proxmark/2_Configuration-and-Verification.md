@@ -67,23 +67,23 @@ or
 
 These versions is obsolete.
 
-If you didn't download sim014.bin from the RRG Repo be aware that it might be corrupted or faulty.
+If you didn't download sim024.bin from the RRG Repo be aware that it might be corrupted or faulty.
 You find a hash text file in this folder.   It was generated with the following linux command.
 
 ```
-sha512sum -b sim014.bin > sim014.sha512.txt
+sha512sum -b sim024.bin > sim024.sha512.txt
 ```
 
-You should validate the sim014.bin file against this hash file in order to be sure the file is not corrupted or faulty.
+You should validate the sim024.bin file against this hash file in order to be sure the file is not corrupted or faulty.
 
 The following command upgrades your device sim module firmware.
 Don't not turn off your device during the execution of this command!!
 Even its a quite fast command you should be warned.  You may brick it if you interrupt it.
 
 ```
-[usb] pm3 --> smart upgrade -f /usr/local/share/proxmark3/firmware/sim014.bin
+[usb] pm3 --> smart upgrade -f /usr/local/share/proxmark3/firmware/sim024.bin
 # or if from local repo
-[usb] pm3 --> smart upgrade -f sim014.bin
+[usb] pm3 --> smart upgrade -f sim024.bin
 ```
 
 You get the following output if the execution was successful:
@@ -94,10 +94,10 @@ You get the following output if the execution was successful:
 [!] ⚠️  A dangerous command, do wrong and you could brick the sim module
 [=] --------------------------------------------------------------------
 
-[=] firmware file       sim014.bin
-[=] Checking integrity  sim014.sha512.txt
-[+] loaded 3658 bytes from binary file sim014.bin
-[+] loaded 158 bytes from binary file sim014.sha512.txt
+[=] firmware file       sim024.bin
+[=] Checking integrity  sim024.sha512.txt
+[+] loaded 3658 bytes from binary file sim024.bin
+[+] loaded 158 bytes from binary file sim024.sha512.txt
 [=] Don't turn off your PM3!
 [+] Sim module firmware uploading to PM3...
  🕑 3658 bytes sent
