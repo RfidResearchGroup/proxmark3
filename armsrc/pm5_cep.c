@@ -55,10 +55,21 @@
 #define CEP_SYNC_BYTE            0x55
 #define CEP_SYNC_MAX_DISCARD     600
 
+// How long cep_attach_poll() will go without seeing a real SPI poll from the
+// Flipper before deciding the FAP has quit (see the comment at its one use
+// below) and letting AppMain() go back to sleeping between iterations.
+#define CEP_ACTIVITY_TIMEOUT_MS      3000
+
 static bool s_cep_active = false;   // handshake completed, SPI transport live
+static bool s_cep_attached = false; // CC controller reports a physical attach
+static uint32_t s_last_spi_activity_tick = 0; // last time a real SPI poll was seen
 
 bool cep_is_active(void) {
     return s_cep_active;
+}
+
+bool cep_is_attached(void) {
+    return s_cep_attached;
 }
 
 // ---------------------------------------------------------------------------
@@ -279,6 +290,7 @@ void cep_attach_poll(void) {
     }
 
     bool attached = ((cc_ctrl_data >> 6 & 0x03) != 0);
+    s_cep_attached = attached;
 
     if (!attached) {
         s_cep_active = false;
@@ -294,6 +306,18 @@ void cep_attach_poll(void) {
         // can't hang the main loop.
         if (usart_flag_get(USART1, USART_RDBF_FLAG) != RESET) {
             s_cep_active = cep_do_handshake();
+            if (s_cep_active) {
+                s_last_spi_activity_tick = GetTickCount();
+            }
+        }
+
+        // The FAP quitting doesn't touch the CC controller's attach bit - the
+        // cable stays connected, so `attached` alone can't tell us it's gone.
+        // Losing its SPI poll cadence (normally every 20-120ms) is what
+        // actually means it has - fall back to the slower/idle main loop
+        // once that cadence has been missing this long.
+        if (s_cep_active && (GetTickCountDelta(s_last_spi_activity_tick) > CEP_ACTIVITY_TIMEOUT_MS)) {
+            s_cep_active = false;
         }
     }
 
@@ -336,6 +360,7 @@ bool cep_spi_data_available(void) {
     if (!cep_spi_read_byte(&len_header[1])) {
         return false;
     }
+    s_last_spi_activity_tick = GetTickCount(); // FAP is still polling, valid frame or not
     uint16_t data_len = (len_header[1] << 8) | len_header[0];
     if (data_len > PM3_CMD_DATA_SIZE * 2) {
         return false;
