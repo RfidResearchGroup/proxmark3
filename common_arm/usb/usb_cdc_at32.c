@@ -18,6 +18,13 @@ static otg_core_type otg_core_struct;
 static usbd_core_type *udev = &(otg_core_struct.dev);
 static usbd_desc_t vp_desc;
 
+// Spin-wait iteration bound for usb_write()'s tx-complete wait, not a time
+// unit - g_tx_completed is set from the USB core's own IN-endpoint ISR, so
+// this can't use the shared ticks timer (see ticks_apis.h StartTicks()/
+// StopTicks() callers elsewhere in armsrc - it's routinely stopped by
+// LF/HF code at the exact moments a reply may need to go out).
+#define USB_TX_COMPLETE_TIMEOUT  2000000
+
 /**
   * @brief  get device descriptor
   * @retval usbd_desc
@@ -515,8 +522,12 @@ int usb_write(const uint8_t *data, const size_t len) {
 
     // wait for send complete
     cdc_struct_type *pcdc = (cdc_struct_type *)(udev->class_handler->pdata);
+    uint32_t tx_timeout = 0;
     while (pcdc->g_tx_completed != 1) {
         if (usb_check() == false) {
+            return PM3_EIO;
+        }
+        if (tx_timeout++ > USB_TX_COMPLETE_TIMEOUT) {
             return PM3_EIO;
         }
         // working for send to HOST...
@@ -531,8 +542,12 @@ int usb_write(const uint8_t *data, const size_t len) {
         if (usb_vcp_send_data(udev, (uint8_t *) data, 0) != SUCCESS) {
             return PM3_EIO;
         }
+        tx_timeout = 0;
         while (pcdc->g_tx_completed != 1) {
             if (usb_check() == false) {
+                return PM3_EIO;
+            }
+            if (tx_timeout++ > USB_TX_COMPLETE_TIMEOUT) {
                 return PM3_EIO;
             }
         }
