@@ -343,6 +343,17 @@ static bool cep_spi_read_byte(uint8_t *out) {
     return true;
 }
 
+// Genuinely non-blocking - a single flag read, no spin-wait at all. For
+// data_available()'s use (armsrc/util.c): a tight sampling loop calls that
+// every pass purely to notice an incoming CMD_BREAK_LOOP promptly, so it
+// needs to cost nothing when idle. cep_spi_data_available() isn't a fit
+// here - it waits (bounded, but non-zero) for a first byte to actually
+// arrive, which is fine for receive_ng()'s own cadence but would add that
+// wait to every iteration of every LF/HF reader loop in the codebase.
+bool cep_spi_rx_pending(void) {
+    return spi_i2s_flag_get(SPI1, SPI_I2S_RDBF_FLAG) != RESET;
+}
+
 bool cep_spi_data_available(void) {
     uint8_t len_header[2] = {0x00};
     size_t discarded = 0;

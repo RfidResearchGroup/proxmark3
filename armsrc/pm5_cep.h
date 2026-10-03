@@ -58,6 +58,13 @@ void cep_attach_poll(void);
 // simple non-blocking peek.
 bool cep_spi_data_available(void);
 
+// True if SPI1's receive-data register currently holds an unread byte - a
+// single flag check, zero wait. Gate for data_available() (armsrc/util.c),
+// which many LF/HF reader loops call every pass to notice an incoming
+// CMD_BREAK_LOOP - that call site needs to cost nothing when idle, unlike
+// cep_spi_data_available() above which waits (bounded) for a first byte.
+bool cep_spi_rx_pending(void);
+
 // Read up to `len` raw NG bytes off SPI1. Returns the number of bytes
 // actually read before an internal per-byte timeout gave up early.
 uint32_t cep_spi_read_ng(uint8_t *data, size_t len);
