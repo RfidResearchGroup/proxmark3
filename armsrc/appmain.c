@@ -4098,6 +4098,20 @@ static void PacketReceived(PacketCommandNG *packet) {
             SendCapabilities();
             break;
         }
+        case CMD_CEP_STATUS: {
+            cep_status_t status = {0};
+#ifdef WITH_CEP
+            status.cep_active = cep_is_active();
+#endif
+#ifdef WITH_BWM_STATUS
+            bwm_read_battery_info(&status.battery);
+#endif
+            if (CheckValidInformationMagic(&g_version_information)) {
+                strncpy(status.fw_version, g_version_information.gitversion, sizeof(status.fw_version) - 1);
+            }
+            reply_ng(CMD_CEP_STATUS, PM3_SUCCESS, (uint8_t *)&status, sizeof(status));
+            break;
+        }
         case CMD_PING: {
             reply_ng(CMD_PING, PM3_SUCCESS, packet->data.asBytes, packet->length);
             break;
