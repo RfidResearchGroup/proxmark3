@@ -39,6 +39,13 @@ void cep_init(void);
 // Flipper is attached.
 bool cep_is_active(void);
 
+// True once the CC controller reports a Flipper physically attached,
+// independent of whether the handshake/SPI transport is up yet. Gate for
+// AppMain()'s WFI-skip (see appmain.c) - a Flipper merely being plugged in
+// is reason enough to stop sleeping between main-loop iterations, before
+// any handshake has even started.
+bool cep_is_attached(void);
+
 // Rate-limited (see PM5_CEP_ATTACH_POLL_MS), non-blocking. Call once per
 // AppMain() main-loop iteration, alongside bwm_autooff_check(). Detects the
 // Flipper attach/detach transition via the CC controller and, on a fresh
