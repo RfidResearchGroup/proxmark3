@@ -1008,6 +1008,23 @@ typedef struct {
 // underlying data source and by clients (e.g. the Flipper Zero FAP) that want the raw
 // numbers instead of hw status's free-text Dbprintf lines.
 #define CMD_PM5_BWM_GET_BATTERY 0x0184
+// PM5, live hardware-status snapshot (CEP handshake state, battery telemetry,
+// firmware version) for the Flipper Zero FAP's status page and any future
+// client. Always answers PM3_SUCCESS with every field it can - fields for a
+// feature this build doesn't have (no WITH_CEP, no WITH_BWM_STATUS) read as
+// zero/false rather than the command failing. A client that also wants to
+// distinguish "zero" from "not built" should check CMD_CAPABILITIES'
+// compiled_with_cep/compiled_with_bwm first.
+// req: none. resp: cep_status_t.
+#define CMD_CEP_STATUS 0x0185
+typedef struct {
+    uint8_t  cep_active;        // cep_is_active(): handshake complete, SPI transport live
+    bwm_battery_info_t battery; // bwm_read_battery_info(); all-zero if WITH_BWM_STATUS not built
+    char     fw_version[24];    // g_version_information.gitversion, NUL-terminated, may truncate
+    // Appended in a future version once cep_is_attached() lands (PR #3687,
+    // not yet merged): a cep_attached byte distinguishing "physically
+    // present, handshake not yet complete" from "active".
+} PACKED cep_status_t;
 #define BWM_OTA_ACTION_BEGIN 0x00
 #define BWM_OTA_ACTION_WRITE 0x01
 #define BWM_OTA_ACTION_END   0x02
