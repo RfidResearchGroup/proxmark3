@@ -39,6 +39,13 @@ void cep_init(void);
 // Flipper is attached.
 bool cep_is_active(void);
 
+// True once the CC controller reports a Flipper physically attached,
+// independent of whether the handshake/SPI transport is up yet. Gate for
+// AppMain()'s WFI-skip (see appmain.c) - a Flipper merely being plugged in
+// is reason enough to stop sleeping between main-loop iterations, before
+// any handshake has even started.
+bool cep_is_attached(void);
+
 // Rate-limited (see PM5_CEP_ATTACH_POLL_MS), non-blocking. Call once per
 // AppMain() main-loop iteration, alongside bwm_autooff_check(). Detects the
 // Flipper attach/detach transition via the CC controller and, on a fresh
@@ -56,8 +63,15 @@ bool cep_spi_data_available(void);
 uint32_t cep_spi_read_ng(uint8_t *data, size_t len);
 
 // Write `len` raw NG bytes (a whole PacketResponseNG/OLD frame) out over
-// SPI1 as one length-prefixed packet. Always returns PM3_SUCCESS today (the
-// underlying spi_i2s_data_transmit() calls are blocking-until-ready).
+// SPI1 as one length-prefixed packet. Returns PM3_EIO if the master isn't
+// clocking within CEP_SPI_BYTE_TIMEOUT at any point - this can legitimately
+// happen (PM5's reply is ready on its own schedule, not the master's), the
+// caller just loses this one reply rather than hanging forever.
 int cep_spi_write_sync(uint8_t *data, size_t len);
+
+// Hardware-reset SPI1 and bring it back up (see AT32F435/437 errata ES0003
+// in pm5_cep.c). Call on any CEP frame error so a corrupted CS-edge sync
+// can't persist into the next transaction.
+void cep_spi_resync(void);
 
 #endif // __PM5_CEP_H
