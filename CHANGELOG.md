@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mf hardnested`/`hf mf autopwn` on PM5 with hardened MIFARE Classic EV1 (#3595, #3664) - a settle delay before the nested auth (the 288 MHz AT32's fast turnaround corrupted the encrypted nonce read) plus a per-round nonce cap so PM5's large command buffer can't outrun the client's 3 s reply timeout (@ByteOrderMarc)
 - Added `A1856618` (an EM4305 anti-clone card password) to the `t55xx_default_pwds` dictionary used by `lf em 4x05 chk` (@nemanjan00)
 - Added `hw bwm ble` - the BWM's BLE settings: `on`/`off` (persisted radio switch), `pairing` (require a 6-digit passkey, LE Secure Connections; the module ships open), `forget` bonded devices, `txpower`, `status` (@Msprg)
 - Changed `hw bwm autooff` - `--idle <sec>` adds an opt-in power-off after that long idle on battery (no command, button press or BLE/WiFi client), off by default; `--unplug off` makes an unplug only restart that idle clock instead of powering off at once; all stored on the BWM, `hw status` shows it (@Msprg)
