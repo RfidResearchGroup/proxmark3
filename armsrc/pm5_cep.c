@@ -45,6 +45,14 @@
 #define CEP_HANDSHAKE_STRING     "iamf0rupm5"
 #define CEP_HANDSHAKE_STX        0x02
 #define CEP_SPI_BYTE_TIMEOUT     100000  // spin-wait iterations per byte (matches source)
+// The Flipper master only clocks the bus in bursts roughly every ~120ms
+// (its own idle poll cadence) - CEP_SPI_BYTE_TIMEOUT alone (~3-10ms real
+// time) is far shorter than that gap, so the first reply byte - the one
+// racing against the master's next poll - needs a budget that actually
+// spans it. Once that byte clears, the master is mid-CS and keeps
+// clocking continuously, so every later byte stays on the short timeout.
+// Took measured CEP reply success from ~22% to ~100% in testing.
+#define CEP_SPI_HEADER_BYTE_TIMEOUT  2000000
 #define CEP_SPI_RESPONSE_TIMEOUT_US  (1000 * 1000)  // 1s, matches source
 #define CEP_HANDSHAKE_RX_TIMEOUT_MS  2000  // bail out of the receive loop rather than ever hang the main loop
 #define CEP_HANDSHAKE_REPLY_MAX_RETRIES 3  // bound the stall-recovery loop below - still-attached isn't still-working forever
@@ -365,6 +373,12 @@ bool cep_spi_data_available(void) {
             break;
         }
         if (++discarded > CEP_SYNC_MAX_DISCARD) {
+            // More sync bytes than the FAP's real preamble (500) can only
+            // mean a desynced read (AT32 errata ES0003, see
+            // cep_spi_resync()) or bus noise - resync now rather than
+            // leaving SPI1 in that state until a later CRC/length check
+            // catches it, which may be a full frame away.
+            cep_spi_resync();
             return false;
         }
     }
@@ -374,6 +388,9 @@ bool cep_spi_data_available(void) {
     s_last_spi_activity_tick = GetTickCount(); // FAP is still polling, valid frame or not
     uint16_t data_len = (len_header[1] << 8) | len_header[0];
     if (data_len > PM3_CMD_DATA_SIZE * 2) {
+        // Same reasoning: an implausible length is itself evidence of a
+        // desynced read, not just "no frame yet."
+        cep_spi_resync();
         return false;
     }
     return true;
@@ -398,10 +415,10 @@ uint32_t cep_spi_read_ng(uint8_t *data, size_t len) {
 // hangs the main loop forever (no recovery, not even a watchdog reset) the
 // moment a reply is queued between two master polls - bound every wait so
 // a slow/absent master degrades to a dropped reply, not a dead device.
-static bool cep_spi_wait_tdbe(void) {
+static bool cep_spi_wait_tdbe(uint64_t timeout_limit) {
     uint64_t timeout = 0;
     while (spi_i2s_flag_get(SPI1, SPI_I2S_TDBE_FLAG) == RESET) {
-        if (timeout++ > CEP_SPI_BYTE_TIMEOUT) {
+        if (timeout++ > timeout_limit) {
             return false;
         }
     }
@@ -409,29 +426,31 @@ static bool cep_spi_wait_tdbe(void) {
 }
 
 int cep_spi_write_sync(uint8_t *data, size_t len) {
-    if (!cep_spi_wait_tdbe()) {
+    // These two length-header bytes are the ones racing against the
+    // master's next poll - see CEP_SPI_HEADER_BYTE_TIMEOUT's comment.
+    if (!cep_spi_wait_tdbe(CEP_SPI_HEADER_BYTE_TIMEOUT)) {
         return PM3_EIO;
     }
     spi_i2s_data_transmit(SPI1, len & 0xFF);
 
-    if (!cep_spi_wait_tdbe()) {
+    if (!cep_spi_wait_tdbe(CEP_SPI_HEADER_BYTE_TIMEOUT)) {
         return PM3_EIO;
     }
     spi_i2s_data_transmit(SPI1, (len >> 8) & 0xFF);
 
     for (size_t i = 0; i < len; ++i) {
-        if (!cep_spi_wait_tdbe()) {
+        if (!cep_spi_wait_tdbe(CEP_SPI_BYTE_TIMEOUT)) {
             return PM3_EIO;
         }
         spi_i2s_data_transmit(SPI1, data[i]);
     }
 
     // Two trailing zero bytes: the agreed "no more data" idle marker.
-    if (!cep_spi_wait_tdbe()) {
+    if (!cep_spi_wait_tdbe(CEP_SPI_BYTE_TIMEOUT)) {
         return PM3_EIO;
     }
     spi_i2s_data_transmit(SPI1, 0x00);
-    if (!cep_spi_wait_tdbe()) {
+    if (!cep_spi_wait_tdbe(CEP_SPI_BYTE_TIMEOUT)) {
         return PM3_EIO;
     }
     spi_i2s_data_transmit(SPI1, 0x00);
