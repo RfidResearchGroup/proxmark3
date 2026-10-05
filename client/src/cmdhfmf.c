@@ -10713,6 +10713,11 @@ static int CmdHF14AGen4_GDM_Wipe(const char *Cmd) {
     if (wres != PM3_SUCCESS) {
         return wres;
     }
+    if (gw.wakeup_type == MF_WAKE_WUPA) {
+        PrintAndLogEx(WARNING, "hf mf gdmwipe needs a gen1a/gdm backdoor; WUPA magic auth is insufficient");
+        PrintAndLogEx(HINT, "Hint: enable one first:  " _YELLOW_("hf mf gdmsetcfg --wakestyle gen1a --wupa -k <key>"));
+        return PM3_EFAILED;
+    }
     uint8_t wakeup_type = gw.wakeup_type;
     uint8_t auth_cmd = gw.auth_cmd;
     memcpy(key, gw.key, sizeof(key));
