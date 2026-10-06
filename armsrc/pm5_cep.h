@@ -39,6 +39,13 @@ void cep_init(void);
 // Flipper is attached.
 bool cep_is_active(void);
 
+// True once the CC controller reports a Flipper physically attached,
+// independent of whether the handshake/SPI transport is up yet. Gate for
+// AppMain()'s WFI-skip (see appmain.c) - a Flipper merely being plugged in
+// is reason enough to stop sleeping between main-loop iterations, before
+// any handshake has even started.
+bool cep_is_attached(void);
+
 // Rate-limited (see PM5_CEP_ATTACH_POLL_MS), non-blocking. Call once per
 // AppMain() main-loop iteration, alongside bwm_autooff_check(). Detects the
 // Flipper attach/detach transition via the CC controller and, on a fresh
@@ -51,13 +58,27 @@ void cep_attach_poll(void);
 // simple non-blocking peek.
 bool cep_spi_data_available(void);
 
+// True if SPI1's receive-data register currently holds an unread byte - a
+// single flag check, zero wait. Gate for data_available() (armsrc/util.c),
+// which many LF/HF reader loops call every pass to notice an incoming
+// CMD_BREAK_LOOP - that call site needs to cost nothing when idle, unlike
+// cep_spi_data_available() above which waits (bounded) for a first byte.
+bool cep_spi_rx_pending(void);
+
 // Read up to `len` raw NG bytes off SPI1. Returns the number of bytes
 // actually read before an internal per-byte timeout gave up early.
 uint32_t cep_spi_read_ng(uint8_t *data, size_t len);
 
 // Write `len` raw NG bytes (a whole PacketResponseNG/OLD frame) out over
-// SPI1 as one length-prefixed packet. Always returns PM3_SUCCESS today (the
-// underlying spi_i2s_data_transmit() calls are blocking-until-ready).
+// SPI1 as one length-prefixed packet. Returns PM3_EIO if the master isn't
+// clocking within CEP_SPI_BYTE_TIMEOUT at any point - this can legitimately
+// happen (PM5's reply is ready on its own schedule, not the master's), the
+// caller just loses this one reply rather than hanging forever.
 int cep_spi_write_sync(uint8_t *data, size_t len);
+
+// Hardware-reset SPI1 and bring it back up (see AT32F435/437 errata ES0003
+// in pm5_cep.c). Call on any CEP frame error so a corrupted CS-edge sync
+// can't persist into the next transaction.
+void cep_spi_resync(void);
 
 #endif // __PM5_CEP_H
