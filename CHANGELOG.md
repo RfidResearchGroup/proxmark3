@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed PM5 start guide to better identify a `brew install` vs `make -j` version of `pm3` difference, that caused an issue for a few new users of the PM5 (@innocentbystanderproxmark)
 - Added `A1856618` (an EM4305 anti-clone card password) to the `t55xx_default_pwds` dictionary used by `lf em 4x05 chk` (@nemanjan00)
 - Added `hw bwm ble` - the BWM's BLE settings: `on`/`off` (persisted radio switch), `pairing` (require a 6-digit passkey, LE Secure Connections; the module ships open), `forget` bonded devices, `txpower`, `status` (@Msprg)
 - Changed `hw bwm autooff` - `--idle <sec>` adds an opt-in power-off after that long idle on battery (no command, button press or BLE/WiFi client), off by default; `--unplug off` makes an unplug only restart that idle clock instead of powering off at once; all stored on the BWM, `hw status` shows it (@Msprg)
