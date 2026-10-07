@@ -548,6 +548,10 @@ while true; do
       if ! CheckExecute "lf IDTECK reject test"      "if ! $CLIENTBIN -c 'lf idteck demod --raw DEADBEEFDEADBEEF' 2>&1 | grep -q 'IDTECK Tag Found'; then echo OK; fi" "OK"; then break; fi
       if ! CheckExecute "lf IDTECK no wiegand test"  "if ! $CLIENTBIN -c 'lf idteck demod --raw 4944544B351FBE4B' 2>&1 | grep -q 'H10301'; then echo OK; fi" "OK"; then break; fi
       if ! CheckExecute "lf INDALA test"             "$CLIENTBIN -c 'data load -f traces/lf_Indala-504278295.pm3;lf search -1'" "Indala ID found"; then break; fi
+      if ! CheckExecute "lf INDALA weak test"        "$CLIENTBIN -c 'data load -f traces/lf_Indala-a0000000e6bd0e92-weak.pm3;lf search -1'" "Raw: a0000000e6bd0e92"; then break; fi
+      if ! CheckExecute "lf INDALA weak test 2"      "$CLIENTBIN -c 'data load -f traces/lf_Indala-a0000000e6bd0e92-weak.pm3; lf indala demod'" \
+                                                              "Indala \(len 64\)  Raw: a0000000e6bd0e92"; then break; fi
+      if ! CheckExecute "lf PSK reject test"         "$CLIENTBIN -c 'data load -f traces/lf_NRZ_RF64_fc2-ripple_synthetic.pm3;lf search -1'" "No known 125/134 kHz tags found"; then break; fi
       if ! CheckExecute "lf KERI test"               "$CLIENTBIN -c 'data load -f traces/lf_Keri.pm3;lf search -1'" "Pyramid ID found"; then break; fi
       if ! CheckExecute "lf NEXWATCH test"           "$CLIENTBIN -c 'data load -f traces/lf_NEXWATCH_Quadrakey-521512301.pm3;lf search -1 '" "NexWatch ID found"; then break; fi
       if ! CheckExecute "lf SECURAKEY test"          "$CLIENTBIN -c 'data load -f traces/lf_NEXWATCH_Securakey-64169.pm3;lf search -1 '" "Securakey ID found"; then break; fi

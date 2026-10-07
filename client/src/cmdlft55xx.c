@@ -1424,7 +1424,7 @@ static void t55xx_psk_coherent(int fitclk, uint8_t clk, t55xx_conf_block_t *test
         double this_clk = 0.0, score = 0.0;
         int this_phase = 0;
 
-        if (pm3_psk_demod(sig, count, subcarriers[s], (double)fitclk, work, &got_n, &this_clk, &this_phase, &score, NULL) != PM3_SUCCESS) {
+        if (pm3_psk_demod(sig, count, subcarriers[s], (double)fitclk, work, &got_n, &this_clk, &this_phase, &score, NULL, NULL) != PM3_SUCCESS) {
             continue;
         }
 
