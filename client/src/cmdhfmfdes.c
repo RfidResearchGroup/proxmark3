@@ -9300,6 +9300,39 @@ static void desfire_etest_hex(char *dst, size_t dstlen, const uint8_t *src, size
     dst[2 * i] = 0;
 }
 
+static int desfire_etest_probe_result(const PacketResponseNG *resp, bool json,
+                                     char *fields, size_t fields_len) {
+    if (resp->length < sizeof(desfire_sim_probe_result_t)) {
+        return PM3_EFAILED;
+    }
+
+    desfire_sim_probe_result_t result;
+    memcpy(&result, resp->data.asBytes, sizeof(result));
+    char rndb[33] = {0};
+    char continuation[65] = {0};
+    desfire_etest_hex(rndb, sizeof(rndb), result.rndb, sizeof(result.rndb));
+    desfire_etest_hex(continuation, sizeof(continuation), result.continuation,
+                      MIN(result.continuation_len, sizeof(result.continuation)));
+    if (json) {
+        snprintf(fields, fields_len,
+                 ",\"outcome\":%u,\"flags\":%u,\"aid\":\"%02X%02X%02X\",\"keyno\":%u,"
+                 "\"candidate_id\":%" PRIu32 ",\"rndb\":\"%s\",\"continuation\":\"%s\"",
+                 result.outcome, result.flags, result.aid[2], result.aid[1], result.aid[0],
+                 result.keyno, result.candidate_id, rndb, continuation);
+    } else {
+        PrintAndLogEx(SUCCESS, "Probe outcome..... %u", result.outcome);
+        PrintAndLogEx(SUCCESS, "Evidence flags..... 0x%02X", result.flags);
+        PrintAndLogEx(SUCCESS, "AID/key............ %02X%02X%02X / %u",
+                      result.aid[2], result.aid[1], result.aid[0], result.keyno);
+        PrintAndLogEx(SUCCESS, "CAD selected/read.. %s / %s",
+                      result.flags & DESFIRE_SIM_PROBE_DISCOVERY_SELECTED ? "yes" : "no",
+                      result.flags & DESFIRE_SIM_PROBE_DISCOVERY_READ ? "yes" : "no");
+        PrintAndLogEx(SUCCESS, "RndB............... %s", rndb);
+        PrintAndLogEx(SUCCESS, "Reader continuation %s", continuation);
+    }
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14ADesETest(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes etest",
@@ -9314,6 +9347,8 @@ static int CmdHF14ADesETest(const char *Cmd) {
                   "hf mfdes etest --scan\n"
                   "hf mfdes etest --random 0102030405060708\n"
                   "hf mfdes etest --apdu 900A0000010000 -j\n"
+                  "hf mfdes etest --probe 02F48120FF03010000000102030405060708090A0B0C0D0E0F10F4812F00\n"
+                  "hf mfdes etest --probe-result -j\n"
                   "hf mfdes etest --state -j\n"
                   "hf mfdes etest --end");
 
@@ -9326,6 +9361,8 @@ static int CmdHF14ADesETest(const char *Cmd) {
         arg_str0(NULL, "random",   "<hex>", "Queue bytes for the next RndB / random UID draws"),
         arg_lit0(NULL, "fieldoff", "RF reset, session dropped"),
         arg_lit0(NULL, "state",    "Show session and random queue state"),
+        arg_str0(NULL, "probe",    "<hex>", "Configure a 30-byte v2 candidate-key probe payload"),
+        arg_lit0(NULL, "probe-result", "Read probe evidence and outcome"),
         arg_lit0("j",  "json",     "One line of JSON instead of text"),
         arg_param_end
     };
@@ -9338,7 +9375,9 @@ static int CmdHF14ADesETest(const char *Cmd) {
     bool has_random = (arg_get_str(ctx, 5)->count > 0);
     bool fieldoff = arg_get_lit(ctx, 6);
     bool state = arg_get_lit(ctx, 7);
-    bool json = arg_get_lit(ctx, 8);
+    bool has_probe = (arg_get_str(ctx, 8)->count > 0);
+    bool probe_result = arg_get_lit(ctx, 9);
+    bool json = arg_get_lit(ctx, 10);
 
     int apdulen = 0;
     uint8_t apdu[PM3_CMD_DATA_SIZE - sizeof(desfire_sim_test_cmd_t)] = {0};
@@ -9353,15 +9392,25 @@ static int CmdHF14ADesETest(const char *Cmd) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
+    int probe_len = 0;
+    uint8_t probe[sizeof(desfire_sim_probe_cmd_t)] = {0};
+    if (CLIParamHexToBuf(arg_get_str(ctx, 8), probe, sizeof(probe), &probe_len)) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
     CLIParserFree(ctx);
 
-    if (begin + end + scan + has_apdu + has_random + fieldoff + state != 1) {
+    if (begin + end + scan + has_apdu + has_random + fieldoff + state + has_probe + probe_result != 1) {
         PrintAndLogEx(WARNING, "Give exactly one action");
         return PM3_EINVARG;
     }
 
     if ((has_apdu && apdulen == 0) || (has_random && rndlen == 0)) {
         PrintAndLogEx(WARNING, "Need at least one byte");
+        return PM3_EINVARG;
+    }
+    if (has_probe && probe_len != sizeof(desfire_sim_probe_cmd_t)) {
+        PrintAndLogEx(WARNING, "Probe configuration must be %zu bytes", sizeof(desfire_sim_probe_cmd_t));
         return PM3_EINVARG;
     }
 
@@ -9392,6 +9441,14 @@ static int CmdHF14ADesETest(const char *Cmd) {
     } else if (fieldoff) {
         op = DESFIRE_SIM_TEST_FIELDOFF;
         name = "fieldoff";
+    } else if (has_probe) {
+        op = DESFIRE_SIM_TEST_PROBE_CONFIG;
+        name = "probe";
+        data = probe;
+        len = probe_len;
+    } else if (probe_result) {
+        op = DESFIRE_SIM_TEST_PROBE_RESULT;
+        name = "probe-result";
     } else {
         op = DESFIRE_SIM_TEST_STATE;
         name = "state";
@@ -9466,6 +9523,10 @@ static int CmdHF14ADesETest(const char *Cmd) {
         }
     }
 
+    if (res == PM3_SUCCESS && op == DESFIRE_SIM_TEST_PROBE_RESULT) {
+        res = desfire_etest_probe_result(&resp, json, fields, sizeof(fields));
+    }
+
     if (res != PM3_SUCCESS) {
         const char *why;
         switch (res) {
@@ -9497,8 +9558,11 @@ static int CmdHF14ADesETest(const char *Cmd) {
         return res;
     }
 
-    bool plain_ack = (op == DESFIRE_SIM_TEST_BEGIN || op == DESFIRE_SIM_TEST_END ||
-                      op == DESFIRE_SIM_TEST_RANDOM || op == DESFIRE_SIM_TEST_FIELDOFF);
+    bool plain_ack = (op == DESFIRE_SIM_TEST_BEGIN
+                      || op == DESFIRE_SIM_TEST_END
+                      || op == DESFIRE_SIM_TEST_RANDOM
+                      || op == DESFIRE_SIM_TEST_FIELDOFF
+                      || op == DESFIRE_SIM_TEST_PROBE_CONFIG);
     if (json) {
         PrintAndLogEx(NORMAL, "{\"command\":\"%s\",\"ok\":true%s}", name, fields);
     } else if (plain_ack) {
