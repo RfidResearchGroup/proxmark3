@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Fixed weak fc/2 PSK tags (Indala, NexWatch, IDTECK, ...) misreading or failing: when the wave tracker has errors, the PSK demod falls back to `pm3_psk_demod` (@mfcarroll)
+- Fixed corrected `sim014.bin` references to `sim024.bin` as `sim014.bin` does not exist in this repo currently, thus removing some newbie confusion. (@innocentbystanderproxmark)
 - Added `A1856618` (an EM4305 anti-clone card password) to the `t55xx_default_pwds` dictionary used by `lf em 4x05 chk` (@nemanjan00)
 - Added `hw bwm ble` - the BWM's BLE settings: `on`/`off` (persisted radio switch), `pairing` (require a 6-digit passkey, LE Secure Connections; the module ships open), `forget` bonded devices, `txpower`, `status` (@Msprg)
 - Changed `hw bwm autooff` - `--idle <sec>` adds an opt-in power-off after that long idle on battery (no command, button press or BLE/WiFi client), off by default; `--unplug off` makes an unplug only restart that idle clock instead of powering off at once; all stored on the BWM, `hw status` shows it (@Msprg)
