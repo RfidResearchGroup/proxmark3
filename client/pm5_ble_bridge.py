@@ -17,8 +17,8 @@
 # WSL2 without admin, NAT networking:  Windows can only make OUTBOUND
 # connections, but by default localhostForwarding lets Windows reach a WSL
 # listener at 127.0.0.1:PORT.  So:
-#     WSL:      python3 pm5_ble_bridge.py --relay --listen 7777 --pty /tmp/pm5-ble
-#     Windows:  py      pm5_ble_bridge.py -n Proxmark5 --connect 127.0.0.1:7777
+#     WSL:      python3 pm5_ble_bridge.py --relay --listen 18888 --pty /tmp/pm5-ble
+#     Windows:  py      pm5_ble_bridge.py -n Proxmark5 --connect 127.0.0.1:18888
 #     WSL:      ./pm3 /tmp/pm5-ble
 # If localhostForwarding is off, point --connect at WSL's own IP
 # (WSL: `hostname -I`) instead of 127.0.0.1.
