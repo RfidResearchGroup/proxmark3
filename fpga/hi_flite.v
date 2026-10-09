@@ -110,24 +110,42 @@ always @(posedge adc_clk)
 //maybe change it so that ARM sends preamble as well.
 //then: ready bits sent to ARM, 8 bits sent from ARM (all ones), then preamble (all zeros, presumably) - which starts modulation
 
+// SSP(FRAME_H)     ~speed -> 9'd31                      speed -> 8'd15
+// SSP(FRAME_L)     ~speed -> 9'b1011111(d95 OF 512)     speed -> 8'b101111(d47 OF 256)
+// TIMODE(FRAME_H)  ~speed -> 9'd(512-64)                speed -> 8'd(256-32)
+// TIMODE(FRAME_L)  ~speed -> 9'b0                       speed -> 8'b0
+`ifdef WITH_TIMODE
+    `define FRAME_SET_L  9'd448
+    `define FRAME_SET_H  8'd224
+    `define FRAME_CLR_L  9'd0
+    `define FRAME_CLR_H  8'd0
+`else
+    `define FRAME_SET_L  9'd31
+    `define FRAME_SET_H  8'd15
+    `define FRAME_CLR_L  9'b1011111   // 95 = 96 - 1
+    `define FRAME_CLR_H  8'b101111    // 47 = 48 - 1
+`endif
+
 always @(negedge adc_clk)
 begin
     //count fc/64 - transfer bits to ARM at the rate they are received
+    //At speed 0, clk rises at 0 or 64; at speed 1, clk rises at 0 or 32.
     if( ((~speed) && (ssp_cnt[5:0] == 6'b000000) ) || (speed && (ssp_cnt[4:0] == 5'b00000)) )
     begin
         ssp_clk <= 1'b1;
         //send current bit (detected in SNIFF mode or the one being modulated in MOD mode, 0 otherwise)
         ssp_din <= curbit;
     end
+    // At speed 0, clk falls at 32; at speed 1, clk falls at 16.
     if( ( (~speed) && (ssp_cnt[5:0] == 6'b100000)) ||(speed && ssp_cnt[4:0] == 5'b10000))
         ssp_clk <= 1'b0;
     //create frame pulses. TBH, I still don't know what they do exactly, but they are crucial for ARM->FPGA transfer. If the frame is in the beginning of the byte, transfer slows to a crawl for some reason
     // took me a day to figure THAT out.
-    if(( (~speed) && (ssp_cnt[8:0] == 9'd31)) || (speed && ssp_cnt[7:0] == 8'd15))
+    if(( (~speed) && (ssp_cnt[8:0] == `FRAME_SET_L)) || (speed && ssp_cnt[7:0] == `FRAME_SET_H))
     begin
         ssp_frame <= 1'b1;
     end
-    if(( (~speed) && (ssp_cnt[8:0] == 9'b1011111)) || (speed &&ssp_cnt[7:0] == 8'b101111) )
+    if(( (~speed) && (ssp_cnt[8:0] == `FRAME_CLR_L)) || (speed && ssp_cnt[7:0] == `FRAME_CLR_H))
     begin
         ssp_frame <= 1'b0;
     end
@@ -348,7 +366,11 @@ always @(ck_1356meg or ssp_dout or power or disabl or mod)
 begin
     if (power)
     begin
+`ifdef PM5 // pwr_hi is used to control the 1356 clk enable on PM5, not clk output.
+        pwr_hi  <= 1'b1; // enable 1356 clk output
+`else
         pwr_hi  <= ck_1356meg;
+`endif
         pwr_lo  <= 1'b0;
         pwr_oe1 <= 1'b0;//mod;
         pwr_oe2 <= 1'b0;//mod;
