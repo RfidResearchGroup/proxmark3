@@ -156,10 +156,21 @@ begin
 
     ssp_clk <= ~clock_cnt[3];       // ssp_clk frequency = 13,56MHz / 16 = 847,5 kHz
 
+`ifdef WITH_TIMODE
+    // Toggle once every 8 ssp_clk cycles
+    // TI mode 7D112: starts with the TI frame start signal; the line is driven high at the (128-16)th ssp_clk cycle.
+    if(clock_cnt[6:0] == 7'd112)
+        ssp_frame <= 1'b1;
+
+    // Clear the frame signal at the new frame start (0th ssp_clk cycle)
+    if(clock_cnt[6:0] == 7'd0)
+        ssp_frame <= 1'b0;
+`else
     if (clock_cnt[6:4] == 3'b000)    // set ssp_frame for 0...31
         ssp_frame <= 1'b1;
     else
         ssp_frame <= 1'b0;
+`endif
 
 end
 
