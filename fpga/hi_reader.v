@@ -147,8 +147,8 @@ begin
                     begin
                         if (match28 < match32)
                         begin
-                            diff28 = match32 - match28;
-                            diff16 = match16 - match28;
+                            diff28 = (match32 - match28) & 8'hFF;
+                            diff16 = (match16 - match28) & 8'hFF;
                             if (diff28*2 > diff16)
                                 fskout = 2'b01;
                             else if (!last0)
@@ -158,8 +158,8 @@ begin
                         end
                         else //if (match32 <= match28)
                         begin
-                            diff32 = match28 - match32;
-                            diff16 = match16 - match32;
+                            diff32 = (match28 - match32) & 8'hFF;
+                            diff16 = (match16 - match32) & 8'hFF;
                             if (diff32*2 > diff16)
                                 fskout = 2'b10;
                             else if (!last0)
@@ -368,7 +368,15 @@ begin
 
 end
 
-// ssp clock and frame signal for communication to and from ARM
+`ifdef WITH_TIMODE // In TI mode, the frame signal goes high during the last `ssp_clk` pulse (at the 60th clock cycle, i.e., 64-4).
+    `define FRAME_SET  6'd60
+    `define FRAME_CLR  6'd0
+`else
+    `define FRAME_SET  6'd1
+    `define FRAME_CLR  6'd3
+`endif
+
+// ssp clock and frame signal for communication to and from ARM, not SPI TI-MODE
 //                _____       _____       _____       _
 // ssp_clk       |     |_____|     |_____|     |_____|
 //                   _____
@@ -380,18 +388,18 @@ end
 //
 always @(negedge adc_clk)
 begin
-    if (corr_i_cnt[1:0] == 2'b00)
+    if (corr_i_cnt[1:0] == 2'b00) // High level for 2 cycles (rising edge at cycle 0 or 4)
         ssp_clk <= 1'b1;
 
-    if (corr_i_cnt[1:0] == 2'b10)
+    if (corr_i_cnt[1:0] == 2'b10) // Low level for 2 cycles (falling edge at the second cycle)
         ssp_clk <= 1'b0;
 
     // set ssp_frame signal for corr_i_cnt = 1..3
     // (send one frame with 16 Bits)
-    if (corr_i_cnt == 6'd1)
+    if (corr_i_cnt == `FRAME_SET)
         ssp_frame <= 1'b1;
 
-    if (corr_i_cnt == 6'd3)
+    if (corr_i_cnt == `FRAME_CLR)
         ssp_frame <= 1'b0;
 end
 
@@ -410,6 +418,10 @@ begin
     end
 end
 
+// ---
+// pwr_hi is used to control the 1356 clk enable on PM5, not clk output.
+// ---
+
 always @(*)
 begin
     pwr_oe1 = 1'b0;
@@ -417,22 +429,38 @@ begin
 
     if (minor_mode == `FPGA_HF_READER_MODE_SEND_SHALLOW_MOD)
     begin
+`ifdef PM5
+        pwr_hi  = 1'b1;
+`else
         pwr_hi  = ck_1356meg;
+`endif
         pwr_oe4 = ssp_dout;
     end
     else if (minor_mode == `FPGA_HF_READER_MODE_SEND_SHALLOW_MOD_RDV4)
     begin
+`ifdef PM5
+        pwr_hi  = 1'b1;
+`else
         pwr_hi  = ck_1356meg;
+`endif
         pwr_oe1 = ssp_dout;
     end
     else if (minor_mode == `FPGA_HF_READER_MODE_SEND_FULL_MOD)
     begin
+`ifdef PM5
+        pwr_hi  = ~ssp_dout;
+`else
         pwr_hi  = ck_1356meg & ~ssp_dout;
+`endif
         pwr_oe4 = 1'b0;
     end
     else if (minor_mode == `FPGA_HF_READER_MODE_SEND_JAM)
     begin
+`ifdef PM5
+        pwr_hi  = jam_signal;
+`else
         pwr_hi  = ck_1356meg & jam_signal;
+`endif
         pwr_oe4 = 1'b0;
     end
     else if (minor_mode == `FPGA_HF_READER_MODE_SNIFF_IQ
@@ -444,7 +472,11 @@ begin
     end
     else // receiving from tag
     begin
+`ifdef PM5
+        pwr_hi  = 1'b1;
+`else
         pwr_hi  = ck_1356meg;
+`endif
         pwr_oe4 = 1'b0;
     end
 end
