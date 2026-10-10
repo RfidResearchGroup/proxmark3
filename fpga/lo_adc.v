@@ -29,7 +29,7 @@ module lo_adc(
     input ssp_dout,
 
     output ssp_din,
-    output ssp_frame,
+    output reg ssp_frame,
     output ssp_clk,
     output adc_clk,
     output pwr_lo,
@@ -63,7 +63,14 @@ assign pwr_oe4 = 1'b0;  // 10k Ohms
 assign debug = adc_clk;
 
 // ADC clock out of phase with antenna driver
+`ifdef PM5
+// Since the PM5's ADC sampling occurs on the rising edge,
+// whereas the falling edge of the field signal causes a rapid voltage rise—making it unsuitable for sampling
+// the phase was adjusted to align them.
+assign adc_clk = clk_state;
+`else
 assign adc_clk = ~clk_state;
+`endif
 
 // serialized SSP data is gated by clk_state to suppress unwanted signal
 assign ssp_din = to_arm_shiftreg[7] && !clk_state;
@@ -71,15 +78,35 @@ assign ssp_din = to_arm_shiftreg[7] && !clk_state;
 // SSP clock always runs at 24MHz
 assign ssp_clk = pck0;
 
-// SSP frame is gated by clk_state and goes high when pck_divider=8..15
-assign ssp_frame = (pck_divider[7:3] == 5'd1) && !clk_state;
+// ssp_frame window: TI = 1-cycle pulse (at divider 7), SSP = spans the entire data window (dividers 8–15).
+// Note: The 'always' block below reads the value of pck_divider *before* it toggles for the current cycle,
+// so SET is triggered at the window start minus 1, and CLR is triggered at the window end.
+`ifdef WITH_TIMODE
+  `define LO_ADC_FRAME_SET  8'd6
+  `define LO_ADC_FRAME_CLR  8'd7
+`else
+  `define LO_ADC_FRAME_SET  8'd7
+  `define LO_ADC_FRAME_CLR  8'd15
+`endif
+
+// Frame signal generation.
+always @(posedge pck0)
+begin
+  if ((pck_divider == `LO_ADC_FRAME_SET) && !clk_state)
+      ssp_frame <= 1'b1;
+  if ((pck_divider == `LO_ADC_FRAME_CLR) && !clk_state)
+      ssp_frame <= 1'b0;
+end
 
 // divide 24mhz down to 3mhz
-always @(posedge pck0)
+always @(posedge pck0) // SSPCLK rising edge
 begin
     if (pck_divider == divisor[7:0])
     begin
+        // Resets to zero upon reaching the frequency division factor; effectively, the value 95 corresponds to 125 kHz, meaning it executes 96 times (counting from 0 to 95) and resets on the 96th iteration.
+        // After resetting, the cycle count becomes 0 and does not increment.
         pck_divider <= 8'd0;
+        // Toggle clk upon reaching the frequency division factor; the value 95 (corresponding to 125 kHz) actually implies operation at a frequency of 250 kHz.
         clk_state = !clk_state;
     end
     else
@@ -92,6 +119,15 @@ end
 // the ADC output which is then clocked into the ARM SSP.
 always @(posedge pck0)
 begin
+
+    // For PM5: Since adc_clk = ~clk_state, the ADC receives a rising edge when clk_state is 0.
+    // Note: Because the PM5 ADC samples on the rising edge, this causes hardware sampling to occur the moment the field is turned off (when voltage rises rapidly); therefore, a modification was made here.
+    // The adc_clk is now set to be in-phase with clk_state (since pwrlo is based on clk_state, this aligns the phases).
+    // Consequently, when clk_state is 0, the ADC receives a falling edge; sampling the output of the 9280 on the falling edge is safe, so this approach was adopted.
+    // ADC sampling completes when pck_divider == 8'd7; one cycle later, the 'else' condition takes effect.
+    // Shift transmission begins at 8'd8, but since the data payload is only 8 bits, zeros are transmitted continuously after the actual data is sent—a point easily misunderstood.
+    // In reality, the active sequence spans pck_divider values from 0 to 7 (sampling), to 8 (transmission start), and finally to 16 (transmission end).
+
     if ((pck_divider == 8'd7) && !clk_state)
         to_arm_shiftreg <= adc_d;
     else
