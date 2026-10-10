@@ -36,7 +36,12 @@ module hi_iso14443a(
     output debug
 );
 
+// The PM5's ADC is inverting (for HF).
+`ifdef PM5
+assign adc_clk = ~ck_1356meg;
+`else
 assign adc_clk = ck_1356meg;
+`endif
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Reader -> PM3:
@@ -47,8 +52,16 @@ reg [11:0] has_been_low_for;
 
 always @(negedge adc_clk)
 begin
-    if(adc_d >= 16) after_hysteresis <= 1'b1;           // U >= 1,14V   -> after_hysteresis = 1
-    else if(adc_d < 8) after_hysteresis <= 1'b0;        // U <  1,04V   -> after_hysteresis = 0
+
+    // The PM5's ADC is inverting (for HF). Therefore, the trigger values are inverted as well.
+`ifdef PM5
+    if(adc_d <= 240) after_hysteresis <= 1'b1;           // U >= 1,14V   -> after_hysteresis = 1
+    else if(adc_d > 248) after_hysteresis <= 1'b0;       // U <  1,04V   -> after_hysteresis = 0
+`else
+    if(adc_d >= 16) after_hysteresis <= 1'b1;            // U >= 1,14V   -> after_hysteresis = 1
+    else if(adc_d < 8) after_hysteresis <= 1'b0;         // U <  1,04V   -> after_hysteresis = 0
+`endif
+
     // Note: was >= 3,53V and <= 1,19V. The new trigger values allow more reliable detection of the first bit
     // (it might not reach 3,53V due to the high time constant of the high pass filter in the analogue RF part).
     // In addition, the new values are more in line with ISO14443-2: "The PICC shall detect the ”End of Pause” after the field exceeds
@@ -57,7 +70,11 @@ begin
 
     // detecting a loss of reader's field (adc_d < 192 for 4096 clock cycles). If this is the case,
     // set the detected reader signal (after_hysteresis) to '1' (unmodulated)
+`ifdef PM5
+    if(adc_d <= 32)
+`else
     if(adc_d >= 192)
+`endif
     begin
         has_been_low_for <= 12'd0;
     end
@@ -86,7 +103,11 @@ reg [8:0] saw_deep_modulation;
 
 always @(negedge adc_clk)
 begin
+`ifdef PM5
+    if(& adc_d[7:0])                                    // if adc_d == 255 (ADC Value of PM5 is inverted)
+`else
     if(~(| adc_d[7:0]))                                 // if adc_d == 0 (U <= 0,94V)
+`endif
     begin
         if(deep_counter == 3'd7)                        // adc_d == 0 for 8 adc_clk ticks -> deep_modulation (by reader)
         begin
@@ -472,32 +493,47 @@ end
 // FPGA <-> ARM communication:
 // generate a ssp clock and ssp frame signal for the synchronous transfer from/to the ARM
 
+`ifdef WITH_TIMODE
+`define FRAME_SET_8B   6'd56
+`define FRAME_CLR_8B   6'd0
+`define FRAME_SET_16B  7'd112
+`define FRAME_CLR_16B  7'd0
+`else
+`define FRAME_SET_8B   6'd0
+`define FRAME_CLR_8B   6'd8
+`define FRAME_SET_16B  7'd7
+`define FRAME_CLR_16B  7'd23
+`endif
+
 always @(negedge adc_clk)
 begin
     if(mod_type == `FPGA_HF_ISO14443A_SNIFFER)
     // FPGA_HF_ISO14443A_SNIFFER mode (ssp_clk = adc_clk / 8, ssp_frame clock = adc_clk / 64)):
     begin
-        if(negedge_cnt[2:0] == 3'd0)
+        if(negedge_cnt[2:0] == 3'd0) // High level for 4 cycles
             ssp_clk <= 1'b1;
-        if(negedge_cnt[2:0] == 3'd4)
+        if(negedge_cnt[2:0] == 3'd4)// Low level for 4 cycles
             ssp_clk <= 1'b0;
 
-        if(negedge_cnt[5:0] == 6'd0)    // ssp_frame rising edge indicates start of frame
+        //ssp模式6D0,TI模式6D56，TI帧开始信号开始：最后一个ssp_clk拉高(64-8)的时候就拉高
+        // ssp_frame rising edge indicates start of frame
+        if(negedge_cnt[5:0] == `FRAME_SET_8B)
             ssp_frame <= 1'b1;
-        if(negedge_cnt[5:0] == 6'd8)
+        //ssp模式6D8,TI模式6D0,TI帧开始信号结束：在第一次ssp_clk拉高的时候就拉低（清除上一个周期拉高）
+        if(negedge_cnt[5:0] == `FRAME_CLR_8B)
             ssp_frame <= 1'b0;
     end
     else
     // all other modes (ssp_clk = adc_clk / 16, ssp_frame clock = adc_clk / 128):
     begin
-        if(negedge_cnt[3:0] == 4'd0)
+        if(negedge_cnt[3:0] == 4'd0) // High level for 8 cycles (rising edge at cycle 0 or 16)
             ssp_clk <= 1'b1;
-        if(negedge_cnt[3:0] == 4'd8)
+        if(negedge_cnt[3:0] == 4'd8) // Low level for 8 cycles (falling edge at cycle 8)
             ssp_clk <= 1'b0;
 
-        if(negedge_cnt[6:0] == 7'd7)    // ssp_frame rising edge indicates start of frame, sampled on falling edge of ssp_clk
+        if(negedge_cnt[6:0] == `FRAME_SET_16B) // ssp_frame rising edge indicates start of frame, sampled on falling edge of ssp_clk
             ssp_frame <= 1'b1;
-        if(negedge_cnt[6:0] == 7'd23)
+        if(negedge_cnt[6:0] == `FRAME_CLR_16B)
             ssp_frame <= 1'b0;
     end
 end
@@ -544,7 +580,12 @@ assign sub_carrier = ~sub_carrier_cnt[3];
 
 // in FPGA_HF_ISO14443A_READER_MOD: drop carrier for mod_sig_coil == 1 (pause);
 // in FPGA_HF_ISO14443A_READER_LISTEN: carrier always on; in other modes: carrier always off
+
+`ifdef PM5
+assign pwr_hi = (((mod_type == `FPGA_HF_ISO14443A_READER_MOD) & ~mod_sig_coil) || (mod_type == `FPGA_HF_ISO14443A_READER_LISTEN));
+`else
 assign pwr_hi = (ck_1356meg & (((mod_type == `FPGA_HF_ISO14443A_READER_MOD) & ~mod_sig_coil) || (mod_type == `FPGA_HF_ISO14443A_READER_LISTEN)));
+`endif
 
 // Enable HF antenna drivers:
 assign pwr_oe1 = 1'b0;
