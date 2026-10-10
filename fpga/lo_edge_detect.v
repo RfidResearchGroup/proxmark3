@@ -64,6 +64,13 @@ assign pwr_hi = 1'b0;
 // filter the ADC values
 wire data_rdy;
 wire [7:0] adc_filtered;
+
+// Regarding PM5, here is why the ADC sampling points remain in-phase (unlike other cases where sampling occurs at the same frequency as the signal):
+// 1. The ADC operates at 125 kHz (derived from a 24 MHz oversampling clock); sampling points are distributed throughout the entire cycle. High dV/dt events near the signal edges will inevitably be captured regardless of phase inversion,
+//    and are subsequently suppressed by the 20 kHz low-pass filter, making phase alignment irrelevant;
+// 2. Phase inversion (adc_clk = ~pck0) causes the ADC to output data on the pck0 falling edge while downstream components (adc_filter/lf_edge_detect) read it on the pck0 rising edge.
+//    This leaves a margin of only half a clock cycle (20.8 ns); given the ADC's maximum tOD of approximately 25 ns, the timing margin for reading is insufficient, creating a risk of capturing unstable or metastable data.
+
 assign adc_clk = pck0;
 
 lp20khz_1MSa_iir_filter adc_filter(
