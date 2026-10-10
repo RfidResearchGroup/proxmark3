@@ -494,15 +494,15 @@ end
 // generate a ssp clock and ssp frame signal for the synchronous transfer from/to the ARM
 
 `ifdef WITH_TIMODE
-`define FRAME_SET_8B   6'd56
-`define FRAME_CLR_8B   6'd0
-`define FRAME_SET_16B  7'd112
-`define FRAME_CLR_16B  7'd0
+`define HI_ISO14443A_FRAME_SET_8B   6'd56
+`define HI_ISO14443A_FRAME_CLR_8B   6'd0
+`define HI_ISO14443A_FRAME_SET_16B  7'd112
+`define HI_ISO14443A_FRAME_CLR_16B  7'd0
 `else
-`define FRAME_SET_8B   6'd0
-`define FRAME_CLR_8B   6'd8
-`define FRAME_SET_16B  7'd7
-`define FRAME_CLR_16B  7'd23
+`define HI_ISO14443A_FRAME_SET_8B   6'd0
+`define HI_ISO14443A_FRAME_CLR_8B   6'd8
+`define HI_ISO14443A_FRAME_SET_16B  7'd7
+`define HI_ISO14443A_FRAME_CLR_16B  7'd23
 `endif
 
 always @(negedge adc_clk)
@@ -517,10 +517,10 @@ begin
 
         //ssp模式6D0,TI模式6D56，TI帧开始信号开始：最后一个ssp_clk拉高(64-8)的时候就拉高
         // ssp_frame rising edge indicates start of frame
-        if(negedge_cnt[5:0] == `FRAME_SET_8B)
+        if(negedge_cnt[5:0] == `HI_ISO14443A_FRAME_SET_8B)
             ssp_frame <= 1'b1;
         //ssp模式6D8,TI模式6D0,TI帧开始信号结束：在第一次ssp_clk拉高的时候就拉低（清除上一个周期拉高）
-        if(negedge_cnt[5:0] == `FRAME_CLR_8B)
+        if(negedge_cnt[5:0] == `HI_ISO14443A_FRAME_CLR_8B)
             ssp_frame <= 1'b0;
     end
     else
@@ -531,9 +531,9 @@ begin
         if(negedge_cnt[3:0] == 4'd8) // Low level for 8 cycles (falling edge at cycle 8)
             ssp_clk <= 1'b0;
 
-        if(negedge_cnt[6:0] == `FRAME_SET_16B) // ssp_frame rising edge indicates start of frame, sampled on falling edge of ssp_clk
+        if(negedge_cnt[6:0] == `HI_ISO14443A_FRAME_SET_16B) // ssp_frame rising edge indicates start of frame, sampled on falling edge of ssp_clk
             ssp_frame <= 1'b1;
-        if(negedge_cnt[6:0] == `FRAME_CLR_16B)
+        if(negedge_cnt[6:0] == `HI_ISO14443A_FRAME_CLR_16B)
             ssp_frame <= 1'b0;
     end
 end

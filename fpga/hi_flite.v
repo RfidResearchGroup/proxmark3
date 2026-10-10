@@ -115,15 +115,15 @@ always @(posedge adc_clk)
 // TIMODE(FRAME_H)  ~speed -> 9'd(512-64)                speed -> 8'd(256-32)
 // TIMODE(FRAME_L)  ~speed -> 9'b0                       speed -> 8'b0
 `ifdef WITH_TIMODE
-    `define FRAME_SET_L  9'd448
-    `define FRAME_SET_H  8'd224
-    `define FRAME_CLR_L  9'd0
-    `define FRAME_CLR_H  8'd0
+    `define HI_FLITE_FRAME_SET_L  9'd448
+    `define HI_FLITE_FRAME_SET_H  8'd224
+    `define HI_FLITE_FRAME_CLR_L  9'd0
+    `define HI_FLITE_FRAME_CLR_H  8'd0
 `else
-    `define FRAME_SET_L  9'd31
-    `define FRAME_SET_H  8'd15
-    `define FRAME_CLR_L  9'b1011111   // 95 = 96 - 1
-    `define FRAME_CLR_H  8'b101111    // 47 = 48 - 1
+    `define HI_FLITE_FRAME_SET_L  9'd31
+    `define HI_FLITE_FRAME_SET_H  8'd15
+    `define HI_FLITE_FRAME_CLR_L  9'b1011111   // 95 = 96 - 1
+    `define HI_FLITE_FRAME_CLR_H  8'b101111    // 47 = 48 - 1
 `endif
 
 always @(negedge adc_clk)
@@ -141,11 +141,11 @@ begin
         ssp_clk <= 1'b0;
     //create frame pulses. TBH, I still don't know what they do exactly, but they are crucial for ARM->FPGA transfer. If the frame is in the beginning of the byte, transfer slows to a crawl for some reason
     // took me a day to figure THAT out.
-    if(( (~speed) && (ssp_cnt[8:0] == `FRAME_SET_L)) || (speed && ssp_cnt[7:0] == `FRAME_SET_H))
+    if(( (~speed) && (ssp_cnt[8:0] == `HI_FLITE_FRAME_SET_L)) || (speed && ssp_cnt[7:0] == `HI_FLITE_FRAME_SET_H))
     begin
         ssp_frame <= 1'b1;
     end
-    if(( (~speed) && (ssp_cnt[8:0] == `FRAME_CLR_L)) || (speed && ssp_cnt[7:0] == `FRAME_CLR_H))
+    if(( (~speed) && (ssp_cnt[8:0] == `HI_FLITE_FRAME_CLR_L)) || (speed && ssp_cnt[7:0] == `HI_FLITE_FRAME_CLR_H))
     begin
         ssp_frame <= 1'b0;
     end

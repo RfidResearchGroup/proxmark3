@@ -369,11 +369,11 @@ begin
 end
 
 `ifdef WITH_TIMODE // In TI mode, the frame signal goes high during the last `ssp_clk` pulse (at the 60th clock cycle, i.e., 64-4).
-    `define FRAME_SET  6'd60
-    `define FRAME_CLR  6'd0
+    `define HI_READER_FRAME_SET  6'd60
+    `define HI_READER_FRAME_CLR  6'd0
 `else
-    `define FRAME_SET  6'd1
-    `define FRAME_CLR  6'd3
+    `define HI_READER_FRAME_SET  6'd1
+    `define HI_READER_FRAME_CLR  6'd3
 `endif
 
 // ssp clock and frame signal for communication to and from ARM, not SPI TI-MODE
@@ -396,10 +396,10 @@ begin
 
     // set ssp_frame signal for corr_i_cnt = 1..3
     // (send one frame with 16 Bits)
-    if (corr_i_cnt == `FRAME_SET)
+    if (corr_i_cnt == `HI_READER_FRAME_SET)
         ssp_frame <= 1'b1;
 
-    if (corr_i_cnt == `FRAME_CLR)
+    if (corr_i_cnt == `HI_READER_FRAME_CLR)
         ssp_frame <= 1'b0;
 end
 

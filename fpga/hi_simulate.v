@@ -112,11 +112,11 @@ end
 // This means an 8-bit transfer; in SSP mode, the frame signal is driven high at bit 1 (clock rising edge) and low at bit 5 (clock falling edge).
 // To switch to TI mode, this must be changed to the rising edge of the final cycle: driving high at bit 14 (rising edge) and low at bit 0 (falling edge).
 `ifdef WITH_TIMODE
-`define FRAME_SET_212K  4'd14
-`define FRAME_CLR_212K  4'd0
+`define HI_SIMULATE_FRAME_SET_212K  4'd14
+`define HI_SIMULATE_FRAME_CLR_212K  4'd0
 `else
-`define FRAME_SET_212K  4'd1
-`define FRAME_CLR_212K  4'd5
+`define HI_SIMULATE_FRAME_SET_212K  4'd1
+`define HI_SIMULATE_FRAME_CLR_212K  4'd5
 `endif
 
 // Produce the byte framing signal; the phase of this signal
@@ -125,16 +125,16 @@ always @(negedge adc_clk)
 begin
     if (mod_type == `FPGA_HF_SIMULATOR_MODULATE_212K)
     begin
-        if (ssp_clk_divider[8:5] == `FRAME_SET_212K)
+        if (ssp_clk_divider[8:5] == `HI_SIMULATE_FRAME_SET_212K)
             ssp_frame <= 1'b1;
-        if (ssp_clk_divider[8:5] == `FRAME_CLR_212K)
+        if (ssp_clk_divider[8:5] == `HI_SIMULATE_FRAME_CLR_212K)
             ssp_frame <= 1'b0;
     end
     else
     begin
-        if (ssp_clk_divider[7:4] == `FRAME_SET_212K)
+        if (ssp_clk_divider[7:4] == `HI_SIMULATE_FRAME_SET_212K)
             ssp_frame <= 1'b1;
-        if (ssp_clk_divider[7:4] == `FRAME_CLR_212K)
+        if (ssp_clk_divider[7:4] == `HI_SIMULATE_FRAME_CLR_212K)
             ssp_frame <= 1'b0;
     end
 end
