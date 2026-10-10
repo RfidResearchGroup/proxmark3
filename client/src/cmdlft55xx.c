@@ -124,6 +124,7 @@ static buffer_savestate_t t55xx_psk_trim_head(void) {
 static void t55xx_psk_untrim_head(buffer_savestate_t st) {
     s_sample_bias = 0;
     restore_graphbuffer(st);
+    free_buffer_savestate(st);
 }
 
 // the bit offset to read a block at in the demod buffer loaded right now

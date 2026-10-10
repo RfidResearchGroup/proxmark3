@@ -93,6 +93,7 @@ int demodVisa2k(bool verbose) {
     if (ASKDemod_ext(64, 0, 0, 0, false, false, false, 1, &st) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: ASK/Manchester Demod failed");
         restore_graphbuffer(saveState);
+        free_buffer_savestate(saveState);
         return PM3_ESOFT;
     }
     size_t size = g_DemodBufferLen;
@@ -108,6 +109,7 @@ int demodVisa2k(bool verbose) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - Visa2k: ans: %d", ans);
 
         restore_graphbuffer(saveState);
+        free_buffer_savestate(saveState);
         return PM3_ESOFT;
     }
     setDemodBuff(g_DemodBuffer, 96, ans);
@@ -126,6 +128,7 @@ int demodVisa2k(bool verbose) {
     if (chk != calc) {
         PrintAndLogEx(DEBUG, "DEBUG: error: Visa2000 checksum (%s) %x - %x\n", _RED_("fail"), chk, calc);
         restore_graphbuffer(saveState);
+        free_buffer_savestate(saveState);
         return PM3_ESOFT;
     }
     // parity
@@ -134,9 +137,11 @@ int demodVisa2k(bool verbose) {
     if (calc_par != chk_par) {
         PrintAndLogEx(DEBUG, "DEBUG: error: Visa2000 parity (%s) %x - %x\n", _RED_("fail"), chk_par, calc_par);
         restore_graphbuffer(saveState);
+        free_buffer_savestate(saveState);
         return PM3_ESOFT;
     }
     PrintAndLogEx(SUCCESS, "Visa2000 - Card " _GREEN_("%u") ", Raw: %08X%08X%08X", raw2,  raw1, raw2, raw3);
+    free_buffer_savestate(saveState);
     return PM3_SUCCESS;
 }
 
