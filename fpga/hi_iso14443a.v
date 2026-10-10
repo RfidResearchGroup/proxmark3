@@ -221,7 +221,7 @@ begin
         if (mod_type == `FPGA_HF_ISO14443A_SNIFFER)
         begin
             // detect modulation signal: if modulating, there must have been a falling AND a rising edge
-            if ((rx_mod_falling_edge_max > edge_detect_threshold_high) && (rx_mod_rising_edge_max < -edge_detect_threshold_high))
+            if ((rx_mod_falling_edge_max > $signed(edge_detect_threshold_high)) && (rx_mod_rising_edge_max < -$signed(edge_detect_threshold_high)))
                 curbit <= 1'b1; // modulation
             else
                 curbit <= 1'b0; // no modulation
@@ -229,7 +229,7 @@ begin
         else
         begin
             // detect modulation signal: if modulating, there must have been a falling AND a rising edge
-            if ((rx_mod_falling_edge_max > edge_detect_threshold) && (rx_mod_rising_edge_max < -edge_detect_threshold))
+            if ((rx_mod_falling_edge_max > $signed(edge_detect_threshold)) && (rx_mod_rising_edge_max < -$signed(edge_detect_threshold)))
                 curbit <= 1'b1; // modulation
             else
                 curbit <= 1'b0; // no modulation
