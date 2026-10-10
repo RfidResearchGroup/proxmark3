@@ -50,16 +50,34 @@ always @(posedge ssp_clk)
 begin
     ssp_cnt <= ssp_cnt + 1'b1;
 
+`ifdef WITH_TIMODE
+    if(ssp_cnt[2:0] == 3'b111) // set frame pin to high for TI mode on the last bit of the frame
+    begin
+        ssp_frame <= 1'b1;
+    end
+`endif
+
     if(ssp_cnt[2:0] == 3'b000) // set frame length
     begin
         adc_d_out[7:0] <= adc_d;
-        ssp_frame <= 1'b1;
+
+`ifdef WITH_TIMODE
+        ssp_frame <= 1'b0; // In TI mode, pull the frame signal low here—at the rising edge of the first bit (marking the end of the last bit).
+`else
+        ssp_frame <= 1'b1; // In SSP mode, pull the frame signal high here.
+`endif
+
     end
+
     else
     begin
         // shift value right one bit
         adc_d_out[7:0] <= {1'b0, adc_d_out[7:1]};
-        ssp_frame <= 1'b0;
+
+`ifndef WITH_TIMODE
+        ssp_frame <= 1'b0; // In SSP mode, pull the frame signal low here.
+`endif
+
     end
 
 end
