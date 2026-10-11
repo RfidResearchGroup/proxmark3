@@ -1,0 +1,8 @@
+# 1. 读取源代码和宏定义
+read_verilog -D PM5 -D WITH_TIMODE -D WITH_HF_15 -D WITH_FELICA_PROBE define.v mux8.v clk_divider.v lp20khz_1MSa_iir_filter.v min_max_tracker.v hi_flite.v hi_get_trace.v hi_iso14443a.v hi_reader.v hi_simulate.v hi_sniffer.v lf_edge_detect.v lo_adc.v lo_edge_detect.v lo_passthru.v lo_read.v gowin_rpll.v fpga_pm5_hf.v fpga_pm5_lf.v fpga_pm5_top.v
+
+# 2. 检查并强制指定顶层
+hierarchy -top fpga_top
+
+# 3. 进行综合
+synth_gowin -nolutram -json output.json
