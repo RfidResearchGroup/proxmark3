@@ -56,6 +56,7 @@ wire low_signal_mode = (subcarrier_frequency == `FPGA_HF_READER_2SUBCARRIERS_424
 
 always @(negedge adc_clk)
 begin
+    // TODO DXL - 阈值是绝对值，这是否会在PM5上导致问题？需要考虑判定的adc值是否和场的信号同步，待测
     if (low_signal_mode)
     begin
         if (& adc_d[7:4]) after_hysteresis <= 1'b1;
