@@ -28,10 +28,13 @@
 #include "ui.h"
 #include "crc16.h"
 #include "crapto1/crapto1.h"
+#include "iso14b.h"
 #include "protocols.h"
 #include "cmdhficlass.h"
+#include "cmdhfcalypso.h"
 #include "mifare/mifaredefault.h"  // mifare consts
 #include "cmdhfseos.h"
+#include "iso7816/apduinfo.h"
 
 enum MifareAuthSeq {
     masNone,
@@ -46,7 +49,12 @@ enum MifareAuthSeq {
 static enum MifareAuthSeq MifareAuthState;
 static AuthData_t AuthData;
 
+// Set while the previous reader frame was a bit oriented ANTICOLLISION, whose
+// answer completes a split byte and so carries no CRC either.
+static bool gs_14a_anticoll_answer = false;
+
 void ClearAuthData(void) {
+    gs_14a_anticoll_answer = false;
     AuthData.uid = 0;
     AuthData.nt = 0;
     AuthData.first_auth = true;
@@ -71,6 +79,29 @@ static uint8_t *gs_mfuc_key = NULL;
  */
 
 uint8_t iso14443A_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
+
+    // Neither half of a bit oriented ANTICOLLISION exchange carries a CRC: the
+    // request stops mid byte and the answer completes it.  NVB counts SEL and
+    // NVB themselves, so 0x20..0x67 is the anticollision range and only a
+    // SELECT, NVB 0x70, ends in a CRC.  `hf 14a antifuzz` pushes a reader past
+    // cascade level 3, hence the whole odd 0x93..0x9F range.
+    //
+    // The answer carries nothing that identifies it, so it is recognised by the
+    // request it follows - frames reach us in order.
+    if (isResponse == false) {
+        gs_14a_anticoll_answer = (n >= 2 &&
+                                  (d[0] & 1) &&
+                                  d[0] >= ISO14443A_CMD_ANTICOLL_OR_SELECT &&
+                                  d[0] <= 0x9F &&
+                                  d[1] >= 0x20 && d[1] <= 0x67);
+        if (gs_14a_anticoll_answer) {
+            return 2;
+        }
+    } else if (gs_14a_anticoll_answer) {
+        gs_14a_anticoll_answer = false;
+        return 2;
+    }
+
     if (n < 3) {
         return 2;
     }
@@ -79,11 +110,6 @@ uint8_t iso14443A_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
         return 2;
     }
 
-    if (d[1] == 0x50 &&
-            d[0] >= ISO14443A_CMD_ANTICOLL_OR_SELECT &&
-            d[0] <= ISO14443A_CMD_ANTICOLL_OR_SELECT_3) {
-        return 2;
-    }
     return check_crc(CRC_14443_A, d, n);
 }
 
@@ -199,6 +225,46 @@ uint8_t iclass_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
 }
 
 
+static int annotateEcp(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize) {
+    if (cmdsize < 7 || cmd[0] != ECP_HEADER) {
+        return PM3_ESOFT;
+    }
+
+    // Byte 0 is a header
+    // Byte 1 indicates format version
+    // Version 0x01 format is 7 bytes long (including CRC)
+    // Version 0x02 format is at least 7 bytes long, including CRC.
+    // The low nibble of byte 2 defines extra payload length.
+    if (cmd[1] == 0x01 && cmdsize == 7) {
+        snprintf(exp, size, "ECP1");
+        return PM3_SUCCESS;
+    }
+
+    if (cmd[1] == 0x02 && cmdsize == (cmd[2] & 0x0F) + 7) {
+        // Byte 3 is the reader type
+        switch (cmd[3]) {
+            case 0x01:
+                snprintf(exp, size, "ECP2 (Transit)");
+                break;
+            case 0x02:
+                snprintf(exp, size, "ECP2 (Access)");
+                break;
+            case 0x03:
+                snprintf(exp, size, "ECP2 (Identity)");
+                break;
+            case 0x05:
+                snprintf(exp, size, "ECP2 (AirDrop)");
+                break;
+            default:
+                snprintf(exp, size, "ECP2");
+                break;
+        }
+        return PM3_SUCCESS;
+    }
+
+    return PM3_ESOFT;
+}
+
 int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
 
     if (is_response == false) {
@@ -208,35 +274,8 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
             return PM3_SUCCESS;
         }
 
-        if (cmdsize >= 7 && cmd[0] == ECP_HEADER) {
-            // Byte 0 is a header
-            // Byte 1 indicates format version
-            // Version 0x01 format is 7 bytes long (including crc)
-            // Version 0x02 format is at least 7 bytes long (including crc). First 4 bits of byte 2 define extra payload length
-            if (cmd[1] == 0x01 && cmdsize == 7) {
-                snprintf(exp, size, "ECP1");
-                return PM3_SUCCESS;
-            } else if (cmd[1] == 0x02 && cmdsize == (cmd[2] & 0x0F) + 7) {
-                // Byte 3 is the reader type
-                switch (cmd[3]) {
-                    case 0x01:
-                        snprintf(exp, size, "ECP2 (Transit)");
-                        break;
-                    case 0x02:
-                        snprintf(exp, size, "ECP2 (Access)");
-                        break;
-                    case 0x03:
-                        snprintf(exp, size, "ECP2 (Identity)");
-                        break;
-                    case 0x05:
-                        snprintf(exp, size, "ECP2 (AirDrop)");
-                        break;
-                    default:
-                        snprintf(exp, size, "ECP2");
-                        break;
-                }
-                return PM3_SUCCESS;
-            }
+        if (annotateEcp(exp, size, cmd, cmdsize) == PM3_SUCCESS) {
+            return PM3_SUCCESS;
         }
 
         gs_ntag_i2c_state = 0;
@@ -250,40 +289,45 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
             case ISO14443A_CMD_WUPA:
                 snprintf(exp, size, "WUPA");
                 break;
-            case ISO14443A_CMD_ANTICOLL_OR_SELECT: {
-                // 93 20 = Anticollision (usage: 9320 - answer: 4bytes UID+1byte UID-bytes-xor)
-                // 93 50 = Bit oriented anti-collision (usage: 9350+ up to 5bytes, 9350 answer - up to 5bytes UID+BCC)
-                // 93 70 = Select (usage: 9370+5bytes 9370 answer - answer: 1byte SAK)
-                if (cmd[1] == 0x70)
-                    snprintf(exp, size, "SELECT_UID");
-                else if (cmd[1] == 0x20 || cmd[1] == 0x50)
-                    snprintf(exp, size, "ANTICOLL");
-                else
-                    snprintf(exp, size, "SELECT_XXX");
-                break;
-            }
-            case ISO14443A_CMD_ANTICOLL_OR_SELECT_2: {
-                //95 20 = Anticollision of cascade level2
-                //95 50 = Bit oriented anti-collision level2
-                //95 70 = Select of cascade level2
-                if (cmd[1] == 0x70)
-                    snprintf(exp, size, "SELECT_UID-2");
-                else if (cmd[1] == 0x20 || cmd[1] == 0x50)
-                    snprintf(exp, size, "ANTICOLL-2");
-                else
-                    snprintf(exp, size, "SELECT_XXX-2");
-                break;
-            }
-            case ISO14443A_CMD_ANTICOLL_OR_SELECT_3: {
-                //97 20 = Anticollision of cascade level3
-                //97 50 = Bit oriented anti-collision level3
-                //97 70 = Select of cascade level3
-                if (cmd[1] == 0x70)
-                    snprintf(exp, size, "SELECT_UID-3");
-                else if (cmd[1] == 0x20 || cmd[1] == 0x50)
-                    snprintf(exp, size, "ANTICOLL-3");
-                else
-                    snprintf(exp, size, "SELECT_XXX-3");
+            // 93 20 = Anticollision (usage: 9320 - answer: 4bytes UID+1byte UID-bytes-xor)
+            // 93 50 = Bit oriented anti-collision (usage: 9350+ up to 5bytes, 9350 answer - up to 5bytes UID+BCC)
+            // 93 70 = Select (usage: 9370+5bytes 9370 answer - answer: 1byte SAK)
+            // 95 xx / 97 xx are the same for cascade level 2 and 3.  ISO 14443-3
+            // defines no level above 3, but `hf 14a antifuzz` walks a reader up
+            // the whole odd 0x93..0x9F range, so decode that range too.
+            case ISO14443A_CMD_ANTICOLL_OR_SELECT:
+            case ISO14443A_CMD_ANTICOLL_OR_SELECT_2:
+            case ISO14443A_CMD_ANTICOLL_OR_SELECT_3:
+            case 0x99:
+            case 0x9B:
+            case 0x9D:
+            case 0x9F: {
+                // one suffix for every level past the first, so an ordinary
+                // trace keeps reading "ANTICOLL" / "SELECT_UID"
+                char lvl[8] = {0};
+                uint8_t level = ((cmd[0] - ISO14443A_CMD_ANTICOLL_OR_SELECT) >> 1) + 1;
+                if (level > 1) {
+                    snprintf(lvl, sizeof(lvl), "-%u", level);
+                }
+
+                if (cmdsize < 2) {
+                    snprintf(exp, size, "SELECT_XXX%s", lvl);
+                } else if (cmd[1] == 0x70) {
+                    snprintf(exp, size, "SELECT_UID%s", lvl);
+                } else if (cmd[1] >= 0x20 && cmd[1] <= 0x67 && (cmd[1] & 0x0F) < 8) {
+                    // NVB counts SEL and NVB themselves, so 0x20 is "no UID bits
+                    // known" and 0x67 is "39 known".  Anything in between is a
+                    // bit oriented request, and how far the reader has got is
+                    // the whole story of a collision storm.
+                    uint8_t known = (uint8_t)((((cmd[1] >> 4) - 2) * 8) + (cmd[1] & 0x0F));
+                    if (known) {
+                        snprintf(exp, size, "ANTICOLL%s(" _MAGENTA_("%u") " bit%s)", lvl, known, (known == 1) ? "" : "s");
+                    } else {
+                        snprintf(exp, size, "ANTICOLL%s", lvl);
+                    }
+                } else {
+                    snprintf(exp, size, "SELECT_XXX%s", lvl);
+                }
                 break;
             }
             case ISO14443A_CMD_REQA:
@@ -394,7 +438,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 break;
             case MIFARE_ULEV1_AUTH:
                 if (cmdsize == 7)
-                    snprintf(exp, size, "PWD-AUTH: " _GREEN_("0x%02X%02X%02X%02X"), cmd[1], cmd[2], cmd[3], cmd[4]);
+                    snprintf(exp, size, "PWD-AUTH: " _GREEN_("%02X%02X%02X%02X"), cmd[1], cmd[2], cmd[3], cmd[4]);
                 else
                     snprintf(exp, size, "PWD-AUTH");
                 break;
@@ -409,7 +453,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
             case MIFARE_ULC_WRITE : {
                 if (cmd[1] < 0x21)
                     snprintf(exp, size, "WRITEBLOCK(" _MAGENTA_("%d") ")", cmd[1]);
-                else
+                else if (cmdsize >= 6)
                     // outside limits, useful for some tags...
                     snprintf(exp, size, "WRITEBLOCK(" _MAGENTA_("%d") ") (%s)", cmd[1], sprint_hex_inrow(cmd + 2, 4));
                 break;
@@ -422,10 +466,12 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 break;
             }
             case MIFARE_ULEV1_INCR_CNT : {
-                if (cmd[1] < 5)
-                    snprintf(exp, size, "INCR(" _MAGENTA_("%d") ")", cmd[1]);
-                else
+                if (cmd[1] < 5) {
+                    uint32_t v = MemLeToUint3byte(cmd + 2);
+                    snprintf(exp, size, "INCR CNT(" _MAGENTA_("%d") ") %u", cmd[1], v);
+                } else {
                     snprintf(exp, size, "?");
+                }
                 break;
             }
             case MIFARE_ULEV1_READSIG:
@@ -799,7 +845,12 @@ void annotateTopaz(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 }
 
 // iso 7816-3
-void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+//
+// contact tells the two framings apart: a contactless frame is always a block
+// typed by its first byte, while a contact T=0 frame is a bare APDU and a T=1
+// frame is NAD PCB LEN INF EDC. Without it a GSM APDU starting with CLA 'A0'
+// matches the T=CL R-block test.
+void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response, bool contact) {
 
     if (cmdsize < 2) {
         return;
@@ -809,8 +860,76 @@ void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool
         return;
     }
 
+    // T=1 puts the block type in cmd[1], not cmd[0] as T=CL does. Match only
+    // the one byte LRC length - a five byte APDU with P1 zero is otherwise
+    // indistinguishable from a LEN=0 block with a CRC. NAD must be 0x00.
+    if (contact) {
+
+        if ((cmdsize >= 4) && (cmd[0] == 0x00) && ((int)cmdsize == (int)cmd[2] + 4)) {
+
+            uint8_t pcb = cmd[1];
+
+            // Length alone is not enough - "00 B2 01 0C 00" is a READ RECORD
+            // that matches it. Require PCB and LEN to agree: an R-block carries
+            // no INF, an S-block at most one byte.
+            bool pcb_agrees = true;
+            if ((pcb & 0xC0) == 0x80) {
+                pcb_agrees = (cmd[2] == 0);              /* R */
+            } else if ((pcb & 0xC0) == 0xC0) {
+                pcb_agrees = (cmd[2] <= 1);              /* S */
+            }
+
+            if (pcb_agrees == false) {
+                goto not_a_block;
+            }
+
+            if ((pcb & 0x80) == 0x00) {
+                snprintf(exp, size, "I-block N(S)=%u%s", (pcb >> 6) & 1,
+                         (pcb & 0x20) ? " chained" : "");
+            } else if ((pcb & 0xC0) == 0x80) {
+                snprintf(exp, size, "R-block N(R)=%u%s", (pcb >> 4) & 1,
+                         (pcb & 0x0F) ? " error" : "");
+            } else {
+                switch (pcb & 0x3F) {
+                    case 0x00:
+                        snprintf(exp, size, "S-block RESYNCH req");
+                        break;
+                    case 0x20:
+                        snprintf(exp, size, "S-block RESYNCH resp");
+                        break;
+                    case 0x01:
+                        snprintf(exp, size, "S-block IFS req");
+                        break;
+                    case 0x21:
+                        snprintf(exp, size, "S-block IFS resp");
+                        break;
+                    case 0x02:
+                        snprintf(exp, size, "S-block ABORT req");
+                        break;
+                    case 0x22:
+                        snprintf(exp, size, "S-block ABORT resp");
+                        break;
+                    case 0x03:
+                        snprintf(exp, size, "S-block WTX req");
+                        break;
+                    case 0x23:
+                        snprintf(exp, size, "S-block WTX resp");
+                        break;
+                    default:
+                        snprintf(exp, size, "S-block");
+                        break;
+                }
+            }
+            return;
+        }
+not_a_block:
+        ;   // a bare APDU then - decoded below with pos = 1
+    }
+
+    bool blocks = (contact == false);
+
     // S-block
-    if ((cmd[0] & 0xC0) && ((cmdsize == 3) || (cmdsize == 4))) {
+    if (blocks && ((cmd[0] & 0xC0) == 0xC0) && ((cmdsize == 3) || (cmdsize == 4))) {
 
         switch ((cmd[0] & 0x3F)) {
             case 0x00   :
@@ -846,27 +965,36 @@ void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool
         }
     }
     // R-block (ack)
-    else if (((cmd[0] & 0xD0) == 0x80) && (cmdsize > 2)) {
+    else if (blocks && ((cmd[0] & 0xD0) == 0x80) && (cmdsize > 2)) {
         if ((cmd[0] & 0x10) == 0)
             snprintf(exp, size, "R-block ACK");
         else
             snprintf(exp, size, "R-block NACK");
     }
-    // I-block
+    // I-block, or a bare APDU when there is no block layer
     else {
 
         int pos = 0;
-        switch (cmd[0]) {
-            case 2:
-            case 3:
-                pos = 2;
-                break;
-            case 0:
-                pos = 1;
-                break;
-            default:
-                pos = 3;
-                break;
+        if (blocks == false) {
+            // CLA INS P1 P2 ...
+            pos = 1;
+        } else {
+            switch (cmd[0]) {
+                case 2:
+                case 3:
+                    pos = 2;
+                    break;
+                case 0:
+                    pos = 1;
+                    break;
+                default:
+                    pos = 3;
+                    break;
+            }
+        }
+
+        if (pos >= cmdsize) {
+            return;
         }
 
         switch (cmd[pos]) {
@@ -928,43 +1056,399 @@ void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool
     }
 }
 
+static bool iso14443_4_get_i_block_inf(uint8_t *cmd, uint8_t cmdsize, bool is_response, const uint8_t **inf, size_t *inf_len) {
+    (void)is_response;
+    size_t frame_len = cmdsize;
+    if (frame_len < 1 || (cmd[0] & 0xC0) != 0x00 || (cmd[0] & 0x02) != 0x02) {
+        return false;
+    }
+
+    size_t pos = 1;
+    if ((cmd[0] & 0x08) == 0x08) {
+        pos++;
+    }
+    if ((cmd[0] & 0x04) == 0x04) {
+        pos++;
+    }
+    if (pos >= frame_len) {
+        return false;
+    }
+
+    *inf = cmd + pos;
+    if (inf_len != NULL) {
+        *inf_len = frame_len - pos;
+    }
+    return true;
+}
+
+static bool annotateIso14443_s_r_block(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response, bool show_block_number) {
+    (void)is_response;
+    size_t frame_len = cmdsize;
+    if (frame_len < 1 || frame_len > 4) {
+        return false;
+    }
+
+    if ((cmd[0] & 0xC0) == 0xC0) {
+        switch (cmd[0] & 0x30) {
+            case 0x00:
+                snprintf(exp, size, "S-block DESELECT");
+                break;
+            case 0x30:
+                snprintf(exp, size, "S-block WTX");
+                break;
+            default:
+                snprintf(exp, size, "S-block");
+                break;
+        }
+        return true;
+    }
+
+    if ((cmd[0] & 0xD0) == 0x80) {
+        if (show_block_number) {
+            snprintf(exp, size, (cmd[0] & 0x10) ? "R-block NACK(%d)" : "R-block ACK(%d)", cmd[0] & 0x01);
+        } else {
+            snprintf(exp, size, (cmd[0] & 0x10) ? "R-block NACK" : "R-block ACK");
+        }
+        return true;
+    }
+
+    return false;
+}
+
+static void calypso_sfi_file_ref(char *out, size_t out_len, uint8_t p2, uint8_t current_mask, uint8_t sfi_mask) {
+    if (p2 == current_mask) {
+        snprintf(out, out_len, "current EF");
+    } else if ((p2 & 0x07) == sfi_mask && (p2 >> 3) != 0) {
+        snprintf(out, out_len, "sfi=%u", p2 >> 3);
+    } else {
+        snprintf(out, out_len, "p2=%02X", p2);
+    }
+}
+
+static void calypso_binary_ref(char *out, size_t out_len, uint8_t ins, uint8_t p1, uint8_t p2) {
+    if (ins == CALYPSO_READ_BINARY || ins == CALYPSO_WRITE_BINARY || ins == CALYPSO_UPDATE_BINARY) {
+        if ((p1 & 0x80) == 0x80) {
+            snprintf(out, out_len, "sfi=%u, off=%u", p1 & 0x1F, p2);
+        } else {
+            snprintf(out, out_len, "off=%u", ((p1 & 0x7F) << 8) | p2);
+        }
+    } else if ((p2 & 0x80) == 0x80) {
+        snprintf(out, out_len, "sfi=%u", p2 & 0x1F);
+    } else if (p2 == 0x00) {
+        snprintf(out, out_len, "current EF");
+    } else {
+        snprintf(out, out_len, "p2=%02X", p2);
+    }
+}
+
+static bool annotateCalypsoApdu(char *exp, size_t size, const uint8_t *apdu, size_t apdu_len) {
+    if (apdu_len < 4) {
+        return false;
+    }
+
+    uint8_t decoded_data[1024] = {0};
+    APDU_t decoded = {0};
+    bool decoded_ok = false;
+    if (apdu_len <= sizeof(decoded_data)) {
+        memcpy(decoded_data, apdu, apdu_len);
+        decoded_ok = APDUDecode(decoded_data, (int)apdu_len, &decoded) == 0;
+        if (decoded_ok == false && apdu_len > 2) {
+            decoded_ok = APDUDecode(decoded_data, (int)(apdu_len - 2), &decoded) == 0;
+        }
+    }
+
+    uint8_t ins = decoded_ok ? decoded.ins : apdu[1];
+    uint8_t p1 = decoded_ok ? decoded.p1 : apdu[2];
+    uint8_t p2 = decoded_ok ? decoded.p2 : apdu[3];
+
+    switch (ins) {
+        case CALYPSO_SELECT: {
+            if (decoded_ok && (p1 == 0x00 || p1 == 0x08 || p1 == 0x09)) {
+                char ref[64] = "current DF"; // Select for empty LID implies current DF
+                if (decoded.lc == 2) {
+                    uint16_t fid = (decoded.data[0] << 8) | decoded.data[1];
+                    if (fid == 0x3F00) {
+                        snprintf(ref, sizeof(ref), "MF");
+                    } else if (fid != 0x0000) {
+                        snprintf(ref, sizeof(ref), p1 == 0x08 ? "path=%04X" : "lid=%04X", fid);
+                    }
+                } else if (decoded.lc > 0) {
+                    snprintf(ref, sizeof(ref), p1 == 0x08 ? "path=%s" : "data=%s", sprint_hex_inrow(decoded.data, decoded.lc));
+                }
+                snprintf(exp, size, "SELECT FILE (%s)", ref);
+            } else if (p1 == 0x04) {
+                const char *mode = (p2 == 0x02 || p2 == 0x0E) ? "next" : "first";
+                const char *fci = (p2 == 0x0C || p2 == 0x0E) ? "N" : "Y";
+                if (decoded_ok && decoded.lc > 0) {
+                    snprintf(exp, size, "SELECT APP (aid=%s, mode=%s, fci=%s)", sprint_hex_inrow(decoded.data, decoded.lc), mode, fci);
+                } else {
+                    snprintf(exp, size, "SELECT APP (mode=%s, fci=%s)", mode, fci);
+                }
+            } else if (p1 == 0x02 && (p2 == 0x00 || p2 == 0x02)) {
+                snprintf(exp, size, p2 == 0x02 ? "SELECT FILE (next EF)" : "SELECT FILE (first EF)");
+            } else if (p1 == 0x03) {
+                snprintf(exp, size, "SELECT FILE (parent DF)");
+            } else {
+                snprintf(exp, size, "SELECT");
+            }
+            return true;
+        }
+        case CALYPSO_INVALIDATE:
+            snprintf(exp, size, "INVALIDATE");
+            return true;
+        case CALYPSO_REHABILITATE:
+            snprintf(exp, size, "REHABILITATE");
+            return true;
+        case CALYPSO_GET_DATA: {
+            uint16_t tag = (p1 << 8) | p2;
+            const char *name = CalypsoGetDataTagName(tag);
+            if (name) {
+                snprintf(exp, size, "GET DATA (tag=%04X - %s)", tag, name);
+            } else {
+                snprintf(exp, size, "GET DATA (tag=%04X)", tag);
+            }
+            return true;
+        }
+        case CALYPSO_APPEND_RECORD: {
+            char ref[20];
+            calypso_sfi_file_ref(ref, sizeof(ref), p2, 0x00, 0x00);
+            snprintf(exp, size, "APPEND RECORD (%s)", ref);
+            return true;
+        }
+        case CALYPSO_DECREASE: {
+            char ref[20];
+            calypso_sfi_file_ref(ref, sizeof(ref), p2, 0x00, 0x00);
+            snprintf(exp, size, "DECREASE (%s, counter=%u)", ref, p1);
+            return true;
+        }
+        case CALYPSO_DECREASE_MULTIPLE: {
+            char ref[20];
+            calypso_sfi_file_ref(ref, sizeof(ref), p2, 0x00, 0x00);
+            snprintf(exp, size, "DECREASE MULTIPLE (%s)", ref);
+            return true;
+        }
+        case CALYPSO_INCREASE: {
+            char ref[20];
+            calypso_sfi_file_ref(ref, sizeof(ref), p2, 0x00, 0x00);
+            snprintf(exp, size, "INCREASE (%s, counter=%u)", ref, p1);
+            return true;
+        }
+        case CALYPSO_INCREASE_MULTIPLE: {
+            char ref[20];
+            calypso_sfi_file_ref(ref, sizeof(ref), p2, 0x00, 0x00);
+            snprintf(exp, size, "INCREASE MULTIPLE (%s)", ref);
+            return true;
+        }
+        case CALYPSO_READ_RECORD: {
+            char ref[20];
+            calypso_sfi_file_ref(ref, sizeof(ref), p2, 0x04, 0x04);
+            snprintf(exp, size, "READ RECORD (%s, rec=%u)", ref, p1);
+            return true;
+        }
+        case CALYPSO_READ_RECORD_MULTIPLE: {
+            char ref[20];
+            calypso_sfi_file_ref(ref, sizeof(ref), p2, 0x05, 0x05);
+            snprintf(exp, size, "READ RECORDS (%s, rec=%u)", ref, p1);
+            return true;
+        }
+        case CALYPSO_SEARCH_RECORD_MULTIPLE: {
+            char ref[20];
+            calypso_sfi_file_ref(ref, sizeof(ref), p2, 0x07, 0x07);
+            snprintf(exp, size, "SEARCH RECORD (%s, rec=%u)", ref, p1);
+            return true;
+        }
+        case CALYPSO_READ_BINARY:
+        case CALYPSO_READ_BINARY_EXTENDED: {
+            char ref[20];
+            calypso_binary_ref(ref, sizeof(ref), ins, p1, p2);
+            snprintf(exp, size, "READ BINARY (%s)", ref);
+            return true;
+        }
+        case CALYPSO_WRITE_BINARY: {
+            char ref[20];
+            calypso_binary_ref(ref, sizeof(ref), ins, p1, p2);
+            snprintf(exp, size, "WRITE BINARY (%s)", ref);
+            return true;
+        }
+        case CALYPSO_UPDATE_BINARY: {
+            char ref[20];
+            calypso_binary_ref(ref, sizeof(ref), ins, p1, p2);
+            snprintf(exp, size, "UPDATE BINARY (%s)", ref);
+            return true;
+        }
+        case CALYPSO_UPDATE_RECORD: {
+            char ref[20];
+            calypso_sfi_file_ref(ref, sizeof(ref), p2, 0x04, 0x04);
+            snprintf(exp, size, "UPDATE RECORD (%s, rec=%u)", ref, p1);
+            return true;
+        }
+        case CALYPSO_WRITE_RECORD: {
+            char ref[20];
+            calypso_sfi_file_ref(ref, sizeof(ref), p2, 0x04, 0x04);
+            snprintf(exp, size, "WRITE RECORD (%s, rec=%u)", ref, p1);
+            return true;
+        }
+        case CALYPSO_GET_CHALLENGE:
+            snprintf(exp, size, "GET CHALLENGE");
+            return true;
+        case CALYPSO_OPEN_SESSION:
+            snprintf(exp, size, "OPEN SESSION");
+            return true;
+        case CALYPSO_CLOSE_SESSION:
+            snprintf(exp, size, "CLOSE SESSION");
+            return true;
+        case CALYPSO_VERIFY_PIN:
+            snprintf(exp, size, "VERIFY PIN");
+            return true;
+        case CALYPSO_RESET_RETRY_COUNTER:
+            snprintf(exp, size, "RESET RETRY COUNTER");
+            return true;
+        case CALYPSO_CHANGE_PIN:
+            if (p1 == 0x00 && (p2 == 0x04 || p2 == 0xFF)) {
+                snprintf(exp, size, "CHANGE PIN");
+            } else if (p1 == 0x00 && p2 >= 0x01 && p2 <= 0x03) {
+                snprintf(exp, size, "CHANGE KEY");
+            } else {
+                snprintf(exp, size, "CHANGE PIN/KEY");
+            }
+            return true;
+        case CALYPSO_SV_GET:
+            snprintf(exp, size, "SV GET");
+            return true;
+        case CALYPSO_SV_DEBIT:
+            snprintf(exp, size, "SV DEBIT (challenge=%02X%02X)", p1, p2);
+            return true;
+        case CALYPSO_SV_RELOAD:
+            snprintf(exp, size, "SV RELOAD (challenge=%02X%02X)", p1, p2);
+            return true;
+        case CALYPSO_SV_UN_DEBIT:
+            snprintf(exp, size, "SV UNDEBIT (challenge=%02X%02X)", p1, p2);
+            return true;
+        case CALYPSO_SAM_SV_DEBIT:
+            snprintf(exp, size, "SAM SV DEBIT");
+            return true;
+        case CALYPSO_SAM_SV_RELOAD:
+            snprintf(exp, size, "SAM SV RELOAD");
+            return true;
+        case CALYPSO_GET_RESPONSE:
+            snprintf(exp, size, "GET RESPONSE");
+            return true;
+        default:
+            return false;
+    }
+}
+
+static bool annotateIso14443bPrime(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+    if (cmdsize < 2) {
+        return false;
+    }
+
+    const uint8_t command = cmd[1];
+
+    if (is_response) {
+        switch (command) {
+            case ISO14443B_PRIME_CMD_RR:
+                if (cmdsize == 2 || cmdsize == 4) {
+                    snprintf(exp, size, "RR");
+                    return true;
+                }
+                return false;
+            case ISO14443B_PRIME_CMD_REPGEN:
+                if (cmdsize < 7) {
+                    return false;
+                }
+                if ((cmd[6] & ISO14443B_PRIME_VERLOG_LONG_REPGEN) && cmdsize >= 8) {
+                    snprintf(exp, size, "REPGEN(DIV=%s, VERLOG=%02X, CONFIG=%02X)",
+                             sprint_hex_inrow(cmd + 2, ISO14B_PRIME_DIV_LEN), cmd[6], cmd[7]);
+                } else {
+                    snprintf(exp, size, "REPGEN(DIV=%s, VERLOG=%02X)",
+                             sprint_hex_inrow(cmd + 2, ISO14B_PRIME_DIV_LEN), cmd[6]);
+                }
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    switch (command) {
+        case ISO14443B_PRIME_CMD_APGEN:
+            if (cmdsize < 3 || cmdsize > 6) {
+                return false;
+            }
+            if (cmdsize == 4 || cmdsize == 6) {
+                snprintf(exp, size, "APGEN(OccuPar=%02X, Config=%02X)", cmd[2], cmd[3]);
+            } else {
+                snprintf(exp, size, "APGEN(OccuPar=%02X)", cmd[2]);
+            }
+            return true;
+        case ISO14443B_PRIME_CMD_ATTRIB:
+            if (cmdsize != 6 && cmdsize != 8) {
+                return false;
+            }
+            snprintf(exp, size, "ATTRIB(DIV=%s)", sprint_hex_inrow(cmd + 2, ISO14B_PRIME_DIV_LEN));
+            return true;
+        case ISO14443B_PRIME_CMD_DISC:
+            if (cmdsize == 2 || cmdsize == 4) {
+                snprintf(exp, size, "DISC");
+                return true;
+            }
+            return false;
+        default:
+            return false;
+    }
+}
+
+void annotateCalypso(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+    if (cmdsize < 1) {
+        return;
+    }
+
+    if (annotateIso14443bPrime(exp, size, cmd, cmdsize, is_response)) {
+        return;
+    }
+
+    if (is_response) {
+        return;
+    }
+
+    if (applyIso14443a(exp, size, cmd, cmdsize, false) == PM3_SUCCESS) {
+        return;
+    }
+
+    if (cmd[0] == ISO14443B_REQB || cmd[0] == ISO14443B_ATTRIB || cmd[0] == ISO14443B_HALT) {
+        annotateIso14443b(exp, size, cmd, cmdsize, false);
+        return;
+    }
+
+    if (annotateIso14443_s_r_block(exp, size, cmd, cmdsize, false, false)) {
+        return;
+    }
+
+    const uint8_t *inf = NULL;
+    size_t inf_len = 0;
+    if (iso14443_4_get_i_block_inf(cmd, cmdsize, false, &inf, &inf_len)) {
+        annotateCalypsoApdu(exp, size, inf, inf_len);
+    }
+}
+
 // MIFARE DESFire
 void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 
     // it's basically a ISO14443a tag, so try annotation from there
     if (applyIso14443a(exp, size, cmd, cmdsize, false) != PM3_SUCCESS) {
 
-        // S-block 11xxx010
-        if ((cmd[0] & 0xC0) && (cmdsize == 3)) {
-            switch ((cmd[0] & 0x30)) {
-                case 0x00:
-                    snprintf(exp, size, "S-block DESELECT");
-                    break;
-                case 0x30:
-                    snprintf(exp, size, "S-block WTX");
-                    break;
-                default:
-                    snprintf(exp, size, "S-block");
-                    break;
-            }
-        }
-        // R-block (ack) 101xx01x
-        else if (((cmd[0] & 0xB0) == 0xA0) && (cmdsize > 2)) {
-            if ((cmd[0] & 0x10) == 0)
-                snprintf(exp, size, "R-block ACK(%d)", (cmd[0] & 0x01));
-            else
-                snprintf(exp, size, "R-block NACK(%d)", (cmd[0] & 0x01));
+        if (annotateIso14443_s_r_block(exp, size, cmd, cmdsize, false, true)) {
+            return;
         }
         // I-block 000xCN1x
         else if (((cmd[0] & 0xC0) == 0x00) && (cmdsize > 2)) {
 
-            // PCB [CID] [NAD] [INF] CRC CRC
-            int pos = 1;
-            if ((cmd[0] & 0x08) == 0x08)  // cid byte following
-                pos++;
+            const uint8_t *inf = NULL;
+            if (iso14443_4_get_i_block_inf(cmd, cmdsize, false, &inf, NULL) == false) {
+                return;
+            }
 
-            if ((cmd[0] & 0x04) == 0x04)  // nad byte following
-                pos++;
+            int pos = inf - cmd;
 
             for (uint8_t i = 0; i < 2; i++, pos++) {
                 bool found_annotation = true;
@@ -982,14 +1466,14 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                 switch (cmd[pos]) {
                     case MFDES_CREATE_APPLICATION:
                         if (data_size >= 3) {
-                            snprintf(exp, size, "CREATE APPLICATION (appId %06x)", MemLeToUint3byte(data));
+                            snprintf(exp, size, "CREATE APPLICATION (" _CYAN_("aid %06x")")", MemLeToUint3byte(data));
                         } else {
                             snprintf(exp, size, "CREATE APPLICATION");
                         }
                         break;
                     case MFDES_DELETE_APPLICATION:
                         if (data_size >= 3) {
-                            snprintf(exp, size, "DELETE APPLICATION (appId %06x)", MemLeToUint3byte(data));
+                            snprintf(exp, size, "DELETE APPLICATION (" _CYAN_("aid %06x")")", MemLeToUint3byte(data));
                         } else {
                             snprintf(exp, size, "DELETE APPLICATION");
                         }
@@ -999,7 +1483,7 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                         break;
                     case MFDES_SELECT_APPLICATION:
                         if (data_size >= 3) {
-                            snprintf(exp, size, "SELECT APPLICATION (appId %06x)", MemLeToUint3byte(data));
+                            snprintf(exp, size, "SELECT APPLICATION (" _CYAN_("aid %06x")")", MemLeToUint3byte(data));
                         } else {
                             snprintf(exp, size, "SELECT APPLICATION");
                         }
@@ -1012,67 +1496,107 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                         break;
                     case MFDES_READ_DATA:
                         if (data_size >= 7) {
-                            snprintf(exp, size, "READ DATA (fileId %02x, offset %u, len %u)", data[0], MemLeToUint3byte(data + 1), MemLeToUint3byte(data + 4));
+                            snprintf(exp, size, "READ DATA (fileId " _CYAN_("%02x")", offset %u, len %u)", data[0], MemLeToUint3byte(data + 1), MemLeToUint3byte(data + 4));
                         } else {
                             snprintf(exp, size, "READ DATA");
                         }
                         break;
+                    case MFDES_READ_DATA2: {
+                        if (data_size >= 7) {
+                            snprintf(exp, size, "READ DATA2 (fileId " _CYAN_("%02x")", offset %u, len %u)", data[0], MemLeToUint3byte(data + 1), MemLeToUint3byte(data + 4));
+                        } else {
+                            snprintf(exp, size, "READ DATA2");
+                        }
+                        break;
+                    }
                     case MFDES_WRITE_DATA:
                         if (data_size >= 7) {
-                            snprintf(exp, size, "WRITE DATA (fileId %02x, offset %u, len %u)", data[0], MemLeToUint3byte(data + 1), MemLeToUint3byte(data + 4));
+                            snprintf(exp, size, "WRITE DATA (fileId " _CYAN_("%02x")", offset %u, len %u)", data[0], MemLeToUint3byte(data + 1), MemLeToUint3byte(data + 4));
                         } else {
                             snprintf(exp, size, "WRITE DATA");
                         }
                         break;
+                    case MFDES_WRITE_DATA2: {
+                        if (data_size >= 7) {
+                            snprintf(exp, size, "WRITE DATA_2 (fileId " _CYAN_("%02x")", offset %u, len %u)", data[0], MemLeToUint3byte(data + 1), MemLeToUint3byte(data + 4));
+                        } else {
+                            snprintf(exp, size, "WRITE DATA_2");
+                        }
+                        break;
+                    }
                     case MFDES_GET_VALUE:
                         if (data_size >= 1) {
-                            snprintf(exp, size, "GET VALUE (fileId %02x)", data[0]);
+                            snprintf(exp, size, "GET VALUE (fileId " _CYAN_("%02x")")", data[0]);
                         } else {
                             snprintf(exp, size, "GET VALUE");
                         }
                         break;
                     case MFDES_CREDIT:
                         if (data_size >= 1) {
-                            snprintf(exp, size, "CREDIT (fileId %02x)", data[0]);
+                            snprintf(exp, size, "CREDIT (fileId " _CYAN_("%02x")")", data[0]);
                         } else {
                             snprintf(exp, size, "CREDIT");
                         }
                         break;
                     case MFDES_DEBIT:
                         if (data_size >= 1) {
-                            snprintf(exp, size, "DEBIT (fileId %02x)", data[0]);
+                            snprintf(exp, size, "DEBIT (fileId " _CYAN_("%02x")")", data[0]);
                         } else {
                             snprintf(exp, size, "DEBIT");
                         }
                         break;
                     case MFDES_LIMITED_CREDIT:
                         if (data_size >= 1) {
-                            snprintf(exp, size, "LIMITED CREDIT (fileId %02x)", data[0]);
+                            snprintf(exp, size, "LIMITED CREDIT (fileId " _CYAN_("%02x")")", data[0]);
                         } else {
                             snprintf(exp, size, "LIMITED CREDIT");
                         }
                         break;
                     case MFDES_WRITE_RECORD:
                         if (data_size >= 7) {
-                            snprintf(exp, size, "WRITE RECORD (fileId %02x, offset %u, len %u)", data[0], MemLeToUint3byte(data + 1), MemLeToUint3byte(data + 4));
+                            snprintf(exp, size, "WRITE RECORD (fileId " _CYAN_("%02x")", offset %u, len %u)", data[0], MemLeToUint3byte(data + 1), MemLeToUint3byte(data + 4));
                         } else {
                             snprintf(exp, size, "WRITE RECORD");
                         }
                         break;
+                    case MFDES_WRITE_RECORD2: {
+                        if (data_size >= 7) {
+                            snprintf(exp, size, "WRITE RECORD_2 (fileId " _CYAN_("%02x")", offset %u, len %u)", data[0], MemLeToUint3byte(data + 1), MemLeToUint3byte(data + 4));
+                        } else {
+                            snprintf(exp, size, "WRITE RECORD_2");
+                        }
+                        break;
+                    }
                     case MFDES_READ_RECORDS:
                         if (data_size >= 7) {
-                            snprintf(exp, size, "READ RECORDS (fileId %02x, offset %u, len %u)", data[0], MemLeToUint3byte(data + 1), MemLeToUint3byte(data + 4));
+                            snprintf(exp, size, "READ RECORDS (fileId " _CYAN_("%02x")", offset %u, len %u)", data[0], MemLeToUint3byte(data + 1), MemLeToUint3byte(data + 4));
                         } else {
                             snprintf(exp, size, "READ RECORDS");
                         }
                         break;
+                    case MFDES_READ_RECORDS2: {
+                        if (data_size >= 7) {
+                            snprintf(exp, size, "READ RECORDS_2 (fileId " _CYAN_("%02x")", offset %u, len %u)", data[0], MemLeToUint3byte(data + 1), MemLeToUint3byte(data + 4));
+                        } else {
+                            snprintf(exp, size, "READ RECORDS_2");
+                        }
+                        break;
+                    }
                     case MFDES_CLEAR_RECORD_FILE:
                         if (data_size >= 1) {
-                            snprintf(exp, size, "CLEAR RECORD FILE (fileId %02x)", data[0]);
+                            snprintf(exp, size, "CLEAR RECORD FILE (fileId " _CYAN_("%02x")")", data[0]);
                         } else {
                             snprintf(exp, size, "CLEAR RECORD FILE");
                         }
                         break;
+                    case MFDES_UPDATE_RECORD: {
+                        snprintf(exp, size, "MFDES_UPDATE_RECORD)");
+                        break;
+                    }
+                    case MFDES_UPDATE_RECORD2: {
+                        snprintf(exp, size, "MFDES_UPDATE_RECORD_2)");
+                        break;
+                    }
                     case MFDES_NOTIFY_TRANSACTION_SUCCESS:
                         snprintf(exp, size, "NOTIFY TRANSACTION SUCCESS (ECP)");
                         break;
@@ -1096,84 +1620,84 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                         break;
                     case MFDES_GET_FILE_SETTINGS:
                         if (data_size >= 1) {
-                            snprintf(exp, size, "GET FILE SETTINGS (fileId %02x)", data[0]);
+                            snprintf(exp, size, "GET FILE SETTINGS (fileId " _CYAN_("%02x")")", data[0]);
                         } else {
                             snprintf(exp, size, "GET FILE SETTINGS");
                         }
                         break;
                     case MFDES_CHANGE_FILE_SETTINGS:
                         if (data_size >= 1) {
-                            snprintf(exp, size, "CHANGE FILE SETTINGS (fileId %02x)", data[0]);
+                            snprintf(exp, size, "CHANGE FILE SETTINGS (fileId " _CYAN_("%02x")")", data[0]);
                         } else {
                             snprintf(exp, size, "CHANGE FILE SETTINGS");
                         }
                         break;
                     case MFDES_CREATE_STD_DATA_FILE:
                         if (data_size >= 1) {
-                            snprintf(exp, size, "CREATE STD DATA FILE (fileId %02x)", data[0]);
+                            snprintf(exp, size, "CREATE STD DATA FILE (fileId " _CYAN_("%02x")")", data[0]);
                         } else {
                             snprintf(exp, size, "CREATE STD DATA FILE");
                         }
                         break;
                     case MFDES_CREATE_BACKUP_DATA_FILE:
                         if (data_size >= 1) {
-                            snprintf(exp, size, "CREATE BACKUP DATA FILE (fileId %02x)", data[0]);
+                            snprintf(exp, size, "CREATE BACKUP DATA FILE (fileId " _CYAN_("%02x")")", data[0]);
                         } else {
                             snprintf(exp, size, "CREATE BACKUP DATA FILE");
                         }
                         break;
                     case MFDES_CREATE_VALUE_FILE:
                         if (data_size >= 1) {
-                            snprintf(exp, size, "CREATE VALUE FILE (fileId %02x)", data[0]);
+                            snprintf(exp, size, "CREATE VALUE FILE (fileId " _CYAN_("%02x")")", data[0]);
                         } else {
                             snprintf(exp, size, "CREATE VALUE FILE");
                         }
                         break;
                     case MFDES_CREATE_LINEAR_RECORD_FILE:
                         if (data_size >= 1) {
-                            snprintf(exp, size, "CREATE LINEAR RECORD FILE (fileId %02x)", data[0]);
+                            snprintf(exp, size, "CREATE LINEAR RECORD FILE (fileId " _CYAN_("%02x")")", data[0]);
                         } else {
                             snprintf(exp, size, "CREATE LINEAR RECORD FILE");
                         }
                         break;
                     case MFDES_CREATE_CYCLIC_RECORD_FILE:
                         if (data_size >= 1) {
-                            snprintf(exp, size, "CREATE CYCLIC RECORD FILE (fileId %02x)", data[0]);
+                            snprintf(exp, size, "CREATE CYCLIC RECORD FILE (fileId " _CYAN_("%02x")")", data[0]);
                         } else {
                             snprintf(exp, size, "CREATE CYCLIC RECORD FILE");
                         }
                         break;
                     case MFDES_CREATE_TRANS_MAC_FILE:
                         if (data_size >= 1) {
-                            snprintf(exp, size, "CREATE TRANSACTION MAC FILE (fileId %02x)", data[0]);
+                            snprintf(exp, size, "CREATE TRANSACTION MAC FILE (fileId " _CYAN_("%02x")")", data[0]);
                         } else {
                             snprintf(exp, size, "CREATE TRANSACTION MAC FILE");
                         }
                         break;
                     case MFDES_DELETE_FILE:
                         if (data_size >= 1) {
-                            snprintf(exp, size, "DELETE FILE (fileId %02x)", data[0]);
+                            snprintf(exp, size, "DELETE FILE (fileId " _CYAN_("%02x")")", data[0]);
                         } else {
                             snprintf(exp, size, "DELETE FILE");
                         }
                         break;
                     case MFDES_AUTHENTICATE:
                         if (data_size >= 1) {
-                            snprintf(exp, size, "AUTH NATIVE (keyNo %u)", data[0]);
+                            snprintf(exp, size, "AUTH NATIVE (keyNo " _CYAN_("%u")")", data[0]);
                         } else {
                             snprintf(exp, size, "AUTH NATIVE");
                         }
                         break;  // AUTHENTICATE_NATIVE
                     case MFDES_AUTHENTICATE_ISO:
                         if (data_size >= 1) {
-                            snprintf(exp, size, "AUTH ISO (keyNo %u)", data[0]);
+                            snprintf(exp, size, "AUTH ISO (keyNo " _CYAN_("%u")")", data[0]);
                         } else {
                             snprintf(exp, size, "AUTH ISO");
                         }
                         break;  // AUTHENTICATE_STANDARD
                     case MFDES_AUTHENTICATE_AES:
                         if (data_size >= 1) {
-                            snprintf(exp, size, "AUTH AES (keyNo %u)", data[0]);
+                            snprintf(exp, size, "AUTH AES (keyNo " _CYAN_("%u")")", data[0]);
                         } else {
                             snprintf(exp, size, "AUTH AES");
                         }
@@ -1192,14 +1716,14 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                         break;
                     case MFDES_CHANGE_KEY:
                         if (data_size >= 1) {
-                            snprintf(exp, size, "CHANGE KEY (keyNo %u)", data[0]);
+                            snprintf(exp, size, "CHANGE KEY (keyNo " _CYAN_("%u")")", (uint8_t)(data[0] & 0x3Fu));
                         } else {
                             snprintf(exp, size, "CHANGE KEY");
                         }
                         break;
                     case MFDES_GET_KEY_VERSION:
                         if (data_size >= 1) {
-                            snprintf(exp, size, "GET KEY VERSION (keyNo %u)", data[0]);
+                            snprintf(exp, size, "GET KEY VERSION (keyNo " _CYAN_("%u")")", data[0]);
                         } else {
                             snprintf(exp, size, "GET KEY VERSION");
                         }
@@ -1355,13 +1879,12 @@ void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     // ok this part is copy paste from annotateMfDesfire, it seems to work for MIFARE Plus also
     if (((cmd[0] & 0xC0) == 0x00) && (cmdsize > 2)) {
 
-        // PCB [CID] [NAD] [INF] CRC CRC
-        int pos = 1;
-        if ((cmd[0] & 0x08) == 0x08)  // cid byte following
-            pos++;
+        const uint8_t *inf = NULL;
+        if (iso14443_4_get_i_block_inf(cmd, cmdsize, false, &inf, NULL) == false) {
+            return;
+        }
 
-        if ((cmd[0] & 0x04) == 0x04)  // nad byte following
-            pos++;
+        int pos = inf - cmd;
 
         for (uint8_t i = 0; i < 2; i++, pos++) {
             bool found_annotation = true;
@@ -1621,7 +2144,15 @@ void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 0F = Completion
 0A 11 22 33 44 55 66 = Authenticate (11 22 33 44 55 66 = data to authenticate)
 **/
-void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+
+    if (annotateIso14443bPrime(exp, size, cmd, cmdsize, is_response)) {
+        return;
+    }
+
+    if (is_response) {
+        return;
+    }
 
     // xerox anti collison loop / slot select for uid bytes...
     if (cmdsize == 1) {
@@ -1744,6 +2275,9 @@ void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                 break;
             }
         default:
+            if (annotateEcp(exp, size, cmd, cmdsize) == PM3_SUCCESS) {
+                break;
+            }
             snprintf(exp, size, "?");
             break;
     }
@@ -1799,7 +2333,7 @@ void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is
     // it's basically a ISO14443a tag, so try annotation from there
     if (applyIso14443a(exp, size, cmd, cmdsize, false) != PM3_SUCCESS) {
 
-        annotateIso7816(exp, size, cmd, cmdsize, isResponse);
+        annotateIso7816(exp, size, cmd, cmdsize, isResponse, false);
 
         int pos = 0;
         switch (cmd[0]) {
@@ -1818,6 +2352,7 @@ void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is
         if (memcmp(cmd + pos, "\x00\xA4\x04\x00", 4) == 0) {
             uint8_t n = cmd[pos + 4];
             snprintf(exp, size, "SELECT AID " _WHITE_("%s"), sprint_hex_inrow(cmd + pos + 4 + 1, n));
+            // iceman:  add a lookup to known SEOS AID's
             return;
         }
 
@@ -1869,6 +2404,55 @@ void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is
 
         if (memcmp(cmd + pos, "\x0C\x41\x0C\x03", 4) == 0) {
             snprintf(exp, size, "CREATE ADF");
+            return;
+        }
+
+        if (memcmp(cmd + pos, "\x00\xD4\x00\x00\x00", 5) == 0) {
+            snprintf(exp, size, "GET REMAINING CREDITS");
+            return;
+        }
+
+        if (memcmp(cmd + pos, "\xA0\x10\x00\x00\x00", 5) == 0) {
+            snprintf(exp, size, "GET APPLET INFO");
+            return;
+        }
+
+        if (memcmp(cmd + pos, "\xA0\xD3\x00\x00\x00", 5) == 0) {
+            snprintf(exp, size, "GET APPLET VERSION");
+            return;
+        }
+
+        if (memcmp(cmd + pos, "\xA0\xDA\x04", 3) == 0) {
+            snprintf(exp, size, "PUSH ENGINE ID");
+            return;
+        }
+
+        if (memcmp(cmd + pos, "\xA0\xDA\x05", 3) == 0) {
+            snprintf(exp, size, "PUSH USERNAME");
+            return;
+        }
+
+        if (memcmp(cmd + pos, "\xA0\xDA\x10\x00\x01\x01", 6) == 0) {
+            snprintf(exp, size, "FINAL PERSONALIZE");
+            return;
+        }
+
+        if (memcmp(cmd + pos, "\xA0\xDA\x25\x00\x02\x01", 6) == 0) {
+            snprintf(exp, size, "UNKNOWN OPCODE ( 0x25 )");
+            return;
+        }
+
+        if (memcmp(cmd + pos, "\xA0\xCA\x00\x00\x00", 5) == 0) {
+            snprintf(exp, size, "GET DATA");
+            return ;
+        }
+
+        //  CLA 0x90    Proprietary class - DESFire's "ISO 7816 wrap of native commands" indicator.
+        //  Tells the card "the next byte is a DESFire native opcode, not an ISO 7816 standard INS."
+        //  INS 0x5A    DESFire native opcode SelectApplication (3-byte AID).
+
+        if (memcmp(cmd + pos, "\x90\x5A\x00\x00", 4) == 0) {
+            snprintf(exp, size, "(desfire) SELECT AID " _CYAN_("%02X%02X%02X"), cmd[pos + 5], cmd[pos + 6], cmd[pos + 7]);
             return;
         }
 
@@ -1969,127 +2553,497 @@ void annotateLegic(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     }
 }
 
-void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+static bool annotateFelicaSeac(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+    if (cmdsize < 7 || cmd[4] != 0x01 || cmd[5] != 0x01 ||
+            (cmd[6] != 0x01 && cmd[6] < 0x0F)) {
+        return false;
+    }
+
+    const char *operation = NULL;
     switch (cmd[3]) {
-        case FELICA_POLL_REQ:
+        case FELICA_SEAC_POLLING_CMD:
+            operation = "POLLING";
+            break;
+        case FELICA_SEAC_AUTHENTICATION1_CMD:
+            operation = "AUTHENTICATION1";
+            break;
+        case FELICA_SEAC_AUTHENTICATION2_CMD:
+            operation = "AUTHENTICATION2";
+            break;
+        case FELICA_SEAC_WRITE_CMD:
+            operation = "WRITE";
+            break;
+        case FELICA_SEAC_READ_CMD:
+            operation = "READ";
+            break;
+        case FELICA_SEAC_EXTENDED_CMD:
+            operation = "EXTENDED";
+            break;
+        default:
+            return false;
+    }
+
+    snprintf(exp, size, "SEAC %s %s (SELECTOR %02X)", operation, is_response ? "RES" : "REQ", cmd[6]);
+    return true;
+}
+
+void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+    if (cmdsize < 4) {
+        snprintf(exp, size, "?");
+        return;
+    }
+
+    if (annotateFelicaSeac(exp, size, cmd, cmdsize, is_response)) {
+        return;
+    }
+
+    uint16_t cmd_code = cmd[3];
+    if (cmd_code >= 0xC0 && cmdsize > 4) {
+        // Command codes >= 0xC0 include a second-byte subcommand/function code.
+        cmd_code = (uint16_t)((cmd_code << 8) | cmd[4]);
+    }
+
+    switch (cmd_code) {
+        case FELICA_POLLING_REQ: {
+            // Polling request code is byte 6 of the trace frame.
+            if (cmdsize > 6) {
+                if (cmd[6] == 0x01) {
+                    snprintf(exp, size, "POLLING (SYSTEM CODE)");
+                    break;
+                }
+                if (cmd[6] == 0x02) {
+                    snprintf(exp, size, "POLLING (COMMUNICATION PERFORMANCE)");
+                    break;
+                }
+            }
             snprintf(exp, size, "POLLING");
             break;
-        case FELICA_POLL_ACK:
-            snprintf(exp, size, "POLL ACK");
+        }
+        case FELICA_POLLING_RES:
+            snprintf(exp, size, "POLLING RES");
             break;
-        case FELICA_REQSRV_REQ:
+        case FELICA_REQUEST_SERVICE_REQ:
             snprintf(exp, size, "REQUEST SERVICE");
             break;
-        case FELICA_REQSRV_ACK:
-            snprintf(exp, size, "REQ SERV ACK");
+        case FELICA_REQUEST_SERVICE_RES:
+            snprintf(exp, size, "REQUEST SERVICE RES");
             break;
-        case FELICA_REQRESP_REQ:
+        case FELICA_REQUEST_RESPONSE_REQ:
             snprintf(exp, size, "REQUEST RESPONSE");
             break;
-        case FELICA_REQRESP_ACK:
-            snprintf(exp, size, "REQ RESP ACK");
+        case FELICA_REQUEST_RESPONSE_RES:
+            snprintf(exp, size, "REQUEST RESPONSE RES");
             break;
-        case FELICA_RDBLK_REQ:
-            snprintf(exp, size, "READ BLK");
+        case FELICA_READ_WITHOUT_ENCRYPTION_REQ:
+            snprintf(exp, size, "READ WITHOUT ENCRYPTION");
             break;
-        case FELICA_RDBLK_ACK:
-            snprintf(exp, size, "READ BLK ACK");
+        case FELICA_READ_WITHOUT_ENCRYPTION_RES:
+            snprintf(exp, size, "READ WITHOUT ENCRYPTION RES");
             break;
-        case FELICA_WRTBLK_REQ:
-            snprintf(exp, size, "WRITE BLK");
+        case FELICA_WRITE_WITHOUT_ENCRYPTION_REQ:
+            snprintf(exp, size, "WRITE WITHOUT ENCRYPTION");
             break;
-        case FELICA_WRTBLK_ACK:
-            snprintf(exp, size, "WRITE BLK ACK");
+        case FELICA_WRITE_WITHOUT_ENCRYPTION_RES:
+            snprintf(exp, size, "WRITE WITHOUT ENCRYPTION RES");
             break;
-        case FELICA_SRCHSYSCODE_REQ:
+        case FELICA_SEARCH_SERVICE_CODE_REQ:
             snprintf(exp, size, "SEARCH SERVICE CODE");
             break;
-        case FELICA_SRCHSYSCODE_ACK:
-            snprintf(exp, size, "SSC ACK");
+        case FELICA_SEARCH_SERVICE_CODE_RES:
+            snprintf(exp, size, "SEARCH SERVICE CODE RES");
             break;
-        case FELICA_REQSYSCODE_REQ:
+        case FELICA_REQUEST_SYSTEM_CODE_REQ:
             snprintf(exp, size, "REQUEST SYSTEM CODE");
             break;
-        case FELICA_REQSYSCODE_ACK:
-            snprintf(exp, size, "RSC ACK");
+        case FELICA_REQUEST_SYSTEM_CODE_RES:
+            snprintf(exp, size, "REQUEST SYSTEM CODE RES");
             break;
-        case FELICA_AUTH1_REQ:
-            snprintf(exp, size, "AUTH 1");
+        case FELICA_REQUEST_BLOCK_INFORMATION_REQ:
+            snprintf(exp, size, "REQUEST BLOCK INFORMATION");
             break;
-        case FELICA_AUTH1_ACK:
-            snprintf(exp, size, "AUTH 1 ACK");
+        case FELICA_REQUEST_BLOCK_INFORMATION_RES:
+            snprintf(exp, size, "REQUEST BLOCK INFORMATION RES");
             break;
-        case FELICA_AUTH2_REQ:
-            snprintf(exp, size, "AUTH 2");
+        case FELICA_AUTHENTICATION1_REQ:
+            snprintf(exp, size, "AUTHENTICATION1");
             break;
-        case FELICA_AUTH2_ACK:
-            snprintf(exp, size, "AUTH 2 ACK");
+        case FELICA_AUTHENTICATION1_RES:
+            snprintf(exp, size, "AUTHENTICATION1 RES");
             break;
-        case FELICA_RDSEC_REQ:
+        case FELICA_AUTHENTICATION2_REQ:
+            snprintf(exp, size, "AUTHENTICATION2");
+            break;
+        case FELICA_AUTHENTICATION2_RES:
+            snprintf(exp, size, "AUTHENTICATION2 RES");
+            break;
+        case FELICA_READ_SECURE_REQ:
             snprintf(exp, size, "READ");
             break;
-        case FELICA_RDSEC_ACK:
-            snprintf(exp, size, "READ ACK");
+        case FELICA_READ_SECURE_RES:
+            snprintf(exp, size, "READ RES");
             break;
-        case FELICA_WRTSEC_REQ:
+        case FELICA_WRITE_SECURE_REQ:
             snprintf(exp, size, "WRITE");
             break;
-        case FELICA_WRTSEC_ACK:
-            snprintf(exp, size, "WRITE ACK");
+        case FELICA_WRITE_SECURE_RES:
+            snprintf(exp, size, "WRITE RES");
             break;
-        case FELICA_REQSRV2_REQ:
+        case FELICA_REQUEST_CODE_LIST_REQ:
+            snprintf(exp, size, "REQUEST CODE LIST");
+            break;
+        case FELICA_REQUEST_CODE_LIST_RES:
+            snprintf(exp, size, "REQUEST CODE LIST RES");
+            break;
+        case FELICA_REQUEST_BLOCK_INFORMATION_EX_REQ:
+            snprintf(exp, size, "REQUEST BLOCK INFORMATION EX");
+            break;
+        case FELICA_REQUEST_BLOCK_INFORMATION_EX_RES:
+            snprintf(exp, size, "REQUEST BLOCK INFORMATION EX RES");
+            break;
+        case FELICA_SET_PARAMETER_REQ:
+            snprintf(exp, size, "SET PARAMETER");
+            break;
+        case FELICA_SET_PARAMETER_RES:
+            snprintf(exp, size, "SET PARAMETER RES");
+            break;
+        case FELICA_GET_CONTAINER_ISSUE_INFORMATION_REQ:
+            snprintf(exp, size, "GET CONTAINER ISSUE INFORMATION");
+            break;
+        case FELICA_GET_CONTAINER_ISSUE_INFORMATION_RES:
+            snprintf(exp, size, "GET CONTAINER ISSUE INFORMATION RES");
+            break;
+        case FELICA_GET_AREA_INFORMATION_REQ:
+            snprintf(exp, size, "GET AREA INFORMATION");
+            break;
+        case FELICA_GET_AREA_INFORMATION_RES:
+            snprintf(exp, size, "GET AREA INFORMATION RES");
+            break;
+        case FELICA_GET_NODE_PROPERTY_REQ:
+            snprintf(exp, size, "GET NODE PROPERTY");
+            break;
+        case FELICA_GET_NODE_PROPERTY_RES:
+            snprintf(exp, size, "GET NODE PROPERTY RES");
+            break;
+        case FELICA_GET_CONTAINER_PROPERTY_REQ:
+            snprintf(exp, size, "GET CONTAINER PROPERTY");
+            break;
+        case FELICA_GET_CONTAINER_PROPERTY_RES:
+            snprintf(exp, size, "GET CONTAINER PROPERTY RES");
+            break;
+        case FELICA_REQUEST_SERVICE_V2_REQ:
             snprintf(exp, size, "REQUEST SERVICE v2");
             break;
-        case FELICA_REQSRV2_ACK:
-            snprintf(exp, size, "REQ SERV v2 ACK");
+        case FELICA_REQUEST_SERVICE_V2_RES:
+            snprintf(exp, size, "REQUEST SERVICE v2 RES");
             break;
-        case FELICA_GETSTATUS_REQ:
-            snprintf(exp, size, "GET STATUS");
+        case FELICA_INTERNAL_AUTHENTICATE_AND_READ_REQ:
+            snprintf(exp, size, "INTERNAL AUTHENTICATE AND READ");
             break;
-        case FELICA_GETSTATUS_ACK:
-            snprintf(exp, size, "GET STATUS ACK");
+        case FELICA_INTERNAL_AUTHENTICATE_AND_READ_RES:
+            snprintf(exp, size, "INTERNAL AUTHENTICATE AND READ RES");
             break;
-        case FELICA_OSVER_REQ:
-            snprintf(exp, size, "REQUEST SPECIFIC VERSION");
+        case FELICA_EXTERNAL_AUTHENTICATE_AND_WRITE_REQ:
+            snprintf(exp, size, "EXTERNAL AUTHENTICATE AND WRITE");
             break;
-        case FELICA_OSVER_ACK:
-            snprintf(exp, size, "RSV ACK");
+        case FELICA_EXTERNAL_AUTHENTICATE_AND_WRITE_RES:
+            snprintf(exp, size, "EXTERNAL AUTHENTICATE AND WRITE RES");
+            break;
+        case FELICA_GET_SYSTEM_STATUS_REQ:
+            snprintf(exp, size, "GET SYSTEM STATUS");
+            break;
+        case FELICA_GET_SYSTEM_STATUS_RES:
+            snprintf(exp, size, "GET SYSTEM STATUS RES");
+            break;
+        case FELICA_REQUEST_PRODUCT_INFORMATION_REQ:
+            snprintf(exp, size, "REQUEST PRODUCT INFORMATION");
+            break;
+        case FELICA_REQUEST_PRODUCT_INFORMATION_RES:
+            snprintf(exp, size, "REQUEST PRODUCT INFORMATION RES");
+            break;
+        case FELICA_REQUEST_SPECIFICATION_VERSION_REQ:
+            snprintf(exp, size, "REQUEST SPECIFICATION VERSION");
+            break;
+        case FELICA_REQUEST_SPECIFICATION_VERSION_RES:
+            snprintf(exp, size, "REQUEST SPECIFICATION VERSION RES");
             break;
         case FELICA_RESET_MODE_REQ:
             snprintf(exp, size, "RESET MODE");
             break;
-        case FELICA_RESET_MODE_ACK:
-            snprintf(exp, size, "RESET MODE ACK");
+        case FELICA_RESET_MODE_RES:
+            snprintf(exp, size, "RESET MODE RES");
             break;
-        case FELICA_AUTH1V2_REQ:
-            snprintf(exp, size, "AUTH 1 v2");
+        case FELICA_AUTHENTICATION1_V2_REQ:
+            snprintf(exp, size, "AUTHENTICATION1 v2");
             break;
-        case FELICA_AUTH1V2_ACK:
-            snprintf(exp, size, "AUTH 1 v2 ACK");
+        case FELICA_AUTHENTICATION1_V2_RES:
+            snprintf(exp, size, "AUTHENTICATION1 v2 RES");
             break;
-        case FELICA_AUTH2V2_REQ:
-            snprintf(exp, size, "AUTH 2 v2");
+        case FELICA_AUTHENTICATION2_V2_REQ:
+            snprintf(exp, size, "AUTHENTICATION2 v2");
             break;
-        case FELICA_AUTH2V2_ACK:
-            snprintf(exp, size, "AUTH 2 v2 ACK");
+        case FELICA_AUTHENTICATION2_V2_RES:
+            snprintf(exp, size, "AUTHENTICATION2 v2 RES");
             break;
-        case FELICA_RDSECV2_REQ:
+        case FELICA_READ_SECURE_V2_REQ:
             snprintf(exp, size, "READ v2");
             break;
-        case FELICA_RDSECV2_ACK:
-            snprintf(exp, size, "READ v2 ACK");
+        case FELICA_READ_SECURE_V2_RES:
+            snprintf(exp, size, "READ v2 RES");
             break;
-        case FELICA_WRTSECV2_REQ:
+        case FELICA_WRITE_SECURE_V2_REQ:
             snprintf(exp, size, "WRITE v2");
             break;
-        case FELICA_WRTSECV2_ACK:
-            snprintf(exp, size, "WRITE v2 ACK");
+        case FELICA_WRITE_SECURE_V2_RES:
+            snprintf(exp, size, "WRITE v2 RES");
             break;
-        case FELICA_UPDATE_RNDID_REQ:
+        case FELICA_DELETE_KEY_REQ:
+            snprintf(exp, size, "DELETE KEY");
+            break;
+        case FELICA_DELETE_KEY_RES:
+            snprintf(exp, size, "DELETE KEY RES");
+            break;
+        case FELICA_NFC_DEP_ATR_REQ:
+            snprintf(exp, size, "NFC-DEP ATR REQ");
+            break;
+        case FELICA_NFC_DEP_ATR_RES:
+            snprintf(exp, size, "NFC-DEP ATR RES");
+            break;
+        case FELICA_NFC_DEP_PSL_REQ:
+            snprintf(exp, size, "NFC-DEP PSL REQ");
+            break;
+        case FELICA_NFC_DEP_PSL_RES:
+            snprintf(exp, size, "NFC-DEP PSL RES");
+            break;
+        case FELICA_NFC_DEP_DEP_REQ:
+            snprintf(exp, size, "NFC-DEP DEP REQ");
+            break;
+        case FELICA_NFC_DEP_DEP_RES:
+            snprintf(exp, size, "NFC-DEP DEP RES");
+            break;
+        case FELICA_NFC_DEP_DSL_REQ:
+            snprintf(exp, size, "NFC-DEP DSL REQ");
+            break;
+        case FELICA_NFC_DEP_DSL_RES:
+            snprintf(exp, size, "NFC-DEP DSL RES");
+            break;
+        case FELICA_NFC_DEP_RLS_REQ:
+            snprintf(exp, size, "NFC-DEP RLS REQ");
+            break;
+        case FELICA_NFC_DEP_RLS_RES:
+            snprintf(exp, size, "NFC-DEP RLS RES");
+            break;
+        case FELICA_ATTR_REQ:
+            snprintf(exp, size, "ATTR");
+            break;
+        case FELICA_ATTR_RES:
+            snprintf(exp, size, "ATTR RES");
+            break;
+        case FELICA_HLT_REQ:
+            snprintf(exp, size, "HLT");
+            break;
+        case FELICA_HLT_RES:
+            snprintf(exp, size, "HLT RES");
+            break;
+        case FELICA_WUP_REQ:
+            snprintf(exp, size, "WUP");
+            break;
+        case FELICA_WUP_RES:
+            snprintf(exp, size, "WUP RES");
+            break;
+        case FELICA_UPDATE_RANDOM_ID_REQ:
             snprintf(exp, size, "UPDATE RANDOM ID");
             break;
-        case FELICA_UPDATE_RNDID_ACK:
-            snprintf(exp, size, "URI ACK");
+        case FELICA_UPDATE_RANDOM_ID_RES:
+            snprintf(exp, size, "UPDATE RANDOM ID RES");
+            break;
+        case FELICA_REGISTER_AREA_V2_REQ:
+            snprintf(exp, size, "REGISTER AREA v2");
+            break;
+        case FELICA_REGISTER_AREA_V2_RES:
+            snprintf(exp, size, "REGISTER AREA v2 RES");
+            break;
+        case FELICA_REGISTER_SERVICE_V2_REQ:
+            snprintf(exp, size, "REGISTER SERVICE v2");
+            break;
+        case FELICA_REGISTER_SERVICE_V2_RES:
+            snprintf(exp, size, "REGISTER SERVICE v2 RES");
+            break;
+        case FELICA_REGISTER_ISSUE_ID_EX_V2_REQ:
+            snprintf(exp, size, "REGISTER ISSUE ID EX v2");
+            break;
+        case FELICA_REGISTER_ISSUE_ID_EX_V2_RES:
+            snprintf(exp, size, "REGISTER ISSUE ID EX v2 RES");
+            break;
+        case FELICA_REGISTER_ISSUE_ID_EX_REQ:
+            snprintf(exp, size, "REGISTER ISSUE ID EX");
+            break;
+        case FELICA_REGISTER_ISSUE_ID_EX_RES:
+            snprintf(exp, size, "REGISTER ISSUE ID EX RES");
+            break;
+        case FELICA_SEPARATE_SYSTEM_V2_REQ:
+            snprintf(exp, size, "SEPARATE SYSTEM v2");
+            break;
+        case FELICA_SEPARATE_SYSTEM_V2_RES:
+            snprintf(exp, size, "SEPARATE SYSTEM v2 RES");
+            break;
+        case FELICA_CHANGE_SYSTEM_BLOCK_V2_REQ:
+            snprintf(exp, size, "CHANGE SYSTEM BLOCK v2");
+            break;
+        case FELICA_CHANGE_SYSTEM_BLOCK_V2_RES:
+            snprintf(exp, size, "CHANGE SYSTEM BLOCK v2 RES");
+            break;
+        case FELICA_GET_CONTAINER_ID_REQ:
+            snprintf(exp, size, "GET CONTAINER ID");
+            break;
+        case FELICA_GET_CONTAINER_ID_RES:
+            snprintf(exp, size, "GET CONTAINER ID RES");
+            break;
+        case FELICA_SET_NODE_PROPERTY_REQ:
+            snprintf(exp, size, "SET NODE PROPERTY");
+            break;
+        case FELICA_SET_NODE_PROPERTY_RES:
+            snprintf(exp, size, "SET NODE PROPERTY RES");
+            break;
+        case FELICA_REGISTER_ISSUE_ID_REQ:
+            snprintf(exp, size, "REGISTER ISSUE ID");
+            break;
+        case FELICA_REGISTER_ISSUE_ID_RES:
+            snprintf(exp, size, "REGISTER ISSUE ID RES");
+            break;
+        case FELICA_REGISTER_AREA_REQ:
+            snprintf(exp, size, "REGISTER AREA");
+            break;
+        case FELICA_REGISTER_AREA_RES:
+            snprintf(exp, size, "REGISTER AREA RES");
+            break;
+        case FELICA_REGISTER_SERVICE_REQ:
+            snprintf(exp, size, "REGISTER SERVICE");
+            break;
+        case FELICA_REGISTER_SERVICE_RES:
+            snprintf(exp, size, "REGISTER SERVICE RES");
+            break;
+        case FELICA_SEPARATE_SYSTEM_REQ:
+            snprintf(exp, size, "SEPARATE SYSTEM");
+            break;
+        case FELICA_SEPARATE_SYSTEM_RES:
+            snprintf(exp, size, "SEPARATE SYSTEM RES");
+            break;
+        case FELICA_CHANGE_SYSTEM_BLOCK_REQ:
+            snprintf(exp, size, "CHANGE SYSTEM BLOCK");
+            break;
+        case FELICA_CHANGE_SYSTEM_BLOCK_RES:
+            snprintf(exp, size, "CHANGE SYSTEM BLOCK RES");
+            break;
+        case FELICA_REGISTER_MANUFACTURE_ID_REQ:
+            snprintf(exp, size, "REGISTER MANUFACTURE ID");
+            break;
+        case FELICA_REGISTER_MANUFACTURE_ID_RES:
+            snprintf(exp, size, "REGISTER MANUFACTURE ID RES");
+            break;
+        case FELICA_SELF_DIAGNOSIS_REQ:
+            snprintf(exp, size, "SELF DIAGNOSIS");
+            break;
+        case FELICA_SELF_DIAGNOSIS_RES:
+            snprintf(exp, size, "SELF DIAGNOSIS RES");
+            break;
+        case FELICA_CHANGE_ACTIVE_INTERFACE_REQ:
+            snprintf(exp, size, "CHANGE ACTIVE INTERFACE");
+            break;
+        case FELICA_CHANGE_ACTIVE_INTERFACE_RES:
+            snprintf(exp, size, "CHANGE ACTIVE INTERFACE RES");
+            break;
+        case FELICA_RESET_INTERFACE_REQ:
+            snprintf(exp, size, "RESET INTERFACE");
+            break;
+        case FELICA_RESET_INTERFACE_RES:
+            snprintf(exp, size, "RESET INTERFACE RES");
+            break;
+        case FELICA_PROPOSE_ADHOC_REQ:
+            snprintf(exp, size, "PROPOSE ADHOC");
+            break;
+        case FELICA_PROPOSE_ADHOC_RES:
+            snprintf(exp, size, "PROPOSE ADHOC RES");
+            break;
+        case FELICA_START_ADHOC_MODE_REQ:
+            snprintf(exp, size, "START ADHOC MODE");
+            break;
+        case FELICA_START_ADHOC_MODE_RES:
+            snprintf(exp, size, "START ADHOC MODE RES");
+            break;
+        case FELICA_FALP_TERMINATE_ADHOC:
+            snprintf(exp, size, "FALP TERMINATE ADHOC");
+            break;
+        case FELICA_PUSH_REQ:
+            snprintf(exp, size, "PUSH");
+            break;
+        case FELICA_PUSH_RES:
+            snprintf(exp, size, "PUSH RES");
+            break;
+        case FELICA_FALP_TRANSMIT_DATA:
+            snprintf(exp, size, "FALP TRANSMIT DATA");
+            break;
+        case FELICA_DCK_ENCAPSULATION_CAPDU_DATA:
+            snprintf(exp, size, "DCK ENCAPSULATION CAPDU DATA");
+            break;
+        case FELICA_DCK_ENCAPSULATION_CAPDU_DATA_CHAINED:
+            snprintf(exp, size, "DCK ENCAPSULATION CAPDU DATA CHAINED");
+            break;
+        case FELICA_DCK_ENCAPSULATION_RW_ACK:
+            snprintf(exp, size, "DCK ENCAPSULATION R/W ACK");
+            break;
+        case FELICA_DCK_ENCAPSULATION_NACK:
+            snprintf(exp, size, "DCK ENCAPSULATION NACK");
+            break;
+        case FELICA_DCK_ENCAPSULATION_RAPDU_DATA_RES:
+            snprintf(exp, size, "DCK ENCAPSULATION RAPDU DATA RES");
+            break;
+        case FELICA_DCK_ENCAPSULATION_RAPDU_DATA_CHAINED_RES:
+            snprintf(exp, size, "DCK ENCAPSULATION RAPDU DATA CHAINED RES");
+            break;
+        case FELICA_DCK_ENCAPSULATION_DEVICE_ACK_RES:
+            snprintf(exp, size, "DCK ENCAPSULATION DEVICE ACK RES");
+            break;
+        case FELICA_DCK_ENCAPSULATION_NACK_RES:
+            snprintf(exp, size, "DCK ENCAPSULATION NACK RES");
+            break;
+        case FELICA_SET_PRIVACY_FLAG_REQ:
+            snprintf(exp, size, "SET PRIVACY FLAG");
+            break;
+        case FELICA_SET_PRIVACY_FLAG_RES:
+            snprintf(exp, size, "SET PRIVACY FLAG RES");
+            break;
+        case FELICA_REQUEST_MASKED_CODE_LIST_REQ:
+            snprintf(exp, size, "REQUEST MASKED CODE LIST");
+            break;
+        case FELICA_REQUEST_MASKED_CODE_LIST_RES:
+            snprintf(exp, size, "REQUEST MASKED CODE LIST RES");
+            break;
+        case FELICA_TURN_OFF_RF_POWER_CMD:
+            snprintf(exp, size, "TURN OFF RF POWER CMD");
+            break;
+        case FELICA_TURN_OFF_RF_POWER_RES:
+            snprintf(exp, size, "TURN OFF RF POWER RES");
+            break;
+        case FELICA_SET_BAUD_RATE_CMD:
+            snprintf(exp, size, "SET BAUD RATE CMD");
+            break;
+        case FELICA_SET_BAUD_RATE_RES:
+            snprintf(exp, size, "SET BAUD RATE RES");
+            break;
+        case FELICA_ECHO_REQ:
+            snprintf(exp, size, "ECHO");
+            break;
+        case FELICA_SET_RF_CHIP_REGISTER_CMD:
+            snprintf(exp, size, "SET RF CHIP REGISTER CMD");
+            break;
+        case FELICA_SET_RF_CHIP_REGISTER_RES:
+            snprintf(exp, size, "SET RF CHIP REGISTER RES");
+            break;
+        case FELICA_GET_RF_CHIP_REGISTER_CMD:
+            snprintf(exp, size, "GET RF CHIP REGISTER CMD");
+            break;
+        case FELICA_GET_RF_CHIP_REGISTER_RES:
+            snprintf(exp, size, "GET RF CHIP REGISTER RES");
             break;
         default                     :
             snprintf(exp, size, "?");

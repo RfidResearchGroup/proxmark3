@@ -47,23 +47,22 @@ typedef struct emrtd_hashalg_s {
     const uint8_t descriptor[15];
 } emrtd_hashalg_t;
 
-typedef struct emrtd_pacealg_s {
-    const char *name;
-    int (*keygenerator)(uint8_t *datain, int datainlen, uint8_t *dataout);
-    const uint8_t descriptor[10];
-} emrtd_pacealg_t;
-
-// Standardized Domain Parameters
-typedef struct emrtd_pacesdp_s {
-    uint8_t id;
-    const char *name;
-    size_t size;
-} emrtd_pacesdp_t;
+// Everything needed to authenticate to a document, either with BAC or with PACE
+typedef struct emrtd_auth_s {
+    char documentnumber[10];
+    char dob[7];
+    char expiry[7];
+    char can[15];
+    bool mrz_available;
+    bool can_available;
+    bool force_pace;        // fail rather than falling back to BAC
+    bool force_bac;         // skip PACE even when EF_CardAccess is present
+} emrtd_auth_t;
 
 int CmdHFeMRTD(const char *Cmd);
 
-int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available, const char *path);
-int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_available, bool only_fast);
+int dumpHF_EMRTD(const emrtd_auth_t *auth, const char *path);
+int infoHF_EMRTD(const emrtd_auth_t *auth, bool only_fast);
 int infoHF_EMRTD_offline(const char *path);
 
 #ifdef __cplusplus

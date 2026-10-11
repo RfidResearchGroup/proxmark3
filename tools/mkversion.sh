@@ -102,9 +102,9 @@ sha=$(
     [ -f armsrc/appmain.c ] || return
     if [ "${OSTYPE#darwin}" != "$OSTYPE" ]; then
         # macOS
-        ls armsrc/*.[ch] common_arm/*.[ch]|grep -E -v "(disabled|version_pm3|fpga_version_info)"|sort|xargs shasum -a 256 -t|shasum -a 256|cut -c -9
+        ls armsrc/*.[ch] common_arm/*/*.[ch]|grep -E -v "(disabled|version_pm3|fpga_version_info)"|sort|xargs shasum -a 256 -t|shasum -a 256|cut -c -9
     else
-        ls armsrc/*.[ch] common_arm/*.[ch]|grep -E -v "(disabled|version_pm3|fpga_version_info)"|sort|xargs sha256sum -t|sha256sum|cut -c -9
+        ls armsrc/*.[ch] common_arm/*/*.[ch]|grep -E -v "(disabled|version_pm3|fpga_version_info)"|sort|xargs sha256sum -t|sha256sum|cut -c -9
     fi
 )
 if [ "$sha" = "" ]; then

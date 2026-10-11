@@ -1,0 +1,154 @@
+#:import theme epassport.ui.theme
+#:import GuideOverlay epassport.ui.scan.GuideOverlay
+
+<ScanScreen>:
+    BoxLayout:
+        orientation: "vertical"
+        padding: dp(16)
+        spacing: dp(10)
+
+        BoxLayout:
+            size_hint_y: None
+            height: dp(32)
+            spacing: dp(10)
+
+            Label:
+                text: "Scan the MRZ"
+                font_name: theme.FONT_LABEL_BOLD
+                font_size: sp(18)
+                color: app.palette["accent"]
+                halign: "left"
+                valign: "middle"
+                text_size: self.size
+
+            # 0 cameras: say so.  1..n: offer the dropdown.
+            Label:
+                text: "No camera detected"
+                font_name: theme.FONT_LABEL_BOLD
+                font_size: sp(12)
+                color: theme.WARN
+                size_hint_x: None
+                width: dp(0) if root.has_cameras else dp(180)
+                opacity: 0 if root.has_cameras else 1
+                halign: "right"
+                valign: "middle"
+                text_size: self.size
+
+            Label:
+                text: "CAMERA"
+                font_name: theme.FONT_LABEL_BOLD
+                font_size: sp(11)
+                color: app.palette["text_dim"]
+                size_hint_x: None
+                width: dp(60) if root.has_cameras else dp(0)
+                opacity: 1 if root.has_cameras else 0
+                halign: "right"
+                valign: "middle"
+                text_size: self.size
+
+            Spinner:
+                id: camera_picker
+                text: root.camera_label
+                values: root.camera_choices
+                disabled: not root.has_cameras
+                size_hint_x: None
+                width: dp(280) if root.has_cameras else dp(0)
+                opacity: 1 if root.has_cameras else 0
+                font_name: theme.FONT_LABEL
+                font_size: sp(12)
+                sync_height: True
+                on_text: root.select_camera(self.text)
+
+            Button:
+                text: "Rescan" if root.has_cameras else "Rescan for devices"
+                size_hint_x: None
+                width: dp(90) if root.has_cameras else dp(160)
+                font_name: theme.FONT_LABEL
+                font_size: sp(12)
+                on_release: root.refresh_cameras(probe=True)
+
+        FloatLayout:
+            canvas.before:
+                Color:
+                    rgba: app.palette["log_bg"]
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+            canvas.after:
+                Color:
+                    rgba: theme.OK[0], theme.OK[1], theme.OK[2], (0.30 if root.accepted else 0)
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+            Image:
+                id: preview
+                fit_mode: "contain"
+                pos_hint: {"x": 0, "y": 0}
+                size_hint: 1, 1
+                # An Image with no texture draws an untextured quad, which is
+                # a solid white panel.  Keep it hidden until a frame arrives.
+                opacity: 1 if self.texture else 0
+
+            Label:
+                text: ("No camera detected on this machine." if not root.has_cameras else "Starting camera\u2026")
+                font_name: theme.FONT_LABEL
+                font_size: sp(14)
+                color: app.palette["text_dim"]
+                opacity: 0 if preview.texture else 1
+                pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                size_hint: None, None
+                size: self.texture_size
+            # The overlay covers the preview widget but draws against the
+            # letterboxed image inside it, computed as ONE expression so a
+            # position is never derived from a stale size.
+            GuideOverlay:
+                id: overlay
+                pos_hint: {"x": 0, "y": 0}
+                size_hint: 1, 1
+                # Zero rect while there is no picture, so no stray box or
+                # scrim is drawn over an empty panel.
+                image_rect:
+                    [preview.center_x - preview.norm_image_size[0] / 2.0, \
+                    preview.center_y - preview.norm_image_size[1] / 2.0, \
+                    preview.norm_image_size[0], preview.norm_image_size[1]] \
+                    if preview.texture else [0, 0, 0, 0]
+
+        Label:
+            text: root.status
+            font_name: theme.FONT_LABEL_BOLD
+            font_size: sp(13)
+            color: theme.OK if root.accepted else app.palette["text"]
+            size_hint_y: None
+            height: dp(22)
+            halign: "left"
+            valign: "middle"
+            text_size: self.size
+
+        Label:
+            text: root.detail
+            font_name: theme.FONT_MONO
+            font_size: sp(11)
+            color: app.palette["text_dim"]
+            size_hint_y: None
+            height: dp(34)
+            halign: "left"
+            valign: "top"
+            text_size: self.size
+
+        BoxLayout:
+            size_hint_y: None
+            height: dp(40)
+            spacing: dp(10)
+            Button:
+                text: "Enter manually"
+                font_name: theme.FONT_LABEL
+                font_size: sp(13)
+                on_release: app.goto_entry()
+            Widget:
+            Button:
+                text: "Cancel"
+                font_name: theme.FONT_LABEL
+                font_size: sp(13)
+                size_hint_x: None
+                width: dp(120)
+                on_release: app.goto_entry()

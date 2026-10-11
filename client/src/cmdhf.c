@@ -21,18 +21,24 @@
 #include "cmdparser.h"      // command_t
 #include "cliparser.h"      // parse
 #include "comms.h"          // clearCommandBuffer
+#include "util.h"           // set_rgb
 #include "lfdemod.h"        // computeSignalProperties
 #include "cmdhf14a.h"       // ISO14443-A
 #include "cmdhf14b.h"       // ISO14443-B
 #include "cmdhf15.h"        // ISO15693
+#include "cmdhfaliro.h"     // ALIRO digital keys
+#include "cmdhfcalypso.h"   // Calypso transport cards
 #include "cmdhfcipurse.h"   // CIPURSE transport cards
 #include "cmdhfcryptorf.h"  // CryptoRF
 #include "cmdhfepa.h"       // German Identification Card
 #include "cmdhfemrtd.h"     // eMRTD
 #include "cmdhffelica.h"    // ISO18092 / FeliCa
 #include "cmdhffido.h"      // FIDO authenticators
+#include "cmdhffmcos.h"     // FMCOS CPU cards
+#include "cmdhfsecc.h"      // iClass SE Config Card
 #include "cmdhffudan.h"     // Fudan cards
 #include "cmdhfgallagher.h" // Gallagher DESFire cards
+#include "cmdhfgst.h"       // Google Smart Tap
 #include "cmdhficlass.h"    // ICLASS
 #include "cmdhfict.h"       // ICT MFC / DESfire cards
 #include "cmdhfjooki.h"     // MFU based Jooki
@@ -40,10 +46,11 @@
 #include "cmdhflegic.h"     // LEGIC
 #include "cmdhflto.h"       // LTO-CM
 #include "cmdhfmf.h"        // CLASSIC
-#include "cmdhfmfu.h"       // ULTRALIGHT/NTAG etc
 #include "cmdhfmfp.h"       // Mifare Plus
+#include "cmdhfmfu.h"       // ULTRALIGHT/NTAG etc
 #include "cmdhfmfdes.h"     // DESFIRE
 #include "cmdhfntag424.h"   // NTAG 424 DNA
+#include "cmdhfsaflok.h"    // Saflok
 #include "cmdhfseos.h"      // SEOS
 #include "cmdhfst25ta.h"    // ST25TA
 #include "cmdhftesla.h"     // Tesla
@@ -86,7 +93,7 @@ int CmdHFSearch(const char *Cmd) {
     uint8_t success[COUNT_OF_PROTOCOLS] = {0};
 
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, " Searching for ThinFilm tag...");
+    PrintAndLogEx(INPLACE, "Searching for ThinFilm tag...");
     if (IfPm3NfcBarcode()) {
         if (infoThinFilm(false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Thinfilm tag") " found\n");
@@ -96,7 +103,7 @@ int CmdHFSearch(const char *Cmd) {
     }
 
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, " Searching for Topaz tag...");
+    PrintAndLogEx(INPLACE, "Searching for Topaz tag...");
     if (IfPm3Iso14443a()) {
         if (readTopazUid(false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Topaz tag") " found\n");
@@ -106,7 +113,7 @@ int CmdHFSearch(const char *Cmd) {
     }
 
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, " Searching for LTO-CM tag...");
+    PrintAndLogEx(INPLACE, "Searching for LTO-CM tag...");
     if (IfPm3Iso14443a()) {
         if (reader_lto(false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LTO-CM tag") " found\n");
@@ -116,7 +123,7 @@ int CmdHFSearch(const char *Cmd) {
     }
 
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, " Searching for ISO14443-A tag...");
+    PrintAndLogEx(INPLACE, "Searching for ISO14443-A tag...");
     if (IfPm3Iso14443a()) {
         int sel_state = infoHF14A(false, false, false);
         if (sel_state > 0) {
@@ -145,7 +152,7 @@ int CmdHFSearch(const char *Cmd) {
     */
 
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, " Searching for LEGIC tag...");
+    PrintAndLogEx(INPLACE, "Searching for LEGIC tag...");
     if (IfPm3Legicrf()) {
         if (readLegicUid(false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LEGIC Prime tag") " found\n");
@@ -156,7 +163,7 @@ int CmdHFSearch(const char *Cmd) {
 
     // texkom
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, " Searching for TEXKOM tag...");
+    PrintAndLogEx(INPLACE, "Searching for TEXKOM tag...");
     if (read_texkom_uid(false, false) == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("TEXKOM tag") " found\n");
         success[PROTO_TEXKOM] = true;
@@ -165,7 +172,7 @@ int CmdHFSearch(const char *Cmd) {
 
     // xerox
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, " Searching for Fuji/Xerox tag...");
+    PrintAndLogEx(INPLACE, "Searching for Fuji/Xerox tag...");
     if (IfPm3Iso14443b()) {
         if (read_xerox_uid(false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Fuji/Xerox tag") " found\n");
@@ -176,7 +183,7 @@ int CmdHFSearch(const char *Cmd) {
 
     // 14b is the longest test
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, " Searching for ISO14443-B tag...");
+    PrintAndLogEx(INPLACE, "Searching for ISO14443-B tag...");
     if (IfPm3Iso14443b()) {
         if (readHF14B(false, false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 14443-B tag") " found\n");
@@ -188,7 +195,7 @@ int CmdHFSearch(const char *Cmd) {
     // OBS!  This triggers a swap to FPGA_BITSTREAM_HF_15 == 1.5sec delay
 
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, " Searching for ISO15693 tag...");
+    PrintAndLogEx(INPLACE, "Searching for ISO15693 tag...");
     if (IfPm3Iso15693()) {
         if (readHF15Uid(false, true)) {
             PrintAndLogEx(SUCCESS, "Valid " _GREEN_("ISO 15693 tag") " found\n");
@@ -198,7 +205,7 @@ int CmdHFSearch(const char *Cmd) {
     }
 
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, " Searching for iCLASS / PicoPass tag...");
+    PrintAndLogEx(INPLACE, "Searching for iCLASS / PicoPass tag...");
     if (IfPm3Iclass()) {
         if (read_iclass_csn(false, false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iCLASS tag / PicoPass tag") " found\n");
@@ -210,10 +217,14 @@ int CmdHFSearch(const char *Cmd) {
     // OBS!  This triggers a swap to FPGA_BITSTREAM_HF_FELICA == 1.5sec delay
 
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, " Searching for FeliCa tag...");
+    PrintAndLogEx(INPLACE, "Searching for FeliCa tag...");
     if (IfPm3Felica()) {
         if (read_felica_uid(false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 18092 / FeliCa tag") " found\n");
+            success[FELICA] = true;
+            res = PM3_SUCCESS;
+        } else if (info_felica_seac() == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "Valid " _GREEN_("FeliCa SEAC tag") " found\n");
             success[FELICA] = true;
             res = PM3_SUCCESS;
         }
@@ -221,7 +232,7 @@ int CmdHFSearch(const char *Cmd) {
 
     /*
     PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, " Searching for CryptoRF tag...");
+    PrintAndLogEx(INPLACE, "Searching for CryptoRF tag...");
     if (IfPm3Iso14443b()) {
         if (readHFCryptoRF(false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("CryptoRF tag") " found\n");
@@ -231,61 +242,77 @@ int CmdHFSearch(const char *Cmd) {
     }
     */
 
+    DropField();
+
     PROMPT_CLEARLINE;
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, _RED_("No known/supported 13.56 MHz tags found"));
-        res = PM3_ESOFT;
-    } else {
-
-        // no need to print 14A hints,  since it will print itself
-
-        if (success[THINFILM]) {
-            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf thinfilm") "` commands\n");
-        }
-
-        if (success[LTO]) {
-            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf lto") "` commands\n");
-        }
-
-        if (success[LEGIC]) {
-            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf legic") "` commands\n");
-        }
-
-        if (success[TOPAZ]) {
-            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf topaz") "` commands\n");
-        }
-
-        if (success[PROTO_TEXKOM]) {
-            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf texkom") "` commands\n");
-        }
-
-        if (success[PROTO_XEROX]) {
-            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf xerox") "` commands\n");
-        }
-
-        if (success[ISO_14443B]) {
-            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 14b") "` commands\n");
-        }
-
-        if (success[ISO_15693]) {
-            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 15") "` commands\n");
-        }
-
-        if (success[ICLASS]) {
-            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass") "` commands\n");
-        }
-
-        if (success[FELICA]) {
-            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf felica") "` commands\n");
-        }
-
-        if (success[PROTO_CRYPTORF]) {
-            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf cryptorf") "` commands\n");
-        }
+        return res;
     }
 
-    DropField();
+    // no need to print 14A hints,  since it will print itself
+
+    if (success[THINFILM]) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf thinfilm") "` commands\n");
+    }
+
+    if (success[LTO]) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf lto") "` commands\n");
+    }
+
+    if (success[LEGIC]) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf legic") "` commands\n");
+    }
+
+    if (success[TOPAZ]) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf topaz") "` commands\n");
+    }
+
+    if (success[PROTO_TEXKOM]) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf texkom") "` commands\n");
+    }
+
+    if (success[PROTO_XEROX]) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf xerox") "` commands\n");
+    }
+
+    if (success[ISO_14443B]) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 14b") "` commands\n");
+    }
+
+    if (success[ISO_15693]) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 15") "` commands\n");
+    }
+
+    if (success[ICLASS]) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass") "` commands\n");
+    }
+
+    if (success[FELICA]) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf felica") "` commands\n");
+    }
+
+    if (success[PROTO_CRYPTORF]) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf cryptorf") "` commands\n");
+    }
+
     return res;
+}
+
+// Mirror an antenna tuning level on the PM5 antenna RGB LED. `volt` is scaled
+// relative to the running peak (`v_max`), so the colour tracks the on-screen bar:
+// blue = low, green = mid, red = high.
+static void tune_rgb_update(uint32_t volt, uint32_t v_max) {
+    uint32_t t = (v_max > 0) ? (volt * 510 / v_max) : 0;
+    if (t > 510) {
+        t = 510;
+    }
+    if (t < 255) {          // blue -> green
+        set_rgb(0, (uint8_t)t, (uint8_t)(255 - t));
+    } else {                // green -> red
+        t -= 255;
+        set_rgb((uint8_t)t, (uint8_t)(255 - t), 0);
+    }
 }
 
 int CmdHFTune(const char *Cmd) {
@@ -305,6 +332,7 @@ int CmdHFTune(const char *Cmd) {
         arg_lit0(NULL, "mix", "mixed style"),
         arg_lit0(NULL, "value", "values style"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "rgb", "(PM5) mirror the tuning level on the antenna RGB LED"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -313,7 +341,13 @@ int CmdHFTune(const char *Cmd) {
     bool is_mix = arg_get_lit(ctx, 3);
     bool is_value = arg_get_lit(ctx, 4);
     bool verbose = arg_get_lit(ctx, 5);
+    bool use_rgb = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
+
+    if (use_rgb && (IfPm5() == false)) {
+        PrintAndLogEx(WARNING, "`--rgb` is only supported on Proxmark5; ignoring");
+        use_rgb = false;
+    }
 
     if ((is_bar + is_mix + is_value) > 1) {
         PrintAndLogEx(ERR, "Select only one output style");
@@ -340,6 +374,15 @@ int CmdHFTune(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
+    // All three modes of this command answer under the same command id
+    // and there is no sequence number
+    if ((resp.status != PM3_SUCCESS) || (resp.length != 0)) {
+        PrintAndLogEx(WARNING, "unexpected reply to HF initialization (status %d, %u bytes)",
+                      resp.status,
+                      (unsigned)resp.length
+                     );
+    }
+
     mode[0] = 2;
 
     uint32_t v_max = 0xFFFF;
@@ -356,6 +399,9 @@ int CmdHFTune(const char *Cmd) {
             break;
         }
 
+        // Anything still queued is a leftover
+        clearCommandBuffer();
+
         SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF, mode, sizeof(mode));
         if (WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 1000) == false) {
             PrintAndLogEx(NORMAL, "");
@@ -363,12 +409,18 @@ int CmdHFTune(const char *Cmd) {
             break;
         }
 
-        if ((resp.status == PM3_EOPABORTED) || (resp.length != sizeof(uint16_t))) {
+        if ((resp.status == PM3_EOPABORTED) || (resp.length != sizeof(uint16_t) && resp.length != sizeof(uint32_t))) {
             PrintAndLogEx(NORMAL, "");
             break;
         }
 
-        uint16_t volt = resp.data.asDwords[0] & 0xFFFF;
+        uint32_t volt;
+        if (resp.length == sizeof(uint16_t)) {
+            volt = resp.data.asDwords[0] & 0xFFFF;
+        } else {
+            volt = resp.data.asDwords[0]; // U32. It can exceed 65.535V.
+        }
+
         if (first) {
             v_max = volt;
             v_min = volt;
@@ -381,15 +433,22 @@ int CmdHFTune(const char *Cmd) {
             v_count++;
         }
         print_progress(volt, v_max, style);
+        if (use_rgb) {
+            tune_rgb_update(volt, v_max);
+        }
+    }
+    if (use_rgb) {
+        set_rgb(0, 0, 0); // turn the LED off on exit
     }
     mode[0] = 3;
 
+    clearCommandBuffer();
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_HF, mode, sizeof(mode));
     if (WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_HF, &resp, 1000) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for Proxmark HF shutdown, aborting");
         return PM3_ETIMEOUT;
     }
-    PrintAndLogEx(NORMAL, "\x1b%c[2K\r", 30);
+    PrintAndLogEx(NORMAL, _CLR_LINE_ "\r");
 
     if (verbose) {
         PrintAndLogEx(INFO, "Min....... %u mV", v_min);
@@ -477,7 +536,7 @@ int CmdHFSniff(const char *Cmd) {
 
         if (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            PrintAndLogEx(INFO, "User aborted");
+            PrintAndLogEx(WARNING, "\naborted via keyboard!");
             break;
         }
 
@@ -502,7 +561,7 @@ int CmdHFSniff(const char *Cmd) {
                 PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("data plot") "` to view");
                 PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("data save") "` to save");
 
-                // download bigbuf_malloc:d.
+                // download bigbuf_calloc:d.
                 // it reserve memory from the higher end.
                 // At the moment, sniff takes all free memory in bigbuff. If this changes,
                 // we can't start from beginning idx 0 but from that hi-to-start-of-allocated.
@@ -575,14 +634,19 @@ static command_t CommandTable[] = {
     {"14a",         CmdHF14A,         AlwaysAvailable, "{ ISO14443A RFIDs...                  }"},
     {"14b",         CmdHF14B,         AlwaysAvailable, "{ ISO14443B RFIDs...                  }"},
     {"15",          CmdHF15,          AlwaysAvailable, "{ ISO15693 RFIDs...                   }"},
+    {"aliro",       CmdHFAliro,       AlwaysAvailable, "{ ALIRO digital access credentials... }"},
+    {"calypso",     CmdHFCalypso,     AlwaysAvailable, "{ Calypso transport cards...          }"},
 //    {"cryptorf",    CmdHFCryptoRF,    AlwaysAvailable, "{ CryptoRF RFIDs...                   }"},
     {"cipurse",     CmdHFCipurse,     AlwaysAvailable, "{ Cipurse transport Cards...          }"},
     {"epa",         CmdHFEPA,         AlwaysAvailable, "{ German Identification Card...       }"},
     {"emrtd",       CmdHFeMRTD,       AlwaysAvailable, "{ Machine Readable Travel Document... }"},
     {"felica",      CmdHFFelica,      AlwaysAvailable, "{ ISO18092 / FeliCa RFIDs...          }"},
     {"fido",        CmdHFFido,        AlwaysAvailable, "{ FIDO and FIDO2 authenticators...    }"},
+    {"fmcos",       CmdHFFmcos,       AlwaysAvailable, "{ FMCOS CPU cards...                  }"},
     {"fudan",       CmdHFFudan,       AlwaysAvailable, "{ Fudan RFIDs...                      }"},
     {"gallagher",   CmdHFGallagher,   AlwaysAvailable, "{ Gallagher DESFire RFIDs...          }"},
+    {"gst",         CmdHFGST,         AlwaysAvailable, "{ Google Smart Tap passes...          }"},
+    {"secc",        CmdHFHIDConfig,   AlwaysAvailable, "{ iClass SE Config Card Emulator...   }"},
     {"iclass",      CmdHFiClass,      AlwaysAvailable, "{ ICLASS RFIDs...                     }"},
     {"ict",         CmdHFICT,         AlwaysAvailable, "{ ICT MFC/DESfire RFIDs...            }"},
     {"jooki",       CmdHF_Jooki,      AlwaysAvailable, "{ Jooki RFIDs...                      }"},
@@ -594,13 +658,14 @@ static command_t CommandTable[] = {
     {"mfu",         CmdHFMFUltra,     AlwaysAvailable, "{ MIFARE Ultralight RFIDs...          }"},
     {"mfdes",       CmdHFMFDes,       AlwaysAvailable, "{ MIFARE Desfire RFIDs...             }"},
     {"ntag424",     CmdHF_ntag424,    AlwaysAvailable, "{ NXP NTAG 4242 DNA RFIDs...          }"},
+    {"saflok",      CmdHFSaflok,      AlwaysAvailable, "{ Saflok MFC RFIDs...                 }"},
     {"seos",        CmdHFSeos,        AlwaysAvailable, "{ SEOS RFIDs...                       }"},
     {"st25ta",      CmdHFST25TA,      AlwaysAvailable, "{ ST25TA RFIDs...                     }"},
     {"tesla",       CmdHFTESLA,       AlwaysAvailable, "{ TESLA Cards...                      }"},
     {"texkom",      CmdHFTexkom,      AlwaysAvailable, "{ Texkom RFIDs...                     }"},
     {"thinfilm",    CmdHFThinfilm,    AlwaysAvailable, "{ Thinfilm RFIDs...                   }"},
     {"topaz",       CmdHFTopaz,       AlwaysAvailable, "{ TOPAZ (NFC Type 1) RFIDs...         }"},
-    {"vas",         CmdHFVAS,         AlwaysAvailable, "{ Apple Value Added Service           }"},
+    {"vas",         CmdHFVAS,         AlwaysAvailable, "{ Apple Value Added Service...        }"},
 #ifdef HAVE_GD
     {"waveshare",   CmdHFWaveshare,   AlwaysAvailable, "{ Waveshare NFC ePaper...             }"},
 #endif

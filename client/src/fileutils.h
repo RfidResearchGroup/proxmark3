@@ -32,6 +32,121 @@
 #include "protocols.h"    // iclass defines
 #include "cmdhftopaz.h"   // TOPAZ defines
 #include "mifare/mifaredefault.h"     // MFP / AES defines
+#include "iso15.h"        // iso15_tag_t
+#include "desfire.h"      // desfire_app_keys_t
+
+// keys recovered from a DESFire PICC by `hf mfdes chk`,  one entry per application
+typedef struct {
+    iso14a_card_select_t card_info;
+    uint8_t appcount;
+    desfire_app_keys_t app[DESFIRE_MAX_APP_COUNT];
+} desfire_keys_dump_t;
+
+//-----------------------------------------------------------------------------
+// DESFire card image,  as written by `hf mfdes dump` and read back by
+// `hf mfdes view`.  See doc/mfdes_dump_format.md for the on-disk JSON schema.
+//
+// Contents of a file live in a heap buffer hanging off desfire_dump_file_t,
+// so the image can hold real file sizes without a multi-megabyte struct.
+// Whoever fills or loads one of these owns those buffers -- release them with
+// desfire_dump_free() before dropping the image.
+//-----------------------------------------------------------------------------
+
+// keys of one application.  The key type is a property of the application, not
+// of the individual key, so it lives in desfire_dump_app_t.
+//
+// A key version is readable without knowing the key, so the two are tracked
+// separately: `versionknown` without `present` is the normal case for a key we
+// found but could not recover
+typedef struct {
+    uint8_t present[DESFIRE_MAX_KEY_COUNT];         // 1 = we have the key value
+    uint8_t versionknown[DESFIRE_MAX_KEY_COUNT];    // 1 = we read the key version
+    uint8_t version[DESFIRE_MAX_KEY_COUNT];
+    uint8_t key[DESFIRE_MAX_KEY_COUNT][DESFIRE_MAX_KEY_SIZE];
+} desfire_dump_keys_t;
+
+typedef struct {
+    uint8_t num;                // file number,  0x00 ... 0x1F
+    uint16_t isofid;            // ISO file id,  0 = none
+    uint8_t type;               // raw file type byte,  0x00 ... 0x05
+    uint8_t commmode;           // raw file communication mode
+    uint16_t accessrights;      // raw access rights word
+    uint8_t addrights_len;
+    uint16_t addrights[16];     // additional access rights
+
+    uint32_t size;              // standard / backup data file size
+    uint32_t lowerlimit;        // value file
+    uint32_t upperlimit;
+    uint32_t value;
+    uint8_t limitedcredit;
+    uint32_t recordsize;        // record file
+    uint32_t maxrecords;
+    uint32_t currecords;
+
+    bool settings_ok;           // file settings were read
+
+    // read_ok false means "we could not read it",  which is not the same as
+    // "the file is empty".  Never fill `data` with zeros to paper over it,  a
+    // simulator would then confidently answer with contents the card never had.
+    bool read_ok;
+    uint32_t datalen;
+    uint8_t *data;              // heap,  NULL when read_ok is false
+} desfire_dump_file_t;
+
+// One application.  The PICC level is an application too -- AID 000000 -- and
+// uses this same struct, so key settings and keys are always stated against an
+// AID instead of floating loose at card level
+typedef struct {
+    uint32_t aid;
+    uint16_t isofid;
+    uint8_t dfname[16];
+    uint8_t dfnamelen;
+
+    uint8_t keysettings;
+    uint8_t numkeysraw;
+    uint8_t numkeys;
+    uint8_t keytype;            // DesfireCryptoAlgorithm, one per application
+    bool settings_ok;           // key settings were read
+    bool auth_ok;               // we authenticated to this application
+
+    desfire_dump_keys_t keys;
+
+    uint8_t filecount;
+    desfire_dump_file_t files[DESFIRE_MAX_FILE_COUNT];
+} desfire_dump_app_t;
+
+typedef struct {
+    // card identity only.  Anything key related belongs to an application
+    iso14a_card_select_t card_info;
+
+    // GetVersion answers in three frames and the frames are not the same shape
+    // across generations -- D40 and EV1 close with UID||BatchNo[5]||CW||Year
+    // while EV3 re-cuts it as UID||BatchNo[3]||TypeID[2]||CW||Year -- so each is
+    // kept raw and separate rather than parsed into fields.
+    // HW/SW frames 7 bytes each: vendor, type, subtype, major, minor, storage,
+    // protocol.  Major+minor identify the generation, see prime.c
+    uint8_t versionhw[7];
+    uint8_t versionhwlen;
+    uint8_t versionsw[7];
+    uint8_t versionswlen;
+    uint8_t versionprod[14];    // UID and production details
+    uint8_t versionprodlen;
+    uint8_t signature[56];      // NXP originality signature
+    uint8_t signaturelen;
+
+    uint32_t freemem;
+    bool freemem_ok;
+
+    desfire_dump_app_t picc;    // AID 000000,  written as Applications.000000
+
+    // real applications only,  the PICC is not counted here
+    uint8_t appcount;
+    desfire_dump_app_t app[DESFIRE_MAX_APP_COUNT];
+} desfire_dump_t;
+
+// release the per-file heap buffers inside an image.  Safe on a NULL pointer
+// and safe to call twice.  Does not free the image itself.
+void desfire_dump_free(desfire_dump_t *dump);
 
 typedef union {
     void *v;
@@ -40,6 +155,9 @@ typedef union {
     topaz_tag_t *topaz;
     iso14a_mf_extdump_t *mfc;
     iso14a_mf_dump_ev1_t *mfc_ev1;
+    iso15_tag_t *iso15;
+    desfire_keys_dump_t *mfdes;
+    desfire_dump_t *mfdesdump;
 } udata_t;
 
 typedef enum {
@@ -48,7 +166,10 @@ typedef enum {
     jsfMfc_v2,
     jsfMfc_v3,
     jsfMfuMemory,
-    jsfHitag,
+    jsfHitag1,
+    jsfHitag2,
+    jsfHitagS,
+    jsfHitagU,
     jsfIclass,
     jsf14b,
     jsf14b_v2,
@@ -56,6 +177,7 @@ typedef enum {
     jsf15_v2,
     jsf15_v3,
     jsf15_v4,
+    jsf15_v5,
     jsfLegic,
     jsfLegic_v2,
     jsfT55x7,
@@ -63,6 +185,8 @@ typedef enum {
     jsfMfPlusKeys,
     jsfCustom,
     jsfMfDesfireKeys,
+    jsfMfDesfireKeys_v2,
+    jsfMfDesfire_v1,
     jsfEM4x05,
     jsfEM4x69,
     jsfEM4x50,
@@ -83,6 +207,8 @@ typedef enum {
     DICTIONARY,
     MCT,
     FLIPPER,
+    TAGINFO,
+    BRUCE,
 } DumpFileType_t;
 
 typedef enum {
@@ -100,10 +226,67 @@ typedef enum {
     NFC_DF_14_3A,
     NFC_DF_14_3B,
     NFC_DF_14_4A,
+    NFC_DF_15,
     NFC_DF_PICOPASS,
 } nfc_df_e;
 
+typedef enum {
+    ISO15_DF_UNKNOWN,
+    ISO15_DF_V4_BIN,
+    ISO15_DF_V5_BIN
+} iso15_df_e;
+
 int fileExists(const char *filename);
+
+/**
+ * @brief Check whether a path exists and is a directory.
+ */
+bool path_is_directory(const char *path);
+
+/**
+ * @brief Check whether a path exists and is a regular file.
+ */
+bool path_is_regular_file(const char *path);
+
+/**
+ * @brief Check whether a path is absolute.
+ */
+bool path_is_absolute(const char *path);
+
+/**
+ * @brief Expand a leading "~" into the user home directory.
+ *
+ * The pm3 prompt is not a shell, so "~" reaches the client verbatim.
+ * Returns a newly allocated string which the caller must free, NULL on failure.
+ * "~user/..." is not supported and is returned unchanged.
+ */
+char *path_expand_homedir(const char *path);
+
+/**
+ * @brief Return the final path component, or an empty string for NULL input.
+ */
+const char *path_basename(const char *path);
+
+/**
+ * @brief Copy the final path component without its last file extension.
+ */
+void path_basename_without_ext(const char *path, char *out, size_t out_len);
+
+/**
+ * @brief Recursively collect regular file paths under a directory into fixed-size slots.
+ *
+ * A max_depth of 0 scans only dirpath and does not descend into subdirectories.
+ */
+int collect_file_paths_recursive(const char *dirpath, char *paths, size_t path_len,
+                                 size_t max_paths, size_t *count, bool include_hidden, size_t max_depth);
+
+/**
+ * @brief Resolve a resources subdirectory and recursively collect regular file paths from it.
+ *
+ * A max_depth of 0 scans only the resolved resource_dir and does not descend into subdirectories.
+ */
+int collect_resource_file_paths(const char *resource_dir, char *paths, size_t path_len,
+                                size_t max_paths, size_t *count, bool include_hidden, size_t max_depth);
 
 // set a path in the path list g_session.defaultPaths
 bool setDefaultPath(savePaths_t pathIndex, const char *path);
@@ -116,7 +299,7 @@ void truncate_filename(char *fn,  uint16_t maxlen);
 /**
  * @brief Utility function to save data to a binary file. This method takes a preferred name, but if that
  * file already exists, it tries with another name until it finds something suitable.
- * E.g. dumpdata-15.txt
+ * E.g. dumpdata-15.bin
  *
  * @param preferredName
  * @param suffix the file suffix. Including the ".".
@@ -126,6 +309,19 @@ void truncate_filename(char *fn,  uint16_t maxlen);
  */
 int saveFile(const char *preferredName, const char *suffix, const void *data, size_t datalen);
 int saveFileEx(const char *preferredName, const char *suffix, const void *data, size_t datalen, savePaths_t e_save_path);
+
+/**
+ * @brief Utility function to save data to a text file. This method takes a preferred name, but if that
+ * file already exists, it tries with another name until it finds something suitable.
+ * E.g. dumpdata-15.txt
+ *
+ * @param preferredName
+ * @param suffix the file suffix. Including the ".".
+ * @param data The binary data to write to the file
+ * @param datalen the length of the data
+ * @return 0 for ok, 1 for failz
+ */
+int saveFileTXT(const char *preferredName, const char *suffix, const void *data, size_t datalen, savePaths_t e_save_path);
 
 /** STUB
  * @brief Utility function to save JSON data to a file. This method takes a preferred name, but if that
@@ -190,6 +386,19 @@ int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, const sector
 */
 int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, size_t *datalen);
 int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata, size_t *datalen, bool verbose);
+
+/**
+ * @brief Utility function to load a text file. This method takes a preferred name.
+ * E.g. dumpdata-15.json,  tries to search for it,  and allocated memory.
+ *
+ * @param preferredName
+ * @param suffix the file suffix. Including the ".".
+ * @param data The data array to store the loaded bytes from file
+ * @param datalen the number of bytes loaded from file
+ * @return PM3_SUCCESS for ok, PM3_E* for failz
+*/
+int loadFile_TXTsafe(const char *preferredName, const char *suffix, void **pdata, size_t *datalen, bool verbose);
+
 /**
  * @brief  Utility function to load data from a textfile (EML). This method takes a preferred name.
  * E.g. dumpdata-15.txt
@@ -307,7 +516,7 @@ int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, vo
 */
 int loadFileXML_safe(const char *preferredName, const char *suffix, void **pdata, size_t *datalen);
 
-int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya, void **keyb, size_t *alen, size_t *blen);
+int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya, void **keyb, size_t *alen, size_t *blen, bool verbose);
 
 /**
  * @brief  Utility function to check and convert plain mfu dump format to new mfu binary format.
@@ -318,6 +527,17 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
  * @return PM3_SUCCESS for ok, PM3_ESOFT for fails
 */
 int convert_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose);
+
+/**
+ * @brief Convert an ISO15693 dump to the current iso15_tag_t revision.
+ * A .bin has no version field, only a length, so the length selects the layout.
+ * A dump that already is the current revision is left untouched.
+ * @param dump pointer to loaded dump, replaced on conversion
+ * @param dumplen the number of bytes loaded, updated on conversion
+ * @param verbose - extra debug output
+ * @return PM3_SUCCESS for ok, PM3_ESOFT for an unrecognised length
+*/
+int convert_15_dump_format(uint8_t **dump, size_t *dumplen, bool verbose);
 mfu_df_e detect_mfu_dump_format(uint8_t **dump, bool verbose);
 int detect_nfc_dump_format(const char *preferredName, nfc_df_e *dump_type, bool verbose);
 
@@ -357,6 +577,10 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
  * @return PM3_SUCCESS if OK
  */
 int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft);
+// as pm3_save_dump, but lets the caller add fields the raw dump cannot carry,
+// such as the Hitag u UID and ICR which arrive separately from the pages
+int pm3_save_dump_cb(const char *fn, uint8_t *d, size_t n, JSONFileType jsft, void (*callback)(json_t *));
+int pm3_save_dump_json(const char *fn, uint8_t *d, size_t n, JSONFileType jsft);
 
 /** STUB
  * @brief Utility function to save data to three file files (BIN/JSON).
@@ -385,4 +609,15 @@ int pm3_save_mf_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft);
  * @return PM3_SUCCESS if OK
  */
 int pm3_save_fm11rf08s_nonces(const char *fn, iso14a_fm11rf08s_nonces_with_data_t *d, bool with_data);
+
+
+/**
+ * Inserts a line into a text file only if it does not already exist.
+ * Returns PM3_SUCCES or, PM3_EFILE;
+ *
+ * @param filepath Path to the file.
+ * @param keystr     Line to insert (should not contain a trailing newline).
+ */
+int insert_line_if_not_exists(const char *preferredName, const char *keystr);
+
 #endif // FILEUTILS_H

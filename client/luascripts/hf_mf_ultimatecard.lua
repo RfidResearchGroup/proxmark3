@@ -11,9 +11,11 @@ local _ntagpassword = nil
 local _key = '00000000' -- default UMC key
 local err_lock = 'use -k or change cfg0 block'
 local _print = 0
+local _ug4_version = ''
+local _packpage = 'E6'
 copyright = ''
 author = 'Nathan Glaser'
-version = 'v1.0.5'
+version = 'v1.0.7'
 date = 'Created - Jan 2022'
 desc = 'This script enables easy programming of an Ultimate Mifare Magic card'
 example = [[
@@ -142,20 +144,17 @@ end
 -- reads the number of bytes specified in arg1 (arg0 in c-struct)
 -- @param usbpacket the data received from the device
 local function getResponseData(usbpacket)
-    local resp = Command.parse(usbpacket)
-    local len = tonumber(resp.arg1) * 2
-    return string.sub(tostring(resp.data), 0, len);
+    local _rlen, _sel, _raw = parseRaw('14a', usbpacket)
+    if _rlen == nil then return nil end
+    return tohex(_raw)
 end
 ---
 local function sendRaw(rawdata, options)
     local flags = lib14a.ISO14A_COMMAND.ISO14A_NO_DISCONNECT
                 + lib14a.ISO14A_COMMAND.ISO14A_RAW
                 + lib14a.ISO14A_COMMAND.ISO14A_APPEND_CRC
-    local c = Command:newMIX{cmd = cmds.CMD_HF_ISO14443A_READER,
-                arg1 = flags,
-                arg2 = string.len(rawdata)/2,
-                data = rawdata}
-    return c:sendMIX(options.ignore_response)
+    local c = Command:newRaw{ tech = '14a', flags = flags, data = rawdata }
+    return c:sendNG(options.ignore_response)
 end
 ---
 local function send(payload)
@@ -180,6 +179,31 @@ local function connect()
     return true
 end
 ---
+-- Probe UMC revision robustly. CF<key>CC occasionally returns a truncated
+-- frame (e.g. 3F/7F), so retry until we get a well-formed 5-byte version.
+-- Some (06A0, 6666) UMC versions -> PACK page 0x13; others are assumed fine
+-- and an unprobeable card fall back to page 0xE6.
+local function detect_packpage()
+    if _ug4_version ~= '' then return end          -- already classified this run
+    for i = 1, 5 do
+        local v = (send("CF".._key.."CC") or ''):sub(1,-5):sub(-4)
+        if v:find('^%x+$') then        -- exactly 5 hex bytes
+            _ug4_version = v:upper()
+            print("Detected UMC version: ".._ug4_version)
+            break
+        end
+    end
+    if _ug4_version == '06A0' or _ug4_version == '6666' then
+        _packpage = '13'
+    else
+        _packpage = 'E6'
+        if _ug4_version == '' then
+            print("[!] Warning: unable to confirm config (".._ug4_version .."); using PACK page 0xE6")
+        end
+    end
+end
+
+---
 -- Read magic configuration
 local function read_config()
     local info = connect()
@@ -195,6 +219,7 @@ local function read_config()
     atqaf = atqa1..' '..atqa2
     cardtype, cardprotocol, gtustr, atsstr = 'unknown', 'unknown', 'unknown', 'unknown'
     if magicconfig == nil then lib14a.disconnect(); return nil, "can't read configuration, "..err_lock end
+    detect_packpage()
     if #magicconfig ~= 64 and #magicconfig ~= 68 then lib14a.disconnect(); return nil, "partial read of configuration, "..err_lock end
     if gtumode == '00' then gtustr = 'Pre-write/Shadow Mode'
     elseif gtumode == '01' or gtumode == '04' then gtustr = 'Restore Mode'
@@ -204,7 +229,7 @@ local function read_config()
     if ats:sub(1,2) == '00' then atsstr = 'Disabled'
     else atsstr = (string.sub(ats, 3))
     end
-    if ulprotocol == '00' then
+    if ulprotocol == '00'  then
     cardprotocol = 'MIFARE Classic Protocol'
     ultype = 'Disabled'
     if uidlength == '00' then
@@ -263,7 +288,7 @@ local function read_config()
     if pwd == '04' then lib14a.disconnect(); return nil, "can't read configuration, "..err_lock end
     -- read PACK
     cpack = send("30F1"):sub(1,4)
-    pack = send("30E6"):sub(1,4)
+    pack = send("30".._packpage):sub(1,4) -- *should* be E6, testing shows 13 on version 006a.
     -- read SIGNATURE
     signature1 = send('30F2'):sub(1,32)
     signature2 = send('30F6'):sub(1,32)
@@ -271,7 +296,7 @@ local function read_config()
     end
     if _print < 1 then
     print(string.rep('=', 88))
-    print('\t\t\tUltimate Magic Card Configuration')
+    print('\t\t\tUltimate Magic Card Configuration ('.._ug4_version..')')
     print(string.rep('=', 88))
     print(' - Raw Config      ', string.sub(magicconfig, 1, -9))
     print(' - Card Protocol    ', cardprotocol)
@@ -293,7 +318,7 @@ local function read_config()
         print(string.rep('=', 88))
         print(' - ATS          ', atsstr)
         print(' - Password     ', '[0xE5] '..pwd, '[0xF0] '..cpwd)
-        print(' - Pack         ', '[0xE6] '..pack, '[0xF1] '..cpack)
+        print(' - Pack         ', '[0x'.._packpage..'] '..pack, '[0xF1] '..cpack)
         print(' - Version      ', cversion)
         print(' - Signature    ', signature1..signature2)
     end
@@ -444,7 +469,7 @@ local function write_pack(userpack)
     local info = connect()
     if not info then return false, "Can't select card" end
     print('Writing new PACK', userpack)
-    send('A2E6'..userpack..'0000')
+    send('A2'.._packpage..userpack..'0000')
     send('A2F1'..userpack..'0000')
     lib14a.disconnect()
     return true, 'Ok'

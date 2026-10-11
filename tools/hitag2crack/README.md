@@ -148,8 +148,11 @@ can then be read out.
 
 _note_  the Proxmark3 hitag sniff command isn't good enough yet to collect the needed data.
 
-**TODO** example
-
+#### Example
+```
+./ht2crack2gentest 1
+./runalltests.sh
+```
 
 Usage details: Attack 3
 -----------------------
@@ -164,6 +167,13 @@ _note_  the Proxmark3 hitag sniff command isn't good enough yet to collect the n
 
 **TODO** will be ht2 sim or sniff with actual tag ?
 
+#### Example
+```
+python3 ../hitag2_gen_nRaR.py 000102030405 AABBCCDD 32 > hitag2_AABBCCDD_nrar_32emul.txt
+./ht2crack3test hitag2_AABBCCDD_nrar_32emul.txt 000102030405 AABBCCDD
+./ht2crack3 AABBCCDD hitag2_AABBCCDD_nrar_32emul.txt |grep -E -v '(trying|partial)'
+rm hitag2_AABBCCDD_nrar_32emul.txt
+```
 
 Usage details: Attack 4
 -----------------------
@@ -173,7 +183,12 @@ nonce and challenge response pairs are required.
 
 _note_  the Proxmark3 hitag sniff command isn't good enough yet to collect the needed data.
 
-**TODO** example
+#### Example
+```
+python3 ../hitag2_gen_nRaR.py AABBCCDDEEFF 12345678 32 > hitag2_12345678_nrar_32emul.txt
+./ht2crack4 -u 12345678 -n hitag2_12345678_nrar_32emul.txt -N 16 -t 500000 2>&1
+rm hitag2_12345678_nrar_32emul.txt
+```
 
 Usage details: Attack 5
 -----------------------
@@ -181,8 +196,10 @@ Usage details: Attack 5
 Attack 5 requires two encrypted nonce and challenge
 response value pairs (nR, aR) for the tag's UID.
 
-**TODO** example
-
+#### Example
+```
+./ht2crack5 12345678 71DA20AA 7EFDF3FA 2A4265F9 59653B07
+```
 
 Usage details: Attack 5gpu/5opencl
 ----------------------------------
@@ -190,7 +207,10 @@ Usage details: Attack 5gpu/5opencl
 Attacks 5gpu and 5opencl require two encrypted nonce and challenge
 response value pairs (nR, aR) for the tag's UID.
 
-**TODO** example
+#### Example
+```
+./ht2crack5opencl 12345678 B438220C 944FFD74 942C59E3 3D450B34
+```
 
 5opencl supports a number of additional parameters, see [crack5opencl/README.md](/tools/hitag2crack/crack5opencl/README.md) for details.
 

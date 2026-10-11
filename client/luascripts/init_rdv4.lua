@@ -78,6 +78,8 @@ function main(args)
     core.console('mem load -f mfc_default_keys --mfc')
     core.console('mem load -f t55xx_default_pwds --t55xx')
     core.console('mem load -f iclass_default_keys --iclass')
+    core.console('mem load -f mfulc_default_keys --ulc')
+    core.console('mem load -f mfulaes_default_keys --aes')
     print(dash)
 
     -- T55x7 Device configuration

@@ -23,6 +23,17 @@ local ISO15_COMMAND = {
     ISO15_REQ_NONINVENTORY = 0,
 }
 
+-- pm3 transport flags, iso15_command_t in include/iso15.h
+local PM3_ISO15 = {
+    CONNECT        = 1,
+    NO_DISCONNECT  = 2,
+    RAW            = 4,
+    APPEND_CRC     = 8,
+    HIGH_SPEED     = 16,
+    READ_RESPONSE  = 32,
+    LONG_WAIT      = 64,
+}
+
 local function errorString15693(number)
     local errors = {}
     errors[0x01] =  "The command is not supported"
@@ -94,28 +105,23 @@ local function read15693(slow, dont_readresponse)
 
     data = utils.Crc15("260100")
 
-    command = Command:newMIX{
-            cmd = cmds.CMD_HF_ISO15693_COMMAND,
-            arg1 = #data / 2,
-            arg2 = 1,
-            arg3 = 1,
-            data = data
-            }
-
-    if slow then
-        command.arg2 = 0
+    local flags = PM3_ISO15.CONNECT + PM3_ISO15.RAW
+    if not slow then
+        flags = flags + PM3_ISO15.HIGH_SPEED
     end
-    if dont_readresponse then
-        command.arg3 = 0
+    if not dont_readresponse then
+        flags = flags + PM3_ISO15.READ_RESPONSE
     end
 
-    local result, err = command:sendMIX()
+    command = Command:newRaw{ tech = '15', flags = flags, data = data }
+
+    local result, err = command:sendNG()
     if result then
-        local count, cmd, len, arg2, arg3 = bin.unpack('LLLL', result)
-        if len == 0 then
+        local len, _, raw = parseRaw('15', result)
+        if len == nil or len == 0 then
             return nil, 'iso15693 card select failed'
         end
-        data = string.sub(result, count, count+len-1)
+        data = raw
         info, err = parse15693(data)
     else
         err = 'No response from card'
@@ -144,10 +150,9 @@ end
 
 -- Sends an instruction to do nothing, only disconnect
 local function disconnect15693()
-    local c = Command:newMIX{cmd = cmds.CMD_HF_ISO15693_COMMAND}
-    -- We can ignore the response here, no ACK is returned for this command
-    -- Check /armsrc/iso14443a.c, ReaderIso14443a() for details
-    return c:sendMIX(true)
+    -- We can ignore the response here, no reply is returned for this command
+    local c = Command:newRaw{ tech = '15' }
+    return c:sendNG(true)
 end
 
 local library = {

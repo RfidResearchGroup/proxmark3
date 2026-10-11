@@ -175,9 +175,13 @@ These instructions will show how to setup the environment on OSX to the point wh
 2. Install dependencies:
 
 ```
-brew install readline qt5 gd pkgconfig coreutils openssl
+brew install readline qt gd pkgconfig coreutils openssl zlib
 brew install RfidResearchGroup/proxmark3/arm-none-eabi-gcc
 ```
+
+If you don't need support for decompressing compressed Google Smart Tap payloads in the Proxmark3 client,
+you can skip the installation of `zlib`.
+
 3. (optional) Install makefile dependencies:
 ```
 brew install recode

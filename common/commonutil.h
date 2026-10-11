@@ -75,10 +75,13 @@ typedef struct {
 
 
 int calculate_hours_between_dates(const Date_t s, Date_t *e);
+void add_minutes(Date_t *d, int minutes_to_add);
 void add_hours(Date_t *d, int hours_to_add);
 void add_days(Date_t *d, int days_to_add);
 uint8_t days_in_month(int year, int month);
 
+bool CheckValidInformationMagic(const void *version_info);
+bool CheckInformationMagicAndChipType(const void *version_info, uint32_t chiptype);
 
 extern struct version_information_t g_version_information;
 void FormatVersionInformation(char *dst, int len, const char *prefix, const void *version_info);
@@ -134,6 +137,9 @@ void xor(uint8_t *dest, const uint8_t *src, size_t n);
 
 void lsl(uint8_t *d, size_t n);
 void lslx(uint8_t *d, size_t n, uint8_t shifts);
+
+void rsl(uint8_t *d, size_t n);
+void rslx(uint8_t *d, size_t n, uint8_t shifts);
 
 uint32_t le24toh(const uint8_t data[3]);
 void htole24(uint32_t val, uint8_t data[3]);

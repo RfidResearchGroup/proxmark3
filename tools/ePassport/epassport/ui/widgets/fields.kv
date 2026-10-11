@@ -1,0 +1,59 @@
+#:import theme epassport.ui.theme
+
+<FieldLabel>:
+    font_name: theme.FONT_LABEL_BOLD
+    font_size: sp(root.parent.label_font_size if hasattr(root.parent, "label_font_size") else 10)
+    color: theme.LABEL
+    halign: "left"
+    valign: "bottom"
+    text_size: self.width, None
+    size_hint_y: None
+    height: self.texture_size[1]
+    shorten: True
+    shorten_from: "right"
+
+<FieldValue>:
+    font_name: theme.FONT_VALUE
+    color: theme.VALUE
+    halign: "left"
+    valign: "top"
+    text_size: self.width, None
+    size_hint_y: None
+    height: self.texture_size[1]
+    shorten: True
+    shorten_from: "right"
+
+<CheckBadge>:
+    font_name: theme.FONT_LABEL_BOLD
+    font_size: sp(13)
+    size_hint: None, None
+    size: dp(16), dp(16)
+
+<DataField>:
+    orientation: "vertical"
+    spacing: dp(1)
+    size_hint_y: None
+    height: caption.height + value_row.height + dp(3)
+
+    FieldLabel:
+        id: caption
+        text: root.label_text
+        font_size: sp(root.label_font_size)
+        letter_spacing: 1
+
+    BoxLayout:
+        id: value_row
+        size_hint_y: None
+        height: max(value.height, dp(14))
+        spacing: dp(4)
+
+        FieldValue:
+            id: value
+            text: root.value_text
+            font_size: sp(root.value_font_size)
+            color: theme.VALUE_DIM if root.dim else theme.VALUE
+            font_name: theme.FONT_VALUE_LIGHT if root.dim else theme.FONT_VALUE
+
+        CheckBadge:
+            state: root.check
+            pos_hint: {"top": 1}

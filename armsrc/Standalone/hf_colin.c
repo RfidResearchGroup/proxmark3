@@ -22,9 +22,10 @@
 #include "hf_colin.h"
 #include "proxmark3_arm.h"
 #include "appmain.h"
-#include "fpgaloader.h"
+#include "fpga_apis.h"
+#include "fpga_loader.h"
 #include "dbprint.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "util.h"
 #include "commonutil.h"
 #include "BigBuf.h"
@@ -97,9 +98,9 @@ static int colin_currfline;
 static int colin_curlline;
 static int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, uint8_t keyCount, const uint8_t *datain, uint64_t *key);
 static int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype);
-static void saMifareMakeTag(void);
+static void __attribute__((noinline)) saMifareMakeTag(void);
 static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, const uint8_t *datain);
-static void WriteTagToFlash(uint32_t uid, size_t size);
+static void __attribute__((noinline)) WriteTagToFlash(uint32_t uid, size_t size);
 
 // TODO : Implement fast read of KEYS like in RFIdea
 // also http://ext.delaat.net/rp/2015-2016/p04/report.pdf
@@ -125,7 +126,7 @@ static uint64_t hex2i(const char *s) {
         s += 2;
     else if (*s == 'x')
         s++;
-    while (colin_is_hex[(uint8_t)*s])
+    while (colin_is_hex[(uint8_t) * s])
         val = (val << 4) | (colin_is_hex[(uint8_t) * (s++)] - 1);
     return val;
 }
@@ -250,7 +251,15 @@ static char *ReadSchemasFromSPIFFS(char *filename) {
 
     int changed = rdv40_spiffs_lazy_mount();
     uint32_t size = size_in_spiffs((char *)filename);
-    uint8_t *mem = BigBuf_malloc(size);
+    uint8_t *mem = BigBuf_calloc(size);
+    if (mem == NULL) {
+        if (changed) {
+            rdv40_spiffs_lazy_unmount();
+        }
+        SpinOff(0);
+        return NULL;
+    }
+
     rdv40_spiffs_read_as_filetype((char *)filename, (uint8_t *)mem, size, RDV40_SPIFFS_SAFETY_SAFE);
 
     if (changed) {
@@ -260,9 +269,14 @@ static char *ReadSchemasFromSPIFFS(char *filename) {
     return (char *)mem;
 }
 
-static void add_schemas_from_json_in_spiffs(char *filename) {
+static void __attribute__((noinline)) add_schemas_from_json_in_spiffs(char *filename) {
 
     const char *jsonfile = ReadSchemasFromSPIFFS((char *)filename);
+    if (jsonfile == NULL) {
+        DbprintfEx(FLAG_NEWLINE, "[!!] out of memory, schemas NOT loaded");
+        cjSetCursLeft();
+        return;
+    }
 
     int i, len = strlen(jsonfile);
     struct json_token t;
@@ -280,7 +294,7 @@ static void add_schemas_from_json_in_spiffs(char *filename) {
     }
 }
 
-static void ReadLastTagFromFlash(void) {
+static void __attribute__((noinline)) ReadLastTagFromFlash(void) {
     SpinOff(0);
     LED_A_ON();
     LED_B_ON();
@@ -292,7 +306,13 @@ static void ReadLastTagFromFlash(void) {
     DbprintfEx(FLAG_NEWLINE, "Button HELD ! Using LAST Known TAG for Simulation...");
     cjSetCursLeft();
 
-    uint8_t *mem = BigBuf_malloc(size);
+    uint8_t *mem = BigBuf_calloc(size);
+    if (mem == NULL) {
+        DbprintfEx(FLAG_NEWLINE, "[!!] out of memory, last tag NOT recovered");
+        cjSetCursLeft();
+        SpinOff(0);
+        return;
+    }
 
     // this one will handle filetype (symlink or not) and resolving by itself
     rdv40_spiffs_read_as_filetype((char *)HFCOLIN_LASTTAG_SYMLINK, (uint8_t *)mem, len, RDV40_SPIFFS_SAFETY_SAFE);
@@ -306,7 +326,7 @@ static void ReadLastTagFromFlash(void) {
     return;
 }
 
-static void WriteTagToFlash(uint32_t uid, size_t size) {
+static void __attribute__((noinline)) WriteTagToFlash(uint32_t uid, size_t size) {
     SpinOff(0);
     LED_A_ON();
     LED_B_ON();
@@ -314,7 +334,17 @@ static void WriteTagToFlash(uint32_t uid, size_t size) {
     LED_D_ON();
 
     uint32_t len = size;
-    uint8_t data[(size * (16 * 64)) / 1024];
+
+    // this used to be a VLA - `uint8_t data[(size * (16 * 64)) / 1024]` - which put
+    // another `size` bytes (1024 at the only call site) on top of RunMod's already
+    // 2.5 kB frame, and did not show up in -fstack-usage as anything but "dynamic".
+    uint8_t *data = BigBuf_calloc((size * (16 * 64)) / 1024);
+    if (data == NULL) {
+        DbprintfEx(FLAG_NEWLINE, "[!!] out of memory, tag NOT written to flash");
+        cjSetCursLeft();
+        SpinOff(0);
+        return;
+    }
 
     emlGetMem_xt(data, 0, (size * 64) / 1024, MIFARE_BLOCK_SIZE);
 
@@ -445,11 +475,18 @@ void RunMod(void) {
     };
 
     // Can remember something like that in case of Bigbuf
-    keyBlock = BigBuf_malloc(ARRAYLEN(mfKeys) * 6);
+    keyBlock = BigBuf_calloc(ARRAYLEN(mfKeys) * MF_KEY_LENGTH);
+    if (keyBlock == NULL) {
+        DbprintfEx(FLAG_NEWLINE, "[!!] out of memory, aborting");
+        cjSetCursLeft();
+        SpinOff(0);
+        return;
+    }
+
     int mfKeysCnt = ARRAYLEN(mfKeys);
 
     for (int mfKeyCounter = 0; mfKeyCounter < mfKeysCnt; mfKeyCounter++) {
-        num_to_bytes(mfKeys[mfKeyCounter], 6, (uint8_t *)(keyBlock + mfKeyCounter * 6));
+        num_to_bytes(mfKeys[mfKeyCounter], MF_KEY_LENGTH, (uint8_t *)(keyBlock + (mfKeyCounter * MF_KEY_LENGTH)));
     }
 
     // TODO : remember why we actually had need to initialize this array in such specific case
@@ -498,7 +535,7 @@ failtag:
     SpinOff(50);
     LED_A_ON();
 
-    while (!iso14443a_select_card(colin_cjuid, &colin_p_card, &colin_cjcuid, true, 0, true)) {
+    while (iso14443a_select_card(colin_cjuid, &colin_p_card, &colin_cjcuid, true, 0, true) == 0) {
         WDT_HIT();
         if (BUTTON_HELD(10) == BUTTON_HOLD) {
             WDT_HIT();
@@ -576,13 +613,10 @@ failtag:
             if (key == -1) {
                 err = 1;
                 allKeysFound = false;
-                // used in portable imlementation on microcontroller: it reports back the fail and open the
-                // standalone lock reply_ng(CMD_CJB_FSMSTATE_MENU, NULL, 0);
                 break;
             } else if (key == -2) {
                 err = 1; // Can't select card.
                 allKeysFound = false;
-                // reply_old(CMD_CJB_FSMSTATE_MENU, 0, 0, 0, 0, 0);
                 break;
             } else {
                 /*  BRACE YOURSELF : AS LONG AS WE TRAP A KNOWN KEY, WE STOP CHECKING AND ENFORCE KNOWN SCHEMES */
@@ -591,7 +625,6 @@ failtag:
                 num_to_bytes(key64, 6, foundKey[type][sec]);
                 cjSetCursRight();
                 DbprintfEx(FLAG_NEWLINE, "SEC: %02x ; KEY : %012" PRIx64 " ; TYP: %i", sec, key64, type);
-                /*reply_old(CMD_CJB_INFORM_CLIENT_KEY, 12, sec, type, tosendkey, 12);*/
 
                 for (int i = 0; i < colin_total_schemas; i++) {
                     if (key64 == colin_Schemas[i].trigger) {
@@ -785,7 +818,7 @@ static int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
 
     bool isOK = true;
 
-    if (!iso14443a_select_card(colin_cjuid, &colin_p_card, &colin_cjcuid, true, 0, true)) {
+    if (iso14443a_select_card(colin_cjuid, &colin_p_card, &colin_cjcuid, true, 0, true) == 0) {
         isOK = false;
     }
 
@@ -844,8 +877,7 @@ static int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTr
     for (uint8_t i = 0; i < keyCount; i++) {
 
         /* no need for anticollision. just verify tag is still here */
-        // if (!iso14443a_fast_select_card(colin_cjuid, 0)) {
-        if (!iso14443a_select_card(colin_cjuid, &colin_p_card, &colin_cjcuid, true, 0, true)) {
+        if (iso14443a_select_card(colin_cjuid, &colin_p_card, &colin_cjcuid, true, 0, true) == 0) {
             cjSetCursLeft();
             DbprintfEx(FLAG_NEWLINE, "%sFATAL%s : E_MF_LOSTTAG", _XRED_, _XWHITE_);
             break;
@@ -868,7 +900,7 @@ static int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTr
     return retval;
 }
 
-static void saMifareMakeTag(void) {
+static void __attribute__((noinline)) saMifareMakeTag(void) {
     uint8_t cfail = 0;
     cjSetCursLeft();
     cjTabulize();
@@ -955,7 +987,7 @@ static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, const 
     if (workFlags & 0x08) {
         iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
         //  clear_trace();
-        set_tracing(FALSE);
+        set_tracing(false);
     }
 
     while (true) {
@@ -963,7 +995,7 @@ static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, const 
 
         // get UID from chip
         if (workFlags & 0x01) {
-            if (!iso14443a_select_card(colin_cjuid, &colin_p_card, &colin_cjcuid, true, 0, true)) {
+            if (iso14443a_select_card(colin_cjuid, &colin_p_card, &colin_cjcuid, true, 0, true) == 0) {
                 DbprintfEx(FLAG_NEWLINE, "Can't select card");
                 break;
             };

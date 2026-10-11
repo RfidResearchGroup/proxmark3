@@ -34,8 +34,8 @@
 #include "crc32.h"
 #include "cmdhfmfdes.h"
 
-#define NTAG424_MAX_BYTES 412
-
+#define NTAG424_MAX_BYTES           412
+#define NTAG424_RESPONSE_LENGTH     2
 
 // NTAG424 commands currently implemented
 // icenam: should be able to use 14a / msdes to annotate NTAG424 communications
@@ -48,6 +48,8 @@
 #define NTAG424_CMD_MORE_DATA              0xAF
 #define NTAG424_CMD_GET_VERSION            0x60
 #define NTAG424_CMD_GET_SIGNATURE          0x3C
+#define NTAG424_CMD_GET_TT_STATUS          0xF7
+#define NTAG424_CMD_SET_CONFIGURATION      0x5C
 
 //
 // Original from  https://github.com/rfidhacking/node-sdm/
@@ -147,6 +149,11 @@ typedef struct {
     ntag424_version_information_t software;
     ntag424_production_information_t production;
 } ntag424_full_version_information_t;
+
+typedef struct {
+    uint8_t perm;
+    uint8_t curr;
+} ntag424_tag_tamper_status_t;
 
 
 static void ntag424_print_version_information(ntag424_version_information_t *version, bool is_hw) {
@@ -283,10 +290,6 @@ static int ntag424_calc_file_settings_size(const ntag424_file_settings_t *settin
     }
 
     return size;
-}
-
-static int ntag424_calc_file_write_settings_size(const ntag424_file_settings_t *settings) {
-    return ntag424_calc_file_settings_size(settings) - 4;
 }
 
 static void ntag424_calc_send_iv(ntag424_session_keys_t *session_keys, uint8_t *out_ivc) {
@@ -480,21 +483,99 @@ static int ntag424_get_file_settings(uint8_t fileno, ntag424_file_settings_t *se
     return PM3_SUCCESS;
 }
 
+// Build the file settings command buffer dynamically.
+// This correctly handles conditional SDM offset fields per AN12196 specification.
+// Returns the number of bytes written to cmd_buffer (excluding fileno byte).
+static size_t ntag424_build_file_settings_cmd(const ntag424_file_settings_t *settings, uint8_t *cmd_buffer) {
+    size_t offset = 0;
+    int sdm_data_idx = 0;
+
+    // File options and access rights (always present)
+    cmd_buffer[offset++] = settings->options;
+    cmd_buffer[offset++] = settings->access[0];
+    cmd_buffer[offset++] = settings->access[1];
+
+    // SDM settings are only present if SDM is enabled
+    if (settings->options & FILE_SETTINGS_OPTIONS_SDM_AND_MIRRORING) {
+        // SDM options and access rights
+        cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_options;
+        cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_access[0];
+        cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_access[1];
+
+        uint8_t sdm_options = settings->optional_sdm_settings.sdm_options;
+        uint8_t sdm_meta_read = ntag424_file_settings_get_sdm_meta_read(settings);
+        uint8_t sdm_file_read = ntag424_file_settings_get_sdm_file_read(settings);
+
+        // UIDOffset: only in plain mode (sdmMetaRead == 0xE) with UID option set
+        if ((sdm_options & FILE_SETTINGS_SDM_OPTIONS_UID) && sdm_meta_read == 0x0e) {
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][0];
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][1];
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][2];
+            sdm_data_idx++;
+        }
+
+        // SDMReadCtrOffset: only in plain mode (sdmMetaRead == 0xE) with counter option set
+        if ((sdm_options & FILE_SETTINGS_SDM_OPTIONS_SDM_READ_COUNTER) && sdm_meta_read == 0x0e) {
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][0];
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][1];
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][2];
+            sdm_data_idx++;
+        }
+
+        // PICCDataOffset: only in encrypted mode (sdmMetaRead <= 0x04)
+        if (sdm_meta_read <= 0x04) {
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][0];
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][1];
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][2];
+            sdm_data_idx++;
+        }
+
+        // SDMMACInputOffset: when file read is enabled (sdmFileRead != 0x0F)
+        if (sdm_file_read != 0x0f) {
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][0];
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][1];
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][2];
+            sdm_data_idx++;
+
+            // SDMEncOffset and SDMEncLength: only when encrypted file data is enabled
+            if (sdm_options & FILE_SETTINGS_SDM_OPTIONS_SDM_ENC_FILE_DATA) {
+                // SDMEncOffset
+                cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][0];
+                cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][1];
+                cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][2];
+                sdm_data_idx++;
+                // SDMEncLength
+                cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][0];
+                cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][1];
+                cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][2];
+                sdm_data_idx++;
+            }
+
+            // SDMMACOffset: always included when file read is enabled
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][0];
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][1];
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][2];
+            sdm_data_idx++;
+        }
+
+        // SDMReadCtrLimit: when counter limit option is set
+        if (sdm_options & FILE_SETTINGS_SDM_OPTIONS_SDM_READ_COUNTER_LIMIT) {
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][0];
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][1];
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][2];
+            sdm_data_idx++;
+        }
+    }
+
+    return offset;
+}
+
 static int ntag424_write_file_settings(uint8_t fileno, const ntag424_file_settings_t *settings, ntag424_session_keys_t *session_keys) {
 
-    // ------- Convert file settings to the format for writing
-    file_settings_write_t write_settings = {
-        .options = settings->options,
-        .access[0] = settings->access[0],
-        .access[1] = settings->access[1],
-        .optional_sdm_settings = settings->optional_sdm_settings,
-    };
-
-    size_t settings_size = ntag424_calc_file_write_settings_size(settings);
-
+    // Build the command buffer dynamically based on which SDM fields are required
     uint8_t cmd_buffer[256];
     cmd_buffer[0] = fileno;
-    memcpy(&cmd_buffer[1], &write_settings, settings_size);
+    size_t settings_size = ntag424_build_file_settings_cmd(settings, &cmd_buffer[1]);
 
     APDU_t apdu = {
         .cla = 0x90,
@@ -502,7 +583,6 @@ static int ntag424_write_file_settings(uint8_t fileno, const ntag424_file_settin
         .lc = 1 + settings_size,
         .data = cmd_buffer
     };
-
 
     // ------- Actually send the APDU
     int response_length = 8 + 2;
@@ -542,19 +622,17 @@ static void ntag424_print_file_settings(uint8_t fileno, const ntag424_file_setti
 
 // NTAG424 only have one static application, so we select it here
 static int ntag424_select_application(void) {
-    const size_t RESPONSE_LENGTH = 2;
     uint8_t cmd[] = {0x00, 0xA4, 0x04, 0x0C, 0x07, 0xD2, 0x76, 0x00, 0x00, 0x85, 0x01, 0x01, 0x00 };
-    uint8_t resp[RESPONSE_LENGTH];
+    uint8_t resp[NTAG424_RESPONSE_LENGTH];
     int outlen = 0;
-    int res;
 
-    res = ExchangeAPDU14a(cmd, sizeof(cmd), false, true, resp, RESPONSE_LENGTH, &outlen);
+    int res = ExchangeAPDU14a(cmd, sizeof(cmd), false, true, resp, NTAG424_RESPONSE_LENGTH, &outlen);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Failed to send apdu");
         return res;
     }
 
-    if (outlen != RESPONSE_LENGTH || resp[RESPONSE_LENGTH - 2] != 0x90 || resp[RESPONSE_LENGTH - 1] != 0x00) {
+    if (outlen != NTAG424_RESPONSE_LENGTH || resp[NTAG424_RESPONSE_LENGTH - 2] != 0x90 || resp[NTAG424_RESPONSE_LENGTH - 1] != 0x00) {
         PrintAndLogEx(ERR, "Failed to select application");
         return PM3_ESOFT;
     }
@@ -785,6 +863,39 @@ static int ntag424_read_data(uint8_t fileno, uint16_t offset, uint16_t num_bytes
     return PM3_SUCCESS;
 }
 
+static const char *tt_status_str(uint8_t status) {
+    switch (status) {
+        case 'C':
+            return "Close";
+        case 'O':
+            return "Open";
+        case 'I':
+            return "Invalid";
+        default:
+            return "Unknown";
+    }
+}
+
+static int ntag424_get_tt_status(ntag424_tag_tamper_status_t *status, ntag424_communication_mode_t comm_mode, ntag424_session_keys_t *session_keys) {
+    APDU_t apdu = {
+        .cla = 0x90,
+        .ins = NTAG424_CMD_GET_TT_STATUS,
+        .lc = 0
+    };
+
+    // align_up(sizeof(ntag424_tag_tamper_status_t) + 1, 16) + sizeof(mac) + sizeof(status_word)
+    int response_length = 16 + 8 + 2;
+    uint8_t response[response_length];
+
+    int res = ntag424_exchange_apdu(apdu, 0, response, &response_length, comm_mode, session_keys, 0x91, 0x00);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    memcpy(status, response, sizeof(*status));
+    return PM3_SUCCESS;
+}
+
 static int ntag424_get_version(ntag424_full_version_information_t *version) {
     APDU_t apdu = {
         .cla = 0x90,
@@ -840,6 +951,25 @@ static int ntag424_get_signature(uint8_t *signature_out) {
     }
 
     return PM3_SUCCESS;
+}
+
+static int ntag424_set_configuration(uint8_t option, const uint8_t *data, int data_len, ntag424_session_keys_t *session_keys) {
+    uint8_t cmd_buffer[64];
+    cmd_buffer[0] = option;
+    memcpy(&cmd_buffer[1], data, data_len);
+
+    APDU_t apdu = {
+        .cla = 0x90,
+        .ins = NTAG424_CMD_SET_CONFIGURATION,
+        .lc = 1 + data_len,
+        .data = cmd_buffer
+    };
+
+    // No response data, only MAC and status word
+    int response_length = 8 + 2;
+    uint8_t response[response_length];
+
+    return ntag424_exchange_apdu(apdu, 1, response, &response_length, COMM_FULL, session_keys, 0x91, 0x00);
 }
 
 static int ntag424_change_key(uint8_t keyno, const uint8_t *new_key, const uint8_t *old_key, uint8_t version, ntag424_session_keys_t *session_keys) {
@@ -1442,7 +1572,13 @@ static int CmdHF_ntag424_changekey(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t version = arg_get_int(ctx, 6);
+    int kv = arg_get_int(ctx, 5);
+    if (kv < 0 || kv > 0xFF) {
+        PrintAndLogEx(ERR, "Key version must be 0..255, got ( %d )", kv);
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    uint8_t version = (uint8_t)kv;
     int keyno = arg_get_int(ctx, 1);
 
     uint8_t oldkey[16] = {0};
@@ -1502,6 +1638,136 @@ static int CmdHF_ntag424_changekey(const char *Cmd) {
     return res;
 }
 
+static int CmdHF_ntag424_getttstatus(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf ntag424 gettt",
+                  "Read and print Tag Tamper status. Will authenticate if key information is provided.",
+                  "hf ntag424 gettt --keyno 0 -k 00000000000000000000000000000000");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "keyno",   "<dec>", "Key number"),
+        arg_str0("k",  "key",     "<hex>", "Key for authentication (HEX 16 bytes)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int keyno = 0;
+    uint8_t key[16] = {0};
+    bool auth = arg_get_str(ctx, 2)->count > 0;
+    if (auth && ntag424_cli_get_auth_information(ctx, 1, 2, &keyno, key) != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Could not get key settings");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    CLIParserFree(ctx);
+
+    if (SelectCard14443A_4(false, true, NULL) != PM3_SUCCESS) {
+        DropField();
+        PrintAndLogEx(ERR, "Failed to select card");
+        return PM3_ERFTRANS;
+    }
+
+    if (ntag424_select_application() != PM3_SUCCESS) {
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    int res = PM3_SUCCESS;
+    ntag424_session_keys_t session_keys = {0};
+    if (auth) {
+        res = ntag424_authenticate_ev2_first(keyno, key, &session_keys);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Auth key %d ( " _RED_("fail") " )", keyno);
+            DropField();
+            return res;
+        } else {
+            PrintAndLogEx(SUCCESS, "Auth key %d ( " _GREEN_("ok") " )", keyno);
+        }
+    }
+
+    ntag424_tag_tamper_status_t tt_status = {0};
+    res = ntag424_get_tt_status(&tt_status, auth ? COMM_FULL : COMM_PLAIN, &session_keys);
+    DropField();
+    if (res == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "--- " _CYAN_("Tag Tamper status:"));
+        PrintAndLogEx(SUCCESS, " TTPermStatus: " _GREEN_("%02X (%s)"), tt_status.perm, tt_status_str(tt_status.perm));
+        PrintAndLogEx(SUCCESS, " TTCurrStatus: " _GREEN_("%02X (%s)"), tt_status.curr, tt_status_str(tt_status.curr));
+    }
+    return res;
+}
+
+static int CmdHF_ntag424_setconfig(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf ntag424 setconfig",
+                  "Change a PICC configuration option.\n"
+                  "Several options are one-way, see the datasheet before using this.",
+                  "hf ntag424 setconfig -k 00000000000000000000000000000000 --option 07 -d 0100");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("k",  "key0",   "<hex>", "Authentication key (must be key 0, HEX 16 bytes)"),
+        arg_str1(NULL, "option", "<hex>", "Configuration option (HEX 1 byte)"),
+        arg_strx1("d", "data",   "<hex>", "Option data (HEX, 1..47 bytes)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    uint8_t key[16] = {0};
+    if (ntag424_cli_get_auth_information(ctx, 0, 1, NULL, key) != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Could not get key settings");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t option[1] = {0};
+    int optionlen = sizeof(option);
+    if (CLIParamHexToBuf(arg_get_str(ctx, 2), option, sizeof(option), &optionlen) || (optionlen != sizeof(option))) {
+        PrintAndLogEx(ERR, "Option must be 1 byte");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t data[47] = {0};
+    int datalen = sizeof(data);
+    if (CLIParamHexToBuf(arg_get_str(ctx, 3), data, sizeof(data), &datalen) || (datalen < 1)) {
+        PrintAndLogEx(ERR, "Data must be 1..%zu bytes", sizeof(data));
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    CLIParserFree(ctx);
+
+    if (SelectCard14443A_4(false, true, NULL) != PM3_SUCCESS) {
+        DropField();
+        PrintAndLogEx(ERR, "Failed to select card");
+        return PM3_ERFTRANS;
+    }
+
+    if (ntag424_select_application() != PM3_SUCCESS) {
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    ntag424_session_keys_t session = {0};
+    int res = ntag424_authenticate_ev2_first(0, key, &session);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Auth key 0 ( " _RED_("fail") " )");
+        DropField();
+        return res;
+    }
+    PrintAndLogEx(SUCCESS, "Auth key 0 ( " _GREEN_("ok") " )");
+
+    res = ntag424_set_configuration(option[0], data, datalen, &session);
+    DropField();
+    if (res == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Set configuration option %02X ( " _GREEN_("ok") " )", option[0]);
+    } else {
+        PrintAndLogEx(ERR, "Set configuration option %02X ( " _RED_("fail") " )", option[0]);
+    }
+    return res;
+}
+
 static command_t CommandTable[] = {
     {"help",         CmdHelp,                          AlwaysAvailable,  "This help"},
     {"-----------",  CmdHelp,                          IfPm3Iso14443a,   "----------------------- " _CYAN_("operations") " -----------------------"},
@@ -1513,6 +1779,8 @@ static command_t CommandTable[] = {
     {"getfs",        CmdHF_ntag424_getfilesettings,    IfPm3Iso14443a,   "Get file settings"},
     {"changefs",     CmdHF_ntag424_changefilesettings, IfPm3Iso14443a,   "Change file settings"},
     {"changekey",    CmdHF_ntag424_changekey,          IfPm3Iso14443a,   "Change key"},
+    {"gettt",        CmdHF_ntag424_getttstatus,        IfPm3Iso14443a,   "Get Tag Tamper status"},
+    {"setconfig",    CmdHF_ntag424_setconfig,          IfPm3Iso14443a,   "Set PICC configuration option"},
     {NULL, NULL, NULL, NULL}
 };
 

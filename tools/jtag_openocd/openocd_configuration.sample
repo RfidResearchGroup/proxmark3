@@ -1,6 +1,6 @@
 CONFIG_GEN=general.cfg
 CONFIG_BOARD=board-at91sam7s.cfg
-IMAGE=../../recovery/proxmark3_recovery.bin
+IMAGE=../../recovery/recovery.bin
 DUMP="dump_$(date +'%Y%m%d-%H%M%S').bin"
 
 # One can use openocd-provided interfaces or local interface files

@@ -29,7 +29,8 @@ Always use the latest repository commits from *master* branch. There are always 
   - [Qt Session management error](#qt-session-management-error)
   - [found architecture 'x86\_64' required architecture 'arm64' error](#found-architecture-x86_64-required-architecture-arm64-error)
   - [wrong permissions on runtime directory /run/user/1000](#wrong-permissions-on-runtime-directory-runuser1000)
-  - [proxspace `file not found or locked` on Windows 11](#proxspace-file-not-found-or-locked-on-windows-11)
+  - [proxspace 'file not found or locked' on Windows 11](#proxspace-file-not-found-or-locked-on-windows-11)
+  - [qt.qpa.plugin: Could not find the Qt platform plugin 'wayland' error](#qtqpaplugin-could-not-find-the-qt-platform-plugin-wayland-error)
 
 ## `pm3` or `pm3-flash*` doesn't see my Proxmark
 
@@ -166,9 +167,9 @@ proxmark3 <YOUR_PORT_HERE> --flash --image /usr/local/share/proxmark3/firmware/f
 proxmark3 <YOUR_PORT_HERE> --flash --image /usr/share/proxmark3/firmware/fullimage.elf
 
 using the script:
-pm3 --> smart upgrade -f /usr/local/share/proxmark3/firmware/sim014.bin
+pm3 --> smart upgrade -f /usr/local/share/proxmark3/firmware/sim024.bin
 <>
-pm3 --> smart upgrade -f /usr/share/proxmark3/firmware/sim014.bin
+pm3 --> smart upgrade -f /usr/share/proxmark3/firmware/sim024.bin
 ```
 
 If you didn't install the Proxmark but you're working from the sources directory and depending how you launch the client, your working directory might be the root of the repository:
@@ -191,7 +192,7 @@ client/proxmark3 <YOUR_PORT_HERE> --flash --image armsrc/obj/fullimage.elf
 <>
 ./proxmark3 <YOUR_PORT_HERE> --flash --image ../armsrc/obj/fullimage.elf
 
-pm3 --> smart upgrade -f sim014.bin
+pm3 --> smart upgrade -f sim024.bin
 ```
 
 etc.
@@ -253,8 +254,8 @@ make: *** [Makefile:177: client/all] Error 2
 The following dependencies are currently needed to make the development environment compile:   
 ```
 sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
-libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev \
-libbz2-dev liblz4-dev libbluetooth-dev libpython3-dev libssl-dev
+libreadline-dev gcc-arm-none-eabi libnewlib-dev qt6-base-dev \
+libbz2-dev liblz4-dev libbluetooth-dev libpython3-dev libssl-dev libgd-dev
 ```
 
 ## target attribute is not supported on this machine
@@ -391,3 +392,31 @@ Side note:
 You may also be able to choose "Browse all apps" and find your specific proxmark3.exe in the client folder but
 be sure to choose the proper location and specific file in case you have more than one stored on your PC somewhere.
 ```
+
+## qt.qpa.plugin: Could not find the Qt platform plugin 'wayland' error
+^[Top](#top)
+
+If you run into this error message when running on modern Ubuntu which is using the wayland display 
+you most likely have not installed these following packages. 
+
+Solution:  Install or reinstall the required Qt Wayland packages.
+
+```
+Debian / Ubuntu based *nix
+    sudo apt install qt5-qtwayland             --< if QT 5
+    sudo apt install qt6-qtwayland             --< if QT 6
+
+Arch *nix
+    pacman -S qt5-wayland
+    pacman -S qt6-wayland
+```
+
+
+Alternatively you could set QT_QPA_PLATFORM environment to either wayland or xcb
+```
+export QT_QPA_PLATFORM=wayland
+
+export QT_QPA_PLATFORM=xcb
+```
+
+

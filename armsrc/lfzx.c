@@ -20,13 +20,14 @@
 
 #include "BigBuf.h"
 #include "crc.h"        // CRC-8 / Hitag1 / ZX8211
-#include "fpgaloader.h"
+#include "fpga_loader.h"
 #include "dbprint.h"
 #include "lfops.h"      // turn_read_lf_on / off
 #include "lfadc.h"
 #include "lfsampling.h" // getSamplingConfig
 #include "pm3_cmd.h"    // struct
-#include "ticks.h"
+#include "ticks_apis.h"
+#include "fpga_apis.h"
 
 /*
 ZX8211
@@ -98,7 +99,7 @@ static void zx8211_setup_read(void) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD);
 
     // 50ms for the resonant antenna to settle.
-    WaitMS(50);
+    SpinDelay(50);
 
     // Now set up the SSC to get the ADC samples that are now streaming at us.
     FpgaSetupSsc(FPGA_MAJOR_MODE_LF_READER);
@@ -106,10 +107,7 @@ static void zx8211_setup_read(void) {
     FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125);
 
     // Connect the A/D to the peak-detected low-frequency path.
-    SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-
-    // Start the timer
-    StartTicks();
+    SetAdcMuxFor(ADC_MUXSEL_LOPKD);
 
     // Watchdog hit
     WDT_HIT();
@@ -145,12 +143,12 @@ static void zx_get(bool ledcontrol) {
 
         WDT_HIT();
 
-        if (ledcontrol && (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY)) {
+        if (ledcontrol && FPGA_SSC_TX_Ready()) {
             LED_D_ON();
         }
 
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
-            volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_RX_Ready()) {
+            volatile uint8_t sample = (uint8_t)FPGA_SSC_RX_Value();
             (void)sample;
 
             // (RDV4) Test point 8 (TP8) can be used to trigger oscilloscope
@@ -178,9 +176,7 @@ int zx8211_read(zx8211_data_t *zxd, bool ledcontrol) {
     //uint32_t cs = CRC8Hitag1(uint8_t *buff, size_t size);
 
     if (ledcontrol) LEDsoff();
-
-    StopTicks();
-    lf_finalize(ledcontrol);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     reply_ng(CMD_LF_ZX_READ, PM3_SUCCESS, NULL, 0);
     return PM3_SUCCESS;
@@ -189,8 +185,8 @@ int zx8211_read(zx8211_data_t *zxd, bool ledcontrol) {
 int zx8211_write(zx8211_data_t *zxd, bool ledcontrol) {
     zx8211_setup_read();
 
-    StopTicks();
-    lf_finalize(ledcontrol);
+    if (ledcontrol) LEDsoff();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     //reply_ng(CMD_LF_ZX_WRITE, status, tag.data, sizeof(tag.data));
     return PM3_SUCCESS;
 }

@@ -22,6 +22,7 @@
 #include "pmflash.h"
 #include "fileutils.h"  //saveFile
 #include "comms.h"      //getfromdevice
+#include "util_posix.h" // msclock
 #include "cliparser.h"
 
 static int CmdHelp(const char *Cmd);
@@ -41,9 +42,25 @@ int flashmem_spiffs_load(const char *destfn, const uint8_t *data, size_t datalen
     // fast push mode
     g_conn.block_after_ACK = true;
 
+    // One packet per frame, not per 256 byte flash page.  SPIFFS pages the data
+    // itself, so FLASH_MEM_BLOCK_SIZE was never a transport limit - and every
+    // packet costs a SPIFFS_open() by name, which walks the object lookup tables
+    // of the whole filesystem.  Measured on a 2MB (PM5) filesystem, storing 512KB
+    // reads 243MB of flash at 256 bytes a packet against 16MB at 4029
+    uint32_t max_packet = FLASH_MEM_BLOCK_SIZE;
+    if (g_conn.max_cmd_data_size > sizeof(flashmem_write_t)) {
+        max_packet = g_conn.max_cmd_data_size - sizeof(flashmem_write_t);
+    }
+
+    // inline feedback. Time based, not byte based: SPIFFS garbage collection can
+    // make a single packet take seconds on a full filesystem, and a counter that
+    // only moves every 16 packets is indistinguishable from a hang
+    const bool show_progress = (datalen > max_packet);
+    uint64_t last_update = 0;
+
     while (bytes_remaining > 0) {
 
-        uint32_t bytes_in_packet = MIN(FLASH_MEM_BLOCK_SIZE, bytes_remaining);
+        uint32_t bytes_in_packet = MIN(max_packet, bytes_remaining);
 
         flashmem_write_t *payload = calloc(1, sizeof(flashmem_write_t) + bytes_in_packet);
         if (payload == NULL) {
@@ -69,9 +86,6 @@ int flashmem_spiffs_load(const char *destfn, const uint8_t *data, size_t datalen
 
         free(payload);
 
-        bytes_remaining -= bytes_in_packet;
-        bytes_sent += bytes_in_packet;
-
         uint8_t retry = 3;
         while (WaitForResponseTimeout(CMD_SPIFFS_WRITE, &resp, 2000) == false) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply");
@@ -81,9 +95,38 @@ int flashmem_spiffs_load(const char *destfn, const uint8_t *data, size_t datalen
                 goto out;
             }
         }
+
+        // the device only counts a packet once SPIFFS took it
+        if (resp.status != PM3_SUCCESS) {
+            int32_t serr = (resp.length >= sizeof(int32_t)) ? (int32_t)resp.data.asDwords[0] : 0;
+            if (show_progress) {
+                PrintAndLogEx(NORMAL, "");
+            }
+            PrintAndLogEx(FAILED, "device refused the write at " _YELLOW_("%u") " / " _YELLOW_("%zu") " bytes (spiffs errno %d)", bytes_sent, datalen, serr);
+            if (serr == SPIFFS_ERR_FULL_RDV) {
+                PrintAndLogEx(HINT, "Hint: filesystem is full, try `" _YELLOW_("mem spiffs tree") "` and remove what you don't need");
+            }
+            ret_val = PM3_EFLASH;
+            goto out;
+        }
+
+        bytes_remaining -= bytes_in_packet;
+        bytes_sent += bytes_in_packet;
+
+        if (show_progress && ((msclock() - last_update > 100) || (bytes_remaining == 0))) {
+            PrintAndLogEx(INPLACE, "Sent " _YELLOW_("%u") " / " _YELLOW_("%zu") " bytes  (" _YELLOW_("%u") "%%)"
+                          , bytes_sent
+                          , datalen
+                          , (uint32_t)((bytes_sent * 100) / datalen)
+                         );
+            last_update = msclock();
+        }
     }
 
 out:
+    if (show_progress) {
+        PrintAndLogEx(NORMAL, "");
+    }
     clearCommandBuffer();
 
     // turn off fast push mode
@@ -512,11 +555,11 @@ static int CmdFlashMemSpiFFSUpload(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)src, FILE_PATH_SIZE, &slen);
 
     int dlen = 0;
-    char dest[32] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)dest, 32, &dlen);
+    char dst[32] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)dst, 32, &dlen);
     CLIParserFree(ctx);
 
-    PrintAndLogEx(DEBUG, "Upload `" _YELLOW_("%s") "` -> `" _YELLOW_("%s") "`", src, dest);
+    PrintAndLogEx(DEBUG, "Upload `" _YELLOW_("%s") "` -> `" _YELLOW_("%s") "`", src, dst);
 
     size_t datalen = 0;
     uint8_t *data = NULL;
@@ -527,13 +570,14 @@ static int CmdFlashMemSpiFFSUpload(const char *Cmd) {
         return PM3_EFILE;
     }
 
-    res = flashmem_spiffs_load(dest, data, datalen);
+    res = flashmem_spiffs_load(dst, data, datalen);
     free(data);
 
-    if (res == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%zu") " bytes to file "_GREEN_("%s"), datalen, dest);
+    if (res == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%zu") " bytes to file "_GREEN_("%s"), datalen, dst);
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("mem spiffs tree") "` to verify");
+    }
 
-    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("mem spiffs tree") "` to verify");
     return res;
 }
 
@@ -575,20 +619,22 @@ static int CmdFlashMemSpiFFSView(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"help",    CmdHelp,                  AlwaysAvailable, "This help"},
-    {"copy",    CmdFlashMemSpiFFSCopy,    IfPm3Flash, "Copy a file to another (destructively) in SPIFFS file system"},
-    {"check",   CmdFlashMemSpiFFSCheck,   IfPm3Flash, "Check/try to defrag faulty/fragmented file system"},
-    {"dump",    CmdFlashMemSpiFFSDump,    IfPm3Flash, "Dump a file from SPIFFS file system"},
-    {"info",    CmdFlashMemSpiFFSInfo,    IfPm3Flash, "Print file system info and usage statistics"},
-    {"mount",   CmdFlashMemSpiFFSMount,   IfPm3Flash, "Mount the SPIFFS file system if not already mounted"},
-    {"remove",  CmdFlashMemSpiFFSRemove,  IfPm3Flash, "Remove a file from SPIFFS file system"},
-    {"rename",  CmdFlashMemSpiFFSRename,  IfPm3Flash, "Rename/move a file in SPIFFS file system"},
-    {"test",    CmdFlashMemSpiFFSTest,    IfPm3Flash, "Test SPIFFS Operations"},
-    {"tree",    CmdFlashMemSpiFFSTree,    IfPm3Flash, "Print the Flash memory file system tree"},
-    {"unmount", CmdFlashMemSpiFFSUnmount, IfPm3Flash, "Un-mount the SPIFFS file system"},
-    {"upload",  CmdFlashMemSpiFFSUpload,  IfPm3Flash, "Upload file into SPIFFS file system"},
-    {"view",    CmdFlashMemSpiFFSView,    IfPm3Flash, "View file on SPIFFS file system"},
-    {"wipe",    CmdFlashMemSpiFFSWipe,    IfPm3Flash, "Wipe all files from SPIFFS file system   * " _RED_("dangerous") " *" },
+    {"-----------", CmdHelp,                  IfPm3Flash, "------------------- " _CYAN_("General") " -------------------"},
+    {"help",        CmdHelp,                  AlwaysAvailable, "This help"},
+    {"test",        CmdFlashMemSpiFFSTest,    IfPm3Flash,      "Perform SPIFFS Operations tests"},
+    {"-----------", CmdHelp,                  IfPm3Flash, "------------------- " _CYAN_("Operations") " -------------------"},
+    {"copy",        CmdFlashMemSpiFFSCopy,    IfPm3Flash, "Copy a file to another (destructively) in SPIFFS file system"},
+    {"check",       CmdFlashMemSpiFFSCheck,   IfPm3Flash, "Check/try to defrag faulty/fragmented file system"},
+    {"dump",        CmdFlashMemSpiFFSDump,    IfPm3Flash, "Dump a file from SPIFFS file system"},
+    {"info",        CmdFlashMemSpiFFSInfo,    IfPm3Flash, "File system information and usage statistics"},
+    {"mount",       CmdFlashMemSpiFFSMount,   IfPm3Flash, "Mount the SPIFFS file system if not already mounted"},
+    {"remove",      CmdFlashMemSpiFFSRemove,  IfPm3Flash, "Remove a file from SPIFFS file system"},
+    {"rename",      CmdFlashMemSpiFFSRename,  IfPm3Flash, "Rename/move a file in SPIFFS file system"},
+    {"tree",        CmdFlashMemSpiFFSTree,    IfPm3Flash, "Print the Flash memory file system tree"},
+    {"unmount",     CmdFlashMemSpiFFSUnmount, IfPm3Flash, "Un-mount the SPIFFS file system"},
+    {"upload",      CmdFlashMemSpiFFSUpload,  IfPm3Flash, "Upload file into SPIFFS file system"},
+    {"view",        CmdFlashMemSpiFFSView,    IfPm3Flash, "View file on SPIFFS file system"},
+    {"wipe",        CmdFlashMemSpiFFSWipe,    IfPm3Flash, "Wipe all files from SPIFFS file system   * " _RED_("dangerous") " *" },
     {NULL, NULL, NULL, NULL}
 };
 

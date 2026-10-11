@@ -95,6 +95,10 @@ typedef struct {
 typedef struct {
     uint8_t fileNum;
     uint16_t fileISONum;
+    // false means GetFileSettings failed for this file, so fileSettings is
+    // zeros and not a 0 byte standard data file.  Callers must not read
+    // fileSettings without checking this first
+    bool fileSettingsRead;
     FileSettings_t fileSettings;
 } FileListElm_t;
 
@@ -199,6 +203,7 @@ void DesfireCheckAuthCommands(DesfireISOSelectWay way, uint32_t appID, char *dfn
 void DesfireCheckAuthCommandsPrint(AuthCommandsChk_t *authCmdCheck);
 
 int DesfireFormatPICC(DesfireContext_t *dctx);
+int DesfireGetVersion(DesfireContext_t *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetFreeMem(DesfireContext_t *dctx, uint32_t *freemem);
 int DesfireGetUID(DesfireContext_t *dctx, uint8_t *resp, size_t *resplen);
 int DesfireGetAIDList(DesfireContext_t *dctx, uint8_t *resp, size_t *resplen);
@@ -209,6 +214,7 @@ void DesfirePrintPICCInfo(DesfireContext_t *dctx, PICCInfo_t *PICCInfo);
 void DesfirePrintAppList(DesfireContext_t *dctx, PICCInfo_t *PICCInfo, AppListS appList);
 
 int DesfireCreateApplication(DesfireContext_t *dctx, uint8_t *appdata, size_t appdatalen);
+int DesfireCreateDelegatedApplication(DesfireContext_t *dctx, uint8_t *appdata, size_t appdatalen, uint8_t *contdata, size_t contdatalen);
 int DesfireDeleteApplication(DesfireContext_t *dctx, uint32_t aid);
 
 int DesfireGetKeyVersion(DesfireContext_t *dctx, uint8_t *data, size_t len, uint8_t *resp, size_t *resplen);
@@ -273,5 +279,7 @@ int DesfireISOReadBinary(DesfireContext_t *dctx, bool use_file_id, uint8_t filei
 int DesfireISOUpdateBinary(DesfireContext_t *dctx, bool use_file_id, uint8_t fileid, uint16_t offset, uint8_t *data, size_t datalen);
 int DesfireISOReadRecords(DesfireContext_t *dctx, uint8_t recordnum, bool read_all_records, uint8_t fileid, uint8_t length, uint8_t *resp, size_t *resplen);
 int DesfireISOAppendRecord(DesfireContext_t *dctx, uint8_t fileid, uint8_t *data, size_t datalen);
+
+int DesfireCreateMFCMapping(DesfireContext_t *dctx, uint8_t *data, size_t datalen);
 
 #endif // __DESFIRECORE_H

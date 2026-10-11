@@ -57,7 +57,9 @@ int mfu_get_version_uid(uint8_t *version, uint8_t *uid);
 int mfuc_test_authentication_support(void);
 
 int CmdHFMFUltra(const char *Cmd);
-int CmdHF14MfuNDEFRead(const char *Cmd);
+int CmdHF14MfuNDEFRead(const char *Cmd);   // used by cmdnfc.c
+int CmdHF14MfuNDEFWrite(const char *Cmd);  // used by cmdnfc.c
+int CmdHF14MfuNDEFFormat(const char *Cmd); // used by cmdnfc.c
 int CmdHF14MfUTamper(const char *Cmd);
 
 #define MFU_TT_UNKNOWN          0x0ULL
@@ -100,10 +102,15 @@ int CmdHF14MfUTamper(const char *Cmd);
 #define MFU_TT_MAGIC_NTAG21X    0x1000000000ULL
 #define MFU_TT_ST25TN512        0x2000000000ULL
 #define MFU_TT_ST25TN01K        0x4000000000ULL
+// 0x8000000000ULL is free
+#define MFU_TT_NTAG_223_DNA     0x10000000000ULL
+#define MFU_TT_NTAG_223_DNA_SD  0x20000000000ULL
+#define MFU_TT_NTAG_224_DNA     0x40000000000ULL
+#define MFU_TT_NTAG_224_DNA_SD  0x80000000000ULL
 #define MFU_TT_UL_MAGIC         (MFU_TT_UL | MFU_TT_MAGIC)
 #define MFU_TT_UL_C_MAGIC       (MFU_TT_UL_C | MFU_TT_MAGIC)
 // Don't forget to fill UL_TYPES_ARRAY and UL_MEMORY_ARRAY if new types are added
-#define MFU_TT_UL_ERROR         0x7FFFFFFFULL
+#define MFU_TT_UL_ERROR         0x7FFFFFFFFFFFFFFFULL
 
 
 #endif

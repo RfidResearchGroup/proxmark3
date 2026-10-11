@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>  /* for size_t */
 #include <stdarg.h>
+#include <inttypes.h>
 
 #include "jansson_config.h"
 
@@ -65,12 +66,10 @@ typedef struct json_t {
 
 #ifndef JANSSON_USING_CMAKE /* disabled if using cmake */
 #if JSON_INTEGER_IS_LONG_LONG
-#ifdef _WIN32
-#define JSON_INTEGER_FORMAT "I64d"
-#else
-#define JSON_INTEGER_FORMAT "lld"
-#endif
-typedef long long json_int_t;
+// Judging the ‘_WIN32 ’ macro in Msys2 environment will result in UCRT being unable to recognize I64d.
+//  We may need to use inttypes.h & stdint.h for better compatibility.
+#define JSON_INTEGER_FORMAT PRId64
+typedef int64_t json_int_t;
 #else
 #define JSON_INTEGER_FORMAT "ld"
 typedef long json_int_t;

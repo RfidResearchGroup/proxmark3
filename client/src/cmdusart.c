@@ -35,7 +35,7 @@ static int usart_tx(uint8_t *data, size_t len) {
     clearCommandBuffer();
     SendCommandNG(CMD_USART_TX, data, len);
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_USART_TX, &resp, 1000)) {
+    if (WaitForResponseTimeout(CMD_USART_TX, &resp, 1000) == false) {
         return PM3_ETIMEOUT;
     }
     return resp.status;
@@ -49,7 +49,7 @@ static int usart_rx(uint8_t *data, size_t *len, uint32_t waittime) {
     payload.waittime = waittime;
     SendCommandNG(CMD_USART_RX, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_USART_RX, &resp, waittime + 500)) {
+    if (WaitForResponseTimeout(CMD_USART_RX, &resp, waittime + 500) == false) {
         return PM3_ETIMEOUT;
     }
     if (resp.status == PM3_SUCCESS) {
@@ -71,7 +71,7 @@ static int usart_txrx(uint8_t *srcdata, size_t srclen, uint8_t *dstdata, size_t 
 
     payload.header.waittime = waittime;
 
-    if (srclen >= sizeof(payload.data)) {
+    if (srclen >= (size_t)(g_conn.max_cmd_data_size - sizeof(uint32_t))) {
         return PM3_EOVFLOW;
     }
 
@@ -99,7 +99,7 @@ static int set_usart_config(uint32_t baudrate, uint8_t parity) {
     payload.parity = parity;
     SendCommandNG(CMD_USART_CONFIG, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_USART_CONFIG, &resp, 1000)) {
+    if (WaitForResponseTimeout(CMD_USART_CONFIG, &resp, 1000) == false) {
         return PM3_ETIMEOUT;
     }
     return resp.status;
@@ -637,7 +637,7 @@ static int CmdUsartTXhex(const char *Cmd) {
 
     int dlen = 0;
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00};
-    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), data, sizeof(data), &dlen);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), data, (int)g_conn.max_cmd_data_size, &dlen);
     CLIParserFree(ctx);
 
     if (res) {

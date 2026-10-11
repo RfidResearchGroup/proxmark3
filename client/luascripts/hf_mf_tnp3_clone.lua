@@ -91,12 +91,11 @@ end
 local function readmagicblock( blocknum )
     -- Read block N
     local CSETBLOCK_SINGLE_OPERATION = 0x1F
-    local c = Command:newMIX{
-                    cmd = cmds.CMD_HF_MIFARE_CGETBL
-                    , arg1 = CSETBLOCK_SINGLE_OPERATION
-                    , arg3 = blocknum
-                    }
-    local b, err = getblockdata(c:sendMIX())
+    -- mf_chinese_blk_t { u8 params, u8 blockno, u8 data[] }
+    -- mf_chinese_blk_t { u8 params, u8 blockno, u8 data[] }
+    local payload = ('%02X%02X'):format(CSETBLOCK_SINGLE_OPERATION, blocknum)
+    local c = Command:newNG{ cmd = cmds.CMD_HF_MIFARE_CGETBL, data = payload }
+    local b, err = getblockdata(c:sendNG())
     if not b then return oops(err) end
     return b
 end

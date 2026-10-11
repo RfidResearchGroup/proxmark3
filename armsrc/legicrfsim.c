@@ -24,14 +24,17 @@
 #include "cmd.h"
 #include "proxmark3_arm.h"
 #include "BigBuf.h"
-#include "fpgaloader.h"
-#include "ticks.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
+#include "ticks_apis.h"
 #include "dbprint.h"
 #include "util.h"
 
 static uint8_t *legic_mem;      /* card memory, used for sim */
 static legic_card_select_t card;/* metadata of currently selected card */
 static crc_t legic_crc;
+static uint8_t last_rx_len;
+static uint32_t last_rx_cmd;
 
 //-----------------------------------------------------------------------------
 // Frame timing and pseudorandom number generator
@@ -73,7 +76,7 @@ static uint32_t last_frame_end; /* ts of last bit of previews rx or tx frame */
 // Returns true if a pulse/pause is received within timeout
 // Note: inlining this function would fail with -Os
 static bool wait_for(bool value, const uint32_t timeout) {
-    while ((bool)(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_DIN) != value) {
+    while (Gpio_SSC_DIN_Read() != value) {
         WDT_HIT();
         if (GetCountSspClk() > timeout) {
             return false;
@@ -140,10 +143,10 @@ static void tx_bit(bool bit) {
 
     if (bit) {
         // modulate subcarrier
-        HIGH(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_High();
     } else {
         // do not modulate subcarrier
-        LOW(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_Low();
     }
 
     // wait for tx timeslot to end
@@ -179,7 +182,7 @@ static void tx_frame(uint32_t frame, uint8_t len) {
     };
 
     // disable subcarrier
-    LOW(GPIO_SSC_DOUT);
+    Gpio_SSC_DOUT_Low();
 
     // log
     uint8_t cmdbytes[] = {len, BYTEx(frame, 0), BYTEx(frame, 1)};
@@ -200,7 +203,7 @@ static void tx_ack(void) {
     legic_prng_forward(1);
 
     // disable subcarrier
-    LOW(GPIO_SSC_DOUT);
+    Gpio_SSC_DOUT_Low();
 
     // log
     uint8_t cmdbytes[] = {1, 1};
@@ -308,18 +311,19 @@ static int32_t init_card(uint8_t cardtype, legic_card_select_t *p_card) {
 }
 
 static void init_tag(void) {
-    // configure FPGA
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+    // configure FPGA.  _keep_EM because legic_mem below is emulator memory, which
+    // is where `hf legic eload` put the tag content -- the plain variant frees and
+    // clears the whole of BigBuf to decompress into and would wipe it
+    FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_212K);
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    SetAdcMuxFor(ADC_MUXSEL_HIPKD);
 
     // configure SSC with defaults
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_SIMULATOR);
 
     // first pull output to low to prevent glitches then re-claim GPIO_SSC_DOUT
-    LOW(GPIO_SSC_DOUT);
-    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
-    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
+    Gpio_SSC_DOUT_Low();
+    gpio_fpga_mod_only_setup();
 
     // reserve a cardmem, meaning we can use the tracelog function in bigbuff easier.
     legic_mem = BigBuf_get_EM_addr();
@@ -414,17 +418,27 @@ static int32_t connected_phase(legic_card_select_t *p_card) {
     // wait for command
     int32_t cmd = rx_frame(&len);
     if (cmd < 0) {
+        last_rx_len = len;
+        last_rx_cmd = (uint32_t)cmd;
         return PM3_ETIMEOUT;
     }
 
+    last_rx_len = len;
+    last_rx_cmd = (uint32_t)cmd;
+
     // check if command is LEGIC_READ
-    if (len == p_card->cmdsize) {
+    if (len == p_card->cmdsize && ((cmd & 1) == 1)) {
         // prepare data
         uint8_t byte = legic_mem[cmd >> 1];
         uint8_t crc = calc_crc4(cmd, p_card->cmdsize, byte);
 
         // transmit data
         tx_frame((crc << 8) | byte, 12);
+        return PM3_SUCCESS;
+    }
+
+    // Some readers issue a write header as a 9-bit frame only.
+    if (len == p_card->cmdsize && ((cmd & 1) == 0)) {
         return PM3_SUCCESS;
     }
 
@@ -500,8 +514,13 @@ void LegicRfSimulate(uint8_t tagtype, bool send_reply) {
         }
 
         // connection is established, process commands until one fails
-        while (connected_phase(&card) == PM3_SUCCESS) {
+        int32_t phase_res;
+        while ((phase_res = connected_phase(&card)) == PM3_SUCCESS) {
             WDT_HIT();
+        }
+
+        if (phase_res != PM3_SUCCESS) {
+            Dbprintf("LEGIC sim session ended: res=%d len=%u cmd=%05x", phase_res, last_rx_len, (unsigned int)last_rx_cmd);
         }
     }
 
@@ -509,6 +528,10 @@ OUT:
 
     if (g_dbglevel >= DBG_ERROR) {
         Dbprintf("Emulator stopped. Trace length... " _YELLOW_("%d"), BigBuf_get_traceLen());
+    }
+
+    if (BUTTON_PRESS()) {
+        DbpString("Button pressed, please wait while the PM3 cleans up...");
     }
 
     if (res == PM3_EOPABORTED) {

@@ -98,55 +98,7 @@ static int l_fast_push_mode(lua_State *L) {
 
 /**
  * The following params expected:
- * @brief l_SendCommandMIX
- * @param L - a lua string with the following five params.
- * @param cmd  must be hexstring, max u64
- * @param arg0  must be hexstring, max u64
- * @param arg1  must be hexstring, max u64
- * @param arg2  must be hexstring, max u64
- * @param data  must be hexstring less than 1024 chars(512bytes)
- * @return
- */
-static int l_SendCommandMIX(lua_State *L) {
-
-    uint64_t cmd, arg0, arg1, arg2;
-    uint8_t data[PM3_CMD_DATA_SIZE] = {0};
-    size_t len = 0, size;
-
-    // check number of arguments
-    int n = lua_gettop(L);
-    if (n != 5) {
-        return returnToLuaWithError(L, "You need to supply five parameters");
-    }
-
-    // parse input
-    cmd = luaL_checknumber(L, 1);
-    arg0 = luaL_checknumber(L, 2);
-    arg1 = luaL_checknumber(L, 3);
-    arg2 = luaL_checknumber(L, 4);
-
-    // data
-    const char *p_data = luaL_checklstring(L, 5, &size);
-    if (size) {
-        if (size > 1024)
-            size = 1024;
-
-        uint32_t tmp;
-        for (int i = 0; i < size; i += 2) {
-            sscanf(&p_data[i], "%02x", &tmp);
-            data[i >> 1] = tmp & 0xFF;
-            len++;
-        }
-    }
-
-    clearCommandBuffer();
-    SendCommandMIX(cmd, arg0, arg1, arg2, data, len);
-    lua_pushboolean(L, true);
-    return 1;
-}
-/**
- * The following params expected:
- * @brief l_SendCommandMIX
+ * @brief l_SendCommandNG
  * @param L - a lua string with the following two params.
  * @param cmd  must be hexstring, max u64
  * @param data  must be hexstring less than 1024 chars(512bytes)
@@ -303,7 +255,7 @@ static int l_GetFromFlashMemSpiffs(lua_State *L) {
     // get size from spiffs itself !
     SendCommandNG(CMD_SPIFFS_STAT, (uint8_t *)destfilename, 32);
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_SPIFFS_STAT, &resp, 2000))
+    if (WaitForResponseTimeout(CMD_SPIFFS_STAT, &resp, 2000) == false)
         return returnToLuaWithError(L, "No response from the device");
 
     len = resp.data.asDwords[0];
@@ -378,15 +330,6 @@ static int l_WaitForResponseTimeout(lua_State *L) {
 
     memcpy(foo + n, &resp.crc, sizeof(resp.crc));
     n += sizeof(resp.crc);
-
-    memcpy(foo + n, &resp.oldarg[0], sizeof(resp.oldarg[0]));
-    n += sizeof(resp.oldarg[0]);
-
-    memcpy(foo + n, &resp.oldarg[1], sizeof(resp.oldarg[1]));
-    n += sizeof(resp.oldarg[1]);
-
-    memcpy(foo + n, &resp.oldarg[2], sizeof(resp.oldarg[2]));
-    n += sizeof(resp.oldarg[2]);
 
     memcpy(foo + n, resp.data.asBytes, sizeof(resp.data));
     n += sizeof(resp.data);
@@ -473,12 +416,51 @@ static int l_kbd_enter_pressed(lua_State *L) {
 /**
  * @brief Calls the command line parser to deal with the command. This enables
  * lua-scripts to do stuff like "core.console('hf mf mifare')"
+ *     core.console(cmd [, capture [, quiet]])
+ *
+ *  Same idea as the python binding
+ *     `capture` hands the command's output back as a string,
+ *     `quiet` keeps it off the// terminal
  * @param L
  * @return
  */
 static int l_CmdConsole(lua_State *L) {
-    CommandReceived((char *)luaL_checkstring(L, 1));
-    return 0;
+
+    const char *cmd = luaL_checkstring(L, 1);
+
+    const bool capture = (lua_isnoneornil(L, 2) == 0) && lua_toboolean(L, 2);
+    const bool quiet = (lua_isnoneornil(L, 3) == 0) && lua_toboolean(L, 3);
+
+    const uint8_t prev_printAndLog = g_printAndLog;
+
+    if (capture) {
+        g_printAndLog |= PRINTANDLOG_GRAB;
+        // anything left in the grabber belongs to an earlier call
+        g_grabbed_output.idx = 0;
+    }
+
+    if (quiet) {
+        g_printAndLog &= ~PRINTANDLOG_PRINT;
+    }
+
+    CommandReceived((char *)cmd);
+
+    g_printAndLog = prev_printAndLog;
+
+    if (capture == false) {
+        return 0;
+    }
+
+    if (g_grabbed_output.ptr == NULL) {
+        lua_pushstring(L, "");
+        return 1;
+    }
+
+    g_grabbed_output.ptr[g_grabbed_output.idx] = 0;
+    lua_pushstring(L, g_grabbed_output.ptr);
+
+    g_grabbed_output.idx = 0;
+    return 1;
 }
 
 static int l_iso15693_crc(lua_State *L) {
@@ -516,7 +498,7 @@ static int l_iso14443b_crc(lua_State *L) {
 }
 
 /*
- Simple AES 128 cbc hook up to OpenSSL.
+ Simple AES 128 cbc hook up to mbedtls.
  params:  key, input
 */
 static int l_aes128decrypt_cbc(lua_State *L) {
@@ -1286,6 +1268,9 @@ static int l_set_iso_dep_state(lua_State *L) {
         case 3:
             SetISODEPState(ISODEP_NFCV);
             break;
+        case 4:
+            SetISODEPState(ISODEP_NFCB_PRIME);
+            break;
         default:
             return returnToLuaWithError(L, "Wrong ISODEP STATE value");
     }
@@ -1400,7 +1385,6 @@ static int setLuaPath(lua_State *L, const char *path) {
 
 int set_pm3_libraries(lua_State *L) {
     static const luaL_Reg libs[] = {
-        {"SendCommandMIX",              l_SendCommandMIX},
         {"SendCommandNG",               l_SendCommandNG},
         {"GetFromBigBuf",               l_GetFromBigBuf},
         {"GetFromFlashMem",             l_GetFromFlashMem},

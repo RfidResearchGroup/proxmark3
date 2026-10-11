@@ -632,7 +632,7 @@ static int CmdIndalaReader(const char *Cmd) {
     do {
         lf_read(false, 30000);
         demodIndalaEx(clk, invert, max_err, !cm);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm & (kbd_enter_pressed() == false));
     return PM3_SUCCESS;
 }
 
@@ -1096,7 +1096,7 @@ static int CmdIndalaBrute(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",     CmdHelp,            AlwaysAvailable, "This help"},
-    {"brute",    CmdIndalaBrute,     IfPm3Lf,         "Demodulate an Indala tag (PSK1) from the GraphBuffer"},
+    {"brute",    CmdIndalaBrute,     IfPm3Lf,         "Bruteforce an Indala reader with a specified facility code"},
     {"demod",    CmdIndalaDemod,     AlwaysAvailable, "Demodulate an Indala tag (PSK1) from the GraphBuffer"},
     {"altdemod", CmdIndalaDemodAlt,  AlwaysAvailable, "Alternative method to demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
     {"reader",   CmdIndalaReader,    IfPm3Lf,         "Read an Indala tag from the antenna"},
@@ -1163,12 +1163,12 @@ int getIndalaBits(uint8_t fc, uint16_t cn, uint8_t *bits) {
     chk += ((cn >> 2) & 1); //y14 == 89 - 30 = 59
     chk += (cn & 1); //y16 == 71 - 30 = 41
 
-    if ((chk & 1) == 0) {
-        bits[62] = 0;
-        bits[63] = 1;
-    } else {
+    if ((chk & 1) == 0) { // If the sum is even, checksum is '10' (binary) = 2.
         bits[62] = 1;
         bits[63] = 0;
+    } else {              // If the sum is odd, checksum is '01' (binary) = 1.
+        bits[62] = 0;
+        bits[63] = 1;
     }
 
     // add parity
@@ -1344,7 +1344,7 @@ out:
     *size = found_size;
 
     if (found_size < 64) {
-        PrintAndLogEx(INFO, "DEBUG: detectindala | %zu", found_size);
+        PrintAndLogEx(DEBUG, "DEBUG: detectindala | %zu", found_size);
         return -5;
     }
 

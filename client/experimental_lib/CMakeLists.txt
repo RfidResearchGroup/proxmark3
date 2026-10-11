@@ -23,8 +23,8 @@
 #  On ProxSpace 3.4:
 #    cmake -G"MSYS Makefiles" ..
 #  On Proxspace 3.3 or less, you need to install cmake:
-#    pacman -S mingw-w64-x86_64-cmake
-#    /mingw64/bin/cmake -G"MSYS Makefiles" ..
+#    pacman -S mingw-w64-ucrt-x86_64-cmake
+#    /ucrt64/bin/cmake -G"MSYS Makefiles" ..
 #
 # Android cross-compilation: (ANDROID_ABI=arm64-v8a for a 64b version)
 # cmake \
@@ -47,44 +47,6 @@ find_package(PkgConfig)
 # Allow specifying a Python version via cmake option
 set(PYTHON3_PKGCONFIG "python3" CACHE STRING "Python3 package config version suffix")
 
-if (NOT SKIPQT EQUAL 1)
-
-    if(APPLE AND EXISTS /usr/local/opt/qt5)
-        # Homebrew installs Qt5 (up to at least 5.11.0) in
-        # /usr/local/opt/qt5. Ensure that it can be found by CMake
-        # since it is not in the default /usr/local prefix.
-        # Add it to PATHS so that it doesn't override the
-        # CMAKE_PREFIX_PATH environment variable.
-        # QT_FIND_PACKAGE_OPTIONS should be passed to find_package,
-        # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
-        list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /usr/local/opt/qt5)
-    endif(APPLE AND EXISTS /usr/local/opt/qt5)
-
-    if(APPLE AND EXISTS /opt/homebrew/opt/qt@5)
-        # Homebrew on Apple Silicon installs Qt5 in
-        # /opt/homebrew/opt/qt@5. Ensure that it can be found by CMake
-        # since it is not in the default /usr/local prefix.
-        # Add it to PATHS so that it doesn't override the
-        # CMAKE_PREFIX_PATH environment variable.
-        # QT_FIND_PACKAGE_OPTIONS should be passed to find_package,
-        # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
-        list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /opt/homebrew/opt/qt@5)
-    endif(APPLE AND EXISTS /opt/homebrew/opt/qt@5)
-    set(QT_PACKAGELIST
-        Qt5Core
-        Qt5Widgets
-        Qt5Gui
-    )
-    set(Qt5_FOUND ON)
-    foreach(_qt_package IN LISTS QT_PACKAGELIST)
-        find_package(${_qt_package} QUIET ${QT_FIND_PACKAGE_OPTIONS})
-        set(Qt5_LIBRARIES ${${_qt_package}_LIBRARIES} ${Qt5_LIBRARIES})
-        if(NOT ${_qt_package}_FOUND)
-            set(Qt5_FOUND OFF)
-        endif(NOT ${_qt_package}_FOUND)
-    endforeach()
-endif (NOT SKIPQT EQUAL 1)
-
 if (NOT SKIPBT EQUAL 1)
     pkg_search_module(BLUEZ QUIET bluez)
 endif (NOT SKIPBT EQUAL 1)
@@ -93,6 +55,13 @@ if (NOT SKIPPYTHON EQUAL 1)
     pkg_search_module(PYTHON3 QUIET ${PYTHON3_PKGCONFIG})
     pkg_search_module(PYTHON3EMBED QUIET ${PYTHON3_PKGCONFIG}-embed)
 endif (NOT SKIPPYTHON EQUAL 1)
+
+if (MINGW)
+    # Prefer static archives for single-exe deployments.
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+    set(ZLIB_USE_STATIC_LIBS ON)
+    set(BZIP2_USE_STATIC_LIBS ON)
+endif()
 
 # If cross-compiled, we need to init source and build.
 if (CMAKE_TOOLCHAIN_FILE)
@@ -219,6 +188,8 @@ if (LZ4_INCLUDE_DIRS AND LZ4_LIBRARIES)
     set(LZ4_FOUND ON)
 endif (LZ4_INCLUDE_DIRS AND LZ4_LIBRARIES)
 
+find_package(ZLIB QUIET)
+
 if (NOT SKIPGD EQUAL 1)
     if (EMBED_GD)
         cmake_policy(SET CMP0114 NEW)
@@ -248,6 +219,21 @@ if (NOT SKIPWHEREAMISYSTEM EQUAL 1)
     endif (WHEREAMI_INCLUDE_DIRS AND WHEREAMI_LIBRARIES)
 endif (NOT SKIPWHEREAMISYSTEM EQUAL 1)
 
+# These must be set BEFORE add_subdirectory(deps): CMake copies the
+# current variable scope into a subdirectory at that point, so flags set
+# further down never reach the bundled deps and jansson fails the
+# -Werror=stringop-overflow false positive on its own.
+# GCC 10 has issues with false positives on stringop-overflow,
+# let's disable them for now (cf https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92955, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94335)
+# beware these flags didn't exist for GCC < 7
+if(CMAKE_COMPILER_IS_GNUCXX)
+    execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
+    if (GCC_VERSION VERSION_GREATER 10.0 OR GCC_VERSION VERSION_EQUAL 10.0)
+        set(CMAKE_C_FLAGS "-Wno-stringop-overflow -Wno-error=stringop-overflow ${CMAKE_C_FLAGS}")
+        set(CMAKE_CXX_FLAGS "-Wno-stringop-overflow -Wno-error=stringop-overflow ${CMAKE_CXX_FLAGS}")
+    endif()
+endif(CMAKE_COMPILER_IS_GNUCXX)
+
 add_subdirectory(${PM3_ROOT}/client/deps deps)
 
 set (TARGET_SOURCES
@@ -269,8 +255,11 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/common/hitag2/hitag2_crypto.c
         ${PM3_ROOT}/client/src/crypto/asn1dump.c
         ${PM3_ROOT}/client/src/crypto/asn1utils.c
+        ${PM3_ROOT}/client/src/crypto/duoxcrypto.c
         ${PM3_ROOT}/client/src/crypto/libpcrypto.c
         ${PM3_ROOT}/client/src/crypto/originality.c
+        ${PM3_ROOT}/client/src/emrtd/emrtd_pace.c
+        ${PM3_ROOT}/client/src/emrtd/emrtd_pacetest.c
         ${PM3_ROOT}/client/src/emv/test/cda_test.c
         ${PM3_ROOT}/client/src/emv/test/crypto_test.c
         ${PM3_ROOT}/client/src/emv/test/cryptotest.c
@@ -299,49 +288,68 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cipurse/cipursecore.c
         ${PM3_ROOT}/client/src/cipurse/cipursetest.c
         ${PM3_ROOT}/client/src/loclass/cipher.c
+        ${PM3_ROOT}/client/src/loclass/cipher_bs.c
+        ${PM3_ROOT}/client/src/loclass/cipher_bs_avx2.c
+        ${PM3_ROOT}/client/src/loclass/cipher_bs_avx512.c
+        ${PM3_ROOT}/client/src/loclass/cipher_bs_dispatch.c
+        ${PM3_ROOT}/client/src/loclass/cipher_bs_neon.c
         ${PM3_ROOT}/client/src/loclass/cipherutils.c
         ${PM3_ROOT}/client/src/loclass/elite_crack.c
         ${PM3_ROOT}/client/src/loclass/hash1_brute.c
         ${PM3_ROOT}/client/src/loclass/ikeys.c
         ${PM3_ROOT}/client/src/mifare/mad.c
+        ${PM3_ROOT}/client/src/mifare/mad_test.c
         ${PM3_ROOT}/client/src/mifare/aiddesfire.c
         ${PM3_ROOT}/client/src/mifare/mfkey.c
         ${PM3_ROOT}/client/src/mifare/mifare4.c
         ${PM3_ROOT}/client/src/mifare/mifaredefault.c
         ${PM3_ROOT}/client/src/mifare/mifarehost.c
         ${PM3_ROOT}/client/src/mifare/gen4.c
-        ${PM3_ROOT}/client/src/nfc/ndef.c
         ${PM3_ROOT}/client/src/mifare/lrpcrypto.c
         ${PM3_ROOT}/client/src/mifare/desfirecrypto.c
+        ${PM3_ROOT}/client/src/mifare/desfireem.c
         ${PM3_ROOT}/client/src/mifare/desfiresecurechan.c
         ${PM3_ROOT}/client/src/mifare/desfirecore.c
         ${PM3_ROOT}/client/src/mifare/desfiretest.c
         ${PM3_ROOT}/client/src/mifare/gallaghercore.c
+        ${PM3_ROOT}/client/src/mifare/gallaghertest.c
+        ${PM3_ROOT}/client/src/mifare/prime.c
+        ${PM3_ROOT}/client/src/nfc/ndef.c
+        ${PM3_ROOT}/client/src/qrcode/qrcode.c
+        ${PM3_ROOT}/client/src/relay/relay_posix.c
+        ${PM3_ROOT}/client/src/relay/relay_win32.c
         ${PM3_ROOT}/client/src/uart/ringbuffer.c
         ${PM3_ROOT}/client/src/uart/uart_common.c
         ${PM3_ROOT}/client/src/uart/uart_posix.c
+        ${PM3_ROOT}/client/src/uart/ble_posix.c
         ${PM3_ROOT}/client/src/uart/uart_win32.c
         ${PM3_ROOT}/client/src/ui/overlays.ui
         ${PM3_ROOT}/client/src/ui/image.ui
         ${PM3_ROOT}/client/src/aidsearch.c
         ${PM3_ROOT}/client/src/atrs.c
         ${PM3_ROOT}/client/src/cmdanalyse.c
+        ${PM3_ROOT}/client/src/cmdbwm.c
         ${PM3_ROOT}/client/src/cmdcrc.c
         ${PM3_ROOT}/client/src/cmddata.c
         ${PM3_ROOT}/client/src/cmdflashmem.c
         ${PM3_ROOT}/client/src/cmdflashmemspiffs.c
+        ${PM3_ROOT}/client/src/cmdfpga.c
         ${PM3_ROOT}/client/src/cmdhf.c
         ${PM3_ROOT}/client/src/cmdhf14a.c
         ${PM3_ROOT}/client/src/cmdhf14b.c
         ${PM3_ROOT}/client/src/cmdhf15.c
+        ${PM3_ROOT}/client/src/cmdhfaliro.c
+        ${PM3_ROOT}/client/src/cmdhfcalypso.c
+        ${PM3_ROOT}/client/src/cmdhfcipurse.c
         ${PM3_ROOT}/client/src/cmdhfcryptorf.c
         ${PM3_ROOT}/client/src/cmdhfemrtd.c
         ${PM3_ROOT}/client/src/cmdhfepa.c
         ${PM3_ROOT}/client/src/cmdhffelica.c
         ${PM3_ROOT}/client/src/cmdhffido.c
+        ${PM3_ROOT}/client/src/cmdhffmcos.c
         ${PM3_ROOT}/client/src/cmdhffudan.c
         ${PM3_ROOT}/client/src/cmdhfgallagher.c
-        ${PM3_ROOT}/client/src/cmdhfcipurse.c
+        ${PM3_ROOT}/client/src/cmdhfgst.c
         ${PM3_ROOT}/client/src/cmdhficlass.c
         ${PM3_ROOT}/client/src/cmdhfict.c
         ${PM3_ROOT}/client/src/cmdhfjooki.c
@@ -353,8 +361,11 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhfmfdes.c
         ${PM3_ROOT}/client/src/cmdhfmfhard.c
         ${PM3_ROOT}/client/src/cmdhfmfp.c
+        ${PM3_ROOT}/client/src/cmdhfmfsen.c
         ${PM3_ROOT}/client/src/cmdhfmfu.c
         ${PM3_ROOT}/client/src/cmdhfntag424.c
+        ${PM3_ROOT}/client/src/cmdhfsaflok.c
+        ${PM3_ROOT}/client/src/cmdhfsecc.c
         ${PM3_ROOT}/client/src/cmdhfseos.c
         ${PM3_ROOT}/client/src/cmdhfst.c
         ${PM3_ROOT}/client/src/cmdhfst25ta.c
@@ -398,10 +409,13 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdlfsecurakey.c
         ${PM3_ROOT}/client/src/cmdlft55xx.c
         ${PM3_ROOT}/client/src/cmdlfti.c
+        ${PM3_ROOT}/client/src/cmdlftrovan.c
         ${PM3_ROOT}/client/src/cmdlfviking.c
         ${PM3_ROOT}/client/src/cmdlfvisa2000.c
         ${PM3_ROOT}/client/src/cmdlfzx8211.c
+        ${PM3_ROOT}/client/src/cmdmad.c
         ${PM3_ROOT}/client/src/cmdmain.c
+        ${PM3_ROOT}/client/src/cmdmqtt.c
         ${PM3_ROOT}/client/src/cmdnfc.c
         ${PM3_ROOT}/client/src/cmdparser.c
         ${PM3_ROOT}/client/src/cmdpiv.c
@@ -413,16 +427,32 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/comms.c
         ${PM3_ROOT}/client/src/fileutils.c
         ${PM3_ROOT}/client/src/flash.c
+        ${PM3_ROOT}/client/src/frame_data2.c
+        ${PM3_ROOT}/client/src/frame_progress.c
         ${PM3_ROOT}/client/src/graph.c
         ${PM3_ROOT}/client/src/hidsio.c
         ${PM3_ROOT}/client/src/iso4217.c
         ${PM3_ROOT}/client/src/jansson_path.c
+        ${PM3_ROOT}/client/src/jsonutils.c
         ${PM3_ROOT}/client/src/lua_bitlib.c
+        ${PM3_ROOT}/client/src/parsers/parsehrt.c
+        ${PM3_ROOT}/client/src/parsers/parsehid.c
+        ${PM3_ROOT}/client/src/parsers/parsevigik.c
+        ${PM3_ROOT}/client/src/parsers/parsehexact.c
+        ${PM3_ROOT}/client/src/parsers/parsemykey.c
+        ${PM3_ROOT}/client/src/parsers/parseproac.c
+        ${PM3_ROOT}/client/src/parsers/parserkf.c
+        ${PM3_ROOT}/client/src/parsers/parsenortic.c
+        ${PM3_ROOT}/client/src/parsers/hrtparser/hrtparser.c
+        ${PM3_ROOT}/client/src/pla.c
         ${PM3_ROOT}/client/src/preferences.c
         ${PM3_ROOT}/client/src/pm3.c
         ${PM3_ROOT}/client/src/pm3_binlib.c
         ${PM3_ROOT}/client/src/pm3_bitlib.c
+        ${PM3_ROOT}/client/src/pm3_dsp.c
+        ${PM3_ROOT}/client/src/pm3_fit.c
         ${PM3_ROOT}/client/src/pm3line.c
+        ${PM3_ROOT}/client/src/pm3line_vocabulary.c
         ${PM3_ROOT}/client/src/scandir.c
         ${PM3_ROOT}/client/src/scripting.c
         ${PM3_ROOT}/client/src/ui.c
@@ -466,23 +496,6 @@ if (APPLE)
       set(ADDITIONAL_LNK "-framework Foundation" "-framework AppKit")
     endif()
 endif (APPLE)
-
-if ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND))
-    set(CMAKE_AUTOMOC ON)
-    set(CMAKE_AUTORCC ON)
-    set(CMAKE_AUTOUIC ON)
-    set (TARGET_SOURCES
-            ${PM3_ROOT}/client/src/proxgui.cpp
-            ${PM3_ROOT}/client/src/proxguiqt.cpp
-            ${TARGET_SOURCES})
-
-    add_definitions("-DHAVE_GUI")
-    set(ADDITIONAL_LNK ${Qt5_LIBRARIES} ${ADDITIONAL_LNK})
-else ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND))
-    set(TARGET_SOURCES
-            ${PM3_ROOT}/client/src/guidummy.cpp
-            ${TARGET_SOURCES})
-endif ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND))
 
 if (NOT SKIPBT EQUAL 1)
     if (BLUEZ_FOUND)
@@ -528,6 +541,12 @@ if (LZ4_FOUND)
     set(ADDITIONAL_LNK ${LZ4_LIBRARIES} ${ADDITIONAL_LNK})
 endif (LZ4_FOUND)
 
+if (ZLIB_FOUND)
+    add_definitions("-DHAVE_ZLIB")
+    set(ADDITIONAL_DIRS ${ZLIB_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+    set(ADDITIONAL_LNK ${ZLIB_LIBRARIES} ${ADDITIONAL_LNK})
+endif (ZLIB_FOUND)
+
 if (NOT SKIPGD EQUAL 1 AND GD_FOUND)
     set(ADDITIONAL_DIRS ${GD_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
     set(ADDITIONAL_LNK ${GD_LIBRARIES} ${ADDITIONAL_LNK})
@@ -551,15 +570,6 @@ execute_process(
 )
 string(STRIP ${version_pm3} version_pm3)
 message(STATUS "Version info:      ${version_pm3}")
-if (SKIPQT EQUAL 1)
-    message(STATUS "GUI support:       skipped")
-else (SKIPQT EQUAL 1)
-    if (Qt5_FOUND)
-        message(STATUS "GUI support:       QT5 found, enabled")
-    else (Qt5_FOUND)
-        message(STATUS "GUI support:       QT5 not found, disabled")
-    endif (Qt5_FOUND)
-endif (SKIPQT EQUAL 1)
 
 if (SKIPBT EQUAL 1)
     message(STATUS "native BT support: skipped")
@@ -590,6 +600,12 @@ if (LZ4_FOUND)
 else (LZ4_FOUND)
     message(SEND_ERROR "LZ4 library:       LZ4 not found")
 endif (LZ4_FOUND)
+
+if (ZLIB_FOUND)
+    message(STATUS "Zlib library:      system library found (enabled)")
+else (ZLIB_FOUND)
+    message(STATUS "Zlib library:      not found, disabled")
+endif (ZLIB_FOUND)
 
 if (SKIPGD EQUAL 1)
     message(STATUS "GD library:        skipped")
@@ -688,23 +704,54 @@ add_definitions(-DHAVE_SNPRINTF)
 
 add_library(pm3rrg_rdv4 SHARED
         ${PM3_ROOT}/client/src/proxmark3.c
+        ${PM3_ROOT}/client/src/guidummy.cpp
         ${TARGET_SOURCES}
         ${ADDITIONAL_SRC}
 )
 
-target_compile_definitions(pm3rrg_rdv4 PRIVATE LIBPM3)
+add_library(pm3rrg_rdv4_static STATIC
+        ${PM3_ROOT}/client/src/proxmark3.c
+        ${PM3_ROOT}/client/src/guidummy.cpp
+        ${TARGET_SOURCES}
+        ${ADDITIONAL_SRC}
+)
 
-target_compile_options(pm3rrg_rdv4 PUBLIC -Wall -Werror -O3)
+set(PM3_LIBRARY_TARGETS pm3rrg_rdv4 pm3rrg_rdv4_static)
+foreach (target IN LISTS PM3_LIBRARY_TARGETS)
+    target_compile_definitions(${target} PRIVATE LIBPM3)
+    target_compile_options(${target} PUBLIC -Wall -Werror -O3)
+    target_include_directories(${target} PRIVATE
+            ${PM3_ROOT}/common
+            ${PM3_ROOT}/common_fpga
+            ${PM3_ROOT}/include
+            ${PM3_ROOT}/client/src
+            ${PM3_ROOT}/client/include
+            ${ADDITIONAL_DIRS}
+    )
+endforeach()
+
+if (UNIX AND NOT APPLE)
+    # Fail the build if a client source file is missing from TARGET_SOURCES.
+    # Otherwise Linux may defer unresolved shared-library symbols until import.
+    set_property(TARGET pm3rrg_rdv4 APPEND_STRING PROPERTY LINK_FLAGS " -Wl,--no-undefined")
+endif()
+
 if (EMBED_READLINE)
     if (NOT SKIPREADLINE EQUAL 1)
-        add_dependencies(pm3rrg_rdv4 ncurses readline)
+        foreach (target IN LISTS PM3_LIBRARY_TARGETS)
+            add_dependencies(${target} ncurses readline)
+        endforeach()
     endif (NOT SKIPREADLINE EQUAL 1)
 endif (EMBED_READLINE)
 if (EMBED_BZIP2)
-    add_dependencies(pm3rrg_rdv4 bzip2)
+    foreach (target IN LISTS PM3_LIBRARY_TARGETS)
+        add_dependencies(${target} bzip2)
+    endforeach()
 endif (EMBED_BZIP2)
 if (EMBED_LZ4)
-    add_dependencies(pm3rrg_rdv4 lz4)
+    foreach (target IN LISTS PM3_LIBRARY_TARGETS)
+        add_dependencies(${target} lz4)
+    endforeach()
 endif (EMBED_LZ4)
 
 if (MINGW)
@@ -712,7 +759,9 @@ if (MINGW)
     # and setting _ISOC99_SOURCE sets internally __USE_MINGW_ANSI_STDIO=1
     # FTR __USE_MINGW_ANSI_STDIO seems deprecated in Mingw32
     # but not Mingw64 https://fr.osdn.net/projects/mingw/lists/archive/users/2019-January/000199.html
-    target_compile_definitions(pm3rrg_rdv4 PRIVATE _ISOC99_SOURCE)
+    foreach (target IN LISTS PM3_LIBRARY_TARGETS)
+        target_compile_definitions(${target} PRIVATE _ISOC99_SOURCE)
+    endforeach()
 
     set(CMAKE_C_FLAGS "-mno-ms-bitfields -fexec-charset=cp850 ${CMAKE_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "-mno-ms-bitfields -fexec-charset=cp850 ${CMAKE_CXX_FLAGS}")
@@ -720,26 +769,6 @@ if (MINGW)
     # link Winsock2
     set(ADDITIONAL_LNK ws2_32 ${ADDITIONAL_LNK})
 endif (MINGW)
-
-# GCC 10 has issues with false positives on stringop-overflow,
-# let's disable them for now (cf https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92955, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94335)
-# beware these flags didn't exist for GCC < 7
-if(CMAKE_COMPILER_IS_GNUCXX)
-    execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
-    if (GCC_VERSION VERSION_GREATER 10.0 OR GCC_VERSION VERSION_EQUAL 10.0)
-        set(CMAKE_C_FLAGS "-Wno-stringop-overflow -Wno-error=stringop-overflow ${CMAKE_C_FLAGS}")
-        set(CMAKE_CXX_FLAGS "-Wno-stringop-overflow -Wno-error=stringop-overflow ${CMAKE_CXX_FLAGS}")
-    endif()
-endif(CMAKE_COMPILER_IS_GNUCXX)
-
-target_include_directories(pm3rrg_rdv4 PRIVATE
-        ${PM3_ROOT}/common
-        ${PM3_ROOT}/common_fpga
-        ${PM3_ROOT}/include
-        ${PM3_ROOT}/client/src
-        ${PM3_ROOT}/client/include
-        ${ADDITIONAL_DIRS}
-)
 
 if (NOT APPLE)
     # required for Raspberry Pi, but breaks with clang (OSX). Need to be at the end of the linker line.
@@ -764,20 +793,26 @@ if (NOT WHEREAMI_FOUND)
     set(ADDITIONAL_LNK pm3rrg_rdv4_whereami ${ADDITIONAL_LNK})
 endif (NOT WHEREAMI_FOUND)
 
-target_link_libraries(pm3rrg_rdv4 PRIVATE
-        m
-        pm3rrg_rdv4_mbedtls
-        pm3rrg_rdv4_cliparser
-        pm3rrg_rdv4_lua
-        pm3rrg_rdv4_tinycbor
-        pm3rrg_rdv4_amiibo
-        pm3rrg_rdv4_reveng
-        pm3rrg_rdv4_hardnested
-        pm3rrg_rdv4_id48
-        ${ADDITIONAL_LNK})
+foreach (target IN LISTS PM3_LIBRARY_TARGETS)
+    target_link_libraries(${target} PRIVATE
+            m
+            pm3rrg_rdv4_mbedtls
+            pm3rrg_rdv4_cliparser
+            pm3rrg_rdv4_lua
+            pm3rrg_rdv4_tinycbor
+            pm3rrg_rdv4_amiibo
+            pm3rrg_rdv4_reveng
+            pm3rrg_rdv4_hardnested
+            pm3rrg_rdv4_id48
+            pm3rrg_rdv4_mqtt
+            pm3rrg_rdv4_vec
+            ${ADDITIONAL_LNK})
+endforeach()
 
 if (NOT SKIPPTHREAD EQUAL 1)
-    target_link_libraries(pm3rrg_rdv4 PRIVATE pthread)
+    foreach (target IN LISTS PM3_LIBRARY_TARGETS)
+        target_link_libraries(${target} PRIVATE pthread)
+    endforeach()
 endif (NOT SKIPPTHREAD EQUAL 1)
 
 if (NOT SKIPPYTHON EQUAL 1)
@@ -789,4 +824,6 @@ if (NOT SKIPPYTHON EQUAL 1)
     endif (PYTHON3EMBED_FOUND OR PYTHON3_FOUND)
 endif (NOT SKIPPYTHON EQUAL 1)
 
-target_link_directories(pm3rrg_rdv4 PRIVATE ${ADDITIONAL_LNKDIRS})
+foreach (target IN LISTS PM3_LIBRARY_TARGETS)
+    target_link_directories(${target} PRIVATE ${ADDITIONAL_LNKDIRS})
+endforeach()

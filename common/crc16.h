@@ -20,6 +20,7 @@
 
 #include "common.h"
 
+#define CRC16_SIZE 2
 #define CRC16_POLY_CCITT     0x1021
 #define CRC16_POLY_KERMIT    0x8408
 #define CRC16_POLY_LEGIC     0xc6c6 //0x6363

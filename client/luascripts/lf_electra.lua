@@ -145,7 +145,7 @@ local function readfile()
     local f = io.open(ID_STATUS, "r")
     for line in f:lines() do
         id = line:match"^(%x+)"
-        if id then break end
+    if id then break end
     end
     f:close()
     if not id then
@@ -299,7 +299,7 @@ local function main(args)
         if answer == 'n' then
             core.console('clear')
             print( string.rep('--',39) )
-            print(ac.red..'                                  USER ABORTED'..ac.reset)
+            print(ac.red..'                                  Aborted via keyboard!'..ac.reset)
             print( string.rep('--',39) )
             break
         end

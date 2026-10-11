@@ -802,6 +802,10 @@ static void ice_compare(
     return;
 }
 
+#if defined(__cplusplus)
+}
+#endif
+
 int main(int argc, const char *argv[]) {
     size_t pos;
     crypto_state_t ostate;
@@ -969,7 +973,3 @@ int main(int argc, const char *argv[]) {
     }
     return 0;
 }
-
-#if defined(__cplusplus)
-}
-#endif

@@ -190,26 +190,26 @@ int main(int argc, char *argv[]) {
     }
 
     if (!strncmp(argv[1], "0x", 2) || !strncmp(argv[1], "0X", 2)) {
-        uid = rev32(hexreversetoulong(argv[1] + 2));
+        uid = rev32(hexreversetouint32(argv[1] + 2));
     } else {
-        uid = rev32(hexreversetoulong(argv[1]));
+        uid = rev32(hexreversetouint32(argv[1]));
     }
 
     if (!strncmp(argv[2], "0x", 2) || !strncmp(argv[2], "0X", 2)) {
-        nR1 = rev32(hexreversetoulong(argv[2] + 2));
+        nR1 = rev32(hexreversetouint32(argv[2] + 2));
     } else {
-        nR1 = rev32(hexreversetoulong(argv[2]));
+        nR1 = rev32(hexreversetouint32(argv[2]));
     }
 
-    aR1 = strtol(argv[3], NULL, 16);
+    aR1 = strtoul(argv[3], NULL, 16);
 
     if (!strncmp(argv[4], "0x", 2) || !strncmp(argv[4], "0X", 2)) {
-        nR2 = rev32(hexreversetoulong(argv[4] + 2));
+        nR2 = rev32(hexreversetouint32(argv[4] + 2));
     } else {
-        nR2 = rev32(hexreversetoulong(argv[4]));
+        nR2 = rev32(hexreversetouint32(argv[4]));
     }
 
-    aR2 = strtol(argv[5], NULL, 16);
+    aR2 = strtoul(argv[5], NULL, 16);
 
     target = ~aR1;
     // bitslice inverse target bits
@@ -262,7 +262,7 @@ int main(int argc, char *argv[]) {
     }
 
     ctx.kernelSource = (char *)calloc(1, filestat.st_size);
-    if (!ctx.kernelSource) {
+    if (ctx.kernelSource == NULL) {
         printf("Cannot calloc kernelSource\n");
         exit(1);
     }

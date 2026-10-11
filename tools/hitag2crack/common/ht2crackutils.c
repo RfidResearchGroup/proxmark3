@@ -85,14 +85,9 @@ unsigned char hex2bin(unsigned char c) {
 
 // return a single bit from a value
 int bitn(uint64_t x, int bit) {
-    uint64_t bitmask = 1;
-    bitmask <<= bit;
+    const uint64_t bitmask = (uint64_t)(1) << bit;
 
-    if (x & bitmask) {
-        return 1;
-    } else {
-        return 0;
-    }
+    return (x & bitmask) ? 1 : 0;
 }
 
 
@@ -126,17 +121,15 @@ int fc(unsigned int i) {
 
 // the filter function that generates a bit of output from the prng state
 int fnf(uint64_t s) {
-    unsigned int x1, x2, x3, x4, x5, x6;
+    const unsigned int x1 = (unsigned int)((bitn(s,  2) << 0) | (bitn(s,  3) << 1) | (bitn(s,  5) << 2) | (bitn(s,  6) << 3));
+    const unsigned int x2 = (unsigned int)((bitn(s,  8) << 0) | (bitn(s, 12) << 1) | (bitn(s, 14) << 2) | (bitn(s, 15) << 3));
+    const unsigned int x3 = (unsigned int)((bitn(s, 17) << 0) | (bitn(s, 21) << 1) | (bitn(s, 23) << 2) | (bitn(s, 26) << 3));
+    const unsigned int x4 = (unsigned int)((bitn(s, 28) << 0) | (bitn(s, 29) << 1) | (bitn(s, 31) << 2) | (bitn(s, 33) << 3));
+    const unsigned int x5 = (unsigned int)((bitn(s, 34) << 0) | (bitn(s, 43) << 1) | (bitn(s, 44) << 2) | (bitn(s, 46) << 3));
 
-    x1 = (bitn(s,  2) << 0) | (bitn(s,  3) << 1) | (bitn(s,  5) << 2) | (bitn(s,  6) << 3);
-    x2 = (bitn(s,  8) << 0) | (bitn(s, 12) << 1) | (bitn(s, 14) << 2) | (bitn(s, 15) << 3);
-    x3 = (bitn(s, 17) << 0) | (bitn(s, 21) << 1) | (bitn(s, 23) << 2) | (bitn(s, 26) << 3);
-    x4 = (bitn(s, 28) << 0) | (bitn(s, 29) << 1) | (bitn(s, 31) << 2) | (bitn(s, 33) << 3);
-    x5 = (bitn(s, 34) << 0) | (bitn(s, 43) << 1) | (bitn(s, 44) << 2) | (bitn(s, 46) << 3);
+    const unsigned int x6 = (unsigned int)((fa(x1) << 0) | (fb(x2) << 1) | (fb(x3) << 2) | (fb(x4) << 3) | (fa(x5) << 4));
 
-    x6 = (fa(x1) << 0) | (fb(x2) << 1) | (fb(x3) << 2) | (fb(x4) << 3) | (fa(x5) << 4);
-
-    return fc(x6);
+    return bitn(0x7907287B, (int) x6);
 }
 
 // builds the lfsr for the prng (quick calcs for hitag2_nstep())
@@ -151,9 +144,9 @@ void buildlfsr(Hitag_State *hstate) {
                    ^ (temp >> 42) ^ (temp >> 46);
 }
 
-// convert byte-reversed 8 digit hex to unsigned long
-unsigned long hexreversetoulong(char *hex) {
-    unsigned long ret = 0L;
+// convert byte-reversed 8 digit hex to uint32_t
+uint32_t hexreversetouint32(char *hex) {
+    uint32_t ret = 0;
     unsigned int x;
     char i;
 
@@ -164,14 +157,14 @@ unsigned long hexreversetoulong(char *hex) {
         if (sscanf(hex, "%2X", &x) != 1) {
             return 0L;
         }
-        ret += ((unsigned long) x) << i * 8;
+        ret += ((uint32_t) x) << i * 8;
         hex += 2;
     }
     return ret;
 }
 
-// convert byte-reversed 12 digit hex to unsigned long
-unsigned long long hexreversetoulonglong(char *hex) {
+// convert byte-reversed 12 digit hex to uint64_t
+uint64_t hexreversetouint64(char *hex) {
     char tmp[9];
 
     // this may seem an odd way to do it, but weird compiler issues were
@@ -180,9 +173,9 @@ unsigned long long hexreversetoulonglong(char *hex) {
     tmp[8] = '\0';
     memset(tmp + 4, '0', 4);
     memcpy(tmp, hex + 8, 4);
-    unsigned long long ret = hexreversetoulong(tmp);
+    uint64_t ret = hexreversetouint32(tmp);
     ret <<= 32;
     memcpy(tmp, hex, 8);
-    ret += hexreversetoulong(tmp);
+    ret += hexreversetouint32(tmp);
     return ret;
 }

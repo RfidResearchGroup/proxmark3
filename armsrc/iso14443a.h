@@ -129,6 +129,8 @@ void setHf14aConfig(const hf14a_config_t *hc);
 hf14a_config_t *getHf14aConfig(void);
 void iso14a_set_timeout(uint32_t timeout);
 uint32_t iso14a_get_timeout(void);
+// Rebase absolute reader-transfer schedule after a caller restarts the SSP clock counter.
+void iso14a_rebase_transfer_time(void);
 
 void GetParity(const uint8_t *pbtCmd, uint16_t len, uint8_t *par);
 
@@ -140,33 +142,50 @@ void Uart14aReset(void);
 void Uart14aInit(uint8_t *d, uint16_t n, uint8_t *par);
 RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time);
 RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_time);
+RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit, uint32_t non_real_time);
 
-void RAMFUNC SniffIso14443a(uint8_t param);
-void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uint8_t exitAfterNReads,
-                          uint8_t *ats, size_t ats_len);
+int RAMFUNC SniffIso14443a(uint8_t param);
+void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uint8_t exitAfterNReads);
+
+void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, uint8_t exitAfterNReads,
+                            uint8_t *ats, size_t ats_len,
+                            uint8_t *ulauth_1a1, uint8_t ulauth_1a1_len,
+                            uint8_t *ulauth_1a2, uint8_t ulauth_1a2_len,
+                            bool ulauth_1a2_mirror);
 
 void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
                              uint8_t *ats, size_t ats_len,  uint8_t *aid, size_t aid_len,
                              uint8_t *selectaid_response, size_t selectaid_response_len,
                              uint8_t *getdata_response, size_t getdata_response_len);
 
+void iso14a_set_atqa_sak_override(uint16_t atqa, uint8_t sak);
+uint8_t iso14a_get_pcb_blocknum(void);
+void iso14a_toggle_pcb_blocknum(void);
 bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
-                           uint8_t *ats, size_t ats_len, tag_response_info_t **responses,
-                           uint32_t *cuid, uint32_t counters[3], uint8_t tearings[3], uint8_t *pages);
+                           uint8_t *ats, size_t ats_len,
+                           tag_response_info_t **responses,
+                           uint32_t *cuid, uint8_t *pages,
+                           uint8_t *ulc_key);
 
 bool GetIso14443aCommandFromReader(uint8_t *received, uint16_t received_maxlen, uint8_t *par, int *len);
-void iso14443a_antifuzz(uint32_t flags);
+void iso14443a_antifuzz(uint32_t flags, uint8_t mode);
+int GetATQA(uint8_t *resp, uint16_t resp_len, uint8_t *resp_par, const iso14a_polling_parameters_t *polling_parameters);
 void ReaderIso14443a(PacketCommandNG *c);
 void ReaderTransmit(const uint8_t *frame, uint16_t len, uint32_t *timing);
 void ReaderTransmitBitsPar(const uint8_t *frame, uint16_t bits, uint8_t *par, uint32_t *timing);
 void ReaderTransmitPar(const uint8_t *frame, uint16_t len, uint8_t *par, uint32_t *timing);
 uint16_t ReaderReceive(uint8_t *receivedAnswer, uint16_t answer_maxlen, uint8_t *par);
+uint32_t iso14a_last_tx_end(void);
+uint32_t iso14a_last_rx_start(void);
 
 void iso14443a_setup(uint8_t fpga_minor_mode);
 int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, uint16_t data_len, uint8_t *res);
 int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats);
-int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats, iso14a_polling_parameters_t *polling_parameters);
-int iso14443a_fast_select_card(uint8_t *uid_ptr, uint8_t num_cascades);
+int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr,
+                            bool anticollision, uint8_t num_cascades, bool no_rats,
+                            const iso14a_polling_parameters_t *polling_parameters, bool force_rats);
+int iso14443a_select_card_for_magic(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades);
+int iso14443a_fast_select_card(const uint8_t *uid_ptr, uint8_t num_cascades);
 void iso14a_set_trigger(bool enable);
 
 int EmSendCmd14443aRaw(const uint8_t *resp, uint16_t respLen);
@@ -181,8 +200,9 @@ int EmSendPrecompiledCmd(tag_response_info_t *p_response);
 bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_t **buffer, size_t *max_buffer_size);
 bool prepare_tag_modulation(tag_response_info_t *response_info, size_t max_buffer_size);
 
-bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_StartTime, uint32_t reader_EndTime, uint8_t *reader_Parity,
-                uint8_t *tag_data, uint16_t tag_len, uint32_t tag_StartTime, uint32_t tag_EndTime, uint8_t *tag_Parity);
+bool EmLogTrace(const uint8_t *reader_data, uint16_t reader_len, uint32_t reader_StartTime,
+                uint32_t reader_EndTime, const uint8_t *reader_Parity,  const uint8_t *tag_data,
+                uint16_t tag_len, uint32_t tag_StartTime, uint32_t tag_EndTime, const uint8_t *tag_Parity);
 
 void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype);
 void DetectNACKbug(void);
@@ -191,5 +211,21 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t rec_
 
 extern iso14a_polling_parameters_t WUPA_POLLING_PARAMETERS;
 extern iso14a_polling_parameters_t REQA_POLLING_PARAMETERS;
+
+// Sniffer timing delays (carrier clock cycles), for use by external sniff loops.
+#define DELAY_TAG_AIR2ARM_AS_SNIFFER    (3 + 14 + 8)
+
+// When the PM acts as sniffer and is receiving reader data, it takes
+// 2 ticks delay in analogue RF receiver (for the falling edge of the
+// start bit, which marks the start of the communication)
+// 3 ticks A/D conversion
+// 8 ticks on average until the data is stored in to_arm.
+// + the delays in transferring data - which is the same for
+// sniffing reader and tag data and therefore not relevant
+#define DELAY_READER_AIR2ARM_AS_SNIFFER (2 + 3 + 8)
+
+// Maximum ISO 14443A protocol timeout in field cycles (1/13.56 MHz).
+#define MAX_ISO14A_TIMEOUT 524288
+// this timeout is in MS
 
 #endif /* __ISO14443A_H */

@@ -77,4 +77,35 @@ typedef struct {
 int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose);
 int NDEFRecordsDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen, bool verbose);
 int NDEFGetTotalLength(uint8_t *ndef, size_t ndeflen, size_t *outlen);
+
+// NFC Forum well known types
+#define NDEF_TYPE_URI       "U"
+#define NDEF_TYPE_TEXT      "T"
+
+// Android Application Record,  TNF external
+#define NDEF_ANDROID_AAR    "android.com:pkg"
+
+// Describes one record to be encoded.
+// Field order intentionally matches gst_ndef_record_t in cmdhfgst.c so the two
+// can eventually be folded together.
+typedef struct {
+    TypeNameFormat_t tnf;
+    const uint8_t *type;
+    size_t typeLen;
+    const uint8_t *id;
+    size_t idLen;
+    const uint8_t *payload;
+    size_t payloadLen;
+} NDEFRecordDesc_t;
+
+// payload builders
+int NDEFEncodePayloadURI(const char *uri, uint8_t *buf, size_t bufLen, size_t *outLen);
+int NDEFEncodePayloadText(const char *text, const char *lang, uint8_t *buf, size_t bufLen, size_t *outLen);
+int NDEFEncodePayloadAAR(const char *pkg, uint8_t *buf, size_t bufLen, size_t *outLen);
+
+// record / message / TLV assembly
+int NDEFEncodeRecord(const NDEFRecordDesc_t *rec, bool mb, bool me, uint8_t *buf, size_t bufLen, size_t *outLen);
+int NDEFEncodeMessage(const NDEFRecordDesc_t *recs, size_t count, uint8_t *buf, size_t bufLen, size_t *outLen);
+int NDEFEncodeTLV(const uint8_t *msg, size_t msgLen, uint8_t *buf, size_t bufLen, size_t *outLen);
+
 #endif // _NDEF_H_

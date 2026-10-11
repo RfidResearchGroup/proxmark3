@@ -849,7 +849,7 @@ LZ4_FORCE_INLINE int LZ4HC_compress_generic_internal(
              ctx, src, *srcSizePtr, limit);
 
     if (limit == fillOutput && dstCapacity < 1) return 0;   /* Impossible to store anything */
-    if ((U32)*srcSizePtr > (U32)LZ4_MAX_INPUT_SIZE) return 0;    /* Unsupported input size (too large or negative) */
+    if ((U32) * srcSizePtr > (U32)LZ4_MAX_INPUT_SIZE) return 0;  /* Unsupported input size (too large or negative) */
 
     ctx->end += *srcSizePtr;
     if (cLevel < 1) cLevel = LZ4HC_CLEVEL_DEFAULT;   /* note : convention is different from lz4frame, maybe something to review */

@@ -26,4 +26,6 @@ const char *pm3_grabbed_output_get(pm3 *dev);
 const char *pm3_name_get(pm3 *dev);
 void pm3_close(pm3 *dev);
 pm3 *pm3_get_current_dev(void);
+int pm3_flash(const char *port, const char *const *images, int nimages,
+              bool unlock_bootloader, bool force);
 #endif // LIBPM3_H

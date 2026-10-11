@@ -569,7 +569,7 @@ int demodFDXB(bool verbose) {
 
     if (verbose == false) {
         PROMPT_CLEARLINE;
-        PrintAndLogEx(SUCCESS, "Animal ID........... " _GREEN_("%04u-%012"PRIu64), countryCode, NationalCode);
+        PrintAndLogEx(SUCCESS, "Animal ID........... " _GREEN_("%03u-%012"PRIu64), countryCode, NationalCode);
         return PM3_SUCCESS;
     }
 
@@ -692,7 +692,7 @@ static int CmdFdxBReader(const char *Cmd) {
         lf_read(false, 10000);
         ret = demodFDXB(!cm); // be verbose only if not in continuous mode
 
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
 
 
     if (old_div != curr_div) {
@@ -763,6 +763,11 @@ static int CmdFdxBClone(const char *Cmd) {
     PrintAndLogEx(INFO, "RFU................. 0");
 
     uint8_t *bs = calloc(128, sizeof(uint8_t));
+    if (bs == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
     if (getFDXBBits(national_code, country_code, is_animal, has_extended, extended, bs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         free(bs);

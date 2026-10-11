@@ -23,7 +23,8 @@
 #include "BigBuf.h"
 #include "string.h"
 #include "mifareutil.h"
-#include "fpgaloader.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
 #include "proxmark3_arm.h"
 #include "cmd.h"
 #include "protocols.h"
@@ -32,17 +33,29 @@
 #include "commonutil.h"
 #include "crc16.h"
 #include "dbprint.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "i2c.h"
 #include "i2c_direct.h"
 
-static void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint8_t *output, uint16_t *olen) {
+// Maximum chained ISO 7816-4 GET RESPONSE (61xx) follow-ups before bailing.
+// A misbehaving card that always returns 61xx would otherwise recurse without
+// bound, allocating fresh smart_card_raw_t payloads from BigBuf each time
+// until the device wedges. Eight rounds is more than any legitimate APDU
+// chain would need.
+#define SC_DIRECT_MAX_DEPTH 8
+
+static void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint8_t *output, uint16_t *olen, uint8_t depth) {
     LED_D_ON();
 
     uint16_t len = 0;
-    uint8_t *resp = BigBuf_malloc(ISO7816_MAX_FRAME);
+    uint8_t *resp = BigBuf_calloc(ISO7816_MAX_FRAME);
+    if (resp == NULL) {
+        Dbprintf("SmartCardDirectSend: BigBuf_calloc failed");
+        if (olen) *olen = 0;
+        LEDsoff();
+        return;
+    }
     resp[0] = prepend;
-    // check if alloacted...
     smartcard_command_t flags = p->flags;
 
     if ((flags & SC_LOG) == SC_LOG)
@@ -67,10 +80,17 @@ static void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint
 
     uint32_t wait = SIM_WAIT_DELAY;
 
-    if (((flags & SC_RAW) == SC_RAW) || ((flags & SC_RAW_T0) == SC_RAW_T0)) {
+    if (((flags & SC_RAW) == SC_RAW) ||
+            ((flags & SC_RAW_T0) == SC_RAW_T0) ||
+            ((flags & SC_RAW_T1) == SC_RAW_T1)) {
 
         if ((flags & SC_WAIT) == SC_WAIT) {
-            wait = (uint32_t)((p->wait_delay * 1000) / 3.07);
+            // see the same conversion in SmartCardRaw()
+            uint32_t ms = p->wait_delay;
+            if (ms > I2C_WAIT_MAX_MS) {
+                ms = I2C_WAIT_MAX_MS;
+            }
+            wait = I2C_ITERS_FOR_MS(ms);
         }
 
         LogTrace(p->data, p->len, 0, 0, NULL, true);
@@ -78,12 +98,14 @@ static void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint
         bool res = I2C_BufferWrite(
                        p->data,
                        p->len,
-                       (((flags & SC_RAW_T0) == SC_RAW_T0) ? I2C_DEVICE_CMD_SEND_T0 : I2C_DEVICE_CMD_SEND),
+                       sc_raw_device_cmd(flags),
                        I2C_DEVICE_ADDRESS_MAIN
                    );
 
-        if (res == false && g_dbglevel > 3) {
-            Dbprintf("SmartCardDirectSend: I2C_BufferWrite failed\n");
+        if (res == false) {
+            if (g_dbglevel > 3) {
+                Dbprintf("SmartCardDirectSend: I2C_BufferWrite failed");
+            }
             goto OUT;
         }
 
@@ -98,15 +120,25 @@ static void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint
     }
 
     if (len == 2 && resp[1] == 0x61) {
+
+        if (depth >= SC_DIRECT_MAX_DEPTH) {
+            Dbprintf("SmartCardDirectSend: GET RESPONSE chain depth (%u) exceeded; aborting", depth);
+            goto OUT;
+        }
+
         uint8_t cmd_getresp[] = {0x00, ISO7816_GET_RESPONSE, 0x00, 0x00, resp[2]};
 
         smart_card_raw_t *payload = (smart_card_raw_t *)BigBuf_calloc(sizeof(smart_card_raw_t) + sizeof(cmd_getresp));
+        if (payload == NULL) {
+            Dbprintf("SmartCardDirectSend: GET RESPONSE alloc failed");
+            goto OUT;
+        }
         payload->flags = SC_RAW | SC_LOG;
         payload->len = sizeof(cmd_getresp);
         payload->wait_delay = 0;
         memcpy(payload->data, cmd_getresp, sizeof(cmd_getresp));
 
-        SmartCardDirectSend(prepend, payload, output, olen);
+        SmartCardDirectSend(prepend, payload, output, olen, depth + 1);
     } else if (len == 2) {
         Dbprintf("***** BAD response from card (response unsupported)...");
         Dbhexdump(3, &resp[0], false);
@@ -174,32 +206,20 @@ int CmdSmartRaw(const uint8_t prepend, const uint8_t *data, int dlen, uint8_t *o
     payload->len = dlen;
     memcpy(payload->data, data, dlen);
 
-    payload->flags = SC_LOG;
-    bool active = true;
-    bool active_select = false;
     int timeout = 600;
-    bool use_t0 = true;
 
-    if (active || active_select) {
-        payload->flags |= (SC_CONNECT | SC_CLEARLOG);
-        if (active_select)
-            payload->flags |= SC_SELECT;
-    }
-
+    payload->flags = (SC_LOG | SC_CONNECT | SC_CLEARLOG);
     payload->wait_delay = 0;
+
     if (timeout > -1) {
         payload->flags |= SC_WAIT;
         payload->wait_delay = timeout;
     }
 
     if (dlen > 0) {
-        if (use_t0)
-            payload->flags |= SC_RAW_T0;
-        else
-            payload->flags |= SC_RAW;
+        payload->flags |= SC_RAW_T0;
     }
-
-    SmartCardDirectSend(prepend, payload, output, olen);
+    SmartCardDirectSend(prepend, payload, output, olen, 0);
 
     return PM3_SUCCESS;
 }

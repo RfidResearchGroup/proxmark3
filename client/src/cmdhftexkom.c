@@ -30,6 +30,8 @@
 #include "graph.h"
 
 #define TEXKOM_NOISE_THRESHOLD (10)
+#define TEXKOM_BITSTRING_SIZE   256
+#define TEXKOM_MAX_INTERVALS    (TEXKOM_BITSTRING_SIZE - 1)
 
 static inline uint32_t GetGraphBuffer(uint32_t indx) {
     if (g_GraphBuffer[indx] < -128)
@@ -461,9 +463,9 @@ static int texkom_get_type(texkom_card_select_t *card, bool verbose) {
     }
 
     // decode samples to 8 bytes
-    char bitstring[256] = {0};
+    char bitstring[TEXKOM_BITSTRING_SIZE] = {0};
     char cbitstring[128] = {0};
-    char genbitstring[256] = {0};
+    char genbitstring[TEXKOM_BITSTRING_SIZE] = {0};
     int found = TexkomModError;
     uint32_t sindx = 0;
 
@@ -493,7 +495,7 @@ static int texkom_get_type(texkom_card_select_t *card, bool verbose) {
             noiselvl = TEXKOM_NOISE_THRESHOLD;
         }
 
-        uint32_t implengths[256] = { 0 };
+        uint32_t implengths[TEXKOM_BITSTRING_SIZE] = { 0 };
         uint32_t implengthslen = 0;
         uint32_t impulseindx = 0;
         uint32_t impulsecnt = 0;
@@ -502,7 +504,7 @@ static int texkom_get_type(texkom_card_select_t *card, bool verbose) {
                 impulsecnt++;
 
                 if (impulseindx != 0) {
-                    if (implengthslen < 256) {
+                    if (implengthslen < TEXKOM_MAX_INTERVALS) {
                         implengths[implengthslen++] = sindx + i - impulseindx;
                     }
                 }
@@ -623,7 +625,7 @@ int read_texkom_uid(bool loop, bool verbose) {
             }
         }
 
-    } while (loop && kbd_enter_pressed() == false);
+    } while (loop && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }
@@ -664,7 +666,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
         SendCommandNG(CMD_HF_ACQ_RAW_ADC, (uint8_t *)&samplesCount, sizeof(uint32_t));
 
         PacketResponseNG resp;
-        if (!WaitForResponseTimeout(CMD_HF_ACQ_RAW_ADC, &resp, 2500)) {
+        if (WaitForResponseTimeout(CMD_HF_ACQ_RAW_ADC, &resp, 2500) == false) {
             PrintAndLogEx(WARNING, "command execution time out");
             return PM3_ETIMEOUT;
         }
@@ -678,9 +680,9 @@ static int CmdHFTexkomReader(const char *Cmd) {
         }
     }
 
-    char bitstring[256] = {0};
+    char bitstring[TEXKOM_BITSTRING_SIZE] = {0};
     char cbitstring[128] = {0};
-    char genbitstring[256] = {0};
+    char genbitstring[TEXKOM_BITSTRING_SIZE] = {0};
     int codefound = TexkomModError;
     uint32_t sindx = 0;
     while (sindx < samplesCount - 5) {
@@ -707,7 +709,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
 
         //PrintAndLogEx(WARNING, "--- indx: %d, len: %d, max: %d, noise: %d", sindx, slen, maxlvl, noiselvl);
 
-        uint32_t implengths[256] = { 0 };
+        uint32_t implengths[TEXKOM_BITSTRING_SIZE] = { 0 };
         uint32_t implengthslen = 0;
         uint32_t impulseindx = 0;
         uint32_t impulsecnt = 0;
@@ -716,7 +718,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
                 impulsecnt++;
 
                 if (impulseindx != 0) {
-                    if (implengthslen < 256)
+                    if (implengthslen < TEXKOM_MAX_INTERVALS)
                         implengths[implengthslen++] = sindx + i - impulseindx;
                 }
                 impulseindx = sindx + i;

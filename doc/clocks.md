@@ -118,7 +118,8 @@ Characteristics:
 
 * 1 kHz, 32b (49 days), if used with 16b: 65s
 * Configured at boot (or TIA) with `StartTickCount()`
-* Time events with `GetTickCount()`/`GetTickCountDeltaDelta()`, see example
+* Time events with `GetTickCount()`/`GetTickCountDelta()`, see example
+* Each change in configuration of the clock increments the label value, retrievable through `GetTickCountLabel()`
 * Coarse, based on the ~32kHz RC slow clock with some adjustment factor computed by TIA
 * Maybe 2.5% error, can increase if temperature conditions change and no TIA is recomputed
 * If TimingIntervalAcquisition() is called later, StartTickCount() is called again and RTC is reset
@@ -131,12 +132,24 @@ uint32_t ti = GetTickCount();
 uint32_t delta = GetTickCountDelta(ti);
 ```
 
+If `StartTickCount()` may run between two reads (e.g. via TIA), pair tick with a label:
+
+```
+uint32_t label = GetTickCountLabel();
+uint32_t ti = GetTickCount();
+...do stuff...
+if (label == GetTickCountLabel()) {
+    uint32_t delta = GetTickCountDelta(ti);
+}
+```
+
 Current usages:
 
 * cheap random for nonces, e.g. `prng_successor(GetTickCount(), 32)`
 * rough timing of some operations, only for informative purposes
 * timeouts
 * USB connection speed measure
+* Optional HF field inactivity timeout
 
 ## Occasional PWM timer
 ^[Top](#top)
@@ -147,8 +160,15 @@ Current usages:
 
 Busy wait based on 46.875 kHz PWM Channel 0
 
-* 21.3 us precision and maximum 1.39 s
-* *Precision* variant: 0.7 us precision and maximum 43 ms
+* 21.3 us precision, no upper bound on the delay
+* *Precision* variant: 0.7 us precision, no upper bound on the delay
+
+Both used to truncate their tick count into the 16 bit PWM counter and so
+returned early past those two limits without saying so: a requested 60 ms
+`SpinDelayUsPrecision()` measured 17.5 ms on an RDV4, and `hw tearoff --delay`
+accepts values right across that boundary. Longer waits are now walked in
+chunks of half a counter period. `SpinDelay()` still clamps its own argument at
+1390 ms and complains above that.
 
 ## Occasional TC0+TC1 / CountUS functions
 ^[Top](#top)

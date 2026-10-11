@@ -22,5 +22,6 @@
 #include "common.h"
 
 int CmdScript(const char *Cmd);
+void CmdScriptCleanup(void);
 
 #endif

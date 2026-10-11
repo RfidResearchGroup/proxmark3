@@ -113,6 +113,14 @@ endif
 ifneq (,$(findstring WITH_STANDALONE_HF_CRAFTBYTE,$(APP_CFLAGS)))
     SRC_STANDALONE = hf_craftbyte.c
 endif
+# WITH_STANDALONE_HF_DOEGOX_AUTH0
+ifneq (,$(findstring WITH_STANDALONE_HF_DOEGOX_AUTH0,$(APP_CFLAGS)))
+    SRC_STANDALONE = hf_doegox_auth0.c
+endif
+# WITH_STANDALONE_HF_DOEGOX_COMMIT
+ifneq (,$(findstring WITH_STANDALONE_HF_DOEGOX_COMMIT,$(APP_CFLAGS)))
+    SRC_STANDALONE = hf_doegox_commit.c
+endif
 # WITH_STANDALONE_HF_ICECLASS
 ifneq (,$(findstring WITH_STANDALONE_HF_ICECLASS,$(APP_CFLAGS)))
     SRC_STANDALONE = hf_iceclass.c
@@ -120,6 +128,10 @@ endif
 # WITH_STANDALONE_HF_LEGIC
 ifneq (,$(findstring WITH_STANDALONE_HF_LEGIC,$(APP_CFLAGS)))
    SRC_STANDALONE = hf_legic.c
+endif
+# WITH_STANDALONE_HF_LEGIC_RDV4
+ifneq (,$(findstring WITH_STANDALONE_HF_LEGIC_RDV4,$(APP_CFLAGS)))
+   SRC_STANDALONE = hf_legic_rdv4.c
 endif
 # WITH_STANDALONE_HF_LEGICSIM
 ifneq (,$(findstring WITH_STANDALONE_HF_LEGICSIM,$(APP_CFLAGS)))
@@ -160,6 +172,10 @@ endif
 # WITH_STANDALONE_HF_ST25_TEAROFF
 ifneq (,$(findstring WITH_STANDALONE_HF_ST25_TEAROFF,$(APP_CFLAGS)))
     SRC_STANDALONE = hf_st25_tearoff.c
+endif
+# WITH_STANDALONE_HF_EMVPNG
+ifneq (,$(findstring WITH_STANDALONE_HF_EMVPNG,$(APP_CFLAGS)))
+    SRC_STANDALONE = hf_emvpng.c
 endif
 
 ifneq (,$(findstring WITH_STANDALONE_DANKARMULTI,$(APP_CFLAGS)))

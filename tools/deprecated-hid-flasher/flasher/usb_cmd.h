@@ -63,7 +63,7 @@ typedef struct {
 #define CMD_FLASHMEM_WIPE                                                 0x0122
 #define CMD_FLASHMEM_DOWNLOAD                                             0x0123
 #define CMD_FLASHMEM_DOWNLOADED                                           0x0124
-#define CMD_FLASHMEM_INFO                                                 0x0125
+#define CMD_FLASHMEM_GET_ID                                               0x0125
 
 // For low-frequency tags
 #define CMD_LF_TI_READ                                                    0x0202
@@ -195,10 +195,11 @@ typedef struct {
 #define CMD_HF_MIFARE_SETMOD                                              0x0624
 
 #define CMD_HF_MIFARE_SNIFF                                               0x0630
-//ultralightC
-#define CMD_HF_MIFAREUC_AUTH                                              0x0724
-//0x0725 and 0x0726 no longer used
-#define CMD_HF_MIFAREUC_SETPWD                                            0x0727
+// ultralight-C & AES
+#define CMD_HF_MIFAREU3P_AUTH                                             0x0724
+// 0x0725 is free
+#define CMD_HF_MIFAREU3P_CHKKEY                                           0x0726
+#define CMD_HF_MIFAREU_SETKEY                                             0x0727
 
 
 // mifare desfire

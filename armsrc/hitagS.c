@@ -24,8 +24,9 @@
 #include "proxmark3_arm.h"
 #include "cmd.h"
 #include "BigBuf.h"
-#include "fpgaloader.h"
-#include "ticks.h"
+#include "fpga_loader.h"
+#include "fpga_apis.h"
+#include "ticks_apis.h"
 #include "dbprint.h"
 #include "util.h"
 #include "string.h"
@@ -56,7 +57,7 @@ static int block_data_left = 0;
 static bool enable_page_tearoff = false;
 
 static uint8_t protocol_mode = HITAGS_UID_REQ_ADV1;
-static MOD m = AC2K;                                // used modulation
+static hitag_mod_t m = AC2K;                                // used modulation
 static uint32_t reader_selected_uid;
 static int rotate_uid = 0;
 static int sof_bits;                                // number of start-of-frame bits
@@ -86,7 +87,7 @@ datasheet HitagS_V11.pdf bytes in tables printed 3 2 1 0
 #define ht2bs_5c(a,b,c,d,e) (~((((((c^e)|d)&a)^b)&(c^b))^(((d^e)|a)&((d^b)|c))))
 
 static void update_tag_max_page(void) {
-    //check which memorysize this tag has
+    // check which memorysize this tag has
     if (tag.data.s.config.MEMT == 0x00) {
         tag.max_page = 32 / (HITAGS_PAGE_SIZE * 8) - 1;
     } else if (tag.data.s.config.MEMT == 0x1) {
@@ -164,7 +165,7 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
     // Try to find out which command was send by selecting on length (in bits)
     switch (rxlen) {
         case 5: {
-            //UID request with a selected response protocol mode
+            // UID request with a selected response protocol mode
             DBG Dbprintf("UID request: length: %i first byte: %02x", rxlen, rx[0]);
             tag.pstate = HT_READY;
             tag.tstate = HT_NO_OP;
@@ -187,22 +188,22 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
         }
         // case 14 to 44 AC SEQUENCE
         case 45: {
-            //select command from reader received
+            // select command from reader received
             DBG DbpString("SELECT");
 
             if ((rx[0] & 0xf8) == HITAGS_SELECT && check_select(rx, BSWAP_32(tag.data.s.uid_le)) == 1) {
                 DBG DbpString("SELECT match");
 
-                //if the right tag was selected
+                // if the right tag was selected
                 *txlen = 32;
 
-                //send configuration
+                // send configuration
                 memcpy(tx, tag.data.pages[HITAGS_CONFIG_PADR], HITAGS_PAGE_SIZE - 1);
 
                 tx[3] = 0xff;
 
                 if (protocol_mode != HITAGS_UID_REQ_STD) {
-                    //add crc8
+                    // add crc8
                     crc = CRC8Hitag1Bits(tx, 32);
                     *txlen += 8;
                     tx[4] = crc;
@@ -211,7 +212,7 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
             break;
         }
         case 64: {
-            //challenge message received
+            // challenge message received
             DBG Dbprintf("Challenge for UID: %X", reader_selected_uid);
 
             rotate_uid++;
@@ -261,7 +262,7 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
         case 40: {
             DBG Dbprintf("WRITE DATA");
 
-            //data received to be written
+            // data received to be written
             if (tag.tstate == HT_WRITING_PAGE_DATA) {
                 tag.tstate = HT_NO_OP;
                 memcpy(tag.data.pages[page_to_be_written], rx, HITAGS_PAGE_SIZE);
@@ -272,7 +273,7 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
 
             } else if (tag.tstate == HT_WRITING_BLOCK_DATA) {
                 memcpy(tag.data.pages[page_to_be_written], rx, HITAGS_PAGE_SIZE);
-                //send ack
+                // send ack
                 *txlen = 2;
                 tx[0] = 0x40;
                 page_to_be_written++;
@@ -286,7 +287,7 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
             break;
         }
         case 20: {
-            //write page, write block, read page or read block command received
+            // write page, write block, read page or read block command received
             uint8_t page = ((rx[0] & 0x0f) << 4) + ((rx[1] & 0xf0) >> 4);
             // TODO: handle over max_page readonly to 00000000. 82xx mode
             if (page > tag.max_page) {
@@ -294,8 +295,8 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
                 break;
             }
 
-            if ((rx[0] & 0xf0) == HITAGS_READ_PAGE) { //read page
-                //send page data
+            if ((rx[0] & 0xf0) == HITAGS_READ_PAGE) { // read page
+                // send page data
                 *txlen = 32;
                 memcpy(tx, tag.data.pages[page], HITAGS_PAGE_SIZE);
 
@@ -304,53 +305,53 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
                 }
 
                 if (protocol_mode != HITAGS_UID_REQ_STD) {
-                    //add crc8
+                    // add crc8
                     crc = CRC8Hitag1Bits(tx, 32);
                     *txlen += 8;
                     tx[4] = crc;
                 }
 
                 if (tag.data.s.config.auth && tag.data.s.config.LKP && (page == 2 || page == 3)) {
-                    //if reader asks for key or password and the LKP-mark is set do not respond
+                    // if reader asks for key or password and the LKP-mark is set do not respond
                     *txlen = 0;
                 }
 
-            } else if ((rx[0] & 0xf0) == HITAGS_READ_BLOCK) { //read block
+            } else if ((rx[0] & 0xf0) == HITAGS_READ_BLOCK) { // read block
                 // TODO: handle auth LKP
                 *txlen = (HITAGS_BLOCK_SIZE - (page % 4) * HITAGS_PAGE_SIZE) * 8;
 
-                //send page,...,page+3 data
+                // send page,...,page+3 data
                 memcpy(tx, tag.data.pages[page], *txlen / 8);
 
                 if (protocol_mode != HITAGS_UID_REQ_STD) {
-                    //add crc8
+                    // add crc8
                     crc = CRC8Hitag1Bits(tx, *txlen);
                     *txlen += 8;
                     tx[16] = crc;
                 }
 
-            } else if ((rx[0] & 0xf0) == HITAGS_WRITE_PAGE) { //write page
+            } else if ((rx[0] & 0xf0) == HITAGS_WRITE_PAGE) { // write page
                 // TODO: handle con2 LCK*
                 if ((tag.data.s.config.LCON && page == 1)
                         || (tag.data.s.config.LKP && (page == 2 || page == 3))) {
-                    //deny
+                    // deny
                     *txlen = 0;
                 } else {
-                    //allow
+                    // allow
                     *txlen = 2;
                     tx[0] = 0x40;
                     page_to_be_written = page;
                     tag.tstate = HT_WRITING_PAGE_DATA;
                 }
 
-            } else if ((rx[0] & 0xf0) == HITAGS_WRITE_BLOCK) { //write block
+            } else if ((rx[0] & 0xf0) == HITAGS_WRITE_BLOCK) { // write block
                 // TODO: handle LCON con2 LCK*
                 if ((tag.data.s.config.LCON && page == 1)
                         || (tag.data.s.config.LKP && (page == 2 || page == 3))) {
-                    //deny
+                    // deny
                     *txlen = 0;
                 } else {
-                    //allow
+                    // allow
                     *txlen = 2;
                     tx[0] = 0x40;
                     page_to_be_written = page;
@@ -370,28 +371,39 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
 /*
  * Emulates a Hitag S Tag with the given data from the .hts file
  */
-void hts_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, bool ledcontrol) {
+void hts_simulate(int8_t threshold, bool ledcontrol) {
     int overflow = 0;
     uint8_t rx[HITAG_FRAME_LEN] = {0};
     size_t rxlen = 0;
     uint8_t tx[HITAG_FRAME_LEN];
     size_t txlen = 0;
 
-    // free eventually allocated BigBuf memory
-    BigBuf_free();
-    BigBuf_Clear_ext(false);
+    // keep emulator memory, that is where eload put the tag content
+    BigBuf_free_keep_EM();
+    BigBuf_Clear_keep_EM();
 
     DbpString("Starting Hitag S simulation");
 
     tag.pstate = HT_READY;
     tag.tstate = HT_NO_OP;
 
-    // read tag data into memory
-    if (tag_mem_supplied) {
-        DbpString("Loading hitag S memory...");
-        memcpy(tag.data.pages, data, HITAGS_MAX_BYTE_SIZE);
+    // Take the tag content from emulator memory, where `lf hitag eload -s` put
+    // it.  An all-zero emulator memory means nothing was loaded, so keep whatever
+    // the last read left behind rather than simulating a tag of all zeroes.
+    uint8_t *em = BigBuf_get_EM_addr();
+    bool em_empty = true;
+    for (size_t i = 0; i < HITAGS_MAX_BYTE_SIZE; i++) {
+        if (em[i] != 0) {
+            em_empty = false;
+            break;
+        }
+    }
+
+    if (em_empty) {
+        DbpString("Emulator memory is empty, simulating the last read tag");
     } else {
-        // use the last read tag
+        DbpString("Loading Hitag S memory from emulator memory...");
+        memcpy(tag.data.pages, em, HITAGS_MAX_BYTE_SIZE);
     }
 
     // max_page
@@ -423,7 +435,7 @@ void hts_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
             LogTraceBits(rx, rxlen, start_time, TIMESTAMP, true);
 
             // Disable timer 1 with external trigger to avoid triggers during our own modulation
-            AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+            StopLoEdgeCapture();
 
             // Process the incoming frame (rx) and prepare the outgoing frame (tx)
             hts_handle_reader_command(rx, rxlen, tx, &txlen);
@@ -433,7 +445,7 @@ void hts_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
             // with respect to the falling edge, we need to wait actually (T_Wait1 - T_Low)
             // periods. The gap time T_Low varies (4..10). All timer values are in
             // terms of T0 units
-            while (AT91C_BASE_TC0->TC_CV < T0 * (HITAG_T_WAIT_RESP - HITAG_T_LOW)) {};
+            while (GetPrecisionCounter() < T0 * (HITAG_T_WAIT_RESP - HITAG_T_LOW)) {};
 
             // Send and store the tag answer (if there is any)
             if (txlen > 0) {
@@ -444,7 +456,7 @@ void hts_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
             }
 
             // Enable and reset external trigger in timer for capturing future frames
-            AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+            EnableLoEdgeCapture();
 
             // Reset the received frame and response timing info
             memset(rx, 0x00, sizeof(rx));
@@ -454,15 +466,15 @@ void hts_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, 
         // Reset the frame length
         rxlen = 0;
         // Save the timer overflow, will be 0 when frame was received
-        overflow += (AT91C_BASE_TC1->TC_CV / T0);
+        overflow += (GetLoEdgeCaptureCount() / T0);
         // Reset the timer to restart while-loop that receives frames
-        AT91C_BASE_TC1->TC_CCR = AT91C_TC_SWTRG;
+        ResetLoEdgeCapture();
 
     }
 
     hitag_cleanup(ledcontrol);
-    // release allocated memory from BigBuff.
-    BigBuf_free();
+    // release BigBuf, but keep emulator memory for eview / esave
+    BigBuf_free_keep_EM();
 
     DbpString("Sim stopped");
 }
@@ -472,7 +484,7 @@ static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t
 
     // Send and store the reader command
     // Disable timer 1 with external trigger to avoid triggers during our own modulation
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+    StopLoEdgeCapture();
 
     DBG Dbprintf("tx %d bits:", txlen);
     DBG Dbhexdump((txlen + 7) / 8, tx, false);
@@ -482,7 +494,7 @@ static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t
     // falling edge occurred halfway the period. with respect to this falling edge,
     // we need to wait (T_Wait2 + half_tag_period) when the last was a 'one'.
     // All timer values are in terms of T0 units
-    while (AT91C_BASE_TC0->TC_CV < T0 * t_wait) {};
+    while (GetPrecisionCounter() < T0 * t_wait) {};
 
     start_time = TIMESTAMP;
 
@@ -496,7 +508,7 @@ static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t
     LogTraceBits(tx, txlen, start_time, TIMESTAMP, true);
 
     // Enable and reset external trigger in timer for capturing future frames
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+    EnableLoEdgeCapture();
 
     hts_set_frame_modulation(protocol_mode, ac_seq);
 
@@ -665,11 +677,11 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
             return -8;
         }
 
-        //encrypted con2,password received.
+        // encrypted con2,password received.
         DBG Dbprintf("UID... %08X", BSWAP_32(tag.data.s.uid_le));
         DBG Dbprintf("RND... %02X%02X%02X%02X", rnd[0], rnd[1], rnd[2], rnd[3]);
 
-        //decrypt password
+        // decrypt password
         pwdh0 = 0;
         pwdl0 = 0;
         pwdl1 = 0;
@@ -702,14 +714,14 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
 
     uint8_t rx[HITAG_FRAME_LEN] = { 0x00 };
     uint8_t tx[HITAG_FRAME_LEN] = { 0x00 };
+    lf_hts_read_response_t card = {0};
 
-    int status = PM3_SUCCESS, reason = -1;
-    reason = hts_select_tag(payload, tx, ARRAYLEN(tx), rx, ARRAYLEN(rx), HITAG_T_WAIT_FIRST, ledcontrol);
+    int status = PM3_SUCCESS;
+    int reason = hts_select_tag(payload, tx, ARRAYLEN(tx), rx, ARRAYLEN(rx), HITAG_T_WAIT_FIRST, ledcontrol);
     if (reason != 0) {
         status = PM3_ERFTRANS;
         goto read_end;
     }
-
 
     if (payload->page >= tag.max_page) {
         DBG Dbprintf("Warning, read page "_YELLOW_("%d") " > max page("_YELLOW_("%d") ") ", payload->page, tag.max_page);
@@ -717,7 +729,6 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
 
     int page_addr = payload->page;
     int page_index = 0;
-    lf_hts_read_response_t card = {0};
 
     memcpy(card.config_page.asBytes, tag.data.pages[HITAGS_CONFIG_PADR], HITAGS_PAGE_SIZE);
 
@@ -733,7 +744,7 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
 
         size_t rxlen = 0;
 
-        //send read request
+        // send read request
         size_t txlen = 0;
         uint8_t cmd = HITAGS_READ_PAGE;
         txlen = concatbits(tx, txlen, &cmd, 0, 4, false);
@@ -754,7 +765,7 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
             continue;
         }
 
-        //save received data - 40 bits
+        // save received data - 40 bits
         memcpy(card.pages[page_index], rx, HITAGS_PAGE_SIZE);
 
         if (g_dbglevel >= DBG_EXTENDED) {
@@ -775,7 +786,7 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
 
         page_addr++;
         page_index++;
-        //display key and password if possible
+        // display key and password if possible
         if (page_addr == 2 && card.config_page.s.auth == 1 && card.config_page.s.LKP) {
             if (payload->cmd == HTSF_KEY) {
                 DBG Dbprintf("Page[ 2]: %02X %02X %02X %02X",
@@ -793,7 +804,7 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
                 card.pages_reason[page_index++] = 1;
                 card.pages_reason[page_index++] = 1;
             } else {
-                //if the authentication is done with a challenge the key and password are unknown
+                // if the authentication is done with a challenge the key and password are unknown
                 DBG Dbprintf("Page[ 2]: __ __ __ __");
                 DBG Dbprintf("Page[ 3]: __ __ __ __");
                 card.pages_reason[page_index++] = -11;
@@ -815,7 +826,7 @@ read_end:
  */
 void hts_write_page(const lf_hitag_data_t *payload, bool ledcontrol) {
 
-    //check for valid input
+    // check for valid input
     if (payload->page == 0) {
         DBG Dbprintf("Warning, write page 0");
     }
@@ -833,13 +844,13 @@ void hts_write_page(const lf_hitag_data_t *payload, bool ledcontrol) {
         goto write_end;
     }
 
-    //check if the given page exists
+    // check if the given page exists
     if (payload->page > tag.max_page) {
         DBG Dbprintf("Warning, page number too large");
         // 82xx CON0 is fully modifiable
     }
 
-    //send write page request
+    // send write page request
     txlen = 0;
 
     uint8_t cmd = HITAGS_WRITE_PAGE;
@@ -947,7 +958,7 @@ int hts_read_uid(uint32_t *uid, bool ledcontrol, bool send_answer) {
  */
 void hts_check_challenges(const uint8_t *data, uint32_t datalen, bool ledcontrol) {
 
-    //check for valid input
+    // check for valid input
     if (datalen < 8) {
         DBG Dbprintf("Error, missing challenges");
         reply_ng(CMD_LF_HITAGS_TEST_TRACES, PM3_EINVARG, NULL, 0);

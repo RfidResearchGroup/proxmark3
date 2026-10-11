@@ -13,6 +13,24 @@
  *
  * See LICENSE.txt for the text of the license.
  *-----------------------------------------------------------------------------
+ * Memory Layout:
+ *                SRAM START
+ *            ┌─────────────────┐
+ *            │     .data       │
+ *            ├─────────────────┤
+ *            │                 │ ← __bss_start__
+ *            │     .bss        │ ← __bss_end__
+ *            ├─────────────────┤
+ *            │                 │
+ *            │     unused      │ ← BigBuf
+ *            │                 │
+ *            ├─────────────────┤
+ *            │                 │ ← _stack_start
+ *            │     stack       │ ← _stack_end
+ *            ├─────────────────┤
+ *            │   commonarea    │ ← proxmark3_arm.h & common_area_t
+ *            └─────────────────┘
+ *                 SRAM END
  *-----------------------------------------------------------------------------
  * Common linker script
  *-----------------------------------------------------------------------------
@@ -20,18 +38,25 @@
 stacksize = DEFINED(stacksize) ? stacksize : 8488;
 commonareasize = 0x20;
 
-/* AT91SAM7S256 has 256k Flash and 64k RAM */
-/* AT91SAM7S512 has 512k Flash and 64k RAM */
-/* boot space = 8192bytes (0x2000) */
-/* osimage space =   (512k - 0x2000 == 524288 - 8192 == 516096bytes == 0x7E000 ) */
 MEMORY
 {
-    bootphase1 : ORIGIN = 0x00100000, LENGTH = 0x200                                        /* Phase 1 bootloader: Copies real bootloader to RAM */
-    bootphase2 : ORIGIN = 0x00100200, LENGTH = 0x2000 - 0x200                               /* Main bootloader code, stored in Flash, executed from RAM */
-    osimage    : ORIGIN = 0x00102000, LENGTH = 512K - 0x2000                                /* Place where the main OS will end up */
-    ram        : ORIGIN = 0x00200000, LENGTH = 64K - commonareasize                         /* RAM, minus small common area */
-    stack      : ORIGIN = 0x00200000 + 64K - stacksize - commonareasize, LENGTH = stacksize /* Stack */
-    commonarea : ORIGIN = 0x00200000 + 64K - commonareasize, LENGTH = commonareasize        /* Communication between bootloader and main OS */
+    /* Phase 1 bootloader: Copies real bootloader to RAM */
+    bootphase1 : ORIGIN = mcu_flash_base_addr                                             , LENGTH = bootphase1_size
+
+    /* Main bootloader code, stored in Flash, run in RAM */
+    bootphase2 : ORIGIN = mcu_flash_base_addr + bootphase1_size                           , LENGTH = bootphase2_size
+
+    /* Place where the main OS will end up */
+    osimage    : ORIGIN = os_image_origin                                                 , LENGTH = os_image_size
+
+    /* RAM, minus small common area */
+    ram        : ORIGIN = mcu_sram_base_addr                                              , LENGTH = mcu_sram_size - commonareasize
+
+    /* Stack */
+    stack      : ORIGIN = mcu_sram_base_addr + mcu_sram_size - stacksize - commonareasize , LENGTH = stacksize
+
+    /* Communication between bootloader and main OS */
+    commonarea : ORIGIN = mcu_sram_base_addr + mcu_sram_size - commonareasize             , LENGTH = commonareasize
 }
 
 /* Export some information that can be used from within the firmware */

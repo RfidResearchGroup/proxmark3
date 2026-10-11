@@ -32,6 +32,26 @@
 // Option width set to 30 to allow option descriptions to align.  approx line 74
 // Example width set to 50 to allow help descriptions to align.  approx line 93
 
+static void expand_tilde_path(const char *src, char *dst, size_t dst_len) {
+    if (src == NULL || dst == NULL || dst_len == 0) {
+        return;
+    }
+
+    const char *home = getenv("HOME");
+#ifdef _WIN32
+    if (home == NULL) {
+        home = getenv("USERPROFILE");
+    }
+#endif
+
+    if (home != NULL && src[0] == '~' && (src[1] == '\0' || src[1] == '/' || src[1] == '\\')) {
+        snprintf(dst, dst_len, "%s%s", home, src + 1);
+        return;
+    }
+
+    snprintf(dst, dst_len, "%s", src);
+}
+
 int CLIParserInit(CLIParserContext **ctx, const char *vprogramName, const char *vprogramHint, const char *vprogramHelp) {
     *ctx = calloc(sizeof(CLIParserContext), sizeof(uint8_t));
     if (*ctx == NULL) {
@@ -327,7 +347,16 @@ int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
             return 2;
         }
 
-        memcpy(&tmpstr[ibuf], argstr->sval[i], len);
+        char expanded[MAX_INPUT_ARG_LENGTH + 1] = {0};
+        expand_tilde_path(argstr->sval[i], expanded, sizeof(expanded));
+
+        len = strlen(expanded);
+        if (len > ((sizeof(tmpstr) / 2) - ibuf)) {
+            PrintAndLogEx(ERR, "Parameter error: string too long (%i chars), expect MAX %zu chars\n", len + ibuf, (sizeof(tmpstr) / 2));
+            return 2;
+        }
+
+        memcpy(&tmpstr[ibuf], expanded, len);
 
         ibuf += len;
     }
@@ -475,4 +504,3 @@ int arg_get_u32_hexstr_def_nlen(CLIParserContext *ctx, uint8_t paramnum, uint32_
     }
     return 0;
 }
-

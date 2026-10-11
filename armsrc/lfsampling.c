@@ -20,14 +20,16 @@
 
 #include "proxmark3_arm.h"
 #include "BigBuf.h"
-#include "fpgaloader.h"
-#include "ticks.h"
+#include "fpga_loader.h"
+#include "ticks_apis.h"
+#include "fpga_apis.h"
 #include "dbprint.h"
 #include "util.h"
 #include "lfdemod.h"
 #include "string.h"  // memset
 #include "appmain.h" // print stack
-#include "usb_cdc.h" // real-time sampling
+#include "usb_cdc_apis.h"
+#include "lfops.h"
 
 /*
 Default LF config is set to:
@@ -149,7 +151,12 @@ void initSampleBufferEx(uint32_t *sample_size, bool use_malloc) {
             data.buffer = BigBuf_get_addr();
         } else {
             *sample_size = MIN(*sample_size, BigBuf_max_traceLen());
-            data.buffer = BigBuf_malloc(*sample_size);
+            data.buffer = BigBuf_calloc(*sample_size);
+            if (data.buffer == NULL) {
+                Dbprintf("Failed to allocate memory, using whole BigBuf");
+                *sample_size = BigBuf_max_traceLen();
+                data.buffer = BigBuf_get_addr();
+            }
         }
 
     } else {
@@ -272,7 +279,7 @@ void LFSetupFPGAForADC(int divisor, bool reader_field) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | (reader_field ? FPGA_LF_ADC_READER_FIELD : 0));
 
     // Connect the A/D to the peak-detected low-frequency path.
-    SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+    SetAdcMuxFor(ADC_MUXSEL_LOPKD);
 
     // Now set up the SSC to get the ADC samples that are now streaming at us.
     FpgaSetupSsc(FPGA_MAJOR_MODE_LF_READER);
@@ -334,12 +341,12 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
 
         WDT_HIT();
 
-        if (ledcontrol && (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY)) {
+        if (ledcontrol && FPGA_SSC_TX_Ready()) {
             LED_D_ON();
         }
 
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
-            volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_RX_Ready()) {
+            volatile uint8_t sample = (uint8_t)FPGA_SSC_RX_Value();
 
             // (RDV4) Test point 8 (TP8) can be used to trigger oscilloscope
             if (ledcontrol) LED_D_OFF();
@@ -398,6 +405,7 @@ uint32_t DoAcquisition(uint8_t decimation, uint8_t bits_per_sample, bool avg, in
 uint32_t DoAcquisition_default(int trigger_threshold, bool verbose, bool ledcontrol) {
     return DoAcquisition(1, 8, 0, trigger_threshold, verbose, 0, 0, 0, ledcontrol);
 }
+
 uint32_t DoAcquisition_config(bool verbose, uint32_t sample_size, bool ledcontrol) {
     return DoAcquisition(config.decimation
                          , config.bits_per_sample
@@ -422,9 +430,11 @@ uint32_t DoPartialAcquisition(int trigger_threshold, bool verbose, uint32_t samp
                          , ledcontrol);  // samples to skip
 }
 
-static uint32_t ReadLF(bool reader_field, bool verbose, uint32_t sample_size, bool ledcontrol) {
+static uint32_t ReadLF(bool reader_field, bool verbose, uint32_t sample_size, bool ledcontrol, bool cotag) {
     if (verbose)
         printLFConfig();
+
+    if (cotag) cotag_start_pulse();
 
     LFSetupFPGAForADC(config.divisor, reader_field);
     uint32_t ret = DoAcquisition_config(verbose, sample_size, ledcontrol);
@@ -437,9 +447,9 @@ static uint32_t ReadLF(bool reader_field, bool verbose, uint32_t sample_size, bo
 * Initializes the FPGA for reader-mode (field on), and acquires the samples.
 * @return number of bits sampled
 **/
-uint32_t SampleLF(bool verbose, uint32_t sample_size, bool ledcontrol) {
+uint32_t SampleLF(bool verbose, uint32_t sample_size, bool ledcontrol, bool cotag) {
     BigBuf_Clear_ext(false);
-    return ReadLF(true, verbose, sample_size, ledcontrol);
+    return ReadLF(true, verbose, sample_size, ledcontrol, cotag);
 }
 
 /**
@@ -450,7 +460,12 @@ uint32_t SampleLF(bool verbose, uint32_t sample_size, bool ledcontrol) {
  * @param reader_field - true for reading tags, false for sniffing
  * @return sampling result
 **/
-int ReadLF_realtime(bool reader_field) {
+
+// how long the host is given to collect a streamed USB packet before the link is declared dead?
+// ticks run at 1.5MHz,  about 100ms
+#define LF_REALTIME_USB_TIMEOUT  (100 * 1500)
+
+int ReadLF_realtime(bool reader_field, bool cotag, uint32_t sample_limit) {
     // parameters from config and constants
     const uint8_t bits_per_sample = config.bits_per_sample;
     const int16_t trigger_threshold = config.trigger_threshold;
@@ -464,10 +479,14 @@ int ReadLF_realtime(bool reader_field) {
     uint8_t last_byte = 0;
     uint8_t curr_byte = 0;
     int return_value = PM3_SUCCESS;
+    // Total samples streamed so far
+    uint32_t total_logged = 0;
 
-    uint32_t sample_buffer_len = AT91C_USB_EP_IN_SIZE;
+    uint32_t usb_buffer_len = 0, sample_buffer_len;
+    usb_get_ep_size(NULL, &usb_buffer_len, NULL);
+    sample_buffer_len = usb_buffer_len; // If sample_buffer_len is not specified, a buffer of random length may be requested.
     initSampleBuffer(&sample_buffer_len);
-    if (sample_buffer_len != AT91C_USB_EP_IN_SIZE) {
+    if (sample_buffer_len != usb_buffer_len) {
         return PM3_EFAILED;
     }
 
@@ -480,6 +499,9 @@ int ReadLF_realtime(bool reader_field) {
     }
 
     BigBuf_Clear_ext(false);
+
+    if (cotag) cotag_start_pulse();
+
     LFSetupFPGAForADC(config.divisor, reader_field);
 
     while (BUTTON_PRESS() == false) {
@@ -497,12 +519,12 @@ int ReadLF_realtime(bool reader_field) {
 
         WDT_HIT();
 
-        if ((AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY)) {
+        if (FPGA_SSC_TX_Ready()) {
             LED_D_ON();
         }
 
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
-            volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_RX_Ready()) {
+            volatile uint8_t sample = (uint8_t)FPGA_SSC_RX_Value();
 
             // (RDV4) Test point 8 (TP8) can be used to trigger oscilloscope
             LED_D_OFF();
@@ -526,14 +548,26 @@ int ReadLF_realtime(bool reader_field) {
             curr_byte = data.numbits >> 3;
             if (curr_byte > last_byte) {
                 async_usb_write_pushByte(data.buffer[last_byte]);
+                total_logged++;
             }
             last_byte = curr_byte;
 
             if (samples.total_saved == size_threshold) {
-                // Request USB transmission and change FIFO bank
+
+                // Request USB transmission and change FIFO bank.
+                // A busy IN endpoint only means the host has not collected the previous packet yet,
                 if (async_usb_write_requestWrite() == false) {
-                    return_value = PM3_EIO;
-                    goto out;
+
+                    uint32_t start_ticks = GetTicks();
+                    do {
+
+                        WDT_HIT();
+                        if (GetTicksDelta(start_ticks) > LF_REALTIME_USB_TIMEOUT) {
+                            return_value = PM3_EIO;
+                            goto out;
+                        }
+
+                    } while (async_usb_write_requestWrite() == false);
                 }
 
                 // Reset sample
@@ -548,12 +582,23 @@ int ReadLF_realtime(bool reader_field) {
                     break;
                 }
             }
+
+            if (sample_limit > 0 && total_logged >= sample_limit) {
+                break;
+            }
         }
     }
 
-    return_value = async_usb_write_stop();
-
 out:
+    // Always close the async write down, error paths included. Leaving it open
+    // strands the IN endpoint with a half filled FIFO, and every later usb_write() fails
+    {
+        int stop_value = async_usb_write_stop();
+        if (return_value == PM3_SUCCESS) {
+            return_value = stop_value;
+        }
+    }
+
     LED_D_OFF();
 
     // DoAcquisition() end
@@ -567,93 +612,9 @@ out:
 **/
 uint32_t SniffLF(bool verbose, uint32_t sample_size, bool ledcontrol) {
     BigBuf_Clear_ext(false);
-    return ReadLF(false, verbose, sample_size, ledcontrol);
+    return ReadLF(false, verbose, sample_size, ledcontrol, false);
 }
 
-/**
-* acquisition of T55x7 LF signal. Similar to other LF, but adjusted with @marshmellows thresholds
-* the data is collected in BigBuf.
-**/
-void doT55x7Acquisition(size_t sample_size, bool ledcontrol) {
-
-#define T55xx_READ_UPPER_THRESHOLD 128+60  // 60 grph
-#define T55xx_READ_LOWER_THRESHOLD 128-60  // -60 grph
-#define T55xx_READ_TOL   5
-
-    uint8_t *dest = BigBuf_get_addr();
-    uint16_t bufsize = BigBuf_max_traceLen();
-
-    if (bufsize > sample_size)
-        bufsize = sample_size;
-
-    uint8_t lastSample = 0;
-    uint16_t i = 0, skipCnt = 0;
-    bool startFound = false;
-    bool highFound = false;
-    bool lowFound = false;
-
-    uint16_t checker = 0;
-
-    if (g_dbglevel >= DBG_DEBUG) {
-        Dbprintf("doT55x7Acquisition - after init");
-        print_stack_usage();
-    }
-
-    while (skipCnt < 1000 && (i < bufsize)) {
-
-        if (BUTTON_PRESS())
-            break;
-
-        if (checker == 4000) {
-            if (data_available())
-                break;
-            else
-                checker = 0;
-        } else {
-            ++checker;
-        }
-
-        WDT_HIT();
-
-        if (ledcontrol && (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY)) {
-            LED_D_ON();
-        }
-
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
-            volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-            if (ledcontrol) LED_D_OFF();
-
-            // skip until the first high sample above threshold
-            if (!startFound && sample > T55xx_READ_UPPER_THRESHOLD) {
-                highFound = true;
-            } else if (!highFound) {
-                skipCnt++;
-                continue;
-            }
-            // skip until the first low sample below threshold
-            if (!startFound && sample < T55xx_READ_LOWER_THRESHOLD) {
-                lastSample = sample;
-                lowFound = true;
-            } else if (!lowFound) {
-                skipCnt++;
-                continue;
-            }
-
-            // skip until first high samples begin to change
-            if (startFound || sample > T55xx_READ_LOWER_THRESHOLD + T55xx_READ_TOL) {
-                // if just found start - recover last sample
-                if (startFound == false) {
-                    dest[i++] = lastSample;
-                    startFound = true;
-                }
-                // collect samples
-                if (i < bufsize) {
-                    dest[i++] = sample;
-                }
-            }
-        }
-    }
-}
 /**
 * acquisition of Cotag LF signal. Similart to other LF,  since the Cotag has such long datarate RF/384
 * and is Manchester?,  we directly gather the manchester data into bigbuff
@@ -668,13 +629,14 @@ void doT55x7Acquisition(size_t sample_size, bool ledcontrol) {
 #endif
 void doCotagAcquisition(void) {
 
-    uint16_t bufsize = BigBuf_max_traceLen();
-    uint8_t *dest = BigBuf_malloc(bufsize);
+    uint32_t bufsize = BigBuf_max_traceLen();
+    uint8_t *dest = BigBuf_calloc(bufsize);
 
     dest[0] = 0;
 
     bool firsthigh = false, firstlow = false;
-    uint16_t i = 0, noise_counter = 0;
+    uint32_t i = 0;
+    uint16_t noise_counter = 0;
 
     uint16_t checker = 0;
 
@@ -694,9 +656,8 @@ void doCotagAcquisition(void) {
 
         WDT_HIT();
 
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
-
-            volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_RX_Ready()) {
+            volatile uint8_t sample = (uint8_t)FPGA_SSC_RX_Value();
 
             // find first peak
             if (firsthigh == false) {
@@ -764,8 +725,8 @@ uint16_t doCotagAcquisitionManchester(uint8_t *dest, uint16_t destlen) {
         }
 
 
-        if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
-            volatile uint8_t sample = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_RX_Ready()) {
+            volatile uint8_t sample = (uint8_t)FPGA_SSC_RX_Value();
 
             // find first peak
             if (firsthigh == false) {

@@ -1,0 +1,249 @@
+[
+  {
+    "system": "0003",
+    "prefix": "0102",
+    "code": "JH",
+    "name": "Kitaca",
+    "format": "packed",
+    "serial_group": 5
+  },
+  {
+    "system": "0003",
+    "prefix": "0103",
+    "code": "JE",
+    "name": "Suica",
+    "format": "packed",
+    "serial_group": 5
+  },
+  {
+    "system": "0003",
+    "prefix": "0104",
+    "code": "JC",
+    "name": "TOICA",
+    "format": "packed",
+    "serial_group": 5
+  },
+  {
+    "system": "0003",
+    "prefix": "0105",
+    "code": "JW",
+    "name": "ICOCA",
+    "format": "packed",
+    "serial_group": 5
+  },
+  {
+    "system": "0003",
+    "prefix": "0107",
+    "code": "JK",
+    "name": "SUGOCA",
+    "format": "packed",
+    "serial_group": 5
+  },
+  {
+    "system": "0003",
+    "prefix": "0252",
+    "code": "PB",
+    "name": "PASMO",
+    "format": "packed",
+    "serial_group": 5
+  },
+  {
+    "system": "0003",
+    "prefix": "0387",
+    "code": "TP",
+    "name": "manaca",
+    "format": "packed",
+    "serial_group": 5
+  },
+  {
+    "system": "0003",
+    "prefix": "04AD",
+    "code": "SU",
+    "name": "PiTaPa",
+    "format": "packed",
+    "serial_group": 5,
+    "sources": [
+      "https://github.com/soltia48/suica-viewer/"
+    ]
+  },
+  {
+    "system": "0003",
+    "prefix": "05D5",
+    "code": "NR",
+    "name": "nimoca",
+    "format": "packed",
+    "serial_group": 5,
+    "sources": [
+      "https://github.com/soltia48/suica-viewer/"
+    ]
+  },
+  {
+    "system": "0003",
+    "prefix": "05D7",
+    "code": "FC",
+    "name": "hayakaken",
+    "format": "packed",
+    "serial_group": 5,
+    "sources": [
+      "https://github.com/soltia48/suica-viewer/"
+    ]
+  },
+  {
+    "system": "0003",
+    "format": "packed"
+  },
+  {
+    "system": "8029",
+    "prefix": "024D",
+    "code": "SR",
+    "name": "Saitama",
+    "format": "packed",
+    "serial_group": 5
+  },
+  {
+    "system": "8029",
+    "format": "packed"
+  },
+  {
+    "system": "802B",
+    "prefix": "0232",
+    "code": "TK",
+    "name": "Setamaru",
+    "format": "packed",
+    "serial_group": 5
+  },
+  {
+    "system": "802B",
+    "format": "packed"
+  },
+  {
+    "system": "80E0",
+    "prefix": "05D3",
+    "code": "IY",
+    "name": "icecard",
+    "format": "packed",
+    "serial_group": 5
+  },
+  {
+    "system": "80E0",
+    "prefix": "0FF0",
+    "code": "DE",
+    "name": "Desuca",
+    "format": "packed",
+    "counter_endian": "le",
+    "serial_group": 5
+  },
+  {
+    "system": "80E0",
+    "format": "packed"
+  },
+  {
+    "system": "80EF",
+    "prefix": "0D66",
+    "code": "HT",
+    "name": "Ica",
+    "format": "epoch",
+    "serial_group": 4
+  },
+  {
+    "system": "80EF",
+    "format": "epoch"
+  },
+  {
+    "system": "811D",
+    "format": "bcd"
+  },
+  {
+    "system": "8194",
+    "prefix": "2332",
+    "code": "IW",
+    "name": "Iwasaki",
+    "format": "epoch",
+    "serial_group": 4
+  },
+  {
+    "system": "8194",
+    "format": "epoch"
+  },
+  {
+    "system": "832C",
+    "prefix": "0367",
+    "code": "TC",
+    "name": "ecomyca",
+    "format": "epoch",
+    "serial_group": 4
+  },
+  {
+    "system": "832C",
+    "prefix": "0D69",
+    "code": "TL",
+    "name": "passca",
+    "format": "epoch",
+    "serial_group": 4
+  },
+  {
+    "system": "832C",
+    "format": "epoch"
+  },
+  {
+    "system": "83CC",
+    "prefix": "0F0C",
+    "code": "RB",
+    "name": "hareca",
+    "format": "packed",
+    "serial_group": 5
+  },
+  {
+    "system": "83CC",
+    "format": "packed"
+  },
+  {
+    "system": "84A1",
+    "prefix": "1822",
+    "code": "HH",
+    "name": "hanica",
+    "format": "packed",
+    "serial_group": 5
+  },
+  {
+    "system": "84A1",
+    "format": "packed"
+  },
+  {
+    "system": "8B43",
+    "prefix": "0FC9",
+    "code": "FK",
+    "name": "Noruca",
+    "format": "epoch",
+    "serial_group": 4
+  },
+  {
+    "system": "8B43",
+    "prefix": "0FCA",
+    "code": "AZ",
+    "name": "Aizu Noruca",
+    "format": "epoch",
+    "serial_group": 4
+  },
+  {
+    "system": "8B43",
+    "format": "epoch"
+  },
+  {
+    "system": "8B5D",
+    "prefix": "0F4F",
+    "code": "NB",
+    "name": "ryuto",
+    "format": "epoch",
+    "serial_group": 4
+  },
+  {
+    "system": "8B5D",
+    "format": "epoch"
+  },
+  {
+    "system": "FE00",
+    "format": "epoch",
+    "date_offset": 2
+  }
+]

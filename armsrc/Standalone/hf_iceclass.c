@@ -26,9 +26,10 @@
 #include "proxmark3_arm.h"
 #include "appmain.h"
 #include "BigBuf.h"
-#include "fpgaloader.h"
+#include "fpga_apis.h"
+#include "fpga_loader.h"
 #include "util.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "dbprint.h"
 #include "spiffs.h"
 #include "iclass.h"
@@ -217,7 +218,7 @@ static int fullsim_mode(void) {
         Dbprintf("loaded " _GREEN_(HF_ICLASS_FULLSIM_ORIG_BIN) " (%u bytes)", fsize);
     }
 
-    iclass_simulate(ICLASS_SIM_MODE_FULL, 0, false, NULL, NULL, NULL);
+    iclass_simulate(ICLASS_SIM_MODE_FULL, 0, false, false, NULL, NULL, NULL);
 
     LED_B_ON();
     rdv40_spiffs_lazy_mount();
@@ -238,9 +239,13 @@ static int reader_attack_mode(void) {
 
     BigBuf_free();
     uint16_t mac_response_len = 0;
-    uint8_t *mac_responses = BigBuf_malloc(MAC_RESPONSES_SIZE);
+    uint8_t *mac_responses = BigBuf_calloc(MAC_RESPONSES_SIZE);
+    if (mac_responses == NULL) {
+        Dbprintf("Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
 
-    iclass_simulate(ICLASS_SIM_MODE_READER_ATTACK, NUM_CSNS, false, csns, mac_responses, &mac_response_len);
+    iclass_simulate(ICLASS_SIM_MODE_READER_ATTACK, NUM_CSNS, false, false, csns, mac_responses, &mac_response_len);
 
     if (mac_response_len > 0) {
 
@@ -250,8 +255,8 @@ static int reader_attack_mode(void) {
 
         size_t dumplen = NUM_CSNS * 24;
 
-        uint8_t *dump = BigBuf_malloc(dumplen);
-        if (dump == false) {
+        uint8_t *dump = BigBuf_calloc(dumplen);
+        if (dump == NULL) {
             Dbprintf("Failed to allocate memory");
             return PM3_EMALLOC;
         }
@@ -305,6 +310,11 @@ static int reader_dump_mode(void) {
         BigBuf_free();
 
         uint8_t *card_data = BigBuf_malloc(ICLASS_16KS_SIZE);
+        if (card_data == NULL) {
+            Dbprintf("Failed to allocate memory");
+            return PM3_EMALLOC;
+        }
+        // Don't use calloc since we set allocated memory to 0xFF's
         memset(card_data, 0xFF, ICLASS_16KS_SIZE);
 
         if (BUTTON_PRESS()) {
@@ -442,6 +452,11 @@ static int dump_sim_mode(void) {
         BigBuf_free();
 
         uint8_t *card_data = BigBuf_malloc(ICLASS_16KS_SIZE);
+        if (card_data == NULL) {
+            Dbprintf("Failed to allocate memory");
+            return PM3_EMALLOC;
+        }
+        // Don't use calloc since we set allocated memory to 0xFF's
         memset(card_data, 0xFF, ICLASS_16KS_SIZE);
 
         if (BUTTON_PRESS()) {
@@ -582,7 +597,7 @@ static int dump_sim_mode(void) {
     }
 
     Dbprintf("simming " _GREEN_(HF_ICALSSS_READSIM_TEMP_BIN));
-    iclass_simulate(ICLASS_SIM_MODE_FULL, 0, false, NULL, NULL, NULL);
+    iclass_simulate(ICLASS_SIM_MODE_FULL, 0, false, false, NULL, NULL, NULL);
 
     LED_B_ON();
     rdv40_spiffs_lazy_mount();
@@ -612,7 +627,7 @@ static int config_sim_mode(void) {
 
         if (res == SPIFFS_OK) {
             Dbprintf("loaded " _GREEN_("%s") " (%u bytes) to emulator memory", cc_files[i], fsize);
-            iclass_simulate(ICLASS_SIM_MODE_FULL, 0, false, NULL, NULL, NULL);
+            iclass_simulate(ICLASS_SIM_MODE_FULL, 0, false, false, NULL, NULL, NULL);
         }
     }
 

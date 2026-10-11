@@ -89,8 +89,7 @@ int demodTI(bool verbose) {
         1, 1, 1, 1, 1, 1, 1, 1
     };
 
-    buffer_savestate_t saveState = save_bufferS32(g_GraphBuffer, g_GraphTraceLen);
-    saveState.offset = g_GridOffset;
+    buffer_savestate_t saveState = save_graphbuffer();
 
     int lowLen = ARRAYLEN(LowTone);
     int highLen = ARRAYLEN(HighTone);
@@ -278,8 +277,7 @@ int demodTI(bool verbose) {
 
 out:
     if (retval != PM3_SUCCESS) {
-        restore_bufferS32(saveState, g_GraphBuffer);
-        g_GridOffset = saveState.offset;
+        restore_graphbuffer(saveState);
     }
 
     return retval;
@@ -325,7 +323,7 @@ static int CmdTIReader(const char *Cmd) {
     do {
         clearCommandBuffer();
         SendCommandNG(CMD_LF_TI_READ, NULL, 0);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }

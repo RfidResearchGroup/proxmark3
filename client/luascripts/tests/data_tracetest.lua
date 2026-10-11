@@ -1,53 +1,48 @@
-local cmds = require('commands')
 local getopt = require('getopt')
-local bin = require('bin')
-local utils = require('utils')
-local dumplib = require('html_dumplib')
 local ansicolors = require('ansicolors')
+local R = require('testresult')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.5'
+version = 'v1.1.1'
 desc = [[
-This script will load several traces files in current working directory/traces/ folder and do
-"data load"
-"lf search -1u"
+Replays every LF trace in traces/ through `lf search` and reports what each one
+was identified as, against a recorded baseline.
 
-The following tracefiles will be loaded:
-   em*.pm3
-   modulation*.pm3
+The baseline lives in traces/lf_search_expected.txt, one line per trace.
+`-u` - record or refresh the baseline
+
+Runs entirely offline, no device and no tag needed.
 ]]
 example = [[
-    1. script run data_tracetest
+    1. script run tests/data_tracetest
+    2. script run tests/data_tracetest -u
+    3. script run tests/data_tracetest -f em4
 ]]
 usage = [[
-script run data_tracetest [-h]
+script run tests/data_tracetest [-h] [-u] [-v] [-f <substring>]
 ]]
 arguments = [[
     -h             : this help
+    -u             : update the baseline from this run
+    -v             : print the full `lf search` output for every trace
+    -f <substring> : only traces whose name contains this
 ]]
-local DEBUG = true -- the debug flag
----
--- A debug printout-function
-local function dbg(args)
-    if not DEBUG then return end
-    if type(args) == 'table' then
-        local i = 1
-        while result[i] do
-            dbg(result[i])
-            i = i+1
-        end
-    else
-        print('###', args)
-    end
+
+local BASELINE = 'traces/lf_search_expected.txt'
+local RULE = R.RULE
+
+local ROW = '%-44s %-24s %-24s '
+
+
+local function no_capture(out)
+
+    if type(out) == 'string' then return false end
+
+    print('[?] Maybe a session already running')
+    return true
 end
----
--- This is only meant to be used when errors occur
-local function oops(err)
-    print('ERROR:', err)
-    core.clearCommandBuffer()
-    return nil, err
-end
+
 ---
 -- Usage help
 local function help()
@@ -62,65 +57,108 @@ local function help()
     print(ansicolors.cyan..'Example usage'..ansicolors.reset)
     print(example)
 end
---
--- Exit message
-local function ExitMsg(msg)
-    print( string.rep('--',20) )
-    print( string.rep('--',20) )
-    print(msg)
-    print()
+
+local function identified(out)
+
+    local found = {}
+    local seen = {}
+
+    for name in out:gmatch('Valid (.-) ID found') do
+        if seen[name] == nil then
+            seen[name] = true
+            table.insert(found, name)
+        end
+    end
+
+    table.sort(found)
+    if #found == 0 then return 'none' end
+    return table.concat(found, ' + ')
 end
 
+local function load_baseline(path)
+    local t, n = {}, 0
+    local fh = io.open(path, 'r')
+    if fh == nil then return nil, 0 end
+    for line in fh:lines() do
+        local name, want = line:match('^(%S+)%s+(.-)%s*$')
+        if name ~= nil and name:sub(1, 1) ~= '#' then
+            t[name] = want
+            n = n + 1
+        end
+    end
+    fh:close()
+    return t, n
+end
 
 local function main(args)
 
-    print( string.rep('--',20) )
-    print( string.rep('--',20) )
+    local update, verbose, filter = false, false, nil
 
-    local cmdDataLoad = 'data load -f %s';
-    local cwd = core.cwd();
-
-    local tracesEM = "find '"..cwd.."/traces/ ' -iname 'em*.pm3' -type f"
-    local tracesMOD = "find '"..cwd.."/traces/' -iname 'modulation*.pm3' -type f"
-
-    local write2File = false
-    local outputTemplate = os.date('testtest_%Y-%m-%d_%H%M%S')
-
-    -- Arguments for the script
-    for o, arg in getopt.getopt(args, 'h') do
+    for o, a in getopt.getopt(args, 'huvf:') do
         if o == 'h' then return help() end
+        if o == 'u' then update = true end
+        if o == 'v' then verbose = true end
+        if o == 'f' then filter = a end
     end
 
-    core.clearCommandBuffer()
+    local cwd = core.cwd()
 
     local files = {}
-
-    -- Find a set of traces staring with EM
-    local p = assert( io.popen(tracesEM))
+    local p = assert(io.popen("find '" .. cwd .. "/traces/' -iname 'lf_*.pm3' -type f | sort"))
     for file in p:lines() do
-        table.insert(files, file)
+        if filter == nil or file:find(filter, 1, true) then
+            table.insert(files, file)
+        end
     end
-    p.close();
+    p:close()
 
-    -- Find a set of traces staring with MODULATION
-    p = assert( io.popen(tracesMOD) )
-    for file in p:lines() do
-        table.insert(files, file)
+    if #files == 0 then
+        print('[!] no traces found under ' .. cwd .. '/traces/')
+        return
     end
-    p.close();
 
-    local cmdLFSEARCH = 'lf search -1u'
+    local baseline, nbase = load_baseline(cwd .. '/' .. BASELINE)
+    if baseline == nil and update == false then
+        print('[!] no baseline at ' .. BASELINE)
+        print('[?] recording what this run finds, then run with -u to freeze it')
+        baseline = {}
+    end
 
-    -- main loop
-    io.write('Starting to test traces > ')
-    for _,file in pairs(files) do
+    print(RULE)
+    print(('LF trace identification,  %d traces%s'):format(#files, (nbase > 0) and (', baseline of '.. nbase) or ''))
+    print(RULE)
+    print('    ' .. ROW:format('trace', 'identified as', 'baseline') .. 'verdict')
+    print(RULE)
 
-        local x = 'data load -f '..file
-        dbg(x)
-        core.console(x)
+    local pass, fail, new, results = 0, 0, 0, {}
 
-        dbg(cmdLFSEARCH)
-        core.console(cmdLFSEARCH)
+    for _, file in ipairs(files) do
+
+        local name = file:match('([^/]+)$')
+
+        core.console('data load -f ' .. file, false, true)
+        local out = core.console('lf search -1u', true, not verbose)
+
+        if no_capture(out) then return end
+
+        local got = identified(out)
+        table.insert(results, { name = name, got = got })
+
+        if update then
+            print('[=] ' .. ROW:format(name, got, '') .. R.SKIP)
+        else
+            local want = baseline[name]
+            if want == nil then
+                new = new + 1
+                print('[?] ' .. ROW:format(name, got, '( no entry )') .. NEW)
+            elseif want == got then
+                pass = pass + 1
+                print('[+] ' .. ROW:format(name, got, '') .. R.OK)
+            else
+                fail = fail + 1
+                print('[!] ' .. ROW:format(name, got, want) .. R.FAIL)
+            end
+        end
 
         core.clearCommandBuffer()
 
@@ -129,9 +167,37 @@ local function main(args)
             break
         end
     end
-    io.write('\n')
 
-    print( string.rep('--',20) )
+    print(RULE)
 
+    if update then
+        local fh, err = io.open(cwd .. '/' .. BASELINE, 'w')
+        if fh == nil then
+            print('[!] could not write '.. BASELINE ..': '..tostring(err))
+            return
+        end
+
+        fh:write('# `lf search -1u` identification per trace, recorded by `script run tests/data_tracetest -u`.\n')
+
+        for _, r in ipairs(results) do
+            fh:write(('%-46s %s\n'):format(r.name, r.got))
+        end
+
+        fh:close()
+
+        print(('[+] wrote %d entries to %s'):format(#results, BASELINE))
+
+    else
+        local count = R.counter()
+        count.pass, count.fail, count.other = pass, fail, new
+        count:summary()
+        if new > 0 then
+            print(('[?] %d have no baseline entry, record one with -u'):format(new))
+        end
+    end
+
+    print(RULE)
+    return fail
 end
+
 main(args)

@@ -21,10 +21,11 @@
 #include <inttypes.h>
 #include "proxmark3_arm.h"
 #include "appmain.h"
-#include "fpgaloader.h"
+#include "fpga_apis.h"
+#include "fpga_loader.h"
 #include "util.h"
 #include "dbprint.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "string.h"
 #include "commonutil.h"
 #include "mifarecmd.h"
@@ -96,7 +97,7 @@ void RunMod(void) {
                     }
                 }
 
-                if (!iso14443a_select_card(NULL, &card[selected], NULL, true, 0, true)) {
+                if (iso14443a_select_card(NULL, &card[selected], NULL, true, 0, true) == 0) {
                     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
                     LED_D_OFF();
                     SpinDelay(500);
@@ -162,10 +163,11 @@ void RunMod(void) {
             SpinDelay(500);
             // Begin clone function here:
             /* Example from client/mifarehost.c for commanding a block write for "magic Chinese" cards:
-                    SendCommandMIX(CMD_HF_MIFARE_CSETBL, params & (0xFE | (uid == NULL ? 0:1)), blockNo, 0, data, 16);
+                    SendCommandNG(CMD_HF_MIFARE_CSETBL, payload, sizeof(mf_chinese_blk_t) + 16);
+                    where payload is mf_chinese_blk_t { u8 params, u8 blockno, u8 data[] }
 
                 Block read is similar:
-                    SendCommandMIX(CMD_HF_MIFARE_CGETBL, params, blockNo, 0,...};
+                    SendCommandNG(CMD_HF_MIFARE_CGETBL, payload, sizeof(mf_chinese_blk_t));
                 We need to imitate that call with blockNo 0 to set a uid.
 
                 The get and set commands are handled in this file:
@@ -253,25 +255,25 @@ void RunMod(void) {
 
                     if (uids[selected].sak == 0x08 && uids[selected].atqa[0] == 0x04 && uids[selected].atqa[1] == 0) {
                         DbpString("Mifare Classic 1k");
-                        SimulateIso14443aTag(1, flags, data, 0, NULL, 0);
+                        SimulateIso14443aTag(1, flags, data, 0);
                     } else if (uids[selected].sak == 0x18 && uids[selected].atqa[0] == 0x02 && uids[selected].atqa[1] == 0) {
                         DbpString("Mifare Classic 4k (4b uid)");
-                        SimulateIso14443aTag(8, flags, data, 0, NULL, 0);
+                        SimulateIso14443aTag(8, flags, data, 0);
                     } else if (uids[selected].sak == 0x08 && uids[selected].atqa[0] == 0x44 && uids[selected].atqa[1] == 0) {
                         DbpString("Mifare Classic 4k (7b uid)");
-                        SimulateIso14443aTag(8, flags, data, 0, NULL, 0);
+                        SimulateIso14443aTag(8, flags, data, 0);
                     } else if (uids[selected].sak == 0x00 && uids[selected].atqa[0] == 0x44 && uids[selected].atqa[1] == 0) {
                         DbpString("Mifare Ultralight");
-                        SimulateIso14443aTag(2, flags, data, 0, NULL, 0);
+                        SimulateIso14443aTag(2, flags, data, 0);
                     } else if (uids[selected].sak == 0x20 && uids[selected].atqa[0] == 0x04 && uids[selected].atqa[1] == 0x03) {
                         DbpString("Mifare DESFire");
-                        SimulateIso14443aTag(3, flags, data, 0, NULL, 0);
+                        SimulateIso14443aTag(3, flags, data, 0);
                     } else if (uids[selected].sak == 0x20 && uids[selected].atqa[0] == 0x44 && uids[selected].atqa[1] == 0x03) {
                         DbpString("Mifare DESFire Ev1/Plus/JCOP");
-                        SimulateIso14443aTag(3, flags, data, 0, NULL, 0);
+                        SimulateIso14443aTag(3, flags, data, 0);
                     } else {
                         Dbprintf("Unrecognized tag type -- defaulting to Mifare Classic emulation");
-                        SimulateIso14443aTag(1, flags, data, 0, NULL, 0);
+                        SimulateIso14443aTag(1, flags, data, 0);
                     }
 
                 } else if (button_pressed == BUTTON_SINGLE_CLICK) {

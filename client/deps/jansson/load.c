@@ -54,7 +54,7 @@ typedef int (*get_func)(void *data);
 typedef struct {
     get_func get;
     void *data;
-    char buffer[7];
+    char buffer[8];
     size_t buffer_pos;
     int state;
     int line;
@@ -187,6 +187,9 @@ static int stream_get(stream_t *stream, json_error_t *error) {
 
             assert(count >= 2);
             assert(count <= 4);
+
+            if (count >= sizeof(stream->buffer))
+                goto out;
 
             // if count == 4 ,   i will become 5 and overflow.
             for (i = 1; i < count; i++)

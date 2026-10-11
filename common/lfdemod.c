@@ -110,12 +110,16 @@ void computeSignalProperties(const uint8_t *samples, uint32_t size) {
     uint32_t offset_size = size - SIGNAL_IGNORE_FIRST_SAMPLES;
 
 #ifndef ON_DEVICE
-    uint8_t tmp[offset_size];
-    memcpy(tmp, samples + SIGNAL_IGNORE_FIRST_SAMPLES, sizeof(tmp));
-    qsort(tmp, sizeof(tmp), sizeof(uint8_t), cmp_uint8);
+    uint8_t *tmp = calloc(offset_size, sizeof(uint8_t));
+    if (tmp == NULL)
+        return;
+    memcpy(tmp, samples + SIGNAL_IGNORE_FIRST_SAMPLES, offset_size);
+    qsort(tmp, offset_size, sizeof(uint8_t), cmp_uint8);
 
     uint8_t low10 = 0.5 * (tmp[(int)(offset_size * 0.1)] + tmp[(int)((offset_size - 1) * 0.1)]);
     uint8_t hi90 =  0.5 * (tmp[(int)(offset_size * 0.9)] + tmp[(int)((offset_size - 1) * 0.9)]);
+    free(tmp);
+
     uint32_t cnt = 0;
     for (uint32_t i = SIGNAL_IGNORE_FIRST_SAMPLES; i < size; i++) {
 
@@ -161,12 +165,16 @@ void removeSignalOffset(uint8_t *samples, uint32_t size) {
 
 #ifndef ON_DEVICE
 
-    uint8_t tmp[offset_size];
-    memcpy(tmp, samples + SIGNAL_IGNORE_FIRST_SAMPLES, sizeof(tmp));
-    qsort(tmp, sizeof(tmp), sizeof(uint8_t), cmp_uint8);
+    uint8_t *tmp = calloc(offset_size, sizeof(uint8_t));
+    if (tmp == NULL)
+        return;
+    memcpy(tmp, samples + SIGNAL_IGNORE_FIRST_SAMPLES, offset_size);
+    qsort(tmp, offset_size, sizeof(uint8_t), cmp_uint8);
 
     uint8_t low10 = 0.5 * (tmp[(int)(offset_size * 0.05)] + tmp[(int)((offset_size - 1) * 0.05)]);
     uint8_t hi90 =  0.5 * (tmp[(int)(offset_size * 0.95)] + tmp[(int)((offset_size - 1) * 0.95)]);
+    free(tmp);
+
     int32_t cnt = 0;
     for (uint32_t i = SIGNAL_IGNORE_FIRST_SAMPLES; i < size; i++) {
 
@@ -539,13 +547,16 @@ size_t pskFindFirstPhaseShift(const uint8_t *samples, size_t size, uint8_t *curP
 
     uint16_t avgWaveVal = 0, lastAvgWaveVal;
     size_t i = waveStart, waveEnd, waveLenCnt, firstFullWave;
+    // waveStart starts as wherever the caller began looking, so the first length is part of a wave,
+    // not a wave, and judging it accepts a shift that is not there.  Baseline on the first peak.
+    bool wave_from_peak = false;
     for (; i < loopCnt; i++) {
         // find peak // was "samples[i] + fc" but why?  must have been used to weed out some wave error... removed..
         if (samples[i] < samples[i + 1] && samples[i + 1] >= samples[i + 2]) {
             waveEnd = i + 1;
             if (g_debugMode == 2) prnt("DEBUG PSK: waveEnd: %zu, waveStart: %zu", waveEnd, waveStart);
             waveLenCnt = waveEnd - waveStart;
-            if (waveLenCnt > fc && waveStart > fc && !(waveLenCnt > fc + 8)) { //not first peak and is a large wave but not out of whack
+            if (wave_from_peak && waveLenCnt > fc && waveStart > fc && !(waveLenCnt > fc + 8)) { //not first peak and is a large wave but not out of whack
                 lastAvgWaveVal = avgWaveVal / (waveLenCnt);
                 firstFullWave = waveStart;
                 *fullWaveLen = waveLenCnt;
@@ -554,6 +565,7 @@ size_t pskFindFirstPhaseShift(const uint8_t *samples, size_t size, uint8_t *curP
                 return firstFullWave;
             }
             waveStart = i + 1;
+            wave_from_peak = true;
             avgWaveVal = 0;
         }
         avgWaveVal += samples[i + 2];
@@ -1649,7 +1661,14 @@ uint16_t manrawdecode(uint8_t *bits, size_t *size, uint8_t invert, uint8_t *alig
 
     *alignPos = bestRun;
     // decode
-    for (i = bestRun; i < *size; i += 2) {
+    //
+    // i + 1 < *size, not i < *size: the body reads bits[i + 1], so the old bound
+    // ran one pair past the end whenever the chosen alignment left a lone sample
+    // at the tail (bestRun == 1 with an even size, say).  That out of range read
+    // produced a spurious trailing symbol, marked 7 as an impossible Manchester
+    // pair, and callers that then stop at the first 7 lost the last real bit -
+    // a Hitag 2 tag answering CE129911 decoded as CE129910, one bit short.
+    for (i = bestRun; i + 1 < *size; i += 2) {
 
         if (bits[i] == 1 && (bits[i + 1] == 0)) {
             bits[bitnum++] = invert;
@@ -1887,18 +1906,31 @@ int nrzRawDemod(uint8_t *dest, size_t *size, int *clk, const int *invert, int *s
         if (dest[i] <= low)  bit = 0;
         dest[i] = bit;
     }
-    //now demod based on clock (rf/32 = 32 1's for one 1 bit, 32 0's for one 0 bit)
+    // start on the first level change: it is the earliest sample known to be a
+    // bit boundary.  counting the samples before it as bits rotated the stream
+    // whenever that edge moved by one, and left startIdx naming no sample
     size_t lastBit = 0;
     size_t numBits = 0;
+    bool anchored = false;
     for (i = 21; i < *size - 20; i++) {
+
+        bool edge = (dest[i] != dest[i - 1]);
+
+        if (anchored == false) {
+            if (edge == false) {
+                continue;
+            }
+            *startIdx = (int)i;
+            if (g_debugMode == 2) prnt("DEBUG NRZ: startIdx %i", *startIdx);
+            lastBit = i - 1;
+            anchored = true;
+            continue;
+        }
+
         //if transition detected or large number of same bits - store the passed bits
-        if (dest[i] != dest[i - 1] || (i - lastBit) == (10 * *clk)) {
+        if (edge || (i - lastBit) == (10 * *clk)) {
             memset(dest + numBits, dest[i - 1] ^ *invert, (i - lastBit + (*clk / 4)) / *clk);
             numBits += (i - lastBit + (*clk / 4)) / *clk;
-            if (lastBit == 0) {
-                *startIdx = i - (numBits * *clk);
-                if (g_debugMode == 2) prnt("DEBUG NRZ: startIdx %i", *startIdx);
-            }
             lastBit = i - 1;
         }
     }
@@ -2023,6 +2055,13 @@ static size_t aggregate_bits(uint8_t *dest, size_t size, uint8_t clk, uint8_t in
             // 0->1 crossing
             n = (n * fchigh + hclk) / clk;
 
+        // A leading run that rounds to no bits is lead-in, not data.  Forcing it to one fabricates
+        // a bit and shifts the word; mid-stream a zero would lose a bit the tag did send.
+        if (n == 0 && numBits == 0) {
+            lastval = dest[i];
+            continue;
+        }
+
         if (n == 0)
             n = 1;
 
@@ -2126,14 +2165,22 @@ int pskRawDemod_ext(uint8_t *dest, size_t *size, int *clock, const int *invert, 
         i = findModStart(dest, *size, fc);
         //find first phase shift
         firstFullWave = pskFindFirstPhaseShift(dest, *size, &curPhase, i, fc, &fullWaveLen);
-        if (firstFullWave == 0) {
-            // no phase shift detected - could be all 1's or 0's - doesn't matter where we start
-            // so skip a little to ensure we are past any Start Signal
-            firstFullWave = 160;
-            memset(dest, curPhase, firstFullWave / *clock);
-        } else {
-            memset(dest, curPhase ^ 1, firstFullWave / *clock);
-        }
+    }
+
+    // A first shift less than a bit period in is lead-in, not data.  Counting it toggles curPhase
+    // once too often, and the emitted bit is the running phase, so the rest of the word inverts.
+    const size_t bit_period = (size_t)(*clock);
+    if (firstFullWave != 0 && firstFullWave < bit_period) {
+        curPhase = *invert;
+        fullWaveLen = 0;
+        firstFullWave = pskFindFirstPhaseShift(dest, *size, &curPhase, bit_period, fc, &fullWaveLen);
+    }
+
+    if (firstFullWave == 0) {
+        // no phase shift detected - could be all 1's or 0's - doesn't matter where we start
+        // so skip a little to ensure we are past any Start Signal
+        firstFullWave = 160;
+        memset(dest, curPhase, firstFullWave / *clock);
     } else {
         memset(dest, curPhase ^ 1, firstFullWave / *clock);
     }

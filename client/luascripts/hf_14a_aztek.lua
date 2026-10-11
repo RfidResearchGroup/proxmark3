@@ -100,14 +100,9 @@ function sendRaw(rawdata, options)
                 + lib14a.ISO14A_COMMAND.ISO14A_APPEND_CRC
                 + lib14a.ISO14A_COMMAND.ISO14A_NO_RATS
 
-    local command = Command:newMIX{cmd = cmds.CMD_HF_ISO14443A_READER,
-                                arg1 = flags, -- Send raw
-                                -- arg2 contains the length, which is half the length
-                                -- of the ASCII-string rawdata
-                                arg2 = string.len(rawdata)/2,
-                                data = rawdata}
+    local command = Command:newRaw{ tech = '14a', flags = flags, data = rawdata }
 
-    return command:sendMIX(options.ignore_response)
+    return command:sendNG(options.ignore_response)
 end
 ---
 -- The main entry point
@@ -146,8 +141,9 @@ function main(args)
             return oops(err)
         end
 
-        local cmd_response = Command.parse(res)
-        local len = tonumber(cmd_response.arg1) * 2
+        local _rlen, _sel, _raw = parseRaw('14a', res)
+        local cmd_response = { arg1 = _rlen or 0, data = tohex(_raw or '') }
+        local len = (_rlen or 0) * 2
         local data = string.sub(tostring(cmd_response.data), 0, len-4)
 
         showdata(block, data)

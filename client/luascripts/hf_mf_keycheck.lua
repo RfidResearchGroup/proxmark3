@@ -216,7 +216,7 @@ local function perform_check(uid, numsectors)
     for sector = 0, #keys do
         -- Check if user aborted
         if core.kbd_enter_pressed() then
-            print('Aborted by user')
+            print('Aborted via keyboard!')
             break
         end
 

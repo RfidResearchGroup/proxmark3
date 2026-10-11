@@ -44,7 +44,7 @@ void buildlfsr(Hitag_State *hstate);
 #define rev16(X)  (rev8 (X) + (rev8 (X >> 8) << 8))
 #define rev32(X)  (rev16(X) + (rev16(X >> 16) << 16))
 #define rev64(X)  (rev32(X) + (rev32(X >> 32) << 32))
-unsigned long hexreversetoulong(char *hex);
-unsigned long long hexreversetoulonglong(char *hex);
+uint32_t hexreversetouint32(char *hex);
+uint64_t hexreversetouint64(char *hex);
 
 #endif /* HT2CRACKUTILS_H */

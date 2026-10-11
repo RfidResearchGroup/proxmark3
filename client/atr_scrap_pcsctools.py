@@ -48,6 +48,7 @@ C_HEADER="""//------------------------------------------------------------------
 
 #define ATRS_H__
 #include <stddef.h>
+#include <stdint.h>
 
 typedef struct atr_s {
     const char *bytes;
@@ -55,6 +56,8 @@ typedef struct atr_s {
 } atr_t;
 
 const char *getAtrInfo(const char *atr_str);
+void atsToEmulatedAtr(uint8_t *ats, uint8_t *atr, int *atrLen);
+void atqbToEmulatedAtr(uint8_t *atqb, uint8_t cid, uint8_t *atr, int *atrLen);
 
 // atr_t array is expected to be NULL terminated
 const static atr_t AtrTable[] = {

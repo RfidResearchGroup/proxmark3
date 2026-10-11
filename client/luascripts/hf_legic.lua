@@ -28,7 +28,7 @@ Seg   = Segment Header
 SegC  =  Crc8 over the Segment Header
 Stp   = Stamp (could be more as 4 - up to 7)
 UID   = dec User-ID for online-Mapping
-kghC  = crc8 over MCD + MSN0..MSN2 + UID
+kghC  = crc8 over MCD + MSN0..MSN2 + WRP + WRC + RD + segment marker + segment data excluding CRC
 
 
 (example)   Legic-Cash on MIM256/1024 tag' (37 bytes)
@@ -102,6 +102,7 @@ Known issues; needs to be fixed:
 local utils       = require('utils')
 local getopt      = require('getopt')
 local ansicolors  = require('ansicolors')
+local json        = require('dkjson')
 
 ---
 -- global variables / defines
@@ -194,7 +195,7 @@ it's kinda interactive with following commands in three categories:
                           without the need of changing anything - MCD,MSN,MCC will be read from the tag
                           before and applied to the output.
 
- lf: 'load file'         - load a (xored) binary file (*.bin) from the local Filesystem into the 'virtual inTag'
+  lf: 'load file'         - load a (xored) binary file (*.bin) or Proxmark JSON dump (*.json) into the 'virtual inTag'
  sf: 'save file'         - saves the 'virtual inTag' to the local Filesystem as eml and bin (xored with Tag-MCC)
  xf: 'xor file'          - saves the 'virtual inTag' to the local Filesystem (xored with chosen MCC - use '00' for plain values)
 
@@ -351,6 +352,11 @@ end
 function file_check(file_name)
   if not file_name then return false, "" end
 
+  local home = os.getenv("HOME") or os.getenv("USERPROFILE")
+  if home and (file_name == "~" or file_name:sub(1, 2) == "~/" or file_name:sub(1, 2) == "~\\") then
+    file_name = home .. file_name:sub(2)
+  end
+
   local arr = split(file_name, ".")
   local ext = table.remove(arr)
   local name = join(arr, '.')
@@ -395,20 +401,72 @@ function getInputBytes(infile)
     local line
     local bytes = {}
 
+    local home = os.getenv("HOME") or os.getenv("USERPROFILE")
+    if home and (infile == "~" or infile:sub(1, 2) == "~/" or infile:sub(1, 2) == "~\\") then
+        infile = home .. infile:sub(2)
+    end
+
     local arr = split(infile, ".")
     local ext = table.remove(arr)
     local name = join(arr, '.')
     local path = core.search_file(name, "."..ext)
     if (path == nil) then oops("failed to read from file ".. infile); return false; end
 
-    local fhi,err = io.open(path,"rb")
-    if err then oops("failed to read from file ".. path); return false; end
+    if ext:lower() == "json" then
+        local fhi, err = io.open(path, "r")
+        if err then oops("failed to read from file ".. path); return false; end
 
-    file_data = fhi:read("*a");
-    for i = 1, #file_data do
-        bytes[i] = string.format("%x",file_data:byte(i))
+        local file_data = fhi:read("*a")
+        fhi:close()
+
+        local obj, pos, jerr = json.decode(file_data, 1, nil)
+        if jerr then
+            oops("failed to parse json dump ".. path ..": ".. jerr)
+            return false
+        end
+
+        if type(obj) ~= "table" or type(obj.blocks) ~= "table" then
+            oops("json dump does not contain a blocks table: ".. path)
+            return false
+        end
+
+        local keys = {}
+        for k in pairs(obj.blocks) do
+            local n = tonumber(k)
+            if n ~= nil then
+                keys[#keys + 1] = n
+            end
+        end
+        table.sort(keys)
+
+        for _, key in ipairs(keys) do
+            local block = obj.blocks[tostring(key)] or obj.blocks[key]
+            if type(block) ~= "string" then
+                oops("block ".. key .." is missing or invalid in json dump ".. path)
+                return false
+            end
+
+            block = block:gsub("%s", "")
+            if (#block % 2) ~= 0 then
+                oops("block ".. key .." has an odd number of hex digits in json dump ".. path)
+                return false
+            end
+
+            for c in block:gmatch("..") do
+                bytes[#bytes + 1] = c:lower()
+            end
+        end
+    else
+        local fhi,err = io.open(path,"rb")
+        if err then oops("failed to read from file ".. path); return false; end
+
+        file_data = fhi:read("*a");
+        for i = 1, #file_data do
+            bytes[i] = string.format("%x",file_data:byte(i))
+        end
+        fhi:close()
     end
-    fhi:close()
+
     if (bytes[7]=='00') then return false end
     print(#bytes .. " bytes from "..path.." loaded")
     return bytes
@@ -668,7 +726,7 @@ local function readFile(filename)
     end
 
     bytes = getInputBytes(path)
-    if bytes == false then return oops('couldnt get input bytes') end
+    if bytes == false then return oops('could not get input bytes') end
 
     -- make plain bytes
     bytes = xorBytes(bytes,bytes[5])
@@ -2835,6 +2893,7 @@ function main(args)
   -- set init colors/switch (can be toggled with 'tac' => 'toggle ansicolors')
   load_colors(colored_output)
   if (#args == 0 ) then modifyMode() end
+  if args and args:match('^%-%-help%s*$') then return help() end
   --- variables
   local inTAG, backupTAG, outTAG, outfile, interactive, crc
   local ofs=false

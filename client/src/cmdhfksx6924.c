@@ -358,7 +358,7 @@ end:
 static command_t CommandTable[] = {
     {"help",       CmdHelp,                AlwaysAvailable, "This help"},
     {"select",     CmdHFKSX6924Select,     IfPm3Iso14443a,  "Select application, and leave field up"},
-    {"info",       CmdHFKSX6924Info,       IfPm3Iso14443a,  "Get info about a KS X 6924 (T-Money, Snapper+) transit card"},
+    {"info",       CmdHFKSX6924Info,       IfPm3Iso14443a,  "Tag information"},
     {"balance",    CmdHFKSX6924Balance,    IfPm3Iso14443a,  "Get current purse balance"},
     {"init",       CmdHFKSX6924Initialize, IfPm3Iso14443a,  "Perform transaction initialization with Mpda"},
     {"prec",       CmdHFKSX6924PRec,       IfPm3Iso14443a,  "Send proprietary get record command (CLA=90, INS=4C)"},

@@ -37,9 +37,10 @@ from the client to view the stored quadlets.
 #include "util.h"
 #include "spiffs.h"
 #include "appmain.h"
-#include "fpgaloader.h"
+#include "fpga_apis.h"
+#include "fpga_loader.h"
 #include "dbprint.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "BigBuf.h"
 #include "string.h"
 
@@ -63,18 +64,26 @@ static void RAMFUNC SniffAndStore(uint8_t param) {
     set_tracing(true);
 
     // Array to store the authpwds
-    uint8_t *capturedPwds = BigBuf_malloc(4 * MAX_PWDS_PER_SESSION);
+    uint8_t *capturedPwds = BigBuf_calloc(4 * MAX_PWDS_PER_SESSION);
 
     // The command (reader -> tag) that we're receiving.
-    uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
-    uint8_t *receivedCmdPar = BigBuf_malloc(MAX_PARITY_SIZE);
+    uint8_t *receivedCmd = BigBuf_calloc(MAX_FRAME_SIZE);
+    uint8_t *receivedCmdPar = BigBuf_calloc(MAX_PARITY_SIZE);
 
     // The response (tag -> reader) that we're receiving.
-    uint8_t *receivedResp = BigBuf_malloc(MAX_FRAME_SIZE);
-    uint8_t *receivedRespPar = BigBuf_malloc(MAX_PARITY_SIZE);
+    uint8_t *receivedResp = BigBuf_calloc(MAX_FRAME_SIZE);
+    uint8_t *receivedRespPar = BigBuf_calloc(MAX_PARITY_SIZE);
 
     // The DMA buffer, used to stream samples from the FPGA
-    uint8_t *dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
+    uint8_t *dmaBuf = BigBuf_calloc(DMA_BUFFER_SIZE);
+
+    if (capturedPwds == NULL || receivedCmd == NULL || receivedCmdPar == NULL ||
+            receivedResp == NULL || receivedRespPar == NULL || dmaBuf == NULL) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("hf bog: failed to allocate buffers");
+        BigBuf_free();
+        return;
+    }
+
     uint8_t *data = dmaBuf;
 
     uint8_t previous_data = 0;
@@ -89,9 +98,9 @@ static void RAMFUNC SniffAndStore(uint8_t param) {
     Uart14aInit(receivedCmd, MAX_FRAME_SIZE, receivedCmdPar);
 
     // Setup and start DMA.
-    if (!FpgaSetupSscDma((uint8_t *)dmaBuf, DMA_BUFFER_SIZE)) {
-        if (g_dbglevel > 1) {
-            Dbprintf("FpgaSetupSscDma failed. Exiting");
+    if (FpgaSetupSscRxDmaRepeat((uint8_t *)dmaBuf, DMA_BUFFER_SIZE) == false) {
+        if (g_dbglevel > DBG_ERROR) {
+            Dbprintf("FpgaSetupSscRxDmaRepeat failed. Exiting");
         }
         return;
     }
@@ -118,7 +127,7 @@ static void RAMFUNC SniffAndStore(uint8_t param) {
         LED_A_ON();
 
         int register readBufDataP = data - dmaBuf;
-        int register dmaBufDataP = DMA_BUFFER_SIZE - AT91C_BASE_PDC_SSC->PDC_RCR;
+        int register dmaBufDataP = DMA_BUFFER_SIZE - FPGA_SSC_DMA_RX_Remaining_Count();
         if (readBufDataP <= dmaBufDataP)
             dataLen = dmaBufDataP - readBufDataP;
         else
@@ -132,16 +141,8 @@ static void RAMFUNC SniffAndStore(uint8_t param) {
         if (dataLen < 1)
             continue;
 
-        // primary buffer was stopped( <-- we lost data!
-        if (AT91C_BASE_PDC_SSC->PDC_RCR == 0) {
-            AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t)dmaBuf;
-            AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
-            // Dbprintf("[-] RxEmpty ERROR | data length %d", dataLen); // temporary
-        }
-        // secondary buffer sets as primary, secondary buffer was stopped
-        if (AT91C_BASE_PDC_SSC->PDC_RNCR == 0) {
-            AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t)dmaBuf;
-            AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
+        if (FPGA_SSC_DMA_RX_Done()) {
+            FPGA_SSC_DMA_RX_Refresh_Repeat(dmaBuf, DMA_BUFFER_SIZE);
         }
 
         LED_A_OFF();
@@ -161,7 +162,7 @@ static void RAMFUNC SniffAndStore(uint8_t param) {
                     if (triggered) {
                         if ((receivedCmd) &&
                                 ((receivedCmd[0] == MIFARE_ULEV1_AUTH) || (receivedCmd[0] == MIFARE_ULC_AUTH_1))) {
-                            if (g_dbglevel > 1)
+                            if (g_dbglevel > DBG_ERROR)
                                 Dbprintf("PWD-AUTH KEY: 0x%02x%02x%02x%02x", receivedCmd[1], receivedCmd[2],
                                          receivedCmd[3], receivedCmd[4]);
 
@@ -216,7 +217,7 @@ static void RAMFUNC SniffAndStore(uint8_t param) {
         }
     } // end main loop
 
-    FpgaDisableSscDma();
+    FPGA_SSC_DMA_RX_Disable();
     set_tracing(false);
 
     Dbprintf("Stopped sniffing");
@@ -225,7 +226,7 @@ static void RAMFUNC SniffAndStore(uint8_t param) {
 
     // Write stuff to spiffs logfile
     if (auth_attempts > 0) {
-        if (g_dbglevel > 1)
+        if (g_dbglevel > DBG_ERROR)
             Dbprintf("[!] Authentication attempts = %u", auth_attempts);
 
         if (!exists_in_spiffs((char *)HF_BOG_LOGFILE)) {
@@ -235,7 +236,7 @@ static void RAMFUNC SniffAndStore(uint8_t param) {
         }
     }
 
-    if (g_dbglevel > 1)
+    if (g_dbglevel > DBG_ERROR)
         Dbprintf("[!] Wrote %u Authentication attempts into logfile", auth_attempts);
 
     SpinErr(LED_A, 200, 5);

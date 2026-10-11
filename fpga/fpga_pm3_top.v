@@ -28,6 +28,8 @@
 //`define PM3GENERIC
 // iCopy-X with XC3S100E
 //`define PM3ICOPYX
+// Proxmark3 Ultimate with XC2S50
+//`define PM3ULTIMATE
 
 // Pass desired defines to compiler to enable required modules
 // WITH_LF  enables Low Frequency mode when defined else HF is enabled
@@ -206,6 +208,10 @@ lo_edge_detect le(
     .cross_lo          (cross_lo),
     .lf_field          (conf_word[0]),
     .lf_ed_toggle_mode (conf_word[1]),
+    .lf_weak_load      (conf_word[2]),
+    .lf_ed_hold_tracker (conf_word[3]),
+    .lf_ed_sensitive   (conf_word[4]),
+    .lf_ed_slope       (conf_word[5]),
     .lf_ed_threshold   (lf_ed_threshold),
     .ssp_dout          (ssp_dout),
 
@@ -248,6 +254,7 @@ lo_adc la(
     .adc_d             (adc_d),
     .divisor           (divisor),
     .lf_field          (conf_word[0]),
+    .lf_weak_load      (conf_word[2]),
     .ssp_dout          (ssp_dout),
 
     .ssp_din           (mux3_ssp_din),

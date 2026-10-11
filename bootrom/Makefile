@@ -17,13 +17,55 @@
 # Makefile for bootrom, see ../common_arm/Makefile.common for common settings
 #-----------------------------------------------------------------------------
 
+# This Makefile might have been called directly, not via the root Makefile, so:
+ifeq ($(PLTNAME),)
+    PLATFORM_FILE ?= ../Makefile.platform
+    -include $(PLATFORM_FILE)
+    -include ../.Makefile.options.cache
+    -include ../armsrc/Standalone/Makefile.hal
+    include ../common_arm/Makefile.hal
+    ifeq ($(PLATFORM_CHANGED), true)
+        $(error platform definitions have been changed, please "make clean" at the root of the project)
+    endif
+endif
+
+# Proxmark5 requires armlib.
+include ../armlib/Exports.mk
+
+# HAL for platform
+ifeq ($(PLATFORM),PM5)
+    SRC_SYS        = sys_hw_at32.c
+    SRC_TICKS      = ticks_hw_at32.c
+    SRC_GPIO       = gpio_hw_at32.c
+    SRC_USB_CDC    = usb_cdc_at32.c
+    SRC_FLASH_CODE = flash_code_hw_at32.c
+    SRC_FLASH_DATA = flashmem_hw_at32.c
+    SRC_STARTUP    = flash-reset-at32.s ram-reset-at32.s
+    LD_SCRIPT      = ldscript-flash-at32
+    APP_CFLAGS     += -mcpu=cortex-m4 -DPM5
+    CROSS_LDFLAGS  += -mcpu=cortex-m4
+    ARMLIB_OBJ     = $(OBJDIR)/$(ARMLIB_EXPORT_LIBNAME)
+    LIBS           += $(ARMLIB_OBJ)
+else
+    SRC_SYS        = sys_hw_at91.c
+    SRC_TICKS      = ticks_hw_at91.c
+    SRC_GPIO       = gpio_hw_at91.c
+    SRC_USB_CDC    = usb_cdc_at91.c
+    SRC_FLASH_CODE = flash_code_hw_at91.c
+    SRC_FLASH_DATA = flashmem_hw_at91.c
+    SRC_STARTUP    = flash-reset-at91.s ram-reset-at91.s
+    LD_SCRIPT      = ldscript-flash-at91
+endif
+
 # DO NOT use thumb mode in the phase 1 bootloader since that generates a section with glue code
 ARMSRC =
-THUMBSRC = usb_cdc.c \
-           clocks.c \
-           bootrom.c
+THUMBSRC = bootrom.c $(SRC_SYS) $(SRC_TICKS) $(SRC_GPIO) $(SRC_USB_CDC) $(SRC_FLASH_CODE) usb_cdc_desc.c
+ifneq (,$(findstring WITH_BWM_FORWARD,$(PLATFORM_DEFS)))
+    THUMBSRC += bwm_boot.c bwm_frame.c
+    APP_CFLAGS += -I../armsrc
+endif
 
-ASMSRC = ram-reset.s flash-reset.s
+ASMSRC = $(SRC_STARTUP)
 VERSIONSRC = version_pm3.c
 
 ## There is a strange bug with the linker: Sometimes it will not emit the glue to call
@@ -34,20 +76,35 @@ VERSIONSRC = version_pm3.c
 # THUMBSRC :=
 
 # stdint.h provided locally until GCC 4.5 becomes C99 compliant
-APP_CFLAGS = -I. -ffunction-sections -fdata-sections -DAS_BOOTROM
-
-# stack-protect , no-pie reduces size on Gentoo Hardened 8.2 gcc,  no-common makes sure uninitialized vars don't end up in COMMON area
-APP_CFLAGS += -fno-stack-protector -fno-pie -fno-common
+APP_CFLAGS += -I. -DAS_BOOTROM
+# no-common makes sure uninitialized vars don't end up in COMMON area
+APP_CFLAGS += -fno-common
+# For PM5, armlib is required
+APP_CFLAGS += $(ARMLIB_EXPORT_CFLAGS)
 
 ifneq (,$(findstring WITH_FLASH,$(PLATFORM_DEFS)))
-	APP_CFLAGS += -DWITH_FLASH
-	APP_CFLAGS += -I../common_arm
-    THUMBSRC += flashmem.c ticks.c
+    APP_CFLAGS += -DWITH_FLASH
+    APP_CFLAGS += -I../common_arm
+    THUMBSRC += ticks_core.c flashmem_core.c $(SRC_FLASH_DATA)
 endif
 
+ifneq (,$(findstring WITH_BWM_FORWARD,$(PLATFORM_DEFS)))
+    APP_CFLAGS += -DWITH_BWM_FORWARD
+endif
+
+# PLATFORM_EXTRAS=BWM is a no-op unless Makefile.hal filled PLATFORM_DEFS.
+ifneq (,$(findstring BWM,$(PLATFORM_EXTRAS)))
+ifeq (,$(findstring WITH_BWM_FORWARD,$(PLATFORM_DEFS)))
+    $(error PLATFORM_EXTRAS=BWM did not set WITH_BWM_FORWARD. Build bootrom from the repo root (`make bootrom`) or let this Makefile include common_arm/Makefile.hal.)
+endif
+endif
 
 # Do not move this inclusion before the definition of {THUMB,ASM,ARM}SRC
 include ../common_arm/Makefile.common
+
+ifneq (,$(findstring WITH_BWM_FORWARD,$(PLATFORM_DEFS)))
+    VPATH += ../armsrc
+endif
 
 INSTALLFW = $(OBJDIR)/bootrom.elf
 
@@ -67,9 +124,16 @@ tarbin: $(OBJS)
 	$(info [=] GEN $@)
 	$(Q)$(TAR) $(TARFLAGS) ../proxmark3-$(platform)-bin.tar $(OBJS:%=bootrom/%) $(OBJS:%.s19=bootrom/%.elf)
 
-$(OBJDIR)/bootrom.elf: $(VERSIONOBJ) $(ASMOBJ) $(ARMOBJ) $(THUMBOBJ)
+ifeq ($(PLATFORM),PM5)
+$(ARMLIB_OBJ):
+	$(info [=] MAKE $(notdir $@))
+	@$(MAKE) --no-print-directory -f ../armlib/Makefile
+endif
+
+$(OBJDIR)/bootrom.elf: $(VERSIONOBJ) $(ASMOBJ) $(ARMOBJ) $(THUMBOBJ) $(ARMLIB_OBJ)
 	$(info [=] LD $@)
-	$(Q)$(CROSS_LD) $(CROSS_LDFLAGS) -Wl,-T,ldscript-flash,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
+# Using -T instead of -Wl,-T is needed to prevent the linker from using the default ldscript when using picolibc instead of newlib
+	$(Q)$(CROSS_LD) $(CROSS_LDFLAGS) -T $(LD_SCRIPT) -Wl,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)
 
 clean:
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.o

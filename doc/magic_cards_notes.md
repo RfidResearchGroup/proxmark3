@@ -19,7 +19,7 @@ Useful docs:
     * [ID-F8268](#id-f8268)
   * [H series](#h-series)
     * [H1](#h1)
-    * [H5.5 / H7](#h55--h7)
+    * [H7](#h7)
     * [i57 / i57v2](#i57--i57v2)
 * [ISO14443A](#iso14443a)
   * [Identifying broken ISO14443A magic](#identifying-broken-iso14443a-magic)
@@ -159,8 +159,9 @@ This is the cheapest and most common ID82xx chip available. It is usually sold a
 
 * Chip is likely a cut down version of Hitag µ (micro) clone
 * UID `00 00 00 00 00 00`
-* Password protection (4b), usually "00000000"(default) or "9AC4999C"(FURUI)
-* Config block 0xFF
+* Data pages available: 0-14
+* Password block: 0xFE
+* Config block: 0xFF
   * Byte0
     * bit 0-1 : Data Rate. ’00’ -> 2kbit/s, ’01’ -> 4kbit/s, ’10’ -> 8kbit/s, ’11’ -> 2kbit/s
     * bit 2   : 1 -> fixed to 2kbit/s
@@ -171,14 +172,31 @@ This is the cheapest and most common ID82xx chip available. It is usually sold a
   * Byte1 only bit 0 changable
   * Byte2 fixed 0x00
   * Byte3 only higher nibble changable
-* Currently unimplemented in proxmark3 client
-* Other names:
-  * ID8210 (CN)
-  * H-125 (CN)
-  * H5 (RU)
-    * The sales of "H5" have been ceased because "the chip was leaked".
+* Proxmark has support for those tags: `lf hitag htu ... --82xx`
+
+#### Variations
+
+*China naming can have ID before chip number (ID8265, ID8210)*
+
+* 8265 (CN), H5 (RU). Password: `00000000`
+* 8210 (CN) (advices for FURUI Chinese cloner). Password: `9AC4999C`
+* H5.5 (RU). Password: `496B0E59`
 
 #### Detect
+
+Can be detected by `lf search command`:
+```
+[usb] pm3 --> lf search
+...
+[=] Searching for auth LF and special cases...
+[+] UID....... 000000000000
+[+] Chipset... Hitag � / 8265
+[?] Hint: Try `lf hitag htu` commands
+```
+⚠️ *That kind of detection is very sensitive to tag position on Proxmark. Few milimiters or tag rotation to other side and tag can be detected no more* ⚠️
+
+
+Or in a manual way:
 
 ```
 [usb] pm3 --> lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W00011 -s 3000
@@ -190,6 +208,24 @@ Check the green line of the plot. It must be a straight line at the end with no 
 ### Commands
 
 *Try NXP Hitag µ datasheet for sending commands to chip*
+
+Cloning EM410x to 8265 chip: `lf em 410x clone --id ... --htu`. Works only with 8265 chips, which have default password (`00000000`)
+Specific chip commands:
+```
+[usb] pm3 --> lf hitag htu
+
+help             This help
+list             List Hitag � trace history
+-----------      ----------- General -----------
+reader           Act like a Hitag � reader
+rdbl             Read Hitag � block
+dump             Dump Hitag � blocks to a file
+wrbl             Write Hitag � block
+-----------      ----------- Simulation -----------
+sim              Simulate Hitag � transponder
+```
+
+Or in a manual way:
 
 ```
 # login with pass 00000000
@@ -310,11 +346,11 @@ Simplest EM ID cloning chip available. Officially discontinued.
   * RW64bit
   * RW125FL
 
-### H5.5 / H7
+### H7
 
 ^[Top](#top)
 
-First "advanced" custom chip with H naming.
+First "advanced" custom chip with H naming. Probably variation of Hitag S chip with KDF.
 
 #### Characteristics
 
@@ -747,6 +783,7 @@ Here is how the IC can be configured:
   * MF-8 (RU)
   * MF-3 (RU) - not susceptible to "field reset bug", a way to detect [OTP](#fuid) chips.
   * MF-3.2 (RU) - static nonce `01200145`, potentially fixed chip which can bypass Iron Logic's filters.
+  * M+ (CopyKEY) - chips presented as a universal alternative to more advanced Chinese ICs; only real difference is presence of rewritable sectors 16+17 and block 255 (readable after any auth)
 `
 ### Identify
 
@@ -980,7 +1017,7 @@ hf 14a raw -s -c 90FD111100
 
 ^[Top](#top)
 
-TLDR: These magic cards have a 16 byte long configuration page, which usually starts with 0x85.
+TLDR: These magic cards have a 16 byte long configuration page, which usually starts with 0x85 or 0x7A.
 All of the known tags are using this, except for Ultralight tags, are listed here.
 
 You cannot turn a Classic tag into an Ultralight and vice-versa!
@@ -991,7 +1028,7 @@ You cannot turn a Classic tag into an Ultralight and vice-versa!
 
 * UID: 4/7 bytes
 * ATQA: always read from block 0
-* SAK: read from backdoor or configuration
+* SAK: read from hidden block or configuration
 * BCC: read from memory, beware!
 * ATS: no/unknown
 
@@ -1002,40 +1039,44 @@ You cannot turn a Classic tag into an Ultralight and vice-versa!
 ```
 hf mf info
 ...
-[+] Magic capabilities... Gen 4 GDM / USCUID ( Magic Auth/Gen1 Magic Wakeup/Alt Magic Wakeup )
+
+[+] Magic capabilities... Gen 1a
+[+] Magic capabilities... Gen 4 GDM / USCUID ( Magic Auth )
+[+] Magic capabilities... Gen 4 GDM / USCUID ( Gen1 Magic Wakeup / Gen4 Magic Wakeup)
+
 ```
 
 Possible tag wakeup mechanisms are:
 
-* Magic Auth
-* Gen1 Magic Wakeup
-* Alt Magic Wakeup
+* Gen1 Magic Wakeup (--gen1a)
+* Gen4 Magic Wakeup (--gdm)
+* Magic Auth (--wupa)
 
 ### Magic commands
 
 ^[Top](#top)
 
-* Magic authentication: select, `8000+crc`, `[Crypto1 Auth: 000000000000]`
-  * Backdoor read: `38xx+crc`
-  * Backdoor write: `A8xx+crc`, `[16 bytes data]+crc`
-  * Read configuration: `E000+crc`
-  * Write configuration: `E100+crc`; `[16 bytes data]+crc`
-* Magic wakeup (A: 00): `40(7)`, `43`
-* Magic wakeup (B: 85): `20(7)`, `23`
+* Magic wakeup (Gen1a): `40(7)`, `43`
+* Magic wakeup (GDM): `20(7)`, `23`
   * Backdoor read main block: `30xx+crc`
   * Backdoor write main block: `A0xx+crc`, `[16 bytes data]+crc`
   * Read hidden block: `38xx+crc`
   * Write hidden block: `A8xx+crc`, `[16 bytes data]+crc`
   * Read configuration: `E000+crc`
   * Write configuration: `E100+crc`
+* Magic authentication: select, `8000+crc`, `[Crypto1 Auth: 000000000000]`
+  * Read hidden block: `38xx+crc`
+  * Write hidden block: `A8xx+crc`, `[16 bytes data]+crc`
+  * Read configuration: `E000+crc`
+  * Write configuration: `E100+crc`; `[16 bytes data]+crc`
 
 * **DANGER**
   * Set main memory and config to 00 `F000+crc`
   * Set main memory and config to FF `F100+crc`
   * Set main memory and config to 55 (no 0A response) `F600+crc`
-  * Set backdoor memory to 00 `F800+crc`
-  * Set backdoor memory to FF `F900+crc`
-  * Set backdoor memory to 55 (no 0A response) `FE00+crc`
+  * Set hidden memory to 00 `F800+crc`
+  * Set hidden memory to FF `F900+crc`
+  * Set hidden memory to 55 (no 0A response) `FE00+crc`
 
 ### USCUID configuration guide
 
@@ -1046,8 +1087,8 @@ Possible tag wakeup mechanisms are:
 ```
 85000000000000000000000000000008
       ^^^^^^    ^^          ^^   >> ??? Mystery ???
-^^^^                             >> Gen1a mode (works with bitflip)
-    ^^                           >> Magic wakeup command (00 for 40-43; 85 for 20-23)
+^^^^                             >> backdoor enable: 7AFF on, 8500 off
+    ^^                           >> backdoor style (00 for 40(7)/43; 85 for 20(7)/23)
             ^^                   >> Block use of Key B if readable by ACL
               ^^                 >> CUID mode
                   ^^             >> MFC EV1 CL2 Perso config*
@@ -1058,23 +1099,39 @@ Possible tag wakeup mechanisms are:
                               ^^ >> SAK***
 
 To enable an option, set it to 5A.
-* 5A - unfused F0. C3 - F0: CL2 UID; A5 - F1: CL2 UID with anticollision shortcut; 87 - F2: CL1 Random UID; 69 - F3: CL1 non-UID. Anything else is going to be ignored, and set as 4 bytes.
-** Do not change the real ACL! Backdoor commands only acknowledge FF0780. To recover, disable this byte and issue regular write to sector trailer.
-*** If perso byte is enabled, this SAK is ignored, and hidden SAK is used instead.
+
+*   MFC EV1 CL2 Perso config - one value per personalization state:
+      5A  Unfused (not personalized yet)
+      C3  UIDF0 - double size (7 byte) UID, CL2
+      A5  UIDF1 - double size (7 byte) UID, CL2, with anticollision shortcut
+      87  UIDF2 - single size (4 byte) random UID, CL1
+      69  UIDF3 - single size (4 byte) NUID, CL1
+    Any other value is ignored, and the tag uses a 4 byte UID read from block 0.
+**  Shadow mode - do not change the real ACL! Backdoor commands only acknowledge FF0780.
+    To recover, disable this byte and issue a regular write to the sector trailer.
+*** SAK - if the perso byte is enabled, this SAK is ignored, and the SAK in the hidden block is used instead.
 ```
 
-* Gen1a mode:                            Allow using custom wakeup commands, like real gen1a chip, to run backdoor commands, as well as some extras.
-* Magic wakeup command:                  Use different wakeup commands for entering Gen1a mode. A) 00 - 40(7), 43; B) 85 - 20(7), 23.
+* backdoor enable:                       The master on/off switch for the magic wakeup backdoor. Bytes 0-1 = `7AFF` enable it (with access to the config block), `8500` disable it. When disabled the tag has no wakeup backdoor, and only the Magic Auth command (if enabled, see below) can reach the backdoor commands. This is byte 0-1 in the parsed `gdmgetcfg` output ("Magic wakeup enabled/disabled"). Note the guide's default example above (`8500...`) has it disabled. Works with bitflip (`hint: 8500 XOR FFFF = 7AFF`).
+* backdoor style:                        Selects *which* wakeup command sequence enters the backdoor. A tag uses exactly one style, chosen by byte 2:
+
+  | Byte 2 | Style            | Wakeup sequence               | Client flag |
+  | ------ | ---------------- | ----------------------------- | ----------- |
+  | `00`   | Gen1a            | `40` (7 bit frame), then `43` | `--gen1a`   |
+  | `85`   | GDM / alt / Gen4 | `20` (7 bit frame), then `23` | `--gdm`     |
+
+  Using the wrong style for a tag returns a `wupC1` / `wupGDM1` error - that means style mismatch, not a broken command.
+
 * Block use of Key B if readable by ACL: Per the MF1ICS50 datasheet, if Key B is readable by the ACL, using it shall give a Cmd Error 04. This option controls whether it happens or not.
 * CUID mode:                             Allow direct write to block 0, instead of giving Cmd Error 04.
-* MFC EV1 CL2 Perso config:              When configured, the tag behaves like a real Mifare Classic EV1 7B UID tag, and reads UID from backdoor blocks. Otherwise, the tag acts like a 4 byte tag.
+* MFC EV1 CL2 Perso config:              When configured, the tag behaves like a real Mifare Classic EV1 7B UID tag, and reads UID from hidden blocks. Otherwise, the tag acts like a 4 byte tag.
 * Shadow mode:                           Writes to memory persisting in tag RAM. As soon as no power is left, the contents are restored to saved data.
 * Magic Auth Command:                    Acknowledge command `8000` after selection, and call for Crypto1 auth with key `000000000000`.
 * Static encrypted nonce mode:           Use static encrypted nonces for authentication, making key recovery impossible.
-* Signature sector:                      Acknowledge auth commands to sector 17, which is stored in backdoor sector 1.
+* Signature sector:                      Acknowledge auth commands to sector 17, which is stored in hidden sector 1.
 * SAK:                                   If perso byte is not set, after UID select, send this value.
 
-2. Backdoor blocks
+2. Hidden blocks
 
 ```
 
@@ -1104,19 +1161,18 @@ Sectors 2-15
 
 ^[Top](#top)
 
-```
-# Read config block from card
-hf mf gdmcfg
-
-# Write config block to card
-hf mf gdmsetcfg
-
-# Parse config block to card
-hf mf gdmparsecfg
-
-# Write block to card
-hf mf gdmsetblk
-```
+| Command | Purpose |
+|---|---|
+| `gdmgetcfg` | Read + parse the config block |
+| `gdmsetcfg` | Write raw 16 bytes (`-d`) or individual flags (`--wakestyle/--cuid/--cl2/--shadow/--magicauth/--statenc/--sigsec`) for the config block |
+| `gdmparsecfg` | Offline decode of a config block |
+| `gdmgetblk` | Read public block |
+| `gdmsetblk` | Write a public block |
+| `gdmgethidblk` | Read hidden block |
+| `gdmsethidblk` | Write a hidden block |
+| `gdmsetuid` | Set 4-byte / 7-byte UID, or F3 perso (`--f3d`) |
+| `gdmwipe` | Restore card to factory defaults (`-a` for 4K) |
+| `gdmsetsig` | Write EV1 signature (hidden blocks 5/6), enable sigsec, write default signature key sector |
 
 ### libnfc commands
 
@@ -1126,21 +1182,19 @@ No implemented commands today
 ### Variations
 
 ^[Top](#top)
-| Factory configuration | Name |
-| --- | --- |
-| 850000000000000000005A5A00000008 | GDM |
-| 850000000000005A00FF005A00000008 | GDCUID |
-| 850000000000005A0000005A5A5A0008 | UCUID |
+| Factory configuration            | Name          |
+| -------------------------------- | ------------- |
+| 850000000000000000005A5A00000008 | GDM           |
+| 850000000000005A00FF005A00000008 | GDCUID        |
+| 850000000000005A0000005A5A5A0008 | UCUID         |
 | 8500000000005A00005A005A005A0008 | "7 byte hard" |
-| 7AFF850102015A00005A005A005A0008 | M1-7B |
-| 7AFF85000000000000FF000000000008 | FUID |
-| 7AFF000000000000BAFA358500000008 | PFUID |
-| 7AFF000000000000BAFA000000000008 | UFUID |
-| 7AFF0000000000000000000000000008 | ZUID |
+| 7AFF850102015A00005A005A005A0008 | M1-7B         |
+| 7AFF85000000000000FF000000000008 | FUID          |
+| 7AFF000000000000BAFA358500000008 | PFUID         |
+| 7AFF000000000000BAFA000000000008 | UFUID         |
+| 7AFF0000000000000000000000000008 | ZUID          |
 
-*Not all tags are the same!* UFUID, ZUID and PFUID* are not full implementations of USCUID - they only acknowledge the first 8 (except wakeup command) and last config byte(s).
-
-*Read and write config commands are flipped
+*Not all tags are the same!* UFUID, ZUID and PFUID are not full implementations of USCUID - they only acknowledge the first 8 (except wakeup command) and last config byte(s). Read and write config commands in PFUID are flipped.
 
 Well-known variations are described below.
 
@@ -1187,7 +1241,7 @@ Unlocked tag type:
 ```
 hf mf info
 ...
-[+] Magic capabilities... Gen 4 GDM / USCUID ( Alt Magic Wakeup )
+[+] Magic capabilities... Gen 4 GDM / USCUID ( Gen4 Magic Wakeup )
 [+] Magic capabilities... Write Once / FUID
 
 ```
@@ -1206,7 +1260,7 @@ hf mf info
 ^[Top](#top)
 
 ```
-[usb] pm3 --> hf mf gdmcfg --gdm
+[usb] pm3 --> hf mf gdmgetcfg --gdm
 [+] Config... 7A FF 85 00 00 00 00 00 00 FF 00 00 00 00 00 08
 [+]           7A FF .........................................  Magic wakeup enabled with GDM config block access
 [+]                 85 ......................................  Magic wakeup style GDM 20(7)/23
@@ -1258,7 +1312,7 @@ hf mf info
 
 ^[Top](#top)
 
-* `hf mf gdmcfg --gdm`
+* `hf mf gdmgetcfg --gdm`
 * `hf mf gdmsetcfg --gdm`
 * `hf mf gdmsetblk --gdm`
 
@@ -1299,7 +1353,7 @@ Before the sealing could be detected from the config block value.
 ^[Top](#top)
 
 ```
-[usb] pm3 --> hf mf gdmcfg --gen1a
+[usb] pm3 --> hf mf gdmgetcfg --gen1a
 [+] Config... 7A FF 00 00 00 00 00 00 BA FA 00 00 00 00 00 08
 [+]           7A FF .........................................  Magic wakeup enabled with GDM config block access
 [+]                 00 ......................................  Magic wakeup style Gen1a 40(7)/43
@@ -1342,7 +1396,7 @@ hf 14a raw       -c   85000000000000000000000000000008
 
 All commands are available before sealing.
 
-* `hf mf gdmcfg --gen1a`
+* `hf mf gdmgetcfg --gen1a`
 * `hf mf gdmsetcfg --gen1a`
 * `hf mf gdmsetblk --gen1a`
 * `hf mf csetuid`
@@ -1392,7 +1446,7 @@ hf mf info
 ^[Top](#top)
 
 ```
-[usb] pm3 --> hf mf gdmcfg --gen1a
+[usb] pm3 --> hf mf gdmgetcfg --gen1a
 [+] Config... 7A FF 00 00 00 00 00 00 00 00 00 00 00 00 00 08
 [+]           7A FF .........................................  Magic wakeup enabled with GDM config block access
 [+]                 00 ......................................  Magic wakeup style Gen1a 40(7)/43
@@ -1423,7 +1477,7 @@ hf mf info
 
 ^[Top](#top)
 
-* `hf mf gdmcfg --gen1a`
+* `hf mf gdmgetcfg --gen1a`
 * `hf mf gdmsetcfg --gen1a`
 * `hf mf gdmsetblk --gen1a`
 * `hf mf csetuid`
@@ -1470,7 +1524,7 @@ Could be manually validated with the configuration block value.
 ^[Top](#top)
 
 ```
-[usb] pm3 --> hf mf gdmcfg
+[usb] pm3 --> hf mf gdmgetcfg
 [+] Config... 85 00 00 00 00 00 00 00 00 00 5A 5A 00 00 00 08
 [+]           85 00 .........................................  Magic wakeup disabled
 [+]                 00 ......................................  Magic wakeup style Gen1a 40(7)/43
@@ -1492,8 +1546,8 @@ Could be manually validated with the configuration block value.
 ^[Top](#top)
 
 * Magic authentication: select, `8000+crc`, `[Crypto1 Auth: 000000000000]`
-  * Backdoor read: `38xx+crc`
-  * Backdoor write: `A8xx+crc`, `[16 bytes data]+crc`
+  * Read hidden block: `38xx+crc`
+  * Write hidden block: `A8xx+crc`, `[16 bytes data]+crc`
   * Read configuration: `E000+crc`
   * Write configuration: `E100+crc`; `[16 bytes data]+crc`
 
@@ -1502,7 +1556,7 @@ Could be manually validated with the configuration block value.
 ^[Top](#top)
 
 * Backdoor write: `gdmsetcfg`
-* Read configuration: `gdmcfg`
+* Read configuration: `gdmgetcfg`
 * Write configuration: `gdmsetcfg`
 
 ## GDCUID
@@ -1539,7 +1593,7 @@ Could be manually validated with the configuration block value.
 ^[Top](#top)
 
 ```
-[usb] pm3 --> hf mf gdmcfg
+[usb] pm3 --> hf mf gdmgetcfg
 [+] Config... 85 00 00 00 00 00 00 5A 00 FF 00 5A 00 00 00 08
 [+]           85 00 .........................................  Magic wakeup disabled
 [+]                 00 ......................................  Magic wakeup style Gen1a 40(7)/43
@@ -1561,8 +1615,8 @@ Could be manually validated with the configuration block value.
 ^[Top](#top)
 
 * Magic authentication: select, `8000+crc`, `[Crypto1 Auth: 000000000000]`
-  * Backdoor read: `38xx+crc`
-  * Backdoor write: `A8xx+crc`, `[16 bytes data]+crc`
+  * Read hidden block: `38xx+crc`
+  * Write hidden block: `A8xx+crc`, `[16 bytes data]+crc`
   * Read configuration: `E000+crc`
   * Write configuration: `E100+crc`; `[16 bytes data]+crc`
 
@@ -1571,7 +1625,7 @@ Could be manually validated with the configuration block value.
 ^[Top](#top)
 
 * Backdoor write: `gdmsetcfg`
-* Read configuration: `gdmcfg`
+* Read configuration: `gdmgetcfg`
 * Write configuration: `gdmsetcfg`
 
 ## MIFARE Classic, other versions
@@ -2088,7 +2142,7 @@ hf 14a raw -c e100
 Possible tag wakeup mechanisms are:
 
 * Gen1 Magic Wakeup
-* Alt Magic Wakeup
+* Gen4 Magic Wakeup
 
 ### Magic commands
 
@@ -2197,7 +2251,26 @@ hf 14a raw -akb 7 40; hf 14a raw -k 43; hf 14a raw -ck A2F2000000BD; hf 14a raw 
 
 ^[Top](#top)
 
-No implemented commands at time of writing
+Two helper scripts drive USCUID-UL cards:
+
+* `script run hf_mfu_uscuid` (Python) - read/parse config, change emulated type, set UID, set signature, and raw backdoor read/write.
+* `script run hf_mf_uscuid_prog` (Lua) - equivalent functionality. See `-h` for its options.
+
+Backdoor operations (set UID, set signature, raw hidden-block read/write) require the gen1a backdoor to be enabled - a config block starting with `7AFF`, see the [USCUID-UL configuration guide](#uscuid-ul-configuration-guide) - and a magic wakeup to be selected: for the Python script, `--gen1a` (`40`/`43`) or `--gdm` (`20`/`23`).
+
+Example - write the tag signature (32 bytes / 64 hexsymbols) using the `40:43` wakeup:
+
+```
+script run hf_mfu_uscuid -s <signature, 64 hexsymbols> --gen1a
+```
+
+Verify with `hf mfu info` and look for `Signature verification: successful`.
+
+The same result can be achieved manually with raw commands (magic wakeup, then write the eight signature pages `F8`-`FF`):
+
+```
+hf 14a raw -akb 7 40; hf 14a raw -k 43; hf 14a raw -ck A2F8<4 bytes>; ...; hf 14a raw -c A2FF<4 bytes>
+```
 
 ### libnfc commands
 
@@ -2209,11 +2282,11 @@ No implemented commands at time of writing
 
 ^[Top](#top)
 
-| Factory configuration | Name |
-| --- | --- |
-| 850000A0 00000AC3 00040301 01000B03 | UL-11 |
-| 850000A0 00000A3C 00040301 01000E03 | UL-21 |
-| 850000A0 0A000A00 00000000 00000000 | UL-C |
+| Factory configuration               | Name    |
+| ----------------------------------- | ------- |
+| 850000A0 00000AC3 00040301 01000B03 | UL-11   |
+| 850000A0 00000A3C 00040301 01000E03 | UL-21   |
+| 850000A0 0A000A00 00000000 00000000 | UL-C    |
 | 850085A0 00000AA5 00040402 01000F03 | NTAG213 |
 | 850000A0 00000A5A 00040402 01001103 | NTAG215 |
 | 850000A0 00000AAA 00040402 01001303 | NTAG216 |
@@ -2356,6 +2429,36 @@ After communication to iKey LLC (importer of those tags to Russian market), new 
 [+] ATS: 85 00 00 A0 00 00 0A 3C 00 04 03 01 01 00 0E 03 [ C8 1D ]
 ```
 
+### Magic commands
+
+^[Top](#top)
+
+Use the script `hf_mfu_ultra.lua` to restore (write) dump to tag or clear previously written tag.
+
+Usage:
+1. Restore dump to tag:
+   ```
+   script run hf_mfu_ultra -f <dump filename> -k <passwd> -r
+   ```
+2. Wipe tag (use it to prepare tag for restoring another dump):
+   ```
+   script run hf_mfu_ultra -k <passwd> -w
+   ```
+3. Show help:
+   ```
+   script run hf_mfu_ultra -h
+   ```
+
+Examples:
+1. Restore dump to tag:
+   ```
+   script run hf_mfu_ultra -f hf-mfu-3476FF1514D866-dump.bin -k ffffffff -r
+   ```
+2. Wipe tag:
+   ```
+   script run hf_mfu_ultra -k 1d237f76 -w
+   ```
+
 ## UL-5
 
 ^[Top](#top)
@@ -2388,6 +2491,28 @@ After personalization it is not possible to identify UL-5.
 The manufacturer confirmed unpersonalized tags could be identified by first 2 bytes of UID:
 
 * `AA 55...`
+
+### Magic commands
+
+^[Top](#top)
+
+Use the script `hf_mfu_ultra.lua` to restore (write) dump to tag.
+
+Usage:
+1. Restore dump to tag:
+   ```
+   script run hf_mfu_ultra -f <dump filename> -k <passwd> -r
+   ```
+3. Show help:
+   ```
+   script run hf_mfu_ultra -h
+   ```
+
+Examples:
+1. Restore dump to tag:
+   ```
+   script run hf_mfu_ultra -f hf-mfu-3476FF1514D866-dump.bin -k ffffffff -r
+   ```
 
 ## UL, other chips
 
@@ -2560,9 +2685,100 @@ More commands to follow. Be careful with some.
 
 ^[Top](#top)
 
+Three kinds of UID changeable ISO15693 tags are known, called V1 (Gen1), V2 (Gen2) and V3 (Gen3) here.
+`hf 15 info` only matches the UID prefix against its vendor list, so it can't tell them apart from genuine tags.
+
 ### Identify
 
-**TODO**
+^[Top](#top)
+
+| Kind | Blocks on tags tested | Set UID with |
+|------|-----------------------|--------------|
+| V1 (Gen1) | 28/40/56 | `hf 15 csetuid` |
+| V2 (Gen2) | 64 | `hf 15 csetuid --v2` |
+| V3 (Gen3) | 80 | `hf 15 csetuid --v3`, then `hf 15 cfinalize` |
+
+The block counts come from the few tags tested, they are only a hint.
+
+The same kind of magic can behave a bit differently between manufacturers, for example the block layout,
+or how the V1 backdoor blocks answer to read and write commands. What is described here comes from the tags tested.
+
+V1: no reliable way to identify it, the only sure check is to set a UID and see if it changes.
+On the V1 tags tested, reading blocks `0x38`, `0x39`, `0x3E` and `0x3F` fails while writing `0x38` and `0x39` works. That may be a hint but it is not confirmed. 
+
+```
+hf 15 raw -ac -d 022038     # command failed on the V1 tags tested
+```
+
+V2: no passive identification known. It uses the custom command `0xE0`, which genuine tags do not implement.
+
+V3: blocks `0x14` and `0x15` hold a signature while the tag is not finalized.
+
+```
+hf 15 raw -ac -d 022014     # A5 2B 44 2C
+hf 15 raw -ac -d 022015     # 21 AE 93 00 (00 00 00 00 after finalize)
+```
+
+
+
+### V1 (Gen1)
+
+^[Top](#top)
+
+The UID is written to blocks `0x38` and `0x39` with plain `WRITEBLOCK`, each holding four UID bytes in reverse order.
+Blocks `0x3E` and `0x3F` are written first as an unlock, this is what `hf 15 csetuid` sends for `E011223344556677`:
+
+```
+hf 15 raw -acw -d 02213E00000000
+hf 15 raw -acw -d 02213F69960000
+hf 15 raw -acw -d 02213877665544
+hf 15 raw -acw -d 022139332211E0
+```
+
+On the tags tested, writing only `0x38` and `0x39` is enough, the new UID is active immediately.
+`0x3E` and `0x3F` accept the unlock values once, later writes fail with `command failed`.
+
+### V2 (Gen2)
+
+^[Top](#top)
+
+Uses the custom command `0xE0`, this is what `hf 15 csetuid --v2` sends for `E011223344556677`:
+
+```
+hf 15 raw -acw -d 02E009473F038B00
+hf 15 raw -acw -d 02E0095200000000
+hf 15 raw -acw -d 02E0094077665544
+hf 15 raw -acw -d 02E00941332211E0
+```
+
+On the V2 tag tested, block `0x38` reads as normal memory, a `WRITEBLOCK` to it is refused with error code 3 (option not supported) unless the request flags carry the option flag (`42` instead of `02`).
+
+### V3 (Gen3)
+
+^[Top](#top)
+
+The UID sits in blocks `0x10` (last four bytes, reversed) and `0x11` (first four bytes, reversed).
+It can be rewritten as often as needed until the tag is finalized:
+
+```
+hf 15 raw -acw -d 02211077665544
+hf 15 raw -acw -d 022111332211E0
+```
+
+Finalize locks the UID for good and can't be undone. It clears the configuration
+blocks and changes the block numbering: on the tag tested, data written to block
+`0x38` before finalize read back at block `0x20` afterwards, a shift of `0x18`.
+User data is moved, not erased. Note down what is where before finalizing:
+
+```
+hf 15 raw -acw -d 022114A52B442C
+hf 15 raw -acw -d 02211569E25D00
+```
+
+> [!WARNING]
+> Writing anything other than these two finalize values to blocks `0x14` and `0x15` bricks the tag.
+>
+> `hf 15 wipe` may brick v3 tag.
 
 ### Proxmark3 commands
 
@@ -2571,8 +2787,19 @@ More commands to follow. Be careful with some.
 Always set a UID starting with `E0`.
 
 ```
-hf 15 csetuid E011223344556677
+hf 15 csetuid -u E011223344556677           # V1
+hf 15 csetuid -u E011223344556677 --v2      # V2
+hf 15 csetuid -u E011223344556677 --v3      # V3
+hf 15 cfinalize -y                          # V3, irreversible
 ```
+
+Before writing, `csetuid` checks that the tag looks like the selected kind:
+
+* V1 reads blocks `0x38`, `0x39`, `0x3E`, `0x3F` and stops if one holds data other than `00000000` (or `69960000` in `0x3F`),
+  or if a read fails other than with no answer / block not available.
+  If the write or the UID check fails and the tag still shows its original UID, it writes those four blocks back to `00000000`.
+* V3 stops unless blocks `0x14` and `0x15` still hold the un-finalized signature, `cfinalize` does the same.
+* V2 has no check, the `0xE0` command is ignored by genuine tags.
 
 or (ignore errors):
 
@@ -2605,6 +2832,7 @@ Can emulate MIFARE Classic, Ultralight/NTAG families, 14b UID & App Data
 * [Set 14443B UID and ATQB](#set-14443b-uid-and-atqb)
 * [(De)Activate Ultralight mode](#deactivate-ultralight-mode)
 * [Select Ultralight mode](#select-ultralight-mode)
+* [NTAG21X/I2C Notes](#ntag-notes)
 * [Set shadow mode (GTU)](#set-shadow-mode-gtu)
 * [Direct block read and write](#direct-block-read-and-write)
 * [(De)Activate direct write to block 0](#deactivate-direct-write-to-block-0)
@@ -2742,6 +2970,14 @@ Default `<passwd>`: `00000000`
 * Shadow mode: GTU
 * Backdoor password mode
 
+## UMC Version/Factory Test
+
+The CF..CC command is commonly considered to be a way of determining UMC versions. The card in circulation in recent years (2024? to present) is 06A0. It has some quirks. The older (previous?) 03A0 is assumed to have a full working featureset. The arm source points to the command being a "factory test." It also lists other possible values:
+- 6666 "Card type generic"
+- 02AA "Card type limited functionality"
+
+**NOTE**: Some versions (eg, 6666) return just the version + crc (4-bytes) others (eg, 06A0) return a zero padded version + crc (7-bytes).
+
 ### Proxmark3 commands
 
 ^[Top](#top) ^^[Gen4](#g4top)
@@ -2770,7 +3006,7 @@ hf 14a raw -s -c -t 1000 CF00000000CE02
 ...
 ```
 
-👉 **TODO** In Mifare Ultralight / NTAG mode, the special writes (`hf mfu restore` option `-s`, `-e`, `-r`) do not apply. Use `script run hf_mf_ultimatecard` for UID and signature, and `hf mfu wrbl` for PWD and PACK.
+👉 **TODO** In Mifare Ultralight / NTAG mode, the special writes (`hf mfu restore` option `-s`, `-e`, `-r`) do not apply. Use `script run hf_mf_ultimatecard` for UID and signature, and `hf mfu wrbl` for [PWD](#set-ntag-pwd) and [PACK](#set-ntag-pack).
 
 ### Change ATQA / SAK
 
@@ -2984,6 +3220,40 @@ Example: set maximum 63 blocks read/write for Mifare Classic 1K
 hf 14a raw -s -c -t 1000 CF000000006B3F
 ```
 
+### NTAG Notes
+
+^[Top](#top) ^^[Gen4](#g4top)
+
+**For UMC 06A0 and 6666**
+
+Despite varying memory structures on their specs, the UMC derives things like the PWD and PACK from fixed pages. The PWD is stored at E5 which matches the NTAG216/I2C transponders while the PACK is stored at 13 like an NTAG210 or an Ultralight EV1.
+
+#### Set NTAG PWD
+
+```
+hf mfu wrbl -b e5 -d <new 4-byte PWD>
+```
+or
+```
+hf 14a raw -s -c -t 1000 a2e5<new 4-byte PWD>
+```
+or
+```
+script run hf_mf_ultimatecard -p <new 4-byte PWD>
+```
+#### Set NTAG PACK
+```
+hf mfu wrbl -b 13 -d <2-byte PACK>0000
+```
+or
+```
+hf 14a -s -c -t 1000 a213<2-byte PACK>0000
+```
+or
+```
+script run hf_mf_ultimatecard -a <2-byte PACK>
+```
+
 ### Set shadow mode (GTU)
 
 ^[Top](#top) ^^[Gen4](#g4top)
@@ -2995,10 +3265,10 @@ This description of shadow modes wroted by seller at marketpalces:
 And these conclusions were made after a number of tests with UMC (new version, configured as MFC for example):
 
 | Mode | Buffer | Standart command (rdbl, wrbl e.t.c)     | Backdoor command (gsetblk, ggetblk, gload e.t.c.) |
-|------|--------|-----------------------------------------|---------------------------------------------------|
-| 2,3  |  buf23 | read/write from/to buf23                | read/write from/to buf23                          |
-|  0   |  buf0  | read from buf0, write to buf0 and buf23 | read/write from/to buf23                          |
-|  4   |   -    | read from buf0, write to buf23          | read/write from/to buf23                          |
+| ---- | ------ | --------------------------------------- | ------------------------------------------------- |
+| 2,3  | buf23  | read/write from/to buf23                | read/write from/to buf23                          |
+| 0    | buf0   | read from buf0, write to buf0 and buf23 | read/write from/to buf23                          |
+| 4    | -      | read from buf0, write to buf23          | read/write from/to buf23                          |
 
 Mode 1: For new card this mode looks like a bug. Reading/writing first two block use *buf23*. Reading other blocks use invalid region of memory and all returned data looks like pseudo-random. All acl looks like invalid. All data is readable by the keys and acl wich was written in *buf0*. Any writing operations in this mode use copy of *buf0* and only it. It`s not affected any other buffers. So if you change keys or/and acl you will must use new keys to read data.
 
@@ -3227,6 +3497,7 @@ hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC1910101112131
 ```
 hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC19101011121314151644000001FB
 ```
+
 
 ### Version and Signature
 

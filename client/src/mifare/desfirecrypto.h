@@ -75,6 +75,9 @@ typedef struct {
     bool appSelected; // for iso auth
     uint32_t selectedAID;
 
+    uint8_t selectedDFName[16];
+    uint8_t selectedDFNameLen;
+
     uint8_t uid[10];
     uint8_t uidlen;
 
@@ -83,6 +86,10 @@ typedef struct {
     uint8_t sessionKeyEnc[DESFIRE_MAX_KEY_SIZE];  // look at mifare4.h - mf4Session_t
     uint8_t lastIV[DESFIRE_MAX_KEY_SIZE];
     uint8_t lastCommand;
+    // status byte of the last answer the card gave. Every card error collapses
+    // to PM3_EAPDU_FAIL on the way out, so this is the only place the caller can
+    // find out which one it was
+    uint8_t lastRespCode;
     bool lastRequestZeroLen;
     uint16_t cmdCntr;   // for AES
     uint8_t TI[4];      // for AES
@@ -95,7 +102,9 @@ void DesfireSetKey(DesfireContext_t *ctx, uint8_t keyNum, DesfireCryptoAlgorithm
 void DesfireSetKeyNoClear(DesfireContext_t *ctx, uint8_t keyNum, DesfireCryptoAlgorithm keyType, uint8_t *key);
 void DesfireSetCommandSet(DesfireContext_t *ctx, DesfireCommandSet cmdSet);
 void DesfireSetCommMode(DesfireContext_t *ctx, DesfireCommunicationMode commMode);
+void DesfireSetSecureChannel(DesfireContext_t *ctx, DesfireSecureChannel schann);
 void DesfireSetKdf(DesfireContext_t *ctx, uint8_t kdfAlgo, uint8_t *kdfInput, uint8_t kdfInputLen);
+void DesfireSetDFName(DesfireContext_t *ctx, uint8_t *dfname, uint8_t dfnameLen);
 bool DesfireIsAuthenticated(DesfireContext_t *dctx);
 size_t DesfireGetMACLength(DesfireContext_t *ctx);
 
@@ -120,6 +129,7 @@ void DesfirePrintCardKeyType(uint8_t keyType);
 
 DesfireCommunicationMode DesfireFileCommModeToCommMode(uint8_t file_comm_mode);
 uint8_t DesfireCommModeToFileCommMode(DesfireCommunicationMode comm_mode);
+DesfireCommunicationMode DesfireEffectiveCommMode(DesfireContext_t *ctx, DesfireCommunicationMode filemode, const uint8_t *rights, size_t rightslen);
 
 void DesfireGenSessionKeyEV1(const uint8_t rnda[], const uint8_t rndb[], DesfireCryptoAlgorithm keytype, uint8_t *key);
 void DesfireGenSessionKeyEV2(uint8_t *key, uint8_t *rndA, uint8_t *rndB, bool enckey, uint8_t *sessionkey);

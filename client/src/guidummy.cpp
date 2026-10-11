@@ -30,7 +30,7 @@ extern "C" void ShowGraphWindow(void) {
 extern "C" void HideGraphWindow(void) {}
 extern "C" void RepaintGraphWindow(void) {}
 
-extern "C" void ShowPictureWindow(char *fn, int len) {
+extern "C" void ShowPictureWindow(const char *title, unsigned char *data, int len) {
     static int warned = 0;
 
     if (!warned) {
@@ -38,7 +38,7 @@ extern "C" void ShowPictureWindow(char *fn, int len) {
         warned = 1;
     }
 }
-extern "C" void ShowBase64PictureWindow(char *b64) {
+extern "C" void ShowBase64PictureWindow(const char *title, char *b64) {
     static int warned = 0;
 
     if (!warned) {
@@ -46,6 +46,7 @@ extern "C" void ShowBase64PictureWindow(char *b64) {
         warned = 1;
     }
 }
+extern "C" void ClearPictureWindow(void) {}
 extern "C" void HidePictureWindow(void) {}
 extern "C" void RepaintPictureWindow(void) {}
 

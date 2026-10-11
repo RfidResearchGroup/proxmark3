@@ -1,80 +1,38 @@
-local cmds = require('commands')
 local getopt = require('getopt')
-local bin = require('bin')
-local utils = require('utils')
 local ansicolors = require('ansicolors')
+local t55 = require('t55xx_config')
 
 copyright = ''
 author = 'Iceman'
-version = 'v1.0.3'
+version = 'v1.1.1'
 desc = [[
-This script will program a T55x7 TAG with the configuration: block 0x00 data 0x00088040
-The outlined procedure is as following:
+Testsuite for the PSK demodulation.
 
-"lf t55xx write -b 0 -d 00088040"
-"lf t55xx detect"
-"lf t55xx info"
+Writes block 0 with PSK selected and sweeps the bit rate and the PSK
+subcarrier, reads the configuration back with `lf t55xx detect` and reports,
+per configuration, whether what came back is what went in.
 
-Loop OUTER:
-    change the configuretion block 0 with:
-    -xxxx8xxx = PSK RF/2 with Manchester modulation
-    -xxxx1xxx = PSK RF/2 with PSK1 modulation (phase change when input changes)
-    -xxxx2xxx = PSK RF/2 with PSk2 modulation (phase change on bitclk if input high)
-    -xxxx3xxx = PSK RF/2 with PSk3 modulation (phase change on rising edge of input)
-    Loop INNER
-        for each outer configuration, also do
-            XXXXX0XX = PSK RF/2
-            XXXXX4XX = PSK RF/4
-            XXXXX8XX = PSK RF/8
+    00 xx y z 40
+    --         -- max 2 blocks
+            -- subcarrier, 0 4 8 = RF/2 RF/4 RF/8
+          -- PSK1 1, PSK2 2, PSK3 3
+       -- bit rate, 00 04 08 0C 10 14 18 1C = RF/8 16 32 40 50 64 100 128
 
-In all 12 individual test for the PSK demod
+Needs a T5577 in the field.
 ]]
 example = [[
-    1. script run lf_t55xx_defaultpsk
+    1. script run tests/lf_t55xx_defaultpsk
+    2. script run tests/lf_t55xx_defaultpsk -a
 ]]
 usage = [[
-script run lf_t55xx_defaultpsk [-h]
+script run tests/lf_t55xx_defaultpsk [-h] [-a] [-v]
 ]]
 arguments = [[
     -h             : this help
+    -a             : sweep PSK2 and PSK3 as well, not just PSK1
+    -v             : also run `lf t55xx info` for each configuration
 ]]
 
-local DEBUG = true -- the debug flag
-local TIMEOUT = 1500
-
--- --BLOCK 0 = 00 08 80 40 PSK
-             -- -----------
-               -- 08------- bitrate
-                  -- 8----- modulation PSK1
-                   -- 0---- PSK ClockRate
-                      -- 40 max 2 blocks
-
-local procedurecmds = {
-    [1] = '00%02X%X%X40',
-    [2] = 'lf t55xx detect',
-    [3] = 'lf t55xx info',
-}
----
--- A debug printout-function
-local function dbg(args)
-    if not DEBUG then return end
-    if type(args) == 'table' then
-        local i = 1
-        while args[i] do
-            dbg(args[i])
-            i = i+1
-        end
-    else
-        print('###', args)
-    end
-end
----
--- This is only meant to be used when errors occur
-local function oops(err)
-    print('ERROR:', err)
-    core.clearCommandBuffer()
-    return nil, err
-end
 ---
 -- Usage help
 local function help()
@@ -89,79 +47,42 @@ local function help()
     print(ansicolors.cyan..'Example usage'..ansicolors.reset)
     print(example)
 end
---
--- Exit message
-local function ExitMsg(msg)
-    print( string.rep('--',20) )
-    print( string.rep('--',20) )
-    print(msg)
-    print()
-end
-
-local function test(modulation)
-    local bitrate
-    local clockrate
-    local password = '00000000'
-    local block = '00'
-    local flags = '00'
-    for bitrate = 0x0, 0x1d, 0x4 do
-
-        for clockrate = 0,8,4 do
-
-            for _ = 1, #procedurecmds do
-                local cmd = procedurecmds[_]
-
-                if #cmd == 0 then
-
-                elseif _ == 1 then
-
-                    dbg('Writing to T55x7 TAG')
-
-                    local config = cmd:format(bitrate, modulation, clockrate)
-                    dbg(('lf t55xx write -b 0 -d %s'):format(config))
-
-                    local data = ('%s%s%s%s'):format(utils.SwapEndiannessStr(config, 32), password, block, flags)
-
-                    local wc = Command:newNG{cmd = cmds.CMD_LF_T55XX_WRITEBL, data = data}
-                    local response, err = wc:sendNG(false, TIMEOUT)
-                    if not response then return oops(err) end
-                else
-                    dbg(cmd)
-                    core.console( cmd )
-                end
-            end
-            core.clearCommandBuffer()
-        end
-    end
-    print( string.rep('--',20) )
-end
 
 local function main(args)
 
-    print( string.rep('--',20) )
-    print( string.rep('--',20) )
+    local opts = {}
+    local last_mod = 1
 
-    -- Arguments for the script
-    for o, arg in getopt.getopt(args, 'h') do
+    for o, _ in getopt.getopt(args, 'hav') do
         if o == 'h' then return help() end
+        if o == 'a' then last_mod = 3 end
+        if o == 'v' then opts.verbose = true end
     end
 
     core.clearCommandBuffer()
 
-    test(1)  -- PSK1
-    --test(2) -- PSK2
-    --test(3) -- PSK3
+    local title = (last_mod == 1) and 'T55x7 PSK1,  bit rate x subcarrier sweep'  or 'T55x7  PSK1/2/3,  bit rate x subcarrier sweep'
+    local report = t55.report(title)
+    local aborted = false
 
-    print( string.rep('--',20) )
+    for modulation = 1, last_mod do
+        for bitrate = 0x0, 0x1d, 0x4 do
+            for subcarrier = 0, 8, 4 do
+
+                t55.check(report, ('00%02X%X%X40'):format(bitrate, modulation, subcarrier), opts)
+
+                if core.kbd_enter_pressed() then
+                    print('aborted by user')
+                    aborted = true
+                    break
+                end
+            end
+            if aborted then break end
+        end
+        if aborted then break end
+    end
+
+    return report:summary()
 end
+
 main(args)
-
--- Where it iterates over
-  -- xxxx8xxx = PSK RF/2 with Manchester modulation
-  -- xxxx1xxx = PSK RF/2 with PSK1 modulation (phase change when input changes)
-  -- xxxx2xxx = PSK RF/2 with PSk2 modulation (phase change on bitclk if input high)
-  -- xxxx3xxx = PSK RF/2 with PSk3 modulation (phase change on rising edge of input)
-
-    -- XXXXX0XX = PSK RF/2
-    -- XXXXX4XX = PSK RF/4
-    -- XXXXX8XX = PSK RF/8

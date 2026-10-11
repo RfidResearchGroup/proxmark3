@@ -83,11 +83,7 @@ local function read14443b(disconnect)
     local info = nil
     local result, err = c:sendNG(false, TIMEOUT)
     if result and result.Status == 0 then
-        if result.Oldarg0 == 0 then
-            info, err = parse14443b(result.Data)
-        else
-            err = 'iso14443b card select failed'
-        end
+        info, err = parse14443b(result.Data)
     else
         err = 'No response from card'
     end

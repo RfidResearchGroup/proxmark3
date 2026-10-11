@@ -33,11 +33,12 @@
 #include "standalone.h" // standalone definitions
 #include "proxmark3_arm.h"
 #include "appmain.h"
-#include "fpgaloader.h"
+#include "fpga_apis.h"
+#include "fpga_loader.h"
 #include "util.h"
 #include "dbprint.h"
 
-#include "ticks.h"  // SpinDelay
+#include "ticks_apis.h"  // SpinDelay
 #include "protocols.h"  // MIFARE_ULEV1_VERSION, MIFARE_ULEV1_READSIG, MIFARE_ULEV1_READ_CNT, MIFARE_ULEV1_CHECKTEAR
 #include <string.h>  // memcmp
 #include "mifareutil.h"
@@ -157,7 +158,7 @@ void RunMod(void) {
             if (button_pressed != BUTTON_NO_CLICK || data_available())
                 break;
             else if (state == STATE_SEARCH) {
-                if (!iso14443a_select_card(NULL, &card, NULL, true, 0, true)) {
+                if (iso14443a_select_card(NULL, &card, NULL, true, 0, true) == 0) {
                     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
                     LED_D_OFF();
                     SpinDelay(500);
@@ -188,7 +189,7 @@ void RunMod(void) {
 
                 for (int i = 0; i < block_count; i++) {
                     uint8_t dataout[16] = {0x00};
-                    if (mifare_ultra_readblock(i, dataout)) {
+                    if (mifare_ultra_readblock(i, dataout) != PM3_SUCCESS) {
                         // If there's an error reading, go back to search state
                         read_successful = false;
                         break;
@@ -246,7 +247,7 @@ void RunMod(void) {
                 FLAG_SET_UID_IN_DATA(flags, 7);
 
                 Dbprintf("Starting simulation, press " _GREEN_("pm3 button") " to stop and go back to search state.");
-                SimulateIso14443aTag(7, flags, card.uid, 0, NULL, 0);
+                SimulateIso14443aTag(7, flags, card.uid, 0);
 
                 // Go back to search state if user presses pm3-button
                 state = STATE_SEARCH;

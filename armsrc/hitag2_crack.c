@@ -19,6 +19,9 @@
 
 
 #include "hitag2_crack.h"
+
+// How many times the crypto probe retries before deciding the tag is refusing.
+#define HT2_CRACK_PROBE_TRIES 8
 #include "hitag2/hitag2_crypto.h"
 #include "hitag2.h"
 #include "proxmark3_arm.h"
@@ -341,6 +344,11 @@ void ht2_crack2(uint8_t *nrar_hex) {
 
     uint8_t *e_response = BigBuf_calloc(32);
     lf_hitag_crack2_t *c2 = (lf_hitag_crack2_t *)BigBuf_calloc(sizeof(lf_hitag_crack2_t));
+    if (e_response == NULL || c2 == NULL) {
+        BigBuf_free();
+        reply_ng(CMD_LF_HITAG2_CRACK_2, PM3_EMALLOC, NULL, 0);
+        return;
+    }
 
     g_logging = false;
     LEDsoff();
@@ -365,6 +373,22 @@ void ht2_crack2(uint8_t *nrar_hex) {
     // find a valid encrypted command
     uint8_t e_firstcmd[10] = {0};
     if (hitag2crack_find_valid_e_cmd(e_firstcmd, c2->nrar) == false) {
+
+        // Say why, because the two causes need different fixes.
+        //
+        // Every guess replays the nR aR and waits for the tag's encrypted page 3.
+        // A password mode tag never answers a 64 bit authentication at all - that
+        // is the datasheet behaviour, selected by bit 3 of the configuration byte
+        // - and neither does a crypto tag given a pair captured from some other
+        // card or key.  Without this the attack just reported "fail".
+        //
+        // Probing once up front was tried instead and removed: the exchange misses
+        // often enough that a short probe rejected a card this attack then cracked
+        // successfully.  The full sweep is the reliable test, so report after it.
+        // Reading the configuration byte would be better still, but that needs the
+        // authentication we are trying to establish.
+        DbpString("no encrypted command was answered");
+        DbpString("  tag is not in crypto mode, or this nR aR is not valid for it");
         BigBuf_free();
         reply_ng(CMD_LF_HITAG2_CRACK_2, PM3_EFAILED, NULL, 0);
         return;
@@ -431,6 +455,11 @@ void ht2_crack2(uint8_t *nrar_hex) {
     Dbprintf("Recovered " _YELLOW_("%4i") " bits of keystream", kslen);
 
     lf_hitag_crack_response_t *packet = (lf_hitag_crack_response_t *)BigBuf_calloc(sizeof(lf_hitag_crack_response_t));
+    if (packet == NULL) {
+        BigBuf_free();
+        reply_ng(CMD_LF_HITAG2_CRACK_2, PM3_EMALLOC, NULL, 0);
+        return;
+    }
 
     packet->status = 1;
     binarray2hex(c2->keybits, kslen, packet->data);

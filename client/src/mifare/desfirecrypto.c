@@ -101,9 +101,22 @@ void DesfireSetCommMode(DesfireContext_t *ctx, DesfireCommunicationMode commMode
 void DesfireSetKdf(DesfireContext_t *ctx, uint8_t kdfAlgo, uint8_t *kdfInput, uint8_t kdfInputLen) {
     ctx->kdfAlgo = kdfAlgo;
     ctx->kdfInputLen = kdfInputLen;
-    if (kdfInputLen) {
+    if (kdfInputLen)
         memcpy(ctx->kdfInput, kdfInput, kdfInputLen);
+}
+
+void DesfireSetDFName(DesfireContext_t *ctx, uint8_t *dfname, uint8_t dfnameLen) {
+    ctx->selectedDFNameLen = 0;
+    memset(ctx->selectedDFName, 0, sizeof(ctx->selectedDFName));
+
+    if (dfname && dfnameLen && dfnameLen <= 16) {
+        ctx->selectedDFNameLen = dfnameLen;
+        memcpy(ctx->selectedDFName, dfname, dfnameLen);
     }
+}
+
+void DesfireSetSecureChannel(DesfireContext_t *ctx, DesfireSecureChannel schann) {
+    ctx->secureChannel = schann;
 }
 
 bool DesfireIsAuthenticated(DesfireContext_t *dctx) {
@@ -561,19 +574,42 @@ uint8_t DesfireCommModeToFileCommMode(DesfireCommunicationMode comm_mode) {
     return fmode;
 }
 
+// The PICC applies the file communication mode only when access is granted via a key
+// that matches the authenticated one. When the operation is granted by the free access
+// right (0x0e) instead, the PICC runs it in plain, whatever the file settings say.
+// `rights` lists every access right that can grant the operation.
+DesfireCommunicationMode DesfireEffectiveCommMode(DesfireContext_t *ctx, DesfireCommunicationMode filemode, const uint8_t *rights, size_t rightslen) {
+    bool freeaccess = false;
+
+    for (size_t i = 0; i < rightslen; i++) {
+        // a key based right we hold takes precedence over free access
+        if (rights[i] == ctx->keyNum && DesfireIsAuthenticated(ctx)) {
+            return filemode;
+        }
+
+        if (rights[i] == 0x0e) {
+            freeaccess = true;
+        }
+    }
+
+    return (freeaccess) ? DCMPlain : filemode;
+}
+
 void DesfireGenSessionKeyEV1(const uint8_t rnda[], const uint8_t rndb[], DesfireCryptoAlgorithm keytype, uint8_t *key) {
     switch (keytype) {
-        case T_DES:
+        case T_DES: {
             memcpy(key, rnda, 4);
             memcpy(key + 4, rndb, 4);
             break;
-        case T_3DES:
+        }
+        case T_3DES: {
             memcpy(key, rnda, 4);
             memcpy(key + 4, rndb, 4);
             memcpy(key + 8, rnda + 4, 4);
             memcpy(key + 12, rndb + 4, 4);
             break;
-        case T_3K3DES:
+        }
+        case T_3K3DES: {
             memcpy(key, rnda, 4);
             memcpy(key + 4, rndb, 4);
             memcpy(key + 8, rnda + 6, 4);
@@ -581,12 +617,14 @@ void DesfireGenSessionKeyEV1(const uint8_t rnda[], const uint8_t rndb[], Desfire
             memcpy(key + 16, rnda + 12, 4);
             memcpy(key + 20, rndb + 12, 4);
             break;
-        case T_AES:
+        }
+        case T_AES: {
             memcpy(key, rnda, 4);
             memcpy(key + 4, rndb, 4);
             memcpy(key + 8, rnda + 12, 4);
             memcpy(key + 12, rndb + 12, 4);
             break;
+        }
     }
 }
 
@@ -616,7 +654,7 @@ void DesfireGenSessionKeyEV2(uint8_t *key, uint8_t *rndA, uint8_t *rndB, bool en
     DesfireContext_t ctx = {0};
     ctx.keyType = T_AES;
     memcpy(ctx.key, key, 16); // aes-128
-    DesfireCryptoCMAC(&ctx, data, 32, cmac);
+    DesfireCryptoCMACEx(&ctx, DCOMainKey, data, 32, 0, cmac);
 
     memcpy(sessionkey, cmac, CRYPTO_AES_BLOCK_SIZE);
 }

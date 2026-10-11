@@ -38,7 +38,7 @@
 ///     The only requirement is that this structure remain
 ///     smaller than the NG buffer size (256 bytes).
 typedef struct {
-    bool parity;
+    bool _ignored__was_use_parity; // BUGBUG: Ignored, but kept for structure size / offset compatibility
 
     // Used for writing address
     uint8_t address;

@@ -69,7 +69,7 @@ local function exitMsg(msg)
 end
 
 local function main(args)
-    
+
     print( string.rep('--',20) )
     print( string.rep('--',20) )
     print()

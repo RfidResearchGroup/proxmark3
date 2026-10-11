@@ -1,0 +1,30 @@
+{
+    "Created": "proxmark3",
+    "FileType": "mfdes v1",
+    "Version": 1,
+    "Card": {
+        "UID": "04268512A25680",
+        "ATQA": "4403",
+        "SAK": "20",
+        "ATS": "06757781028002F0",
+        "VersionHW": "04010101001805",
+        "VersionSW": "04010101041805",
+        "VersionProd": "04268512A25680B90C1749702717",
+        "FreeMem": 3840
+    },
+    "Applications": {
+        "000000": {
+            "KeySettings": "0F",
+            "NumKeysRaw": "01",
+            "NumKeys": 1,
+            "KeyType": "2tdea",
+            "Authenticated": true,
+            "Keys": {
+                "0": {
+                    "Version": "00",
+                    "Key": "00000000000000000000000000000000"
+                }
+            }
+        }
+    }
+}

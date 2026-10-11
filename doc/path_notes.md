@@ -63,8 +63,8 @@ The recovery / firmware files will be copied to
 /usr/local/share/proxmark3/firmware
 ```
 
-* Proxmark3 firmware: `bootrom.elf`, `fullimage.elf`, `proxmark3_recovery.bin` (used for JTAG)
-* SIM firmware: `sim014.bin`, `sim014.sha512.txt`
+* Proxmark3 firmware: `bootrom.elf`, `fullimage.elf`, `recovery.bin` (used for JTAG)
+* SIM firmware: `sim024.bin`, `sim024.sha512.txt`
 
 
 ## Traces

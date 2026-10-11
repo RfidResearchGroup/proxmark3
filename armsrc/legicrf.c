@@ -24,8 +24,9 @@
 #include "proxmark3_arm.h"
 #include "cmd.h"
 #include "BigBuf.h"
-#include "fpgaloader.h"
-#include "ticks.h"
+#include "fpga_loader.h"
+#include "ticks_apis.h"
+#include "fpga_apis.h"
 #include "dbprint.h"
 #include "util.h"
 #include "string.h"
@@ -75,8 +76,8 @@ static uint16_t rx_frame_from_fpga(void) {
         WDT_HIT();
 
         // wait for frame be become available in rx holding register
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            return AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_RX_Ready()) {
+            return FPGA_SSC_RX_Value();
         }
     }
     return 0;
@@ -143,12 +144,12 @@ static bool rx_bit(void) {
 
 static void tx_bit(bool bit) {
     // insert pause
-    HIGH(GPIO_SSC_DOUT);
+    Gpio_SSC_DOUT_High();
     last_frame_end += RWD_TIME_PAUSE;
     while (GET_TICKS < last_frame_end) { };
 
     // return to carrier on, wait for bit periode to end
-    LOW(GPIO_SSC_DOUT);
+    Gpio_SSC_DOUT_Low();
     last_frame_end += (bit ? RWD_TIME_1 : RWD_TIME_0) - RWD_TIME_PAUSE;
     while (GET_TICKS < last_frame_end) { };
 }
@@ -181,10 +182,10 @@ static void tx_frame(uint32_t frame, uint8_t len) {
     };
 
     // add pause to mark end of the frame
-    HIGH(GPIO_SSC_DOUT);
+    Gpio_SSC_DOUT_High();
     last_frame_end += RWD_TIME_PAUSE;
     while (GET_TICKS < last_frame_end) { };
-    LOW(GPIO_SSC_DOUT);
+    Gpio_SSC_DOUT_Low();
 
     // log
     uint8_t cmdbytes[] = {len, BYTEx(frame, 0), BYTEx(frame, 1), BYTEx(frame, 2)};
@@ -288,16 +289,15 @@ static void init_reader(void) {
     // configure FPGA
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_SUBCARRIER_212_KHZ | FPGA_HF_READER_MODE_RECEIVE_IQ);
-    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    SetAdcMuxFor(ADC_MUXSEL_HIPKD);
     LED_A_ON();
 
     // configure SSC with defaults
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
 
     // re-claim GPIO_SSC_DOUT as GPIO and enable output
-    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
-    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
-    LOW(GPIO_SSC_DOUT);
+    gpio_fpga_mod_only_setup();
+    Gpio_SSC_DOUT_Low();
 
     // reserve a cardmem, meaning we can use the tracelog function in bigbuff easier.
     legic_mem = BigBuf_get_EM_addr();

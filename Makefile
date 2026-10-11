@@ -14,7 +14,8 @@
 # See LICENSE.txt for the text of the license.
 #-----------------------------------------------------------------------------
 
--include Makefile.platform
+PLATFORM_FILE ?= Makefile.platform
+-include $(PLATFORM_FILE)
 -include .Makefile.options.cache
 include Makefile.defs
 include common_arm/Makefile.hal
@@ -29,12 +30,22 @@ ifneq (,$(DESTDIR))
     endif
 endif
 
-all clean install uninstall check: %: client/% bootrom/% armsrc/% recovery/% mfc_card_only/% mfc_card_reader/% mfd_aes_brute/% fpga_compress/% cryptorf/%
+define submake
+    $(MAKE) $(1)/$(2) || exit 1;
+endef
+
 # hitag2crack toolsuite is not yet integrated in "all", it must be called explicitly: "make hitag2crack"
-#all clean install uninstall check: %: hitag2crack/%
+HOST_TARGETS := client mfc_card_only mfc_card_reader mfd_aes_brute mfulc_des_brute fpga_compress cryptorf
+TARGETS := bootrom armsrc recovery $(HOST_TARGETS)
+all clean install uninstall check: %:
+	$(foreach target,$(TARGETS),$(call submake,$(target),$*))
+
+host: host/all
+host/all host/clean host/install host/uninstall host/check: %:
+	$(foreach target,$(HOST_TARGETS),$(call submake,$(target),$(notdir $*)))
 
 INSTALLTOOLS=mfc/pm3_eml2lower.sh mfc/pm3_eml2upper.sh mfc/pm3_mfdread.py mfc/pm3_mfd2eml.py mfc/pm3_eml2mfd.py pm3_amii_bin2eml.pl pm3_reblay-emulating.py pm3_reblay-reading.py
-INSTALLSIMFW=sim011.bin sim011.sha512.txt sim013.bin sim013.sha512.txt sim014.bin sim014.sha512.txt
+INSTALLSIMFW=sim011.bin sim011.sha512.txt sim013.bin sim013.sha512.txt sim020.bin sim020.sha512.txt
 INSTALLSCRIPTS=pm3 pm3-flash pm3-flash-all pm3-flash-bootrom pm3-flash-fullimage
 INSTALLSHARES=tools/jtag_openocd traces
 INSTALLDOCS=doc/*.md doc/md
@@ -121,6 +132,9 @@ mfc_card_reader/check: FORCE
 mfd_aes_brute/check: FORCE
 	$(info [*] CHECK $(patsubst %/check,%,$@))
 	$(Q)$(BASH) tools/pm3_tests.sh $(CHECKARGS) $(patsubst %/check,%,$@)
+mfulc_des_brute/check: FORCE
+	$(info [*] CHECK $(patsubst %/check,%,$@))
+	$(Q)$(BASH) tools/pm3_tests.sh $(CHECKARGS) $(patsubst %/check,%,$@)
 fpga_compress/check: FORCE
 	$(info [*] CHECK $(patsubst %/check,%,$@))
 	$(Q)$(BASH) tools/pm3_tests.sh $(CHECKARGS) $(patsubst %/check,%,$@)
@@ -142,8 +156,6 @@ hitag2crack/check: FORCE
 common/check: FORCE
 	$(info [*] CHECK $(patsubst %/check,%,$@))
 	$(Q)$(BASH) tools/pm3_tests.sh $(CHECKARGS) $(patsubst %/check,%,$@)
-check: common/check
-	$(info [*] ALL CHECKS DONE)
 
 cryptorf/%: FORCE
 	$(info [*] MAKE $@)
@@ -154,6 +166,9 @@ mfc_card_only/%: FORCE
 mfc_card_reader/%: FORCE
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C tools/mfc/card_reader $(patsubst mfc_card_reader/%,%,$@) DESTDIR=$(MYDESTDIR)
+mfulc_des_brute/%: FORCE
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C tools/mfulc_des_brute $(patsubst mfulc_des_brute/%,%,$@) DESTDIR=$(MYDESTDIR)
 mfd_aes_brute/%: FORCE
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C tools/mfd_aes_brute $(patsubst mfd_aes_brute/%,%,$@) DESTDIR=$(MYDESTDIR)
@@ -177,15 +192,23 @@ recovery/%: FORCE cleanifplatformchanged
 hitag2crack/%: FORCE
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C tools/hitag2crack $(patsubst hitag2crack/%,%,$@) DESTDIR=$(MYDESTDIR)
+hitag2crack/clean: FORCE hitag2crack/_clean_pycache
+hitag2crack/_clean_pycache:
+	find . -type d -name __pycache__ -exec rm -rfv \{\} +
+ePassport/%: FORCE
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C tools/ePassport $(patsubst ePassport/%,%,$@) DESTDIR=$(MYDESTDIR)
+
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
-.PHONY: all clean install uninstall help _test bootrom fullimage recovery client mfc_card_only mfc_card_reader mfd_aes_brute hitag2crack style miscchecks release FORCE udev accessrights cleanifplatformchanged
+.PHONY: all host clean install uninstall help _test bootrom fullimage recovery client mfc_card_only mfc_card_reader mfulc_des_brute mfd_aes_brute hitag2crack ePassport style miscchecks release FORCE udev accessrights cleanifplatformchanged
 
 help:
 	@echo "Multi-OS Makefile"
 	@echo
 	@echo "Possible targets:"
 	@echo "+ all             - Make all targets: bootrom, fullimage and OS-specific host tools"
+	@echo "+ host            - Make all OS-specific host tools"
 	@echo "+ clean           - Clean in all targets"
 	@echo "+ .../clean       - Clean in specified target and its deps, e.g. bootrom/clean"
 	@echo "+ (un)install     - Install/uninstall Proxmark files in the system, default to /usr/local/share,"
@@ -199,12 +222,13 @@ help:
 	@echo "+ cryptorf        - Make tools/cryptorf"
 	@echo "+ mfc_card_only   - Make tools/mfc/card_only"
 	@echo "+ mfc_card_reader - Make tools/mfc/card_reader"
+	@echo "+ mfulc_des_brute        - Make tools/mfulc_des_brute"
 	@echo "+ mfd_aes_brute   - Make tools/mfd_aes_brute"
 	@echo "+ hitag2crack     - Make tools/hitag2crack"
 	@echo "+ fpga_compress   - Make tools/fpga_compress"
 	@echo
 	@echo "+ style           - Apply some automated source code formatting rules"
-	@echo "+ commands        - Regenerate commands documentation files and autocompletion data"
+	@echo "+ commands        - Regenerate commands documentation files (doc/commands.md, doc/commands.json)"
 	@echo "+ check           - Run offline tests. Set CHECKARGS to pass arguments to the test script"
 	@echo "+ .../check       - Run offline tests against specific target. See above."
 	@echo "+ miscchecks      - Detect various encoding issues in source code"
@@ -242,6 +266,8 @@ cryptorf: cryptorf/all
 mfc_card_only: mfc_card_only/all
 
 mfc_card_reader: mfc_card_reader/all
+
+mfulc_des_brute: mfulc_des_brute/all
 
 mfd_aes_brute: mfd_aes_brute/all
 
@@ -311,26 +337,37 @@ style: commands
 	# Make sure astyle is installed
 	@command -v astyle >/dev/null || ( echo "Please install 'astyle' package first" ; exit 1 )
 	# Remove spaces & tabs at EOL, add LF at EOF if needed on *.c, *.h, *.cpp. *.lua, *.py, *.pl, Makefile, *.v, pm3
-	find . \( -not -path "./cov-int/*" -and -not -path "./fpga*/xst/*" -and -not -path "./venv*" -and \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "Makefile" -or -name "*.v" -or -name "pm3" \) \) \
+	find . \( -not -path "./cov-int/*" -and -not -path "./fpga*/xst/*" -and -not -path "./venv*" -and \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "Makefile" -or -name "*.v" -or \( -name "pm3" -and -type f \) \) \) \
 		-exec perl -pi -e 's/[ \t]+$$//' {} \; \
 		-exec sh -c "tail -c1 {} | xxd -p | tail -1 | grep -q -v 0a$$" \; \
 		-exec sh -c "echo >> {}" \;
-	# Apply astyle on *.c, *.h, *.cpp
-	find . \( -not -path "./cov-int/*" -and -not -path "./venv*" -and \( \( -name "*.[ch]" -and -not -name "ui_overlays.h" \) -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) \) \) -exec astyle --formatted --mode=c --suffix=none \
+	# Apply astyle on *.c, *.h,
+	find . \( -not -path "./cov-int/*" -and -not -path "./venv*" -and -name "*.[ch]" -and -not -name "ui_overlays.h" \) -exec astyle --formatted --mode=c --suffix=none \
 		--indent=spaces=4 --indent-switches \
 		--keep-one-line-blocks --max-continuation-indent=60 \
 		--style=google --pad-oper --unpad-paren --pad-header \
 		--align-pointer=name {} \;
+	# Apply astyle on *.cpp, *.hpp: no pad-oper as it can cause issues with templates
+	find . \( -not -path "./cov-int/*" -and -not -path "./venv*" -and -name "*.cpp" -and -not -name "*.moc.cpp" \) -exec astyle --formatted --mode=c --suffix=none \
+		--indent=spaces=4 --indent-switches \
+		--keep-one-line-blocks --max-continuation-indent=60 \
+		--style=google --unpad-paren --pad-header \
+		--align-pointer=name {} \;
+
+COMMANDS_UTF8_FILTER := cat
+COMMANDS_PYTHON := $(PYTHON3)
+ifdef IS_MINGW
+    COMMANDS_UTF8_FILTER := iconv -f CP850 -t UTF-8
+    COMMANDS_PYTHON := PYTHONIOENCODING=utf-8 $(PYTHON3)
+endif
 
 commands: client
 	# Update commands.md
-	[ -x client/proxmark3 ] && client/proxmark3 -m | tr -d '\r' > doc/commands.md
+	[ -x client/proxmark3 ] && client/proxmark3 -m | $(COMMANDS_UTF8_FILTER) | tr -d '\r' > doc/commands.md
 	# Make sure python3 is installed
-	@command -v python3 >/dev/null || ( echo "Please install 'python3' package first" ; exit 1 )
+	@command -v $(PYTHON3) >/dev/null || ( echo "Please install '$(PYTHON3)' package first" ; exit 1 )
 	# Update commands.json, patch port in case it was run under Windows
-	[ -x client/proxmark3 ] && client/proxmark3 --fulltext | sed 's#com[0-9]#/dev/ttyACM0#'|python3 client/pyscripts/pm3_help2json.py - - | tr -d '\r' > doc/commands.json
-	# Update the readline autocomplete autogenerated code
-	[ -x client/proxmark3 ] && client/proxmark3 --fulltext | python3 client/pyscripts/pm3_help2list.py - - | tr -d '\r' > client/src/pm3line_vocabulary.h
+	[ -x client/proxmark3 ] && client/proxmark3 --fulltext | $(COMMANDS_UTF8_FILTER) | sed 's#com[0-9]#/dev/ttyACM0#'|$(COMMANDS_PYTHON) client/pyscripts/pm3_help2json.py - - | tr -d '\r' > doc/commands.json
 
 
 # Detecting weird codepages and tabs.
@@ -346,7 +383,7 @@ miscchecks:
 # Make sure recode is installed
 	@command -v recode >/dev/null || ( echo "Please install 'recode' package first" ; exit 1 )
 	@echo "Files with suspicious chars:"
-	@find . \( -not -path "./cov-int/*" -and -not -path "./client/deps/*" -and -not -path "./venv*" -and \( -name "*.[ch]" -or -name "*.cpp" -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "Makefile" -or -name "*.v" -or -name "pm3" \) \) \
+	@find . \( -not -path "./cov-int/*" -and -not -path "./client/deps/*" -and -not -path "./venv*" -and \( -name "*.[ch]" -or -name "*.cpp" -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "Makefile" -or -name "*.v" -or \( -name "pm3" -and -type f \) \) \) \
 	      -exec sh -c "cat {} |recode utf8.. >/dev/null || echo {}" \;
 ifneq (,$(EDIT))
 	@echo "Files with tabs: (EDIT enabled, files will be rewritten!)"
@@ -354,7 +391,7 @@ else
 	@echo "Files with tabs: (rerun with EDIT=1 if you want to convert them with vim)"
 endif
 # to remove tabs within lines, one can try with: vi $file -c ':set tabstop=4' -c ':set et|retab' -c ':wq'
-	@find . \( -not -path "./cov-int/*" -and -not -path "./client/deps/*" -and -not -path "./venv*" -and -not -wholename "./client/src/pm3_*wrap.c" -and \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "*.md" -or -name "*.txt" -or -name "*.awk" -or -name "*.v" -or -name "pm3" \) \) \
+	@find . \( -not -path "./cov-int/*" -and -not -path "./client/deps/*" -and -not -path "./venv*" -and -not -wholename "./client/src/pm3_*wrap.c" -and \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "*.md" -or -name "*.txt" -or -name "*.awk" -or -name "*.v" -or \( -name "pm3" -and -type f \) \) \) \
 	      -exec sh -c "$(TABSCMD)" \;
 #	@echo "Files with printf \\\\t:"
 #	@find . \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "*.md" -or -name "*.txt" -or -name "*.awk" -or -name "*.v" \) \
@@ -369,10 +406,12 @@ release:
 	@echo "# - Release Tag:  $(VERSION)"
 	@echo "# - Release Name: $(RELEASE_NAME)"
 	# - Removing -Werror...
-	@find . \( -path "./Makefile.defs" -or -path "./client/Makefile" -or -path "./common_arm/Makefile.common" -or -path "./tools/hitag2crack/*/Makefile" \) -exec sed -i 's/ -Werror//' {} \;
-	@find . \( -path "./client/deps/*.cmake" -or -path "./client/CMakeLists.txt" \) -exec sed -i 's/ -Werror//' {} \;
+	@find . \( -path "./Makefile.defs" -or -path "./client/Makefile" -or -path "./common_arm/Makefile.common" -or -path "./tools/hitag2crack/*/Makefile" -or -path "./client/deps/*/Makefile" \) -exec sed -i 's/ -Werror//' {} \;
+	@find . \( -path "./client/deps/*.cmake" -or -path "./client/CMakeLists.txt" -or -path "./client/experimental_lib/CMakeLists.txt" \) -exec sed -i 's/ -Werror//' {} \;
 	# - Changing banner...
-	@sed -i "s/^#define BANNERMSG3 .*/#define BANNERMSG3 \"Release $(VERSION) - $(RELEASE_NAME)\"/" client/src/proxmark3.c
+	@sed -i "s/^#define BANNERMSG2 .*/#define BANNERMSG2 /" client/src/proxmark3.c
+	@sed -i "s/^#define BANNERMSG3 .*/#define BANNERMSG3 \"    Release... $(VERSION) - $(RELEASE_NAME)\"/" client/src/proxmark3.c
+	@echo -n "#   ";grep "^#define BANNERMSG2" client/src/proxmark3.c
 	@echo -n "#   ";grep "^#define BANNERMSG3" client/src/proxmark3.c
 	# - Committing temporarily...
 	@git commit -a -m "Release $(VERSION) - $(RELEASE_NAME)"

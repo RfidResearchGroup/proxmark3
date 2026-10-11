@@ -11,6 +11,7 @@ External 256kbytes flash is a unique feature of the RDV4 edition.
   - [Page3 Layout](#page3-layout)
   - [RSA signature](#rsa-signature)
 - [backup first!](#backup-first)
+  - [generate a signature](#generate-a-signature)
 
 
 
@@ -119,3 +120,34 @@ To make a backup of the signature to file:
 
 `mem dump -f flash_signature_dump -o 262015 -l 128`
 
+
+## generate a signature
+^[Top](#top)
+
+With the latest addition of a `client/resources/pm3_generic_private_key.pem` file anyone with a modified Proxmark3 device with SPI eeprom now can add a self signed signature.   
+
+
+To verify the private key pem file
+```
+cd client/resources/
+sha512sum -c pm3_generic_private_key.sha512.txt
+
+pm3_generic_private_key.pem: OK
+```
+
+Looking at current SPI eeprom information, run
+```
+mem info
+mem info -v
+```
+
+Create a signature using the new generic private key, run
+```
+mem info -s -p client/resources/pm3_generic_private_key.pem
+```
+
+Create a signature using the new generic private key and write it to the Proxmark3 device, run
+***DANGEROUS***  This will overwrite any current signature.  Make sure you backup your current signature before by following instructions: [backup first!](#backup-first)
+```
+mem info -s -p client/resources/pm3_generic_private_key.pem -w
+```

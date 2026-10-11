@@ -24,7 +24,9 @@
 //-----------------------------------------------------------------------------
 // iCLASS / PICOPASS
 //-----------------------------------------------------------------------------
-#define PICOPASS_BLOCK_SIZE    8
+#define PICOPASS_KEY_SIZE      ( 8 )
+#define PICOPASS_BLOCK_SIZE    ( 8 )
+#define PICOPASS_MAX_BYTES     ( 4096 )  // # 32k bits = 4096 bytes
 
 // iCLASS reader flags
 #define FLAG_ICLASS_READER_INIT        0x01
@@ -48,7 +50,9 @@
 #define ICLASS_SIM_MODE_FULL                  3
 #define ICLASS_SIM_MODE_READER_ATTACK_KEYROLL 4
 #define ICLASS_SIM_MODE_EXIT_AFTER_MAC        5  // note: device internal only
-#define ICLASS_SIM_MODE_CONFIG_CARD           6
+#define ICLASS_SIM_MODE_FULL_GLITCH           6
+#define ICLASS_SIM_MODE_FULL_GLITCH_KEY       7
+#define ICLASS_SIM_MODE_FULL_LIVE             8  // FULL + USB poll for live emul updates (hf iclass tagsim)
 
 
 // iCLASS auth request data structure
@@ -76,6 +80,7 @@ typedef struct {
 // iCLASS dump data structure
 typedef struct {
     iclass_auth_req_t req;
+    uint8_t page;
     uint8_t start_block;
     uint8_t end_block;
 } PACKED iclass_dump_req_t;
@@ -86,6 +91,17 @@ typedef struct {
     uint8_t data[8];
     uint8_t mac[4];
 } PACKED iclass_writeblock_req_t;
+
+// iCLASS tearoff block request data structure
+typedef struct {
+    iclass_auth_req_t req;
+    uint8_t data[8];
+    uint8_t mac[4];
+    int tear_start;
+    int tear_end;
+    int increment;
+    int tear_loop;
+} PACKED iclass_tearblock_req_t;
 
 // iCLASS write block request data structure
 typedef struct {
@@ -107,12 +123,13 @@ typedef struct {
 
 typedef struct {
     iclass_auth_req_t req;
-    iclass_auth_req_t req2;
     uint32_t index;
     uint32_t loop;
     uint8_t nfa[8];
     bool debug;
     bool test;
+    bool fast;
+    bool short_delay;
 } PACKED iclass_recover_req_t;
 
 typedef struct iclass_premac {
@@ -172,6 +189,7 @@ typedef struct {
 // reader flags
 typedef struct {
     uint8_t flags;
+    uint8_t page;
 } PACKED iclass_card_select_t;
 
 // reader flags
@@ -183,5 +201,30 @@ typedef struct {
     } header;
 } PACKED iclass_card_select_resp_t;
 
+typedef struct {
+    union {
+        picopass_hdr_t hdr;
+        picopass_ns_hdr_t ns_hdr;
+    } header;
+    uint8_t data[PICOPASS_MAX_BYTES];
+} PACKED iclass_tag_t;
+
+// CMD_HF_ICLASS_SIMULATE payload.
+// Replaces oldargs: arg0 = sim_type, arg1 = num_csns, arg2 = send_reply
+typedef struct {
+    uint8_t sim_type;
+    uint8_t num_csns;
+    uint8_t send_reply;
+    uint8_t rfu;
+    uint8_t csns[];
+} PACKED iclass_sim_t;
+
+// Reply for the reader-attack sim modes. The old reply put the opcode itself
+// into arg0 so the client could tell anonymous CMD_ACKs apart; NG carries the
+// opcode in the frame, so only the mac count is left to send.
+typedef struct {
+    uint16_t num_mac;
+    uint8_t mac[];
+} PACKED iclass_sim_resp_t;
 
 #endif // _ICLASS_H_

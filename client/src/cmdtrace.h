@@ -25,5 +25,6 @@ int CmdTrace(const char *Cmd);
 int CmdTraceList(const char *Cmd);
 int CmdTraceListAlias(const char *Cmd, const char *alias, const char *protocol);
 bool ImportTraceBuffer(const uint8_t *trace_src, uint16_t trace_len);
+void ClearTraceBuffer(void);
 
 #endif

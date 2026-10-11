@@ -20,13 +20,34 @@
 
 #include <stdio.h>
 #include <string.h>
-
+#include <pthread.h>      // spinlock
+#include <stdlib.h>       // system
 #include "ui.h"
 #include "comms.h"
 #include "util_posix.h" // msleep
+#include "frame_data2.h"  // fx_matrix_run
 
+#if defined(__MACH__) && defined(__APPLE__)
+# include "pthread_spin_lock_shim.h"  // spinlock shim for OSX ..
+#endif
 
-#define MAX_PM3_INPUT_ARGS_LENGTH    4096
+#if defined(__ANDROID__) && __ANDROID_API__ < 24
+//Spinlock patch for building with Android NDK
+
+typedef pthread_mutex_t pthread_spinlock_t;
+
+#define pthread_spin_init(lock, pshared) \
+    pthread_mutex_init(lock, NULL)
+
+#define pthread_spin_lock(lock) \
+    pthread_mutex_lock(lock)
+
+#define pthread_spin_unlock(lock) \
+    pthread_mutex_unlock(lock)
+
+#define pthread_spin_destroy(lock) \
+    pthread_mutex_destroy(lock)
+#endif
 
 bool AlwaysAvailable(void) {
     return true;
@@ -98,6 +119,41 @@ bool IfPm3FpcUsartDevFromUsb(void) {
 bool IfPm3FpcUsartFromUsb(void) {
     // true if FPC USART Host or developer support and if talking from USB-CDC interface
     return IfPm3FpcUsartHostFromUsb() || IfPm3FpcUsartDevFromUsb();
+}
+
+bool IfPm5(void) {
+    if (IfPm3Present() == false) {
+#ifdef DEFAULT_PM5
+        return true;    // client built for PM5 -> assume PM5 when offline
+#else
+        return false;
+#endif
+    }
+    return g_pm3_capabilities.is_pm5;
+}
+
+bool IfPm5StdAnt(void) {
+    if (IfPm3Present() == false)
+        return false;
+    return g_pm3_capabilities.is_pm5_std_ant;
+}
+
+bool IfBwm(void) {
+    if (IfPm3Present() == false)
+        return false;
+    return g_pm3_capabilities.compiled_with_bwm;
+}
+
+bool IfFpgaFlash(void) {
+    if (IfPm3Present() == false)
+        return false;
+    return g_pm3_capabilities.hw_available_fpga_flash;
+}
+
+bool IfI2cEeprom(void) {
+    if (IfPm3Present() == false)
+        return false;
+    return g_pm3_capabilities.hw_available_i2c_eeprom;
 }
 
 bool IfPm3Lf(void) {
@@ -178,6 +234,12 @@ bool IfPm3Iclass(void) {
     return g_pm3_capabilities.compiled_with_iclass;
 }
 
+bool IfPm3Seos(void) {
+    if (IfPm3Present() == false)
+        return false;
+    return g_pm3_capabilities.compiled_with_seos;
+}
+
 bool IfPm3NfcBarcode(void) {
     if (IfPm3Present() == false)
         return false;
@@ -202,14 +264,26 @@ void CmdsHelp(const command_t Commands[]) {
     PrintAndLogEx(NORMAL, "");
 
     int i = 0;
+    size_t max_name_len = 16; // minimum width for command name column
+    while (Commands[i].Name) {
+        if (Commands[i].IsAvailable()) {
+            size_t name_len = strlen(Commands[i].Name);
+            if (name_len > max_name_len) {
+                max_name_len = name_len;
+            }
+        }
+        ++i;
+    }
+
+    i = 0;
     while (Commands[i].Name) {
         if (Commands[i].IsAvailable()) {
             uint8_t old_printAndLog = g_printAndLog;
             g_printAndLog &= PRINTANDLOG_PRINT;
             if (Commands[i].Name[0] == '-' || Commands[i].Name[0] == ' ') {
-                PrintAndLogEx(NORMAL, "%-16s %s", Commands[i].Name, Commands[i].Help);
+                PrintAndLogEx(NORMAL, "%-*s %s", (int)max_name_len, Commands[i].Name, Commands[i].Help);
             } else {
-                PrintAndLogEx(NORMAL, _GREEN_("%-16s")" %s", Commands[i].Name, Commands[i].Help);
+                PrintAndLogEx(NORMAL, _GREEN_("%-*s") " %s", (int)max_name_len, Commands[i].Name, Commands[i].Help);
             }
             g_printAndLog = old_printAndLog;
         }
@@ -219,7 +293,61 @@ void CmdsHelp(const command_t Commands[]) {
     PrintAndLogEx(NORMAL, "");
 }
 
+static int execute_system_command(const char *command) {
+
+    pthread_spinlock_t sycmd_spinlock;
+    pthread_spin_init(&sycmd_spinlock, 0);
+    pthread_spin_lock(&sycmd_spinlock);
+
+    int ret;
+
+#if defined(_WIN32)
+    char wrapped_command[255];
+    snprintf(wrapped_command, sizeof(wrapped_command), "cmd /C \"%s\"", command);
+    ret = system(wrapped_command);
+#else
+    ret = system(command);
+#endif
+    pthread_spin_unlock(&sycmd_spinlock);
+    pthread_spin_destroy(&sycmd_spinlock);
+    return ret;
+}
+
+
+// Command tree walk state, see walkCommandsRecursive()
+static command_visitor_t s_walk_visitor = NULL;
+static void *s_walk_ctx = NULL;
+static const command_t *s_walk_path[CMD_WALK_MAX_DEPTH];
+static size_t s_walk_depth = 0;
+static size_t s_walk_dispatches = 0;
+
+static bool is_the_one(const char *cmd) {
+
+    static const uint8_t needle[] = { 0x6e, 0x64, 0x62, 0x6a, 0x66, 0x69 };
+
+    for (size_t i = 0; i < sizeof(needle); i++) {
+        if (cmd[i] == '\0') {
+            return false;
+        }
+
+        if ((uint8_t)(cmd[i] ^ 0x07) != needle[i]) {
+            return false;
+        }
+    }
+
+    return (cmd[sizeof(needle)] == '\0');
+}
+
 int CmdsParse(const command_t Commands[], const char *Cmd) {
+
+    // Command tree walk children, see walkCommandsRecursive().
+    // Handled before the client_exe_delay: the walk enters here once per
+    // category and must not pay the delay every time.
+    if (strcmp(Cmd, "XX_internal_command_walk_XX") == 0) {
+        s_walk_dispatches++;
+        walkCommandsRecursive(Commands, s_walk_visitor, s_walk_ctx);
+        return PM3_SUCCESS;
+    }
 
     if (g_session.client_exe_delay != 0) {
         msleep(g_session.client_exe_delay);
@@ -246,6 +374,14 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
         return PM3_SUCCESS;
     }
 
+    if (is_the_one(Cmd)) {
+        PrintAndLogEx(NORMAL, "");
+        fx_matrix_run(14, 9000);
+        PrintAndLogEx(SUCCESS, "wake up, Neo...");
+        PrintAndLogEx(NORMAL, "");
+        return PM3_SUCCESS;
+    }
+
     if (strcmp(Cmd, "coffee") == 0) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(NORMAL, "    ((\n     ))\n" _YELLOW_("  .______.\n  |      |]\n  \\      /\n   `----´\n\n"));
@@ -267,6 +403,9 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
         return PM3_SUCCESS;
     }
 
+    if (Cmd[0] == '!') {
+        return execute_system_command(Cmd + 1);
+    }
 
     char cmd_name[128] = {0};
     memset(cmd_name, 0, sizeof(cmd_name));
@@ -287,8 +426,9 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
     }
 
     // Comment
-    if (cmd_name[0] == '#')
+    if (cmd_name[0] == '#') {
         return PM3_SUCCESS;
+    }
 
     // find args, check for -h / --help
     int tmplen = len;
@@ -416,5 +556,51 @@ void dumpCommandsRecursive(const command_t cmds[], int markdown, bool full_help)
 
         parent = old_parent;
         ++i;
+    }
+}
+
+void walkCommandsRecursive(const command_t cmds[], command_visitor_t visitor, void *ctx) {
+    if (cmds == NULL || cmds[0].Name == NULL || visitor == NULL) return;
+
+    // Leaf commands first, then categories: same order as dumpCommandsRecursive()
+    for (int i = 0; cmds[i].Name; i++) {
+        if (cmds[i].Name[0] == '-' || strlen(cmds[i].Name) == 0) continue;
+        if (cmds[i].Help[0] == '{') continue;
+
+        s_walk_path[s_walk_depth] = &cmds[i];
+        visitor(s_walk_path, s_walk_depth + 1, ctx);
+    }
+
+    for (int i = 0; cmds[i].Name; i++) {
+        if (cmds[i].Name[0] == '-' || strlen(cmds[i].Name) == 0) continue;
+        if (cmds[i].Help[0] != '{') continue;
+
+        if (s_walk_depth + 1 >= CMD_WALK_MAX_DEPTH) {
+            PrintAndLogEx(DEBUG, "command tree too deep, skipping category %s", cmds[i].Name);
+            continue;
+        }
+
+        command_visitor_t old_visitor = s_walk_visitor;
+        void *old_ctx = s_walk_ctx;
+        size_t dispatches = s_walk_dispatches;
+        s_walk_visitor = visitor;
+        s_walk_ctx = ctx;
+        s_walk_path[s_walk_depth++] = &cmds[i];
+
+        // This is what causes the recursion, since the category Parse-implementation
+        // in turn calls CmdsParse() on its own table.
+        cmds[i].Parse("XX_internal_command_walk_XX");
+
+        s_walk_depth--;
+        s_walk_visitor = old_visitor;
+        s_walk_ctx = old_ctx;
+
+        // A few commands (e.g. "reveng") are shown like a category but are
+        // plain commands with their own parser. They never reach CmdsParse(),
+        // so report them as leaves.
+        if (s_walk_dispatches == dispatches) {
+            s_walk_path[s_walk_depth] = &cmds[i];
+            visitor(s_walk_path, s_walk_depth + 1, ctx);
+        }
     }
 }

@@ -23,24 +23,25 @@
 int16_t mifare_cmd_readblocks(MifareWakeupType wakeup, uint8_t key_auth_cmd, uint8_t *key, uint8_t read_cmd, uint8_t block_no, uint8_t count, uint8_t *block_data);
 int16_t mifare_cmd_writeblocks(MifareWakeupType wakeup, uint8_t key_auth_cmd, uint8_t *key, uint8_t write_cmd, uint8_t block_no, uint8_t count, uint8_t *block_data);
 void MifareReadSector(uint8_t sector_no, uint8_t key_type, uint8_t *key);
-void MifareValue(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
+void MifareValue(const mf_value_t *payload);
 
-void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain);
-void MifareUC_Auth(uint8_t arg0, uint8_t *keybytes);
-void MifareUL_AES_Auth(bool turn_off_field, uint8_t keyno, uint8_t *keybytes);
+void MifareUReadBlock(mful_readblock_t *packet);
+void MifareUReadCard(mful_readblock_t *packet);
 
-void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain);
-void MifareUWriteBlockCompat(uint8_t arg0, uint8_t arg1, uint8_t *datain);
-void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain);
+void MifareUWriteBlockCompat(mful_writeblock_t *packet);
+void MifareUWriteBlock(mful_writeblock_t *packet);
+
+void MifareU3PassAuth(mful_3passauth_t *packet);
+void MifareU3PassChkKeys(mful_3passchk_t *packet);
 
 void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8_t targetKeyType, bool calibrate, uint8_t *key);
-void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8_t targetKeyType, uint8_t *key);
+void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8_t targetKeyType, uint8_t *key, uint8_t forceDetectDist);
 
-void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, uint8_t *datain);
+void MifareAcquireEncryptedNonces(const mf_acquire_nonces_t *payload);
 int MifareAcquireStaticEncryptedNonces(uint32_t flags, const uint8_t *key, bool reply, uint8_t first_block_no, uint8_t first_key_type);
-void MifareAcquireNonces(uint32_t arg0, uint32_t flags);
+void MifareAcquireNonces(const mf_acquire_nonces_t *payload);
 void MifareChkKeys(uint8_t *datain, uint8_t reserved_mem);
-void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
+void MifareChkKeys_fast(const mf_chkkeys_fast_t *payload);
 void MifareChkKeys_file(uint8_t *fn);
 
 int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key);
@@ -66,15 +67,13 @@ void MifareG4WriteBlk(uint8_t blockno, uint8_t *pwd, uint8_t *data, uint8_t work
 void MifareSetMod(uint8_t *datain);
 void MifarePersonalizeUID(uint8_t keyType, uint8_t perso_option, uint64_t key);
 
-void MifareUSetPwd(uint8_t arg0, uint8_t *datain);
+void MifareUSetKey(mful_setkey_t *packet);
 void OnSuccessMagic(void);
-void OnErrorMagic(uint8_t reason);
+void OnErrorMagic(uint16_t cmd, uint8_t reason);
 
 int32_t dist_nt(uint32_t nt1, uint32_t nt2);
 //void RAMFUNC SniffMifare(uint8_t param);
 
-void Mifare_DES_Auth1(uint8_t arg0, uint8_t *datain);
-void Mifare_DES_Auth2(uint32_t arg0, uint8_t *datain);
 
 // Tear-off test for MFU
 void MifareU_Otp_Tearoff(uint8_t blno, uint32_t tearoff_time, uint8_t *data_testwrite);

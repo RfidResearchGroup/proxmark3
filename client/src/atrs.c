@@ -67,3 +67,62 @@ const char *getAtrInfo(const char *atr_str) {
         return AtrTable[ARRAYLEN(AtrTable) - 1].desc;
     }
 }
+
+void atsToEmulatedAtr(uint8_t *ats, uint8_t *atr, int *atrLen) {
+    uint8_t historicalLen = 0;
+    uint8_t offset = 2;
+
+    if (ats[0] < 2) {
+        historicalLen = 0;
+    } else {
+
+        if ((ats[1] & 64) != 0) {
+            offset++;
+        }
+        if ((ats[1] & 32) != 0) {
+            offset++;
+        }
+        if ((ats[1] & 16) != 0) {
+            offset++;
+        }
+
+        if (offset >= ats[0]) {
+            historicalLen = 0;
+        } else {
+            historicalLen = ats[0] - offset;
+        }
+    }
+
+    atr[0] = 0x3B;
+    atr[1] = 0x80 | historicalLen;
+    atr[2] = 0x80;
+    atr[3] = 0x01;
+
+    uint8_t tck = atr[1] ^ atr[2] ^ atr[3];
+    for (uint8_t i = 0; i < historicalLen; ++i) {
+        atr[4 + i] = ats[offset + i];
+        tck = tck ^ ats[offset + i];
+    }
+    atr[4 + historicalLen] = tck;
+
+    *atrLen = 5 + historicalLen;
+}
+
+void atqbToEmulatedAtr(uint8_t *atqb, uint8_t cid, uint8_t *atr, int *atrLen) {
+    atr[0] = 0x3B;
+    atr[1] = 0x80 | 8;
+    atr[2] = 0x80;
+    atr[3] = 0x01;
+
+    memcpy(atr + 4, atqb, 7);
+    atr[11] = cid >> 4;
+
+    uint8_t tck = 0;
+    for (int i = 1; i < 12; ++i) {
+        tck = tck ^ atr[i];
+    }
+    atr[12] = tck;
+
+    *atrLen = 13;
+}
+

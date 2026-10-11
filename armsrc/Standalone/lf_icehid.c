@@ -23,12 +23,13 @@
 #include "lfops.h"
 #include "lfsampling.h"
 #include "BigBuf.h"
-#include "fpgaloader.h"
+#include "fpga_apis.h"
+#include "fpga_loader.h"
 #include "util.h"
 #include "dbprint.h"
 #include "printf.h"
 #include "spiffs.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "lfdemod.h"
 /*
  * `lf_hidcollect` sniffs after LF HID credentials, and stores them in internal
@@ -199,7 +200,7 @@ static uint32_t IceIOdemod(void) {
 
     size_t size = MIN(12000, BigBuf_max_traceLen());
 
-//    uint8_t *dest = BigBuf_malloc(size);
+//    uint8_t *dest = BigBuf_calloc(size);
     uint8_t *dest = BigBuf_get_addr();
 
     //fskdemod and get start index
@@ -243,7 +244,7 @@ static uint32_t IceHIDDemod(void) {
     // large enough to catch 2 sequences of largest format
 //    size_t size = 50 * 128 * 2;  // 12800 bytes
     size_t size = MIN(12800, BigBuf_max_traceLen());
-    //uint8_t *dest = BigBuf_malloc(size);
+    //uint8_t *dest = BigBuf_calloc(size);
     uint8_t *dest = BigBuf_get_addr();
 
     // FSK demodulator

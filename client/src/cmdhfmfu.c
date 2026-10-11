@@ -24,6 +24,7 @@
 #include "aes.h"
 #include "cmdhfmf.h"
 #include "cmdhf14a.h"
+#include "mifare/mifarehost.h"  // mf_eml_set_mem_xt
 #include "comms.h"
 #include "protocols.h"
 #include "generator.h"
@@ -32,10 +33,15 @@
 #include "cmdmain.h"
 #include "amiibo.h"         // amiiboo fcts
 #include "base64.h"
+#include "util_posix.h"     // msclock
 #include "fileutils.h"      // saveFile
 #include "cmdtrace.h"       // trace list
 #include "preferences.h"    // setDeviceDebugLevel
+#include "crc16.h"
 #include "crypto/originality.h"
+#include "util.h"
+#include <pthread.h>
+#include <vec/vec.h>
 
 #define MAX_UL_BLOCKS       0x0F
 #define MAX_ULC_BLOCKS      0x2F
@@ -47,6 +53,8 @@
 #define MAX_NTAG_213        0x2C
 #define MAX_NTAG_215        0x86
 #define MAX_NTAG_216        0xE6
+#define MAX_NTAG_223_DNA    0x3B
+#define MAX_NTAG_224_DNA    0x4B
 #define MAX_NTAG_I2C_1K     0xE9
 #define MAX_NTAG_I2C_2K     0xE9
 #define MAX_MY_D_NFC        0xFF
@@ -57,13 +65,36 @@
 #define MAX_ST25TN512       0x3F
 #define MAX_ST25TN01K       0x3F
 
+// UL-C key pages
+#define MFU_ULC_KEY0_PAGE   0x2C
+
+// UL-AES fixed memory map,  MF0AES(H)20
+#define MFU_AES_USER_FIRST  0x04
+#define MFU_AES_USER_LAST   0x27
+#define MFU_AES_LOCK_PAGE   0x28
+#define MFU_AES_CFG0_PAGE   0x29
+#define MFU_AES_CFG1_PAGE   0x2A
+#define MFU_AES_KEY0_PAGE   0x30
+
+#define MIFAREU3P_KEY_SIZE 16
+#define MIFAREULC_KEY_INDEX 3
+#define MFU_DEFAULT_KEY_DIC "mfulc_default_keys.dic"
+
+// The Capability Container sits in block 3, the NDEF data area starts at block 4
+// and READ takes a one byte block number, so block 255 is the last one reachable.
+#define MFU_NDEF_CC_BLOCK    3
+#define MFU_NDEF_FIRST_BLOCK 4
+#define MFU_NDEF_MAX_BYTES   ((0xFF - MFU_NDEF_FIRST_BLOCK + 1) * MFU_BLOCK_SIZE)
+
 static int CmdHelp(const char *Cmd);
+
+static const char *key_type[] = { "DataProtKey", "UIDRetrKey", "OriginalityKey" };
 
 static uint8_t default_aes_keys[][16] = {
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // all zeroes
     { 0x42, 0x52, 0x45, 0x41, 0x4b, 0x4d, 0x45, 0x49, 0x46, 0x59, 0x4f, 0x55, 0x43, 0x41, 0x4e, 0x21 }, // 3des std key
-    { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f }, // 0x00-0x0F
     { 0x49, 0x45, 0x4D, 0x4B, 0x41, 0x45, 0x52, 0x42, 0x21, 0x4E, 0x41, 0x43, 0x55, 0x4F, 0x59, 0x46 }, // NFC-key
+    { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f }, // 0x00-0x0F
     { 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01 }, // all ones
     { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }, // all FF
     { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF }, // 11 22 33
@@ -74,8 +105,8 @@ static uint8_t default_aes_keys[][16] = {
 static uint8_t default_3des_keys[][16] = {
     { 0x42, 0x52, 0x45, 0x41, 0x4b, 0x4d, 0x45, 0x49, 0x46, 0x59, 0x4f, 0x55, 0x43, 0x41, 0x4e, 0x21 }, // 3des std key
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // all zeroes
-    { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f }, // 0x00-0x0F
     { 0x49, 0x45, 0x4D, 0x4B, 0x41, 0x45, 0x52, 0x42, 0x21, 0x4E, 0x41, 0x43, 0x55, 0x4F, 0x59, 0x46 }, // NFC-key
+    { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f }, // 0x00-0x0F
     { 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01 }, // all ones
     { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }, // all FF
     { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF }, // 11 22 33
@@ -95,6 +126,8 @@ static uint64_t UL_TYPES_ARRAY[] = {
     MFU_TT_NTAG_203,          MFU_TT_NTAG_210,
     MFU_TT_NTAG_212,          MFU_TT_NTAG_213,
     MFU_TT_NTAG_215,          MFU_TT_NTAG_216,
+    MFU_TT_NTAG_223_DNA,      MFU_TT_NTAG_223_DNA_SD,
+    MFU_TT_NTAG_224_DNA,      MFU_TT_NTAG_224_DNA_SD,
     MFU_TT_MY_D,              MFU_TT_MY_D_NFC,
     MFU_TT_MY_D_MOVE,         MFU_TT_MY_D_MOVE_NFC,
     MFU_TT_MY_D_MOVE_LEAN,    MFU_TT_NTAG_I2C_1K,
@@ -118,6 +151,8 @@ static uint8_t UL_MEMORY_ARRAY[ARRAYLEN(UL_TYPES_ARRAY)] = {
     MAX_NTAG_203,       MAX_NTAG_203,       MAX_NTAG_210,        MAX_NTAG_212,
 //  NTAG_213,           NTAG_215,           NTAG_216,
     MAX_NTAG_213,       MAX_NTAG_215,       MAX_NTAG_216,
+//  NTAG_223_DNA,       NTAG_223_DNA_SD,    NTAG_224_DNA,        NTAG_224_DNA_SD,
+    MAX_NTAG_223_DNA,   MAX_NTAG_223_DNA,   MAX_NTAG_224_DNA,     MAX_NTAG_224_DNA,
 //  MY_D,               MY_D_NFC,           MY_D_MOVE,           MY_D_MOVE_NFC,      MY_D_MOVE_LEAN,
     MAX_UL_BLOCKS,      MAX_MY_D_NFC,       MAX_MY_D_MOVE,       MAX_MY_D_MOVE,      MAX_MY_D_MOVE_LEAN,
 //  NTAG_I2C_1K,        NTAG_I2C_2K,        NTAG_I2C_1K_PLUS,    NTAG_I2C_2K_PLUS,
@@ -157,6 +192,10 @@ static const ul_family_t ul_family[] = {
     {"NTAG 216F", "NT2H1611F0Dxy", "\x00\x04\x04\x04\x01\x00\x13\x03"},
     {"NTAG 213C", "NT2H1311C1DTL", "\x00\x04\x04\x02\x01\x01\x0F\x03"},
     {"NTAG 213TT", "NT2H1311TTDUx", "\x00\x04\x04\x02\x03\x00\x0F\x03"},
+    {"NTAG 223 DNA", "NT2H2331G0", "\x00\x04\x04\x02\x04\x00\x0F\x03"},
+    {"NTAG 223 DNA SD", "NT2H2331S0", "\x00\x04\x04\x08\x04\x00\x0F\x03"},
+    {"NTAG 224 DNA", "NT2H2421G0", "\x00\x04\x04\x02\x05\x00\x10\x03"},
+    {"NTAG 224 DNA SD", "NT2H2421S0", "\x00\x04\x04\x08\x05\x00\x10\x03"},
     {"NTAG I2C 1k", "NT3H1101W0FHK", "\x00\x04\x04\x05\x02\x00\x13\x03"},
     {"NTAG I2C 1k", "NT3H1101W0FHK_Variant", "\x00\x04\x04\x05\x02\x01\x13\x03"},
     {"NTAG I2C 2k", "NT3H1201W0FHK", "\x00\x04\x04\x05\x02\x00\x15\x03"},
@@ -299,7 +338,7 @@ static const char *getUlev1CardSizeStr(uint8_t fsize) {
 
     // is  LSB set?
     if (fsize & 1)
-        snprintf(buf, sizeof(buf), "%02X, (%u <-> %u bytes)", fsize, usize, lsize);
+        snprintf(buf, sizeof(buf), "%02X, (%u - %u bytes)", fsize, usize, lsize);
     else
         snprintf(buf, sizeof(buf), "%02X, (%u bytes)", fsize, lsize);
     return buf;
@@ -312,16 +351,17 @@ int ul_read_uid(uint8_t *uid) {
     }
     // read uid from tag
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_RATS, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    uint8_t sel_343 = 0;
+    if (WaitForIso14aReply(&resp, 2500, NULL, &sel_343) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
     iso14a_card_select_t card;
     memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
-    uint64_t select_status = resp.oldarg[0];
+    uint64_t select_status = sel_343;
     // 0: couldn't read
     // 1: OK with ATS
     // 2: OK, no ATS
@@ -341,22 +381,28 @@ int ul_read_uid(uint8_t *uid) {
 
 static void ul_switch_on_field(void) {
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, NULL, 0);
 }
 
-static int ul_send_cmd_raw(const uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uint16_t responseLength) {
+static int ul_send_cmd_raw(const uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uint16_t responseLength, bool schann) {
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_APPEND_CRC | ISO14A_NO_RATS, cmdlen, 0, cmd, cmdlen);
+
+    uint32_t param = (ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_APPEND_CRC | ISO14A_NO_RATS);
+    if (schann) {
+        param |= ISO14A_APPEND_CMAC;
+    }
+    SendIso14aReader(param, cmd, cmdlen);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    uint16_t rlen_383 = 0;
+    if (WaitForIso14aReply(&resp, 1500, &rlen_383, NULL) == false) {
         return PM3_ETIMEOUT;
     }
 
-    if (!resp.oldarg[0] && responseLength) {
+    if ((rlen_383 == 0) && responseLength) {
         return PM3_EWRONGANSWER;
     }
 
-    uint16_t resplen = (resp.oldarg[0] < responseLength) ? resp.oldarg[0] : responseLength;
+    uint16_t resplen = (rlen_383 < responseLength) ? rlen_383 : responseLength;
     memcpy(response, resp.data.asBytes, resplen);
     return resplen;
 }
@@ -366,13 +412,13 @@ static bool ul_select(iso14a_card_select_t *card) {
     ul_switch_on_field();
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
+    if (WaitForIso14aReply(&resp, 2000, NULL, NULL) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         DropField();
         return false;
     } else {
 
-        uint16_t len = (resp.oldarg[1] & 0xFFFF);
+        uint16_t len = ((const iso14a_card_select_t *)resp.data.asBytes)->uidlen;
         if (len == 0) {
             PrintAndLogEx(DEBUG, "iso14443a card select failed");
             DropField();
@@ -391,13 +437,15 @@ static bool ul_select_rats(iso14a_card_select_t *card) {
     ul_switch_on_field();
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    uint8_t select_status = 0;
+    uint16_t ats_len = 0;
+    if (WaitForIso14aReply(&resp, 1500, NULL, &select_status) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         DropField();
         return false;
     } else {
 
-        uint16_t len = (resp.oldarg[1] & 0xFFFF);
+        uint16_t len = ((const iso14a_card_select_t *)resp.data.asBytes)->uidlen;
         if (len == 0) {
             PrintAndLogEx(DEBUG, "iso14443a card select failed");
             DropField();
@@ -408,18 +456,18 @@ static bool ul_select_rats(iso14a_card_select_t *card) {
             memcpy(card, resp.data.asBytes, sizeof(iso14a_card_select_t));
         }
 
-        if (resp.oldarg[0] == 2) { // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
+        if (select_status == 2) { // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
             // get ATS
             uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
-            SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, sizeof(rats), 0, rats, sizeof(rats));
-            if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+            SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, rats, sizeof(rats));
+            if (WaitForIso14aReply(&resp, 1500, &ats_len, NULL) == false) {
                 PrintAndLogEx(WARNING, "command execution time out");
                 return false;
             }
         }
 
         if (card) {
-            card->ats_len = resp.oldarg[0];
+            card->ats_len = ats_len;
             memcpy(card->ats, resp.data.asBytes, card->ats_len);
         }
 
@@ -428,13 +476,13 @@ static bool ul_select_rats(iso14a_card_select_t *card) {
 }
 
 // This read command will at least return 16bytes.
-static int ul_read(uint8_t page, uint8_t *response, uint16_t responseLength) {
+static int ul_read(uint8_t page, uint8_t *response, uint16_t responseLength, bool schann) {
 
     uint8_t cmd[] = {ISO14443A_CMD_READBLOCK, page};
-    return ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
+    return ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength, schann);
 }
 
-static int ul_comp_write(uint8_t page, const uint8_t *data, uint8_t datalen) {
+static int ul_comp_write(uint8_t page, const uint8_t *data, uint8_t datalen, bool schann) {
 
     if (data == NULL) {
         return PM3_EINVARG;
@@ -449,7 +497,7 @@ static int ul_comp_write(uint8_t page, const uint8_t *data, uint8_t datalen) {
     memcpy(cmd + 2, data, datalen);
 
     uint8_t response[1] = {0xFF};
-    ul_send_cmd_raw(cmd, 2 + datalen, response, sizeof(response));
+    ul_send_cmd_raw(cmd, 2 + datalen, response, sizeof(response), schann);
     // ACK
     if (response[0] == CARD_ACK) {
         return PM3_SUCCESS;
@@ -461,13 +509,13 @@ static int ul_comp_write(uint8_t page, const uint8_t *data, uint8_t datalen) {
 static int ulc_requestAuthentication(uint8_t *nonce, uint16_t nonceLength) {
 
     uint8_t cmd[] = {MIFARE_ULC_AUTH_1, 0x00};
-    return ul_send_cmd_raw(cmd, sizeof(cmd), nonce, nonceLength);
+    return ul_send_cmd_raw(cmd, sizeof(cmd), nonce, nonceLength, false);
 }
 
 int mfuc_test_authentication_support(void) {
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    if (WaitForIso14aReply(&resp, 2500, NULL, NULL) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         DropField();
         return PM3_ETIMEOUT;
@@ -484,7 +532,7 @@ int mfuc_test_authentication_support(void) {
 static int ulev1_requestAuthentication(const uint8_t *pwd, uint8_t *pack, uint16_t packLength) {
 
     uint8_t cmd[] = {MIFARE_ULEV1_AUTH, pwd[0], pwd[1], pwd[2], pwd[3]};
-    int len = ul_send_cmd_raw(cmd, sizeof(cmd), pack, packLength);
+    int len = ul_send_cmd_raw(cmd, sizeof(cmd), pack, packLength, false);
     // NACK tables different tags,  but between 0-9 is a NEGATIVE response.
     // ACK == 0xA
     //  should only give you PACK (4 byytes)
@@ -499,38 +547,51 @@ Default AES key is 00-00h. Both the data and UID one.
 Data key is 00, UID is 01. Authenticity is 02h
 Auth is 1A[Key ID][CRC] - AF[RndB] - AF[RndA][RndB'] - 00[RndA']
 */
-static int ulaes_requestAuthentication(const uint8_t *key, uint8_t keyno, bool switch_off_field) {
-    struct p {
-        bool turn_off_field;
-        uint8_t keyno;
-        uint8_t key[16];
-    } PACKED payload;
-
-    payload.turn_off_field = switch_off_field;
-    payload.keyno = keyno;
+static int ul3pass_authentication(const uint8_t *key, uint8_t keyno, bool switch_off_field, int retries, uint32_t *auths, uint32_t *ms, bool schann, bool try_auth, bool check_answer, bool use_fastread0, bool get_nonces, uint8_t *nonces, bool reset_field, uint8_t available_pairs, uint8_t *pairs) {
+    // keyno < 3: ULAES
+    // keyno = 3: ULC
+    mful_3passauth_t payload = {
+        .turn_off_field = switch_off_field,
+        .try_auth = try_auth,
+        .check_answer = check_answer,
+        .use_schann = schann,
+        .use_fastread0 = use_fastread0,
+        .get_nonces = get_nonces,
+        .reset_field = reset_field,
+        .keyno = keyno,
+        .retries = retries,
+        .available_pairs = available_pairs,
+    };
     memcpy(payload.key, key, sizeof(payload.key));
+    int pairs_bytecount = (keyno == 3 ? 8 + 16 : 16 + 32) * MIN(available_pairs, keyno == 3 ? 10 : 5);
+
+    if (pairs_bytecount && pairs) {
+        memcpy(payload.pairs, pairs, pairs_bytecount);
+    }
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_MIFAREULAES_AUTH, (uint8_t *)&payload, sizeof(payload));
+    SendCommandNG(CMD_HF_MIFAREU3P_AUTH, (uint8_t *)&payload, sizeof(payload) - sizeof(payload.pairs) + pairs_bytecount);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_MIFAREULAES_AUTH, &resp, 1500) == false) {
+    if (WaitForResponseTimeout(CMD_HF_MIFAREU3P_AUTH, &resp, 1500 + (retries * 15)) == false) {
         return PM3_ETIMEOUT;
+    }
+    struct rp {
+        uint32_t auths;
+        uint32_t ticks;
+        uint8_t nonces[PM3_CMD_DATA_SIZE - sizeof(uint32_t) * 2];
+    } PACKED;
+    struct rp *rpayload = (struct rp *) resp.data.asBytes;
+
+    if (auths != NULL) {
+        *auths += rpayload->auths;
+    }
+    if (ms != NULL) {
+        *ms += rpayload->ticks;
+    }
+    if (get_nonces && nonces != NULL) {
+        memcpy(nonces, rpayload->nonces, MIN(sizeof(rpayload->nonces), rpayload->auths * (keyno == 3 ? 8 : 16)));
     }
     return resp.status;
-}
-
-static int ulc_authentication(const uint8_t *key, bool switch_off_field) {
-
-    clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFAREUC_AUTH, switch_off_field, 0, 0, key, 16);
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-        return PM3_ETIMEOUT;
-    }
-    if (resp.oldarg[0] == 1) {
-        return PM3_SUCCESS;
-    }
-    return PM3_ESOFT;
 }
 
 static int trace_mfuc_try_key(uint8_t *key, int state, uint8_t (*authdata)[16]) {
@@ -593,7 +654,7 @@ int trace_mfuc_try_default_3des_keys(uint8_t **correct_key, int state, uint8_t (
 }
 
 // param override,  means we override hw debug levels.
-static int try_default_3des_keys(bool override, uint8_t **correct_key) {
+static int try_default_3des_keys(bool override, uint8_t **correct_key, bool use_fastread0) {
 
     uint8_t dbg_curr = DBG_NONE;
     if (override) {
@@ -613,7 +674,7 @@ static int try_default_3des_keys(bool override, uint8_t **correct_key) {
 
     for (uint8_t i = 0; i < ARRAYLEN(default_3des_keys); ++i) {
         uint8_t *key = default_3des_keys[i];
-        if (ulc_authentication(key, true) == PM3_SUCCESS) {
+        if (ul3pass_authentication(key, MIFAREULC_KEY_INDEX, true, 0, NULL, NULL, false, true, true, use_fastread0, false, NULL, false, 0, NULL) == PM3_SUCCESS) {
             *correct_key = key;
             res = PM3_SUCCESS;
             break;
@@ -627,7 +688,7 @@ static int try_default_3des_keys(bool override, uint8_t **correct_key) {
 }
 
 // param override,  means we override hw debug levels.
-static int try_default_aes_keys(bool override) {
+static int try_default_aes_keys(bool override, bool use_schann, bool use_fastread0) {
 
     uint8_t dbg_curr = DBG_NONE;
     if (override) {
@@ -650,7 +711,7 @@ static int try_default_aes_keys(bool override) {
 
         for (uint8_t keyno = 0; keyno < 3; keyno++) {
 
-            if (ulaes_requestAuthentication(key, keyno, true) == PM3_SUCCESS) {
+            if (ul3pass_authentication(key, keyno, true, 0, NULL, NULL, use_schann, true, true, use_fastread0, false, NULL, false, 0, NULL) == PM3_SUCCESS) {
 
                 char keystr[20] = {0};
                 switch (keyno) {
@@ -666,7 +727,7 @@ static int try_default_aes_keys(bool override) {
                     default:
                         break;
                 }
-                PrintAndLogEx(SUCCESS, "%02X " _YELLOW_("%s") " - %s ( "_GREEN_("ok") " )"
+                PrintAndLogEx(SUCCESS, "%02X " _YELLOW_("%16s") " - %s ( "_GREEN_("ok") " )"
                               , keyno
                               , keystr
                               , sprint_hex_inrow(key, 16)
@@ -683,15 +744,21 @@ static int try_default_aes_keys(bool override) {
     return res;
 }
 
-static int ul_auth_select(iso14a_card_select_t *card, uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, uint8_t *pack, uint8_t packSize) {
+static int ul_auth_select(iso14a_card_select_t *card, uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, uint8_t *pack, uint8_t packSize, bool use_schann) {
     if (ul_select(card) == false) {
         return PM3_ESOFT;
     }
-
+    bool use_fastread0 = false;
     if (hasAuthKey && (tagtype & MFU_TT_UL_C)) {
         //will select card automatically and close connection on error
-        if (ulc_authentication(authkey, false) != PM3_SUCCESS) {
+        if (ul3pass_authentication(authkey, MIFAREULC_KEY_INDEX, false, 0, NULL, NULL, false, true, true, use_fastread0, false, NULL, false, 0, NULL) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Authentication Failed UL-C");
+            return PM3_ESOFT;
+        }
+    } else if (hasAuthKey && (tagtype & MFU_TT_UL_AES)) {
+        //will select card automatically and close connection on error
+        if (ul3pass_authentication(authkey, 0, false, 0, NULL, NULL, use_schann, true, true, use_fastread0, false, NULL, false, 0, NULL) != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Authentication Failed UL-AES");
             return PM3_ESOFT;
         }
     } else {
@@ -708,27 +775,27 @@ static int ul_auth_select(iso14a_card_select_t *card, uint64_t tagtype, bool has
 
 static int ntagtt_getTamperStatus(uint8_t *response, uint16_t responseLength) {
     uint8_t cmd[] = {NTAGTT_CMD_READ_TT, 0x00};
-    return ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
+    return ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength, false);
 }
 
-static int ulev1_getVersion(uint8_t *response, uint16_t responseLength) {
+static int ulev1_getVersion(uint8_t *response, uint16_t responseLength, bool schann) {
     uint8_t cmd[] = {MIFARE_ULEV1_VERSION};
-    return ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
+    return ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength, schann);
 }
 
-static int ulev1_readCounter(uint8_t counter, uint8_t *response, uint16_t responseLength) {
+static int ulev1_readCounter(uint8_t counter, uint8_t *response, uint16_t responseLength, bool schann) {
     uint8_t cmd[] = {MIFARE_ULEV1_READ_CNT, counter};
-    return ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
+    return ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength, schann);
 }
 
 static int ulev1_readTearing(uint8_t counter, uint8_t *response, uint16_t responseLength) {
     uint8_t cmd[] = {MIFARE_ULEV1_CHECKTEAR, counter};
-    return ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
+    return ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength, false);
 }
 
-static int ulev1_readSignature(uint8_t *response, uint16_t responseLength) {
+static int ulev1_readSignature(uint8_t *response, uint16_t responseLength, bool schann) {
     uint8_t cmd[] = {MIFARE_ULEV1_READSIG, 0x00};
-    return ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
+    return ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength, schann);
 }
 
 // Fudan check checks for which error is given for a command with incorrect crc
@@ -744,7 +811,7 @@ static int ulev1_readSignature(uint8_t *response, uint16_t responseLength) {
 //  UL responds with read of page 0, fudan doesn't respond.
 //
 // make sure field is off before calling this function
-static int ul_fudan_check(void) {
+static long long unsigned int ul_fudan_check(void) {
     iso14a_card_select_t card;
     if (ul_select(&card) == false) {
         return MFU_TT_UL_ERROR;
@@ -752,12 +819,13 @@ static int ul_fudan_check(void) {
 
     uint8_t cmd[4] = {ISO14443A_CMD_READBLOCK, 0x00, 0x02, 0xa7}; // wrong crc on purpose, should be 0xa8
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 4, 0, cmd, sizeof(cmd));
+    SendIso14aReader(ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, cmd, sizeof(cmd));
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    uint16_t rlen_810 = 0;
+    if (WaitForIso14aReply(&resp, 1500, &rlen_810, NULL) == false) {
         return MFU_TT_UL_ERROR;
     }
-    if (resp.oldarg[0] != 1) {
+    if (rlen_810 != 1) {
         return MFU_TT_UL_ERROR;
     }
 
@@ -832,20 +900,56 @@ static int ul_print_default(uint8_t *data, uint8_t *real_uid) {
     return PM3_SUCCESS;
 }
 
-static int ndef_get_maxsize(const uint8_t *data) {
-    // no NDEF message
-    if (data[0] != 0xE1)
-        return 0;
+static bool ndef_detect_message(const uint8_t *d, uint16_t n) {
 
-    if (data[2] == 0x06)
-        return 48;
-    else if (data[2] == 0x12)
-        return 144;
-    else if (data[2] == 0x3E)
-        return 496;
-    else if (data[2] == 0x6D)
-        return 872;
-    return 0;
+    if (n < 17) {
+        return false;
+    }
+
+    // start at OTP block and detect a CC container instead
+    const uint8_t *p = d + (3 * MFU_BLOCK_SIZE);
+
+    // no NDEF capability container
+    if (p[0] != 0xE1 && p[0] != 0xF1) {
+        return false;
+    }
+
+    p += 4;
+    const uint8_t *end = d + n;
+
+    // empty data area
+    if (p[0] == 0x00) {
+        return false;
+    }
+
+    while (p < end) {
+
+        // NDEF terminator TLV (0xFE 0x00)
+        if (p[0] == 0xFE && (p + 1) < end && p[1] == 0x00) {
+            return true;
+        }
+        p++;
+    }
+    return false;
+}
+
+// Size of the NDEF data area, as announced by the Capability Container in block 3.
+//
+//   CC[0]  magic number, 0xE1  (0xF1 also accepted for NTAG I2C compatability)
+//   CC[1]  mapping version and read/write access
+//   CC[2]  MLEN, size of the data area expressed in units of 8 bytes
+//   CC[3]  additional access conditions
+//
+// NFC Forum Type 2 Tag Operation defines the data area as 8 * MLEN bytes
+// Returns the size in bytes, 0 when the CC announces no NDEF data area.
+static uint16_t ndef_get_maxsize(const uint8_t *data) {
+
+    // no NDEF capability container
+    if (data[0] != 0xE1 && data[0] != 0xF1) {
+        return 0;
+    }
+
+    return (uint16_t)data[2] * 8;
 }
 
 static int ndef_print_CC(uint8_t *data) {
@@ -1017,6 +1121,14 @@ int ul_print_type(uint64_t tagtype, uint8_t spaces) {
         snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("NTAG 216 888bytes (NT2H1611G0DU)"), spaces, "");
     else if (tagtype & MFU_TT_NTAG_216_F)
         snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("NTAG 216F 888bytes (NT2H1611F0DTL)"), spaces, "");
+    else if (tagtype & MFU_TT_NTAG_223_DNA)
+        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("NTAG 223 DNA 144bytes (NT2H2331G0)"), spaces, "");
+    else if (tagtype & MFU_TT_NTAG_223_DNA_SD)
+        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("NTAG 223 DNA StatusDetect 144bytes (NT2H2331S0)"), spaces, "");
+    else if (tagtype & MFU_TT_NTAG_224_DNA)
+        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("NTAG 224 DNA 208bytes (NT2H2421G0)"), spaces, "");
+    else if (tagtype & MFU_TT_NTAG_224_DNA_SD)
+        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("NTAG 224 DNA StatusDetect 208bytes (NT2H2421S0)"), spaces, "");
     else if (tagtype & MFU_TT_NTAG_I2C_1K)
         snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("NTAG I2C 888bytes (NT3H1101FHK)"), spaces, "");
     else if (tagtype & MFU_TT_NTAG_I2C_2K)
@@ -1079,6 +1191,15 @@ static int ulc_print_3deskey(uint8_t *data) {
     return PM3_SUCCESS;
 }
 
+static int ulaes_print_key(uint8_t *data) {
+    PrintAndLogEx(INFO, "    aeskey  [48/0x30]: %s [%s]", sprint_hex(data, 4), sprint_ascii(data, 4));
+    PrintAndLogEx(INFO, "    aeskey  [49/0x31]: %s [%s]", sprint_hex(data + 4, 4), sprint_ascii(data + 4, 4));
+    PrintAndLogEx(INFO, "    aeskey  [50/0x32]: %s [%s]", sprint_hex(data + 8, 4), sprint_ascii(data + 8, 4));
+    PrintAndLogEx(INFO, "    aeskey  [51/0x33]: %s [%s]", sprint_hex(data + 12, 4), sprint_ascii(data + 12, 4));
+    PrintAndLogEx(INFO, "aes key: " _GREEN_("%s"), sprint_hex_inrow(SwapEndian64(data, 16, 16), 16));
+    return PM3_SUCCESS;
+}
+
 // Only takes 16 bytes of data.  Now key data available here
 static int ulc_print_configuration(uint8_t *data) {
 
@@ -1116,37 +1237,57 @@ static int ulc_print_configuration(uint8_t *data) {
 
 static int ulaes_print_configuration(uint8_t *data, uint8_t start_page) {
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("UL-AES Configuration") " --------------------------");
+    // first call
+    if (start_page == 0x29) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "--- " _CYAN_("UL-AES Configuration") " --------------------------");
 
-    bool rid_act = (data[0] & 1);
-    bool sec_msg_act = (data[0] & 2);
-    bool prot = (data[4] & 0x80);
-    bool cfglck = (data[4] & 0x40);
-    bool cnt_inc_en = (data[4] & 8);
-    bool cnt_rd_en = (data[4] & 4);
-    uint16_t authlim = (data[6]) | ((data[7] & 0x3) << 8);
+        bool rid_act = (data[0] & 0x01);
+        bool sec_msg_act = (data[0] & 0x02);
+        bool prot = (data[4] & 0x80);
+        bool cfglck = (data[4] & 0x40);
+        bool cnt_inc_en = (data[4] & 0x08);
+        bool cnt_rd_en = (data[4] & 0x04);
+        uint16_t authlim = (data[6]) | ((data[7] & 0x3) << 8);
 
-    PrintAndLogEx(INFO, "  cfg0 [%u/0x%02X]: " _YELLOW_("%s"), start_page, start_page, sprint_hex_inrow(data, 4));
+        PrintAndLogEx(INFO, " cfg0 [%u/0x%02X]     " _YELLOW_("%s"), start_page, start_page, sprint_hex_inrow(data, 4));
 
-    PrintAndLogEx(INFO, "                    - Random ID is %s", (rid_act) ? "enabled" : "disabled");
-    PrintAndLogEx(INFO, "                    - Secure messaging is %s", (sec_msg_act) ? "enabled" : "disabled");
-    if (data[3] < 0x3c) {
-        PrintAndLogEx(INFO, "                    - page %d and above need authentication", data[3]);
-    } else {
-        PrintAndLogEx(INFO, "                    - pages don't need authentication");
+        PrintAndLogEx(INFO, "                    - Random ID is %s", (rid_act) ? _RED_("enabled") : _GREEN_("disabled"));
+        PrintAndLogEx(INFO, "                    - Secure messaging is %s", (sec_msg_act) ? _RED_("enabled") : _RED_("disabled"));
+        if (data[3] < 0x3c) {
+            PrintAndLogEx(INFO, "                    - page " _YELLOW_("%d") " and above need authentication", data[3]);
+        } else {
+            PrintAndLogEx(INFO, "                    - pages don't need authentication");
+        }
+        start_page++;
+
+        PrintAndLogEx(INFO, " cfg1 [%u/0x%02X]     " _YELLOW_("%s"), start_page, start_page,  sprint_hex_inrow(data + 4, 4));
+
+        if (authlim == 0) {
+            PrintAndLogEx(INFO, "                    - " _GREEN_("Unlimited authentication attempts"));
+        } else {
+            PrintAndLogEx(INFO, "                    - Max number of authentication attempts is " _YELLOW_("%d"), authlim);
+        }
+        PrintAndLogEx(INFO, "                    - %s access requires authentication", (prot) ? _RED_("Read and write") : "Write");
+        PrintAndLogEx(INFO, "                    - User configuration is %s", (cfglck) ? _RED_("locked") : _GREEN_("unlocked"));
+        PrintAndLogEx(INFO, "                    - Counter 2 increment access %s authentication", (cnt_inc_en) ? _GREEN_("does not require") : _RED_("requires"));
+        PrintAndLogEx(INFO, "                    - Counter 2      read access %s authentication", (cnt_rd_en) ? _GREEN_("does not require") : _RED_("requires"));
+        start_page++;
+
+        PrintAndLogEx(INFO, " RFU [%u/0x%02X]      " _YELLOW_("%s"), start_page, start_page,  sprint_hex_inrow(data + 8, 4));
+        start_page++;
+
+        PrintAndLogEx(INFO, " RFU [%u/0x%02X]      " _YELLOW_("%s"), start_page, start_page,  sprint_hex_inrow(data + 12, 4));
+    } else if (start_page == 0x2D) {
+
+        bool lck_aes1 = (data[0] & 0x80);
+        bool lck_aes0 = (data[0] & 0x40);
+        bool block_lck = (data[0] & 0x20);
+        PrintAndLogEx(INFO, " CMAC cfg [%u/0x%02X] " _YELLOW_("%s"), start_page, start_page,  sprint_hex_inrow(data, 4));
+        PrintAndLogEx(INFO, "                    -  AESKey 1 is %s", (lck_aes1) ? _RED_("locked") : _GREEN_("unlocked"));
+        PrintAndLogEx(INFO, "                    -  AESKey 0 is %s", (lck_aes0) ? _RED_("locked") : _GREEN_("unlocked"));
+        PrintAndLogEx(INFO, "                    -  Block lock key cfg is %s", (block_lck) ? _RED_("perma locked") : _GREEN_("unlocked"));
     }
-    PrintAndLogEx(INFO, "  cfg1 [%u/0x%02X]: " _YELLOW_("%s"), start_page + 1, start_page + 1,  sprint_hex_inrow(data + 4, 4));
-
-    if (authlim == 0) {
-        PrintAndLogEx(INFO, "                    - " _GREEN_("Unlimited authentication attempts"));
-    } else {
-        PrintAndLogEx(INFO, "                    - Max number of authentication attempts is " _YELLOW_("%d"), authlim);
-    }
-    PrintAndLogEx(INFO, "                    - %s access requires authentication", prot ? "Read and write" : "Write");
-    PrintAndLogEx(INFO, "                    - User configuration is %s", cfglck ? _RED_("locked") : "unlocked");
-    PrintAndLogEx(INFO, "                    - Counter 2 increment access %s authentication", cnt_inc_en ? "does not require" : "requires");
-    PrintAndLogEx(INFO, "                    - Counter 2      read access %s authentication", cnt_rd_en ? "does not require" : "requires");
     return PM3_SUCCESS;
 }
 
@@ -1317,7 +1458,7 @@ static int ulev1_print_configuration(uint64_t tagtype, uint8_t *data, uint8_t st
 
     if (tagtype & MFU_TT_NTAG_213_TT) {
         tt_enabled = (data[1] & 0x02);
-        tt_msg_resp_len = ul_read(45, tt_message, 4);
+        tt_msg_resp_len = ul_read(45, tt_message, 4, false);
 
         PrintAndLogEx(INFO, "                    - tamper detection feature is %s"
                       , (tt_enabled) ? _GREEN_("ENABLED") : "disabled"
@@ -1405,27 +1546,31 @@ static int ulev1_print_configuration(uint64_t tagtype, uint8_t *data, uint8_t st
     return PM3_SUCCESS;
 }
 
-static int ulev1_print_counters(void) {
+static int ulev1_print_counters(uint64_t tagtype, bool use_schann) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Counters"));
     uint8_t tear[1] = {0};
     uint8_t counter[3] = {0, 0, 0};
     int len = 0;
     for (uint8_t i = 0; i < 3; ++i) {
-        ulev1_readTearing(i, tear, sizeof(tear));
-        len = ulev1_readCounter(i, counter, sizeof(counter));
+        len = ulev1_readCounter(i, counter, sizeof(counter), use_schann);
         if (len == 3) {
             PrintAndLogEx(INFO, "       [%0d]: %s", i, sprint_hex(counter, 3));
-            PrintAndLogEx(SUCCESS, "            - %02X tearing ( %s )"
-                          , tear[0]
-                          , (tear[0] == 0xBD) ? _GREEN_("ok") : _RED_("fail")
-                         );
+            if ((tagtype & MFU_TT_UL_AES) != MFU_TT_UL_AES) {
+                ulev1_readTearing(i, tear, sizeof(tear));
+                PrintAndLogEx(SUCCESS, "            - %02X tearing ( %s )"
+                              , tear[0]
+                              , (tear[0] == 0xBD) ? _GREEN_("ok") : _RED_("fail")
+                             );
+            }
         }
     }
     return len;
 }
 
 static int ulev1_print_signature(uint64_t tagtype, uint8_t *uid, uint8_t *signature, size_t signature_len) {
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
     int index = -1;
     if (signature_len == 32) {
         index = originality_check_verify(uid, 7, signature, signature_len, PK_MFUL);
@@ -1460,7 +1605,7 @@ static int ntag_print_counter(void) {
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Counter"));
     uint8_t counter[3] = {0, 0, 0};
     uint16_t len;
-    len = ulev1_readCounter(0x02, counter, sizeof(counter));
+    len = ulev1_readCounter(0x02, counter, sizeof(counter), false);
     PrintAndLogEx(INFO, "       [02]: %s", sprint_hex(counter, 3));
     return len;
 }
@@ -1544,7 +1689,7 @@ static uint64_t ul_magic_test(void) {
     }
 
 
-    int status = ul_comp_write(0, NULL, 0);
+    int status = ul_comp_write(0, NULL, 0, false);
     DropField();
     if (status == PM3_SUCCESS) {
         PrintAndLogEx(INFO, "comp write pass");
@@ -1554,8 +1699,11 @@ static uint64_t ul_magic_test(void) {
     // check for GEN1A, GEN1B and NTAG21x
     PacketResponseNG resp;
     clearCommandBuffer();
-    uint8_t payload[] = { 0 };
-    SendCommandNG(CMD_HF_MIFARE_CIDENT, payload, sizeof(payload));
+    mf_chinese_ident_t payload = {
+        .is_mfc = false,
+        .keytype = MF_KEY_A,
+    };
+    SendCommandNG(CMD_HF_MIFARE_CIDENT, (uint8_t *)&payload, sizeof(payload));
 
     uint16_t is_generation = MAGIC_FLAG_NONE;
     if (WaitForResponseTimeout(CMD_HF_MIFARE_CIDENT, &resp, 1500)) {
@@ -1598,7 +1746,7 @@ static char *mfu_generate_filename(const char *prefix, const char *suffix) {
 
 // used with the Amiibo dumps loading...
 // Not related to 'hf mfu dump'
-static int mfu_dump_tag(uint16_t pages, void **pdata, uint16_t *len) {
+static int mfu_dump_tag(uint16_t pages, void **pdata, uint16_t *len, bool use_schann) {
 
     // read uid
     iso14a_card_select_t card;
@@ -1616,16 +1764,22 @@ static int mfu_dump_tag(uint16_t pages, void **pdata, uint16_t *len) {
         goto out;
     }
 
-    // UL_EV1/NTAG auth
-    uint8_t keytype = 2;
+    // read card
+    mful_readblock_t packet = {
+        .block_no = 0,
+        .num_of_blocks = 4,
+        .keytype = 2,                // UL_EV1/NTAG auth
+        .keylen = 4,
+        .use_schann = use_schann,
+    };
+
     // generate PWD
-    uint8_t key[4] = {0};
-    num_to_bytes(ul_ev1_pwdgenB(card.uid), 4, key);
+    num_to_bytes(ul_ev1_pwdgenB(card.uid), 4, packet.key);
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFAREU_READCARD, 0, pages, keytype, key, 4);
+    SendCommandNG(CMD_HF_MIFAREU_READCARD, (uint8_t *)&packet, sizeof(packet));
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    if (WaitForResponseTimeout(CMD_HF_MIFAREU_READCARD, &resp, 2500) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         free(*pdata);
         *pdata = NULL;
@@ -1633,17 +1787,19 @@ static int mfu_dump_tag(uint16_t pages, void **pdata, uint16_t *len) {
         goto out;
     }
 
-    if (resp.oldarg[0] != 1) {
+    if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Failed reading card");
         free(*pdata);
         *pdata = NULL;
-        res = PM3_ESOFT;
+        res = resp.status;
         goto out;
     }
 
     // read all memory
-    uint32_t startindex = resp.oldarg[2];
-    uint32_t buffer_size = resp.oldarg[1];
+    mful_readblock_resp_t *payload = (mful_readblock_resp_t *)resp.data.asBytes;
+    uint32_t startindex = payload->startidx;
+    uint32_t buffer_size = payload->bytelen;
+
     if (buffer_size > maxbytes) {
         PrintAndLogEx(FAILED, "Data exceeded buffer size!");
         buffer_size = maxbytes;
@@ -1685,12 +1841,15 @@ typedef struct {
 
 static mfu_otp_identify_t mfu_otp_ident_table[] = {
     { "SALTO Systems card", 12, 4, "534C544F", ul_c_otpgenA, NULL },
-    { NULL, 0, 0, NULL, NULL, NULL }
+    { NULL, 0, 0, NULL, NULL, NULL}   // must be the last item
 };
 
 static mfu_otp_identify_t *mfu_match_otp_fingerprint(uint8_t *uid, uint8_t *data) {
     uint8_t i = 0;
     do {
+        if (mfu_otp_ident_table[i].desc == NULL) {
+            break;
+        }
         int ml = 0;
         uint8_t mtmp[40] = {0};
 
@@ -1713,7 +1872,7 @@ static mfu_otp_identify_t *mfu_match_otp_fingerprint(uint8_t *uid, uint8_t *data
             PrintAndLogEx(DEBUG, "(fingerprint) found %s", mfu_otp_ident_table[i].desc);
             return &mfu_otp_ident_table[i];
         }
-    } while (mfu_otp_ident_table[++i].desc);
+    } while (++i < ARRAYLEN(mfu_otp_ident_table));
     return NULL;
 }
 
@@ -1858,7 +2017,7 @@ int mfu_get_version_uid(uint8_t *version, uint8_t *uid) {
     memcpy(uid, card.uid, card.uidlen);
 
     uint8_t v[10] = {0x00};
-    int len  = ulev1_getVersion(v, sizeof(v));
+    int len  = ulev1_getVersion(v, sizeof(v), false);
     DropField();
     if (len != sizeof(v)) {
         return PM3_ESOFT;
@@ -1868,13 +2027,135 @@ int mfu_get_version_uid(uint8_t *version, uint8_t *uid) {
     return PM3_SUCCESS;
 }
 
-static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, const uint8_t *authkey, int ak_len) {
+static int mfulc_fingerprint(void) {
+    iso14a_card_select_t card;
+    PacketResponseNG resp;
+
+    // Old LAB401 ULC DW
+    // To be checked before FJ8010
+    if (ul_select(&card) == false) {
+        PrintAndLogEx(ERR, "Unable to select tag");
+        DropField();
+        return PM3_ESOFT;
+    }
+    uint8_t cmd0[] = {0xAF};
+    SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS, cmd0, sizeof(cmd0));
+    uint16_t rlen_2017 = 0;
+    if (WaitForIso14aReply(&resp, 500, &rlen_2017, NULL)) {
+        if ((rlen_2017 == 11) && (resp.data.asBytes[0] == 0x00)) {
+            PrintAndLogEx(SUCCESS, _GREEN_("Lab401 Ultralight-C compatible UID modifiable"));
+            DropField();
+            return PM3_SUCCESS;
+        }
+    }
+    DropField();
+
+    // Feiju FJ8010
+    if (ul_select(&card) == false) {
+        PrintAndLogEx(ERR, "Unable to select tag");
+        DropField();
+        return PM3_ESOFT;
+    }
+    uint8_t cmd1[] = {0x1A, 0x2F};
+    SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS, cmd1, sizeof(cmd1));
+    uint16_t rlen_2035 = 0;
+    if (WaitForIso14aReply(&resp, 500, &rlen_2035, NULL)) {
+        if ((rlen_2035 == 11) && (resp.data.asBytes[0] == 0xAF)) {
+            PrintAndLogEx(SUCCESS, _GREEN_("Feiju FJ8010"));
+            DropField();
+            return PM3_SUCCESS;
+        }
+    }
+    DropField();
+
+    // USCUID-UL with ULC authentication
+    if (ul_select(&card) == false) {
+        PrintAndLogEx(ERR, "Unable to select tag");
+        DropField();
+        return PM3_ESOFT;
+    }
+    uint8_t cmd2[] = {0x1A};
+    SendIso14aReader(ISO14A_RAW | ISO14A_NO_RATS, cmd2, sizeof(cmd2));
+    uint16_t rlen_2053 = 0;
+    if (WaitForIso14aReply(&resp, 500, &rlen_2053, NULL)) {
+        if ((rlen_2053 == 11) && (resp.data.asBytes[0] == 0xAF)) {
+            uint8_t response[11] = {0};
+            memcpy(response, resp.data.asBytes, 9);
+            compute_crc(CRC_14443_A, response, 9, response + 9, response + 10);
+            response[9] ^= resp.data.asBytes[9];
+            response[10] ^= resp.data.asBytes[10];
+            if ((response[9] == 0x6C) && (response[10] == 0xF3)) {
+                PrintAndLogEx(SUCCESS, _GREEN_("USCUID-UL with ULC authentication, variant 1"));
+            } else if ((response[9] == 0xB4) && (response[10] == 0xC5)) {
+                PrintAndLogEx(SUCCESS, _GREEN_("USCUID-UL with ULC authentication, variant 2"));
+            } else {
+                PrintAndLogEx(SUCCESS, _GREEN_("USCUID-UL with ULC authentication") _RED_(" unknown variant") ", please report!");
+            }
+            DropField();
+            return PM3_SUCCESS;
+        }
+    }
+    DropField();
+
+    // GT23SC4489
+    uint8_t cmd3a[] = {0x26};
+    uint8_t cmd3b[] = {0x30};
+    // 7 bit REQA, so lenbits carries it and len stays 0
+    SendIso14aReaderEx(ISO14A_RAW | ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_SELECT | ISO14A_NO_DISCONNECT
+                       , cmd3a, sizeof(cmd3a), 0, 7, 0, 0);
+    uint16_t rlen_2080 = 0;
+    if (WaitForIso14aReply(&resp, 500, &rlen_2080, NULL)) {
+        if (rlen_2080 == 2) {
+            SendIso14aReader(ISO14A_RAW | ISO14A_NO_SELECT, cmd3b, sizeof(cmd3b));
+            uint16_t rlen_2084 = 0;
+            if (WaitForIso14aReply(&resp, 500, &rlen_2084, NULL)) {
+                if (rlen_2084 == 18) {
+                    if ((resp.data.asBytes[0] == 0x04) && (resp.data.asBytes[6] == 0x15) && (resp.data.asBytes[7] == 0x89)) {
+                        PrintAndLogEx(SUCCESS, _GREEN_("GT23SC4489"));
+                    } else {
+                        PrintAndLogEx(SUCCESS, _GREEN_("GT23SC4489") _RED_(" unknown variant") ", please report!");
+                    }
+                    DropField();
+                    return PM3_SUCCESS;
+                }
+            }
+        }
+    }
+    DropField();
+
+    // Mimicking TagInfo to identify MIFARE Hospitality cards: blk2[2]=09 and blk3=E1101200
+    if (ul_select(&card)) {
+        uint8_t data[4] = { 0x00 };
+        uint8_t cmd[] = { ISO14443A_CMD_READBLOCK, 2 };
+        int status = ul_send_cmd_raw(cmd, sizeof(cmd), data, 4, false);
+        if ((status > 0) && (data[2] == 0x09)) {
+            cmd[1] = 3;
+            status = ul_send_cmd_raw(cmd, sizeof(cmd), data, 4, false);
+            if ((status > 0) && (data[0] == 0xE1) && (data[1] == 0x10) && (data[2] == 0x12) && (data[3] == 0x00)) {
+                PrintAndLogEx(INFO, "MIFARE Hospitality (MF0ICU2(H))");
+                DropField();
+                return PM3_SUCCESS;
+            }
+        }
+    }
+    PrintAndLogEx(INFO, "likely MF0ICU2");
+    DropField();
+    return PM3_SUCCESS;
+}
+
+static int mfu_fingerprint(uint64_t tagtype, bool has_auth_key, const uint8_t *authkey, int ak_len, bool use_schann) {
 
     uint8_t dbg_curr = DBG_NONE;
     uint8_t *data = NULL;
     int res = PM3_ESOFT;
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint"));
+
+    // ULC fingerprinting
+    if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) {
+        res = mfulc_fingerprint();
+    }
+
     uint8_t maxbytes = mfu_max_len();
     if (maxbytes == 0) {
         PrintAndLogEx(ERR, "fingerprint table wrong");
@@ -1892,10 +2173,11 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, const uint8_t *aut
 
     uint8_t pages = (maxbytes / MFU_BLOCK_SIZE);
     uint8_t keytype = 0;
-
-    if (hasAuthKey) {
-        if (tagtype & MFU_TT_UL_C)
+    if (has_auth_key) {
+        if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C)
             keytype = 1; // UL_C auth
+        else if ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES)
+            keytype = 3; // UL_AES auth
         else
             keytype = 2; // UL_EV1/NTAG auth
     }
@@ -1910,25 +2192,36 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, const uint8_t *aut
         goto out;
     }
 
+    // read card
+    mful_readblock_t packet = {
+        .block_no = 0,
+        .num_of_blocks = pages,
+        .keytype = keytype,
+        .keylen = ak_len,
+        .use_schann = use_schann,
+    };
+    memcpy(packet.key, authkey, ak_len);
+
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFAREU_READCARD, 0, pages, keytype, authkey, ak_len);
+    SendCommandNG(CMD_HF_MIFAREU_READCARD, (uint8_t *)&packet, sizeof(packet));
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    if (WaitForResponseTimeout(CMD_HF_MIFAREU_READCARD, &resp, 2500) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         res = PM3_ETIMEOUT;
         goto out;
     }
 
-    if (resp.oldarg[0] != 1) {
+    if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Failed reading card");
-        res = PM3_ESOFT;
+        res = resp.status;
         goto out;
     }
 
     // read all memory
-    uint32_t startindex = resp.oldarg[2];
-    uint32_t buffer_size = resp.oldarg[1];
+    mful_readblock_resp_t *payload = (mful_readblock_resp_t *)resp.data.asBytes;
+    uint32_t startindex = payload->startidx;
 
+    uint32_t buffer_size = payload->bytelen;
     if (buffer_size > maxbytes) {
         PrintAndLogEx(FAILED, "Data exceeded buffer size!");
         buffer_size = maxbytes;
@@ -1963,7 +2256,7 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, const uint8_t *aut
     // OTP checks
     mfu_otp_identify_t *item = mfu_match_otp_fingerprint(uid, data);
     if (item) {
-        PrintAndLogEx(SUCCESS, _GREEN_("%s"), item->desc);
+        PrintAndLogEx(SUCCESS, _BACK_GREEN_(" %s "), item->desc);
         res = PM3_SUCCESS;
 
         if (item->hint) {
@@ -1988,43 +2281,43 @@ out:
     return res;
 }
 
-static int mfu_write_block(const uint8_t *data, uint8_t datalen, bool has_auth_key,  bool has_pwd, const uint8_t *auth_key_ptr, uint8_t blockno) {
+static int mfu_write_block(const uint8_t *data, uint8_t datalen, uint8_t keytype, const uint8_t *auth_key_ptr, uint8_t blockno, bool use_schann) {
 
-    // 4 or 16.
-    uint8_t cmd[32];
-    memcpy(cmd, data, datalen);
+    mful_writeblock_t packet = {
+        .block_no = blockno,
+        .keytype = keytype,
+        .use_schann = use_schann,
+        .keylen = 0,
+    };
+    memcpy(packet.data, data, datalen);
 
     // 0 - no pwd/key, no authentication
     // 1 - 3des key (16 bytes)
     // 2 - pwd  (4 bytes)
-    uint8_t keytype = 0;
-    size_t cmdlen = datalen;
-    if (has_auth_key) {
-        keytype = 1;
-        memcpy(cmd + datalen, auth_key_ptr, 16);
-        cmdlen += 16;
-    } else if (has_pwd) {
-        keytype = 2;
-        memcpy(cmd + datalen, auth_key_ptr, 4);
-        cmdlen += 4;
+    // 3 - AES key (16 bytes)
+    if ((keytype == 1) || (keytype == 3)) {
+        memcpy(packet.key, auth_key_ptr, 16);
+        packet.keylen = 16;
+    } else if (keytype == 2) {
+        memcpy(packet.key, auth_key_ptr, 4);
+        packet.keylen = 4;
     }
 
     clearCommandBuffer();
-    if (datalen == 16) {
-        SendCommandMIX(CMD_HF_MIFAREU_WRITEBL_COMPAT, blockno, keytype, 0, cmd, cmdlen);
-    } else {
-        SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, blockno, keytype, 0, cmd, cmdlen);
-    }
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-        return PM3_ETIMEOUT;
-    }
 
-    uint8_t isOK  = resp.oldarg[0] & 0xFF;
-    if (isOK) {
-        return PM3_SUCCESS;
+    if (datalen == 16) {
+        SendCommandNG(CMD_HF_MIFAREU_WRITEBL_COMPAT, (uint8_t *)&packet, sizeof(packet));
+        if (WaitForResponseTimeout(CMD_HF_MIFAREU_WRITEBL_COMPAT, &resp, 1500) == false) {
+            return PM3_ETIMEOUT;
+        }
+    } else {
+        SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packet, sizeof(packet));
+        if (WaitForResponseTimeout(CMD_HF_MIFAREU_WRITEBL, &resp, 1500) == false) {
+            return PM3_ETIMEOUT;
+        }
     }
-    return PM3_ESOFT;
+    return resp.status;
 }
 
 uint64_t GetHF14AMfU_Type(void) {
@@ -2045,11 +2338,11 @@ uint64_t GetHF14AMfU_Type(void) {
         // ST25TN
         // read SYSBLOCK
         uint8_t data[4] = {0x00};
-        int status = ul_read(0x02, data, sizeof(data));
+        int status = ul_read(0x02, data, sizeof(data), false);
         if (status <= 1) {
             tagtype = MFU_TT_UL;
         } else {
-            status = ul_read(data[1] + 1, data, sizeof(data));
+            status = ul_read(data[1] + 1, data, sizeof(data), false);
             if (status <= 1) {
                 tagtype = MFU_TT_UL;
             } else {
@@ -2086,7 +2379,7 @@ uint64_t GetHF14AMfU_Type(void) {
     } else {
         // Note that SAK might be 0x44 but also e.g. 0x04 for cards in Random ID mode
         uint8_t version[10] = {0x00};
-        int len  = ulev1_getVersion(version, sizeof(version));
+        int len  = ulev1_getVersion(version, sizeof(version), false);
         DropField();
 
         switch (len) {
@@ -2158,6 +2451,10 @@ uint64_t GetHF14AMfU_Type(void) {
                 else if (memcmp(version, "\x00\x04\x04\x04\x01\x00\x0F", 7) == 0) { tagtype = MFU_TT_NTAG_213_F; break; }
                 else if (memcmp(version, "\x00\x04\x04\x04\x01\x00\x13", 7) == 0) { tagtype = MFU_TT_NTAG_216_F; break; }
                 else if (memcmp(version, "\x00\x04\x04\x02\x03\x00\x0F", 7) == 0) { tagtype = MFU_TT_NTAG_213_TT; break; }
+                else if (memcmp(version, "\x00\x04\x04\x02\x04\x00\x0F", 7) == 0) { tagtype = MFU_TT_NTAG_223_DNA; break; }
+                else if (memcmp(version, "\x00\x04\x04\x08\x04\x00\x0F", 7) == 0) { tagtype = MFU_TT_NTAG_223_DNA_SD; break; }
+                else if (memcmp(version, "\x00\x04\x04\x02\x05\x00\x10", 7) == 0) { tagtype = MFU_TT_NTAG_224_DNA; break; }
+                else if (memcmp(version, "\x00\x04\x04\x08\x05\x00\x10", 7) == 0) { tagtype = MFU_TT_NTAG_224_DNA_SD; break; }
                 else if (memcmp(version, "\x00\x04\x04\x05\x02\x01\x13", 7) == 0) { tagtype = MFU_TT_NTAG_I2C_1K; break; }
                 else if (memcmp(version, "\x00\x04\x04\x05\x02\x01\x15", 7) == 0) { tagtype = MFU_TT_NTAG_I2C_2K; break; }
                 else if (memcmp(version, "\x00\x04\x04\x05\x02\x02\x13", 7) == 0) { tagtype = MFU_TT_NTAG_I2C_1K_PLUS; break; }
@@ -2204,21 +2501,21 @@ uint64_t GetHF14AMfU_Type(void) {
 
                 // read page 0x26-0x29 (last valid ntag203 page)
                 // if error response, its ULTRALIGHT since doesn't have that memory block
-                status = ul_read(0x26, data, sizeof(data));
+                status = ul_read(0x26, data, sizeof(data), false);
                 if (status <= 1) {
                     tagtype = MFU_TT_UL;
                 } else {
 
                     // read page 44 / 0x2C
                     // if error response, its NTAG203 since doesn't have that memory block
-                    status = ul_read(0x2C, data, sizeof(data));
+                    status = ul_read(0x2C, data, sizeof(data), false);
                     if (status <= 1) {
                         tagtype = MFU_TT_NTAG_203;
                     } else {
 
                         // read page 48 / 0x30
                         // if response, its FUDAN FM11NT021
-                        status = ul_read(0x30, data, sizeof(data));
+                        status = ul_read(0x30, data, sizeof(data), false);
                         if (status == sizeof(data)) {
                             tagtype = MFU_TT_NTAG_213;
                         } else  {
@@ -2261,8 +2558,9 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         arg_param_begin,
         arg_str0("k", "key", "<hex>", "Authentication key (UL-C 16 bytes, EV1/NTAG 4 bytes)"),
         arg_lit0("l", NULL, "Swap entered key's endianness"),
-//        arg_lit0("v", "verbose", "verbose output"),
         arg_lit0(NULL, "force", "override `hw dbg` settings"),
+        arg_lit0(NULL, "schann", "use secure channel. Must have key"),
+//        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -2271,8 +2569,9 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     uint8_t authenticationkey[16] = {0x00};
     CLIGetHexWithReturn(ctx, 1, authenticationkey, &ak_len);
     bool swap_endian = arg_get_lit(ctx, 2);
-//    bool verbose = arg_get_lit(ctx, 3);
     bool override = (arg_get_lit(ctx, 3) == false);
+    bool use_schann = arg_get_lit(ctx, 4);
+//    bool verbose = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
     if (ak_len) {
@@ -2283,14 +2582,20 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     }
 
     bool has_auth_key = false;
-    if (ak_len > 0)
+    if (ak_len > 0) {
         has_auth_key = true;
+    }
+
+    if (use_schann && has_auth_key == false) {
+        PrintAndLogEx(WARNING, "Secure channel must be called with key");
+        return PM3_EINVARG;
+    }
 
     uint8_t authlim = 0xff;
     uint8_t data[16] = {0x00};
     iso14a_card_select_t card;
     int status;
-    uint8_t *authkeyptr = authenticationkey;
+    uint8_t *auth_key_ptr = authenticationkey;
     uint8_t pwd[4] = {0, 0, 0, 0};
     uint8_t *key = pwd;
     uint8_t pack[4] = {0, 0, 0, 0};
@@ -2306,17 +2611,25 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     ul_print_type(tagtype, 6);
 
     // Swap endianness
-    if (swap_endian && has_auth_key) {
-        authkeyptr = SwapEndian64(authenticationkey, ak_len, (ak_len == 16) ? 8 : 4);
+    if (swap_endian) {
+        if (ak_len == 16) {
+            if (((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C)) {
+                auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 8);
+            } else if (((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES)) {
+                auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 16);
+            }
+        } else if (ak_len == 4) {
+            auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 4);
+        }
     }
 
-    if (ul_auth_select(&card, tagtype, has_auth_key, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) {
+    if (ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, pack, sizeof(pack), use_schann) == PM3_ESOFT) {
         return PM3_ESOFT;
     }
 
     bool locked = false;
     // read pages 0,1,2,3 (should read 4 pages)
-    status = ul_read(0, data, sizeof(data));
+    status = ul_read(0, data, sizeof(data), use_schann);
     if (status <= 0) {
         DropField();
         PrintAndLogEx(ERR, "Error: tag didn't answer to READ");
@@ -2328,15 +2641,29 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         locked = true;
     }
 
+    // NXP specific
+    if ((tagtype & (MFU_TT_UL | MFU_TT_UL_C | MFU_TT_UL_EV1_48 | MFU_TT_UL_EV1_128 | MFU_TT_UL_EV1 | MFU_TT_UL_NANO_40 |
+                    MFU_TT_NTAG | MFU_TT_NTAG_203 | MFU_TT_NTAG_210 | MFU_TT_NTAG_210u | MFU_TT_NTAG_212 |
+                    MFU_TT_NTAG_213 | MFU_TT_NTAG_213_F | MFU_TT_NTAG_213_C |
+                    MFU_TT_NTAG_213_TT | MFU_TT_NTAG_215 | MFU_TT_NTAG_216 | MFU_TT_NTAG_216_F |
+                    MFU_TT_NTAG_223_DNA | MFU_TT_NTAG_223_DNA_SD | MFU_TT_NTAG_224_DNA | MFU_TT_NTAG_224_DNA_SD |
+                    MFU_TT_NTAG_I2C_1K | MFU_TT_NTAG_I2C_2K | MFU_TT_NTAG_I2C_1K_PLUS | MFU_TT_NTAG_I2C_2K_PLUS |
+                    MFU_TT_UL_AES)) &&
+            ((tagtype & (MFU_TT_MAGIC | MFU_TT_MAGIC_1A | MFU_TT_MAGIC_1B | MFU_TT_MAGIC_NTAG |
+                         MFU_TT_MAGIC_2 | MFU_TT_MAGIC_4 | MFU_TT_MAGIC_4_GDM | MFU_TT_MAGIC_NTAG21X)) == 0)) {
+        // print silicon info
+        ul_print_nxp_silicon_info(card.uid);
+    }
+
     // UL_C Specific
     if ((tagtype & MFU_TT_UL_C)) {
 
         // read pages 0x28, 0x29, 0x2A, 0x2B
         uint8_t ulc_conf[16] = {0x00};
-        status = ul_read(0x28, ulc_conf, sizeof(ulc_conf));
+        status = ul_read(0x28, ulc_conf, sizeof(ulc_conf), false);
         if (status <= 0) {
             PrintAndLogEx(ERR, "Error: tag didn't answer to page 40 read command");
-            PrintAndLogEx(HINT, "Hint: tag config may be set to read-protect those pages, try dumping");
+            PrintAndLogEx(HINT, "Hint: Tag config may be set to read-protect those pages, try dumping");
             DropField();
             return PM3_ESOFT;
         }
@@ -2347,21 +2674,27 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             locked = true;
         }
 
-        mfu_fingerprint(tagtype, has_auth_key, authkeyptr, ak_len);
+        mfu_fingerprint(tagtype, has_auth_key, auth_key_ptr, ak_len, use_schann);
 
         DropField();
 
         if ((tagtype & MFU_TT_MAGIC) == MFU_TT_MAGIC) {
             //just read key
             uint8_t ulc_deskey[16] = {0x00};
-            status = ul_read(0x2C, ulc_deskey, sizeof(ulc_deskey));
-            if (status <= 0) {
+            if (ul_select(&card) == false) {
                 DropField();
+                PrintAndLogEx(ERR, "Unable to select tag");
+                return PM3_ESOFT;
+            }
+            status = ul_read(0x2C, ulc_deskey, sizeof(ulc_deskey), false);
+            DropField();
+            if (status <= 0) {
                 PrintAndLogEx(ERR, "Error: tag didn't answer to READ magic");
                 return PM3_ESOFT;
             }
 
             if (status == 16) {
+                PrintAndLogEx(SUCCESS, "Reading 3des key from magic card: ");
                 ulc_print_3deskey(ulc_deskey);
             }
 
@@ -2376,7 +2709,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             }
 
             // also try to diversify default keys..  look into CmdHF14AMfGenDiverseKeys
-            if (try_default_3des_keys(override, &key) == PM3_SUCCESS) {
+            if (try_default_3des_keys(override, &key, false) == PM3_SUCCESS) {
                 PrintAndLogEx(SUCCESS, "Found default 3des key: ");
                 uint8_t keySwap[16];
                 memcpy(keySwap, SwapEndian64(key, 16, 8), 16);
@@ -2390,44 +2723,13 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         }
     }
 
-    // Specific UL-AES
-    if (tagtype & MFU_TT_UL_AES) {
-
-        // read pages 0x28, 0x29, 0x2A, 0x2B
-        uint8_t ulaes_conf[16] = {0x00};
-        status = ul_read(0x29, ulaes_conf, sizeof(ulaes_conf));
-        if (status <= 0) {
-            PrintAndLogEx(ERR, "Error: tag didn't answer to READ UL-AES");
-            DropField();
-            return PM3_ESOFT;
-        }
-
-        if (status == 16) {
-            ulaes_print_configuration(ulaes_conf, 0x29);
-        } else {
-            locked = true;
-        }
-
-        DropField();
-
-        // also try to diversify default keys..  look into CmdHF14AMfGenDiverseKeys
-        if (try_default_aes_keys(override) != PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "n/a");
-        }
-        DropField();
-
-        if (ul_auth_select(&card, tagtype, has_auth_key, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) {
-            return PM3_ESOFT;
-        }
-    }
-
-    // do counters and signature first (don't neet auth)
+    // do counters and signature first (don't need auth)
 
     // ul counters are different than ntag counters
-    if ((tagtype & (MFU_TT_UL_EV1_48 | MFU_TT_UL_EV1_128 | MFU_TT_UL_EV1))) {
-        if (ulev1_print_counters() != 3) {
+    if ((tagtype & (MFU_TT_UL_EV1_48 | MFU_TT_UL_EV1_128 | MFU_TT_UL_EV1 | MFU_TT_UL_AES))) {
+        if (ulev1_print_counters(tagtype, use_schann) != 3) {
             // failed - re-select
-            if (ul_auth_select(&card, tagtype, has_auth_key, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) {
+            if (ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, pack, sizeof(pack), use_schann) == PM3_ESOFT) {
                 return PM3_ESOFT;
             }
         }
@@ -2437,7 +2739,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     if ((tagtype & (MFU_TT_NTAG_213 | MFU_TT_NTAG_213_F | MFU_TT_NTAG_213_C | MFU_TT_NTAG_213_TT | MFU_TT_NTAG_215 | MFU_TT_NTAG_216))) {
         if (ntag_print_counter()) {
             // failed - re-select
-            if (ul_auth_select(&card, tagtype, has_auth_key, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) {
+            if (ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, pack, sizeof(pack), false) == PM3_ESOFT) {
                 return PM3_ESOFT;
             }
         }
@@ -2445,13 +2747,13 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
 
     // ST25TN info & signature
     if (tagtype & (MFU_TT_ST25TN512 | MFU_TT_ST25TN01K)) {
-        status = ul_read(0x02, data, sizeof(data));
+        status = ul_read(0x02, data, sizeof(data), false);
         if (status <= 1) {
             PrintAndLogEx(ERR, "Error: tag didn't answer to READ SYSBLOCK");
             DropField();
             return PM3_ESOFT;
         }
-        status = ul_read(data[1] + 1, data, sizeof(data));
+        status = ul_read(data[1] + 1, data, sizeof(data), false);
         if (status <= 1) {
             PrintAndLogEx(ERR, "Error: tag didn't answer to READ SYSBLOCK");
             DropField();
@@ -2463,7 +2765,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         PrintAndLogEx(INFO, "        Product Code: %02x%02x", data[1], data[0]);
         uint8_t signature[32] = {0};
         for (int blkoff = 0; blkoff < 8; blkoff++) {
-            status = ul_read(0x34 + blkoff, signature + (blkoff * 4), 4);
+            status = ul_read(0x34 + blkoff, signature + (blkoff * 4), 4, false);
             if (status <= 1) {
                 PrintAndLogEx(ERR, "Error: tag didn't answer to READ SYSBLOCK");
                 DropField();
@@ -2479,10 +2781,12 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     if ((tagtype & (MFU_TT_UL_EV1_48 | MFU_TT_UL_EV1_128 | MFU_TT_UL_EV1 | MFU_TT_UL_NANO_40 |
                     MFU_TT_NTAG_210u | MFU_TT_NTAG_213 | MFU_TT_NTAG_213_F | MFU_TT_NTAG_213_C |
                     MFU_TT_NTAG_213_TT | MFU_TT_NTAG_215 | MFU_TT_NTAG_216 | MFU_TT_NTAG_216_F |
+                    MFU_TT_NTAG_223_DNA | MFU_TT_NTAG_223_DNA_SD | MFU_TT_NTAG_224_DNA | MFU_TT_NTAG_224_DNA_SD |
                     MFU_TT_NTAG_I2C_1K | MFU_TT_NTAG_I2C_2K | MFU_TT_NTAG_I2C_1K_PLUS | MFU_TT_NTAG_I2C_2K_PLUS |
                     MFU_TT_UL_AES))) {
+
         uint8_t ulev1_signature[48] = {0x00};
-        status = ulev1_readSignature(ulev1_signature, sizeof(ulev1_signature));
+        status = ulev1_readSignature(ulev1_signature, sizeof(ulev1_signature), use_schann);
         if (status < 0) {
             PrintAndLogEx(ERR, "Error: tag didn't answer to READ SIGNATURE");
             DropField();
@@ -2494,17 +2798,14 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             ulev1_print_signature(tagtype, card.uid, ulev1_signature, 48);
         } else {
             // re-select
-            if (ul_auth_select(&card, tagtype, has_auth_key, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) {
+            if (ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, pack, sizeof(pack), use_schann) == PM3_ESOFT) {
                 return PM3_ESOFT;
             }
         }
 
-        // print silicon info
-        ul_print_nxp_silicon_info(card.uid);
-
         // Get Version
         uint8_t version[10] = {0x00};
-        status  = ulev1_getVersion(version, sizeof(version));
+        status = ulev1_getVersion(version, sizeof(version), use_schann);
         if (status < 0) {
             PrintAndLogEx(ERR, "Error: tag didn't answer to GETVERSION");
             DropField();
@@ -2513,28 +2814,27 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             ulev1_print_version(version);
         } else {
             locked = true;
-            if (ul_auth_select(&card, tagtype, has_auth_key, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) {
+            if (ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, pack, sizeof(pack), use_schann) == PM3_ESOFT) {
                 return PM3_ESOFT;
             }
-        }
-
-        // Don't check config / passwords for Ul AES :)
-        if (tagtype == MFU_TT_UL_AES) {
-            goto out;
         }
 
         uint8_t startconfigblock = 0;
         uint8_t ulev1_conf[16] = {0x00};
 
-        for (uint8_t i = 1; i < ARRAYLEN(UL_TYPES_ARRAY); i++) {
-            if ((tagtype & UL_TYPES_ARRAY[i]) == UL_TYPES_ARRAY[i]) {
-                startconfigblock = UL_MEMORY_ARRAY[i] - 3;
-                break;
+        // UL-AES config doesn't sit in the last four pages,  those are the AES keys.
+        // Its config pages are read further down
+        if ((tagtype & MFU_TT_UL_AES) != MFU_TT_UL_AES) {
+            for (uint8_t i = 1; i < ARRAYLEN(UL_TYPES_ARRAY); i++) {
+                if ((tagtype & UL_TYPES_ARRAY[i]) == UL_TYPES_ARRAY[i]) {
+                    startconfigblock = UL_MEMORY_ARRAY[i] - 3;
+                    break;
+                }
             }
         }
 
         if (startconfigblock) { // if we know where the config block is...
-            status = ul_read(startconfigblock, ulev1_conf, sizeof(ulev1_conf));
+            status = ul_read(startconfigblock, ulev1_conf, sizeof(ulev1_conf), use_schann);
             if (status <= 0) {
                 PrintAndLogEx(ERR, "Error: tag didn't answer to READ EV1");
                 DropField();
@@ -2544,18 +2844,58 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 authlim = (ulev1_conf[4] & 0x07);
                 // add pwd / pack if used from cli
                 if (has_auth_key) {
-                    memcpy(ulev1_conf + 8, authkeyptr, 4);
+                    memcpy(ulev1_conf + 8, auth_key_ptr, 4);
                     memcpy(ulev1_conf + 12, pack, 2);
                 }
                 ulev1_print_configuration(tagtype, ulev1_conf, startconfigblock);
             }
         }
 
+        // Only check extended config and skip passwords for Ul AES
+        if ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES) {
+            // read pages 0x28, (lock bytes) - we are skipping this block
+            // read pages 0x29, 0x2A, 0x2B, 0x2C  (cfg1, cfg2, RFU, RFU)
+            uint8_t ulaes_conf[16] = {0x00};
+            status = ul_read(0x29, ulaes_conf, sizeof(ulaes_conf), use_schann);
+            if (status == 16) {
+                ulaes_print_configuration(ulaes_conf, 0x29);
+
+                memset(ulaes_conf, 0, sizeof(ulaes_conf));
+                // read page 0x2D, (CMAC CFG)
+                status = ul_read(0x2D, ulaes_conf, sizeof(ulaes_conf), use_schann);
+                if (status == 16) {
+                    ulaes_print_configuration(ulaes_conf, 0x2D);
+                } else {
+                    PrintAndLogEx(WARNING, "Warning: block 0x2D cannot be read");
+                    locked = true;
+                }
+            } else {
+                PrintAndLogEx(WARNING, "Warning: block 0x29 cannot be read");
+                locked = true;
+            }
+
+            DropField();
+
+            if (ak_len != 16) {
+                // also try to diversify default keys..  look into CmdHF14AMfGenDiverseKeys
+                if (try_default_aes_keys(override, use_schann, false) != PM3_SUCCESS) {
+                    PrintAndLogEx(INFO, "n/a");
+                }
+                DropField();
+            }
+
+            if (ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, pack, sizeof(pack), use_schann) == PM3_ESOFT) {
+                return PM3_ESOFT;
+            }
+            goto out;
+        }
+
+
         // AUTHLIMIT, (number of failed authentications)
         // 0 = limitless.
         // 1-7 = limit. No automatic tries then.
         // hasAuthKey,  if we was called with key, skip test.
-        if (!authlim && (has_auth_key == false)) {
+        if ((authlim == 0) && (has_auth_key == false)) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(SUCCESS, "--- " _CYAN_("Known EV1/NTAG passwords"));
 
@@ -2570,7 +2910,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 goto out;
             }
 
-            if (ul_auth_select(&card, tagtype, has_auth_key, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) {
+            if (ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, pack, sizeof(pack), use_schann) == PM3_ESOFT) {
                 return PM3_ESOFT;
             }
 
@@ -2585,7 +2925,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 goto out;
             }
 
-            if (ul_auth_select(&card, tagtype, has_auth_key, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) {
+            if (ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, pack, sizeof(pack), use_schann) == PM3_ESOFT) {
                 return PM3_ESOFT;
             }
 
@@ -2600,7 +2940,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 goto out;
             }
 
-            if (ul_auth_select(&card, tagtype, has_auth_key, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) {
+            if (ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, pack, sizeof(pack), use_schann) == PM3_ESOFT) {
                 return PM3_ESOFT;
             }
 
@@ -2615,7 +2955,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 goto out;
             }
 
-            if (ul_auth_select(&card, tagtype, has_auth_key, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) {
+            if (ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, pack, sizeof(pack), use_schann) == PM3_ESOFT) {
                 return PM3_ESOFT;
             }
 
@@ -2629,7 +2969,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                     PrintAndLogEx(SUCCESS, "Password... " _GREEN_("%s") "  pack... " _GREEN_("%02X%02X"), sprint_hex_inrow(key, 4), pack[0], pack[1]);
                     break;
                 } else {
-                    if (ul_auth_select(&card, tagtype, has_auth_key, authkeyptr, pack, sizeof(pack)) == PM3_ESOFT) {
+                    if (ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, pack, sizeof(pack), false) == PM3_ESOFT) {
                         return PM3_ESOFT;
                     }
                 }
@@ -2648,7 +2988,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
 out:
     DropField();
 
-    mfu_fingerprint(tagtype, has_auth_key, authkeyptr, ak_len);
+    mfu_fingerprint(tagtype, has_auth_key, auth_key_ptr, ak_len, use_schann);
 
     if (locked) {
         PrintAndLogEx(INFO, "\nTag appears to be locked, try using a key to get more info");
@@ -2673,16 +3013,18 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
                   "Write a block. It autodetects card type.",
                   "hf mfu wrbl -b 0 -d 01234567\n"
                   "hf mfu wrbl -b 0 -d 01234567 -k AABBCCDD\n"
-                  "hf mfu wrbl -b 0 -d 01234567 -k 00112233445566778899AABBCCDDEEFF"
+                  "hf mfu wrbl -b 0 -d 01234567 -k 00112233445566778899AABBCCDDEEFF\n"
+                  "hf mfu wrbl -b 0 -d 01234567 -k 00112233445566778899AABBCCDDEEFF --schann"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("k", "key", "<hex>", "Authentication key (UL-C 16 bytes, EV1/NTAG 4 bytes)"),
+        arg_str0("k", "key", "<hex>", "Authentication key (UL-C/UL-AES 16 bytes, EV1/NTAG 4 bytes)"),
         arg_lit0("l", NULL, "Swap entered key's endianness"),
         arg_int1("b", "block", "<dec>", "Block number to write"),
         arg_str1("d", "data", "<hex>", "Block data (4 or 16 hex bytes, 16 hex bytes will do a compatibility write)"),
         arg_lit0(NULL, "force", "Force operation even if address is out of range"),
+        arg_lit0(NULL, "schann", "use secure channel. Must have key"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2697,7 +3039,9 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
     int datalen = 0;
     uint8_t data[16] = {0x00};
     CLIGetHexWithReturn(ctx, 4, data, &datalen);
+
     bool force = arg_get_lit(ctx, 5);
+    bool use_schann = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
     bool has_auth_key = false;
@@ -2708,6 +3052,11 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
         has_pwd = true;
     } else if (ak_len != 0) {
         PrintAndLogEx(WARNING, "ERROR: Key is incorrect length\n");
+        return PM3_EINVARG;
+    }
+
+    if (use_schann && has_auth_key == false) {
+        PrintAndLogEx(WARNING, "Secure channel must be called with key");
         return PM3_EINVARG;
     }
 
@@ -2741,13 +3090,23 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    // ONLY UL-C supports Compability Write,  not UL-AES
+    if ((datalen == 16) && ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES)) {
+        PrintAndLogEx(WARNING, "UL-AES doesn't support 16 byte compability writes");
+        return PM3_EINVARG;
+    }
+
     // Swap endianness
     if (swap_endian) {
-        if (has_auth_key)
-            auth_key_ptr = SwapEndian64(authenticationkey, 16, 8);
-
-        if (has_pwd)
-            auth_key_ptr = SwapEndian64(authenticationkey, 4, 4);
+        if (ak_len == 16) {
+            if (((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C)) {
+                auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 8);
+            } else if (((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES)) {
+                auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 16);
+            }
+        } else if (ak_len == 4) {
+            auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 4);
+        }
     }
 
     if (blockno <= 3)
@@ -2755,10 +3114,26 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
     else
         PrintAndLogEx(INFO, "Block: %0d (0x%02X) [ %s]", blockno, blockno, sprint_hex(data, datalen));
 
-    if (ak_len) {
-        PrintAndLogEx(INFO, "Using %s " _GREEN_("%s"), (ak_len == 16) ? "3des" : "pwd", sprint_hex(authenticationkey, ak_len));
+    if (has_auth_key) {
+        if (((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C)) {
+            PrintAndLogEx(INFO, "Using %s... " _GREEN_("%s"), "3des", sprint_hex_inrow(authenticationkey, ak_len));
+        } else if (((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES)) {
+            PrintAndLogEx(INFO, "Using %s... " _GREEN_("%s"), "aes", sprint_hex_inrow(authenticationkey, ak_len));
+        }
+    } else if (has_pwd) {
+        PrintAndLogEx(INFO, "Using %s... " _GREEN_("%s"), "pwd", sprint_hex_inrow(authenticationkey, ak_len));
     }
 
+    uint8_t keytype = 0;
+    if (has_auth_key || has_pwd) {
+        if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) {
+            keytype = 1; // UL_C auth
+        } else if ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES) {
+            keytype = 3; // UL_AES auth
+        } else {
+            keytype = 2; // UL_EV1/NTAG auth
+        }
+    }
 
     // Send write Block.
     uint8_t *d = data;
@@ -2767,7 +3142,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
         // Comp write may take 16bytes, but only write 4bytes.   See UL-C datasheet
         for (uint8_t i = 0; i < 4; i++) {
 
-            res = mfu_write_block(d, 4, has_auth_key, has_pwd, auth_key_ptr, blockno + i);
+            res = mfu_write_block(d, 4, keytype, auth_key_ptr, blockno + i, use_schann);
             if (res == PM3_SUCCESS) {
                 d += 4;
             } else {
@@ -2782,7 +3157,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
         }
 
     } else {
-        res = mfu_write_block(data, datalen, has_auth_key, has_pwd, auth_key_ptr, blockno);
+        res = mfu_write_block(data, datalen, keytype, auth_key_ptr, blockno, use_schann);
         switch (res) {
             case PM3_SUCCESS: {
                 PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
@@ -2814,15 +3189,17 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
                   "Read a block and print. It autodetects card type.",
                   "hf mfu rdbl -b 0\n"
                   "hf mfu rdbl -b 0 -k AABBCCDD\n"
-                  "hf mfu rdbl -b 0 --key 00112233445566778899AABBCCDDEEFF"
+                  "hf mfu rdbl -b 0 --key 00112233445566778899AABBCCDDEEFF\n"
+                  "hf mfu rdbl -b 0 --key 00112233445566778899AABBCCDDEEFF --schann"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("k", "key", "<hex>", "Authentication key (UL-C 16 bytes, EV1/NTAG 4 bytes)"),
+        arg_str0("k", "key", "<hex>", "Authentication key (UL-C/UL-AES 16 bytes, EV1/NTAG 4 bytes)"),
         arg_lit0("l", NULL, "Swap entered key's endianness"),
         arg_int1("b", "block", "<dec>", "Block number to read"),
         arg_lit0(NULL, "force", "Force operation even if address is out of range"),
+        arg_lit0(NULL, "schann", "use secure channel. Must have key"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2833,6 +3210,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
     bool swap_endian = arg_get_lit(ctx, 2);
     int blockno = arg_get_int_def(ctx, 3, -1);
     bool force = arg_get_lit(ctx, 4);
+    bool use_schann = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
     bool has_auth_key = false;
@@ -2851,12 +3229,17 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t *authKeyPtr = authenticationkey;
+    if (use_schann && has_auth_key == false) {
+        PrintAndLogEx(WARNING, "Secure channel must be called with key");
+        return PM3_EINVARG;
+    }
+    uint8_t *auth_key_ptr = authenticationkey;
 
     // start with getting tagtype
     uint64_t tagtype = GetHF14AMfU_Type();
-    if (tagtype == MFU_TT_UL_ERROR)
+    if (tagtype == MFU_TT_UL_ERROR) {
         return PM3_ESOFT;
+    }
 
     uint8_t maxblockno = 0;
     for (uint8_t idx = 1; idx < ARRAYLEN(UL_TYPES_ARRAY); idx++) {
@@ -2872,45 +3255,71 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
 
     // Swap endianness
     if (swap_endian) {
-        if (has_auth_key)
-            authKeyPtr = SwapEndian64(authenticationkey, ak_len, 8);
-
-        if (has_pwd)
-            authKeyPtr = SwapEndian64(authenticationkey, ak_len, 4);
+        if (ak_len == 16) {
+            if (((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C)) {
+                auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 8);
+            } else if (((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES)) {
+                auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 16);
+            }
+        } else if (ak_len == 4) {
+            auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 4);
+        }
     }
 
-    if (ak_len) {
-        PrintAndLogEx(INFO, "Using %s " _GREEN_("%s"), (ak_len == 16) ? "3des" : "pwd", sprint_hex(authenticationkey, ak_len));
-    }
-
-    //Read Block
-    uint8_t keytype = 0;
-    uint8_t datalen = 0;
     if (has_auth_key) {
-        keytype = 1;
-        datalen = 16;
+        if (((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C)) {
+            PrintAndLogEx(INFO, "Using %s... " _GREEN_("%s"), "3des", sprint_hex_inrow(authenticationkey, ak_len));
+        } else if (((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES)) {
+            PrintAndLogEx(INFO, "Using %s... " _GREEN_("%s"), "aes", sprint_hex_inrow(authenticationkey, ak_len));
+        }
     } else if (has_pwd) {
-        keytype = 2;
-        datalen = 4;
+        PrintAndLogEx(INFO, "Using %s... " _GREEN_("%s"), "pwd", sprint_hex_inrow(authenticationkey, ak_len));
     }
+
+
+    // read block
+    mful_readblock_t packet = {
+        .block_no = blockno,
+        .use_schann = use_schann,
+        .num_of_blocks = 1,
+    };
+
+    if (has_auth_key || has_pwd) {
+        if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) {
+            packet.keytype = 1; // UL_C auth
+            packet.keylen = 16;
+        } else if ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES) {
+            packet.keytype = 3; // UL_AES auth
+            packet.keylen = 16;
+        } else {
+            packet.keytype = 2; // UL_EV1/NTAG auth
+            packet.keylen = 4;
+        }
+    }
+
+    memcpy(packet.key, auth_key_ptr, packet.keylen);
+
+    PrintAndLogEx(INFO, "using secure channel... %s", (use_schann) ? _GREEN_("yes") : _YELLOW_("no"));
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFAREU_READBL, blockno, keytype, 0, authKeyPtr, datalen);
+    SendCommandNG(CMD_HF_MIFAREU_READBL, (uint8_t *)&packet, sizeof(packet));
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        uint8_t isOK = resp.oldarg[0] & 0xff;
-        if (isOK) {
-            uint8_t *d = resp.data.asBytes;
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(INFO, "Block#  | Data        | Ascii");
-            PrintAndLogEx(INFO, "-----------------------------");
-            PrintAndLogEx(INFO, "%02d/0x%02X | %s| %s\n", blockno, blockno, sprint_hex(d, 4), sprint_ascii(d, 4));
-        } else {
-            PrintAndLogEx(WARNING, "Failed reading block: ( %02x )", isOK);
-        }
-    } else {
+    if (WaitForResponseTimeout(CMD_HF_MIFAREU_READBL, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
+        return PM3_ETIMEOUT;
     }
+
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Failed reading block %u", blockno);
+        return resp.status;
+    }
+
+    uint8_t *d = resp.data.asBytes;
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Block#  | Data        | Ascii");
+    PrintAndLogEx(INFO, "-----------------------------");
+    PrintAndLogEx(INFO, "%02d/0x%02X | %s| %s\n", blockno, blockno, sprint_hex(d, 4), sprint_ascii(d, 4));
+
     return PM3_SUCCESS;
 }
 
@@ -2946,15 +3355,17 @@ void mfu_print_dump(mfu_dump_t *card, uint16_t pages, uint8_t startpage, bool de
     bool bit_stat[16]  = {0};
     bool bit_dyn[16] = {0};
 
-    // Load static lock bytes.
-    memcpy(lockbytes_sta, data + 10, sizeof(lockbytes_sta));
-    for (j = 0; j < 16; j++) {
-        bit_stat[j] = lockbytes_sta[j / 8] & (1 << (7 - j % 8));
+    if (startpage == 0) {
+        // Load static lock bytes.
+        memcpy(lockbytes_sta, data + 10, sizeof(lockbytes_sta));
+        for (j = 0; j < 16; j++) {
+            bit_stat[j] = lockbytes_sta[j / 8] & (1 << (7 - j % 8));
+        }
     }
 
     // Load dynamic lockbytes if available
     // TODO -- FIGURE OUT LOCK BYTES FOR TO EV1 and/or NTAG
-    if (pages == 44) {
+    if ((startpage == 0) && (pages == 44)) {
 
         memcpy(lockbytes_dyn, data + (40 * 4), sizeof(lockbytes_dyn));
 
@@ -2972,7 +3383,7 @@ void mfu_print_dump(mfu_dump_t *card, uint16_t pages, uint8_t startpage, bool de
     bool in_repeated_block = false;
 
     for (uint16_t i = 0; i < pages; ++i) {
-        if (i < 3) {
+        if (i + startpage < 3) {
             PrintAndLogEx(INFO, "%3d/0x%02X | " _RED_("%s")"|   | %s",
                           i + startpage,
                           i + startpage,
@@ -3089,6 +3500,7 @@ void mfu_print_dump(mfu_dump_t *card, uint16_t pages, uint8_t startpage, bool de
             // and the current block data is the same as the previous and next two block
             in_repeated_block = true;
             PrintAndLogEx(INFO, "  ......");
+
         } else if (in_repeated_block &&
                    (memcmp(blk, blk + MFU_BLOCK_SIZE, MFU_BLOCK_SIZE) || i == pages)
                   ) {
@@ -3096,15 +3508,33 @@ void mfu_print_dump(mfu_dump_t *card, uint16_t pages, uint8_t startpage, bool de
             in_repeated_block = false;
         }
 
+        const char *lckbitchar = "?";
+        if ((startpage == 0) && ((i < 16) || (pages == 44))) {
+            lckbitchar = (lckbit) ? _RED_("1") : "0";
+        }
 
         if (in_repeated_block == false) {
-            PrintAndLogEx(INFO, "%3d/0x%02X | %s| %s | %s"
-                          , i + startpage
-                          , i + startpage
-                          , sprint_hex(data + i * 4, 4)
-                          , (lckbit) ? _RED_("1") : "0"
-                          , sprint_ascii(data + i * 4, 4)
-                         );
+
+            if (i == 3) {
+                // otp block
+                PrintAndLogEx(INFO, "%3d/0x%02X | " _CYAN_("%s")"| %s | %s"
+                              , i + startpage
+                              , i + startpage
+                              , sprint_hex(data + i * 4, 4)
+                              , lckbitchar
+                              , sprint_ascii(data + i * 4, 4)
+                             );
+
+            } else {
+                // normal block
+                PrintAndLogEx(INFO, "%3d/0x%02X | %s| %s | %s"
+                              , i + startpage
+                              , i + startpage
+                              , sprint_hex(data + i * 4, 4)
+                              , lckbitchar
+                              , sprint_ascii(data + i * 4, 4)
+                             );
+            }
         }
     }
     PrintAndLogEx(INFO, "---------------------------------");
@@ -3120,24 +3550,27 @@ static int CmdHF14AMfUDump(const char *Cmd) {
                   "Dump MIFARE Ultralight/NTAG tag to files (bin/json)\n"
                   "It autodetects card type."
                   "Supports:\n"
-                  "Ultralight, Ultralight-C, Ultralight EV1\n"
+                  "Ultralight, Ultralight C, Ultralight AES, Ultralight EV1\n"
                   "NTAG 203, NTAG 210, NTAG 212, NTAG 213, NTAG 215, NTAG 216\n",
                   "hf mfu dump -f myfile\n"
                   "hf mfu dump -k AABBCCDD      -> dump whole tag using pwd AABBCCDD\n"
                   "hf mfu dump -p 10            -> start at page 10 and dump rest of blocks\n"
                   "hf mfu dump -p 10 -q 2       -> start at page 10 and dump two blocks\n"
-                  "hf mfu dump --key 00112233445566778899AABBCCDDEEFF"
+                  "hf mfu dump --key 00112233445566778899AABBCCDDEEFF\n"
+                  "\n"
+                  "Note: Dumping a NTAG/UL tag to a UMC will likely result in incorrect PWD and PACK\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
-        arg_str0("k", "key", "<hex>", "Key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)"),
+        arg_str0("k", "key", "<hex>", "Key for authentication (UL-C/UL-AES 16 bytes, EV1/NTAG 4 bytes)"),
         arg_lit0("l", NULL, "Swap entered key's endianness"),
         arg_int0("p", "page", "<dec>", "Manually set start page number to start from"),
         arg_int0("q", "qty", "<dec>", "Manually set number of pages to dump"),
         arg_lit0(NULL, "ns", "no save to file"),
         arg_lit0("z", "dense", "dense dump output style"),
+        arg_lit0(NULL, "schann", "use secure channel. Must have key"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -3148,13 +3581,14 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 
     int ak_len = 0;
     uint8_t authenticationkey[16] = {0x00};
-    uint8_t *authKeyPtr = authenticationkey;
+    uint8_t *auth_key_ptr = authenticationkey;
     CLIGetHexWithReturn(ctx, 2, authenticationkey, &ak_len);
     bool swap_endian = arg_get_lit(ctx, 3);
     int start_page = arg_get_int_def(ctx, 4, 0);
     int pages = arg_get_int_def(ctx, 5, 16);
     bool nosave = arg_get_lit(ctx, 6);
     bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 7));
+    bool use_schann = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
 
     bool has_auth_key = false;
@@ -3165,6 +3599,11 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         has_pwd = true;
     } else if (ak_len != 0) {
         PrintAndLogEx(WARNING, "ERROR: Key is incorrect length\n");
+        return PM3_EINVARG;
+    }
+
+    if (use_schann && has_auth_key == false) {
+        PrintAndLogEx(WARNING, "Secure channel must be called with key");
         return PM3_EINVARG;
     }
 
@@ -3179,20 +3618,22 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 
     uint8_t card_mem_size = 0;
 
-    // Swap endianness
-    if (swap_endian) {
-        if (has_auth_key) {
-            authKeyPtr = SwapEndian64(authenticationkey, ak_len, 8);
-        }
-
-        if (has_pwd) {
-            authKeyPtr = SwapEndian64(authenticationkey, ak_len, 4);
-        }
-    }
-
     uint64_t tagtype = GetHF14AMfU_Type();
     if (tagtype == MFU_TT_UL_ERROR) {
         return PM3_ESOFT;
+    }
+
+    // Swap endianness
+    if (swap_endian) {
+        if (ak_len == 16) {
+            if (((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C)) {
+                auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 8);
+            } else if (((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES)) {
+                auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 16);
+            }
+        } else if (ak_len == 4) {
+            auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 4);
+        }
     }
 
     //get number of pages to read
@@ -3212,6 +3653,8 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     if (has_auth_key || has_pwd) {
         if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C)
             keytype = 1; // UL_C auth
+        else if ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES)
+            keytype = 3; // UL_AES auth
         else
             keytype = 2; // UL_EV1/NTAG auth
     }
@@ -3225,15 +3668,25 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         return PM3_ESOFT;
     }
 
+    // read card
+    mful_readblock_t packet = {
+        .block_no = start_page,
+        .num_of_blocks = pages,
+        .keytype = keytype,
+        .keylen = ak_len,
+        .use_schann = use_schann,
+    };
+    memcpy(packet.key, auth_key_ptr, ak_len);
+
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFAREU_READCARD, start_page, pages, keytype, authKeyPtr, ak_len);
+    SendCommandNG(CMD_HF_MIFAREU_READCARD, (uint8_t *)&packet, sizeof(packet));
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    if (WaitForResponseTimeout(CMD_HF_MIFAREU_READCARD, &resp, 2500) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
-    if (resp.oldarg[0] != 1) {
+    if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Failed dumping card");
         return PM3_ESOFT;
     }
@@ -3244,8 +3697,11 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     uint8_t data[1024] = {0x00};
     memset(data, 0x00, sizeof(data));
 
-    uint32_t startindex = resp.oldarg[2];
-    uint32_t buffer_size = resp.oldarg[1];
+    mful_readblock_resp_t *payload = (mful_readblock_resp_t *)resp.data.asBytes;
+
+    uint32_t startindex = payload->startidx;
+
+    uint32_t buffer_size = payload->bytelen;
     if (buffer_size > sizeof(data)) {
         PrintAndLogEx(FAILED, "Data exceeded buffer size!");
         buffer_size = sizeof(data);
@@ -3262,7 +3718,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 
     if (is_partial) {
 
-        if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) {
+        if (((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) || ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES)) {
             if (card_mem_size != (pages + 4)) {
                 PrintAndLogEx(INFO, "Partial dump, got " _RED_("%d") " bytes - card mem size is %u bytes", pages * MFU_BLOCK_SIZE, card_mem_size * MFU_BLOCK_SIZE);
                 PrintAndLogEx(HINT, "Hint: Try using a key");
@@ -3286,7 +3742,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         // attempt to read pack
         bool has_key = (has_auth_key || has_pwd);
         uint8_t get_pack[] = {0, 0};
-        if (ul_auth_select(&card, tagtype, has_key, authKeyPtr, get_pack, sizeof(get_pack)) != PM3_SUCCESS) {
+        if (ul_auth_select(&card, tagtype, has_key, auth_key_ptr, get_pack, sizeof(get_pack), false) != PM3_SUCCESS) {
             //reset pack
             get_pack[0] = 0;
             get_pack[1] = 0;
@@ -3302,12 +3758,12 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 
         if (has_auth_key) {
             uint8_t dummy_pack[] = {0, 0};
-            ul_auth_select(&card, tagtype, has_auth_key, authKeyPtr, dummy_pack, sizeof(dummy_pack));
+            ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, dummy_pack, sizeof(dummy_pack), use_schann);
         } else {
             ul_select(&card);
         }
 
-        ulev1_getVersion(get_version, sizeof(get_version));
+        ulev1_getVersion(get_version, sizeof(get_version), use_schann);
 
         // ULEV-1 has 3 counters
         uint8_t n = 0;
@@ -3322,15 +3778,15 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 
             if (has_auth_key) {
                 uint8_t dummy_pack[] = {0, 0};
-                ul_auth_select(&card, tagtype, has_auth_key, authKeyPtr, dummy_pack, sizeof(dummy_pack));
+                ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, dummy_pack, sizeof(dummy_pack), use_schann);
             } else {
                 ul_select(&card);
             }
-            ulev1_readCounter(n, &get_counter_tearing[n][0], 3);
+            ulev1_readCounter(n, &get_counter_tearing[n][0], 3, use_schann);
 
             if (has_auth_key) {
                 uint8_t dummy_pack[] = {0, 0};
-                ul_auth_select(&card, tagtype, has_auth_key, authKeyPtr, dummy_pack, sizeof(dummy_pack));
+                ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, dummy_pack, sizeof(dummy_pack), false);
             } else {
                 ul_select(&card);
             }
@@ -3341,12 +3797,12 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 
         if (has_auth_key) {
             uint8_t dummy_pack[] = {0, 0};
-            ul_auth_select(&card, tagtype, has_auth_key, authKeyPtr, dummy_pack, sizeof(dummy_pack));
+            ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, dummy_pack, sizeof(dummy_pack), use_schann);
         } else {
             ul_select(&card);
         }
 
-        ulev1_readSignature(get_signature, sizeof(get_signature));
+        ulev1_readSignature(get_signature, sizeof(get_signature), use_schann);
         DropField();
     }
 
@@ -3354,20 +3810,30 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     // format and add keys to block dump output
     // only add keys if not partial read, and complete pages read
 
-    // UL-C  add a working known key
-    if (has_auth_key && (tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) { // add 4 pages of key
+    // UL-C/UL-AES  add a working known key
+    if (has_auth_key && ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C || (tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES)) { // add 4 pages of key
 
         // if we didn't swapendian before - do it now for the sprint_hex call
         // NOTE: default entry is bigendian (unless swapped), sprint_hex outputs little endian
         //       need to swap to keep it the same
-        if (swap_endian == false) {
-            authKeyPtr = SwapEndian64(authenticationkey, ak_len, 8);
-        } else {
-            authKeyPtr = authenticationkey;
-        }
+        auth_key_ptr = authenticationkey;
 
-        memcpy(data + pages * MFU_BLOCK_SIZE, authKeyPtr, ak_len);
-        pages += ak_len / MFU_BLOCK_SIZE;
+        if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) {
+            if (swap_endian == false) {
+                auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 8);
+            }
+            memcpy(data + pages * MFU_BLOCK_SIZE, auth_key_ptr, ak_len);
+            pages += ak_len / MFU_BLOCK_SIZE;
+        }
+        if (((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES) && (pages >= 0x2F)) {
+            if (swap_endian == false) {
+                auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 16);
+            }
+            memcpy(data + 0x30 * MFU_BLOCK_SIZE, auth_key_ptr, ak_len);
+            if (pages < 0x34) {
+                pages = 0x34;
+            }
+        }
 
         // fix
         if (is_partial && pages == card_mem_size) {
@@ -3380,9 +3846,9 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         // NOTE: default entry is bigendian (unless swapped), sprint_hex outputs little endian
         //       need to swap to keep it the same
         if (swap_endian == false) {
-            authKeyPtr = SwapEndian64(authenticationkey, ak_len, 4);
+            auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 4);
         } else {
-            authKeyPtr = authenticationkey;
+            auth_key_ptr = authenticationkey;
         }
 
         memcpy(data + (pages * MFU_BLOCK_SIZE) - 8, authenticationkey, ak_len);
@@ -3397,6 +3863,10 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     memcpy(dump_file_data.data, data, pages * MFU_BLOCK_SIZE);
 
     mfu_print_dump(&dump_file_data, pages, start_page, dense_output);
+
+    if (ndef_detect_message(dump_file_data.data, pages * MFU_BLOCK_SIZE)) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu ndefread")"`");
+    }
 
     if (nosave) {
         PrintAndLogEx(INFO, "Called with no save option");
@@ -3420,18 +3890,19 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     if (is_partial) {
         PrintAndLogEx(WARNING, "Partial dump created. (%d of %d blocks)", pages, card_mem_size);
     }
+
     return PM3_SUCCESS;
 }
 
-static void wait4response(uint8_t b) {
+static void wait4response(uint32_t cmd, uint8_t b) {
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        uint8_t isOK  = resp.oldarg[0] & 0xff;
-        if (isOK == 0) {
-            PrintAndLogEx(WARNING, "failed to write block %d", b);
-        }
-    } else {
+    if (WaitForResponseTimeout(cmd, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
+        return;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "failed to write block " _YELLOW_("%d"), b);
     }
 }
 
@@ -3460,8 +3931,6 @@ int CmdHF14MfUTamper(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    int tt_cfg_page = 41;
-    int tt_msg_page = 45;
     int msg_len = 0;
     uint8_t msg_data[4] = {0x00};
     CLIGetHexWithReturn(ctx, 3, msg_data, &msg_len);
@@ -3469,7 +3938,6 @@ int CmdHF14MfUTamper(const char *Cmd) {
 
     if (use_msg && msg_len != 4) {
         PrintAndLogEx(WARNING, "The tamper message must be 4 hex bytes if provided");
-        DropField();
         CLIParserFree(ctx);
         return PM3_ESOFT;
     }
@@ -3480,58 +3948,66 @@ int CmdHF14MfUTamper(const char *Cmd) {
     CLIParserFree(ctx);
 
     uint64_t tagtype = GetHF14AMfU_Type();
+    DropField();
+
     if (tagtype == MFU_TT_UL_ERROR) {
         PrintAndLogEx(WARNING, "Tag type not detected");
-        DropField();
         return PM3_ESOFT;
     }
     if (tagtype != MFU_TT_NTAG_213_TT) {
         PrintAndLogEx(WARNING, "Tag type not NTAG 213TT");
-        DropField();
         return PM3_ESOFT;
     }
-
-    DropField();
-    iso14a_card_select_t card;
 
     if (enable && disable) {
         PrintAndLogEx(WARNING, "You can only select one of the options enable/disable tamper feature");
-        DropField();
         return PM3_ESOFT;
     }
 
+    mful_writeblock_t packet = {
+        .keytype = 0,   // no key
+        .use_schann = false,
+        .keylen = 0,
+    };
+    memcpy(packet.data, msg_data, msg_len);
+
     if (use_msg) {
-        if (ul_select(&card) == false) {
-            DropField();
-            return MFU_TT_UL_ERROR;
-        }
-        PrintAndLogEx(INFO, "Trying to write tamper message");
-        SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, tt_msg_page, 0, 0, msg_data, 4);
 
+        PrintAndLogEx(INFO, "Trying to write tamper message...");
+
+        int tt_msg_page = 45;
+        packet.block_no = tt_msg_page;
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packet, sizeof(packet));
         PacketResponseNG resp;
-
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-            uint8_t isOK  = resp.oldarg[0] & 0xff;
-            if (!isOK)
-                PrintAndLogEx(WARNING, "Failed to write tamper message");
-            else
-                PrintAndLogEx(SUCCESS, "Tamper message written successfully");
-        } else {
+        if (WaitForResponseTimeout(CMD_HF_MIFAREU_WRITEBL, &resp, 1500) == false) {
             PrintAndLogEx(WARNING, "command execution time out");
+            return PM3_ETIMEOUT;
+        }
+
+        if (resp.status == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "Writing tamper message ( %s )", _GREEN_("ok"));
+        } else {
+            PrintAndLogEx(FAILED, "Writing tamper message ( %s )", _RED_("fail"));
         }
     }
 
     if (enable || disable || lock_msg) {
 
+        PrintAndLogEx(INFO, "Reading current tag config...");
+
+        iso14a_card_select_t card;
         if (ul_select(&card) == false) {
             PrintAndLogEx(ERR, "Unable to select tag");
             DropField();
-            return MFU_TT_UL_ERROR;
+            return PM3_ESOFT;
         }
 
-        uint8_t cfg_page[4] = {0x00};
-        uint8_t cmd[] = {ISO14443A_CMD_READBLOCK, tt_cfg_page};
-        int status = ul_send_cmd_raw(cmd, sizeof(cmd), cfg_page, 4);
+        int tt_cfg_page = 41;
+        uint8_t cfg_page[4] = { 0x00 };
+        uint8_t cmd[] = { ISO14443A_CMD_READBLOCK, tt_cfg_page };
+        int status = ul_send_cmd_raw(cmd, sizeof(cmd), cfg_page, 4, false);
         DropField();
 
         if (status <= 0) {
@@ -3541,33 +4017,39 @@ int CmdHF14MfUTamper(const char *Cmd) {
         }
 
         if (enable) {
-            cfg_page[1] = cfg_page[1] | 0x02;
+            cfg_page[1] |= 0x02;
             PrintAndLogEx(INFO, "Enabling tamper feature");
         }
+
         if (disable) {
-            cfg_page[1] = cfg_page[1] & 0xFD;
+            cfg_page[1] &= 0xFD;
             PrintAndLogEx(INFO, "Disabling tamper feature");
         }
+
         if (lock_msg) {
-            cfg_page[1] = cfg_page[1] | 0x04;
+            cfg_page[1] |= 0x04;
             PrintAndLogEx(INFO, "Locking tamper message");
         }
 
-        SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, tt_cfg_page, 0, 0, cfg_page, 4);
-        PacketResponseNG resp;
+        packet.block_no = tt_cfg_page;
+        memcpy(packet.data, cfg_page, sizeof(cfg_page));
 
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-            uint8_t isOK  = resp.oldarg[0] & 0xff;
-            if (!isOK)
-                PrintAndLogEx(WARNING, "Failed to write tamper configuration");
-            else
-                PrintAndLogEx(SUCCESS, "Tamper configuration written successfully");
-        } else {
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packet, sizeof(packet));
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_HF_MIFAREU_WRITEBL, &resp, 1500) == false) {
             PrintAndLogEx(WARNING, "command execution time out");
+            return PM3_ETIMEOUT;
         }
+
+        if (resp.status == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "Writing tamper configuration ( %s )", _GREEN_("ok"));
+        } else {
+            PrintAndLogEx(FAILED, "Writing tamper configuration ( %s )", _RED_("fail"));
+        }
+        return resp.status;
     }
 
-    DropField();
     return PM3_SUCCESS;
 }
 
@@ -3580,19 +4062,23 @@ static int CmdHF14AMfURestore(const char *Cmd) {
                   "Restore MIFARE Ultralight/NTAG dump file (bin/eml/json) to tag.\n",
                   "hf mfu restore -f myfile -s                 -> special write\n"
                   "hf mfu restore -f myfile -k AABBCCDD -s     -> special write, use key\n"
-                  "hf mfu restore -f myfile -k AABBCCDD -ser   -> special write, use key, write dump pwd, ..."
+                  "hf mfu restore -f myfile -k AABBCCDD -ser   -> special write, use key, write dump pwd, ...\n"
+                  "hf mfu restore -f myfile -k 00112233445566778899AABBCCDDEEFF -> UL-C / UL-AES, use key\n"
+                  "\n"
+                  "Note: Restoring a NTAG/UL dump to a UMC will likely result in incorrect PWD and PACK\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
-        arg_str0("k", "key", "<hex>", "key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)"),
+        arg_str0("k", "key", "<hex>", "key for authentication (UL-C/UL-AES 16 bytes, EV1/NTAG 4 bytes)"),
         arg_lit0("l", NULL, "swap entered key's endianness"),
         arg_lit0("s", NULL, "enable special write UID -MAGIC TAG ONLY-"),
         arg_lit0("e", NULL, "enable special write version/signature -MAGIC NTAG 21* ONLY-"),
         arg_lit0("r", NULL, "use password found in dumpfile to configure tag. Requires " _YELLOW_("'-e'") " parameter to work"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0("z", "dense", "dense dump output style"),
+        arg_lit0(NULL, "schann", "use secure channel. Must have key"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3602,9 +4088,9 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     int ak_len = 0;
-    uint8_t authkey[16] = {0x00};
-    uint8_t *p_authkey = authkey;
-    CLIGetHexWithReturn(ctx, 2, authkey, &ak_len);
+    uint8_t authenticationkey[16] = {0x00};
+    uint8_t *auth_key_ptr = authenticationkey;
+    CLIGetHexWithReturn(ctx, 2, authenticationkey, &ak_len);
 
     bool swap_endian = arg_get_lit(ctx, 3);
     bool write_special = arg_get_lit(ctx, 4);
@@ -3612,6 +4098,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     bool read_key = arg_get_lit(ctx, 6);
     bool verbose = arg_get_lit(ctx, 7);
     bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 8));
+    bool use_schann = arg_get_lit(ctx, 9);
     CLIParserFree(ctx);
 
     bool has_key = false;
@@ -3622,6 +4109,11 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         } else {
             has_key = true;
         }
+    }
+
+    if (use_schann && has_key == false) {
+        PrintAndLogEx(WARNING, "Secure channel must be called with key");
+        return PM3_EINVARG;
     }
 
     if (fnlen == 0) {
@@ -3665,24 +4157,78 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         return PM3_ESOFT;
     }
 
+    uint64_t tagtype = GetHF14AMfU_Type();
+    if (tagtype == MFU_TT_UL_ERROR) {
+        free(dump);
+        return PM3_ESOFT;
+    }
+
+    bool is_ulaes = ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES);
+
+    if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) {
+        if ((has_key == true) && (ak_len != 16)) {
+            PrintAndLogEx(ERR, "UL-C key must be 16 bytes");
+            free(dump);
+            return PM3_EINVARG;
+        }
+        if (write_extra == true) {
+            PrintAndLogEx(ERR, "Option -e incompatible with your UL-C card");
+            free(dump);
+            return PM3_EINVARG;
+        }
+    } else if ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES) {
+        if ((has_key == true) && (ak_len != 16)) {
+            PrintAndLogEx(ERR, "UL-AES key must be 16 bytes");
+            free(dump);
+            return PM3_EINVARG;
+        }
+        if (write_extra == true) {
+            PrintAndLogEx(ERR, "Option -e incompatible with your UL-AEScard");
+            free(dump);
+            return PM3_EINVARG;
+        }
+    } else {
+        if ((has_key == true) && (ak_len == 16)) {
+            PrintAndLogEx(ERR, "UL PWD must be 4 bytes");
+            free(dump);
+            return PM3_EINVARG;
+        }
+    }
+
     PrintAndLogEx(INFO, "Restoring " _YELLOW_("%s")" to card", filename);
 
     mfu_print_dump(mem, pages, 0, dense_output);
 
     // Swap endianness
-    if (swap_endian && has_key) {
-        if (ak_len == 16)
-            p_authkey = SwapEndian64(authkey, ak_len, 8);
-        else
-            p_authkey = SwapEndian64(authkey, ak_len, 4);
+    if (swap_endian) {
+        if (ak_len == 16) {
+            if (((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C)) {
+                auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 8);
+            } else if (((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES)) {
+                auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 16);
+            }
+        } else if (ak_len == 4) {
+            auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 4);
+        }
     }
 
-    uint8_t data[20] = {0};
-    uint8_t keytype = 0;
-    // set key - only once
+    mful_writeblock_t packetw = {
+        .keytype = 0,
+        .keylen = 0,
+        .use_schann = use_schann,
+    };
     if (has_key) {
-        keytype = (ak_len == 16) ? 1 : 2;
-        memcpy(data + 4, p_authkey, ak_len);
+        if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) {
+            packetw.keytype = 1; // UL_C auth
+            packetw.keylen = 16;
+        } else if ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES) {
+            packetw.keytype = 3; // UL_AES auth
+            packetw.keylen = 16;
+        } else {
+            packetw.keytype = 2; // UL_EV1/NTAG auth
+            packetw.keylen = 4;
+        }
+        memcpy(packetw.key, auth_key_ptr, ak_len);
     }
 
     // write version, signature, pack
@@ -3696,49 +4242,52 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         // pwd
         if (has_key || read_key) {
 
-            memcpy(data,  p_authkey, 4);
+            memcpy(packetw.data,  auth_key_ptr, 4);
             if (read_key) {
                 // try reading key from dump and use.
-                memcpy(data, mem->data + (bytes_read - MFU_DUMP_PREFIX_LENGTH - 8), 4);
+                memcpy(packetw.data, mem->data + (bytes_read - MFU_DUMP_PREFIX_LENGTH - 8), 4);
             }
+            packetw.block_no = MFU_NTAG_SPECIAL_PWD;
 
-            PrintAndLogEx(INFO, "special PWD     block written 0x%X - %s", MFU_NTAG_SPECIAL_PWD, sprint_hex(data, 4));
+            PrintAndLogEx(INFO, "special PWD     block written 0x%X - %s", MFU_NTAG_SPECIAL_PWD, sprint_hex(packetw.data, 4));
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PWD, keytype, 0, data, sizeof(data));
-
-            wait4response(MFU_NTAG_SPECIAL_PWD);
+            SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packetw, sizeof(packetw));
+            wait4response(CMD_HF_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PWD);
 
             // copy the new key
-            keytype = 2;
-            memcpy(authkey, data, 4);
-            memcpy(data + 4, authkey, 4);
+            packetw.keytype = 2;
+            packetw.keylen = 4;
+            memcpy(packetw.key, packetw.data, 4);
         }
 
         // pack
-        memcpy(data, mem->data + (bytes_read - MFU_DUMP_PREFIX_LENGTH - 4), 2);
-        data[2] = 0;
-        data[3] = 0;
-        PrintAndLogEx(INFO, "special PACK    block written 0x%X - %s", MFU_NTAG_SPECIAL_PACK, sprint_hex(data, 4));
+        memcpy(packetw.data, mem->data + (bytes_read - MFU_DUMP_PREFIX_LENGTH - 4), 2);
+        packetw.data[2] = 0;
+        packetw.data[3] = 0;
+        packetw.block_no = MFU_NTAG_SPECIAL_PACK;
+        PrintAndLogEx(INFO, "special PACK    block written 0x%X - %s", MFU_NTAG_SPECIAL_PACK, sprint_hex(packetw.data, 4));
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PACK, keytype, 0, data, sizeof(data));
-        wait4response(MFU_NTAG_SPECIAL_PACK);
+        SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packetw, sizeof(packetw));
+        wait4response(CMD_HF_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PACK);
 
         // Signature
         for (uint8_t s = MFU_NTAG_SPECIAL_SIGNATURE, i = 0; s < MFU_NTAG_SPECIAL_SIGNATURE + 8; s++, i += 4) {
-            memcpy(data, mem->signature + i, 4);
-            PrintAndLogEx(INFO, "special SIG     block written 0x%X - %s", s, sprint_hex(data, 4));
+            memcpy(packetw.data, mem->signature + i, 4);
+            packetw.block_no = s;
+            PrintAndLogEx(INFO, "special SIG     block written 0x%X - %s", s, sprint_hex(packetw.data, 4));
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, s, keytype, 0, data, sizeof(data));
-            wait4response(s);
+            SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packetw, sizeof(packetw));
+            wait4response(CMD_HF_MIFAREU_WRITEBL, s);
         }
 
         // Version
         for (uint8_t s = MFU_NTAG_SPECIAL_VERSION, i = 0; s < MFU_NTAG_SPECIAL_VERSION + 2; s++, i += 4) {
-            memcpy(data, mem->version + i, 4);
-            PrintAndLogEx(INFO, "special VERSION block written 0x%X - %s", s, sprint_hex(data, 4));
+            memcpy(packetw.data, mem->version + i, 4);
+            packetw.block_no = s;
+            PrintAndLogEx(INFO, "special VERSION block written 0x%X - %s", s, sprint_hex(packetw.data, 4));
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, s, keytype, 0, data, sizeof(data));
-            wait4response(s);
+            SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packetw, sizeof(packetw));
+            wait4response(CMD_HF_MIFAREU_WRITEBL, s);
         }
     }
 
@@ -3747,13 +4296,26 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     // write all other data
     // Skip block 0,1,2,3 (only magic tags can write to them)
     // Skip last 5 blocks usually is configuration
-    for (uint8_t b = 4; b < pages - 5; b++) {
+    uint8_t first_page = 4;
+    uint8_t last_page = pages - 5;
+
+    if (is_ulaes) {
+        // UL-AES user memory stops before the lock, config and key pages
+        first_page = MFU_AES_USER_FIRST;
+        last_page = MFU_AES_USER_LAST + 1;
+        if (pages < last_page) {
+            last_page = pages;
+        }
+    }
+
+    for (uint8_t b = first_page; b < last_page; b++) {
 
         //Send write Block
-        memcpy(data, mem->data + (b * 4), 4);
+        memcpy(packetw.data, mem->data + (b * 4), 4);
+        packetw.block_no = b;
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, b, keytype, 0, data, sizeof(data));
-        wait4response(b);
+        SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packetw, sizeof(packetw));
+        wait4response(CMD_HF_MIFAREU_WRITEBL, b);
         PrintAndLogEx(NORMAL, "." NOLF);
         fflush(stdout);
     }
@@ -3764,7 +4326,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 
         PrintAndLogEx(INFO, "Restoring configuration blocks");
 
-        PrintAndLogEx(INFO, "Authentication with keytype[%x]  %s\n", (uint8_t)(keytype & 0xff), sprint_hex(p_authkey, 4));
+        PrintAndLogEx(INFO, "Authentication with keytype[%i] = %s\n", packetw.keytype, sprint_hex(packetw.key, packetw.keylen));
 
 #if defined ICOPYX
         // otp, uid, lock, dynlockbits, cfg0, cfg1, pwd, pack
@@ -3773,18 +4335,36 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         // otp, uid, lock, dynlockbits, cfg0, cfg1
         uint8_t blocks[] = {3, 0, 1, 2, pages - 5, pages - 4, pages - 3};
 #endif
-        for (uint8_t i = 0; i < ARRAYLEN(blocks); i++) {
-            uint8_t b = blocks[i];
-            memcpy(data, mem->data + (b * 4), 4);
+        // otp, uid, lock, cfg0, cfg1.
+        // RFU pages (0x2B, 0x2C) and the key lock bits (0x2D) are left alone, they are one way
+        uint8_t ulaes_blocks[] = {3, 0, 1, 2, MFU_AES_LOCK_PAGE, MFU_AES_CFG0_PAGE, MFU_AES_CFG1_PAGE};
+
+        uint8_t *pblocks = blocks;
+        uint8_t blockcnt = ARRAYLEN(blocks);
+        if (is_ulaes) {
+            pblocks = ulaes_blocks;
+            blockcnt = ARRAYLEN(ulaes_blocks);
+        }
+
+        for (uint8_t i = 0; i < blockcnt; i++) {
+            uint8_t b = pblocks[i];
+            memcpy(packetw.data, mem->data + (b * 4), 4);
+            packetw.block_no = b;
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, b, keytype, 0, data, sizeof(data));
-            wait4response(b);
-            PrintAndLogEx(INFO, "special block written " _YELLOW_("%u") " - %s", b, sprint_hex(data, 4));
+            SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packetw, sizeof(packetw));
+            wait4response(CMD_HF_MIFAREU_WRITEBL, b);
+            PrintAndLogEx(INFO, "special block written " _YELLOW_("%u") " - %s", b, sprint_hex(packetw.data, 4));
         }
     }
 
     DropField();
     free(dump);
+
+    if (is_ulaes) {
+        PrintAndLogEx(INFO, "Key pages 0x%02X..0x%02X not restored", MFU_AES_KEY0_PAGE, MAX_UL_AES);
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu setkey -k <16 hex bytes>") "` to restore the AES keys");
+    }
+
     PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu dump --ns") "` to verify");
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
@@ -3836,18 +4416,23 @@ static int CmdHF14AMfUSim(const char *Cmd) {
                   "ISO/IEC 14443 type A tag with 4,7 or 10 byte UID\n"
                   "from emulator memory.  See `hf mfu eload` first. \n"
                   "The UID from emulator memory will be used if not specified.\n"
-                  "See `hf 14a sim -h` to see available types. You want 2 or 7 usually.",
+                  "See `hf 14a sim -h` to see available types. You want 2, 7, 13 or 14 usually.",
                   "hf mfu sim -t 2 --uid 11223344556677        -> MIFARE Ultralight\n"
                   "hf mfu sim -t 7 --uid 11223344556677 -n 5   -> MFU EV1 / NTAG 215 Amiibo\n"
-                  "hf mfu sim -t 7                             -> MFU EV1 / NTAG 215 Amiibo"
+                  "hf mfu sim -t 7                             -> MFU EV1 / NTAG 215 Amiibo\n"
+                  "hf mfu sim -t 13                            -> MIFARE Ultralight C\n"
+                  "hf mfu sim -t 14                            -> MIFARE Ultralight AES\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int1("t", "type", "<1..12> ", "Simulation type to use"),
+        arg_int1("t", "type", "<1..14> ", "Simulation type to use"),
         arg_str0("u", "uid", "<hex>", "<4|7|10> hex bytes UID"),
         arg_int0("n", "num", "<dec>", "Exit simulation after <numreads> blocks. 0 = infinite"),
         arg_lit0("v", "verbose", "Verbose output"),
+        arg_str0(NULL, "1a1", "<hex>", "<8|16> hex bytes ULC/ULAES Auth reply step1: ek(RndB)"),
+        arg_str0(NULL, "1a2", "<hex>", "<8|16> hex bytes ULC/ULAES Auth reply step2: ek(RndA')"),
+        arg_lit0(NULL, "1a2-mirror", "Mirror ek(RndA) from step1 reply into step2 reply"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3855,9 +4440,197 @@ static int CmdHF14AMfUSim(const char *Cmd) {
     return CmdHF14ASim(Cmd);
 }
 
+
+//-------------------------------------------------------------------------------
+// Ultralight C & AES helpers
+//-------------------------------------------------------------------------------
+
+static int mfu_3pass_load_keys(uint8_t **pkeyBlock, uint32_t *pkeycnt, const char *filename, int fnlen, uint8_t keysize) {
+    // Handle Keys
+    *pkeycnt = 0;
+    *pkeyBlock = NULL;
+    uint8_t *p;
+    // Handle user supplied dictionary file
+    if (fnlen > 0) {
+        uint32_t loaded_numKeys = 0;
+        uint8_t *keyBlock_tmp = NULL;
+        int res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock_tmp, keysize, &loaded_numKeys);
+        if (res != PM3_SUCCESS || loaded_numKeys == 0 || keyBlock_tmp == NULL) {
+            PrintAndLogEx(FAILED, "An error occurred while loading the dictionary!");
+            free(keyBlock_tmp);
+            free(*pkeyBlock);
+            return PM3_EFILE;
+        } else {
+            p = realloc(*pkeyBlock, (*pkeycnt + loaded_numKeys) * keysize);
+            if (p == NULL) {
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
+                free(keyBlock_tmp);
+                free(*pkeyBlock);
+                return PM3_EMALLOC;
+            }
+            *pkeyBlock = p;
+            memcpy(*pkeyBlock + *pkeycnt * keysize, keyBlock_tmp, loaded_numKeys * keysize);
+            *pkeycnt += loaded_numKeys;
+            free(keyBlock_tmp);
+        }
+    }
+    return PM3_SUCCESS;
+}
+
+static int mfu_3pass_check_keys(uint8_t key_index, uint8_t firstChunk, uint8_t lastChunk,
+                                uint32_t nkeys, int segment, uint8_t *ref_key, bool xor_ref_key, uint8_t *keyBlock,
+                                bool verbose, bool quiet, uint32_t *auths, uint32_t *ms, bool check_answer, bool use_fastread0) {
+    // send keychunk
+    clearCommandBuffer();
+
+    mful_3passchk_t payload = {
+        .key_index = key_index,
+        .firstchunk = firstChunk,
+        .lastchunk = lastChunk,
+        .xor_ref_key = xor_ref_key,
+        .segment = segment != -1 ? segment : 4,
+        .check_answer = check_answer,
+        .use_fastread0 = use_fastread0,
+        .nkeys = nkeys
+    };
+    struct rp {
+        uint32_t auths;
+        uint32_t ticks;
+        uint8_t key[16];
+    } PACKED;
+    uint8_t keysize = segment != -1 ? MIFAREU3P_KEY_SIZE / 4 : MIFAREU3P_KEY_SIZE;
+    memcpy(payload.ref_key, ref_key, MIFAREU3P_KEY_SIZE);
+    if (nkeys * keysize > (uint32_t)(g_conn.max_cmd_data_size - MIFAREU3P_CHKKEY_HEADER)) {
+        PrintAndLogEx(ERR, "Key chunk size exceeds payload size");
+        return PM3_ESOFT;
+    }
+    memcpy(payload.data, keyBlock, nkeys * keysize);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFAREU3P_CHKKEY, (uint8_t *)&payload, MIFAREU3P_CHKKEY_HEADER + nkeys * keysize);
+
+    PacketResponseNG resp;
+
+    uint32_t timeout = 0;
+    while (WaitForResponseTimeout(CMD_HF_MIFAREU3P_CHKKEY, &resp, 2000) == false) {
+
+        while (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(INFO, "aborted via keyboard!");
+            return PM3_EOPABORTED;
+        }
+
+        if (quiet == false) {
+            PrintAndLogEx((timeout) ? NORMAL : INFO, "." NOLF);
+            fflush(stdout);
+        }
+
+        timeout++;
+
+        // max timeout for one chunk of 85keys, 60*3sec = 180seconds
+        // s70 with 40*2 keys to check, 80*85 = 6800 auth.
+        // takes about 97s, still some margin before abort
+        // timeout = 180 => ~360s @ Mifare Classic 1k @ ~2300 keys in dict
+        // ~2300 keys @ Mifare Classic 1k => ~620s
+        if (timeout > 60 * 12) {
+            PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
+            return PM3_ETIMEOUT;
+        }
+    }
+
+    if (timeout && (quiet == false)) {
+        PrintAndLogEx(NORMAL, "");
+    }
+    // time to convert the returned data.
+    struct rp *rpayload = (struct rp *) resp.data.asBytes;
+
+    if (auths != NULL) {
+        *auths += rpayload->auths;
+    }
+    if (ms != NULL) {
+        *ms += rpayload->ticks;
+    }
+
+    if (resp.status == PM3_SUCCESS) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(SUCCESS, "Target key " _GREEN_("%1u") " -- found valid key [ " _GREEN_("%s") " ]",
+                      key_index,
+                      sprint_hex_inrow(rpayload->key, MIFAREU3P_KEY_SIZE)
+                     );
+    }
+    return resp.status;
+}
+
 //-------------------------------------------------------------------------------
 // Ultralight C Methods
 //-------------------------------------------------------------------------------
+
+static int stat_ulc_nonces(uint16_t num_sampled_nonces, uint64_t *nonces) {
+    for (uint16_t i = 0; i < num_sampled_nonces; i++) {
+        PrintAndLogEx(DEBUG, "Encrypted nonce: %016" PRIx64 "\n", nonces[i]);
+    }
+
+    // Count nonce frequencies
+    typedef struct {
+        uint64_t nonce;
+        uint32_t count;
+    } nonce_count_t;
+
+    nonce_count_t *counts = calloc(num_sampled_nonces, sizeof(nonce_count_t));
+    if (counts == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory for counts");
+        return PM3_EMALLOC;
+    }
+    uint32_t unique_count = 0;
+    uint32_t recurring_count = 0;
+
+    for (uint32_t i = 0; i < num_sampled_nonces; i++) {
+        bool found = false;
+        for (uint32_t j = 0; j < unique_count; j++) {
+            if (counts[j].nonce == nonces[i]) {
+                if (counts[j].count == 1) {
+                    recurring_count++;
+                }
+                counts[j].count++;
+                found = true;
+                break;
+            }
+        }
+        if (!found && unique_count < num_sampled_nonces) {
+            counts[unique_count].nonce = nonces[i];
+            counts[unique_count].count = 1;
+            unique_count++;
+        }
+    }
+
+    // Sort by count (descending)
+    for (uint32_t i = 0; i < unique_count - 1; i++) {
+        for (uint32_t j = i + 1; j < unique_count; j++) {
+            if (counts[j].count > counts[i].count) {
+                nonce_count_t temp = counts[i];
+                counts[i] = counts[j];
+                counts[j] = temp;
+            }
+        }
+    }
+
+    // Show top N
+    uint8_t topn = 10;
+    uint32_t show_count = recurring_count < topn ? recurring_count : topn;
+    if (counts[0].count == 1) {
+        if (unique_count > 1) {
+            PrintAndLogEx(INFO, "All %u collected nonces are unique.", num_sampled_nonces);
+        }
+        free(counts);
+        return PM3_SUCCESS;
+    }
+    PrintAndLogEx(INFO, "Top %u most common nonces:", show_count);
+    for (uint32_t i = 0; i < show_count; i++) {
+        PrintAndLogEx(INFO, "  %016" PRIx64 " (count: %u)", BSWAP_64(counts[i].nonce), counts[i].count);
+    }
+    free(counts);
+    return PM3_SUCCESS;
+}
 
 // Ultralight C Authentication
 //
@@ -3867,54 +4640,310 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
                   "Tests 3DES key on Mifare Ultralight-C tag.\n"
                   "If key is not specified, a set of known defaults will be tried.",
                   "hf mfu cauth\n"
-                  "hf mfu cauth --key <32 hex chars>"
+                  "hf mfu cauth --key 000102030405060708090a0b0c0d0e0f"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0(NULL, "key", "<hex>", "Authentication key (16 bytes in hex)"),
         arg_lit0("l", NULL, "Swap entered key's endianness"),
-        arg_lit0("k", NULL, "Keep field on (only if a key is provided)"),
+        arg_lit0("k", NULL, "Keep field on at the end (only if a key is provided)"),
+        arg_int0("r", "retries", "<n>", "Number of retries with provided key (def: 0)"),
+        arg_lit0("n", "nocheck", "Skip checking tag answer correctness (only if a key is provided)"),
+        arg_lit0("0", "read0", "Use fast READ0 (skip anticol)"),
+        arg_lit0(NULL, "noauth", "Skip authentication (when collecting nonces)"),
+        arg_lit0(NULL, "reset", "Reset field between each attempt"),
+        arg_lit0(NULL, "collect", "Collect nonces and show top 10"),
+        arg_strx0(NULL, "pair", "<ERndB:ERndARndBp>", "Nonce pair (option can be provided up to 10 times)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int ak_len = 0;
     uint8_t authenticationkey[16] = {0x00};
-    uint8_t *authKeyPtr = authenticationkey;
+    uint8_t *auth_key_ptr = authenticationkey;
     CLIGetHexWithReturn(ctx, 1, authenticationkey, &ak_len);
     bool swap_endian = arg_get_lit(ctx, 2);
     bool keep_field_on = arg_get_lit(ctx, 3);
+    int retries = arg_get_int_def(ctx, 4, 0);
+    bool check_answer = !arg_get_lit(ctx, 5);
+    bool use_fastread0 = arg_get_lit(ctx, 6);
+    bool skip_auth = arg_get_lit(ctx, 7);
+    bool reset_field = arg_get_lit(ctx, 8);
+    bool collect_nonces = arg_get_lit(ctx, 9);
+    int available_pairs = 0;
+    int pairs_bytecount = 0;
+    uint8_t pairs[(8 + 16) * 10] = {0};
+    CLIGetHexWithReturn(ctx, 10, pairs, &pairs_bytecount);
     CLIParserFree(ctx);
+    available_pairs = pairs_bytecount / (8 + 16);
+    if (available_pairs * (8 + 16) != pairs_bytecount) {
+        PrintAndLogEx(WARNING, "Invalid nonce pairs provided, byte count does not match expected size");
+        return PM3_EINVARG;
+    }
+    if (available_pairs > 10) {
+        PrintAndLogEx(WARNING, "Too many nonce pairs provided");
+        return PM3_EINVARG;
+    }
 
     if (ak_len != 16 && ak_len != 0) {
         PrintAndLogEx(WARNING, "ERROR: Key is incorrect length");
         return PM3_EINVARG;
     }
+    if (retries < 0 || retries > 10000) {
+        PrintAndLogEx(ERR, "Invalid retries (must be 0..10000)");
+        return PM3_EINVARG;
+    }
+    if ((retries > 0) && (ak_len == 0) && !skip_auth && available_pairs == 0) {
+        PrintAndLogEx(WARNING, "ERROR: Key is required for retries");
+        return PM3_EINVARG;
+    }
+    if ((! check_answer) && (ak_len == 0)) {
+        PrintAndLogEx(WARNING, "ERROR: Key is required for nocheck");
+        return PM3_EINVARG;
+    }
+    if ((available_pairs > 0) && (ak_len > 0)) {
+        PrintAndLogEx(WARNING, "ERROR: Key and pairs are mutually exclusive");
+        return PM3_EINVARG;
+    }
+
+    if (skip_auth && !collect_nonces) {
+        PrintAndLogEx(WARNING, "ERROR: noauth option only valid with collect option");
+        return PM3_EINVARG;
+    }
+
+    uint64_t *nonces = NULL;
+    if (collect_nonces) {
+        nonces = calloc(1 + retries, sizeof(uint64_t));
+        if (nonces == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            return PM3_EMALLOC;
+        }
+    }
 
     // Swap endianness
     if (swap_endian && ak_len) {
-        authKeyPtr = SwapEndian64(authenticationkey, 16, 8);
+        auth_key_ptr = SwapEndian64(authenticationkey, 16, 8);
     }
 
     int isok;
+    uint32_t auths = 0;
+    uint32_t ms = 0;
 
     // If no hex key is specified, try default keys
-    if (ak_len == 0) {
-        isok = try_default_3des_keys(false, &authKeyPtr);
+    if (ak_len == 0 && !collect_nonces && !skip_auth && available_pairs == 0) {
+
+        PrintAndLogEx(INFO, "Called with no key, checking default keys...");
+        isok = try_default_3des_keys(false, &auth_key_ptr, use_fastread0);
     } else {
         // try user-supplied
-        isok = ulc_authentication(authKeyPtr, !keep_field_on);
+
+        do {
+            uint16_t max_retries_per_call = retries;
+            if (collect_nonces) {
+                // Not strictly needed, but to avoid fw warning
+                max_retries_per_call = ((g_conn.max_cmd_data_size - sizeof(uint32_t) * 2) / sizeof(uint64_t)) - 1;
+            }
+            isok = ul3pass_authentication(auth_key_ptr, MIFAREULC_KEY_INDEX, !keep_field_on, MIN(retries - auths, max_retries_per_call), &auths, &ms, false, !skip_auth, check_answer, use_fastread0, collect_nonces, (uint8_t *)(nonces + auths), reset_field, available_pairs, pairs);
+        } while (skip_auth && auths < 1 + retries);
     }
 
-    if (isok == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Authentication 3DES key... " _GREEN_("%s") " ( " _GREEN_("ok")" )", sprint_hex_inrow(authKeyPtr, 16));
-    } else {
-        PrintAndLogEx(WARNING, "Authentication ( " _RED_("fail") " )");
+    if (collect_nonces) {
+        stat_ulc_nonces(auths, nonces);
     }
+
+    if (!skip_auth) {
+        if (isok == PM3_SUCCESS) {
+            if (available_pairs > 0) {
+                PrintAndLogEx(SUCCESS, "Authentication 3DES with nonce pair... " _GREEN_("ok"));
+            } else {
+                PrintAndLogEx(SUCCESS, "Authentication 3DES key... " _GREEN_("%s") " ( " _GREEN_("ok")" )", sprint_hex_inrow(auth_key_ptr, 16));
+            }
+        } else {
+            PrintAndLogEx(WARNING, "Authentication ( " _RED_("fail") " )");
+        }
+    }
+    if (retries > 0) {
+        PrintAndLogEx(INFO, "Time spent " _YELLOW_("%.1fs"), (float)(ms / 1000.0));
+        PrintAndLogEx(INFO, "Authentication attempts: %u", auths);
+        PrintAndLogEx(INFO, "Speed: %.1f auths/s", (float)(auths * 1000.0 / ms));
+    }
+    free(nonces);
+    return isok;
+}
+
+// Runs one dictionary against one key slot.  The device can only hold a few keys
+// per frame, so the dictionary is fed to it in chunks: the first chunk selects the
+// card, the last one drops the field.
+static int mfu_auth_chk(uint8_t key_index, const char *filename, int fnlen, int segment,
+                        int retries, uint8_t *ref_key, bool xor_ref_key, bool check_answer,
+                        bool use_fastread0) {
+
+    uint8_t *keyBlock = NULL;
+    uint32_t keycnt = 0;
+    int keysize = segment != -1 ? MIFAREU3P_KEY_SIZE / 4 : MIFAREU3P_KEY_SIZE;
+    int ret = mfu_3pass_load_keys(&keyBlock, &keycnt, filename, fnlen, keysize);
+    if (ret != PM3_SUCCESS) {
+        return ret;
+    }
+    if (keycnt == 0) {
+        PrintAndLogEx(ERR, "Dictionary contains no keys");
+        free(keyBlock);
+        return PM3_ESOFT;
+    }
+
+    // cap by what fits in one frame, then by what the nkeys field can announce
+    uint32_t max_chunk = (g_conn.max_cmd_data_size - MIFAREU3P_CHKKEY_HEADER) / keysize;
+    if (max_chunk > MIFAREU3P_CHKKEY_MAX_KEYS) {
+        max_chunk = MIFAREU3P_CHKKEY_MAX_KEYS;
+    }
+    uint32_t chunksize = (keycnt > max_chunk) ? max_chunk : keycnt;
+
+    // time
+    uint32_t auths = 0;
+    uint32_t ms = 0;
+
+    // main keychunk loop
+    for (int r = 0; r < retries + 1; r++) {
+
+        // every pass needs its own select and its own teardown
+        bool firstChunk = true, lastChunk = false;
+
+        for (uint32_t i = 0; i < keycnt; i += chunksize) {
+
+            if (kbd_enter_pressed()) {
+                clearCommandBuffer();
+                SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+                SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);   // field is still ON if not on last chunk
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(WARNING, "\naborted via keyboard!");
+                goto out;
+            }
+
+            uint32_t nkeys = ((keycnt - i) > chunksize) ? chunksize : keycnt - i;
+
+            // last chunk?
+            if (nkeys == keycnt - i) {
+                lastChunk = true;
+            }
+
+            int res = mfu_3pass_check_keys(key_index, firstChunk, lastChunk, nkeys, segment, ref_key, xor_ref_key, keyBlock + (i * keysize), false, true, &auths, &ms, check_answer, use_fastread0);
+            firstChunk = false;
+
+            // all keys,  aborted
+            if (res == PM3_SUCCESS || res == 2) {
+                PrintAndLogEx(NORMAL, "");
+                goto out;
+            }
+            PrintAndLogEx(INPLACE, "Testing %5u/%5u ( " _YELLOW_("%02.1f %%") " )", i, keycnt, (float)i * 100 / keycnt);
+        } // end chunks of keys
+    }
+    PrintAndLogEx(NORMAL, "");
+out:
+    PrintAndLogEx(INFO, "Time spent " _YELLOW_("%.1fs"), (float)(ms / 1000.0));
+    PrintAndLogEx(INFO, "Authentication attempts: %u", auths);
+    PrintAndLogEx(INFO, "Speed: %.1f auths/s", (float)(auths * 1000.0 / ms));
+
+    free(keyBlock);
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
+static int CmdHF14AMfUAuthChk(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu chk",
+                  "Checks MIFARE Ultralight C / Ultralight AES tag keys against a dictionary file.\n"
+                  "The tag type is read off the card and picks the key slot to attack.\n"
+                  "  UL-C ..... single 3DES key, --idx does not apply\n"
+                  "  UL-AES ... key index 0 DataProtKey (default)\n"
+                  "             key index 1 UIDRetrKey\n"
+                  "             key index 2 OriginalityKey\n"
+                  "Without -f, " _YELLOW_(MFU_DEFAULT_KEY_DIC) " is used for both tag types.\n"
+                  "A segment check (-s) holds 4 byte keys, so it needs its own dictionary via -f.",
+                  "hf mfu chk\n"
+                  "hf mfu chk -f mfulc_default_keys.dic\n"
+                  "hf mfu chk -f mfulaes_hw1.dic --idx 1\n"
+                  "hf mfu chk -f mfulc_segment_hw1.dic -s 0");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<fn>", "filename of dictionary"),
+        arg_int0("i", "idx", "<0..2>", "Key index, Ultralight AES only (def: 0)"),
+        arg_int0("s", "segment", "<0..3>", "Segment index (full key if not specified)"),
+        arg_int0("r", "retries", "<0..255>", "Number of retries (def: 0)"),
+        arg_str0("k", "key", "<hex>", "Starting key, 16 hex bytes (def: zero key), for segment check"),
+        arg_lit0("x", "xor", "XOR starting key with segment candidates (def: override)"),
+        arg_lit0("n", "nocheck", "Skip checking tag answer correctness"),
+        arg_lit0("0", "read0", "Use fast READ0 (skip anticol)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    int key_idx = arg_get_int_def(ctx, 2, -1);   // -1 means not given
+    int segment = arg_get_int_def(ctx, 3, -1);   // -1 means full key
+    int retries = arg_get_int_def(ctx, 4, 0);
+    int ref_keylen = 0;
+    uint8_t ref_key[16] = {0};
+    CLIGetHexWithReturn(ctx, 5, ref_key, &ref_keylen);
+    bool xor_ref_key = arg_get_lit(ctx, 6);
+    bool check_answer = !arg_get_lit(ctx, 7);
+    bool use_fastread0 = arg_get_lit(ctx, 8);
+    CLIParserFree(ctx);
+
+    if (key_idx < -1 || key_idx > 2) {
+        PrintAndLogEx(ERR, "Invalid key index (must be 0..2)");
+        return PM3_EINVARG;
+    }
+    if (segment < -1 || segment > 3) {
+        PrintAndLogEx(ERR, "Invalid segment (must be 0..3)");
+        return PM3_EINVARG;
+    }
+    if (retries < 0 || retries > 255) {
+        PrintAndLogEx(ERR, "Invalid retries (must be 0..255)");
+        return PM3_EINVARG;
+    }
+    if (ref_keylen && ref_keylen != MIFAREU3P_KEY_SIZE) {
+        PrintAndLogEx(WARNING, "Key must be %i hex bytes. Got %d", MIFAREU3P_KEY_SIZE, ref_keylen);
+        return PM3_EINVARG;
+    }
+
+    if (fnlen == 0) {
+        if (segment != -1) {
+            PrintAndLogEx(ERR, "A segment check needs a segment dictionary, pass one with " _YELLOW_("-f"));
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("mfulc_segment_hw1.dic") "` or `" _YELLOW_("mfulaes_segment_hw1.dic") "`");
+            return PM3_EFILE;
+        }
+        fnlen = snprintf(filename, sizeof(filename), MFU_DEFAULT_KEY_DIC);
+        PrintAndLogEx(INFO, "No dictionary given, using " _YELLOW_("%s"), filename);
+    }
+
+    uint64_t tagtype = GetHF14AMfU_Type();
+    if (tagtype == MFU_TT_UL_ERROR) {
+        PrintAndLogEx(WARNING, "No Ultralight tag found");
+        return PM3_ESOFT;
+    }
+    ul_print_type(tagtype, 0);
+
+    uint8_t key_index;
+    if ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES) {
+        key_index = (key_idx == -1) ? 0 : (uint8_t)key_idx;
+    } else if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) {
+        if (key_idx != -1) {
+            PrintAndLogEx(ERR, "Ultralight C holds a single key, " _YELLOW_("--idx") " is for Ultralight AES");
+            return PM3_EINVARG;
+        }
+        key_index = MIFAREULC_KEY_INDEX;
+    } else {
+        PrintAndLogEx(ERR, "Tag is neither Ultralight C nor Ultralight AES");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu info") "` to see what this tag is");
+        return PM3_EINVARG;
+    }
+
+    return mfu_auth_chk(key_index, filename, fnlen, segment, retries, ref_key, xor_ref_key, check_answer, use_fastread0);
+}
 //-------------------------------------------------------------------------------
 // Ultralight AES Methods
 //-------------------------------------------------------------------------------
@@ -3925,30 +4954,40 @@ static int CmdHF14AMfUAESAuth(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfu aesauth",
                   "Tests AES key on Mifare Ultralight AES tags.\n"
-                  "If key is not specified, null key will be tried.\n"
-                  "Key index 0: DataProtKey (default)\n"
-                  "Key index 1: UIDRetrKey\n"
-                  "Key index 2: OriginalityKey\n",
+                  "If no key is specified, null key will be tried.\n"
+                  "  Key index 0... DataProtKey (default)\n"
+                  "  Key index 1... UIDRetrKey\n"
+                  "  Key index 2... OriginalityKey\n",
                   "hf mfu aesauth\n"
-                  "hf mfu aesauth --key <32 hex chars> --index <0..2>"
+                  "hf mfu aesauth --key <16 hex bytes> --idx <0..2>\n"
+                  "hf mfu aesauth --key <16 hex bytes> --idx <0..2> --schann"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0(NULL, "key", "<hex>",   "Authentication key (16 bytes in hex)"),
-        arg_int0("i", "index", "<0..2>", "Key index, default: 0"),
+        arg_str0(NULL, "key", "<hex>",   "AES key (16 hex bytes)"),
+        arg_int0("i", "idx", "<0..2>", "Key index (def: 0)"),
+        arg_lit0("l", NULL, "Swap entered key's endianness"),
         arg_lit0("k", NULL, "Keep field on (only if a key is provided)"),
+        arg_lit0(NULL, "schann", "use secure channel. Must have key"),
+        arg_int0("r", "retries", "<n>", "Number of retries (def: 0)"),
+        arg_lit0("n", "nocheck", "Skip checking tag answer correctness"),
+        arg_lit0("0", "read0", "Use fast READ0 (skip anticol)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int ak_len = 0;
     uint8_t authentication_key[16] = {0};
-    uint8_t *authKeyPtr = authentication_key;
+    uint8_t *auth_key_ptr = authentication_key;
     CLIGetHexWithReturn(ctx, 1, authentication_key, &ak_len);
     int key_index = arg_get_int_def(ctx, 2, 0);
-    bool keep_field_on = arg_get_lit(ctx, 3);
-
+    bool swap_endian = arg_get_lit(ctx, 3);
+    bool keep_field_on = arg_get_lit(ctx, 4);
+    bool use_schann = arg_get_lit(ctx, 5);
+    int retries = arg_get_int_def(ctx, 6, 0);
+    bool check_answer = !arg_get_lit(ctx, 7);
+    bool use_fastread0 = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
 
     if (ak_len == 0) {
@@ -3965,17 +5004,752 @@ static int CmdHF14AMfUAESAuth(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    int result = ulaes_requestAuthentication(authKeyPtr, key_index, !keep_field_on);
+    // Swap endianness
+    if (swap_endian && ak_len) {
+        auth_key_ptr = SwapEndian64(authentication_key, ak_len, 16);
+    }
 
-    const char *key_type[] = { "DataProtKey", "UIDRetrKey", "OriginalityKey" };
+    if (retries < 0 || retries > 10000) {
+        PrintAndLogEx(ERR, "Invalid retries (must be 0..10000)");
+        return PM3_EINVARG;
+    }
+    uint32_t auths = 0;
+    uint32_t ms = 0;
+
+    int result = ul3pass_authentication(auth_key_ptr, key_index, !keep_field_on, retries, &auths, &ms, use_schann, true, check_answer, use_fastread0, false, NULL, false, 0, NULL);
     if (result == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Authentication with " _YELLOW_("%s") " " _GREEN_("%s") " ( " _GREEN_("ok")" )",
-                      key_type[key_index], sprint_hex_inrow(authKeyPtr, ak_len));
+        PrintAndLogEx(SUCCESS, "Authentication with " _YELLOW_("%s") " " _GREEN_("%s") " ( " _GREEN_("ok")" )"
+                      , key_type[key_index]
+                      , sprint_hex_inrow(auth_key_ptr, ak_len)
+                     );
     } else {
-        PrintAndLogEx(WARNING, "Authentication with " _YELLOW_("%s") " ( " _RED_("fail") " )",
-                      key_type[key_index]);
+        PrintAndLogEx(WARNING, "Authentication with " _YELLOW_("%s") " ( " _RED_("fail") " )", key_type[key_index]);
+    }
+    if (retries > 0) {
+        PrintAndLogEx(INFO, "Time spent " _YELLOW_("%.1fs"), (float)(ms / 1000.0));
+        PrintAndLogEx(INFO, "Authentication attempts: %u", auths);
+        PrintAndLogEx(INFO, "Speed: %.1f auths/s", (float)(auths * 1000.0 / ms));
     }
     return result;
+}
+
+
+
+
+static int CmdHF14AMfUAESGetUID(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu aesgetuid",
+                  "Retreives real UID on Mifare Ultralight AES tags when random ID is enabled.\n"
+                  "Uses key index 1 (UIDRetrKey).\n"
+                  "If no key is specified, null key will be tried.\n",
+                  "hf mfu aesgetuid\n"
+                  "hf mfu aesgetuid --key <16 hex bytes>\n"
+                  "hf mfu aesgetuid --key <16 hex bytes> --schann"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "key", "<hex>",   "AES key (16 hex bytes)"),
+        arg_lit0("l", NULL, "Swap entered key's endianness"),
+        arg_lit0(NULL, "schann", "use secure channel. Must have key"),
+        arg_int0("r", "retries", "<n>", "Number of retries (def: 0)"),
+        arg_lit0("n", "nocheck", "Skip checking tag answer correctness"),
+        arg_lit0("0", "read0", "Use fast READ0 (skip anticol)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int ak_len = 0;
+    uint8_t authentication_key[16] = {0};
+    uint8_t *auth_key_ptr = authentication_key;
+    CLIGetHexWithReturn(ctx, 1, authentication_key, &ak_len);
+    int key_index = 1;
+    bool swap_endian = arg_get_lit(ctx, 2);
+    bool keep_field_on = true;
+    bool use_schann = arg_get_lit(ctx, 3);
+    int retries = arg_get_int_def(ctx, 4, 0);
+    bool check_answer = !arg_get_lit(ctx, 5);
+    bool use_fastread0 = arg_get_lit(ctx, 6);
+    CLIParserFree(ctx);
+
+    if (ak_len == 0) {
+        // default to null key
+        ak_len = 16;
+    }
+    if (ak_len != 16) {
+        PrintAndLogEx(WARNING, "Invalid key length");
+        return PM3_EINVARG;
+    }
+
+    if (key_index < 0 || key_index > 2) {
+        PrintAndLogEx(WARNING, "Invalid key index");
+        return PM3_EINVARG;
+    }
+
+    // Swap endianness
+    if (swap_endian && ak_len) {
+        auth_key_ptr = SwapEndian64(authentication_key, ak_len, 16);
+    }
+
+    if (retries < 0 || retries > 10000) {
+        PrintAndLogEx(ERR, "Invalid retries (must be 0..10000)");
+        return PM3_EINVARG;
+    }
+    uint32_t auths = 0;
+    uint32_t ms = 0;
+
+    int result = ul3pass_authentication(auth_key_ptr, key_index, !keep_field_on, retries, &auths, &ms, use_schann, true, check_answer, use_fastread0, false, NULL, false, 0, NULL);
+    if (result == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Authentication with " _YELLOW_("%s") " " _GREEN_("%s") " ( " _GREEN_("ok")" )"
+                      , key_type[key_index]
+                      , sprint_hex_inrow(auth_key_ptr, ak_len)
+                     );
+    } else {
+        PrintAndLogEx(WARNING, "Authentication with " _YELLOW_("%s") " ( " _RED_("fail") " )", key_type[key_index]);
+        return PM3_ESOFT;
+    }
+    if (retries > 0) {
+        PrintAndLogEx(INFO, "Time spent " _YELLOW_("%.1fs"), (float)(ms / 1000.0));
+        PrintAndLogEx(INFO, "Authentication attempts: %u", auths);
+        PrintAndLogEx(INFO, "Speed: %.1f auths/s", (float)(auths * 1000.0 / ms));
+    }
+
+    uint8_t data[8] = {0x00};
+    int status = ul_read(0, data, sizeof(data), use_schann);
+    if (status <= 0) {
+        DropField();
+        PrintAndLogEx(ERR, "Error: tag didn't answer to READ %i", status);
+        return PM3_ESOFT;
+    }
+    uint8_t uid[7] = {data[0], data[1], data[2], data[4], data[5], data[6], data[7]};
+    PrintAndLogEx(SUCCESS, "UID: " _GREEN_("%s"), sprint_hex(uid, 7));
+
+    return PM3_SUCCESS;
+}
+
+//DESBRUTE Translation: C2Pwn
+
+typedef enum {
+    MFULC_DESBRUTE_LFSR_UNDEF = 0,
+    MFULC_DESBRUTE_LFSR_ULCG = 1,
+    MFULC_DESBRUTE_LFSR_MFC = 2,
+} mfulc_desbrute_lfsr_t;
+
+typedef struct {
+    uint32_t start;
+    uint32_t end;
+    int key_mode;
+    bool candidate_in_k1;
+    int var_offset;
+    uint8_t init_ciphertext[8];
+    uint8_t prev_ciphertext[8];
+    uint8_t ciphertext[8];
+    uint64_t init_ip_block;
+    uint64_t prev_ciphertext_be;
+    uint64_t ciphertext_ip_block;
+    uint8_t base_key[16];
+    uint64_t fixed_sk[16];
+    uint64_t cand_sk_base[16];
+    uint64_t cand_sk_contrib[28 * 16];
+    mfulc_desbrute_lfsr_t lfsr_type;
+    bool is_reader_mode;
+    int thread_id;
+} mfulc_desbrute_thread_args_t;
+
+typedef struct {
+    volatile bool found;
+    volatile bool aborted;
+    uint32_t found_idx;
+    uint8_t found_key[16];
+} mfulc_desbrute_shared_t;
+
+typedef struct {
+    mfulc_desbrute_thread_args_t args;
+    mfulc_desbrute_shared_t *shared;
+    volatile uint32_t progress;
+    volatile bool done;
+} mfulc_desbrute_worker_args_t;
+
+static uint64_t mfulc_desbrute_be64(const uint8_t *b) {
+    return ((uint64_t)b[0] << 56) | ((uint64_t)b[1] << 48) |
+           ((uint64_t)b[2] << 40) | ((uint64_t)b[3] << 32) |
+           ((uint64_t)b[4] << 24) | ((uint64_t)b[5] << 16) |
+           ((uint64_t)b[6] << 8) | (uint64_t)b[7];
+}
+
+static const uint8_t MFULC_DES_PC1[56] = {
+    57, 49, 41, 33, 25, 17, 9, 1, 58, 50, 42, 34, 26, 18,
+    10, 2, 59, 51, 43, 35, 27, 19, 11, 3, 60, 52, 44, 36,
+    63, 55, 47, 39, 31, 23, 15, 7, 62, 54, 46, 38, 30, 22,
+    14, 6, 61, 53, 45, 37, 29, 21, 13, 5, 28, 20, 12, 4
+};
+
+static const uint8_t MFULC_DES_PC2[48] = {
+    14, 17, 11, 24, 1, 5, 3, 28, 15, 6, 21, 10,
+    23, 19, 12, 4, 26, 8, 16, 7, 27, 20, 13, 2,
+    41, 52, 31, 37, 47, 55, 30, 40, 51, 45, 33, 48,
+    44, 49, 39, 56, 34, 53, 46, 42, 50, 36, 29, 32
+};
+
+static const uint8_t MFULC_DES_SHIFTS[16] = {
+    1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1
+};
+
+static const uint8_t MFULC_DES_IP[64] = {
+    58, 50, 42, 34, 26, 18, 10, 2, 60, 52, 44, 36, 28, 20, 12, 4,
+    62, 54, 46, 38, 30, 22, 14, 6, 64, 56, 48, 40, 32, 24, 16, 8,
+    57, 49, 41, 33, 25, 17, 9, 1, 59, 51, 43, 35, 27, 19, 11, 3,
+    61, 53, 45, 37, 29, 21, 13, 5, 63, 55, 47, 39, 31, 23, 15, 7
+};
+
+static const uint8_t MFULC_DES_FP[64] = {
+    40, 8, 48, 16, 56, 24, 64, 32, 39, 7, 47, 15, 55, 23, 63, 31,
+    38, 6, 46, 14, 54, 22, 62, 30, 37, 5, 45, 13, 53, 21, 61, 29,
+    36, 4, 44, 12, 52, 20, 60, 28, 35, 3, 43, 11, 51, 19, 59, 27,
+    34, 2, 42, 10, 50, 18, 58, 26, 33, 1, 41, 9, 49, 17, 57, 25
+};
+
+static const uint32_t MFULC_DES_SP[512] = {
+    0x00808200, 0x00000000, 0x00008000, 0x00808202, 0x00808002, 0x00008202, 0x00000002, 0x00008000, 0x00000200, 0x00808200, 0x00808202, 0x00000200, 0x00800202, 0x00808002, 0x00800000, 0x00000002, 0x00000202, 0x00800200, 0x00800200, 0x00008200, 0x00008200, 0x00808000, 0x00808000, 0x00800202, 0x00008002, 0x00800002, 0x00800002, 0x00008002, 0x00000000, 0x00000202, 0x00008202, 0x00800000, 0x00008000, 0x00808202, 0x00000002, 0x00808000, 0x00808200, 0x00800000, 0x00800000, 0x00000200, 0x00808002, 0x00008000, 0x00008200, 0x00800002, 0x00000200, 0x00000002, 0x00800202, 0x00008202, 0x00808202, 0x00008002, 0x00808000, 0x00800202, 0x00800002, 0x00000202, 0x00008202, 0x00808200, 0x00000202, 0x00800200, 0x00800200, 0x00000000, 0x00008002, 0x00008200, 0x00000000, 0x00808002,
+    0x40084010, 0x40004000, 0x00004000, 0x00084010, 0x00080000, 0x00000010, 0x40080010, 0x40004010, 0x40000010, 0x40084010, 0x40084000, 0x40000000, 0x40004000, 0x00080000, 0x00000010, 0x40080010, 0x00084000, 0x00080010, 0x40004010, 0x00000000, 0x40000000, 0x00004000, 0x00084010, 0x40080000, 0x00080010, 0x40000010, 0x00000000, 0x00084000, 0x00004010, 0x40084000, 0x40080000, 0x00004010, 0x00000000, 0x00084010, 0x40080010, 0x00080000, 0x40004010, 0x40080000, 0x40084000, 0x00004000, 0x40080000, 0x40004000, 0x00000010, 0x40084010, 0x00084010, 0x00000010, 0x00004000, 0x40000000, 0x00004010, 0x40084000, 0x00080000, 0x40000010, 0x00080010, 0x40004010, 0x40000010, 0x00080010, 0x00084000, 0x00000000, 0x40004000, 0x00004010, 0x40000000, 0x40080010, 0x40084010, 0x00084000,
+    0x00000104, 0x04010100, 0x00000000, 0x04010004, 0x04000100, 0x00000000, 0x00010104, 0x04000100, 0x00010004, 0x04000004, 0x04000004, 0x00010000, 0x04010104, 0x00010004, 0x04010000, 0x00000104, 0x04000000, 0x00000004, 0x04010100, 0x00000100, 0x00010100, 0x04010000, 0x04010004, 0x00010104, 0x04000104, 0x00010100, 0x00010000, 0x04000104, 0x00000004, 0x04010104, 0x00000100, 0x04000000, 0x04010100, 0x04000000, 0x00010004, 0x00000104, 0x00010000, 0x04010100, 0x04000100, 0x00000000, 0x00000100, 0x00010004, 0x04010104, 0x04000100, 0x04000004, 0x00000100, 0x00000000, 0x04010004, 0x04000104, 0x00010000, 0x04000000, 0x04010104, 0x00000004, 0x00010104, 0x00010100, 0x04000004, 0x04010000, 0x04000104, 0x00000104, 0x04010000, 0x00010104, 0x00000004, 0x04010004, 0x00010100,
+    0x80401000, 0x80001040, 0x80001040, 0x00000040, 0x00401040, 0x80400040, 0x80400000, 0x80001000, 0x00000000, 0x00401000, 0x00401000, 0x80401040, 0x80000040, 0x00000000, 0x00400040, 0x80400000, 0x80000000, 0x00001000, 0x00400000, 0x80401000, 0x00000040, 0x00400000, 0x80001000, 0x00001040, 0x80400040, 0x80000000, 0x00001040, 0x00400040, 0x00001000, 0x00401040, 0x80401040, 0x80000040, 0x00400040, 0x80400000, 0x00401000, 0x80401040, 0x80000040, 0x00000000, 0x00000000, 0x00401000, 0x00001040, 0x00400040, 0x80400040, 0x80000000, 0x80401000, 0x80001040, 0x80001040, 0x00000040, 0x80401040, 0x80000040, 0x80000000, 0x00001000, 0x80400000, 0x80001000, 0x00401040, 0x80400040, 0x80001000, 0x00001040, 0x00400000, 0x80401000, 0x00000040, 0x00400000, 0x00001000, 0x00401040,
+    0x00000080, 0x01040080, 0x01040000, 0x21000080, 0x00040000, 0x00000080, 0x20000000, 0x01040000, 0x20040080, 0x00040000, 0x01000080, 0x20040080, 0x21000080, 0x21040000, 0x00040080, 0x20000000, 0x01000000, 0x20040000, 0x20040000, 0x00000000, 0x20000080, 0x21040080, 0x21040080, 0x01000080, 0x21040000, 0x20000080, 0x00000000, 0x21000000, 0x01040080, 0x01000000, 0x21000000, 0x00040080, 0x00040000, 0x21000080, 0x00000080, 0x01000000, 0x20000000, 0x01040000, 0x21000080, 0x20040080, 0x01000080, 0x20000000, 0x21040000, 0x01040080, 0x20040080, 0x00000080, 0x01000000, 0x21040000, 0x21040080, 0x00040080, 0x21000000, 0x21040080, 0x01040000, 0x00000000, 0x20040000, 0x21000000, 0x00040080, 0x01000080, 0x20000080, 0x00040000, 0x00000000, 0x20040000, 0x01040080, 0x20000080,
+    0x10000008, 0x10200000, 0x00002000, 0x10202008, 0x10200000, 0x00000008, 0x10202008, 0x00200000, 0x10002000, 0x00202008, 0x00200000, 0x10000008, 0x00200008, 0x10002000, 0x10000000, 0x00002008, 0x00000000, 0x00200008, 0x10002008, 0x00002000, 0x00202000, 0x10002008, 0x00000008, 0x10200008, 0x10200008, 0x00000000, 0x00202008, 0x10202000, 0x00002008, 0x00202000, 0x10202000, 0x10000000, 0x10002000, 0x00000008, 0x10200008, 0x00202000, 0x10202008, 0x00200000, 0x00002008, 0x10000008, 0x00200000, 0x10002000, 0x10000000, 0x00002008, 0x10000008, 0x10202008, 0x00202000, 0x10200000, 0x00202008, 0x10202000, 0x00000000, 0x10200008, 0x00000008, 0x00002000, 0x10200000, 0x00202008, 0x00002000, 0x00200008, 0x10002008, 0x00000000, 0x10202000, 0x10000000, 0x00200008, 0x10002008,
+    0x00100000, 0x02100001, 0x02000401, 0x00000000, 0x00000400, 0x02000401, 0x00100401, 0x02100400, 0x02100401, 0x00100000, 0x00000000, 0x02000001, 0x00000001, 0x02000000, 0x02100001, 0x00000401, 0x02000400, 0x00100401, 0x00100001, 0x02000400, 0x02000001, 0x02100000, 0x02100400, 0x00100001, 0x02100000, 0x00000400, 0x00000401, 0x02100401, 0x00100400, 0x00000001, 0x02000000, 0x00100400, 0x02000000, 0x00100400, 0x00100000, 0x02000401, 0x02000401, 0x02100001, 0x02100001, 0x00000001, 0x00100001, 0x02000000, 0x02000400, 0x00100000, 0x02100400, 0x00000401, 0x00100401, 0x02100400, 0x00000401, 0x02000001, 0x02100401, 0x02100000, 0x00100400, 0x00000000, 0x00000001, 0x02100401, 0x00000000, 0x00100401, 0x02100000, 0x00000400, 0x02000001, 0x02000400, 0x00000400, 0x00100001,
+    0x08000820, 0x00000800, 0x00020000, 0x08020820, 0x08000000, 0x08000820, 0x00000020, 0x08000000, 0x00020020, 0x08020000, 0x08020820, 0x00020800, 0x08020800, 0x00020820, 0x00000800, 0x00000020, 0x08020000, 0x08000020, 0x08000800, 0x00000820, 0x00020800, 0x00020020, 0x08020020, 0x08020800, 0x00000820, 0x00000000, 0x00000000, 0x08020020, 0x08000020, 0x08000800, 0x00020820, 0x00020000, 0x00020820, 0x00020000, 0x08020800, 0x00000800, 0x00000020, 0x08020020, 0x00000800, 0x00020820, 0x08000800, 0x00000020, 0x08000020, 0x08020000, 0x08020020, 0x08000000, 0x00020000, 0x08000820, 0x00000000, 0x08020820, 0x00020020, 0x08000020, 0x08020000, 0x08000800, 0x08000820, 0x00000000, 0x08020820, 0x00020800, 0x00020800, 0x00000820, 0x00000820, 0x00020020, 0x08000000, 0x08020800
+};
+
+static uint64_t mfulc_desbrute_perm(uint64_t src, int src_bits, const uint8_t *tbl, int n) {
+    uint64_t dst = 0;
+    for (int i = 0; i < n; i++) {
+        int sb = tbl[i] - 1;
+        dst |= ((src >> (src_bits - 1 - sb)) & 1ULL) << (n - 1 - i);
+    }
+    return dst;
+}
+
+static void mfulc_desbrute_keyschedule(uint64_t key64, uint64_t sk[16]) {
+    uint64_t key56 = mfulc_desbrute_perm(key64, 64, MFULC_DES_PC1, 56);
+    uint32_t c = (uint32_t)(key56 >> 28) & 0x0FFFFFFF;
+    uint32_t d = (uint32_t)key56 & 0x0FFFFFFF;
+
+    for (int i = 0; i < 16; i++) {
+        int s = MFULC_DES_SHIFTS[i];
+        c = ((c << s) | (c >> (28 - s))) & 0x0FFFFFFF;
+        d = ((d << s) | (d >> (28 - s))) & 0x0FFFFFFF;
+        sk[i] = mfulc_desbrute_perm(((uint64_t)c << 28) | d, 56, MFULC_DES_PC2, 48);
+    }
+}
+
+static uint32_t mfulc_desbrute_f(uint32_t r, uint64_t k) {
+    uint32_t r0 = ((r & 1u) << 5) | ((r >> 27) & 0x1Fu);
+    uint32_t r1 = (r >> 23) & 0x3Fu;
+    uint32_t r2 = (r >> 19) & 0x3Fu;
+    uint32_t r3 = (r >> 15) & 0x3Fu;
+    uint32_t r4 = (r >> 11) & 0x3Fu;
+    uint32_t r5 = (r >> 7) & 0x3Fu;
+    uint32_t r6 = (r >> 3) & 0x3Fu;
+    uint32_t r7 = ((r & 0x1Fu) << 1) | ((r >> 31) & 1u);
+
+    r0 ^= (uint32_t)((k >> 42) & 0x3Fu);
+    r1 ^= (uint32_t)((k >> 36) & 0x3Fu);
+    r2 ^= (uint32_t)((k >> 30) & 0x3Fu);
+    r3 ^= (uint32_t)((k >> 24) & 0x3Fu);
+    r4 ^= (uint32_t)((k >> 18) & 0x3Fu);
+    r5 ^= (uint32_t)((k >> 12) & 0x3Fu);
+    r6 ^= (uint32_t)((k >> 6) & 0x3Fu);
+    r7 ^= (uint32_t)(k & 0x3Fu);
+
+    return MFULC_DES_SP[r0] ^ MFULC_DES_SP[64 + r1] ^ MFULC_DES_SP[128 + r2] ^ MFULC_DES_SP[192 + r3] ^
+           MFULC_DES_SP[256 + r4] ^ MFULC_DES_SP[320 + r5] ^ MFULC_DES_SP[384 + r6] ^ MFULC_DES_SP[448 + r7];
+}
+
+static uint64_t mfulc_desbrute_des_rounds(uint64_t ip_block, const uint64_t sk[16], bool decrypt) {
+    uint32_t l = (uint32_t)(ip_block >> 32);
+    uint32_t r = (uint32_t)ip_block;
+
+    for (int i = 0; i < 16; i++) {
+        uint64_t k = decrypt ? sk[15 - i] : sk[i];
+        uint32_t nr = l ^ mfulc_desbrute_f(r, k);
+        l = r;
+        r = nr;
+    }
+    return ((uint64_t)r << 32) | l;
+}
+
+static uint64_t mfulc_desbrute_des(uint64_t block, const uint64_t sk[16], bool decrypt) {
+    uint64_t t = mfulc_desbrute_perm(block, 64, MFULC_DES_IP, 64);
+    t = mfulc_desbrute_des_rounds(t, sk, decrypt);
+    return mfulc_desbrute_perm(t, 64, MFULC_DES_FP, 64);
+}
+
+static uint64_t mfulc_desbrute_tdea2_dec_ip(uint64_t ip_block, const uint64_t k1_sk[16], const uint64_t k2_sk[16]) {
+    uint64_t t = mfulc_desbrute_des_rounds(ip_block, k1_sk, true);
+    t = mfulc_desbrute_des_rounds(t, k2_sk, false);
+    t = mfulc_desbrute_des_rounds(t, k1_sk, true);
+    return mfulc_desbrute_perm(t, 64, MFULC_DES_FP, 64);
+}
+
+static void mfulc_desbrute_format_duration(uint64_t seconds, char *buf, size_t buflen) {
+    unsigned int h = (unsigned int)(seconds / 3600);
+    unsigned int m = (unsigned int)((seconds / 60) % 60);
+    unsigned int s = (unsigned int)(seconds % 60);
+
+    if (h > 99) {
+        snprintf(buf, buflen, ">99h");
+    } else if (h > 0) {
+        snprintf(buf, buflen, "%02u:%02u:%02u", h, m, s);
+    } else {
+        snprintf(buf, buflen, "%02u:%02u", m, s);
+    }
+}
+
+static void mfulc_desbrute_progress_bar(double pct, char *buf, size_t buflen) {
+    const int width = 28;
+    int filled = (int)((pct / 100.0) * width);
+
+    if (filled < 0) filled = 0;
+    if (filled > width) filled = width;
+    if (buflen < (size_t)width + 3) {
+        if (buflen > 0) buf[0] = '\0';
+        return;
+    }
+
+    buf[0] = '[';
+    for (int i = 0; i < width; i++) {
+        buf[i + 1] = i < filled ? '#' : '.';
+    }
+    buf[width + 1] = ']';
+    buf[width + 2] = '\0';
+}
+
+static const char *mfulc_desbrute_progress_color(double pct) {
+    if (pct >= 90.0) {
+        return "\x1b[32m";
+    }
+    if (pct >= 50.0) {
+        return "\x1b[33m";
+    }
+    return "\x1b[36m";
+}
+
+static void mfulc_desbrute_compute_sk_tables(const uint8_t base_half[8], int var_offset, uint64_t sk_base[16], uint64_t sk_contrib[28 * 16]) {
+    uint8_t half[8] = {0};
+
+    memcpy(half, base_half, sizeof(half));
+    half[var_offset] = 0;
+    half[var_offset + 1] = 0;
+    half[var_offset + 2] = 0;
+    half[var_offset + 3] = 0;
+    mfulc_desbrute_keyschedule(mfulc_desbrute_be64(half), sk_base);
+
+    for (int bit = 0; bit < 28; bit++) {
+        uint8_t tmp[8] = {0};
+        int byte_in_half = bit / 7;
+        int bit_in_byte = bit % 7;
+        uint64_t bit_sk[16] = {0};
+
+        tmp[var_offset + byte_in_half] = (uint8_t)(1u << (bit_in_byte + 1));
+        mfulc_desbrute_keyschedule(mfulc_desbrute_be64(tmp), bit_sk);
+
+        for (int round = 0; round < 16; round++) {
+            sk_contrib[(bit * 16) + round] = bit_sk[round];
+        }
+    }
+}
+
+static void mfulc_desbrute_make_candidate_sk(const mfulc_desbrute_thread_args_t *args, uint32_t idx, uint64_t cand_sk[16]) {
+    memcpy(cand_sk, args->cand_sk_base, sizeof(args->cand_sk_base));
+
+    for (int bit = 0; bit < 28; bit++) {
+        if ((idx >> bit) & 1u) {
+            const uint64_t *contrib = &args->cand_sk_contrib[bit * 16];
+            for (int round = 0; round < 16; round++) {
+                cand_sk[round] ^= contrib[round];
+            }
+        }
+    }
+}
+
+static void mfulc_desbrute_update_candidate_sk(const mfulc_desbrute_thread_args_t *args, uint32_t old_idx, uint32_t new_idx, uint64_t cand_sk[16]) {
+    uint32_t changed = old_idx ^ new_idx;
+
+    while (changed != 0) {
+        int bit = __builtin_ctz(changed);
+        const uint64_t *contrib = &args->cand_sk_contrib[bit * 16];
+
+        for (int round = 0; round < 16; round++) {
+            cand_sk[round] ^= contrib[round];
+        }
+        changed &= changed - 1;
+    }
+}
+
+static bool mfulc_desbrute_valid_lfsr_ulcg(uint64_t x64) {
+    x64 = BSWAP_64(x64);
+    uint16_t x16 = x64 >> 48;
+    x16 = (uint16_t)(x16 << 15 | ((x16 >> 1) ^ ((x16 >> 3 ^ x16 >> 4 ^ x16 >> 6) & 1)));
+    if (x16 != ((x64 >> 32) & 0xFFFF)) return false;
+    x16 = (uint16_t)(x16 << 15 | ((x16 >> 1) ^ ((x16 >> 3 ^ x16 >> 4 ^ x16 >> 6) & 1)));
+    if (x16 != ((x64 >> 16) & 0xFFFF)) return false;
+    x16 = (uint16_t)(x16 << 15 | ((x16 >> 1) ^ ((x16 >> 3 ^ x16 >> 4 ^ x16 >> 6) & 1)));
+    return x16 == (x64 & 0xFFFF);
+}
+
+static bool mfulc_desbrute_valid_lfsr_mfc(uint64_t x64) {
+    x64 = BSWAP_64(x64);
+    uint16_t x16 = x64 & 0xFFFF;
+    for (int i = 0; i < 16; i++) x16 = (uint16_t)(x16 >> 1 | (x16 ^ x16 >> 2 ^ x16 >> 3 ^ x16 >> 5) << 15);
+    if (x16 != ((x64 >> 16) & 0xFFFF)) return false;
+    for (int i = 0; i < 16; i++) x16 = (uint16_t)(x16 >> 1 | (x16 ^ x16 >> 2 ^ x16 >> 3 ^ x16 >> 5) << 15);
+    if (x16 != ((x64 >> 32) & 0xFFFF)) return false;
+    for (int i = 0; i < 16; i++) x16 = (uint16_t)(x16 >> 1 | (x16 ^ x16 >> 2 ^ x16 >> 3 ^ x16 >> 5) << 15);
+    return x16 == ((x64 >> 48) & 0xFFFF);
+}
+
+static bool mfulc_desbrute_valid_lfsr(uint64_t x64, mfulc_desbrute_lfsr_t lfsr_type) {
+    switch (lfsr_type) {
+        case MFULC_DESBRUTE_LFSR_ULCG:
+            return mfulc_desbrute_valid_lfsr_ulcg(x64);
+        case MFULC_DESBRUTE_LFSR_MFC:
+            return mfulc_desbrute_valid_lfsr_mfc(x64);
+        case MFULC_DESBRUTE_LFSR_UNDEF:
+        default:
+            return false;
+    }
+}
+
+static mfulc_desbrute_lfsr_t mfulc_desbrute_detect_lfsr_type(const uint8_t init_ciphertext[8]) {
+    uint64_t zero_sk[16] = {0};
+    uint64_t x_be;
+
+    mfulc_desbrute_keyschedule(0, zero_sk);
+    x_be = mfulc_desbrute_des(mfulc_desbrute_be64(init_ciphertext), zero_sk, true);
+    uint64_t x = BSWAP_64(x_be);
+    if (mfulc_desbrute_valid_lfsr_ulcg(x)) {
+        return MFULC_DESBRUTE_LFSR_ULCG;
+    }
+    if (mfulc_desbrute_valid_lfsr_mfc(x)) {
+        return MFULC_DESBRUTE_LFSR_MFC;
+    }
+    return MFULC_DESBRUTE_LFSR_UNDEF;
+}
+
+static void mfulc_desbrute_fill_candidate(uint8_t key[16], const uint8_t base_key[16], int key_mode, uint32_t idx) {
+    memcpy(key, base_key, 16);
+    int seg_offset = key_mode * 4;
+    key[seg_offset] = (uint8_t)(((idx) & 0x7F) << 1);
+    key[seg_offset + 1] = (uint8_t)(((idx >> 7) & 0x7F) << 1);
+    key[seg_offset + 2] = (uint8_t)(((idx >> 14) & 0x7F) << 1);
+    key[seg_offset + 3] = (uint8_t)(((idx >> 21) & 0x7F) << 1);
+}
+
+static void mfulc_desbrute_candidate_batch(uint32_t start, uint32_t idx[4]) {
+    union vec lanes = vec_uadd(vec_u1(start), vec_u(0, 1, 2, 3));
+    for (int i = 0; i < 4; i++) {
+        idx[i] = lanes.elem.u[i];
+    }
+}
+
+static bool mfulc_desbrute_test_candidate_sk(const mfulc_desbrute_thread_args_t *args, const uint64_t cand_sk[16]) {
+    uint64_t out_be;
+    const uint64_t *k1_sk;
+    const uint64_t *k2_sk;
+
+    k1_sk = args->candidate_in_k1 ? cand_sk : args->fixed_sk;
+    k2_sk = args->candidate_in_k1 ? args->fixed_sk : cand_sk;
+    out_be = mfulc_desbrute_tdea2_dec_ip(args->ciphertext_ip_block, k1_sk, k2_sk);
+
+    bool match = false;
+    if (args->is_reader_mode) {
+        uint64_t init_be = mfulc_desbrute_tdea2_dec_ip(args->init_ip_block, k1_sk, k2_sk);
+        uint64_t rotated_init_be = (init_be << 8) | (init_be >> 56);
+
+        match = (out_be ^ args->prev_ciphertext_be) == rotated_init_be;
+    } else {
+        match = mfulc_desbrute_valid_lfsr(BSWAP_64(out_be), args->lfsr_type);
+    }
+    return match;
+}
+
+static void *mfulc_desbrute_worker(void *arg) {
+    mfulc_desbrute_worker_args_t *ctx = arg;
+
+    uint32_t candidate[4] = {0};
+    uint32_t last_candidate = 0;
+    uint64_t cand_sk[16] = {0};
+    bool have_candidate_sk = false;
+
+    ctx->progress = ctx->args.start;
+    for (uint32_t idx = ctx->args.start; idx < ctx->args.end; idx += 4) {
+        if (ctx->shared->found || ctx->shared->aborted) {
+            break;
+        }
+        if ((idx & 0x3FF) == 0) {
+            ctx->progress = idx;
+        }
+        if (ctx->args.thread_id == 0 && ((idx & 0x3FFFF) == 0) && kbd_enter_pressed()) {
+            ctx->shared->aborted = true;
+            break;
+        }
+
+        mfulc_desbrute_candidate_batch(idx, candidate);
+        for (int lane = 0; lane < 4; lane++) {
+            if (candidate[lane] >= ctx->args.end) {
+                break;
+            }
+
+            if (have_candidate_sk) {
+                mfulc_desbrute_update_candidate_sk(&ctx->args, last_candidate, candidate[lane], cand_sk);
+            } else {
+                mfulc_desbrute_make_candidate_sk(&ctx->args, candidate[lane], cand_sk);
+                have_candidate_sk = true;
+            }
+            last_candidate = candidate[lane];
+
+            if (mfulc_desbrute_test_candidate_sk(&ctx->args, cand_sk)) {
+                ctx->shared->found_idx = candidate[lane];
+                mfulc_desbrute_fill_candidate(ctx->shared->found_key, ctx->args.base_key, ctx->args.key_mode, candidate[lane]);
+                ctx->progress = candidate[lane] + 1;
+                ctx->shared->found = true;
+                ctx->done = true;
+                return NULL;
+            }
+        }
+    }
+    ctx->progress = ctx->shared->found || ctx->shared->aborted ? ctx->progress : ctx->args.end;
+    ctx->done = true;
+    return NULL;
+}
+
+static int CmdHF14AMfUCDesBrute(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu desbrute",
+                  "Recover one 4-byte segment of a MIFARE Ultralight-C 2TDEA key from known authentication ciphertexts.",
+                  "hf mfu desbrute --counterfeit --null F35C740106ECED87 --target E9E0DC67B35919FC --key 00000000000000000000000000000000 --segment 2\n"
+                  "hf mfu desbrute --counterfeit --null 49C1603621CCAA72 --target 8122262EF5FA8DEB --key 48444C4A4044524200000000544E5846 --segment 3\n"
+                  "hf mfu desbrute --reader --erndb EC9C5CF763244367 --cryptogram 2283BFE8DEBE1780922327794D0706EF --key 48444C4A4044524200000000544E5846 --segment 3");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("c", "counterfeit", "Counterfeit nonce mode: --null and --target are ERndB blocks"),
+        arg_lit0("r", "reader", "Reader nonce mode: --erndb and --cryptogram are sniffed authentication blocks"),
+        arg_str0(NULL, "null", "<hex>", "Null-key ERndB, 8 hex bytes"),
+        arg_str0(NULL, "target", "<hex>", "Target-key ERndB, 8 hex bytes"),
+        arg_str0(NULL, "erndb", "<hex>", "Reader mode ERndB, 8 hex bytes"),
+        arg_str0(NULL, "cryptogram", "<hex>", "Reader mode ERndA|ERndB', 16 hex bytes"),
+        arg_str1("k", "key", "<hex>", "Base 3DES key, 16 hex bytes"),
+        arg_int1("s", "segment", "<1..4>", "4-byte key segment to brute force"),
+        arg_int0("t", "threads", "<n>", "Worker threads (default: all logical CPUs)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool counterfeit_mode = arg_get_lit(ctx, 1);
+    bool reader_mode = arg_get_lit(ctx, 2);
+    uint8_t init_ciphertext[8] = {0};
+    uint8_t ciphertext[8] = {0};
+    uint8_t prev_ciphertext[8] = {0};
+    uint8_t tmp_blocks[16] = {0};
+    uint8_t base_key[16] = {0};
+    int init_len = 0;
+    int ciphertext_len = 0;
+    int tmp_len = 0;
+    int key_len = 0;
+
+    if (counterfeit_mode) {
+        CLIGetHexWithReturn(ctx, 3, init_ciphertext, &init_len);
+        CLIGetHexWithReturn(ctx, 4, ciphertext, &ciphertext_len);
+    }
+    if (reader_mode) {
+        CLIGetHexWithReturn(ctx, 5, init_ciphertext, &init_len);
+        CLIGetHexWithReturn(ctx, 6, tmp_blocks, &tmp_len);
+        memcpy(prev_ciphertext, tmp_blocks, 8);
+        memcpy(ciphertext, tmp_blocks + 8, 8);
+    }
+    CLIGetHexWithReturn(ctx, 7, base_key, &key_len);
+    int segment = arg_get_int_def(ctx, 8, 0);
+    int threads = arg_get_int_def(ctx, 9, num_CPUs());
+    CLIParserFree(ctx);
+
+    if (counterfeit_mode == reader_mode) {
+        PrintAndLogEx(WARNING, "Select exactly one mode: --counterfeit or --reader");
+        return PM3_EINVARG;
+    }
+    if (init_len != 8 || key_len != 16 || (counterfeit_mode && ciphertext_len != 8) || (reader_mode && tmp_len != 16)) {
+        PrintAndLogEx(WARNING, "Invalid input length. Blocks are 8 bytes, reader cryptogram is 16 bytes, key is 16 bytes");
+        return PM3_EINVARG;
+    }
+    if (segment < 1 || segment > 4) {
+        PrintAndLogEx(WARNING, "Segment must be 1..4");
+        return PM3_EINVARG;
+    }
+    if (threads < 1) {
+        threads = 1;
+    }
+    int max_threads = num_CPUs();
+    if (threads > max_threads) {
+        PrintAndLogEx(INFO, "Capping threads at available CPU count (%d)", max_threads);
+        threads = max_threads;
+    }
+
+    mfulc_desbrute_lfsr_t lfsr_type = MFULC_DESBRUTE_LFSR_UNDEF;
+    if (counterfeit_mode) {
+        lfsr_type = mfulc_desbrute_detect_lfsr_type(init_ciphertext);
+        if (lfsr_type == MFULC_DESBRUTE_LFSR_UNDEF) {
+            PrintAndLogEx(WARNING, "LFSR detection failed");
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(INFO, "LFSR detection: %s", lfsr_type == MFULC_DESBRUTE_LFSR_ULCG ? "ULCG" : "MFC (USCUID-UL/FJ8010)");
+    }
+
+    pthread_t *tids = calloc(threads, sizeof(pthread_t));
+    mfulc_desbrute_worker_args_t *worker_args = calloc(threads, sizeof(*worker_args));
+    if (tids == NULL || worker_args == NULL) {
+        free(tids);
+        free(worker_args);
+        return PM3_EMALLOC;
+    }
+
+    mfulc_desbrute_shared_t shared = {0};
+    uint64_t start_ms = msclock();
+    uint32_t total = 1UL << 28;
+    uint32_t chunk = total / (uint32_t)threads;
+    uint32_t remainder = total % (uint32_t)threads;
+    uint32_t current = 0;
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("MFU DESBRUTE"));
+    PrintAndLogEx(INFO, "Mode....... " _YELLOW_("%s"), counterfeit_mode ? "counterfeit nonce" : "reader nonce");
+    PrintAndLogEx(INFO, "Segment.... " _YELLOW_("%d") " (key bytes " _YELLOW_("%d..%d") ")", segment, (segment - 1) * 4, ((segment - 1) * 4) + 3);
+    PrintAndLogEx(INFO, "Keyspace... " _YELLOW_("2^28") " = " _YELLOW_("%" PRIu32) " candidates", total);
+    PrintAndLogEx(INFO, "Threads.... " _YELLOW_("%d") " / " _YELLOW_("%d") " logical CPUs", threads, max_threads);
+    PrintAndLogEx(INFO, "Base key... " _GREEN_("%s"), sprint_hex_inrow(base_key, sizeof(base_key)));
+    if (counterfeit_mode) {
+        PrintAndLogEx(INFO, "Null ERndB. " _GREEN_("%s"), sprint_hex_inrow(init_ciphertext, sizeof(init_ciphertext)));
+        PrintAndLogEx(INFO, "Target..... " _GREEN_("%s"), sprint_hex_inrow(ciphertext, sizeof(ciphertext)));
+        PrintAndLogEx(INFO, "LFSR....... " _YELLOW_("%s"), lfsr_type == MFULC_DESBRUTE_LFSR_ULCG ? "ULCG" : "MFC (USCUID-UL/FJ8010)");
+    } else {
+        PrintAndLogEx(INFO, "ERndB...... " _GREEN_("%s"), sprint_hex_inrow(init_ciphertext, sizeof(init_ciphertext)));
+        PrintAndLogEx(INFO, "ERndA|B'... " _GREEN_("%s"), sprint_hex_inrow(tmp_blocks, sizeof(tmp_blocks)));
+    }
+    PrintAndLogEx(INFO, "Engine..... " _CYAN_("DES SP table + subkey contribution tables + vec candidate lanes"));
+    PrintAndLogEx(INFO, "Abort...... " _YELLOW_("press Enter"));
+    PrintAndLogEx(NORMAL, "");
+
+    for (int i = 0; i < threads; i++) {
+        mfulc_desbrute_worker_args_t *wa = &worker_args[i];
+
+        wa->args.start = current;
+        wa->args.end = current + chunk + (i == threads - 1 ? remainder : 0);
+        wa->progress = wa->args.start;
+        wa->done = false;
+        wa->args.key_mode = segment - 1;
+        wa->args.candidate_in_k1 = wa->args.key_mode < 2;
+        wa->args.var_offset = wa->args.candidate_in_k1 ? ((wa->args.key_mode % 2) * 4) : (((wa->args.key_mode - 2) % 2) * 4);
+        wa->args.lfsr_type = lfsr_type;
+        wa->args.is_reader_mode = reader_mode;
+        wa->args.thread_id = i;
+        memcpy(wa->args.init_ciphertext, init_ciphertext, sizeof(init_ciphertext));
+        memcpy(wa->args.prev_ciphertext, prev_ciphertext, sizeof(prev_ciphertext));
+        memcpy(wa->args.ciphertext, ciphertext, sizeof(ciphertext));
+        memcpy(wa->args.base_key, base_key, sizeof(base_key));
+        wa->args.init_ip_block = mfulc_desbrute_perm(mfulc_desbrute_be64(init_ciphertext), 64, MFULC_DES_IP, 64);
+        wa->args.prev_ciphertext_be = mfulc_desbrute_be64(prev_ciphertext);
+        wa->args.ciphertext_ip_block = mfulc_desbrute_perm(mfulc_desbrute_be64(ciphertext), 64, MFULC_DES_IP, 64);
+        mfulc_desbrute_keyschedule(
+            mfulc_desbrute_be64(wa->args.candidate_in_k1 ? base_key + 8 : base_key),
+            wa->args.fixed_sk
+        );
+        mfulc_desbrute_compute_sk_tables(
+            wa->args.candidate_in_k1 ? base_key : base_key + 8,
+            wa->args.var_offset,
+            wa->args.cand_sk_base,
+            wa->args.cand_sk_contrib
+        );
+        wa->shared = &shared;
+        current = wa->args.end;
+
+        if (pthread_create(&tids[i], NULL, mfulc_desbrute_worker, wa) != 0) {
+            shared.aborted = true;
+            threads = i;
+            PrintAndLogEx(WARNING, "Failed creating worker thread");
+            break;
+        }
+    }
+
+    while (true) {
+        uint64_t checked = 0;
+        bool all_done = true;
+
+        for (int i = 0; i < threads; i++) {
+            uint32_t p = worker_args[i].progress;
+            if (p < worker_args[i].args.start) {
+                p = worker_args[i].args.start;
+            }
+            if (p > worker_args[i].args.end) {
+                p = worker_args[i].args.end;
+            }
+            checked += (uint64_t)(p - worker_args[i].args.start);
+            if (worker_args[i].done == false) {
+                all_done = false;
+            }
+        }
+
+        uint64_t elapsed_now_ms = msclock() - start_ms;
+        double elapsed_s = elapsed_now_ms > 0 ? elapsed_now_ms / 1000.0 : 0.001;
+        double speed = checked / elapsed_s;
+        double pct = ((double)checked * 100.0) / (double)total;
+        uint64_t eta_s = 0;
+        char eta[16] = {0};
+        char elapsed[16] = {0};
+        char bar[32] = {0};
+
+        if (pct > 100.0) pct = 100.0;
+        if (speed > 0.0 && checked < total) {
+            eta_s = (uint64_t)(((double)total - (double)checked) / speed);
+        }
+        mfulc_desbrute_format_duration(eta_s, eta, sizeof(eta));
+        mfulc_desbrute_format_duration(elapsed_now_ms / 1000, elapsed, sizeof(elapsed));
+        mfulc_desbrute_progress_bar(pct, bar, sizeof(bar));
+
+        PrintAndLogEx(INPLACE, "%s%s" AEND " " _YELLOW_("%6.2f%%") "  checked " _CYAN_("%" PRIu64) "/" _CYAN_("%" PRIu32) "  " _GREEN_("%.0f keys/s") "  elapsed " _YELLOW_("%s") "  ETA " _YELLOW_("%s"),
+                      mfulc_desbrute_progress_color(pct), bar, pct, checked, total, speed, elapsed, eta);
+
+        if (all_done || shared.found || shared.aborted) {
+            break;
+        }
+        if (kbd_enter_pressed()) {
+            shared.aborted = true;
+            break;
+        }
+        msleep(250);
+    }
+    PrintAndLogEx(NORMAL, "");
+
+    for (int i = 0; i < threads; i++) {
+        pthread_join(tids[i], NULL);
+    }
+
+    uint64_t elapsed_ms = msclock() - start_ms;
+    free(tids);
+    free(worker_args);
+
+    if (shared.aborted) {
+        PrintAndLogEx(WARNING, "Aborted");
+        return PM3_EOPABORTED;
+    }
+    if (shared.found) {
+        PrintAndLogEx(SUCCESS, "Found key index: " _YELLOW_("%" PRIu32), shared.found_idx);
+        PrintAndLogEx(SUCCESS, "Full key: " _GREEN_("%s"), sprint_hex_inrow(shared.found_key, sizeof(shared.found_key)));
+        PrintAndLogEx(INFO, "Time spent " _YELLOW_("%.1fs"), elapsed_ms / 1000.0);
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(WARNING, "Key segment not found");
+    PrintAndLogEx(INFO, "Time spent " _YELLOW_("%.1fs"), elapsed_ms / 1000.0);
+    return PM3_ESOFT;
 }
 
 /**
@@ -4076,46 +5850,129 @@ static int CmdTestDES(const char * cmd)
 **/
 
 //
-// Mifare Ultralight C - Set password
+// Mifare Ultralight C/AES - Set keys
 //
-static int CmdHF14AMfUCSetPwd(const char *Cmd) {
+static int CmdHF14AMfUSetKey(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mfu setpwd",
-                  "Set the 3DES key on MIFARE Ultralight-C tag. ",
-                  "hf mfu setpwd --key 000102030405060708090a0b0c0d0e0f"
+    CLIParserInit(&ctx, "hf mfu setkey",
+                  "Set the 3DES key on MIFARE Ultralight C tag and the AES keys on Ultralight AES. \n"
+                  "Note: AUTH0 must allow unauthenticated writes to the key blocks\n"
+                  "UL-AES:\n"
+                  "  New Key index 0... DataProtKey (default)\n"
+                  "  New Key index 1... UIDRetrKey\n",
+                  "hf mfu setkey --key 49454D4B41455242214E4143554F5946\n"
+                  "hf mfu setkey --key <16 hex bytes> --idx <0..1>"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("k", "key", "<hex>", "New key (16 hex bytes)"),
+        arg_int0("i", "idx", "<0..1>", "New key index (def: 0), only for UL-AES"),
+        arg_lit0("l", NULL, "Swap entered keys' endianness"),
+        arg_str0(NULL, "usekey", "<hex>", "Current UL-C 3DES or UL-AES DataProt key (16 hex bytes)"),
+        arg_lit0(NULL, "schann", "use secure channel. Must have usekey"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    int k_len = 0;
-    uint8_t key[16] = {0x00};
-    CLIGetHexWithReturn(ctx, 1, key, &k_len);
+    int ak_len = 0;
+    uint8_t authenticationkey[16] = {0x00};
+    uint8_t *auth_key_ptr = authenticationkey;
+    CLIGetHexWithReturn(ctx, 1, authenticationkey, &ak_len);
+    int key_index = arg_get_int_def(ctx, 2, 0);
+    bool swap_endian = arg_get_lit(ctx, 3);
+    int use_ak_len = 0;
+    uint8_t use_authenticationkey[16] = {0x00};
+    uint8_t *use_auth_key_ptr = use_authenticationkey;
+    CLIGetHexWithReturn(ctx, 4, use_authenticationkey, &use_ak_len);
+    bool use_schann = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
-    if (k_len != 16) {
+    if (ak_len != 16) {
         PrintAndLogEx(WARNING, "Key must be 16 hex bytes");
         return PM3_EINVARG;
     }
+    if (key_index < 0 || key_index > 1) {
+        PrintAndLogEx(WARNING, "Invalid key index");
+        return PM3_EINVARG;
+    }
+
+    bool has_auth_key = false;
+    if (use_ak_len == 16) {
+        has_auth_key = true;
+    } else if (use_ak_len != 0) {
+        PrintAndLogEx(WARNING, "usekey must be 16 hex bytes\n");
+        return PM3_EINVARG;
+    }
+
+    if (use_schann && has_auth_key == false) {
+        PrintAndLogEx(WARNING, "Secure channel must be called with usekey");
+        return PM3_EINVARG;
+    }
+
+    uint64_t tagtype = GetHF14AMfU_Type();
+    if (tagtype == MFU_TT_UL_ERROR) {
+        return PM3_ESOFT;
+    }
+    if ((tagtype & (MFU_TT_UL_C | MFU_TT_UL_AES)) == 0) {
+        PrintAndLogEx(WARNING, "Tag is not Ultralight C or Ultralight AES");
+        return PM3_ESOFT;
+    }
+
+    // Swap endianness
+    // Beware, inverse condition! Key not used for authentication here
+    // if key not swapped by user, we need to swap it to write it in memory
+    if (swap_endian == false) {
+        if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) {
+            auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 8);
+        } else if ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES) {
+            auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 16);
+        }
+    }
+
+    // Swap endianness of usekey
+    if (swap_endian) {
+        if (use_ak_len == 16) {
+            if (((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C)) {
+                use_auth_key_ptr = SwapEndian64(use_authenticationkey, use_ak_len, 8);
+            } else if (((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES)) {
+                use_auth_key_ptr = SwapEndian64(use_authenticationkey, use_ak_len, 16);
+            }
+        }
+    }
+
+    if (has_auth_key) {
+        if (((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C)) {
+            PrintAndLogEx(INFO, "Using 3des... " _GREEN_("%s"), sprint_hex_inrow(use_authenticationkey, use_ak_len));
+        } else if (((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES)) {
+            PrintAndLogEx(INFO, "Using aes...  " _GREEN_("%s"), sprint_hex_inrow(use_authenticationkey, use_ak_len));
+        }
+    }
+
+    mful_setkey_t packet = {
+        .has_auth_key = has_auth_key,
+        .use_schann = use_schann,
+        .key_index = key_index,
+        .keytype = ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) ? 1 : 3, // 1=ULC 3=ULAES
+    };
+    if (has_auth_key) {
+        memcpy(packet.auth_key, use_auth_key_ptr, 16);
+    }
+    memcpy(packet.key, auth_key_ptr, 16);
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFAREUC_SETPWD, 0, 0, 0, key, sizeof(key));
-
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        if ((resp.oldarg[0] & 0xff) == 1) {
-            PrintAndLogEx(INFO, "Ultralight-C new key... " _GREEN_("%s"), sprint_hex_inrow(key, sizeof(key)));
-        } else {
-            PrintAndLogEx(WARNING, "Failed writing at block %u", (uint8_t)(resp.oldarg[1] & 0xFF));
-            return PM3_ESOFT;
-        }
-    } else {
+
+    SendCommandNG(CMD_HF_MIFAREU_SETKEY, (uint8_t *)&packet, sizeof(packet));
+    if (WaitForResponseTimeout(CMD_HF_MIFAREU_SETKEY, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
+    }
+    if (resp.status == PM3_SUCCESS) {
+        PrintAndLogEx(INFO, "New key...    " _GREEN_("%s"), sprint_hex_inrow(authenticationkey, sizeof(authenticationkey)));
+    } else {
+        PrintAndLogEx(WARNING, "Failed writing key");
+        return PM3_ESOFT;
     }
     return PM3_SUCCESS;
 }
@@ -4150,12 +6007,24 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Please ignore possible transient BCC warnings");
+    mful_readblock_t packetr = {
+        .use_schann = false,
+        .keytype = 0,
+        .keylen = 0,
+        .num_of_blocks = 1,
+    };
+    mful_writeblock_t packetw = {
+        .keytype = 0,
+        .use_schann = false,
+        .keylen = 0,
+    };
 
-    // read block2.
+    // read block 2
+    packetr.block_no = 2;
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFAREU_READBL, 2, 0, 0, NULL, 0);
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    SendCommandNG(CMD_HF_MIFAREU_READBL, (uint8_t *)&packetr, sizeof(packetr));
+    if (WaitForResponseTimeout(CMD_HF_MIFAREU_READBL, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
     }
@@ -4180,38 +6049,33 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     }
 
     // block 0.
-    uint8_t data[4];
-    data[0] = uid[0];
-    data[1] = uid[1];
-    data[2] = uid[2];
-    data[3] =  0x88 ^ uid[0] ^ uid[1] ^ uid[2];
+    memcpy(packetw.data, uid, 3);
+    packetw.data[3] =  0x88 ^ uid[0] ^ uid[1] ^ uid[2];
+    packetw.block_no = 0;
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, 0, 0, 0, data, sizeof(data));
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packetw, sizeof(packetw));
+    if (WaitForResponseTimeout(CMD_HF_MIFAREU_WRITEBL, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
     }
 
     // block 1.
-    data[0] = uid[3];
-    data[1] = uid[4];
-    data[2] = uid[5];
-    data[3] = uid[6];
+    memcpy(packetw.data, uid + 3, 4);
+    packetw.block_no = 1;
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, 1, 0, 0, data, sizeof(data));
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packetw, sizeof(packetw));
+    if (WaitForResponseTimeout(CMD_HF_MIFAREU_WRITEBL, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
     }
 
     // block 2.
-    data[0] = uid[3] ^ uid[4] ^ uid[5] ^ uid[6];
-    data[1] = oldblock2[1];
-    data[2] = oldblock2[2];
-    data[3] = oldblock2[3];
+    packetw.data[0] = uid[3] ^ uid[4] ^ uid[5] ^ uid[6];
+    memcpy(packetw.data + 1, oldblock2 + 1, 3);
+    packetw.block_no = 2;
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, 2, 0, 0, data, sizeof(data));
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packetw, sizeof(packetw));
+    if (WaitForResponseTimeout(CMD_HF_MIFAREU_WRITEBL, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
     }
@@ -4251,9 +6115,10 @@ static int CmdHF14AMfUKeyGen(const char *Cmd) {
     if (read_tag) {
         // read uid from tag
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
+        SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_RATS, NULL, 0);
         PacketResponseNG resp;
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        uint8_t sel_6133 = 0;
+        if (WaitForIso14aReply(&resp, 2500, NULL, &sel_6133) == false) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply");
             return PM3_ETIMEOUT;
         }
@@ -4261,7 +6126,7 @@ static int CmdHF14AMfUKeyGen(const char *Cmd) {
         iso14a_card_select_t card;
         memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
-        uint64_t select_status = resp.oldarg[0];
+        uint64_t select_status = sel_6133;
         // 0: couldn't read,
         // 1: OK, with ATS
         // 2: OK, no ATS
@@ -4423,7 +6288,7 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
             if (ul_select(&card)) {
                 // Philips toothbrush needs page 0x21-0x23
                 uint8_t data[16] = {0x00};
-                int status = ul_read(0x21, data, sizeof(data));
+                int status = ul_read(0x21, data, sizeof(data), false);
                 if (status <= 0) {
                     PrintAndLogEx(DEBUG, "Error: tag didn't answer to READ");
                 } else if (status == 16) {
@@ -4529,8 +6394,8 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
         PrintAndLogEx(WARNING, "end time smaller than increase value");
         return PM3_EINVARG;
     }
-    if (end > 43000) {
-        PrintAndLogEx(WARNING, "end time - out of 1 .. 43000 range");
+    if (end > 65535) {
+        PrintAndLogEx(WARNING, "end time - out of 1 .. 65535 range");
         return PM3_EINVARG;
     }
     if (start > (end - steps)) {
@@ -4567,7 +6432,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
         PrintAndLogEx(INFO, "Target match block data  : %s", sprint_hex_inrow(match, 4));
     }
     PrintAndLogEx(INFO, "----------------------------------------------------");
-    uint8_t isOK;
+
     bool lock_on = false;
     uint8_t pre[4] = {0};
     uint8_t post[4] = {0};
@@ -4579,6 +6444,22 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
     bool skip_phase1 = false;
     uint8_t retries = 0;
     uint8_t error_retries = 0;
+
+    // read block X
+    mful_readblock_t packetr = {
+        .use_schann = false,
+        .keytype = 0,
+        .keylen = 0,
+        .num_of_blocks = 1,
+    };
+
+    mful_writeblock_t packetw = {
+        .block_no = blockno,
+        .keytype = 0,
+        .use_schann = false,
+        .keylen = 0,
+    };
+    memcpy(packetw.data, data, sizeof(data));
 
     while ((current <= (end - steps)) && (error_retries < 10)) {
 
@@ -4593,42 +6474,36 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
         PacketResponseNG resp;
 
         if (use_data) {
-            SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, blockno, 0, 0, data, d_len);
-            bool got_written = false;
-            if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-                isOK  = resp.oldarg[0] & 0xff;
-                if (isOK) {
-                    got_written = true;
-                }
-            }
-            if (! got_written) {
+            SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packetw, sizeof(packetw));
+            if ((WaitForResponseTimeout(CMD_HF_MIFAREU_WRITEBL, &resp, 1500) == false) ||
+                    (resp.status != PM3_SUCCESS)) {
                 PrintAndLogEx(FAILED, "Failed to write block BEFORE");
                 error_retries++;
                 continue; // try again
             }
         }
 
-        SendCommandMIX(CMD_HF_MIFAREU_READBL, blockno, 0, 0, NULL, 0);
-
-        bool got_pre = false;
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-            isOK = resp.oldarg[0] & 0xFF;
-            if (isOK) {
-                memcpy(pre, resp.data.asBytes, sizeof(pre));
-                got_pre = true;
-            }
-        }
-        if (! got_pre) {
+        packetr.block_no = blockno;
+        SendCommandNG(CMD_HF_MIFAREU_READBL, (uint8_t *)&packetr, sizeof(packetr));
+        if ((WaitForResponseTimeout(CMD_HF_MIFAREU_READBL, &resp, 1500) == false) ||
+                (resp.status != PM3_SUCCESS)) {
             PrintAndLogEx(FAILED, "Failed to read block BEFORE");
             error_retries++;
             continue; // try again
         }
+        memcpy(post, resp.data.asBytes, sizeof(post));
+
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MFU_OTP_TEAROFF, blockno, current, 0, teardata, sizeof(teardata));
+        uint8_t tbuf[sizeof(mfu_otp_tearoff_t) + sizeof(teardata)] = {0};
+        mfu_otp_tearoff_t *tpayload = (mfu_otp_tearoff_t *)tbuf;
+        tpayload->blockno = blockno;
+        tpayload->tearoff_time = current;
+        memcpy(tpayload->data, teardata, sizeof(teardata));
+        SendCommandNG(CMD_HF_MFU_OTP_TEAROFF, tbuf, sizeof(tbuf));
 
         // we be getting ACK that we are silently ignoring here..
 
-        if (!WaitForResponseTimeout(CMD_HF_MFU_OTP_TEAROFF, &resp, 2000)) {
+        if (WaitForResponseTimeout(CMD_HF_MFU_OTP_TEAROFF, &resp, 2000) == false) {
             PrintAndLogEx(WARNING, "Failed");
             return PM3_ESOFT;
         }
@@ -4639,21 +6514,16 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
             continue;
         }
 
-        bool got_post = false;
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MIFAREU_READBL, blockno, 0, 0, NULL, 0);
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-            isOK = resp.oldarg[0] & 0xFF;
-            if (isOK) {
-                memcpy(post, resp.data.asBytes, sizeof(post));
-                got_post = true;
-            }
-        }
-        if (! got_post) {
+        SendCommandNG(CMD_HF_MIFAREU_READBL, (uint8_t *)&packetr, sizeof(packetr));
+        if ((WaitForResponseTimeout(CMD_HF_MIFAREU_READBL, &resp, 1500) == false) ||
+                (resp.status != PM3_SUCCESS)) {
             PrintAndLogEx(FAILED, "Failed to read block BEFORE");
             error_retries++;
             continue; // try again
         }
+        memcpy(post, resp.data.asBytes, sizeof(post));
+
         error_retries = 0;
         char prestr[20] = {0};
         snprintf(prestr, sizeof(prestr), "%s", sprint_hex_inrow(pre, sizeof(pre)));
@@ -4680,20 +6550,25 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
             uint32_t post32 = bytes_to_num(post, 4);
             uint32_t pre32 = bytes_to_num(pre, 4);
 
-            if ((phase_begin_clear == -1) && (bitcount32(pre32) > bitcount32(post32)))
+            if ((phase_begin_clear == -1) && (bitcount32(pre32) > bitcount32(post32))) {
                 phase_begin_clear = current;
+            }
 
-            if ((phase_begin_clear > -1) && (phase_end_clear == -1) && (bitcount32(post32) == 0))
+            if ((phase_begin_clear > -1) && (phase_end_clear == -1) && (bitcount32(post32) == 0)) {
                 phase_end_clear = current;
+            }
 
-            if ((current == start) && (phase_end_clear > -1))
+            if ((current == start) && (phase_end_clear > -1)) {
                 skip_phase1 = true;
+            }
             // new write phase must be atleast 100us later..
-            if (((bitcount32(pre32) == 0) || (phase_end_clear > -1)) && (phase_begin_newwr == -1) && (bitcount32(post32) != 0) && (skip_phase1 || (current > (phase_end_clear + 100))))
+            if (((bitcount32(pre32) == 0) || (phase_end_clear > -1)) && (phase_begin_newwr == -1) && (bitcount32(post32) != 0) && (skip_phase1 || (current > (phase_end_clear + 100)))) {
                 phase_begin_newwr = current;
+            }
 
-            if ((phase_begin_newwr > -1) && (phase_end_newwr == -1) && (memcmp(post, teardata, sizeof(teardata)) == 0))
+            if ((phase_begin_newwr > -1) && (phase_end_newwr == -1) && (memcmp(post, teardata, sizeof(teardata)) == 0)) {
                 phase_end_newwr = current;
+            }
         }
 
         if (use_match && memcmp(post, match, sizeof(post)) == 0) {
@@ -4732,12 +6607,15 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
     if ((phase_begin_clear > - 1) && (phase_begin_clear != start)) {
         PrintAndLogEx(INFO, "Erase phase start boundary around " _YELLOW_("%5d") " us", phase_begin_clear);
     }
+
     if ((phase_end_clear > - 1) && (phase_end_clear != start)) {
         PrintAndLogEx(INFO, "Erase phase end boundary around   " _YELLOW_("%5d") " us", phase_end_clear);
     }
+
     if (phase_begin_newwr > - 1) {
         PrintAndLogEx(INFO, "Write phase start boundary around " _YELLOW_("%5d") " us", phase_begin_newwr);
     }
+
     if (phase_end_newwr > - 1) {
         PrintAndLogEx(INFO, "Write phase end boundary around   " _YELLOW_("%5d") " us", phase_end_newwr);
     }
@@ -4745,7 +6623,8 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-/*
+
+
 static int counter_reset_tear(iso14a_card_select_t *card, uint8_t cnt_no) {
 
     PrintAndLogEx(INFO, "Reset tear check");
@@ -4758,7 +6637,7 @@ static int counter_reset_tear(iso14a_card_select_t *card, uint8_t cnt_no) {
         PrintAndLogEx(FAILED, "failed to select card, exiting...");
         return PM3_ESOFT;
     }
-    if (ul_send_cmd_raw(cw, sizeof(cw), resp, sizeof(resp)) < 0) {
+    if (ul_send_cmd_raw(cw, sizeof(cw), resp, sizeof(resp), false) < 0) {
         PrintAndLogEx(FAILED, "failed to write all ZEROS");
         return PM3_ESOFT;
     }
@@ -4774,17 +6653,17 @@ static int counter_reset_tear(iso14a_card_select_t *card, uint8_t cnt_no) {
     }
     return PM3_SUCCESS;
 }
-*/
 
-/*
+
+
 static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfu countertear",
                   "Tear-off test against a Ev1 counter",
-                  "hf mfu countertear\n"
-                  "hf mfu countertear -s 200 -l 2500      -> target counter 0, start delay 200\n"
-                  "hf mfu countertear -i 2 -s 200 -l 400  -> target counter 0, start delay 200\n"
+                  "hf mfu countertear -c 0         -> target counter 0\n"
+                  "hf mfu countertear -c 0 -s 200  -> target counter 0, start delay 200\n"
+                  "hf mfu countertear -c 0 -x 020000  -> target counter 0, increasing the counter by 2 bytes\n"
                  );
 
     void *argtable[] = {
@@ -4792,9 +6671,9 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
         arg_int0("c", "cnt", "<0,1,2>", "Target this EV1 counter (0,1,2)"),
         arg_int0("i", "inc", "<dec>", "time interval to increase in each iteration - default 10 us"),
         arg_int0("l", "limit", "<dec>", "test upper limit time - default 3000 us"),
-        arg_int0("s", "start", "<dec>", "test start time - default 0 us"),
+        arg_int0("s", "start", "<dec>", "test start time - default 500 us"),
         arg_int0(NULL, "fix", "<dec>", "test fixed loop delay"),
-        arg_str0("x", "hex",  NULL, "3 byte hex to increase counter with"),
+        arg_str0("x", "hex",  NULL, "3 byte hex to increase counter with - default 010000"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -4804,10 +6683,10 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
     int counter = arg_get_int_def(ctx, 1, 0);
     int fixed = arg_get_int_def(ctx, 5, -1);
 
-    if ( fixed == -1 ) {
+    if (fixed == -1) {
         interval = arg_get_int_def(ctx, 2, 10);
         time_limit = arg_get_int_def(ctx, 3, 3000);
-        start_time = arg_get_int_def(ctx, 4, 0);
+        start_time = arg_get_int_def(ctx, 4, 500);
     } else {
         start_time = fixed;
         interval = 0;
@@ -4828,8 +6707,8 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
         PrintAndLogEx(WARNING, "Wrong time limit number");
         return PM3_EINVARG;
     }
-    if (time_limit > 43000) {
-        PrintAndLogEx(WARNING, "You can't set delay out of 1..43000 range!");
+    if (time_limit > 65535) {
+        PrintAndLogEx(WARNING, "You can't set delay out of 1..65535 range!");
         return PM3_EINVARG;
     }
     uint8_t cnt_no = 0;
@@ -4851,8 +6730,8 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
     }
 
     uint8_t initial_cnt[3] = {0, 0, 0};
-    int len = ulev1_readCounter(cnt_no, initial_cnt, sizeof(initial_cnt));
-    if ( len != sizeof(initial_cnt) ) {
+    int len = ulev1_readCounter(cnt_no, initial_cnt, sizeof(initial_cnt), false);
+    if (len != sizeof(initial_cnt)) {
         PrintAndLogEx(WARNING, "failed to read counter");
         return PM3_ESOFT;
     }
@@ -4860,69 +6739,190 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
     uint8_t initial_tear[1] = {0};
     len = ulev1_readTearing(cnt_no, initial_tear, sizeof(initial_tear));
     DropField();
-    if ( len != sizeof(initial_tear) ) {
+    if (len != sizeof(initial_tear)) {
         PrintAndLogEx(WARNING, "failed to read ANTITEAR,  exiting...  %d", len);
         return PM3_ESOFT;
     }
 
-    uint32_t wr_value = ( newvalue[0] | newvalue[1] << 8 | newvalue[2] << 16 );
-    uint32_t initial_value = ( initial_cnt[0] | initial_cnt[1] << 8 | initial_cnt[2] << 16 );;
-
-    PrintAndLogEx(INFO, "----------------- " _CYAN_("MFU Ev1 Counter Tear off") " ---------------------");
+    PrintAndLogEx(INFO, "------------- " _CYAN_("MFU Ev1 Counter Tear off") " -------------");
     PrintAndLogEx(INFO, "Target counter no     [ " _GREEN_("%u") " ]", counter);
-    PrintAndLogEx(INFO, "       counter value  [ " _GREEN_("%s") " ]", sprint_hex_inrow(initial_cnt, sizeof(initial_cnt)));
-    PrintAndLogEx(INFO, "     anti-tear value  [ " _GREEN_("%02X") " ]", initial_tear[0]);
-    PrintAndLogEx(INFO, "       increase value [ " _GREEN_("%s") " ]", sprint_hex_inrow(newvalue, newvaluelen));
+    PrintAndLogEx(INFO, "counter value         [ " _GREEN_("%s") " ]", sprint_hex_inrow(initial_cnt, sizeof(initial_cnt)));
+    PrintAndLogEx(INFO, "anti-tear value       [ " _GREEN_("%02X") " ]", initial_tear[0]);
     PrintAndLogEx(INFO, "----------------------------------------------------");
 
-    uint8_t pre_tear = 0, post_tear = 0;
+    uint8_t post_tear = 0;
     uint8_t pre[3] = {0};
     uint8_t post[3] = {0};
-    uint32_t actual_time = start_time;
     uint32_t a = 0, b = 0;
     uint32_t loop = 0;
 
-    uint16_t late = 0;
+    uint8_t cntresp[3] = {0, 0, 0};
+    uint8_t tear[1] = {0};
+    int tlen = 0;
+    int delay_bd;
+    int delay_00;
+    char prestr[20];
+    char poststr[20];
+    int const_post = 0;
+    bool post_tear_check;
 
-    while (actual_time <= (time_limit - interval)) {
+    counter_reset_tear(&card, cnt_no);
+    if (ul_select(&card) == false) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "BEFORE, failed to select card,  exiting...");
+        return PM3_ESOFT;
+    }
+    msleep(30);
 
-        DropField();
+    if (fixed == -1) {
+        for (delay_bd = start_time; delay_bd <= time_limit; delay_bd += interval) {
 
-        loop++;
+            if (kbd_enter_pressed()) {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(INFO, "\nAborted via keyboard!\n");
+                return PM3_EOPABORTED;
+            }
+
+            if (ul_select(&card) == false) {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(FAILED, "AFTER, failed to select card,  exiting...");
+                return PM3_ESOFT;
+            }
+            msleep(30);
+
+            memset(cntresp, 0, sizeof(cntresp));
+            int rlen = ulev1_readCounter(cnt_no, cntresp, sizeof(cntresp), false);
+            if (rlen == sizeof(cntresp)) {
+                memcpy(pre, cntresp, sizeof(pre));
+            } else {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(FAILED, "BEFORE, failed to read COUNTER,  exiting...");
+                return PM3_ESOFT;
+            }
+
+            struct p {
+                uint8_t counter;
+                uint32_t tearoff_time;
+                uint8_t value[3];
+            } PACKED payload;
+            payload.counter = cnt_no;
+            payload.tearoff_time = delay_bd;
+            memcpy(payload.value, (uint8_t[]) {0x01, 0x00, 0x00}, sizeof(payload.value));
+
+            clearCommandBuffer();
+            PacketResponseNG resp;
+            SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t *)&payload, sizeof(payload));
+            if (WaitForResponseTimeout(CMD_HF_MFU_COUNTER_TEAROFF, &resp, 2000) == false) {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(WARNING, "\nTear off command failed");
+                return PM3_ESOFT;
+            }
+
+            DropField();
+            msleep(50);
+
+            if (ul_select(&card) == false) {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(FAILED, "AFTER, failed to select card,  exiting...");
+                return PM3_ESOFT;
+            }
+            msleep(30);
+
+            memset(cntresp, 0, sizeof(cntresp));
+            rlen = ulev1_readCounter(cnt_no, cntresp, sizeof(cntresp), false);
+            if (rlen == sizeof(cntresp)) {
+                memcpy(post, cntresp, sizeof(post));
+            } else {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(FAILED, "AFTER, failed to read COUNTER,  exiting...");
+                return PM3_ESOFT;
+            }
+
+            tear[0] = 0;
+            tlen = ulev1_readTearing(cnt_no, tear, sizeof(tear));
+            if (tlen == sizeof(tear)) {
+                post_tear = tear[0];
+            } else {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(FAILED, "AFTER, failed to read ANTITEAR,  exiting...");
+                return PM3_ESOFT;
+            }
+
+            snprintf(poststr, sizeof(poststr), "%s", sprint_hex_inrow(post, sizeof(post)));
+            post_tear_check = (post_tear == 0xBD);
+            a = (pre[0] | pre[1] << 8 | pre[2]  << 16);
+            b = (post[0] | post[1] << 8 | post[2]  << 16);
+            PrintAndLogEx(INPLACE, "Delay: " _YELLOW_("%d") "   Tear: %s   Counter: " _YELLOW_("%s") ""
+                          , delay_bd
+                          , sprint_hex_inrow(tear, sizeof(tear))
+                          , poststr
+
+                         );
+
+            DropField();
+            msleep(50);
+
+            if (b != a && post_tear == 0xBD) {
+                if (b < a && b == 0) {
+                    counter_reset_tear(&card, cnt_no);
+                    counter_reset_tear(&card, cnt_no);
+
+                    if (ul_select(&card) == false) {
+                        PrintAndLogEx(NORMAL, "");
+                        PrintAndLogEx(FAILED, "BEFORE, failed to select card,  looping...");
+                        continue;
+                    }
+                    msleep(30);
+
+                    tear[0] = 0;
+                    tlen = ulev1_readTearing(cnt_no, tear, sizeof(tear));
+                    if (tlen == sizeof(tear)) {
+                        post_tear = tear[0];
+                    } else {
+                        PrintAndLogEx(NORMAL, "");
+                        PrintAndLogEx(FAILED, "AFTER, failed to read ANTITEAR,  exiting...");
+                        continue;
+                    }
+                    post_tear_check = (post_tear == 0xBD);
+                    PrintAndLogEx(INFO, "------------------- " _GREEN_("ZEROS value!") " -------------------");
+
+                    PrintAndLogEx(SUCCESS, "Attempt:        " _YELLOW_("%d"), loop);
+                    PrintAndLogEx(SUCCESS, "Delay BD:    " _YELLOW_("%d"), delay_bd);
+                    PrintAndLogEx(SUCCESS, "Counter:        %s -> " _GREEN_("%s"), prestr, poststr);
+                    PrintAndLogEx(SUCCESS, "Tear status:    0x%02X ( %s )",
+                                  post_tear,
+                                  post_tear_check ? _GREEN_("OK") : _RED_("NOT OK"));
+
+                    PrintAndLogEx(INFO, "----------------------------------------------------");
+                    DropField();
+                    return PM3_SUCCESS;
+                }
+                const_post = b;
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(SUCCESS, "BD delay found: " _GREEN_("%d"), delay_bd);
+                DropField();
+                break;
+            }
+
+        }
+    } else if (fixed != -1) {
+        delay_bd = fixed;
+    }
+
+    if (ul_select(&card) == false) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "BEFORE, failed to select card,  exiting...");
+        return PM3_ESOFT;
+    }
+    msleep(30);
+
+    for (delay_00 = 100; delay_00 <= 2000; delay_00 += 10) {
 
         if (kbd_enter_pressed()) {
-            PrintAndLogEx(INFO, "\naborted via keyboard!\n");
-            break;
-        }
-
-        PrintAndLogEx(INPLACE, "Using tear-off delay " _GREEN_("%" PRIu32) " µs  (attempt %u)", actual_time, loop);
-
-        if (ul_select(&card) == false) {
-            PrintAndLogEx(FAILED, "BEFORE, failed to select card,  looping...");
-            continue;
-        }
-
-        uint8_t cntresp[3] = {0, 0, 0};
-        int rlen = ulev1_readCounter(cnt_no, cntresp, sizeof(cntresp));
-        if ( rlen == sizeof(cntresp) ) {
-            memcpy(pre, cntresp, sizeof(pre));
-        } else {
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(FAILED, "BEFORE, failed to read COUNTER,  exiting...");
-            break;
+            PrintAndLogEx(INFO, "\nAborted via keyboard!\n");
+            return PM3_EOPABORTED;
         }
-
-        uint8_t tear[1] = {0};
-        int tlen = ulev1_readTearing(cnt_no, tear, sizeof(tear));
-        if ( tlen == sizeof(tear) ) {
-            pre_tear = tear[0];
-        } else {
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(FAILED, "BEFORE, failed to read ANTITEAR,  exiting...  %d", tlen);
-            break;
-        }
-
-        DropField();
 
         struct p {
             uint8_t counter;
@@ -4930,214 +6930,261 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
             uint8_t value[3];
         } PACKED payload;
         payload.counter = cnt_no;
-        payload.tearoff_time = actual_time;
-        memcpy(payload.value, newvalue, sizeof(payload.value));
+        payload.tearoff_time = delay_00;
+        memcpy(payload.value, (uint8_t[]) {0x00, 0x00, 0x00}, sizeof(payload.value));
 
         clearCommandBuffer();
         PacketResponseNG resp;
-        SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t*)&payload, sizeof(payload));
-        if (!WaitForResponseTimeout(CMD_HF_MFU_COUNTER_TEAROFF, &resp, 2000)) {
-            PrintAndLogEx(WARNING, "\ntear off command failed");
-            continue;
+        SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t *)&payload, sizeof(payload));
+        if (WaitForResponseTimeout(CMD_HF_MFU_COUNTER_TEAROFF, &resp, 2000) == false) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(WARNING, "\nTear off command failed");
+            return PM3_ESOFT;
         }
+
+        DropField();
+        msleep(50);
 
         if (ul_select(&card) == false) {
-            PrintAndLogEx(FAILED, "AFTER, failed to select card,  exiting...");
-            break;
-        }
-
-        rlen = ulev1_readCounter(cnt_no, cntresp, sizeof(cntresp));
-        if ( rlen == sizeof(cntresp) ) {
-            memcpy(post, cntresp, sizeof(post));
-        } else {
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(FAILED, "AFTER, failed to read COUNTER,  exiting...");
-            break;
+            PrintAndLogEx(FAILED, "AFTER, failed to select card,  exiting...");
+            return PM3_ESOFT;
         }
+        msleep(30);
+
 
         tear[0] = 0;
         tlen = ulev1_readTearing(cnt_no, tear, sizeof(tear));
-        if ( tlen == sizeof(tear) ) {
+        if (tlen == sizeof(tear)) {
             post_tear = tear[0];
         } else {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(FAILED, "AFTER, failed to read ANTITEAR,  exiting...");
+            return PM3_ESOFT;
+        }
+
+        post_tear_check = (post_tear == 0xBD);
+
+        PrintAndLogEx(INPLACE, "Delay: " _YELLOW_("%d") "   Tear: %s   Counter: " _YELLOW_("%s") ""
+                      , delay_00
+                      , sprint_hex_inrow(tear, sizeof(tear))
+                      , poststr
+                     );
+        if (post_tear == 0x00) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(SUCCESS, "00 delay found: " _GREEN_("%d"), delay_00);
+            DropField();
             break;
         }
 
-        DropField();
+    }
 
-        char prestr[20] = {0};
+    counter_reset_tear(&card, cnt_no);
+    counter_reset_tear(&card, cnt_no);
+
+    while (true) {
+
+        loop++;
+
+        if (kbd_enter_pressed()) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "\nAborted via keyboard!\n");
+            return PM3_EOPABORTED;
+        }
+
+        if (ul_select(&card) == false) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(FAILED, "BEFORE, failed to select card,  looping...");
+            continue;
+        }
+        msleep(30);
+
+        memset(cntresp, 0, sizeof(cntresp));
+        int rlen = ulev1_readCounter(cnt_no, cntresp, sizeof(cntresp), false);
+        if (rlen == sizeof(cntresp)) {
+            memcpy(pre, cntresp, sizeof(pre));
+        } else {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(FAILED, "BEFORE, failed to read COUNTER,  exiting...");
+            continue;
+        }
+
+        struct p {
+            uint8_t counter;
+            uint32_t tearoff_time;
+            uint8_t value[3];
+        } PACKED payload;
+        payload.counter = cnt_no;
+        payload.tearoff_time = delay_bd;
+        if (newvaluelen > 0) {
+            memcpy(payload.value, newvalue, sizeof(payload.value));
+        } else {
+            memcpy(payload.value, (uint8_t[]) {0x01, 0x00, 0x00}, sizeof(payload.value));
+        }
+
+        clearCommandBuffer();
+        PacketResponseNG resp;
+        SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t *)&payload, sizeof(payload));
+        if (WaitForResponseTimeout(CMD_HF_MFU_COUNTER_TEAROFF, &resp, 2000) == false) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(WARNING, "\nTear off command failed");
+            continue;
+        }
+
+        DropField();
+        msleep(50);
+
+        if (ul_select(&card) == false) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(FAILED, "AFTER, failed to select card,  exiting...");
+            continue;
+        }
+        msleep(30);
+
+        payload.counter = cnt_no;
+        payload.tearoff_time = delay_00;
+        memcpy(payload.value, (uint8_t[]) {0x00, 0x00, 0x00}, sizeof(payload.value));
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t *)&payload, sizeof(payload));
+        if (WaitForResponseTimeout(CMD_HF_MFU_COUNTER_TEAROFF, &resp, 2000) == false) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(WARNING, "\nTear off command failed");
+            continue;
+        }
+
+        DropField();
+        msleep(50);
+
+        if (ul_select(&card) == false) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(FAILED, "BEFORE, failed to select card,  looping...");
+            continue;
+        }
+        msleep(30);
+
+        memset(cntresp, 0, sizeof(cntresp));
+        rlen = ulev1_readCounter(cnt_no, cntresp, sizeof(cntresp), false);
+        if (rlen == sizeof(cntresp)) {
+            memcpy(post, cntresp, sizeof(post));
+        } else {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(FAILED, "AFTER, failed to read COUNTER,  exiting...");
+            continue;
+        }
+
+        tear[0] = 0;
+        tlen = ulev1_readTearing(cnt_no, tear, sizeof(tear));
+        if (tlen == sizeof(tear)) {
+            post_tear = tear[0];
+        } else {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(FAILED, "AFTER, failed to read ANTITEAR,  exiting...");
+            continue;
+        }
+
         snprintf(prestr, sizeof(prestr), "%s", sprint_hex_inrow(pre, sizeof(pre)));
-        char poststr[20] = {0};
+
         snprintf(poststr, sizeof(poststr), "%s", sprint_hex_inrow(post, sizeof(post)));
 
-        bool post_tear_check = (post_tear == 0xBD);
+        post_tear_check = (post_tear == 0xBD);
         a = (pre[0] | pre[1] << 8 | pre[2]  << 16);
         b = (post[0] | post[1] << 8 | post[2]  << 16);
 
         // A != B
         if (memcmp(pre, post, sizeof(pre)) != 0) {
 
-
-            PrintAndLogEx(NORMAL, "");
-
-            if (initial_value != a ) {
-
-                if ( initial_value != b )
-                    PrintAndLogEx(INFO, "pre %08x, post %08x != initial %08x  |  tear:  0x%02X  == 0x%02X", a, b, initial_value, pre_tear, post_tear);
-                else
-                    PrintAndLogEx(INFO, "pre %08x != initial and post %08x == initial %08x |  tear:  0x%02X  == 0x%02X", a, b, initial_value, pre_tear, post_tear);
-            } else {
-
-                if ( initial_value != b )
-                    PrintAndLogEx(INFO, "pre %08x == initial and post %08x != initial  %08x |  tear:  0x%02X  == 0x%02X", a, b, initial_value, pre_tear, post_tear);
-            }
-
-            if ( b == 0 ) {
-                PrintAndLogEx(INFO, _CYAN_("Tear off occurred  (ZEROS value!) ->  ") "%s vs " _GREEN_("%s") "  Tear status:  0x%02X == 0x%02X   ( %s )"
-                    , prestr
-                    , poststr
-                    , pre_tear
-                    , post_tear
-                    , post_tear_check ? _GREEN_("ok") : _RED_("DETECTED")
-                );
-                break;
-            }
-
-            if ( a > b ) {
-                PrintAndLogEx(INFO, _CYAN_("Tear off occurred  " _RED_("( LESS )") " ->  ") "%s vs " _GREEN_("%s") "  Tear status:  0x%02X == 0x%02X   ( %s )"
-                    , prestr
-                    , poststr
-                    , pre_tear
-                    , post_tear
-                    , post_tear_check ? _GREEN_("ok") : _RED_("DETECTED")
-                );
-
-
-                if (counter_reset_tear(&card, cnt_no) != PM3_SUCCESS){
-                    PrintAndLogEx(FAILED, "failed to reset tear,  exiting...");
-                    break;
-                }
-
-                uint32_t bar =  (0x1000000 - b) + 2;
-                // wr_value = bar;
-                // newvalue[0] = (bar) & 0xFF;
-                // newvalue[1] = ((bar >> 8) & 0xFF);
-                // newvalue[2] = ((bar >> 16) & 0xFF);
-
-                wr_value = 0;
-                newvalue[0] = 0;
-                newvalue[1] = 0;
-                newvalue[2] = 0;
-
-                PrintAndLogEx(INFO, "     0x1000000 - 0x%x == 0x%x", b, bar);
-                PrintAndLogEx(INFO, "      new increase value 0x%x" , wr_value);
-                PrintAndLogEx(INFO, "    because BAR + post == 0x%x" , bar + b);
-
-                PrintAndLogEx(INFO, "New increase value " _YELLOW_("%s"), sprint_hex_inrow(newvalue, newvaluelen));
-                continue;
-            } else  {
+            if (b < a) {
 
                 PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(INFO, _CYAN_("Tear off occurred  (+1)  (too late) ->  ") "%s vs %s   Tear:  0x%02X == 0x%02X   ( %s )"
-                    , prestr
-                    , poststr
-                    , pre_tear
-                    , post_tear
-                    , post_tear_check ? _GREEN_("ok") : _RED_("DETECTED")
-                );
 
-                if ( post_tear_check  && b == initial_value) {
-                    PrintAndLogEx(INFO, "Reverted to previous value");
+                if (b == 0) {
+                    counter_reset_tear(&card, cnt_no);
+                    counter_reset_tear(&card, cnt_no);
+
+                    if (ul_select(&card) == false) {
+                        PrintAndLogEx(NORMAL, "");
+                        PrintAndLogEx(FAILED, "BEFORE, failed to select card,  looping...");
+                        continue;
+                    }
+                    msleep(30);
+
+                    tear[0] = 0;
+                    tlen = ulev1_readTearing(cnt_no, tear, sizeof(tear));
+                    if (tlen == sizeof(tear)) {
+                        post_tear = tear[0];
+                    } else {
+                        PrintAndLogEx(NORMAL, "");
+                        PrintAndLogEx(FAILED, "AFTER, failed to read ANTITEAR,  exiting...");
+                        continue;
+                    }
+                    post_tear_check = (post_tear == 0xBD);
+
+                    PrintAndLogEx(INFO, "------------------- " _GREEN_("ZEROS value!") " -------------------");
+
+                    PrintAndLogEx(SUCCESS, "Attempt:        " _YELLOW_("%d"), loop);
+                    PrintAndLogEx(SUCCESS, "Delay BD/00:    " _YELLOW_("%d/%d"), delay_bd, delay_00);
+                    PrintAndLogEx(SUCCESS, "Counter:        %s -> " _GREEN_("%s"), prestr, poststr);
+                    PrintAndLogEx(SUCCESS, "Tear status:    0x%02X ( %s )",
+                                  post_tear,
+                                  post_tear_check ? _GREEN_("OK") : _RED_("NOT OK"));
+
+                    PrintAndLogEx(INFO, "----------------------------------------------------");
                     break;
                 }
-                if ( wr_value != 0 ) {
 
-                    //uint32_t bar =  (0x1000000 - b) + 2;
-                    wr_value = 0;
-                    newvalue[0] = 0;
-                    newvalue[1] = 0;
-                    newvalue[2] = 0;
+                else {
+                    PrintAndLogEx(INFO, "----------------------- " _GREEN_("LESS") " -----------------------");
 
-                    if ( b >= (initial_value + (2 * wr_value))) {
-                        PrintAndLogEx(INFO, "Large " _YELLOW_("( JUMP )") " detected");
+                    PrintAndLogEx(SUCCESS, "Attempt:        " _YELLOW_("%d"), loop);
+                    PrintAndLogEx(SUCCESS, "Delay BD/00:    " _YELLOW_("%d/%d"), delay_bd, delay_00);
+                    PrintAndLogEx(SUCCESS, "Counter:        %s -> " _GREEN_("%s"), prestr, poststr);
+                    PrintAndLogEx(SUCCESS, "Tear status:    0x%02X ( %s )",
+                                  post_tear,
+                                  post_tear_check ? _RED_("NOT OK") : _GREEN_("OK"));
 
-
-                        // wr_value = bar;
-                        // newvalue[0] = (bar) & 0xFF;
-                        // newvalue[1] = ((bar >> 8) & 0xFF);
-                        // newvalue[2] = ((bar >> 16) & 0xFF);
-                    } else {
-
-                        // wr_value = bar;
-                        // newvalue[0] = (bar) & 0xFF;
-                        // newvalue[1] = ((bar >> 8) & 0xFF);
-                        // newvalue[2] = ((bar >> 16) & 0xFF);
-                        // wr_value = 0;
-                        // newvalue[0] = 0;
-                        // newvalue[1] = 0;
-                        // newvalue[2] = 0;
-                    }
-
-                }
-                PrintAndLogEx(INFO, "New increase value " _YELLOW_("%s"), sprint_hex_inrow(newvalue, newvaluelen));
-
-                //actual_time--;
-                late++;
-            }
-        } else {
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(INFO, _CYAN_("Status:  same value!   ->  ") "%s == %s   Tear:  0x%02X == 0x%02X   ( %s )"
-                , prestr
-                , poststr
-                , pre_tear
-                , post_tear
-                , post_tear_check ? _GREEN_("ok") : _RED_("DETECTED")
-            );
-
-            if ( post_tear_check ) {
-                if ( a == b ) {
-                    //actual_time--;
+                    PrintAndLogEx(INFO, "----------------------------------------------------");
                     continue;
                 }
 
-                if ( b == initial_value ) {
-                    PrintAndLogEx(INFO, "Reverted to previous value");
-                    break;
-                }
-            } else {
-
-                if (counter_reset_tear(&card, cnt_no) != PM3_SUCCESS){
-                    PrintAndLogEx(FAILED, "failed to reset tear,  exiting...");
-                    break;
-                }
-
             }
+
         }
 
-        actual_time += interval;
+        PrintAndLogEx(NORMAL, "\r" _YELLOW_("[ %d ]") " Delay BD/00: " _YELLOW_("%d/%d") "   Counter: %s -> %s   Tear: 0x%02X   ( %s )" NOLF
+                      , loop
+                      , delay_bd
+                      , delay_00
+                      , prestr
+                      , poststr
+                      , post_tear
+                      , post_tear_check ? _RED_("NOT OK") : _GREEN_("OK")
+                     );
+
+        if (loop % 20 == 0 && const_post == b && delay_bd != time_limit && fixed == -1) {
+            delay_bd += interval;
+            const_post = b;
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "BD delay increased "  _GREEN_("%d"), delay_bd);
+        } else if (loop % 20 == 0 && b - const_post > 10 && delay_bd != start_time && fixed == -1) {
+            delay_bd -= interval;
+            const_post = b;
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "BD delay reduced " _RED_("%d"), delay_bd);
+        }
+        if (loop % 20 == 0) const_post = b;
+
+        if (loop % 5 == 0 && post_tear_check) {
+            delay_00 += 5;
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "00 delay increased "  _GREEN_("%d"), delay_00);
+        }
     }
 
     DropField();
-
-    PrintAndLogEx(INFO, " Sent %u tear offs ", loop);
-
-    counter_reset_tear(&card, cnt_no);
-
-    PrintAndLogEx(INFO, "hf 14a raw -s -c 3900              -->  read counter 0");
-    PrintAndLogEx(INFO, "hf 14a raw -s -c 3e00              -->  read tearing 0");
-    PrintAndLogEx(NORMAL, "");
-    char read_cnt_str[30];
-    snprintf(read_cnt_str, sizeof(read_cnt_str), "hf 14a raw -s -c 39%02x", counter);
-    CommandReceived(read_cnt_str);
-    char read_tear_str[30];
-    snprintf(read_tear_str, sizeof(read_tear_str), "hf 14a raw -s -c 3e%02x", counter);
-    CommandReceived(read_tear_str);
+    msleep(50);
     return PM3_SUCCESS;
 }
-
-*/
 
 //
 // name, identifying bytes,  decode function,  hints text
@@ -5148,15 +7195,16 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
 
 int CmdHF14MfuNDEFRead(const char *Cmd) {
 
-    int keylen;
-    int maxsize = 16, status;
-    bool hasAuthKey = false;
-    bool swapEndian = false;
+    int ak_len;
+    int status;
+    uint16_t ndef_size = 0;
+    bool has_auth_key = false;
+    bool swap_endian = false;
 
     iso14a_card_select_t card;
     uint8_t data[16] = {0x00};
-    uint8_t key[16] = {0x00};
-    uint8_t *p_key = key;
+    uint8_t authenticationkey[16] = {0x00};
+    uint8_t *auth_key_ptr = authenticationkey;
     uint8_t pack[4] = {0, 0, 0, 0};
 
     CLIParserContext *ctx;
@@ -5173,27 +7221,34 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
         arg_lit0("l", NULL, "Swap entered key's endianness"),
         arg_str0("f", "file", "<fn>", "Save raw NDEF to file"),
         arg_lit0("v",  "verbose", "Verbose output"),
+        arg_lit0(NULL, "schann", "use secure channel. Must have key"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CLIGetHexWithReturn(ctx, 1, key, &keylen);
-    swapEndian = arg_get_lit(ctx, 2);
+    CLIGetHexWithReturn(ctx, 1, authenticationkey, &ak_len);
+    swap_endian = arg_get_lit(ctx, 2);
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     bool verbose = arg_get_lit(ctx, 4);
+    bool use_schann = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
-    switch (keylen) {
+    switch (ak_len) {
         case 0:
             break;
         case 4:
         case 16:
-            hasAuthKey = true;
+            has_auth_key = true;
             break;
         default:
             PrintAndLogEx(WARNING, "ERROR: Key is incorrect length\n");
             return PM3_EINVARG;
+    }
+
+    if (use_schann && has_auth_key == false) {
+        PrintAndLogEx(WARNING, "Secure channel must be called with key");
+        return PM3_EINVARG;
     }
 
     // Get tag type
@@ -5206,56 +7261,91 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
     // Is tag UL/NTAG?
 
     // Swap endianness
-    if (swapEndian && hasAuthKey) p_key = SwapEndian64(key, keylen, (keylen == 16) ? 8 : 4);
+    if (swap_endian) {
+        if (ak_len == 16) {
+            if (((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C)) {
+                auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 8);
+            } else if (((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES)) {
+                auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 16);
+            }
+        } else if (ak_len == 4) {
+            auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 4);
+        }
+    }
 
     // Select and Auth
-    if (ul_auth_select(&card, tagtype, hasAuthKey, p_key, pack, sizeof(pack)) == PM3_ESOFT) return PM3_ESOFT;
+    if (ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, pack, sizeof(pack), use_schann) == PM3_ESOFT) return PM3_ESOFT;
 
     // read pages 0,1,2,3 (should read 4pages)
-    status = ul_read(0, data, sizeof(data));
+    status = ul_read(0, data, sizeof(data), use_schann);
     if (status <= 0) {
         DropField();
         PrintAndLogEx(ERR, "Error: tag didn't answer to READ");
         return PM3_ESOFT;
-    } else if (status == 16) {
-
-        status = ndef_print_CC(data + 12);
-        if (status == PM3_ESOFT) {
-            DropField();
-            PrintAndLogEx(ERR, "Error: tag didn't contain a NDEF Container");
-            return PM3_ESOFT;
-        }
-
-        // max datasize;
-        maxsize = ndef_get_maxsize(data + 12);
     }
 
-    // iceman: maybe always take MIN of tag identified size vs NDEF reported size?
-    // fix: UL_EV1 48bytes != NDEF reported size
+    if (status != 16) {
+        DropField();
+        PrintAndLogEx(ERR, "Error: tag returned %d bytes, need 16 to read the NDEF Container", status);
+        return PM3_ESOFT;
+    }
+
+    if (ndef_print_CC(data + 12) == PM3_ESOFT) {
+        DropField();
+        PrintAndLogEx(ERR, "Error: tag didn't contain a NDEF Container");
+        return PM3_ESOFT;
+    }
+
+    // size of the NDEF data area
+    ndef_size = ndef_get_maxsize(data + 12);
+    if (ndef_size == 0) {
+        DropField();
+        PrintAndLogEx(ERR, "Error: tag announces an empty NDEF data area");
+        return PM3_ESOFT;
+    }
+
+    // The data area starts at block 4, so cap the announced size to what the
+    // identified tag can physically hold. UL_MEMORY_ARRAY holds the last valid
+    // block number, hence the +1.
     for (uint8_t idx = 1; idx < ARRAYLEN(UL_TYPES_ARRAY); idx++) {
         if ((tagtype & UL_TYPES_ARRAY[idx]) == UL_TYPES_ARRAY[idx]) {
 
-            if (maxsize != (UL_MEMORY_ARRAY[idx] * 4)) {
-                PrintAndLogEx(INFO, "Tag reported size vs NDEF reported size mismatch. Using smallest value");
+            int avail = (UL_MEMORY_ARRAY[idx] + 1 - MFU_NDEF_FIRST_BLOCK) * MFU_BLOCK_SIZE;
+            if (avail > 0 && ndef_size > avail) {
+                PrintAndLogEx(INFO, "NDEF data area (%u bytes) is larger than the tag (%d bytes), using tag size"
+                              , ndef_size
+                              , avail
+                             );
+                ndef_size = avail;
             }
-            maxsize = MIN(maxsize, (UL_MEMORY_ARRAY[idx] * 4));
             break;
         }
     }
 
-    // The following read will read in blocks of 16 bytes.
-    // ensure maxsize is rounded up to a multiple of 16
-    maxsize = maxsize + (16 - (maxsize % 16));
-    // allocate mem
-    uint8_t *records = calloc(maxsize, sizeof(uint8_t));
+    // MLEN can announce up to 2040 bytes but the READ command addresses blocks
+    // with a single byte, so block 255 is the last one we can ask for.
+    if (ndef_size > MFU_NDEF_MAX_BYTES) {
+        PrintAndLogEx(INFO, "NDEF data area (%u bytes) exceeds the addressable range, using %d bytes"
+                      , ndef_size
+                      , MFU_NDEF_MAX_BYTES
+                     );
+        ndef_size = MFU_NDEF_MAX_BYTES;
+    }
+
+    // The following read returns 4 blocks (16 bytes) at a time,
+    // round the buffer up to a multiple of 16.
+    uint16_t readsize = (ndef_size + 15) & ~15U;
+
+    // allocate mem, one extra byte so the buffer is always NUL terminated
+    uint8_t *records = calloc(readsize + 1, sizeof(uint8_t));
     if (records == NULL) {
         DropField();
         return PM3_EMALLOC;
     }
 
     // read NDEF records.
-    for (uint32_t i = 0, j = 0; i < maxsize; i += 16, j += 4) {
-        status = ul_read(4 + j, records + i, 16);
+    for (uint16_t i = 0, j = 0; i < readsize; i += 16, j += 4) {
+        status = ul_read(MFU_NDEF_FIRST_BLOCK + j, records + i, 16, use_schann);
         if (status <= 0) {
             DropField();
             PrintAndLogEx(ERR, "Error: tag didn't answer to READ");
@@ -5266,15 +7356,15 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
 
     DropField();
 
-    status = NDEFRecordsDecodeAndPrint(records, (size_t)maxsize, verbose);
+    status = NDEFRecordsDecodeAndPrint(records, (size_t)ndef_size, verbose);
     if (status != PM3_SUCCESS) {
-        status = NDEFDecodeAndPrint(records, (size_t)maxsize, verbose);
+        status = NDEFDecodeAndPrint(records, (size_t)ndef_size, verbose);
     }
 
     // get total NDEF length before save. If fails, we save it all
     size_t n = 0;
-    if (NDEFGetTotalLength(records, maxsize, &n) != PM3_SUCCESS)
-        n = maxsize;
+    if (NDEFGetTotalLength(records, ndef_size, &n) != PM3_SUCCESS)
+        n = ndef_size;
 
     pm3_save_dump(filename, records, n, jsfNDEF);
 
@@ -5318,6 +7408,796 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
     return status;
 }
 
+
+// Build a NDEF message from the CLI options and write it into the data area of a
+// MIFARE Ultralight / NTAG tag.  The tag has to be NDEF formatted already, this
+// command never touches the Capability Container in block 3.
+int CmdHF14MfuNDEFWrite(const char *Cmd) {
+
+    int ak_len = 0;
+    bool has_auth_key = false;
+    bool has_pwd = false;
+    bool swap_endian = false;
+
+    iso14a_card_select_t card;
+    uint8_t data[16] = {0x00};
+    uint8_t authenticationkey[16] = {0x00};
+    uint8_t *auth_key_ptr = authenticationkey;
+    uint8_t pack[4] = {0, 0, 0, 0};
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu ndefwrite",
+                  "Write NFC Data Exchange Format (NDEF) records to a MIFARE Ultralight / NTAG tag.\n"
+                  "The tag must already be NDEF formatted, ie carry a Capability Container in block 3.\n"
+                  "\n"
+                  "Combine several of --uri, --text and --aar to build a multi record message,\n"
+                  "records are added in that order.  Alternatively supply raw NDEF bytes with -d\n"
+                  "or -f, those get wrapped in a TLV container automatically when they are not\n"
+                  "already.  Use `nfc encode` to build such raw bytes offline.\n"
+                  "\n"
+                  "Note: the tag is re-selected and re-authenticated for every block written,\n"
+                  "so a large message takes a while.",
+                  "hf mfu ndefwrite --uri https://proxmark.com\n"
+                  "hf mfu ndefwrite --uri tel:+123456789\n"
+                  "hf mfu ndefwrite --text \"hello world\"\n"
+                  "hf mfu ndefwrite --aar com.example.app\n"
+                  "hf mfu ndefwrite --uri https://proxmark.com --aar com.example.app\n"
+                  "hf mfu ndefwrite --uri https://proxmark.com -k ffffffff\n"
+                  "hf mfu ndefwrite -d 0311D1010D550270726F786D61726B2E636F6DFE\n"
+                  "hf mfu ndefwrite -f myfilename"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("k", "key", "<hex>", "Authentication key (UL-C/UL-AES 16 bytes, EV1/NTAG 4 bytes)"),
+        arg_lit0("l", NULL, "Swap entered key endianness"),
+        arg_str0(NULL, "uri",  "<str>", "URI record. URL, tel:, mailto:, ..."),
+        arg_str0(NULL, "text", "<str>", "Text record"),
+        arg_str0(NULL, "lang", "<str>", "language code for the text record (default: en)"),
+        arg_str0(NULL, "aar",  "<str>", "Android Application Record, ie an app package name"),
+        arg_str0("d", "data", "<hex>", "Raw NDEF bytes to write"),
+        arg_str0("f", "file", "<fn>", "Raw NDEF file to write"),
+        arg_lit0("v",  "verbose", "Verbose output"),
+        arg_lit0(NULL, "schann", "use secure channel. Must have key"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    CLIGetHexWithReturn(ctx, 1, authenticationkey, &ak_len);
+    swap_endian = arg_get_lit(ctx, 2);
+
+    // CLIParamStrToBuf copies the trailing NUL as well but only rejects lengths
+    // strictly above maxdatalen, so leave room for that byte
+    int urilen = 0;
+    char uri[1024] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)uri, sizeof(uri) - 1, &urilen);
+
+    int textlen = 0;
+    char text[1024] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)text, sizeof(text) - 1, &textlen);
+
+    int langlen = 0;
+    char lang[32] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t *)lang, sizeof(lang) - 1, &langlen);
+
+    int aarlen = 0;
+    char aar[256] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)aar, sizeof(aar) - 1, &aarlen);
+
+    int rawlen = 0;
+    uint8_t raw[MFU_NDEF_MAX_BYTES] = {0};
+    CLIGetHexWithReturn(ctx, 7, raw, &rawlen);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 8), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    bool verbose = arg_get_lit(ctx, 9);
+    bool use_schann = arg_get_lit(ctx, 10);
+    CLIParserFree(ctx);
+
+    bool has_records = (urilen || textlen || aarlen);
+    int sources = (has_records ? 1 : 0) + (rawlen ? 1 : 0) + (fnlen ? 1 : 0);
+    if (sources == 0) {
+        PrintAndLogEx(ERR, "Nothing to write. See `" _YELLOW_("hf mfu ndefwrite -h") "`");
+        return PM3_EINVARG;
+    }
+    if (sources > 1) {
+        PrintAndLogEx(ERR, "Use either the record options, -d or -f, not a mix of them");
+        return PM3_EINVARG;
+    }
+
+    if ((langlen != 0) && (textlen == 0)) {
+        PrintAndLogEx(WARNING, "--lang only applies to a text record, ignoring");
+    }
+
+    switch (ak_len) {
+        case 0:
+            break;
+        case 4:
+            has_pwd = true;
+            break;
+        case 16:
+            has_auth_key = true;
+            break;
+        default:
+            PrintAndLogEx(WARNING, "ERROR: Key is incorrect length\n");
+            return PM3_EINVARG;
+    }
+
+    if (use_schann && (has_auth_key == false)) {
+        PrintAndLogEx(WARNING, "Secure channel must be called with key");
+        return PM3_EINVARG;
+    }
+
+    // ------------------------------------------------------------------
+    // build the TLV block that goes onto the tag
+    // ------------------------------------------------------------------
+    uint8_t tlv[MFU_NDEF_MAX_BYTES] = {0};
+    size_t tlv_len = 0;
+    int res = PM3_SUCCESS;
+
+    if (has_records) {
+
+        NDEFRecordDesc_t recs[3] = {{0}};
+        size_t count = 0;
+
+        uint8_t p_uri[sizeof(uri) + 1] = {0};
+        size_t p_uri_len = 0;
+        if (urilen) {
+            res = NDEFEncodePayloadURI(uri, p_uri, sizeof(p_uri), &p_uri_len);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Failed to encode URI record");
+                return res;
+            }
+            recs[count].tnf = tnfWellKnownRecord;
+            recs[count].type = (const uint8_t *)NDEF_TYPE_URI;
+            recs[count].typeLen = strlen(NDEF_TYPE_URI);
+            recs[count].payload = p_uri;
+            recs[count].payloadLen = p_uri_len;
+            count++;
+        }
+
+        uint8_t p_text[sizeof(text) + sizeof(lang) + 1] = {0};
+        size_t p_text_len = 0;
+        if (textlen) {
+            res = NDEFEncodePayloadText(text, lang, p_text, sizeof(p_text), &p_text_len);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Failed to encode Text record");
+                return res;
+            }
+            recs[count].tnf = tnfWellKnownRecord;
+            recs[count].type = (const uint8_t *)NDEF_TYPE_TEXT;
+            recs[count].typeLen = strlen(NDEF_TYPE_TEXT);
+            recs[count].payload = p_text;
+            recs[count].payloadLen = p_text_len;
+            count++;
+        }
+
+        uint8_t p_aar[sizeof(aar)] = {0};
+        size_t p_aar_len = 0;
+        if (aarlen) {
+            res = NDEFEncodePayloadAAR(aar, p_aar, sizeof(p_aar), &p_aar_len);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Failed to encode Android Application Record");
+                return res;
+            }
+            recs[count].tnf = tnfExternalRecord;
+            recs[count].type = (const uint8_t *)NDEF_ANDROID_AAR;
+            recs[count].typeLen = strlen(NDEF_ANDROID_AAR);
+            recs[count].payload = p_aar;
+            recs[count].payloadLen = p_aar_len;
+            count++;
+        }
+
+        uint8_t msg[MFU_NDEF_MAX_BYTES] = {0};
+        size_t msg_len = 0;
+        res = NDEFEncodeMessage(recs, count, msg, sizeof(msg), &msg_len);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to encode NDEF message");
+            return res;
+        }
+
+        res = NDEFEncodeTLV(msg, msg_len, tlv, sizeof(tlv), &tlv_len);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to wrap NDEF message in a TLV container");
+            return res;
+        }
+
+    } else {
+
+        uint8_t *src = raw;
+        size_t src_len = (size_t)rawlen;
+        uint8_t *dump = NULL;
+
+        if (fnlen) {
+            size_t bytes_read = 0;
+            res = pm3_load_dump(filename, (void **)&dump, &bytes_read, sizeof(raw));
+            if (res != PM3_SUCCESS) {
+                return res;
+            }
+            src = dump;
+            src_len = bytes_read;
+        }
+
+        if (src_len == 0) {
+            PrintAndLogEx(ERR, "No NDEF data supplied");
+            free(dump);
+            return PM3_EINVARG;
+        }
+
+        // is it a TLV block already?
+        bool is_tlv = false;
+        switch (src[0]) {
+            case 0x00:
+            case 0x01:
+            case 0x02:
+            case 0x03:
+            case 0xFD:
+            case 0xFE:
+                is_tlv = true;
+                break;
+            default:
+                break;
+        }
+
+        if (is_tlv) {
+            if (src_len > sizeof(tlv)) {
+                PrintAndLogEx(ERR, "NDEF data too large, %zu bytes", src_len);
+                free(dump);
+                return PM3_EINVARG;
+            }
+            memcpy(tlv, src, src_len);
+            tlv_len = src_len;
+        } else {
+            if (verbose) {
+                PrintAndLogEx(INFO, "Raw data is not TLV wrapped, adding container");
+            }
+            res = NDEFEncodeTLV(src, src_len, tlv, sizeof(tlv), &tlv_len);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Failed to wrap NDEF message in a TLV container");
+                free(dump);
+                return res;
+            }
+        }
+
+        free(dump);
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "TLV block [%zu]...", tlv_len);
+        print_hex_noascii_break(tlv, tlv_len, 32);
+    }
+
+    // ------------------------------------------------------------------
+    // find the tag and check the message fits
+    // ------------------------------------------------------------------
+    uint64_t tagtype = GetHF14AMfU_Type();
+    if (tagtype == MFU_TT_UL_ERROR) {
+        PrintAndLogEx(WARNING, "No Ultralight / NTAG based tag found");
+        return PM3_ESOFT;
+    }
+
+    ul_print_type(tagtype, 0);
+
+    if (swap_endian) {
+        if (ak_len == 16) {
+            if (((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C)) {
+                auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 8);
+            } else if (((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES)) {
+                auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 16);
+            }
+        } else if (ak_len == 4) {
+            auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 4);
+        }
+    }
+
+    if (ul_auth_select(&card, tagtype, (has_auth_key || has_pwd), auth_key_ptr, pack, sizeof(pack), use_schann) == PM3_ESOFT) {
+        return PM3_ESOFT;
+    }
+
+    // read blocks 0..3 to get at the Capability Container
+    int status = ul_read(0, data, sizeof(data), use_schann);
+    if (status <= 0) {
+        DropField();
+        PrintAndLogEx(ERR, "Error: tag didnt answer to READ");
+        return PM3_ESOFT;
+    }
+
+    if (status != 16) {
+        DropField();
+        PrintAndLogEx(ERR, "Error: tag returned %d bytes, need 16 to read the NDEF Container", status);
+        return PM3_ESOFT;
+    }
+
+    if (ndef_print_CC(data + 12) == PM3_ESOFT) {
+        DropField();
+        PrintAndLogEx(ERR, "Error: tag didnt contain a NDEF Container");
+        PrintAndLogEx(HINT, "Hint: the tag needs to be NDEF formatted first");
+        return PM3_ESOFT;
+    }
+
+    // size of the NDEF data area
+    uint16_t ndef_size = ndef_get_maxsize(data + 12);
+    if (ndef_size == 0) {
+        DropField();
+        PrintAndLogEx(ERR, "Error: tag announces an empty NDEF data area");
+        return PM3_ESOFT;
+    }
+
+    // The data area starts at block 4, so cap the announced size to what the
+    // identified tag can physically hold. UL_MEMORY_ARRAY holds the last valid
+    // block number, hence the +1.
+    for (uint8_t idx = 1; idx < ARRAYLEN(UL_TYPES_ARRAY); idx++) {
+        if ((tagtype & UL_TYPES_ARRAY[idx]) == UL_TYPES_ARRAY[idx]) {
+
+            int avail = (UL_MEMORY_ARRAY[idx] + 1 - MFU_NDEF_FIRST_BLOCK) * MFU_BLOCK_SIZE;
+            if (avail > 0 && ndef_size > avail) {
+                PrintAndLogEx(INFO, "NDEF data area (%u bytes) is larger than the tag (%d bytes), using tag size"
+                              , ndef_size
+                              , avail
+                             );
+                ndef_size = avail;
+            }
+            break;
+        }
+    }
+
+    // MLEN can announce up to 2040 bytes but WRITE addresses blocks with a single
+    // byte, so block 255 is the last one we can reach.
+    if (ndef_size > MFU_NDEF_MAX_BYTES) {
+        ndef_size = MFU_NDEF_MAX_BYTES;
+    }
+
+    if (tlv_len > ndef_size) {
+        DropField();
+        PrintAndLogEx(ERR, "NDEF message is too large for this tag");
+        PrintAndLogEx(ERR, "    message..... " _RED_("%zu") " bytes", tlv_len);
+        PrintAndLogEx(ERR, "    tag holds... " _GREEN_("%u") " bytes", ndef_size);
+        return PM3_EINVARG;
+    }
+
+    DropField();
+
+    // ------------------------------------------------------------------
+    // write it out, one block at a time
+    // ------------------------------------------------------------------
+    uint8_t keytype = 0;
+    if (has_auth_key || has_pwd) {
+        if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) {
+            keytype = 1; // UL_C auth
+        } else if ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES) {
+            keytype = 3; // UL_AES auth
+        } else {
+            keytype = 2; // UL_EV1/NTAG auth
+        }
+    }
+
+    // pad the tail so the last block is complete
+    size_t padded_len = (tlv_len + (MFU_BLOCK_SIZE - 1)) & ~((size_t)MFU_BLOCK_SIZE - 1);
+    uint16_t blocks = (uint16_t)(padded_len / MFU_BLOCK_SIZE);
+
+    PrintAndLogEx(INFO, "Writing " _YELLOW_("%u") " blocks ( %zu bytes ) from block " _YELLOW_("%d")
+                  , blocks
+                  , padded_len
+                  , MFU_NDEF_FIRST_BLOCK
+                 );
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to abort");
+
+    for (uint16_t i = 0; i < blocks; i++) {
+
+        if (kbd_enter_pressed()) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(WARNING, "aborted via keyboard!");
+            if (i > 0) {
+                PrintAndLogEx(WARNING, "tag holds a partially written NDEF message, blocks %d..%u"
+                              , MFU_NDEF_FIRST_BLOCK
+                              , MFU_NDEF_FIRST_BLOCK + i - 1
+                             );
+            }
+            return PM3_EOPABORTED;
+        }
+
+        uint8_t blockno = (uint8_t)(MFU_NDEF_FIRST_BLOCK + i);
+
+        res = mfu_write_block(tlv + (i * MFU_BLOCK_SIZE), MFU_BLOCK_SIZE, keytype, auth_key_ptr, blockno, use_schann);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(NORMAL, "");
+
+            // a protected tag simply stops answering, so the write times out
+            // rather than coming back with an explicit error
+            if (res == PM3_ETIMEOUT) {
+                PrintAndLogEx(FAILED, "Write block %u ( " _RED_("timeout") " )", blockno);
+            } else {
+                PrintAndLogEx(FAILED, "Write block %u ( " _RED_("fail") " )", blockno);
+            }
+            PrintAndLogEx(HINT, "Hint: Check password / key!");
+
+            if (i > 0) {
+                PrintAndLogEx(WARNING, "tag holds a partially written NDEF message, blocks %d..%u"
+                              , MFU_NDEF_FIRST_BLOCK
+                              , blockno - 1
+                             );
+            }
+            return PM3_ESOFT;
+        }
+
+        PrintAndLogEx(INPLACE, "Block %u / %u", i + 1, blocks);
+    }
+
+    DropField();
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu ndefread") "` to verify");
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
+// NDEF formatting - restores the NXP factory delivery content (Capability
+// Container + empty NDEF message) for the detected tag type. Block 3 is OTP.
+// Per-type sources and rationale: doc/mfu_ndef_format_notes.md
+typedef struct {
+    uint64_t tagtype;
+    const char *name;
+    uint8_t page[3][MFU_BLOCK_SIZE];  // pages 03h, 04h, 05h
+} mfu_ndef_format_t;
+
+static const mfu_ndef_format_t mfu_ndef_format_table[] = {
+    { MFU_TT_UL,          "MIFARE Ultralight",         {{0xE1, 0x10, 0x06, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}} },
+    { MFU_TT_UL_C,        "MIFARE Ultralight C",       {{0xE1, 0x10, 0x12, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}} },
+    { MFU_TT_UL_EV1_48,   "MIFARE Ultralight EV1 48",  {{0xE1, 0x10, 0x06, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}} },
+    { MFU_TT_UL_EV1_128,  "MIFARE Ultralight EV1 128", {{0xE1, 0x10, 0x10, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}} },
+    { MFU_TT_NTAG_203,    "NTAG203",                   {{0xE1, 0x10, 0x12, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}} },
+    { MFU_TT_NTAG_210,    "NTAG210",                   {{0xE1, 0x10, 0x06, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}} },
+    { MFU_TT_NTAG_210u,   "NTAG210u",                  {{0xE1, 0x10, 0x06, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}} },
+    { MFU_TT_NTAG_212,    "NTAG212",                   {{0xE1, 0x10, 0x10, 0x00}, {0x01, 0x03, 0x90, 0x0A}, {0x34, 0x03, 0x00, 0xFE}} },
+    { MFU_TT_NTAG_213,    "NTAG213",                   {{0xE1, 0x10, 0x12, 0x00}, {0x01, 0x03, 0xA0, 0x0C}, {0x34, 0x03, 0x00, 0xFE}} },
+    { MFU_TT_NTAG_213_F,  "NTAG213F",                  {{0xE1, 0x10, 0x12, 0x00}, {0x01, 0x03, 0xA0, 0x0C}, {0x34, 0x03, 0x00, 0xFE}} },
+    { MFU_TT_NTAG_213_TT, "NTAG213TT",                 {{0xE1, 0x10, 0x12, 0x00}, {0x01, 0x03, 0xA0, 0x0C}, {0x34, 0x03, 0x00, 0xFE}} },
+    { MFU_TT_NTAG_213_C,  "NTAG213C",                  {{0xE1, 0x10, 0x12, 0x00}, {0x01, 0x03, 0xA0, 0x0C}, {0x34, 0x03, 0x00, 0xFE}} },
+    { MFU_TT_NTAG_215,    "NTAG215",                   {{0xE1, 0x10, 0x3E, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}} },
+    { MFU_TT_NTAG_216,    "NTAG216",                   {{0xE1, 0x10, 0x6D, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}} },
+    { MFU_TT_NTAG_216_F,  "NTAG216F",                  {{0xE1, 0x10, 0x6D, 0x00}, {0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}} },
+};
+
+static const mfu_ndef_format_t *mfu_get_ndef_format(uint64_t tagtype) {
+    for (size_t i = 0; i < ARRAYLEN(mfu_ndef_format_table); i++) {
+        uint64_t tt = mfu_ndef_format_table[i].tagtype;
+        if ((tagtype & tt) == tt) {
+            return &mfu_ndef_format_table[i];
+        }
+    }
+    return NULL;
+}
+
+int CmdHF14MfuNDEFFormat(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu ndefformat",
+                  "Format a MIFARE Ultralight / NTAG tag for NDEF by writing the Capability\n"
+                  "Container to block 3, followed by an empty NDEF message.\n"
+                  "\n"
+                  "Writes NXP factory delivery content for the detected tag type. Block 3 is\n"
+                  "One Time Programmable; unknown types and unreachable CCs are refused.\n"
+                  "\n"
+                  "Note: the tag is re-selected and re-authenticated for each block written.",
+                  "hf mfu ndefformat\n"
+                  "hf mfu ndefformat -v\n"
+                  "hf mfu ndefformat --erase\n"
+                  "hf mfu ndefformat -k FFFFFFFF\n"
+                  "hf mfu ndefformat -k 49454D4B41455242214E4143554F5946\n"
+                  "hf mfu ndefformat -d E1101200 --force"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("k", "key", "<hex>", "Authentication key (UL-C/UL-AES 16 bytes, EV1/NTAG 4 bytes)"),
+        arg_lit0("l", NULL, "Swap entered key endianness"),
+        arg_str0("d", "data", "<hex>", "Capability Container to write, 4 bytes. Overrides the detected type"),
+        arg_lit0(NULL, "erase", "Also zero the rest of the NDEF data area"),
+        arg_lit0(NULL, "force", "Continue on an unknown tag type, or with an oversized -d value"),
+        arg_lit0("v",  "verbose", "Verbose output"),
+        arg_lit0(NULL, "schann", "use secure channel. Must have key"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int ak_len = 0;
+    uint8_t authenticationkey[16] = {0x00};
+    CLIGetHexWithReturn(ctx, 1, authenticationkey, &ak_len);
+    bool swap_endian = arg_get_lit(ctx, 2);
+
+    int cc_len = 0;
+    uint8_t cc_override[MFU_BLOCK_SIZE] = {0x00};
+    CLIGetHexWithReturn(ctx, 3, cc_override, &cc_len);
+
+    bool erase = arg_get_lit(ctx, 4);
+    bool force = arg_get_lit(ctx, 5);
+    bool verbose = arg_get_lit(ctx, 6);
+    bool use_schann = arg_get_lit(ctx, 7);
+    CLIParserFree(ctx);
+
+    if ((cc_len != 0) && (cc_len != MFU_BLOCK_SIZE)) {
+        PrintAndLogEx(WARNING, "Capability Container must be %d bytes, got %d", MFU_BLOCK_SIZE, cc_len);
+        return PM3_EINVARG;
+    }
+
+    bool has_auth_key = false;
+    bool has_pwd = false;
+    switch (ak_len) {
+        case 0:
+            break;
+        case 4:
+            has_pwd = true;
+            break;
+        case 16:
+            has_auth_key = true;
+            break;
+        default:
+            PrintAndLogEx(WARNING, "ERROR: Key is incorrect length\n");
+            return PM3_EINVARG;
+    }
+
+    if (use_schann && (has_auth_key == false)) {
+        PrintAndLogEx(WARNING, "Secure channel must be called with key");
+        return PM3_EINVARG;
+    }
+
+    uint64_t tagtype = GetHF14AMfU_Type();
+    if (tagtype == MFU_TT_UL_ERROR) {
+        PrintAndLogEx(WARNING, "No Ultralight / NTAG based tag found");
+        return PM3_ESOFT;
+    }
+
+    ul_print_type(tagtype, 0);
+
+    const mfu_ndef_format_t *fmt = mfu_get_ndef_format(tagtype);
+    if (fmt == NULL) {
+        if (cc_len == 0) {
+            PrintAndLogEx(FAILED, "Don't know the Capability Container for this tag type");
+            PrintAndLogEx(INFO, "Block 3 is One Time Programmable, a wrong value can not be undone,");
+            PrintAndLogEx(INFO, "so this command will not guess one.");
+            PrintAndLogEx(HINT, "Hint: supply it yourself with `" _YELLOW_("hf mfu ndefformat -d <hex> --force") "`");
+            return PM3_ENOTIMPL;
+        }
+        if (force == false) {
+            PrintAndLogEx(FAILED, "Unknown tag type, add `" _YELLOW_("--force") "` to write anyway");
+            return PM3_EINVARG;
+        }
+        if (erase) {
+            PrintAndLogEx(FAILED, "Refusing to erase on an unknown tag type");
+            PrintAndLogEx(INFO, "The end of the data area can not be established, so the erase");
+            PrintAndLogEx(INFO, "could run into the lock bytes, configuration or key pages.");
+            return PM3_EINVARG;
+        }
+    }
+
+    // pages 03h, 04h and 05h as they will be written
+    uint8_t pages[3][MFU_BLOCK_SIZE] = {{0}};
+    if (fmt != NULL) {
+        memcpy(pages, fmt->page, sizeof(pages));
+    } else {
+        // unknown type, -d plus --force: user supplied CC and an empty NDEF message
+        const uint8_t empty[2][MFU_BLOCK_SIZE] = {{0x03, 0x00, 0xFE, 0x00}, {0x00, 0x00, 0x00, 0x00}};
+        memcpy(pages[1], empty[0], MFU_BLOCK_SIZE);
+        memcpy(pages[2], empty[1], MFU_BLOCK_SIZE);
+    }
+
+    if (cc_len == MFU_BLOCK_SIZE) {
+
+        // -d must not announce more memory than this tag type actually has
+        if ((fmt != NULL) && (cc_override[2] > fmt->page[0][2]) && (force == false)) {
+            PrintAndLogEx(FAILED, "Capability Container announces more memory than this tag has");
+            PrintAndLogEx(INFO, "    requested... %d bytes ( MLEN %02X )", cc_override[2] * 8, cc_override[2]);
+            PrintAndLogEx(INFO, "    tag holds... %d bytes ( MLEN %02X )", fmt->page[0][2] * 8, fmt->page[0][2]);
+            PrintAndLogEx(INFO, "Block 3 is One Time Programmable, this can not be undone.");
+            PrintAndLogEx(HINT, "Hint: add `" _YELLOW_("--force") "` if you really mean it");
+            return PM3_EINVARG;
+        }
+
+        memcpy(pages[0], cc_override, MFU_BLOCK_SIZE);
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "Tag type... " _YELLOW_("%s"), (fmt != NULL) ? fmt->name : "unknown");
+        for (uint8_t i = 0; i < 3; i++) {
+            PrintAndLogEx(INFO, "Block %2u... %s"
+                          , MFU_NDEF_CC_BLOCK + i
+                          , sprint_hex_inrow(pages[i], MFU_BLOCK_SIZE)
+                         );
+        }
+    }
+
+    uint8_t *auth_key_ptr = authenticationkey;
+    if (swap_endian) {
+        if (ak_len == 16) {
+            if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) {
+                auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 8);
+            } else if ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES) {
+                auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 16);
+            }
+        } else if (ak_len == 4) {
+            auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 4);
+        }
+    }
+
+    iso14a_card_select_t card;
+    uint8_t pack[4] = {0, 0, 0, 0};
+    if (ul_auth_select(&card, tagtype, (has_auth_key || has_pwd), auth_key_ptr, pack, sizeof(pack), use_schann) == PM3_ESOFT) {
+        return PM3_ESOFT;
+    }
+
+    // read blocks 0..3 so the current Capability Container can be inspected
+    uint8_t data[16] = {0x00};
+    int status = ul_read(0, data, sizeof(data), use_schann);
+    DropField();
+
+    if (status <= 0) {
+        PrintAndLogEx(ERR, "Error: tag didnt answer to READ");
+        return PM3_ESOFT;
+    }
+
+    if (status != 16) {
+        PrintAndLogEx(ERR, "Error: tag returned %d bytes, need 16 to read the NDEF Container", status);
+        return PM3_ESOFT;
+    }
+
+    // block 3 is OTP: refuse a target the current content can't reach via OR
+    uint8_t *cur = data + (MFU_NDEF_CC_BLOCK * MFU_BLOCK_SIZE);
+    bool blank = true;
+    bool reachable = true;
+    for (uint8_t i = 0; i < MFU_BLOCK_SIZE; i++) {
+        if (cur[i] != 0x00) {
+            blank = false;
+        }
+        if ((cur[i] | pages[0][i]) != pages[0][i]) {
+            reachable = false;
+        }
+    }
+
+    if (reachable == false) {
+        PrintAndLogEx(FAILED, "Capability Container can not be written on this tag");
+        PrintAndLogEx(INFO, "    on tag now... " _RED_("%s"), sprint_hex_inrow(cur, MFU_BLOCK_SIZE));
+        PrintAndLogEx(INFO, "    wanted....... " _GREEN_("%s"), sprint_hex_inrow(pages[0], MFU_BLOCK_SIZE));
+        PrintAndLogEx(INFO, "Block 3 is One Time Programmable. A write is OR'ed with the current");
+        PrintAndLogEx(INFO, "content, so a bit that is already 1 can not be cleared again.");
+        ndef_print_CC(cur);
+        return PM3_EINVARG;
+    }
+
+    if (blank == false) {
+        PrintAndLogEx(WARNING, "Tag already carries a Capability Container ( " _YELLOW_("%s") " )"
+                      , sprint_hex_inrow(cur, MFU_BLOCK_SIZE)
+                     );
+        if (verbose) {
+            ndef_print_CC(cur);
+        }
+    }
+
+    uint8_t keytype = 0;
+    if (has_auth_key || has_pwd) {
+        if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) {
+            keytype = 1; // UL_C auth
+        } else if ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES) {
+            keytype = 3; // UL_AES auth
+        } else {
+            keytype = 2; // UL_EV1/NTAG auth
+        }
+    }
+
+    // erase range from the table MLEN, never from -d - can't run past user memory
+    uint16_t last_block = MFU_NDEF_CC_BLOCK + 2;
+    if (erase && (fmt != NULL)) {
+        last_block = (uint16_t)(MFU_NDEF_CC_BLOCK + (fmt->page[0][2] * 2));
+    }
+
+    // block 255 is the last one WRITE can reach with its single address byte
+    if (last_block > 0xFF) {
+        PrintAndLogEx(INFO, "Data area runs past block 255, stopping at the last addressable block");
+        last_block = 0xFF;
+    }
+
+    uint16_t total = (uint16_t)(last_block - MFU_NDEF_CC_BLOCK + 1);
+
+    PrintAndLogEx(INFO, "Writing " _YELLOW_("%u") " blocks from block " _YELLOW_("%d"), total, MFU_NDEF_CC_BLOCK);
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to abort");
+
+    uint16_t done = 0;
+    const uint8_t zeros[MFU_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00};
+
+    for (uint16_t blockno = MFU_NDEF_CC_BLOCK; blockno <= last_block; blockno++) {
+
+        if (kbd_enter_pressed()) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(WARNING, "aborted via keyboard!");
+            if (done > 0) {
+                PrintAndLogEx(WARNING, "tag holds a partially written NDEF data area, blocks %d..%u"
+                              , MFU_NDEF_CC_BLOCK
+                              , blockno - 1
+                             );
+            }
+            return PM3_EOPABORTED;
+        }
+
+        const uint8_t *src = zeros;
+        if (blockno < MFU_NDEF_CC_BLOCK + 3) {
+            src = pages[blockno - MFU_NDEF_CC_BLOCK];
+        }
+
+        int res = mfu_write_block(src, MFU_BLOCK_SIZE, keytype, auth_key_ptr, (uint8_t)blockno, use_schann);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(NORMAL, "");
+
+            // a protected tag simply stops answering, so the write times out
+            // rather than coming back with an explicit error
+            if (res == PM3_ETIMEOUT) {
+                PrintAndLogEx(FAILED, "Write block %u ( " _RED_("timeout") " )", blockno);
+            } else {
+                PrintAndLogEx(FAILED, "Write block %u ( " _RED_("fail") " )", blockno);
+            }
+            PrintAndLogEx(HINT, "Hint: Check password / key!");
+
+            if (done > 0) {
+                PrintAndLogEx(WARNING, "tag holds a partially written NDEF data area, blocks %d..%u"
+                              , MFU_NDEF_CC_BLOCK
+                              , blockno - 1
+                             );
+            }
+            return PM3_ESOFT;
+        }
+
+        done++;
+        PrintAndLogEx(INPLACE, "Block %u / %u", done, total);
+    }
+
+    DropField();
+    PrintAndLogEx(NORMAL, "");
+
+    // read the formatted blocks back rather than trust the write status alone
+    if (ul_auth_select(&card, tagtype, (has_auth_key || has_pwd), auth_key_ptr, pack, sizeof(pack), use_schann) == PM3_ESOFT) {
+        PrintAndLogEx(WARNING, "Wrote the tag but could not re-select it to verify");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu ndefread") "` to check it yourself");
+        return PM3_ESOFT;
+    }
+
+    uint8_t verify[16] = {0x00};
+    status = ul_read(MFU_NDEF_CC_BLOCK, verify, sizeof(verify), use_schann);
+    DropField();
+
+    if (status != 16) {
+        PrintAndLogEx(WARNING, "Wrote the tag but could not read it back to verify");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu ndefread") "` to check it yourself");
+        return PM3_ESOFT;
+    }
+
+    // the read started at block 3, so the three formatted blocks are at offset 0
+    if (memcmp(verify, pages[0], MFU_BLOCK_SIZE) != 0) {
+        PrintAndLogEx(FAILED, "Capability Container did not take");
+        PrintAndLogEx(INFO, "    wanted...... " _GREEN_("%s"), sprint_hex_inrow(pages[0], MFU_BLOCK_SIZE));
+        PrintAndLogEx(INFO, "    on tag now.. " _RED_("%s"), sprint_hex_inrow(verify, MFU_BLOCK_SIZE));
+        PrintAndLogEx(HINT, "Hint: block 3 is OTP, check whether its block locking bit is set");
+        return PM3_ESOFT;
+    }
+
+    if (memcmp(verify + MFU_BLOCK_SIZE, pages[1], 2 * MFU_BLOCK_SIZE) != 0) {
+        PrintAndLogEx(FAILED, "Capability Container is correct but the empty NDEF message is not");
+        // one sprint_hex_inrow() call per line: it returns a shared static buffer
+        PrintAndLogEx(INFO, "    wanted...... " _GREEN_("%s"), sprint_hex_inrow(pages[1], 2 * MFU_BLOCK_SIZE));
+        PrintAndLogEx(INFO, "    on tag now.. " _RED_("%s"), sprint_hex_inrow(verify + MFU_BLOCK_SIZE, 2 * MFU_BLOCK_SIZE));
+        PrintAndLogEx(HINT, "Hint: these blocks are ordinary user memory, check the lock bytes");
+        return PM3_ESOFT;
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "Verified blocks %d..%d against the tag", MFU_NDEF_CC_BLOCK, MFU_NDEF_CC_BLOCK + 2);
+    }
+
+    PrintAndLogEx(SUCCESS, "Format ( " _GREEN_("ok") " )");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu ndefwrite") "` to write a NDEF message");
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
 // utility function. Retrieves emulator memory
 static int GetMfuDumpFromEMul(mfu_dump_t **buf) {
 
@@ -5363,7 +8243,7 @@ static int CmdHF14AMfuEView(const char *Cmd) {
     bool override_end = (end != -1) ;
 
     if (override_end && (end < 0 || end > MFU_MAX_BLOCKS)) {
-        PrintAndLogEx(WARNING, "Invalid value for end: %d   Must be be positive integer < %d", end, MFU_MAX_BLOCKS);
+        PrintAndLogEx(WARNING, "Invalid value for end: " _RED_("%d") ". Must be be positive integer < %d", end, MFU_MAX_BLOCKS);
         return PM3_EINVARG ;
     }
 
@@ -5380,6 +8260,11 @@ static int CmdHF14AMfuEView(const char *Cmd) {
     }
 
     mfu_print_dump(dump, end, 0, dense_output);
+
+    if (ndef_detect_message(dump->data, end * MFU_BLOCK_SIZE)) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu ndefread")"`");
+    }
+
     free(dump);
     return PM3_SUCCESS;
 }
@@ -5449,6 +8334,71 @@ static int CmdHF14AMfuESave(const char *Cmd) {
     return res;
 }
 
+// Derive the tag type from the dump header,  version bytes and page count.
+// Uses the same version byte signatures as ul_select_card() does on a live tag.
+static uint64_t mfu_dump_get_tagtype(const mfu_dump_t *card) {
+
+    if (memcmp(card->version, "\x00\x04\x03\x01\x04\x00\x0F\x03", 8) == 0 ||
+            memcmp(card->version, "\x00\x04\x03\x02\x04\x00\x0F\x03", 8) == 0 ||
+            memcmp(card->version, "\x00\x04\x03\x03\x04\x00\x0F\x03", 8) == 0) {
+        return MFU_TT_UL_AES;
+    }
+
+    // UL-C has no GET_VERSION,  the dump holds zeroes there
+    bool version_zero = true;
+    for (uint8_t i = 0; i < ARRAYLEN(card->version); i++) {
+        if (card->version[i] != 0x00) {
+            version_zero = false;
+            break;
+        }
+    }
+
+    if (version_zero && card->pages == MAX_ULC_BLOCKS) {
+        return MFU_TT_UL_C;
+    }
+
+    return MFU_TT_UNKNOWN;
+}
+
+// `hf mfu dump` appends the authentication key to the dump when one was given.
+// UL-C:   pages 0x2C..0x2F,  stored as SwapEndian64(key, 16, 8)
+// UL-AES: pages 0x30..0x33,  stored as SwapEndian64(key, 16, 16)
+static void mfu_print_dump_keys(mfu_dump_t *card, uint16_t block_cnt) {
+
+    uint64_t tagtype = mfu_dump_get_tagtype(card);
+
+    uint8_t page;
+    if ((tagtype == MFU_TT_UL_C) && (block_cnt > (MFU_ULC_KEY0_PAGE + 3))) {
+        page = MFU_ULC_KEY0_PAGE;
+    } else if ((tagtype == MFU_TT_UL_AES) && (block_cnt > (MFU_AES_KEY0_PAGE + 3))) {
+        page = MFU_AES_KEY0_PAGE;
+    } else {
+        return;
+    }
+
+    uint8_t *key = card->data + (page * MFU_BLOCK_SIZE);
+
+    PrintAndLogEx(NORMAL, "");
+    if (tagtype == MFU_TT_UL_C) {
+        PrintAndLogEx(INFO, "--- " _CYAN_("UL-C 3DES key") " -------------------------");
+    } else {
+        PrintAndLogEx(INFO, "--- " _CYAN_("UL-AES key") " ----------------------------");
+    }
+
+    uint8_t zeros[MIFAREU3P_KEY_SIZE] = {0x00};
+    if (memcmp(key, zeros, sizeof(zeros)) == 0) {
+        PrintAndLogEx(INFO, "    " _RED_("n/a") " - page %u..%u is all zero", page, page + 3);
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu dump -k <key>") "` to store the key in the dump");
+        return;
+    }
+
+    if (tagtype == MFU_TT_UL_C) {
+        ulc_print_3deskey(key);
+    } else {
+        ulaes_print_key(key);
+    }
+}
+
 static int CmdHF14AMfuView(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -5499,7 +8449,18 @@ static int CmdHF14AMfuView(const char *Cmd) {
         PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, block_cnt, block_cnt);
     }
 
-    mfu_print_dump((mfu_dump_t *)dump, block_cnt, 0, dense_output);
+    mfu_dump_t *p = (mfu_dump_t *)dump;
+    mfu_print_dump(p, block_cnt, 0, dense_output);
+
+    if (verbose) {
+        mfu_print_dump_keys(p, block_cnt);
+    }
+
+    // we need to skip prefix
+    if (ndef_detect_message(p->data, block_cnt * MFU_BLOCK_SIZE)) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu ndefread")"`");
+    }
+
     free(dump);
     return PM3_SUCCESS;
 }
@@ -5588,7 +8549,7 @@ static int CmdHF14AAmiibo(const char *Cmd) {
     } else {
         uint16_t dlen = 0;
         uint8_t *dump = NULL;
-        res = mfu_dump_tag(MAX_NTAG_215, (void **)&dump, &dlen);
+        res = mfu_dump_tag(MAX_NTAG_215, (void **)&dump, &dlen, false);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Failed to dump memory from tag");
             free(dump);
@@ -5640,14 +8601,17 @@ static int CmdHF14AMfuWipe(const char *Cmd) {
                   "you will need to call it with password in order to wipe the config and sett default pwd/pack\n"
                   "Abort by pressing a key\n"
                   "New password.... FFFFFFFF\n"
-                  "New 3-DES key... 49454D4B41455242214E4143554F5946\n",
+                  "New 3-DES key... 49454D4B41455242214E4143554F5946\n"
+                  "New AES keys...  00000000000000000000000000000000\n",
                   "hf mfu wipe\n"
                   "hf mfu wipe -k 49454D4B41455242214E4143554F5946\n"
+                  "hf mfu wipe -k 49454D4B41455242214E4143554F5946 --schann"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_str0("k", "key", "<hex>", "Key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)"),
         arg_lit0("l", NULL, "Swap entered key's endianness"),
+        arg_lit0(NULL, "schann", "use secure channel. Must have key"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -5657,7 +8621,7 @@ static int CmdHF14AMfuWipe(const char *Cmd) {
     uint8_t *auth_key_ptr = authenticationkey;
     CLIGetHexWithReturn(ctx, 1, authenticationkey, &ak_len);
     bool swap_endian = arg_get_lit(ctx, 2);
-
+    bool use_schann = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     bool has_auth_key = false;
@@ -5671,22 +8635,29 @@ static int CmdHF14AMfuWipe(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t card_mem_size = 0;
-
-    // Swap endianness
-    if (swap_endian) {
-        if (has_auth_key) {
-            auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 8);
-        }
-
-        if (has_pwd) {
-            auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 4);
-        }
+    if (use_schann && has_auth_key == false) {
+        PrintAndLogEx(WARNING, "Secure channel must be called with key");
+        return PM3_EINVARG;
     }
+
+    uint8_t card_mem_size = 0;
 
     uint64_t tagtype = GetHF14AMfU_Type();
     if (tagtype == MFU_TT_UL_ERROR) {
         return PM3_ESOFT;
+    }
+
+    // Swap endianness
+    if (swap_endian) {
+        if (ak_len == 16) {
+            if (((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C)) {
+                auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 8);
+            } else if (((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES)) {
+                auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 16);
+            }
+        } else if (ak_len == 4) {
+            auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 4);
+        }
     }
 
     // number of pages to WRITE
@@ -5714,6 +8685,17 @@ static int CmdHF14AMfuWipe(const char *Cmd) {
     }
 
     DropField();
+
+    uint8_t keytype = 0;
+    if (has_auth_key || has_pwd) {
+        if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) {
+            keytype = 1; // UL_C auth
+        } else if ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES) {
+            keytype = 3; // UL_AES auth
+        } else {
+            keytype = 2; // UL_EV1/NTAG auth
+        }
+    }
 
     PrintAndLogEx(INFO, "Start wiping...");
     PrintAndLogEx(INFO, "-----+-----------------------------");
@@ -5757,12 +8739,30 @@ static int CmdHF14AMfuWipe(const char *Cmd) {
         // UL_AES specific
         if ((tagtype & MFU_TT_UL_AES)) {
             // default config?
+
+            switch (i) {
+                case 41:
+                    memcpy(data, "\x00\x00\x00\x3C", 4);
+                    break;
+                case 42:
+                    // schann disabled by previous write on block 41
+                    use_schann = false;
+                    memcpy(data, "\x8C\x05\x00\x00", 4);
+                    break;
+                case 46:
+                    // RFU OTP, write will break if already set to non zero
+                    i = 47;
+                    break;
+                case 48:
+                    goto ulaes;
+            }
         }
 
         // UL / NTAG with PWD/PACK
         if ((tagtype & (MFU_TT_UL_EV1_48 | MFU_TT_UL_EV1_128 | MFU_TT_UL_EV1 | MFU_TT_UL_NANO_40 |
                         MFU_TT_NTAG_210u | MFU_TT_NTAG_213 | MFU_TT_NTAG_213_F | MFU_TT_NTAG_213_C |
                         MFU_TT_NTAG_213_TT | MFU_TT_NTAG_215 | MFU_TT_NTAG_216 | MFU_TT_NTAG_216_F |
+                        MFU_TT_NTAG_223_DNA | MFU_TT_NTAG_223_DNA_SD |
                         MFU_TT_NTAG_I2C_1K | MFU_TT_NTAG_I2C_2K | MFU_TT_NTAG_I2C_1K_PLUS | MFU_TT_NTAG_I2C_2K_PLUS
                        ))) {
 
@@ -5802,11 +8802,11 @@ static int CmdHF14AMfuWipe(const char *Cmd) {
         /*
         int res = PM3_SUCCESS;
         if (res == PM3_ESOFT) {
-            res = mfu_write_block(data, MFU_BLOCK_SIZE, has_auth_key, has_pwd, auth_key_ptr, i);
+            res = mfu_write_block(data, MFU_BLOCK_SIZE, keytype, auth_key_ptr, i);
         }
         */
 
-        int res = mfu_write_block(data, MFU_BLOCK_SIZE, has_auth_key, has_pwd, auth_key_ptr, i);
+        int res = mfu_write_block(data, MFU_BLOCK_SIZE, keytype, auth_key_ptr, i, use_schann);
 
         PrintAndLogEx(INFO, " %3d | %s" NOLF, i, sprint_hex(data, MFU_BLOCK_SIZE));
         switch (res) {
@@ -5829,35 +8829,76 @@ static int CmdHF14AMfuWipe(const char *Cmd) {
 
     PrintAndLogEx(INFO, "-----+-----------------------------");
 
+    mful_setkey_t packet = {
+        .has_auth_key = false,
+        .use_schann = false,
+        .key_index = 0,
+    };
+    PacketResponseNG resp;
+
 ulc:
 
     // UL-C - set 3-DES key
     if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) {
 
-        uint8_t key[16] = {
+        uint8_t defaultkey[16] = {
             0x49, 0x45, 0x4D, 0x4B, 0x41, 0x45, 0x52, 0x42,
             0x21, 0x4E, 0x41, 0x43, 0x55, 0x4F, 0x59, 0x46
         };
+        uint8_t *def_key_ptr = SwapEndian64(defaultkey, 16, 8);
+        packet.keytype = 1; // UL-C
+        memcpy(packet.key, def_key_ptr, 16);
 
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MIFAREUC_SETPWD, 0, 0, 0, key, sizeof(key));
-        PacketResponseNG resp;
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-            if ((resp.oldarg[0] & 0xff) == 1) {
-                PrintAndLogEx(INFO, "Ultralight-C new key... " _GREEN_("%s"), sprint_hex_inrow(key, sizeof(key)));
-            } else {
-                PrintAndLogEx(WARNING, "Failed writing at block %u", (uint8_t)(resp.oldarg[1] & 0xFF));
-                return PM3_ESOFT;
-            }
-        } else {
+        SendCommandNG(CMD_HF_MIFAREU_SETKEY, (uint8_t *)&packet, sizeof(packet));
+        if (WaitForResponseTimeout(CMD_HF_MIFAREU_SETKEY, &resp, 1500) == false) {
             PrintAndLogEx(WARNING, "command execution time out");
             return PM3_ETIMEOUT;
         }
+        if (resp.status == PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "Ultralight C new key... " _GREEN_("%s"), sprint_hex_inrow(defaultkey, sizeof(defaultkey)));
+        } else {
+            PrintAndLogEx(WARNING, "Failed writing key");
+            return PM3_ESOFT;
+        }
     }
 
+ulaes:
     // UL_AES specific
-    if ((tagtype & MFU_TT_UL_AES)) {
-        // Set AES key
+    if ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES) {
+        // Set AES keys
+        uint8_t defaultkey[16] = { 0 };
+        uint8_t *def_key_ptr = SwapEndian64(defaultkey, 16, 16);
+        packet.keytype = 3; // UL-AES
+        packet.key_index = 0;
+        memcpy(packet.key, def_key_ptr, 16);
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_MIFAREU_SETKEY, (uint8_t *)&packet, sizeof(packet));
+        if (WaitForResponseTimeout(CMD_HF_MIFAREU_SETKEY, &resp, 1500) == false) {
+            PrintAndLogEx(WARNING, "command execution time out");
+            return PM3_ETIMEOUT;
+        }
+        if (resp.status == PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "Ultralight AES new DataProtKey... " _GREEN_("%s"), sprint_hex_inrow(defaultkey, sizeof(defaultkey)));
+        } else {
+            PrintAndLogEx(WARNING, "Failed writing key");
+            return PM3_ESOFT;
+        }
+
+        packet.key_index = 1;
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_MIFAREU_SETKEY, (uint8_t *)&packet, sizeof(packet));
+        if (WaitForResponseTimeout(CMD_HF_MIFAREU_SETKEY, &resp, 1500) == false) {
+            PrintAndLogEx(WARNING, "command execution time out");
+            return PM3_ETIMEOUT;
+        }
+        if (resp.status == PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "Ultralight AES new UIDRetrKey...  " _GREEN_("%s"), sprint_hex_inrow(defaultkey, sizeof(defaultkey)));
+        } else {
+            PrintAndLogEx(WARNING, "Failed writing key");
+            return PM3_ESOFT;
+        }
     }
 
 
@@ -5875,12 +8916,14 @@ static int CmdHF14AMfUIncr(const char *Cmd) {
                   "Increment a MIFARE Ultralight Ev1 counter\n"
                   "Will read but not increment counter if NTAG is detected",
                   "hf mfu incr -c 0 -v 1337\n"
-                  "hf mfu incr -c 2 -v 0 -p FFFFFFFF");
+                  "hf mfu incr -c 2 -v 0 -k FFFFFFFF");
     void *argtable[] = {
         arg_param_begin,
         arg_int1("c", "cnt", "<dec>", "Counter index from 0"),
         arg_int1("v", "val", "<dec>", "Value to increment by (0-16777215)"),
-        arg_str0("p", "pwd", "<hex>", "PWD to authenticate with"),
+        arg_str0("k", "key", "<hex>", "Authentication key (UL-AES 16 bytes, EV1/NTAG 4 bytes)"),
+        arg_lit0("l", NULL, "Swap entered key's endianness"),
+        arg_lit0(NULL, "schann", "use secure channel. Must have key"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -5888,19 +8931,30 @@ static int CmdHF14AMfUIncr(const char *Cmd) {
     uint8_t counter = arg_get_int_def(ctx, 1, 3);
     uint32_t value = arg_get_u32_def(ctx, 2, 16777216);
 
-    int pwd_len;
-    uint8_t pwd[4] = { 0x00 };
-    CLIGetHexWithReturn(ctx, 3, pwd, &pwd_len);
-    bool has_key = false;
-    if (pwd_len) {
-        has_key = true;
-        if (pwd_len != 4) {
-            PrintAndLogEx(WARNING, "incorrect PWD length");
-            return PM3_EINVARG;
-        }
+    int ak_len = 0;
+    uint8_t authenticationkey[16] = {0x00};
+    uint8_t pack[4] = {0, 0, 0, 0};
+    CLIGetHexWithReturn(ctx, 3, authenticationkey, &ak_len);
+    bool swap_endian = arg_get_lit(ctx, 4);
+    bool use_schann = arg_get_lit(ctx, 5);
+    CLIParserFree(ctx);
+
+    bool has_auth_key = false;
+    bool has_pwd = false;
+    if (ak_len == 16) {
+        has_auth_key = true;
+    } else if (ak_len == 4) {
+        has_pwd = true;
+    } else if (ak_len != 0) {
+        PrintAndLogEx(WARNING, "ERROR: Key is incorrect length\n");
+        return PM3_EINVARG;
     }
 
-    CLIParserFree(ctx);
+    if (use_schann && has_auth_key == false) {
+        PrintAndLogEx(WARNING, "Secure channel must be called with key");
+        return PM3_EINVARG;
+    }
+    uint8_t *auth_key_ptr = authenticationkey;
 
     if (counter > 2) {
         PrintAndLogEx(WARNING, "Counter index must be in range 0-2");
@@ -5917,14 +8971,8 @@ static int CmdHF14AMfUIncr(const char *Cmd) {
         increment_cmd[i + 2] = (value >> (8 * i)) & 0xff;
     }
 
-    iso14a_card_select_t card;
-    if (ul_select(&card) == false) {
-        PrintAndLogEx(FAILED, "failed to select card, exiting...");
-        return PM3_ESOFT;
-    }
-
     uint64_t tagtype = GetHF14AMfU_Type();
-    uint64_t tags_with_counter_ul = MFU_TT_UL_EV1_48 | MFU_TT_UL_EV1_128 | MFU_TT_UL_EV1;
+    uint64_t tags_with_counter_ul = MFU_TT_UL_EV1_48 | MFU_TT_UL_EV1_128 | MFU_TT_UL_EV1 | MFU_TT_UL_AES;
     uint64_t tags_with_counter_ntag = MFU_TT_NTAG_213 | MFU_TT_NTAG_213_F | MFU_TT_NTAG_213_C | MFU_TT_NTAG_213_TT | MFU_TT_NTAG_215 | MFU_TT_NTAG_216;
     if ((tagtype & (tags_with_counter_ul | tags_with_counter_ntag)) == 0) {
         PrintAndLogEx(WARNING, "tag type does not have counters");
@@ -5939,17 +8987,33 @@ static int CmdHF14AMfUIncr(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t pack[4] = { 0, 0, 0, 0 };
-    if (has_key) {
-        if (ulev1_requestAuthentication(pwd, pack, sizeof(pack)) == PM3_EWRONGANSWER) {
-            PrintAndLogEx(FAILED, "authentication failed UL-EV1/NTAG");
-            DropField();
-            return PM3_ESOFT;
+    // Swap endianness
+    if (swap_endian) {
+        if (ak_len == 16) {
+            if (((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES)) {
+                auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 16);
+            }
+        } else if (ak_len == 4) {
+            auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 4);
         }
     }
 
+    if (has_auth_key) {
+        if (((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES)) {
+            PrintAndLogEx(INFO, "Using %s... " _GREEN_("%s"), "aes", sprint_hex_inrow(authenticationkey, ak_len));
+        }
+    } else if (has_pwd) {
+        PrintAndLogEx(INFO, "Using %s... " _GREEN_("%s"), "pwd", sprint_hex_inrow(authenticationkey, ak_len));
+    }
+
+    iso14a_card_select_t card;
+    if (ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, pack, sizeof(pack), use_schann) == PM3_ESOFT) {
+        PrintAndLogEx(FAILED, "failed to select card, exiting...");
+        return PM3_ESOFT;
+    }
+
     uint8_t current_counter[3] = { 0, 0, 0 };
-    int len = ulev1_readCounter(counter, current_counter, sizeof(current_counter));
+    int len = ulev1_readCounter(counter, current_counter, sizeof(current_counter), use_schann);
     if (len != sizeof(current_counter)) {
         PrintAndLogEx(FAILED, "failed to read old counter");
         if (is_ntag) {
@@ -5969,14 +9033,14 @@ static int CmdHF14AMfUIncr(const char *Cmd) {
     }
 
     uint8_t resp[1] = { 0x00 };
-    if (ul_send_cmd_raw(increment_cmd, sizeof(increment_cmd), resp, sizeof(resp)) < 0) {
+    if (ul_send_cmd_raw(increment_cmd, sizeof(increment_cmd), resp, sizeof(resp), use_schann) < 0) {
         PrintAndLogEx(FAILED, "failed to increment counter");
         DropField();
         return PM3_ESOFT;
     }
 
     uint8_t new_counter[3] = { 0, 0, 0 };
-    int new_len = ulev1_readCounter(counter, new_counter, sizeof(new_counter));
+    int new_len = ulev1_readCounter(counter, new_counter, sizeof(new_counter), use_schann);
     if (new_len != sizeof(current_counter)) {
         PrintAndLogEx(FAILED, "failed to read new counter");
         DropField();
@@ -5990,6 +9054,71 @@ static int CmdHF14AMfUIncr(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14AMfUeSetBlk(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu esetblk",
+                  "Set emulator memory page(s). One page = 4 bytes; pass multiple\n"
+                  "whole pages of data to set consecutive pages from --blk.",
+                  "hf mfu esetblk --blk 4 -d 04E10CDA\n"
+                  "hf mfu esetblk --blk 4 -d 04E10CDA993C8048   -> sets pages 4-5\n"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("b", "blk", "<dec>", "page number to start at"),
+        arg_str0("d", "data", "<hex>", "bytes to write, whole pages (multiple of 4 bytes)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int blk = arg_get_int_def(ctx, 1, 0);
+
+    uint8_t data[MFU_MAX_BYTES] = {0x00};
+    int datalen = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 2), data, sizeof(data), &datalen);
+    CLIParserFree(ctx);
+    if (res) {
+        PrintAndLogEx(FAILED, "Error parsing bytes");
+        return PM3_EINVARG;
+    }
+
+    if (blk < 0) {
+        PrintAndLogEx(WARNING, "page number must be positive");
+        return PM3_EINVARG;
+    }
+
+    if (datalen == 0 || (datalen % MFU_BLOCK_SIZE) != 0) {
+        PrintAndLogEx(WARNING, "data must be whole pages (multiples of %d bytes). Got %i", MFU_BLOCK_SIZE, datalen);
+        return PM3_EINVARG;
+    }
+
+    int count = datalen / MFU_BLOCK_SIZE;
+
+    // live MFU emulator data region is MFU_MAX_BYTES (pages 0..254); page 255 is not round-trippable
+    if ((blk + count) * MFU_BLOCK_SIZE > MFU_MAX_BYTES) {
+        PrintAndLogEx(WARNING, "page range exceeds emulator memory (max page %u)", (MFU_MAX_BYTES / MFU_BLOCK_SIZE) - 1);
+        return PM3_EINVARG;
+    }
+
+    // one esetblk is a single CMD_HF_MIFARE_EML_MEMSET; its payload (data + a 4-byte
+    // header) must fit the command buffer. Larger sets should use `hf mfu eload`.
+    if (datalen > (int)(g_conn.max_cmd_data_size - 4)) {
+        PrintAndLogEx(WARNING, "too many pages for one command: max %d pages (%d bytes). Use " _YELLOW_("`hf mfu eload`") " for larger sets",
+                      (int)((g_conn.max_cmd_data_size - 4) / MFU_BLOCK_SIZE), (int)(g_conn.max_cmd_data_size - 4));
+        return PM3_EINVARG;
+    }
+
+    // MFU emulator page data starts after the 56-byte mfu_dump_t prefix, so shift the
+    // page index by MFU_DUMP_PREFIX_LENGTH/MFU_BLOCK_SIZE (=14), width = MFU_BLOCK_SIZE (4).
+    res = mf_eml_set_mem_xt(data, blk + (MFU_DUMP_PREFIX_LENGTH / MFU_BLOCK_SIZE), count, MFU_BLOCK_SIZE, 0);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Failed to set emulator memory");
+        return res;
+    }
+
+    PrintAndLogEx(SUCCESS, "Set " _YELLOW_("%d") " page(s) from page " _YELLOW_("%d"), count, blk);
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",     CmdHelp,                   AlwaysAvailable, "This help"},
     {"list",     CmdHF14AMfuList,           AlwaysAvailable, "List MIFARE Ultralight / NTAG history"},
@@ -5997,15 +9126,20 @@ static command_t CommandTable[] = {
     {"keygen",   CmdHF14AMfUKeyGen,         AlwaysAvailable, "Generate DES/3DES/AES MIFARE diversified keys"},
     {"pwdgen",   CmdHF14AMfUPwdGen,         AlwaysAvailable, "Generate pwd from known algos"},
     {"otptear",  CmdHF14AMfuOtpTearoff,     IfPm3Iso14443a,  "Tear-off test on OTP bits"},
-//    {"tear_cnt", CmdHF14AMfuEv1CounterTearoff,     IfPm3Iso14443a,  "Tear-off test on Ev1/NTAG Counter bits"},
+    {"countertear", CmdHF14AMfuEv1CounterTearoff,     IfPm3Iso14443a,  "Tear-off test on Ev1/NTAG Counter bits"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("operations") " -----------------------"},
+    {"chk",      CmdHF14AMfUAuthChk,        IfPm3Iso14443a,  "Ultralight C/AES - Authentication dictionary check"},
     {"cauth",    CmdHF14AMfUCAuth,          IfPm3Iso14443a,  "Ultralight-C - Authentication"},
-    {"setpwd",   CmdHF14AMfUCSetPwd,        IfPm3Iso14443a,  "Ultralight-C - Set 3DES key"},
+    {"desbrute", CmdHF14AMfUCDesBrute,      AlwaysAvailable, "Ultralight-C - 3DES key segment brute force"},
     {"aesauth",  CmdHF14AMfUAESAuth,        IfPm3Iso14443a,  "Ultralight-AES - Authentication"},
+    {"aesgetuid",  CmdHF14AMfUAESGetUID,    IfPm3Iso14443a,  "Ultralight-AES - Get UID when RID in use"},
+    {"setkey",   CmdHF14AMfUSetKey,         IfPm3Iso14443a,  "Ultralight C/AES - Set 3DES/AES keys"},
     {"dump",     CmdHF14AMfUDump,           IfPm3Iso14443a,  "Dump MIFARE Ultralight family tag to binary file"},
     {"incr",     CmdHF14AMfUIncr,           IfPm3Iso14443a,  "Increments Ev1/NTAG counter"},
     {"info",     CmdHF14AMfUInfo,           IfPm3Iso14443a,  "Tag information"},
+    {"ndefformat", CmdHF14MfuNDEFFormat,    IfPm3Iso14443a,  "Format tag as NDEF, writes the Capability Container"},
     {"ndefread", CmdHF14MfuNDEFRead,        IfPm3Iso14443a,  "Prints NDEF records from card"},
+    {"ndefwrite", CmdHF14MfuNDEFWrite,      IfPm3Iso14443a,  "Write NDEF records to card"},
     {"rdbl",     CmdHF14AMfURdBl,           IfPm3Iso14443a,  "Read block"},
     {"restore",  CmdHF14AMfURestore,        IfPm3Iso14443a,  "Restore a dump file onto a tag"},
     {"tamper",   CmdHF14MfUTamper,          IfPm3Iso14443a,  "NTAG 213TT - Configure the tamper feature"},
@@ -6016,6 +9150,7 @@ static command_t CommandTable[] = {
     {"eload",    CmdHF14AMfUeLoad,          IfPm3Iso14443a,  "Upload file into emulator memory"},
     {"esave",    CmdHF14AMfuESave,          IfPm3Iso14443a,  "Save emulator memory to file"},
     {"eview",    CmdHF14AMfuEView,          IfPm3Iso14443a,  "View emulator memory"},
+    {"esetblk",  CmdHF14AMfUeSetBlk,        IfPm3Iso14443a,  "Set emulator memory block"},
     {"sim",      CmdHF14AMfUSim,            IfPm3Iso14443a,  "Simulate MIFARE Ultralight from emulator memory"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("magic") " ----------------------------"},
     {"setuid",   CmdHF14AMfUCSetUid,        IfPm3Iso14443a,  "Set UID - MAGIC tags only"},

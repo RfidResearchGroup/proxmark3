@@ -328,6 +328,81 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO14443B_PING         0xBA
 #define ISO14443B_PONG         0xAB
 
+/*
+ * Type B' / Innovatron frame format.
+ *
+ * Byte 0 is V&T Ad. The high nibble is the card/tag address and the low
+ * nibble is the coupler/validator address. APGEN uses card address 0;
+ *
+ * APGEN:  [V&T Ad, 0B, OccuPar] or [V&T Ad, 0B, OccuPar, Config]
+ * REPGEN: [V&T Ad, 07, DIV(4), VERLOG] or
+ *         [V&T Ad, 07, DIV(4), VERLOG, CONFIG, ATR/application bytes...]
+ * ATTRIB: [V&T Ad, 0F, DIV(4)] -> RR
+ * DISC:   [V&T Ad, 03] -> RR
+ * RR:     [V&T Ad, 01]
+ *
+ * Data exchange commands:
+ *   family | (seq << 1), with bit 0 clear and seq carried in bits 1..3.
+ *   COM_RA C2..CE allows assigning card address and performing APDU exchange by DIV.
+ *   COM_R  02..0E is the normal APDU exchange command, relying on card address only.
+ *   REC    42..4E is the card response to COM_RA/COM_R.
+ *   Public PICS rows list seq 1..7.
+ *
+ * Byte 2 in data frames is LNG. LNG includes byte 2 itself, so the APDU/R-APDU
+ * byte count is LNG - 1. In COM_RA the trailing DIV is outside LNG.
+ *
+ */
+#define ISO14443B_PRIME_VT_ADDR_DEFAULT          0x01
+#define ISO14443B_PRIME_VT_CARD_ADDR_MASK        0xF0
+#define ISO14443B_PRIME_VT_CARD_ADDR_SHIFT       4
+#define ISO14443B_PRIME_VT_COUPLER_ADDR_MASK     0x0F
+#define ISO14443B_PRIME_VT_CARD_ADDR_FIRST       1
+#define ISO14443B_PRIME_VT_ADDR(card, coupler)   ((((card) << ISO14443B_PRIME_VT_CARD_ADDR_SHIFT) & ISO14443B_PRIME_VT_CARD_ADDR_MASK) | ((coupler) & ISO14443B_PRIME_VT_COUPLER_ADDR_MASK))
+
+#define ISO14443B_PRIME_CMD_RR                   0x01
+#define ISO14443B_PRIME_CMD_DISC                 0x03
+#define ISO14443B_PRIME_CMD_REPGEN               0x07
+#define ISO14443B_PRIME_CMD_APGEN                0x0B
+#define ISO14443B_PRIME_CMD_ATTRIB               0x0F
+
+#define ISO14443B_PRIME_OCCUPAR_VALUE_MASK       0x3F
+// Public documents and sources identify bit 6 as short APGEN;
+// it's not proven to work yet
+#define ISO14443B_PRIME_OCCUPAR_SHORT_APGEN      0x40
+#define ISO14443B_PRIME_OCCUPAR_HIGH_BITS_MASK   0xC0
+#define ISO14443B_PRIME_OCCUPAR_BPSK_FLAG        0x80
+// OccuPar controls APGEN response chance:
+//   0x3F      card answers every poll attempt
+//   0x3E-0x00 lower values reduce the response chance
+#define ISO14443B_PRIME_OCCUPAR_DEFAULT          0x3F
+
+#define ISO14443B_PRIME_APGEN_CONFIG_REQUEST_ATR 0x80
+#define ISO14443B_PRIME_APGEN_CONFIG_RFU_MASK    0x7F
+
+#define ISO14443B_PRIME_VERLOG_LONG_REPGEN       0x80
+#define ISO14443B_PRIME_VERLOG_FIXED_BITS_MASK   0x61
+#define ISO14443B_PRIME_VERLOG_FIXED_BITS_VALUE  0x61
+#define ISO14443B_PRIME_VERLOG_VERSION_MASK      0x1E
+#define ISO14443B_PRIME_VERLOG_VERSION_SHIFT     1
+
+#define ISO14443B_PRIME_CONFIG_WAIT_SUPPORTED    0x80
+#define ISO14443B_PRIME_CONFIG_ATR_PRESENT       0x40
+#define ISO14443B_PRIME_CONFIG_RFU_MASK          0x3F
+
+#define ISO14443B_PRIME_CMD_COM_DATA_FAMILY_MASK 0xC0
+#define ISO14443B_PRIME_CMD_COM_DATA_SEQ_MASK    0x0E
+#define ISO14443B_PRIME_CMD_COM_DATA_SEQ_SHIFT   1
+#define ISO14443B_PRIME_CMD_COM_DATA_FAMILY_COM_R  0x00
+#define ISO14443B_PRIME_CMD_COM_DATA_FAMILY_REC    0x40
+#define ISO14443B_PRIME_CMD_COM_DATA_FAMILY_COM_RA 0xC0
+#define ISO14443B_PRIME_SEQUENCE_START           1
+#define ISO14443B_PRIME_SEQUENCE_END             7
+#define ISO14443B_PRIME_CMD_COM_DATA_SEQ(cmd)    (((cmd) & ISO14443B_PRIME_CMD_COM_DATA_SEQ_MASK) >> ISO14443B_PRIME_CMD_COM_DATA_SEQ_SHIFT)
+#define ISO14443B_PRIME_CMD_COM_R(seq)           (ISO14443B_PRIME_CMD_COM_DATA_FAMILY_COM_R | (((seq) << ISO14443B_PRIME_CMD_COM_DATA_SEQ_SHIFT) & ISO14443B_PRIME_CMD_COM_DATA_SEQ_MASK))
+#define ISO14443B_PRIME_CMD_REC(seq)             (ISO14443B_PRIME_CMD_COM_DATA_FAMILY_REC | (((seq) << ISO14443B_PRIME_CMD_COM_DATA_SEQ_SHIFT) & ISO14443B_PRIME_CMD_COM_DATA_SEQ_MASK))
+#define ISO14443B_PRIME_CMD_COM_RA(seq)          (ISO14443B_PRIME_CMD_COM_DATA_FAMILY_COM_RA | (((seq) << ISO14443B_PRIME_CMD_COM_DATA_SEQ_SHIFT) & ISO14443B_PRIME_CMD_COM_DATA_SEQ_MASK))
+#define ISO14443B_PRIME_COM_RA_START             ISO14443B_PRIME_CMD_COM_RA(ISO14443B_PRIME_SEQUENCE_START)
+
 // XEROX Commands
 #define ISO14443B_XEROX_PWD             0x38
 #define ISO14443B_XEROX_WUP1            0x0D
@@ -339,10 +414,13 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ASK_REQT               0x10
 #define ASK_IDENTIFY           0x0F
 #define ASK_SELECT             0x9F
-#define ASK_MULTREAD           (0x1 << 4) // High nibble
-#define ASK_UPDATE             (0x3 << 4) // High nibble
-#define ASK_WRITE              (0x5 << 4) // High nibble
-#define ASK_READ               (0x6 << 4) // High nibble
+#define ASK_CTS_PRODUCT_CODE_CTS256B 0x50
+#define ASK_CTS_PRODUCT_CODE_CTS512B 0x60
+#define ASK_BLOCK_ADDRESS_MASK 0x1F
+#define ASK_MULTREAD           (0x1 << 5) // 001 AAAAA
+#define ASK_UPDATE             (0x3 << 5) // 011 AAAAA
+#define ASK_WRITE              (0x5 << 5) // 101 AAAAA
+#define ASK_READ               (0x6 << 5) // 110 AAAAA
 #define ASK_DESACTIVATE        0xF0
 
 
@@ -462,7 +540,8 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define PROTO_TEXKOM    19
 #define PROTO_XEROX     20
 #define PROTO_FMCOS20   21
-#define COUNT_OF_PROTOCOLS 22
+#define PROTO_CALYPSO   22
+#define COUNT_OF_PROTOCOLS 23
 
 // Picopass fuses
 #define FUSE_FPERS   0x80
@@ -609,9 +688,11 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_READ_RECORDS2              0xAB
 #define MFDES_READ_DATA2                 0xAD
 #define MFDES_ADDITIONAL_FRAME           0xAF
+#define MFDES_RESTORE_TRANSFER           0xB1
 #define MFDES_UPDATE_RECORD2             0xBA
 #define MFDES_READ_RECORDS               0xBB
 #define MFDES_READ_DATA                  0xBD
+#define MFDES_RESTRICT_MFC_UPDATE        0xBF
 #define MFDES_CREATE_CYCLIC_RECORD_FILE  0xC0
 #define MFDES_CREATE_LINEAR_RECORD_FILE  0xC1
 #define MFDES_CHANGE_KEY                 0xC4
@@ -624,6 +705,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_CREATE_VALUE_FILE          0xCC
 #define MFDES_CREATE_STD_DATA_FILE       0xCD
 #define MFDES_CREATE_TRANS_MAC_FILE      0xCE
+#define MFDES_CREATE_MFC_MAPPING         0xCF
 #define MFDES_DELETE_APPLICATION         0xDA
 #define MFDES_UPDATE_RECORD              0xDB
 #define MFDES_DEBIT                      0xDC
@@ -644,6 +726,8 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MFDES_S_SIGNATURE                0x90
 #define MFDES_S_ADDITIONAL_FRAME         0xAF
 
+#define MFDES_S_OPERATION_OK             0x00
+#define MFDES_S_NO_CHANGES               0x0C
 #define MFDES_E_OUT_OF_EEPROM            0x0E
 #define MFDES_E_ILLEGAL_COMMAND_CODE     0x1C
 #define MFDES_E_INTEGRITY_ERROR          0x1E
@@ -815,97 +899,325 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define EM4x05_PIGEON                   (1 << 26)
 
 
+// FeliCa SEAC protocol
+
+// Request:  CMD | 01 01 | Selector [| TIMESLOT]
+//           TIMESLOT masks the card's random response slot.
+//           Higher set bits may delay the response beyond the reader timeout.
+//           Observed: omitted~=38%, 00/01=100%, 0F=97%, 4F=50%, 64/65~=10%, FF=0%.
+// Response: CMD | 01 01 | Selector | IDm[8] | CTX[2]
+#define FELICA_SEAC_POLLING_CMD                         0x00
+
+// Request:  CMD | 01 01 | Selector | IDm[8] | Challenge1a[8]
+// Response: CMD | 01 01 | Selector | Challenge1b[8] | Challenge2a[8] | Trailer[1]
+#define FELICA_SEAC_AUTHENTICATION1_CMD                 0x01
+
+// Request:  CMD | 01 01 | Selector | Challenge2b[8]
+// Response: CMD | 01 01 | Selector | ProtectedIDi[8]
+#define FELICA_SEAC_AUTHENTICATION2_CMD                 0x02
+
+// Request/response: CMD | ProtectedBody[N]
+#define FELICA_SEAC_WRITE_CMD                           0x03
+
+// Request/response: CMD | ProtectedBody[N]
+#define FELICA_SEAC_READ_CMD                            0x04
+
+// Request/response: CMD | ProtectedBody[N]
+#define FELICA_SEAC_EXTENDED_CMD                        0xFF
+
+
 // FeliCa protocol
-#define FELICA_POLL_REQ                 0x00
-#define FELICA_POLL_ACK                 0x01
 
-#define FELICA_REQSRV_REQ               0x02
-#define FELICA_REQSRV_ACK               0x03
+#define FELICA_POLLING_REQ                              0x00
+#define FELICA_POLLING_RES                              0x01
 
-#define FELICA_REQRESP_REQ              0x04
-#define FELICA_REQRESP_ACK              0x05
+#define FELICA_REQUEST_SERVICE_REQ                      0x02
+#define FELICA_REQUEST_SERVICE_RES                      0x03
 
-#define FELICA_RDBLK_REQ                0x06
-#define FELICA_RDBLK_ACK                0x07
+#define FELICA_REQUEST_RESPONSE_REQ                     0x04
+#define FELICA_REQUEST_RESPONSE_RES                     0x05
 
-#define FELICA_WRTBLK_REQ               0x08
-#define FELICA_WRTBLK_ACK               0x09
+#define FELICA_READ_WITHOUT_ENCRYPTION_REQ              0x06
+#define FELICA_READ_WITHOUT_ENCRYPTION_RES              0x07
 
-#define FELICA_SRCHSYSCODE_REQ          0x0a
-#define FELICA_SRCHSYSCODE_ACK          0x0b
+#define FELICA_WRITE_WITHOUT_ENCRYPTION_REQ             0x08
+#define FELICA_WRITE_WITHOUT_ENCRYPTION_RES             0x09
 
-#define FELICA_REQSYSCODE_REQ           0x0c
-#define FELICA_REQSYSCODE_ACK           0x0d
+#define FELICA_SEARCH_SERVICE_CODE_REQ                  0x0a
+#define FELICA_SEARCH_SERVICE_CODE_RES                  0x0b
 
-#define FELICA_AUTH1_REQ                0x10
-#define FELICA_AUTH1_ACK                0x11
+#define FELICA_REQUEST_SYSTEM_CODE_REQ                  0x0c
+#define FELICA_REQUEST_SYSTEM_CODE_RES                  0x0d
 
-#define FELICA_AUTH2_REQ                0x12
-#define FELICA_AUTH2_ACK                0x13
+#define FELICA_REQUEST_BLOCK_INFORMATION_REQ            0x0e
+#define FELICA_REQUEST_BLOCK_INFORMATION_RES            0x0f
 
-#define FELICA_RDSEC_REQ                0x14
-#define FELICA_RDSEC_ACK                0x15
+#define FELICA_AUTHENTICATION1_REQ                      0x10
+#define FELICA_AUTHENTICATION1_RES                      0x11
 
-#define FELICA_WRTSEC_REQ               0x16
-#define FELICA_WRTSEC_ACK               0x17
+#define FELICA_AUTHENTICATION2_REQ                      0x12
+#define FELICA_AUTHENTICATION2_RES                      0x13
 
-#define FELICA_REQSRV2_REQ              0x32
-#define FELICA_REQSRV2_ACK              0x33
+#define FELICA_READ_SECURE_REQ                          0x14
+#define FELICA_READ_SECURE_RES                          0x15
 
-#define FELICA_GETSTATUS_REQ            0x38
-#define FELICA_GETSTATUS_ACK            0x39
+#define FELICA_WRITE_SECURE_REQ                         0x16
+#define FELICA_WRITE_SECURE_RES                         0x17
 
-#define FELICA_OSVER_REQ                0x3c
-#define FELICA_OSVER_ACK                0x3d
+#define FELICA_REQUEST_CODE_LIST_REQ                    0x1a
+#define FELICA_REQUEST_CODE_LIST_RES                    0x1b
 
-#define FELICA_RESET_MODE_REQ           0x3e
-#define FELICA_RESET_MODE_ACK           0x3f
+#define FELICA_REQUEST_BLOCK_INFORMATION_EX_REQ         0x1e
+#define FELICA_REQUEST_BLOCK_INFORMATION_EX_RES         0x1f
 
-#define FELICA_AUTH1V2_REQ              0x40
-#define FELICA_AUTH1V2_ACK              0x41
+#define FELICA_SET_PARAMETER_REQ                        0x20
+#define FELICA_SET_PARAMETER_RES                        0x21
 
-#define FELICA_AUTH2V2_REQ              0x42
-#define FELICA_AUTH2V2_ACK              0x43
+#define FELICA_GET_CONTAINER_ISSUE_INFORMATION_REQ      0x22
+#define FELICA_GET_CONTAINER_ISSUE_INFORMATION_RES      0x23
 
-#define FELICA_RDSECV2_REQ              0x44
-#define FELICA_RDSECV2_ACK              0x45
-#define FELICA_WRTSECV2_REQ             0x46
-#define FELICA_WRTSECV2_ACK             0x47
+#define FELICA_GET_AREA_INFORMATION_REQ                 0x24
+#define FELICA_GET_AREA_INFORMATION_RES                 0x25
 
-#define FELICA_UPDATE_RNDID_REQ         0x4C
-#define FELICA_UPDATE_RNDID_ACK         0x4D
+#define FELICA_GET_NODE_PROPERTY_REQ                    0x28
+#define FELICA_GET_NODE_PROPERTY_RES                    0x29
 
-// FeliCa SYSTEM list
-#define SYSTEMCODE_ANY                  0xffff // ANY
-#define SYSTEMCODE_FELICA_LITE          0x88b4 // FeliCa Lite
-#define SYSTEMCODE_COMMON               0xfe00 // Common
-#define SYSTEMCODE_EDY                  0xfe00 // Edy
-#define SYSTEMCODE_CYBERNE              0x0003 // Cyberne
-#define SYSTEMCODE_SUICA                0x0003 // Suica
-#define SYSTEMCODE_PASMO                0x0003 // Pasmo
+#define FELICA_GET_CONTAINER_PROPERTY_REQ               0x2e
+#define FELICA_GET_CONTAINER_PROPERTY_RES               0x2f
 
-//FeliCa Service list Suica/pasmo (little endian)
-#define SERVICE_SUICA_INOUT             0x108f // SUICA/PASMO
-#define SERVICE_SUICA_HISTORY           0x090f // SUICA/PASMO
-#define SERVICE_FELICA_LITE_READONLY    0x0b00 // FeliCa Lite RO
-#define SERVICE_FELICA_LITE_READWRITE   0x0900 // FeliCa Lite RW
+#define FELICA_REQUEST_SERVICE_V2_REQ                   0x32
+#define FELICA_REQUEST_SERVICE_V2_RES                   0x33
+
+#define FELICA_INTERNAL_AUTHENTICATE_AND_READ_REQ       0x34
+#define FELICA_INTERNAL_AUTHENTICATE_AND_READ_RES       0x35
+
+#define FELICA_EXTERNAL_AUTHENTICATE_AND_WRITE_REQ      0x36
+#define FELICA_EXTERNAL_AUTHENTICATE_AND_WRITE_RES      0x37
+
+#define FELICA_GET_SYSTEM_STATUS_REQ                    0x38
+#define FELICA_GET_SYSTEM_STATUS_RES                    0x39
+
+#define FELICA_REQUEST_PRODUCT_INFORMATION_REQ          0x3a
+#define FELICA_REQUEST_PRODUCT_INFORMATION_RES          0x3b
+
+#define FELICA_REQUEST_SPECIFICATION_VERSION_REQ        0x3c
+#define FELICA_REQUEST_SPECIFICATION_VERSION_RES        0x3d
+
+#define FELICA_RESET_MODE_REQ                           0x3e
+#define FELICA_RESET_MODE_RES                           0x3f
+
+#define FELICA_AUTHENTICATION1_V2_REQ                   0x40
+#define FELICA_AUTHENTICATION1_V2_RES                   0x41
+
+#define FELICA_AUTHENTICATION2_V2_REQ                   0x42
+#define FELICA_AUTHENTICATION2_V2_RES                   0x43
+
+#define FELICA_READ_SECURE_V2_REQ                       0x44
+#define FELICA_READ_SECURE_V2_RES                       0x45
+
+#define FELICA_WRITE_SECURE_V2_REQ                      0x46
+#define FELICA_WRITE_SECURE_V2_RES                      0x47
+
+#define FELICA_DELETE_KEY_REQ                           0x48
+#define FELICA_DELETE_KEY_RES                           0x49
+
+#define FELICA_UPDATE_RANDOM_ID_REQ                     0x4C
+#define FELICA_UPDATE_RANDOM_ID_RES                     0x4D
+
+#define FELICA_REGISTER_AREA_V2_REQ                     0x52
+#define FELICA_REGISTER_AREA_V2_RES                     0x53
+
+#define FELICA_REGISTER_SERVICE_V2_REQ                  0x54
+#define FELICA_REGISTER_SERVICE_V2_RES                  0x55
+
+#define FELICA_REGISTER_ISSUE_ID_EX_V2_REQ              0x56
+#define FELICA_REGISTER_ISSUE_ID_EX_V2_RES              0x57
+
+#define FELICA_SEPARATE_SYSTEM_V2_REQ                   0x58
+#define FELICA_SEPARATE_SYSTEM_V2_RES                   0x59
+
+// Observed through secure element communication traffic when deleting a common area service
+// Does not require commiting changes, area deletion cascades to all children nodes
+// Exact name unknown
+#define FELICA_DELETE_NODE_V2_REQ                       0x5C
+#define FELICA_DELETE_NODE_V2_RES                       0x5D
+
+// Also called COMMIT_REGISTRATION in some sources.
+#define FELICA_CHANGE_SYSTEM_BLOCK_V2_REQ               0x5E
+#define FELICA_CHANGE_SYSTEM_BLOCK_V2_RES               0x5F
+
+#define FELICA_GET_CONTAINER_ID_REQ                     0x70
+#define FELICA_GET_CONTAINER_ID_RES                     0x71
+
+#define FELICA_SET_NODE_PROPERTY_REQ                    0x78
+#define FELICA_SET_NODE_PROPERTY_RES                    0x79
+
+#define FELICA_REGISTER_ISSUE_ID_REQ                    0x80
+#define FELICA_REGISTER_ISSUE_ID_RES                    0x81
+
+#define FELICA_REGISTER_AREA_REQ                        0x82
+#define FELICA_REGISTER_AREA_RES                        0x83
+
+#define FELICA_REGISTER_SERVICE_REQ                     0x84
+#define FELICA_REGISTER_SERVICE_RES                     0x85
+
+#define FELICA_REGISTER_ISSUE_ID_EX_REQ                 0x86
+#define FELICA_REGISTER_ISSUE_ID_EX_RES                 0x87
+
+#define FELICA_SEPARATE_SYSTEM_REQ                      0x88
+#define FELICA_SEPARATE_SYSTEM_RES                      0x89
+
+// Also called COMMIT_REGISTRATION in some sources.
+#define FELICA_CHANGE_SYSTEM_BLOCK_REQ                  0x8E
+#define FELICA_CHANGE_SYSTEM_BLOCK_RES                  0x8F
+
+#define FELICA_REGISTER_MANUFACTURE_ID_REQ              0x90
+#define FELICA_REGISTER_MANUFACTURE_ID_RES              0x91
+
+#define FELICA_SELF_DIAGNOSIS_REQ                       0x92
+#define FELICA_SELF_DIAGNOSIS_RES                       0x93
+
+// FeliCa interface commands for mobile devices
+#define FELICA_CHANGE_ACTIVE_INTERFACE_REQ              0xA4
+#define FELICA_CHANGE_ACTIVE_INTERFACE_RES              0xA5
+
+#define FELICA_RESET_INTERFACE_REQ                      0xA8
+#define FELICA_RESET_INTERFACE_RES                      0xA9
+
+// FeliCa Ad-hoc Link Protocol (FALP) commands
+#define FELICA_PROPOSE_ADHOC_REQ                        0xAA
+#define FELICA_PROPOSE_ADHOC_RES                        0xAB
+
+#define FELICA_START_ADHOC_MODE_REQ                     0xAC
+#define FELICA_START_ADHOC_MODE_RES                     0xAD
+
+// FALP tunnel command; does not have a corresponding response code
+#define FELICA_FALP_TERMINATE_ADHOC                     0xAE
+
+#define FELICA_PUSH_REQ                                 0xB0
+#define FELICA_PUSH_RES                                 0xB1
+
+// FALP tunnel command; does not have a corresponding response code
+#define FELICA_FALP_TRANSMIT_DATA                       0xBC
+
+// Command codes >= 0xC0 consist of two bytes; the second byte is the function code.
+// Payload data, including the IDM, if present, is hence shifted by one byte to the right.
+
+// DCK encapsulation commands mentioned in the CCC specification
+#define FELICA_DCK_ENCAPSULATION_CAPDU_DATA             0xC200
+#define FELICA_DCK_ENCAPSULATION_CAPDU_DATA_CHAINED     0xC201
+#define FELICA_DCK_ENCAPSULATION_RW_ACK                 0xC210
+#define FELICA_DCK_ENCAPSULATION_NACK                   0xC220
+
+// DCK encapsulation responses mentioned in the CCC specification
+#define FELICA_DCK_ENCAPSULATION_RAPDU_DATA_RES         0xC300
+#define FELICA_DCK_ENCAPSULATION_RAPDU_DATA_CHAINED_RES 0xC301
+#define FELICA_DCK_ENCAPSULATION_DEVICE_ACK_RES         0xC310
+// 0xC320 is RFU; retained as a NACK response stub.
+#define FELICA_DCK_ENCAPSULATION_NACK_RES               0xC320
+
+// Mobile FeliCa secure-session commands
+// Observed in secure element traffic during card deletion
+// Exact command names are unknown.
+#define FELICA_MOBILE_SECURE_SESSION_CONFIGURE_REQ      0xC811
+#define FELICA_MOBILE_SECURE_SESSION_CONFIGURE_RES      0xC911
+
+#define FELICA_MOBILE_SECURE_SESSION_READ_REQ           0xC812
+#define FELICA_MOBILE_SECURE_SESSION_READ_RES           0xC912
+
+#define FELICA_MOBILE_SECURE_SESSION_GET_STATUS_REQ     0xC817
+#define FELICA_MOBILE_SECURE_SESSION_GET_STATUS_RES     0xC917
+
+#define FELICA_MOBILE_SECURE_SESSION_START_REQ          0xC819
+#define FELICA_MOBILE_SECURE_SESSION_START_RES          0xC919
+
+// FeliCa internal RF commands used on the wired interface
+// Observed in Mobile FeliCa Client
+#define FELICA_SET_PRIVACY_FLAG_REQ                     0xCC01
+#define FELICA_SET_PRIVACY_FLAG_RES                     0xCD01
+
+#define FELICA_REQUEST_MASKED_CODE_LIST_REQ             0xCC02
+#define FELICA_REQUEST_MASKED_CODE_LIST_RES             0xCD02
+
+// Legacy mobile FeliCa client commands
+#define FELICA_TURN_OFF_RF_POWER_CMD                    0xCC12
+#define FELICA_TURN_OFF_RF_POWER_RES                    0xCD12
+
+#define FELICA_SET_BAUD_RATE_CMD                        0xCC13
+#define FELICA_SET_BAUD_RATE_RES                        0xCD13
+
+// NFC-DEP PDUs over NFC-F: the first byte specifies the direction and the second the PDU type.
+// Unlike other extended commands, both the command code and function code is incremented on response.
+#define FELICA_NFC_DEP_ATR_REQ                          0xD400
+#define FELICA_NFC_DEP_ATR_RES                          0xD501
+#define FELICA_NFC_DEP_PSL_REQ                          0xD404
+#define FELICA_NFC_DEP_PSL_RES                          0xD505
+#define FELICA_NFC_DEP_DEP_REQ                          0xD406
+#define FELICA_NFC_DEP_DEP_RES                          0xD507
+#define FELICA_NFC_DEP_DSL_REQ                          0xD408
+#define FELICA_NFC_DEP_DSL_RES                          0xD509
+#define FELICA_NFC_DEP_RLS_REQ                          0xD40A
+#define FELICA_NFC_DEP_RLS_RES                          0xD50B
+
+// These commands are defined by JIS X 6319-4 but have not been observed on any real targets.
+#define FELICA_ATTR_REQ                                 0xD600
+#define FELICA_ATTR_RES                                 0xD701
+#define FELICA_HLT_REQ                                  0xD602
+#define FELICA_HLT_RES                                  0xD703
+#define FELICA_WUP_REQ                                  0xD604
+#define FELICA_WUP_RES                                  0xD705
+
+// Unlike most two-byte commands, works on all FeliCa targets; response code matches the command code
+#define FELICA_ECHO_REQ                                 0xF000
+
+// Legacy mobile FeliCa client RF chip register commands
+#define FELICA_SET_RF_CHIP_REGISTER_CMD                 0xF803
+#define FELICA_SET_RF_CHIP_REGISTER_RES                 0xF903
+
+#define FELICA_GET_RF_CHIP_REGISTER_CMD                 0xF804
+#define FELICA_GET_RF_CHIP_REGISTER_RES                 0xF904
+
+// Observed in Apple Wallet implementation, reads block data of any service present on the file system
+// Request consists of service code and little-endian block number
+#define FELICA_GET_FILESYSTEM_DATA_REQ                  0xFE05
+// Response consists of status bytes, and block data
+#define FELICA_GET_FILESYSTEM_DATA_RES                  0xFF05
+
+// Other FeliCa constants
+#define FELICA_SYSTEM_CODE_WILDCARD                     0xFFFFU
+#define FELICA_SYSTEM_CODE_NFC_TYPE3                    0x12FCU
+#define FELICA_SYSTEM_CODE_FELICA_LITE                  0x88B4U
+#define FELICA_SYSTEM_CODE_FELICA_SECURE_ID             0x957AU
+#define FELICA_SYSTEM_CODE_OSAIFU_KEITAI                0xFE0FU
+#define FELICA_SYSTEM_CODE_FELICA_NETWORKS_COMMON_AREA  0xFE00U
+
+#define FELICA_SERVICE_LITE_READONLY                     0x0b00 // FeliCa Lite RO
+#define FELICA_SERVICE_LITE_READWRITE                    0x0900 // FeliCa Lite RW
 
 // Calypso protocol
 #define CALYPSO_GET_RESPONSE            0xC0
+#define CALYPSO_GET_DATA                0xCA
 #define CALYPSO_SELECT                  0xA4
 #define CALYPSO_INVALIDATE              0x04
 #define CALYPSO_REHABILITATE            0x44
 #define CALYPSO_APPEND_RECORD           0xE2
 #define CALYPSO_DECREASE                0x30
+#define CALYPSO_DECREASE_MULTIPLE       0x38
 #define CALYPSO_INCREASE                0x32
+#define CALYPSO_INCREASE_MULTIPLE       0x3A
 #define CALYPSO_READ_BINARY             0xB0
+#define CALYPSO_READ_BINARY_EXTENDED    0xB1
 #define CALYPSO_READ_RECORD             0xB2
+#define CALYPSO_READ_RECORD_MULTIPLE    0xB3
+#define CALYPSO_SEARCH_RECORD_MULTIPLE  0xA2
+#define CALYPSO_WRITE_BINARY            0xD0
 #define CALYPSO_UPDATE_BINARY           0xD6
 #define CALYPSO_UPDATE_RECORD           0xDC
 #define CALYPSO_WRITE_RECORD            0xD2
 #define CALYPSO_OPEN_SESSION            0x8A
 #define CALYPSO_CLOSE_SESSION           0x8E
 #define CALYPSO_GET_CHALLENGE           0x84
+#define CALYPSO_RESET_RETRY_COUNTER     0x2C
 #define CALYPSO_CHANGE_PIN              0xD8
 #define CALYPSO_VERIFY_PIN              0x20
 #define CALYPSO_SV_GET                  0x7C

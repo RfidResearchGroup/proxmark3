@@ -18,6 +18,7 @@
 
 #include "cmdlfhitaghts.h"
 #include <ctype.h>
+#include <string.h>   // strlen
 #include "cmdparser.h"  // command_t
 #include "comms.h"
 #include "cmdtrace.h"
@@ -37,15 +38,19 @@
 static int CmdHelp(const char *Cmd);
 
 void annotateHitagS(char *exp, size_t size, const uint8_t *cmd, uint8_t nbits, bool is_response) {
-    size_t exp_len = 0;
     uint8_t command = 0;
+
+    // the caller reuses this buffer across frames, and the appends below are
+    // strlen() based now, so clear it here instead of relying on the first
+    // write landing at offset 0
+    exp[0] = '\0';
 
     if (is_response) {
         // Handle responses
         if (nbits == 32) {
-            exp_len = snprintf(exp, size, "UID: [%02X%02X%02X%02X]", cmd[0], cmd[1], cmd[2], cmd[3]);
+            snprintf(exp, size, "UID: [%02X%02X%02X%02X]", cmd[0], cmd[1], cmd[2], cmd[3]);
         } else if (nbits == 40) {
-            exp_len = snprintf(exp, size, "Data");
+            snprintf(exp, size, "Data");
         }
     } else if (nbits >= 5) {
         concatbits(&command, 0, cmd, 0, 5, false);
@@ -55,62 +60,62 @@ void annotateHitagS(char *exp, size_t size, const uint8_t *cmd, uint8_t nbits, b
 
             switch (command) {
                 case HITAGS_UID_REQ_STD:
-                    exp_len += snprintf(exp + exp_len, size - exp_len, "UID Request (Standard 00110)");
+                    snprintf(exp + strlen(exp), size - strlen(exp), "UID Request (Standard 00110)");
                     break;
                 case HITAGS_UID_REQ_ADV1:
-                    exp_len += snprintf(exp + exp_len, size - exp_len, "UID Request (Advanced 11000)");
+                    snprintf(exp + strlen(exp), size - strlen(exp), "UID Request (Advanced 11000)");
                     break;
                 case HITAGS_UID_REQ_ADV2:
-                    exp_len += snprintf(exp + exp_len, size - exp_len, "UID Request (Advanced 11001)");
+                    snprintf(exp + strlen(exp), size - strlen(exp), "UID Request (Advanced 11001)");
                     break;
                 case HITAGS_UID_REQ_FADV:
-                    exp_len += snprintf(exp + exp_len, size - exp_len, "UID Request (Fast Advanced 11010)");
+                    snprintf(exp + strlen(exp), size - strlen(exp), "UID Request (Fast Advanced 11010)");
                     break;
             }
         } else if (nbits == 4 + 8 + 8) {
             concatbits(&command, 0, cmd, 0, 4, false);
 
             if (command == HITAGS_READ_PAGE) {
-                exp_len += snprintf(exp + exp_len, size - exp_len, "READ");
+                snprintf(exp + strlen(exp), size - strlen(exp), "READ");
             } else if (command == HITAGS_WRITE_PAGE) {
-                exp_len += snprintf(exp + exp_len, size - exp_len, "WRITE");
+                snprintf(exp + strlen(exp), size - strlen(exp), "WRITE");
             } else if (command == HITAGS_READ_BLOCK) {
-                exp_len += snprintf(exp + exp_len, size - exp_len, "READ_BLOCK");
+                snprintf(exp + strlen(exp), size - strlen(exp), "READ_BLOCK");
             } else if (command == HITAGS_WRITE_BLOCK) {
-                exp_len += snprintf(exp + exp_len, size - exp_len, "WRITE_BLOCK");
+                snprintf(exp + strlen(exp), size - strlen(exp), "WRITE_BLOCK");
             } else if (command == HITAGS_QUIET) {
-                exp_len += snprintf(exp + exp_len, size - exp_len, "QUIET");
+                snprintf(exp + strlen(exp), size - strlen(exp), "QUIET");
             }
             // Hitag 1 commands
             else if (command == HITAG1_RDCPAGE) {
-                exp_len += snprintf(exp + exp_len, size - exp_len, "RDCPAGE");
+                snprintf(exp + strlen(exp), size - strlen(exp), "RDCPAGE");
             } else if (command == HITAG1_RDCBLK) {
-                exp_len += snprintf(exp + exp_len, size - exp_len, "RDCBLK");
+                snprintf(exp + strlen(exp), size - strlen(exp), "RDCBLK");
             } else if (command == HITAG1_WRCPAGE) {
-                exp_len += snprintf(exp + exp_len, size - exp_len, "WRCPAGE");
+                snprintf(exp + strlen(exp), size - strlen(exp), "WRCPAGE");
             } else if (command == HITAG1_WRCBLK) {
-                exp_len += snprintf(exp + exp_len, size - exp_len, "WRCBLK");
+                snprintf(exp + strlen(exp), size - strlen(exp), "WRCBLK");
             } else {
-                exp_len += snprintf(exp + exp_len, size - exp_len, "Unknown (%02X)", command);
+                snprintf(exp + strlen(exp), size - strlen(exp), "Unknown (%02X)", command);
             }
 
             uint8_t page = 0;
             concatbits(&page, 0, cmd, 5, 8, false);
-            exp_len += snprintf(exp + exp_len, size - exp_len, " Page: %d", page);
+            snprintf(exp + strlen(exp), size - strlen(exp), " Page: %d", page);
         } else if (nbits == 32 + 8) {
             concatbits(&command, 0, cmd, 0, 5, false);
-            exp_len += snprintf(exp + exp_len, size - exp_len, "Data");
+            snprintf(exp + strlen(exp), size - strlen(exp), "Data");
         } else if (nbits == 5 + 32 + 8 || nbits == 5 + 32 + 1 + 8) {
             concatbits(&command, 0, cmd, 0, 5, false);
 
             if (command == HITAGS_SELECT) {
                 uint8_t uid[4] = {0};
                 concatbits(uid, 0, cmd, 5, 32, false);
-                exp_len = snprintf(exp, size, "SELECT UID: %02X%02X%02X%02X", uid[0], uid[1], uid[2], uid[3]);
+                snprintf(exp, size, "SELECT UID: %02X%02X%02X%02X", uid[0], uid[1], uid[2], uid[3]);
             }
         }
     } else {
-        exp_len = snprintf(exp, size, "Invalid command (too short)");
+        snprintf(exp, size, "Invalid command (too short)");
     }
 }
 
@@ -152,8 +157,9 @@ static const char *hts_get_type_str(uint32_t uid) {
             default:
                 return "n/a";
         }
-    } else
+    } else {
         return "Probably not NXP Hitag S";
+    }
 }
 
 static bool hts_get_uid(uint32_t *uid) {
@@ -182,8 +188,8 @@ int read_hts_uid(void) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "UID.... " _GREEN_("%08X"), uid);
-    PrintAndLogEx(SUCCESS, "TYPE... " _GREEN_("%s"), hts_get_type_str(uid));
+    PrintAndLogEx(SUCCESS, "UID....... " _GREEN_("%08X"), uid);
+    PrintAndLogEx(SUCCESS, "TYPE...... " _GREEN_("%s"), hts_get_type_str(uid));
     return PM3_SUCCESS;
 }
 
@@ -198,7 +204,6 @@ static int process_hitags_common_args(CLIParserContext *ctx, lf_hitag_data_t *co
 
     int res = CLIParamHexToBuf(arg_get_str(ctx, 2), nrar, HITAG_NRAR_SIZE, &nrar_len);
     if (res != 0) {
-        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -211,7 +216,6 @@ static int process_hitags_common_args(CLIParserContext *ctx, lf_hitag_data_t *co
 
     res = CLIParamHexToBuf(arg_get_str(ctx, 4), key, HITAG_CRYPTOKEY_SIZE, &key_len);
     if (res != 0) {
-        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -234,13 +238,15 @@ static int process_hitags_common_args(CLIParserContext *ctx, lf_hitag_data_t *co
 
     // complete options
     switch (key_len) {
-        case HITAG_PASSWORD_SIZE:
+        case HITAG_PASSWORD_SIZE: {
             use_82xx = true;
             break;
-        case HITAG_CRYPTOKEY_SIZE:
+        }
+        case HITAG_CRYPTOKEY_SIZE: {
             use_crypto = true;
             break;
-        default:    // key_len == 0
+        }
+        default: {    // key_len == 0
             if (use_82xx) {
                 memcpy(key, "\xBB\xDD\x33\x99", 4);
                 key_len = 4;
@@ -248,6 +254,8 @@ static int process_hitags_common_args(CLIParserContext *ctx, lf_hitag_data_t *co
                 memcpy(key, "ONMIKR", 6);
                 key_len = 6;
             }
+            break;
+        }
     }
 
     // check coherence
@@ -399,7 +407,10 @@ static int CmdLFHitagSRead(const char *Cmd) {
 
     lf_hitag_data_t packet;
 
-    if (process_hitags_common_args(ctx, &packet) < 0) return PM3_EINVARG;
+    if (process_hitags_common_args(ctx, &packet) != PM3_SUCCESS) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
 
     uint32_t page = arg_get_int_def(ctx, 6, 0);
 
@@ -591,7 +602,7 @@ static int CmdLFHitagSDump(const char *Cmd) {
     lf_hitag_data_t packet;
     memset(&packet, 0, sizeof(packet));
 
-    if (process_hitags_common_args(ctx, &packet) < 0) {
+    if (process_hitags_common_args(ctx, &packet) != PM3_SUCCESS) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
@@ -644,7 +655,7 @@ static int CmdLFHitagSDump(const char *Cmd) {
         FillFileNameByUID(fptr, card->pages[HITAGS_UID_PADR], "-dump", HITAGS_PAGE_SIZE);
     }
 
-    pm3_save_dump(filename, (uint8_t *)card->pages, mem_size, jsfHitag);
+    pm3_save_dump(filename, (uint8_t *)card->pages, mem_size, jsfHitagS);
 
     return PM3_SUCCESS;
 }
@@ -682,7 +693,7 @@ static int CmdLFHitagSRestore(const char *Cmd) {
     lf_hitag_data_t packet;
     memset(&packet, 0, sizeof(packet));
 
-    if (process_hitags_common_args(ctx, &packet) < 0) {
+    if (process_hitags_common_args(ctx, &packet) != PM3_SUCCESS) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
@@ -699,7 +710,7 @@ static int CmdLFHitagSRestore(const char *Cmd) {
     // read dump file
     uint32_t *dump = NULL;
     size_t bytes_read = 0;
-    if (pm3_load_dump(filename, (void **)&dump, &bytes_read, jsfHitag) != PM3_SUCCESS) {
+    if (pm3_load_dump(filename, (void **)&dump, &bytes_read, 64 * HITAGS_PAGE_SIZE) != PM3_SUCCESS) {
         return PM3_EFILE;
     }
 
@@ -754,7 +765,7 @@ static int CmdLFHitagSRestore(const char *Cmd) {
         packet.page = page;
         memcpy(packet.data, &dump_bytes[offset], HITAGS_PAGE_SIZE);
 
-        PrintAndLogEx(INPLACE, " Writing page "_YELLOW_("%d")", data: " _GREEN_("%02X %02X %02X %02X"), page,
+        PrintAndLogEx(INPLACE, "Writing page "_YELLOW_("%d")", data: " _GREEN_("%02X %02X %02X %02X"), page,
                       dump_bytes[offset],
                       dump_bytes[offset + 1],
                       dump_bytes[offset + 2],
@@ -900,7 +911,11 @@ static int CmdLFHitagSWrite(const char *Cmd) {
 
     lf_hitag_data_t packet;
 
-    if (process_hitags_common_args(ctx, &packet) < 0) return PM3_EINVARG;
+    if (process_hitags_common_args(ctx, &packet) != PM3_SUCCESS) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
 
     int page = arg_get_int_def(ctx, 6, 0);
 
@@ -968,7 +983,7 @@ static int CmdLFHitagSReader(const char *Cmd) {
         if (hts_get_uid(&uid)) {
             PrintAndLogEx(SUCCESS, "UID.... " _GREEN_("%08X"), uid);
         }
-    } while (cm && kbd_enter_pressed() == false);
+    } while (cm && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }
@@ -995,7 +1010,11 @@ static int CmdLFHitagSSim(const char *Cmd) {
     CLIParserFree(ctx);
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_LF_HITAGS_SIMULATE, false, threshold, 0, NULL, 0);
+    hitag_sim_t payload = {
+        .tag_mem_supplied = false,
+        .threshold = threshold,
+    };
+    SendCommandNG(CMD_LF_HITAGS_SIMULATE, (uint8_t *)&payload, sizeof(payload));
     return PM3_SUCCESS;
 }
 

@@ -27,13 +27,16 @@
 #include <inttypes.h>
 #include <string.h>
 #include <ctype.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h> // Mingw
 
 #include "ui.h"     // PrintAndLog
+#include "comms.h"  // SendCommandNG / WaitForResponseTimeout (set_rgb)
+#include "pm3_cmd.h" // CMD_PM5_RGB_SET
 
-#define UTIL_BUFFER_SIZE_SPRINT 8196
+#define UTIL_BUFFER_SIZE_SPRINT 16384
 // global client debug variable
 uint8_t g_debugMode = 0;
 // global client enable/disable printing/logging/grabbing variable
@@ -73,6 +76,7 @@ int kbd_enter_pressed(void) {
         c = getchar();
         ret |= c == '\n';
     } while (c != EOF);
+
     //blocking
     flags &= ~O_NONBLOCK;
     if (fcntl(STDIN_FILENO, F_SETFL, flags) < 0) {
@@ -268,7 +272,10 @@ void hex_to_buffer(uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, 
         m = hex_max_len;
     }
 
-    while (m--) {
+    // Pad up to m, the way ascii_to_buffer() above does. This used to write m
+    // spaces from wherever it had got to, so a padded field came out i
+    // characters too wide - a 7 byte AID asked to fill 16 produced 30.
+    for (; i < m; i++) {
         *(tmp++) = ' ';
     }
 
@@ -334,6 +341,38 @@ void print_hex_noascii_break(const uint8_t *data, const size_t len, uint8_t brea
         // add the spaces...
         snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), "%*s", ((breaks - mod) * 3), " ");
         PrintAndLogEx(INFO, "%s", buf);
+    }
+}
+
+void print_hex_noascii_break_ex(const uint8_t *data, const size_t len, uint8_t breaks, const char *prefix, char separator, const char *suffix) {
+    if (data == NULL || len == 0 || breaks == 0) return;
+
+    if (prefix == NULL) {
+        prefix = "";
+    }
+    if (suffix == NULL) {
+        suffix = "";
+    }
+    char sep[2] = {separator, '\0'};
+
+    for (size_t pos = 0; pos < len; pos += breaks) {
+        char buf[UTIL_BUFFER_SIZE_SPRINT + 3] = {0};
+        size_t chunk_len = len - pos;
+        if (chunk_len > breaks) {
+            chunk_len = breaks;
+        }
+
+        char *p = buf;
+        size_t remaining = sizeof(buf);
+        for (size_t i = 0; i < chunk_len; i++) {
+            int written = snprintf(p, remaining, "%s%02X", (i > 0 && separator != '\0') ? sep : "", data[pos + i]);
+            if (written < 0 || (size_t)written >= remaining) {
+                break;
+            }
+            p += written;
+            remaining -= (size_t)written;
+        }
+        PrintAndLogEx(INFO, "%s%s%s", prefix, buf, suffix);
     }
 }
 
@@ -669,6 +708,84 @@ int hex_to_bytes(const char *hexValue, uint8_t *bytesValue, size_t maxBytesValue
     }
 
     return bytesValueLen;
+}
+
+int parse_uint32_hex_or_dec(const char *text, uint32_t *out) {
+    if (text == NULL || out == NULL || text[0] == '\0') {
+        return PM3_EINVARG;
+    }
+
+    int base = 10;
+    if (text[0] == '0' && (text[1] == 'x' || text[1] == 'X')) {
+        base = 16;
+    } else {
+        for (const char *p = text; *p; p++) {
+            if (isalpha((unsigned char) * p)) {
+                base = 16;
+                break;
+            }
+        }
+    }
+
+    errno = 0;
+    char *end = NULL;
+    unsigned long value = strtoul(text, &end, base);
+    if (errno == ERANGE || end == text || end == NULL || *end != '\0' || value > UINT32_MAX) {
+        return PM3_EINVARG;
+    }
+
+    *out = (uint32_t)value;
+    return PM3_SUCCESS;
+}
+
+bool bytes_equal_not_null(const void *a, size_t a_len, const void *b, size_t b_len) {
+    return a_len == b_len && a != NULL && b != NULL && memcmp(a, b, a_len) == 0;
+}
+
+// Append a formatted string to buf without ever writing past buf_len.
+// Returns the length of the resulting string.
+// buf must already be a valid NULL terminated string.
+size_t str_append(char *buf, size_t buf_len, const char *fmt, ...) {
+
+    if (buf == NULL || buf_len == 0 || fmt == NULL) {
+        return 0;
+    }
+
+    size_t len = strlen(buf);
+
+    // no room for another character and its terminator
+    if (len + 1 >= buf_len) {
+        return len;
+    }
+
+    size_t avail = buf_len - len;
+
+    va_list args;
+    va_start(args, fmt);
+    int n = vsnprintf(buf + len, avail, fmt, args);
+    va_end(args);
+
+    if (n < 0) {
+        // encoding error. leave the string as we found it
+        buf[len] = '\0';
+        return len;
+    }
+
+    return ((size_t)n < avail) ? (len + (size_t)n) : (buf_len - 1);
+}
+
+int buffer_append_bytes_with_offset(uint8_t *buf, size_t buf_len, size_t *offset, const void *data, size_t data_len) {
+    if (buf == NULL || offset == NULL || (data_len > 0 && data == NULL)) {
+        return PM3_EINVARG;
+    }
+    if (*offset > buf_len || data_len > (buf_len - *offset)) {
+        return PM3_EOVFLOW;
+    }
+    if (data_len > 0) {
+        memcpy(buf + *offset, data, data_len);
+        *offset += data_len;
+    }
+    return PM3_SUCCESS;
 }
 
 // takes a number (uint64_t) and creates a binarray in dest.
@@ -1212,6 +1329,29 @@ void binstr_2_bytes(uint8_t *target, size_t *targetlen, const char *src) {
     }
 }
 
+void binstr_2_u8(char *src, uint8_t n, uint8_t *dest) {
+
+    uint8_t b = 0;
+    // Process binary string
+    for (uint8_t i = 0; i < n; ++i) {
+        b = (b << 1) | (src[i] == '1');
+    }
+    if (dest) {
+        *dest = b;
+    }
+}
+
+void binstr_2_u16(char *src, uint8_t n, uint16_t *dest) {
+    uint16_t b = 0;
+    // Process binary string
+    for (uint8_t i = 0; i < n; ++i) {
+        b = (b << 1) | (src[i] == '1');
+    }
+    if (dest) {
+        *dest = b;
+    }
+}
+
 void hex_xor(uint8_t *d, const uint8_t *x, int n) {
     while (n--) {
         d[n] ^= x[n];
@@ -1320,6 +1460,71 @@ void strn_upper(char *s, size_t n) {
         s[i] = toupper(s[i]);
     }
 }
+
+static int char_compare_case_insensitive(char a, char b) {
+    return tolower((unsigned char)a) - tolower((unsigned char)b);
+}
+
+bool str_equal_case_insensitive(const char *a, const char *b) {
+    if (a == NULL || b == NULL) {
+        return false;
+    }
+
+    while (*a != '\0' && *b != '\0') {
+        if (char_compare_case_insensitive(*a, *b) != 0) {
+            return false;
+        }
+        a++;
+        b++;
+    }
+
+    return *a == '\0' && *b == '\0';
+}
+
+bool str_startswith_case_insensitive(const char *s, const char *pre) {
+    if (s == NULL || pre == NULL) {
+        return false;
+    }
+
+    while (*pre != '\0') {
+        if (*s == '\0' || char_compare_case_insensitive(*s, *pre) != 0) {
+            return false;
+        }
+        s++;
+        pre++;
+    }
+
+    return true;
+}
+
+bool str_contains_case_insensitive(const char *s, const char *needle) {
+    if (s == NULL || needle == NULL) {
+        return false;
+    }
+
+    size_t needle_len = strlen(needle);
+    if (needle_len == 0) {
+        return true;
+    }
+
+    size_t s_len = strlen(s);
+    if (needle_len > s_len) {
+        return false;
+    }
+
+    for (size_t i = 0; i <= (s_len - needle_len); i++) {
+        size_t j = 0;
+        while (j < needle_len && char_compare_case_insensitive(s[i + j], needle[j]) == 0) {
+            j++;
+        }
+        if (j == needle_len) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // check for prefix in string
 bool str_startswith(const char *s,  const char *pre) {
     return strncmp(pre, s, strlen(pre)) == 0;
@@ -1342,6 +1547,52 @@ void clean_ascii(unsigned char *buf, size_t len) {
             buf[i] = '.';
         }
     }
+}
+
+bool is_printable_ascii(const uint8_t *data, size_t data_len) {
+    if (data == NULL || data_len == 0) {
+        return false;
+    }
+
+    for (size_t i = 0; i < data_len; i++) {
+        if (data[i] < 0x20 || data[i] > 0x7E) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool decode_zero_padded_ascii(const uint8_t *data, size_t data_len, char *out, size_t out_len) {
+    if (data == NULL || out == NULL || out_len == 0) {
+        return false;
+    }
+
+    size_t text_len = 0;
+    while (text_len < data_len && data[text_len] != 0x00) {
+        if (data[text_len] < 0x20 || data[text_len] > 0x7E) {
+            return false;
+        }
+        text_len++;
+    }
+
+    if (text_len == 0 || text_len == data_len) {
+        return false;
+    }
+
+    for (size_t i = text_len; i < data_len; i++) {
+        if (data[i] != 0x00) {
+            return false;
+        }
+    }
+
+    size_t copy_len = text_len;
+    if (copy_len > out_len - 1) {
+        copy_len = out_len - 1;
+    }
+
+    memcpy(out, data, copy_len);
+    out[copy_len] = '\0';
+    return true;
 }
 
 // replace \r \n to \0
@@ -1382,6 +1633,112 @@ size_t str_nlen(const char *src, size_t maxlen) {
     return len;
 }
 
+size_t str_copy(char *dst, size_t dst_size, const char *src) {
+    if (src == NULL) {
+        if (dst != NULL && dst_size > 0) {
+            dst[0] = '\0';
+        }
+        return 0;
+    }
+
+    size_t src_len = strlen(src);
+    if (dst == NULL || dst_size == 0) {
+        return src_len;
+    }
+
+    size_t copy_len = src_len;
+    if (copy_len >= dst_size) {
+        copy_len = dst_size - 1;
+    }
+    memcpy(dst, src, copy_len);
+    dst[copy_len] = '\0';
+    return src_len;
+}
+
+static bool str_regex_atom_matches(char atom, bool escaped, char c) {
+    if (!escaped && atom == '.') {
+        return true;
+    }
+    return (atom == c);
+}
+
+static bool str_regex_match_here(const char *regexp, const char *text);
+
+static bool str_regex_match_star(char atom, bool escaped, const char *regexp, const char *text) {
+    do {
+        if (str_regex_match_here(regexp, text)) {
+            return true;
+        }
+    } while (*text != '\0' && str_regex_atom_matches(atom, escaped, *text++));
+
+    return false;
+}
+
+static bool str_regex_match_here(const char *regexp, const char *text) {
+    if (regexp[0] == '\0') {
+        return true;
+    }
+
+    if (regexp[0] == '$' && regexp[1] == '\0') {
+        return (text[0] == '\0');
+    }
+
+    bool escaped = false;
+    char atom = regexp[0];
+    size_t atom_len = 1;
+    if (regexp[0] == '\\' && regexp[1] != '\0') {
+        escaped = true;
+        atom = regexp[1];
+        atom_len = 2;
+    }
+
+    if (regexp[atom_len] == '*') {
+        return str_regex_match_star(atom, escaped, regexp + atom_len + 1, text);
+    }
+
+    if (text[0] != '\0' && str_regex_atom_matches(atom, escaped, text[0])) {
+        return str_regex_match_here(regexp + atom_len, text + 1);
+    }
+
+    return false;
+}
+
+bool str_regex_match(const char *regexp, const char *text) {
+    if (regexp[0] == '^') {
+        return str_regex_match_here(regexp + 1, text);
+    }
+
+    do {
+        if (str_regex_match_here(regexp, text)) {
+            return true;
+        }
+    } while (*text++ != '\0');
+
+    return false;
+}
+
+bool str_regex_match_case_insensitive(const char *regexp, const char *text) {
+    if (regexp == NULL || text == NULL) {
+        return false;
+    }
+
+    char *pattern_lc = str_dup(regexp);
+    char *text_lc = str_dup(text);
+    if (pattern_lc == NULL || text_lc == NULL) {
+        free(pattern_lc);
+        free(text_lc);
+        return false;
+    }
+
+    str_lower(pattern_lc);
+    str_lower(text_lc);
+    bool matched = str_regex_match(pattern_lc, text_lc);
+
+    free(pattern_lc);
+    free(text_lc);
+    return matched;
+}
+
 void str_reverse(char *buf,  size_t len) {
     for (size_t i = 0; i < (len >> 1); i++) {
         char tmp = buf[i];
@@ -1409,6 +1766,20 @@ void str_inverse_bin(char *buf, size_t len) {
     }
 }
 
+void str_trim(char *s) {
+    if (s == NULL) {
+        return;
+    }
+
+    // handle empty string
+    if (!*s) {
+        return;
+    }
+
+    char *ptr;
+    for (ptr = s + strlen(s) - 1; (ptr >= s) && isspace(*ptr); --ptr);
+    ptr[1] = '\0';
+}
 
 /**
  * Converts a hex string to component "hi2", "hi" and "lo" 32-bit integers
@@ -1525,6 +1896,10 @@ int byte_strstr(const uint8_t *src, size_t srclen, const uint8_t *pattern, size_
             continue;
         }
 
+        if (plen == 1) {
+            return i;
+        }
+
         // try to match rest of the pattern
         for (int j = plen - 1; j >= 1; j--) {
 
@@ -1566,9 +1941,18 @@ int byte_strrstr(const uint8_t *src, size_t srclen, const uint8_t *pattern, size
 }
 
 void sb_append_char(smartbuf *sb, unsigned char c) {
+
     if (sb->idx >= sb->size) {
+
         sb->size *= 2;
-        sb->ptr = realloc(sb->ptr, sb->size);
+
+        void *tmp = realloc(sb->ptr, sb->size);
+        if (tmp == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            return;
+        }
+
+        sb->ptr = tmp;
     }
     sb->ptr[sb->idx] = c;
     sb->idx++;
@@ -1591,4 +1975,125 @@ uint8_t get_highest_frequency(const uint8_t *d, uint8_t n) {
     }
     PrintAndLogEx(DEBUG, "highest occurance... %u  xor byte... 0x%02X", highest, v);
     return v;
+}
+
+size_t unduplicate(uint8_t *d, size_t n, const uint8_t item_n) {
+    if (n == 0) {
+        return 0;
+    }
+    if (n == 1) {
+        return 1;
+    }
+
+    int write_index = 0;
+
+    for (int read_index = 0; read_index < n; ++read_index) {
+        uint8_t *current = d + read_index * item_n;
+
+        bool is_duplicate = false;
+
+        // Check against all previous unique elements
+        for (int i = 0; i < write_index; ++i) {
+            uint8_t *unique = d + i * item_n;
+            if (memcmp(current, unique, item_n) == 0) {
+                is_duplicate = 1;
+                break;
+            }
+        }
+
+        // If not duplicate, move to the write_index position
+        if (is_duplicate == false) {
+            uint8_t *dest = d + write_index * item_n;
+            if (dest != current) {
+                memcpy(dest, current, item_n);
+            }
+            write_index++;
+        }
+    }
+
+    return write_index;
+}
+
+void str_trim_ascii_inplace(char *s) {
+    if (s == NULL) {
+        return;
+    }
+
+    size_t start = 0;
+    size_t len = strlen(s);
+    while (start < len && isspace((unsigned char)s[start])) {
+        start++;
+    }
+    while (len > start && isspace((unsigned char)s[len - 1])) {
+        len--;
+    }
+
+    if (start > 0) {
+        memmove(s, s + start, len - start);
+    }
+    s[len - start] = '\0';
+}
+
+void str_unescape_newlines_inplace(char *s) {
+    if (s == NULL) {
+        return;
+    }
+
+    size_t read_pos = 0;
+    size_t write_pos = 0;
+    size_t len = strlen(s);
+    while (read_pos < len) {
+        if (s[read_pos] == '\\' && (read_pos + 1) < len) {
+            char esc = s[read_pos + 1];
+            if (esc == 'n') {
+                s[write_pos++] = '\n';
+                read_pos += 2;
+                continue;
+            }
+            if (esc == 'r') {
+                s[write_pos++] = '\r';
+                read_pos += 2;
+                continue;
+            }
+            if (esc == 't') {
+                s[write_pos++] = '\t';
+                read_pos += 2;
+                continue;
+            }
+        }
+        s[write_pos++] = s[read_pos++];
+    }
+    s[write_pos] = '\0';
+}
+
+int str_copy_without_whitespace(const char *src, char *dst, size_t dst_size, size_t *dst_len) {
+    if (src == NULL || dst == NULL || dst_len == NULL || dst_size == 0) {
+        return PM3_EINVARG;
+    }
+
+    size_t out = 0;
+    for (size_t i = 0; src[i] != '\0'; i++) {
+        if (isspace((unsigned char)src[i])) {
+            continue;
+        }
+        if ((out + 1) >= dst_size) {
+            return PM3_EOVFLOW;
+        }
+        dst[out++] = src[i];
+    }
+    dst[out] = '\0';
+    *dst_len = out;
+    return PM3_SUCCESS;
+}
+
+void set_rgb(uint8_t r, uint8_t g, uint8_t b) {
+    struct {
+        uint8_t r;
+        uint8_t g;
+        uint8_t b;
+    } PACKED payload = { r, g, b };
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_RGB_SET, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp;
+    WaitForResponseTimeout(CMD_PM5_RGB_SET, &resp, 200);
 }

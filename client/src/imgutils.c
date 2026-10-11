@@ -40,13 +40,13 @@ gdImagePtr img_palettize(gdImagePtr rgb, int *palette, int palette_size) {
 
     // Create paletized image
     gdImagePtr res = gdImageCreate(gdImageSX(rgb), gdImageSY(rgb));
-    if (!res) {
+    if (res == NULL) {
         return NULL;
     }
 
     // Allocate space for palette in YCbCr
     struct ycbcr_t *pal_ycbcr = calloc(palette_size, sizeof(struct ycbcr_t));
-    if (!pal_ycbcr) {
+    if (pal_ycbcr == NULL) {
         gdImageDestroy(res);
         return NULL;
     }
@@ -61,7 +61,7 @@ gdImagePtr img_palettize(gdImagePtr rgb, int *palette, int palette_size) {
      * and gets divided by that amount when it is read.
      */
     struct ycbcr_t *forward = calloc(gdImageSX(rgb) + 2, sizeof(struct ycbcr_t));
-    if (!forward) {
+    if (forward == NULL) {
         free(pal_ycbcr);
         gdImageDestroy(res);
         return NULL;
@@ -162,7 +162,7 @@ gdImagePtr img_crop_to_fit(gdImagePtr orig, int width, int height) {
         res = gdImageCreate(width, height);
     }
 
-    if (!res) {
+    if (res == NULL) {
         return NULL;
     }
 

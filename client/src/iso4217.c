@@ -27,8 +27,9 @@ const char *getCurrencyInfo(const char *cn_str) {
 
     // skip last element of AtrTable
     for (int i = 0; i < ARRAYLEN(Iso4217Table) - 1; ++i) {
-        if (strncmp(cn_str, Iso4217Table[i].code, slen) == 0)
+        if (strncmp(cn_str, Iso4217Table[i].code, slen) == 0) {
             return Iso4217Table[i].desc;
+        }
     }
     return Iso4217Table[ARRAYLEN(Iso4217Table) - 1].desc;
 }

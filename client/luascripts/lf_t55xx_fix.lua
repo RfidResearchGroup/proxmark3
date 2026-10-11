@@ -18,7 +18,7 @@ desc = [[
   is found, it uses the wipe command to erase the T5577. Then the reanimation
   procedure is applied. If the password is not found or doesn't exist the script
   only performs the reanimation procedure. The script revives 99% of blocked tags.
-]]
+ ]]
 usage = [[
   script run lf_t55xx_fix
 ]]
@@ -87,7 +87,7 @@ local function reanimate_t5577(password)
         p:console('lf t55 wipe -p ' .. password)
         print("T5577 wiped using a password: " ..ac.green.. password ..ac.reset)
     else
-        print(ac.yellow.."No valid password found, proceeding with reanimation."..ac.reset)
+        print(ac.yellow.."  No valid password found, proceeding with reanimation."..ac.reset)
     end
 
     p:console('lf t55 write -b 0 -d 000880E8 -p 00000000')

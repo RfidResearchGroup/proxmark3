@@ -160,63 +160,63 @@ of the key influences a given output bit.
 Start state + key bit --> output
 
 
-| Start state | Key bit | Output |
-|-------|-------|----------------|
-| `s₀₀` | `K₃₉` | << hidden >>   |
-| `s₀₁` | `K₃₈` | << hidden >>   |
-| `s₀₂` | `K₃₇` | << hidden >>   |
-| `s₀₃` | `K₃₆` | << hidden >>   |
-| `s₀₄` | `K₃₅` | << hidden >>   |
-| `s₀₅` | `K₃₄` | << hidden >>   |
-| `s₀₆` | `K₃₃` | << hidden >>   |
-| `s₀₇` | `K₃₂` | `O₀₀ == frn₀₀` |
-| `s₀₈` | `K₃₁` | `O₀₁ == frn₀₁` |
-| `s₀₉` | `K₃₀` | `O₀₂ == frn₀₂` |
-| `s₁₀` | `K₂₉` | `O₀₃ == frn₀₃` |
-| `s₁₁` | `K₂₈` | `O₀₄ == frn₀₄` |
-| `s₁₂` | `K₂₇` | `O₀₅ == frn₀₅` |
-| `s₁₃` | `K₂₆` | `O₀₆ == frn₀₆` |
-| `s₁₄` | `K₂₅` | `O₀₇ == frn₀₇` |
-| `s₁₅` | `K₂₄` | `O₀₈ == frn₀₈` |
-| `s₁₆` | `K₂₃` | `O₀₉ == frn₀₉` |
-| `s₁₇` | `K₂₂` | `O₁₀ == frn₁₀` |
-| `s₁₈` | `K₂₁` | `O₁₁ == frn₁₁` |
-| `s₁₉` | `K₂₀` | `O₁₂ == frn₁₂` |
-| `s₂₀` | `K₁₉` | `O₁₃ == frn₁₃` |
-| `s₂₁` | `K₁₈` | `O₁₄ == frn₁₄` |
-| `s₂₂` | `K₁₇` | `O₁₅ == frn₁₅` |
-| `s₂₃` | `K₁₆` | `O₁₆ == frn₁₆` |
-| `s₂₄` | `K₁₅` | `O₁₇ == frn₁₇` |
-| `s₂₅` | `K₁₄` | `O₁₈ == frn₁₈` |
-| `s₂₆` | `K₁₃` | `O₁₉ == frn₁₉` |
-| `s₂₇` | `K₁₂` | `O₂₀ == frn₂₀` |
-| `s₂₈` | `K₁₁` | `O₂₁ == frn₂₁` |
-| `s₂₉` | `K₁₀` | `O₂₂ == frn₂₂` |
-| `s₃₀` | `K₀₉` | `O₂₃ == frn₂₃` |
-| `s₃₁` | `K₀₈` | `O₂₄ == frn₂₄` |
-| `s₃₂` | `K₀₇` | `O₂₅ == frn₂₅` |
-| `s₃₃` | `K₀₆` | `O₂₆ == frn₂₆` |
-| `s₃₄` | `K₀₅` | `O₂₇ == frn₂₇` |
-| `s₃₅` | `K₀₄` | `O₂₈ == grn₀₀` |
-| `s₃₆` | `K₀₃` | `O₂₉ == grn₀₁` |
-| `s₃₇` | `K₀₂` | `O₃₀ == grn₀₂` |
-| `s₃₈` | `K₀₁` | `O₃₁ == grn₀₃` |
-| `s₃₉` | `K₀₀` | `O₃₂ == grn₀₄` |
-| `s₄₀` | `0₁₄` | `O₃₃ == grn₀₅` |
-| `s₄₁` | `0₁₃` | `O₃₄ == grn₀₆` |
-| `s₄₂` | `0₁₂` | `O₃₅ == grn₀₇` |
-| `s₄₃` | `0₁₁` | `O₃₆ == grn₀₈` |
-| `s₄₄` | `0₁₀` | `O₃₇ == grn₀₉` |
-| `s₄₅` | `0₀₉` | `O₃₈ == grn₁₀` |
-| `s₄₆` | `0₀₈` | `O₃₉ == grn₁₁` |
-| `s₄₇` | `0₀₇` | `O₄₀ == grn₁₂` |
-| `s₄₈` | `0₀₆` | `O₄₁ == grn₁₃` |
-| `s₄₉` | `0₀₅` | `O₄₂ == grn₁₄` |
-| `s₅₀` | `0₀₄` | `O₄₃ == grn₁₅` |
-| `s₅₁` | `0₀₃` | `O₄₄ == grn₁₆` |
-| `s₅₂` | `0₀₂` | `O₄₅ == grn₁₇` |
-| `s₅₃` | `0₀₁` | `O₄₆ == grn₁₈` |
-| `s₅₄` | `0₀₀` | `O₄₇ == grn₁₉` |
+| Start state | Key bit | Output | Notes |
+|-------|-------|----------------|-------|
+| `s₀₀` | `K₃₉` | << hidden >>   | Seven ...          |
+| `s₀₁` | `K₃₈` | << hidden >>   | .. iterations ...  |
+| `s₀₂` | `K₃₇` | << hidden >>   | .. before ...      |
+| `s₀₃` | `K₃₆` | << hidden >>   | .. any ...         |
+| `s₀₄` | `K₃₅` | << hidden >>   | .. output ...      |
+| `s₀₅` | `K₃₄` | << hidden >>   | .. bits ...        |
+| `s₀₆` | `K₃₃` | << hidden >>   | .. seen.           |
+| `s₀₇` | `K₃₂` | `O₀₀ == frn₀₀` |           |
+| `s₀₈` | `K₃₁` | `O₀₁ == frn₀₁` |           |
+| `s₀₉` | `K₃₀` | `O₀₂ == frn₀₂` |           |
+| `s₁₀` | `K₂₉` | `O₀₃ == frn₀₃` |           |
+| `s₁₁` | `K₂₈` | `O₀₄ == frn₀₄` |           |
+| `s₁₂` | `K₂₇` | `O₀₅ == frn₀₅` |           |
+| `s₁₃` | `K₂₆` | `O₀₆ == frn₀₆` |           |
+| `s₁₄` | `K₂₅` | `O₀₇ == frn₀₇` |           |
+| `s₁₅` | `K₂₄` | `O₀₈ == frn₀₈` |           |
+| `s₁₆` | `K₂₃` | `O₀₉ == frn₀₉` |           |
+| `s₁₇` | `K₂₂` | `O₁₀ == frn₁₀` |           |
+| `s₁₈` | `K₂₁` | `O₁₁ == frn₁₁` |           |
+| `s₁₉` | `K₂₀` | `O₁₂ == frn₁₂` |           |
+| `s₂₀` | `K₁₉` | `O₁₃ == frn₁₃` |           |
+| `s₂₁` | `K₁₈` | `O₁₄ == frn₁₄` |           |
+| `s₂₂` | `K₁₇` | `O₁₅ == frn₁₅` |           |
+| `s₂₃` | `K₁₆` | `O₁₆ == frn₁₆` |           |
+| `s₂₄` | `K₁₅` | `O₁₇ == frn₁₇` |           |
+| `s₂₅` | `K₁₄` | `O₁₈ == frn₁₈` |           |
+| `s₂₆` | `K₁₃` | `O₁₉ == frn₁₉` |           |
+| `s₂₇` | `K₁₂` | `O₂₀ == frn₂₀` |           |
+| `s₂₈` | `K₁₁` | `O₂₁ == frn₂₁` |           |
+| `s₂₉` | `K₁₀` | `O₂₂ == frn₂₂` |           |
+| `s₃₀` | `K₀₉` | `O₂₃ == frn₂₃` |           |
+| `s₃₁` | `K₀₈` | `O₂₄ == frn₂₄` |           |
+| `s₃₂` | `K₀₇` | `O₂₅ == frn₂₅` |           |
+| `s₃₃` | `K₀₆` | `O₂₆ == frn₂₆` |           |
+| `s₃₄` | `K₀₅` | `O₂₇ == frn₂₇` | Last key bit that affects `frn`  |
+| `s₃₅` | `K₀₄` | `O₂₈ == grn₀₀` | Five bits of key affect `grn` |
+| `s₃₆` | `K₀₃` | `O₂₉ == grn₀₁` |                               |
+| `s₃₇` | `K₀₂` | `O₃₀ == grn₀₂` |                               |
+| `s₃₈` | `K₀₁` | `O₃₁ == grn₀₃` |                               |
+| `s₃₉` | `K₀₀` | `O₃₂ == grn₀₄` |                               |
+| `s₄₀` | `0₁₄` | `O₃₃ == grn₀₅` | Zero-fill start |
+| `s₄₁` | `0₁₃` | `O₃₄ == grn₀₆` |                 |
+| `s₄₂` | `0₁₂` | `O₃₅ == grn₀₇` |           |
+| `s₄₃` | `0₁₁` | `O₃₆ == grn₀₈` |           |
+| `s₄₄` | `0₁₀` | `O₃₇ == grn₀₉` |           |
+| `s₄₅` | `0₀₉` | `O₃₈ == grn₁₀` |           |
+| `s₄₆` | `0₀₈` | `O₃₉ == grn₁₁` |           |
+| `s₄₇` | `0₀₇` | `O₄₀ == grn₁₂` |           |
+| `s₄₈` | `0₀₆` | `O₄₁ == grn₁₃` |           |
+| `s₄₉` | `0₀₅` | `O₄₂ == grn₁₄` |           |
+| `s₅₀` | `0₀₄` | `O₄₃ == grn₁₅` |           |
+| `s₅₁` | `0₀₃` | `O₄₄ == grn₁₆` |           |
+| `s₅₂` | `0₀₂` | `O₄₅ == grn₁₇` |           |
+| `s₅₃` | `0₀₁` | `O₄₆ == grn₁₈` |           |
+| `s₅₄` | `0₀₀` | `O₄₇ == grn₁₉` |           |
 
 
 
@@ -525,7 +525,7 @@ FPGA logic if desired.
 
 There are sixteen (`16x`) blocks of memory, each storing a 16-bit value.
 Blocks may be protected (`P` column) as read-only (`RO`) or write-only (`WO`).
-`Lock₀` === Disable writingPermanent write-prevention when set to 1.
+`Lock₀` === Disable writing ... (?) write-prevention when set to 1.
 `Lock₁` === Pin-code lock
 
 | `Block` | `P`  | `Purpose`    | Bits (LSB first)           | Bits (MSB first)            |

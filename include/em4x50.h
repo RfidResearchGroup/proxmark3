@@ -72,6 +72,13 @@ typedef struct {
     uint8_t byte[4];
 } PACKED em4x50_word_t;
 
+// CMD_LF_EM4X50_ESET payload
+typedef struct {
+    uint16_t offset;
+    uint16_t len;
+    uint8_t data[];
+} PACKED em4x50_eset_t;
+
 typedef struct {
     uint8_t count;
     uint32_t *words;

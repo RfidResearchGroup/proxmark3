@@ -172,10 +172,11 @@ static int jooki_decode(uint8_t *b64, uint8_t *result) {
     PrintAndLogEx(DEBUG, "(decode_jooki) raw encoded... " _GREEN_("%s"), sprint_hex(ndef, sizeof(ndef)));
 
     for (uint8_t i = 0; i < JOOKI_PLAIN_LEN; i++) {
-        if (i < 3)
+        if (i < 3) {
             result[i] = ndef[i] ^ nfc_secret[i];
-        else
+        } else {
             result[i] = ndef[i] ^ nfc_secret[i] ^ ndef[i % 3] ^ nfc_secret[i % 3];
+        }
     }
     PrintAndLogEx(DEBUG, "(decode_jooki) plain......... %s", sprint_hex(result, sizeof(ndef)));
     return PM3_SUCCESS;
@@ -239,9 +240,12 @@ static void jooki_print(uint8_t *b64, uint8_t *result, bool verbose) {
 static int jooki_selftest(void) {
 
     PrintAndLogEx(INFO, "======== " _CYAN_("self test") " ===========================================");
+
     for (int i = 0; i < ARRAYLEN(jooks); i++) {
-        if (strlen(jooks[i].b64) == 0)
+
+        if (strlen(jooks[i].b64) == 0) {
             continue;
+        }
 
         uint8_t iv[JOOKI_IV_LEN] = {0};
         uint8_t uid[JOOKI_UID_LEN] = {0};
@@ -409,11 +413,14 @@ static int CmdHF14AJookiEncode(const char *Cmd) {
         fid = 0x0d;
 
     uint8_t iv[JOOKI_IV_LEN] = {0x80, 0x77, 0x51};
+
     if (use_tag) {
+
         res = ul_read_uid(uid);
         if (res != PM3_SUCCESS) {
             return res;
         }
+
     } else {
         if (ulen != JOOKI_UID_LEN) {
             PrintAndLogEx(ERR, "Wrong length of UID, expect %u, got %d", JOOKI_UID_LEN, ulen);
@@ -442,14 +449,16 @@ static int CmdHF14AJookiDecode(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
+
     uint8_t b64[JOOKI_B64_LEN] = {0x00};
     int dlen = sizeof(b64) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
-    memset(b64, 0x0, sizeof(b64));
     CLIGetStrWithReturn(ctx, 1, b64, &dlen);
+
     bool verbose = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
     uint8_t result[JOOKI_PLAIN_LEN] = {0};
+
     int res = jooki_decode(b64, result);
     if (res == PM3_SUCCESS) {
         jooki_print(b64, result, verbose);
@@ -471,9 +480,9 @@ static int CmdHF14AJookiSim(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+
     uint8_t b64[JOOKI_B64_LEN] = {0x00};
     int dlen = sizeof(b64) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
-    memset(b64, 0x0, sizeof(b64));
     CLIGetStrWithReturn(ctx, 1, b64, &dlen);
     CLIParserFree(ctx);
 
@@ -533,10 +542,12 @@ static int CmdHF14AJookiSim(const char *Cmd) {
 
     // fast push mode
     g_conn.block_after_ACK = true;
-    uint8_t blockwidth = 4, counter = 0, blockno = 0;
+    uint8_t blockwidth = 4;
+    uint8_t counter = 0;
+    uint8_t blockno = 0;
 
     // 12 is the size of the struct the fct mf_eml_set_mem_xt uses to transfer to device
-    uint16_t max_avail_blocks = ((PM3_CMD_DATA_SIZE - 12) / blockwidth) * blockwidth;
+    uint16_t max_avail_blocks = ((g_conn.max_cmd_data_size - 12) / blockwidth);
 
     while (datalen) {
         if (datalen == blockwidth) {
@@ -546,7 +557,7 @@ static int CmdHF14AJookiSim(const char *Cmd) {
         uint16_t chunk_size = MIN(max_avail_blocks, datalen);
         uint16_t blocks_to_send = chunk_size / blockwidth;
 
-        if (mf_eml_set_mem_xt(data + counter, blockno, blocks_to_send, blockwidth) != PM3_SUCCESS) {
+        if (mf_eml_set_mem_xt(data + counter, blockno, blocks_to_send, blockwidth, 0) != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Cant set emul block: %3d", blockno);
             free(data);
             return PM3_ESOFT;
@@ -565,13 +576,18 @@ static int CmdHF14AJookiSim(const char *Cmd) {
         uint8_t flags;
         uint8_t uid[10];
         uint8_t exitAfter;
+        uint8_t rats[20];
+        uint8_t ulauth_1a1_len;
+        uint8_t ulauth_1a2_len;
+        uint8_t ulauth_1a1[16];
+        uint8_t ulauth_1a2[16];
+        bool ulauth_1a2_mirror;
     } PACKED payload;
 
+    memset(&payload, 0x00, sizeof(payload));
     // NTAG,  7 byte UID in eloaded data.
     payload.tagtype = 7;
-    payload.flags = 0;
     FLAG_SET_UID_IN_EMUL(payload.flags);
-    payload.exitAfter = 0;
     memcpy(payload.uid, uid, sizeof(uid));
 
     clearCommandBuffer();
@@ -584,15 +600,17 @@ static int CmdHF14AJookiSim(const char *Cmd) {
     for (;;) {
         if (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            PrintAndLogEx(DEBUG, "User aborted");
+            PrintAndLogEx(DEBUG, "\naborted via keyboard!");
             break;
         }
 
-        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == false)
+        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == false) {
             continue;
+        }
 
-        if (resp.status != PM3_SUCCESS)
+        if (resp.status != PM3_SUCCESS) {
             break;
+        }
     }
     free(data);
     PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 14a list") "` to view trace log");
@@ -616,25 +634,25 @@ static int CmdHF14AJookiClone(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
+
     uint8_t b64[JOOKI_B64_LEN] = {0x00};
     int blen = sizeof(b64) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
-    memset(b64, 0x0, sizeof(b64));
     CLIGetStrWithReturn(ctx, 1, b64, &blen);
 
     int dlen = 0;
     uint8_t data[52] = {0x00};
-    memset(data, 0x0, sizeof(data));
     int res = CLIParamHexToBuf(arg_get_str(ctx, 2), data, sizeof(data), &dlen);
-    if (res) {
-        CLIParserFree(ctx);
-        PrintAndLogEx(FAILED, "Error parsing bytes");
-        return PM3_EINVARG;
-    }
 
     int plen = 0;
     uint8_t pwd[4] = {0x00};
     CLIGetHexWithReturn(ctx, 3, pwd, &plen);
     CLIParserFree(ctx);
+
+    // sanity checks
+    if (res) {
+        PrintAndLogEx(FAILED, "Error parsing bytes");
+        return PM3_EINVARG;
+    }
 
     if (dlen != 52) {
         PrintAndLogEx(ERR, "Wrong data length. Expected 52 got %d", dlen);
@@ -646,30 +664,34 @@ static int CmdHF14AJookiClone(const char *Cmd) {
         has_pwd = true;
     }
 
-    // 0 - no authentication
-    // 2 - pwd  (4 bytes)
-    uint8_t keytype = 0, blockno = 4, i = 0;
+    // keytype = 0 - no authentication
+    // keytype = 2 - pwd  (4 bytes)
+    uint8_t i = 0;
+    mful_writeblock_t packetw = {
+        .keytype = 0,   // no key
+        .block_no = 4,
+        .use_schann = false,
+        .keylen = 0,
+    };
 
     while ((i * 4) < dlen) {
 
-        uint8_t cmddata[8] = {0};
-        memcpy(cmddata, data + (i * 4), 4);
+        memcpy(packetw.data, data + (i * 4), 4);
         if (has_pwd) {
-            memcpy(cmddata + 4, pwd, 4);
-            keytype = 2;
+            packetw.keytype = 2;
+            memcpy(packetw.key, pwd, 4);
+            packetw.keylen = 4;
         }
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, blockno, keytype, 0, cmddata, sizeof(cmddata));
-
+        SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packetw, sizeof(packetw));
         PacketResponseNG resp;
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-            uint8_t isOK  = resp.oldarg[0] & 0xff;
-            PrintAndLogEx(SUCCESS, "Write block %d ( %s )", blockno, isOK ? _GREEN_("ok") : _RED_("fail"));
-        } else {
-            PrintAndLogEx(WARNING, "command execution time out");
-        }
 
-        blockno++;
+        if (WaitForResponseTimeout(CMD_HF_MIFAREU_WRITEBL, &resp, 1500) == false) {
+            PrintAndLogEx(WARNING, "command execution time out");
+            return PM3_ETIMEOUT;
+        }
+        PrintAndLogEx(SUCCESS, "Write block %d ( %s )", packetw.block_no, resp.status == PM3_SUCCESS ? _GREEN_("ok") : _RED_("fail"));
+        packetw.block_no++;
         i++;
     }
 

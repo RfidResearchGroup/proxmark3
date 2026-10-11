@@ -27,6 +27,7 @@
 #include "crc.h"
 #include "crc16.h"
 #include "fileutils.h"  //saveFile
+#include "util_posix.h" // msleep
 
 static int CmdHelp(const char *Cmd);
 
@@ -34,7 +35,7 @@ static int CmdHelp(const char *Cmd);
 #define LEGIC_PRIME_MIM256  256
 #define LEGIC_PRIME_MIM1024 1024
 #define LEGIC_BLOCK_SIZE    8
-#define LEGIC_PACKET_SIZE   (PM3_CMD_DATA_SIZE - sizeof(legic_packet_t))
+#define LEGIC_PACKET_SIZE   (g_conn.max_cmd_data_size - sizeof(legic_packet_t))
 
 static bool legic_xor(uint8_t *data, uint16_t cardsize) {
 
@@ -55,6 +56,313 @@ static bool legic_xor(uint8_t *data, uint16_t cardsize) {
     }
     PrintAndLogEx(SUCCESS, "Applying xoring of data done!");
     return true;
+}
+
+void legic_xor_with_crc(uint8_t *data, uint16_t cardsize, uint8_t crc) {
+    for (uint16_t i = 22; i < cardsize; i++) {
+        data[i] ^= crc;
+    }
+}
+
+bool legic_clone_update_segment_crcs(uint8_t *data, size_t bytes_read, const uint8_t uid[4]) {
+    // Segment headers are parsed from offset 22 everywhere else in LEGIC decoding.
+    size_t start = 22;
+    bool found_segment = false;
+
+    while (start + 5 <= bytes_read) {
+        uint16_t seg_len = (((uint16_t)data[start + 1] & 0x0F) << 8) | data[start];
+        if (seg_len < 5 || start + seg_len > bytes_read) {
+            break;
+        }
+
+        found_segment = true;
+        uint8_t cmd[8] = {
+            uid[0], uid[1], uid[2], uid[3],
+            data[start], data[start + 1], data[start + 2], data[start + 3]
+        };
+        data[start + 4] = (uint8_t)CRC8Legic(cmd, sizeof(cmd));
+
+        if (data[start + 1] & 0x80) {
+            break;
+        }
+
+        start += seg_len;
+    }
+
+    if (!found_segment) {
+        PrintAndLogEx(INFO, "No parseable LEGIC Prime segments found; treating dump as raw data.");
+    }
+
+    return true;
+}
+
+bool legic_clone_update_kgh_crcs(uint8_t *data, size_t bytes_read, const uint8_t uid[4]) {
+    // Decoded segmented payload starts at byte 22.
+    size_t start = 22;
+    bool found_kgh = false;
+    uint8_t segment_index = 0;
+
+    while (start + 5 <= bytes_read) {
+        uint16_t seg_len = (((uint16_t)data[start + 1] & 0x0F) << 8) | data[start];
+        if (seg_len < 6 || start + seg_len > bytes_read) {
+            break;
+        }
+
+        // KGH CRC input is UID + WRP/WRC/RD/segment-marker + payload bytes, excluding the KGH byte itself.
+        uint16_t payload_len = seg_len - 6;
+        uint8_t *cmd = calloc(4 + 4 + payload_len, sizeof(uint8_t));
+        if (cmd == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            return false;
+        }
+
+        found_kgh = true;
+        memcpy(cmd, uid, 4);
+        cmd[4] = data[start + 2];
+        cmd[5] = (data[start + 3] & 0x70) >> 4;
+        cmd[6] = (data[start + 3] & 0x80) >> 7;
+        cmd[7] = (segment_index == 0) ? 0x00 : 0x93;
+        memcpy(cmd + 8, data + start + 5, payload_len);
+
+        data[start + seg_len - 1] = (uint8_t)CRC8Legic(cmd, 4 + 4 + payload_len);
+        free(cmd);
+
+        if (data[start + 1] & 0x80) {
+            break;
+        }
+
+        start += seg_len;
+        ++segment_index;
+    }
+
+    if (!found_kgh) {
+        PrintAndLogEx(INFO, "No KGH-rewriteable LEGIC Prime segments found; leaving payload CRCs untouched.");
+    }
+
+    return true;
+}
+
+int legic_write_bytes_to_tag(uint16_t offset, uint8_t iv, const uint8_t *data, size_t bytes_read, const char *verb) {
+    PrintAndLogEx(SUCCESS, "%s", verb);
+
+    // fast push mode
+    g_conn.block_after_ACK = true;
+
+    PacketResponseNG resp;
+    for (size_t i = offset; i < bytes_read; i += LEGIC_PACKET_SIZE) {
+        size_t len = MIN((bytes_read - i), LEGIC_PACKET_SIZE);
+        if (len == bytes_read - i) {
+            g_conn.block_after_ACK = false;
+        }
+
+        legic_packet_t *payload = calloc(1, sizeof(legic_packet_t) + len);
+        if (payload == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            g_conn.block_after_ACK = false;
+            return PM3_EMALLOC;
+        }
+        payload->offset = i;
+        payload->iv = iv;
+        payload->len = len;
+        memcpy(payload->data, data + i, len);
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_LEGIC_WRITER, (uint8_t *)payload, sizeof(legic_packet_t) + len);
+        free(payload);
+
+        uint8_t timeout = 0;
+        while (WaitForResponseTimeout(CMD_HF_LEGIC_WRITER, &resp, 2000) == false) {
+            ++timeout;
+            PrintAndLogEx(NORMAL, "." NOLF);
+            if (timeout > 10) {
+                PrintAndLogEx(WARNING, "\ncommand execution time out");
+                g_conn.block_after_ACK = false;
+                return PM3_ETIMEOUT;
+            }
+        }
+        PrintAndLogEx(NORMAL, "");
+
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Failed writing tag at offset %zu len %zu. Status: %d", i, len, resp.status);
+            g_conn.block_after_ACK = false;
+            return PM3_ERFTRANS;
+        }
+        PrintAndLogEx(SUCCESS, "Wrote chunk [offset %zu | len %zu | end %zu of %zu]", i, len, i + len, bytes_read);
+    }
+
+    g_conn.block_after_ACK = false;
+    return PM3_SUCCESS;
+}
+
+int legic_write_dump_to_tag(uint8_t *dump, size_t bytes_read) {
+    return legic_write_bytes_to_tag(7, 0x55, dump, bytes_read, "Restoring to card");
+}
+
+int legic_migrate_dump(uint8_t *dump, size_t bytes_read, bool rewrite_kgh, const uint8_t dcf[2], bool allow_dcf) {
+    if (dump == NULL || bytes_read <= 22) {
+        return PM3_EINVARG;
+    }
+
+    if (dcf != NULL && !allow_dcf) {
+        return PM3_EINVARG;
+    }
+
+    legic_card_select_t card;
+    if (legic_get_type(&card) != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
+
+    if (card.cardsize < bytes_read) {
+        return PM3_EFILE;
+    }
+
+    uint8_t target_uid[4] = {0};
+    memcpy(target_uid, card.uid, sizeof(target_uid));
+    uint8_t target_mcc = (uint8_t)CRC8Legic(target_uid, sizeof(target_uid));
+
+    if (!legic_clone_update_segment_crcs(dump, bytes_read, target_uid)) {
+        return PM3_EFAILED;
+    }
+    if (rewrite_kgh && !legic_clone_update_kgh_crcs(dump, bytes_read, target_uid)) {
+        return PM3_EFAILED;
+    }
+
+    memcpy(dump, target_uid, sizeof(target_uid));
+    dump[4] = target_mcc;
+    legic_xor_with_crc(dump, bytes_read, dump[4]);
+
+    int write_res = legic_write_dump_to_tag(dump, bytes_read);
+    if (write_res != PM3_SUCCESS) {
+        return write_res;
+    }
+
+    if (dcf != NULL) {
+        uint8_t dcf_dump[7] = {0};
+        memcpy(dcf_dump + 5, dcf, 2);
+        return legic_write_bytes_to_tag(5, 0x55, dcf_dump, sizeof(dcf_dump), "Applying explicit DCF update");
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int CmdLegicMigrate(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf legic migrate",
+                  "Clone a LEGIC Prime dump to the currently attached tag.\n"
+                  "Optionally apply a DCF update after cloning, but only when explicitly requested.",
+                  "hf legic migrate -f src.bin\n"
+                  "hf legic migrate -f src.bin --kgh\n"
+                  "hf legic migrate -f src.bin --dcf 60EA --danger");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<fn>", "Source dump file"),
+        arg_lit0(NULL, "kgh", "Recalculate KGH payload CRCs"),
+        arg_str0(NULL, "dcf", "<hex>", "Optional DCF bytes to write after clone"),
+        arg_lit0(NULL, "danger", "Allow the explicit DCF write"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    bool rewrite_kgh = arg_get_lit(ctx, 2);
+
+    int dcf_len = 0;
+    uint8_t dcf[2] = {0};
+    if (arg_get_str(ctx, 3) != NULL) {
+        CLIParamHexToBuf(arg_get_str(ctx, 3), dcf, sizeof(dcf), &dcf_len);
+        if (dcf_len != 2) {
+            PrintAndLogEx(WARNING, "DCF must be exactly two bytes");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+
+    bool allow_dcf = arg_get_lit(ctx, 4);
+    CLIParserFree(ctx);
+
+    if (fnlen < 1) {
+        PrintAndLogEx(WARNING, "Source dump file is required");
+        return PM3_EINVARG;
+    }
+
+    if (dcf_len > 0 && !allow_dcf) {
+        PrintAndLogEx(WARNING, "Use --danger to allow the explicit DCF write");
+        return PM3_EINVARG;
+    }
+
+    uint8_t *dump = NULL;
+    size_t bytes_read = 0;
+    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, LEGIC_PRIME_MIM1024);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    if (bytes_read <= 22) {
+        PrintAndLogEx(WARNING, "Dump is too small to migrate");
+        free(dump);
+        return PM3_EFILE;
+    }
+
+    if (legic_xor(dump, bytes_read) == false) {
+        PrintAndLogEx(FAILED, "Failed to decode source dump");
+        free(dump);
+        return PM3_EFAILED;
+    }
+
+    legic_card_select_t card;
+    if (legic_get_type(&card) != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Failed to identify tagtype");
+        free(dump);
+        return PM3_ESOFT;
+    }
+
+    legic_print_type(card.cardsize, 0);
+
+    if (card.cardsize != bytes_read) {
+        PrintAndLogEx(WARNING, "Fail, filesize and cardsize is not equal. [%u != %zu]", card.cardsize, bytes_read);
+        free(dump);
+        return PM3_EFILE;
+    }
+
+    uint8_t target_uid[4] = {0};
+    memcpy(target_uid, card.uid, sizeof(target_uid));
+    uint8_t target_mcc = (uint8_t)CRC8Legic(target_uid, sizeof(target_uid));
+    legic_clone_update_segment_crcs(dump, bytes_read, target_uid);
+    if (rewrite_kgh) {
+        if (legic_clone_update_kgh_crcs(dump, bytes_read, target_uid) == false) {
+            free(dump);
+            return PM3_EFAILED;
+        }
+    }
+    memcpy(dump, target_uid, sizeof(target_uid));
+    dump[4] = target_mcc;
+
+    legic_xor_with_crc(dump, bytes_read, dump[4]);
+
+    int write_res = legic_write_dump_to_tag(dump, bytes_read);
+    if (write_res != PM3_SUCCESS) {
+        free(dump);
+        return write_res;
+    }
+
+    if (dcf_len > 0) {
+        PrintAndLogEx(SUCCESS, "Applying explicit DCF update");
+        uint8_t dcf_dump[7] = {0};
+        memcpy(dcf_dump + 5, dcf, sizeof(dcf));
+        int dcf_res = legic_write_bytes_to_tag(5, 0x55, dcf_dump, sizeof(dcf_dump), "Applying explicit DCF update");
+        if (dcf_res != PM3_SUCCESS) {
+            free(dump);
+            return dcf_res;
+        }
+    }
+
+    free(dump);
+    PrintAndLogEx(SUCCESS, "Done!");
+    return PM3_SUCCESS;
 }
 
 static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buffer) {
@@ -300,9 +608,9 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
                 // does this one work? (Answer: Only if KGH/BGH is used with BCD encoded card number! So maybe this will show just garbage...)
                 if (wrp_len == 8) {
                     PrintAndLogEx(SUCCESS, "Card ID: " _YELLOW_("%2X%02X%02X"),
-                                  data[i - 4] ^ crc,
-                                  data[i - 3] ^ crc,
-                                  data[i - 2] ^ crc
+                                  data[i - 4],
+                                  data[i - 3],
+                                  data[i - 2]
                                  );
                 }
             }
@@ -514,8 +822,9 @@ static int CmdLegicSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf legic sim",
                   "Simulates a LEGIC Prime tag.\n"
-                  "Following types supported (MIM22, MIM256, MIM1024)",
+                  "If a file is supplied, it is loaded into emulator memory first.",
                   "hf legic sim --22\n"
+                  "hf legic sim -f myfile.bin --1024\n"
                  );
 
     void *argtable[] = {
@@ -523,12 +832,16 @@ static int CmdLegicSim(const char *Cmd) {
         arg_lit0(NULL, "22", "LEGIC Prime MIM22"),
         arg_lit0(NULL, "256", "LEGIC Prime MIM256 (def)"),
         arg_lit0(NULL, "1024", "LEGIC Prime MIM1024"),
+        arg_str0("f", "file", "<fn>", "Optional dump file to load into emulator memory"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool m1 = arg_get_lit(ctx, 1);
     bool m2 = arg_get_lit(ctx, 2);
     bool m3 = arg_get_lit(ctx, 3);
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
     // validations
@@ -537,6 +850,32 @@ static int CmdLegicSim(const char *Cmd) {
         return PM3_EINVARG;
     } else if (m1 + m2 + m3 == 0) {
         m2 = true;
+    }
+
+    size_t sim_cardsize = LEGIC_PRIME_MIM256;
+    if (m1)
+        sim_cardsize = LEGIC_PRIME_MIM22;
+    else if (m2)
+        sim_cardsize = LEGIC_PRIME_MIM256;
+    else if (m3)
+        sim_cardsize = LEGIC_PRIME_MIM1024;
+
+    if (fnlen > 0) {
+        uint8_t *dump = NULL;
+        size_t bytes_read = 0;
+        int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, LEGIC_PRIME_MIM1024);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+
+        if (bytes_read != sim_cardsize) {
+            PrintAndLogEx(WARNING, "Dump size [%zu] does not match selected simulator size [%zu]", bytes_read, sim_cardsize);
+            free(dump);
+            return PM3_EFILE;
+        }
+
+        legic_seteml(dump, 0, bytes_read);
+        free(dump);
     }
 
     struct {
@@ -557,11 +896,13 @@ static int CmdLegicSim(const char *Cmd) {
     PacketResponseNG resp;
 
     PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
+    bool abort_by_keyboard = false;
     for (;;) {
-        if (kbd_enter_pressed()) {
+        if (abort_by_keyboard == false && kbd_enter_pressed()) {
+            PrintAndLogEx(INFO, "Key pressed, please wait about a minute for the pm3 to stop...");
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            PrintAndLogEx(DEBUG, "User aborted");
-            break;
+            PrintAndLogEx(DEBUG, "Aborted via keyboard!");
+            abort_by_keyboard = true;
         }
 
         if (WaitForResponseTimeout(CMD_HF_LEGIC_SIMULATE, &resp, 1500)) {
@@ -579,12 +920,14 @@ static int CmdLegicWrbl(const char *Cmd) {
     CLIParserInit(&ctx, "hf legic wrbl",
                   "Write data to a LEGIC Prime tag. It autodetects tagsize to ensure proper write",
                   "hf legic wrbl -o 0 -d 11223344    -> Write 0x11223344 starting from offset 0)\n"
-                  "hf legic wrbl -o 10 -d DEADBEEF   -> Write 0xdeadbeef starting from offset 10");
+                  "hf legic wrbl -o 10 -d DEADBEEF   -> Write 0xdeadbeef starting from offset 10\n"
+                  "hf legic wrbl -o 35 --fill 00     -> Fill 0x00 from offset 35 to end");
 
     void *argtable[] = {
         arg_param_begin,
         arg_int1("o", "offset", "<dec>", "offset in data array to start writing"),
-        arg_str1("d", "data", "<hex>", "data to write"),
+        arg_str0("d", "data", "<hex>", "data to write"),
+        arg_str0(NULL, "fill", "<hex>", "fill byte to write from offset to end of card"),
         arg_lit0(NULL, "danger", "Auto-confirm dangerous operations"),
         arg_param_end
     };
@@ -594,11 +937,38 @@ static int CmdLegicWrbl(const char *Cmd) {
 
     int dlen = 0;
     uint8_t data[LEGIC_PRIME_MIM1024] = {0};
-    CLIGetHexWithReturn(ctx, 2, data, &dlen);
+    bool has_data = false;
+    if (arg_get_str(ctx, 2)->count > 0) {
+        CLIGetHexWithReturn(ctx, 2, data, &dlen);
+        has_data = (dlen > 0);
+    }
 
-    bool autoconfirm = arg_get_lit(ctx, 3);
+    int fill_len = 0;
+    uint8_t fill_buf[1] = {0};
+    bool has_fill = false;
+    if (arg_get_str(ctx, 3)->count > 0) {
+        CLIParamHexToBuf(arg_get_str(ctx, 3), fill_buf, sizeof(fill_buf), &fill_len);
+        has_fill = (fill_len == 1);
+        if (!has_fill) {
+            PrintAndLogEx(WARNING, "Repeat byte must be exactly one byte");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+
+    bool autoconfirm = arg_get_lit(ctx, 4);
 
     CLIParserFree(ctx);
+
+    if (has_data && has_fill) {
+        PrintAndLogEx(WARNING, "Use either --data or --fill, not both");
+        return PM3_EINVARG;
+    }
+
+    if (!has_data && !has_fill) {
+        PrintAndLogEx(WARNING, "Either --data or --fill is required");
+        return PM3_EINVARG;
+    }
 
     // OUT-OF-BOUNDS checks
     // UID 4+1 bytes can't be written to.
@@ -636,43 +1006,29 @@ static int CmdLegicWrbl(const char *Cmd) {
         }
     }
 
+    if (has_fill && offset < 22) {
+        PrintAndLogEx(WARNING, "Fill mode is only allowed from offset 22 and above");
+        return PM3_EINVARG;
+    }
+
     uint32_t IV = 0x55;
     legic_chk_iv(&IV);
 
-    PrintAndLogEx(SUCCESS, "Writing to tag to offset %i", offset);
-
-    legic_packet_t *payload = calloc(1, sizeof(legic_packet_t) + dlen);
-    if (payload == NULL) {
-        PrintAndLogEx(WARNING, "Failed to allocate memory");
-        return PM3_EMALLOC;
-    }
-    payload->offset = (offset & 0xFFFF);
-    payload->iv = (IV & 0x7F);
-    payload->len = dlen;
-    memcpy(payload->data, data, dlen);
-
-    PacketResponseNG resp;
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_LEGIC_WRITER, (uint8_t *)payload, sizeof(legic_packet_t) + dlen);
-    free(payload);
-
-    uint8_t timeout = 0;
-    while (WaitForResponseTimeout(CMD_HF_LEGIC_WRITER, &resp, 2000) == false) {
-        ++timeout;
-        PrintAndLogEx(NORMAL, "." NOLF);
-        if (timeout > 10) {
-            PrintAndLogEx(WARNING, "\ncommand execution time out");
-            return PM3_ETIMEOUT;
+    if (has_fill) {
+        if (offset >= card.cardsize) {
+            PrintAndLogEx(WARNING, "Out-of-bounds, Offset = %d, Cardsize = %d", offset, card.cardsize);
+            return PM3_EOUTOFBOUND;
         }
-    }
-    PrintAndLogEx(NORMAL, "");
 
-    if (resp.status != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Failed writing tag");
-        return PM3_ERFTRANS;
+        dlen = card.cardsize - offset;
+        memset(data + offset, fill_buf[0], dlen);
+        PrintAndLogEx(SUCCESS, "Filling from offset %d to end with %02X (%d bytes)", offset, fill_buf[0], dlen);
+    } else {
+        memmove(data + offset, data, dlen);
     }
 
-    return PM3_SUCCESS;
+    PrintAndLogEx(SUCCESS, "Writing to tag to offset %i", offset);
+    return legic_write_bytes_to_tag((uint16_t)offset, (uint8_t)(IV & 0x7F), data, (size_t)(offset + dlen), "Writing to card");
 }
 
 static int CmdLegicCalcCrc(const char *Cmd) {
@@ -781,17 +1137,20 @@ int legic_print_type(uint32_t tagtype, uint8_t spaces) {
 }
 int legic_get_type(legic_card_select_t *card) {
 
-    if (card == NULL)
+    if (card == NULL) {
         return PM3_EINVARG;
+    }
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_LEGIC_INFO, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_LEGIC_INFO, &resp, 1500) == false)
+    if (WaitForResponseTimeout(CMD_HF_LEGIC_INFO, &resp, 1500) == false) {
         return PM3_ETIMEOUT;
+    }
 
-    if (resp.status != PM3_SUCCESS)
+    if (resp.status != PM3_SUCCESS) {
         return PM3_ESOFT;
+    }
 
     memcpy(card, resp.data.asBytes, sizeof(legic_card_select_t));
     return PM3_SUCCESS;
@@ -973,8 +1332,8 @@ static int CmdLegicDump(const char *Cmd) {
 static int CmdLegicRestore(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf legic restore",
-                  "Reads (bin/eml/json) file and it autodetects card type and verifies that the file has the same size\n"
-                  "Then write the data back to card. All bytes except the first 7bytes [UID(4) MCC(1) DCF(2)]",
+                  "Restore an exact LEGIC Prime dump back to the same card family.\n"
+                  "This writes the dump bytes back as-is (except the first 7 bytes [UID(4) MCC(1) DCF(2)] are preserved from the target card).",
                   "hf legic restore -f myfile        --> use user specified filename\n"
                   "hf legic restore -f myfile --ob   --> use UID as filename and obfuscate data");
 
@@ -1026,55 +1385,173 @@ static int CmdLegicRestore(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(SUCCESS, "Restoring to card");
+    int write_res = legic_write_dump_to_tag(dump, bytes_read);
+    if (write_res != PM3_SUCCESS) {
+        free(dump);
+        return write_res;
+    }
 
-    // fast push mode
-    g_conn.block_after_ACK = true;
+    free(dump);
+    PrintAndLogEx(SUCCESS, "Done!");
+    return PM3_SUCCESS;
+}
 
-    // transfer to device
-    PacketResponseNG resp;
-    // 7 = skip UID bytes and MCC
-    for (size_t i = 7; i < bytes_read; i += LEGIC_PACKET_SIZE) {
+static int CmdLegicClone(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf legic clone",
+                  "Rewrite a LEGIC dump for a new target tag or MCC.\n"
+                  "Use --mcc to rewrite only the dump obfuscation, or --write to clone to the current tag.\n"
+                  "Use --kgh with --write to recalculate UID-bound KGH payload CRCs.",
+                  "hf legic clone -f src.bin -c 39 -o clone.bin\n"
+                  "hf legic clone -f src.bin --write\n"
+                  "hf legic clone -f src.bin --write --kgh\n"
+                  "hf legic clone -f src.bin --write --kgh -o clone.bin");
 
-        size_t len = MIN((bytes_read - i), LEGIC_PACKET_SIZE);
-        if (len == bytes_read - i) {
-            // Disable fast mode on last packet
-            g_conn.block_after_ACK = false;
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<fn>", "Source dump file"),
+        arg_str0(NULL, "mcc", "<hex>", "Target MCC byte for output-only cloning"),
+        arg_str0("o", "output", "<fn>", "Output cloned dump file"),
+        arg_lit0("w", "write", "Write cloned dump to the currently attached tag"),
+        arg_lit0(NULL, "kgh", "Recalculate KGH payload CRCs"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    bool write_to_tag = arg_get_lit(ctx, 4);
+    bool rewrite_kgh = arg_get_lit(ctx, 5);
+
+    int outlen = 0;
+    char outfilename[FILE_PATH_SIZE] = {0};
+    if (!write_to_tag && arg_get_str(ctx, 3) != NULL) {
+        CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)outfilename, FILE_PATH_SIZE, &outlen);
+        if (outlen < 1) {
+            PrintAndLogEx(WARNING, "Output filename is invalid");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
         }
+    }
 
-        legic_packet_t *payload = calloc(1, sizeof(legic_packet_t) + len);
-        if (payload == NULL) {
-            PrintAndLogEx(WARNING, "Failed to allocate memory");
+    int mcc_len = 0;
+    uint8_t mcc_buf[1] = {0};
+    bool has_mcc = false;
+
+    if (write_to_tag == false && arg_get_str(ctx, 2) != NULL) {
+
+        CLIParamStrToBuf(arg_get_str(ctx, 2), mcc_buf, sizeof(mcc_buf), &mcc_len);
+        has_mcc = (mcc_len == 1);
+        if (has_mcc == false) {
+            PrintAndLogEx(WARNING, "Target MCC must be exactly one byte");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+
+    CLIParserFree(ctx);
+
+    if (fnlen < 1) {
+        PrintAndLogEx(WARNING, "Source dump file is required");
+        return PM3_EINVARG;
+    }
+
+    if (write_to_tag && has_mcc) {
+        PrintAndLogEx(WARNING, "Use either --mcc or --write, not both");
+        return PM3_EINVARG;
+    }
+
+    if (!write_to_tag && !has_mcc) {
+        PrintAndLogEx(WARNING, "Either --mcc or --write is required");
+        return PM3_EINVARG;
+    }
+
+    if (rewrite_kgh && !write_to_tag) {
+        PrintAndLogEx(WARNING, "Use --kgh together with --write so the target UID is known");
+        return PM3_EINVARG;
+    }
+
+    if (!write_to_tag && outlen < 1) {
+        PrintAndLogEx(WARNING, "Output file is required when using --mcc");
+        return PM3_EINVARG;
+    }
+
+    uint8_t *dump = NULL;
+    size_t bytes_read = 0;
+    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, LEGIC_PRIME_MIM1024);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    if (bytes_read <= 22) {
+        PrintAndLogEx(WARNING, "Dump is too small to clone");
+        free(dump);
+        return PM3_EFILE;
+    }
+
+    if (legic_xor(dump, bytes_read) == false) {
+        PrintAndLogEx(FAILED, "Failed to decode source dump");
+        free(dump);
+        return PM3_EFAILED;
+    }
+
+    uint8_t target_uid[4] = {0};
+    uint8_t target_mcc = 0;
+
+    if (write_to_tag) {
+        legic_card_select_t card;
+        if (legic_get_type(&card) != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Failed to identify tagtype");
             free(dump);
-            return PM3_EMALLOC;
+            return PM3_ESOFT;
         }
-        payload->offset = i;
-        payload->iv = 0x55;
-        payload->len = len;
-        memcpy(payload->data, dump + i, len);
 
-        clearCommandBuffer();
-        SendCommandNG(CMD_HF_LEGIC_WRITER, (uint8_t *)payload, sizeof(legic_packet_t) + len);
-        free(payload);
+        legic_print_type(card.cardsize, 0);
+        if (card.cardsize != bytes_read) {
+            PrintAndLogEx(WARNING, "Fail, filesize and cardsize is not equal. [%u != %zu]", card.cardsize, bytes_read);
+            free(dump);
+            return PM3_EFILE;
+        }
 
-        uint8_t timeout = 0;
-        while (WaitForResponseTimeout(CMD_HF_LEGIC_WRITER, &resp, 2000) == false) {
-            ++timeout;
-            PrintAndLogEx(NORMAL, "." NOLF);
-            if (timeout > 10) {
-                PrintAndLogEx(WARNING, "\ncommand execution time out");
+        memcpy(target_uid, card.uid, sizeof(target_uid));
+        target_mcc = (uint8_t)CRC8Legic(target_uid, sizeof(target_uid));
+        legic_clone_update_segment_crcs(dump, bytes_read, target_uid);
+        if (rewrite_kgh) {
+            if (legic_clone_update_kgh_crcs(dump, bytes_read, target_uid) == false) {
                 free(dump);
-                return PM3_ETIMEOUT;
+                return PM3_EFAILED;
             }
         }
-        PrintAndLogEx(NORMAL, "");
+        memcpy(dump, target_uid, sizeof(target_uid));
+        dump[4] = target_mcc;
+    } else {
+        target_mcc = mcc_buf[0];
+        dump[4] = target_mcc;
+    }
 
-        if (resp.status != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "Failed writing tag");
-            free(dump);
-            return PM3_ERFTRANS;
+    legic_xor_with_crc(dump, bytes_read, dump[4]);
+
+    if (outlen > 0) {
+        PrintAndLogEx(SUCCESS, "Saving cloned dump to %s", outfilename);
+        pm3_save_dump(outfilename, dump, bytes_read, jsfLegic_v2);
+    } else if (write_to_tag) {
+        char auto_filename[FILE_PATH_SIZE] = {0};
+        strcat(auto_filename, "hf-legic-");
+        FillFileNameByUID(auto_filename, dump, "-dump", 4);
+        PrintAndLogEx(SUCCESS, "Saving cloned dump to %s", auto_filename);
+        pm3_save_dump(auto_filename, dump, bytes_read, jsfLegic_v2);
+    }
+
+    if (write_to_tag) {
+        int write_res = legic_write_dump_to_tag(dump, bytes_read);
+        free(dump);
+        if (write_res != PM3_SUCCESS) {
+            return write_res;
         }
-        PrintAndLogEx(SUCCESS, "Wrote chunk [offset %zu | len %zu | total %zu", i, len, i + len);
+        PrintAndLogEx(SUCCESS, "Done!");
+        return PM3_SUCCESS;
     }
 
     free(dump);
@@ -1470,7 +1947,9 @@ static command_t CommandTable[] =  {
     {"list",    CmdLegicList,     AlwaysAvailable, "List LEGIC history"},
     {"rdbl",    CmdLegicRdbl,     IfPm3Legicrf,    "Read bytes from a LEGIC Prime tag"},
     {"reader",  CmdLegicReader,   IfPm3Legicrf,    "LEGIC Prime Reader UID and tag info"},
-    {"restore", CmdLegicRestore,  IfPm3Legicrf,    "Restore a dump file onto a LEGIC Prime tag"},
+    {"restore", CmdLegicRestore,  IfPm3Legicrf,    "Restore an exact dump back onto the same LEGIC Prime card family"},
+    {"clone",   CmdLegicClone,    IfPm3Legicrf,    "Clone a LEGIC Prime dump to a new MCC or different tag"},
+    {"migrate", CmdLegicMigrate,  IfPm3Legicrf,    "Clone a LEGIC Prime dump to a tag; DCF stays opt-in"},
     {"wipe",    CmdLegicWipe,     IfPm3Legicrf,    "Wipe a LEGIC Prime tag"},
     {"wrbl",    CmdLegicWrbl,     IfPm3Legicrf,    "Write data to a LEGIC Prime tag"},
     {"-----------", CmdHelp,      AlwaysAvailable, "--------------------- " _CYAN_("simulation") " ---------------------"},
@@ -1527,7 +2006,7 @@ int readLegicUid(bool loop, bool verbose) {
         PrintAndLogEx(SUCCESS, " MSN: " _GREEN_("%s"), sprint_hex(card.uid + 1, sizeof(card.uid) - 1));
         legic_print_type(card.cardsize, 0);
 
-    } while (loop && kbd_enter_pressed() == false);
+    } while (loop && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }

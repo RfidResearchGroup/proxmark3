@@ -1,0 +1,281 @@
+#:import theme epassport.ui.theme
+#:import entry epassport.ui.entry
+
+<PmField@BoxLayout>:
+    caption: ""
+    hint: ""
+    error: ""
+    value: ""
+    sanitizer: None
+    orientation: "vertical"
+    size_hint_y: None
+    height: dp(58)
+    spacing: dp(2)
+    Label:
+        text: root.caption
+        font_name: theme.FONT_LABEL_BOLD
+        font_size: sp(11)
+        color: app.palette["text_dim"]
+        size_hint_y: None
+        height: dp(15)
+        halign: "left"
+        valign: "middle"
+        text_size: self.size
+    TextInput:
+        id: box
+        text: root.value
+        on_text: root.value = root.sanitizer(self.text) if root.sanitizer else self.text
+        hint_text: root.hint
+        multiline: False
+        font_name: theme.FONT_MONO
+        font_size: sp(15)
+        size_hint_y: None
+        height: dp(30)
+        padding: dp(8), dp(6)
+        background_color: app.palette["field_bg"]
+        foreground_color: app.palette["text"]
+        cursor_color: app.palette["accent"]
+    Label:
+        text: root.error
+        font_name: theme.FONT_LABEL
+        font_size: sp(10)
+        color: theme.BAD
+        size_hint_y: None
+        height: dp(13)
+        halign: "left"
+        valign: "middle"
+        text_size: self.size
+
+<ErrorPanel>:
+    orientation: "vertical"
+    size_hint_y: None
+    height: self.minimum_height if root.visible else 0
+    opacity: 1 if root.visible else 0
+    padding: dp(14)
+    spacing: dp(6)
+    canvas.before:
+        Color:
+            rgba: theme.BAD[0], theme.BAD[1], theme.BAD[2], 0.10
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(6)]
+        Color:
+            rgba: theme.BAD[0], theme.BAD[1], theme.BAD[2], 0.55
+        Line:
+            rounded_rectangle: (self.x, self.y, self.width, self.height, dp(6))
+            width: 1.2
+    Label:
+        text: root.title
+        font_name: theme.FONT_LABEL_BOLD
+        font_size: sp(15)
+        color: theme.BAD
+        size_hint_y: None
+        height: self.texture_size[1]
+        text_size: self.width, None
+        halign: "left"
+    Label:
+        text: root.detail
+        font_name: theme.FONT_MONO
+        font_size: sp(11)
+        color: app.palette["text_dim"]
+        size_hint_y: None
+        height: self.texture_size[1] if root.detail else 0
+        text_size: self.width, None
+        halign: "left"
+    Label:
+        text: root.remedy
+        font_name: theme.FONT_LABEL
+        font_size: sp(13)
+        color: app.palette["text"]
+        size_hint_y: None
+        height: self.texture_size[1]
+        text_size: self.width, None
+        halign: "left"
+
+<EntryScreen>:
+    on_kv_post: root.revalidate()
+    document_number: docnum.value
+    date_of_birth: dob.value
+    date_of_expiry: expiry.value
+    mrz_line2: line2.value
+    can: canbox.value
+
+    BoxLayout:
+        orientation: "vertical"
+        padding: dp(28)
+        spacing: dp(10)
+
+        Label:
+            text: "Chip access key material"
+            font_name: theme.FONT_LABEL_BOLD
+            font_size: sp(18)
+            color: app.palette["accent"]
+            size_hint_y: None
+            height: dp(30)
+            halign: "left"
+            valign: "middle"
+            text_size: self.size
+
+        Label:
+            text: "Use the MRZ (all three values, both dates YYMMDD), or the CAN printed on the data page."
+            font_name: theme.FONT_LABEL
+            font_size: sp(12)
+            color: app.palette["text_dim"]
+            size_hint_y: None
+            height: dp(20)
+            halign: "left"
+            valign: "middle"
+            text_size: self.size
+
+        BoxLayout:
+            size_hint_y: None
+            height: dp(58)
+            spacing: dp(14)
+
+            PmField:
+                id: docnum
+                caption: "DOCUMENT NUMBER"
+                hint: "L898902C3"
+                sanitizer: entry.sanitize_docnum
+                error: root.docnum_error
+
+            PmField:
+                id: dob
+                caption: "DATE OF BIRTH (YYMMDD)"
+                hint: "740812"
+                sanitizer: entry.sanitize_date
+                error: root.dob_error
+                size_hint_x: 0.7
+
+            PmField:
+                id: expiry
+                caption: "DATE OF EXPIRY (YYMMDD)"
+                hint: "120415"
+                sanitizer: entry.sanitize_date
+                error: root.expiry_error
+                size_hint_x: 0.7
+
+        PmField:
+            id: line2
+            caption: "OR MRZ LINE 2 (44 CHARACTERS - TAKES PRECEDENCE)"
+            hint: "L898902C36UTO7408122F1204159ZE184226B<<<<<10"
+            sanitizer: entry.sanitize_line2
+            error: root.line2_error
+
+        BoxLayout:
+            size_hint_y: None
+            height: dp(58)
+            spacing: dp(14)
+
+            PmField:
+                id: canbox
+                caption: "CAN"
+                hint: "123456"
+                error: root.can_error
+                sanitizer: entry.sanitize_can
+                size_hint_x: None
+                width: dp(240)
+
+            BoxLayout:
+                orientation: "vertical"
+                spacing: dp(2)
+                Label:
+                    text: "AUTHENTICATION"
+                    font_name: theme.FONT_LABEL_BOLD
+                    font_size: sp(11)
+                    color: app.palette["text_dim"]
+                    size_hint_y: None
+                    height: dp(15)
+                    halign: "left"
+                    valign: "middle"
+                    text_size: self.size
+                Spinner:
+                    id: auth_picker
+                    text: root.auth_label
+                    values: list(entry.AUTH_LABELS.values())
+                    size_hint_y: None
+                    height: dp(30)
+                    font_name: theme.FONT_LABEL
+                    font_size: sp(12)
+                    sync_height: True
+                    on_text: root.auth_label = self.text
+                Widget:
+                    size_hint_y: None
+                    height: dp(13)
+
+        Label:
+            text: root.auth_note
+            font_name: theme.FONT_LABEL
+            font_size: sp(11)
+            color: app.palette["text_dim"]
+            size_hint_y: None
+            height: dp(18)
+            halign: "left"
+            valign: "middle"
+            text_size: self.size
+
+        Label:
+            text: root.derived_note
+            font_name: theme.FONT_LABEL
+            font_size: sp(11)
+            color: app.palette["text_dim"]
+            size_hint_y: None
+            height: dp(18)
+            halign: "left"
+            valign: "middle"
+            text_size: self.size
+
+        BoxLayout:
+            size_hint_y: None
+            height: dp(30)
+            spacing: dp(8)
+            CheckBox:
+                id: remember_box
+                size_hint_x: None
+                width: dp(30)
+                active: root.remember
+                on_active: root.remember = self.active
+            Label:
+                text: "Remember these values (they are live credential material)"
+                font_name: theme.FONT_LABEL
+                font_size: sp(12)
+                color: app.palette["text_dim"]
+                halign: "left"
+                valign: "middle"
+                text_size: self.size
+
+        ErrorPanel:
+            id: error_panel
+            palette: app.palette
+
+        Widget:
+
+        BoxLayout:
+            size_hint_y: None
+            height: dp(40)
+            spacing: dp(10)
+
+            Button:
+                text: "Scan MRZ with camera"
+                font_name: theme.FONT_LABEL
+                font_size: sp(13)
+                disabled: not app.camera_available
+                on_release: app.goto_scan()
+
+            Button:
+                text: "Open a saved dump…"
+                font_name: theme.FONT_LABEL
+                font_size: sp(13)
+                on_release: app.open_dumps_browser()
+
+            Widget:
+
+            Button:
+                text: "Read passport"
+                font_name: theme.FONT_LABEL_BOLD
+                font_size: sp(14)
+                size_hint_x: None
+                width: dp(170)
+                disabled: not root.valid or app.busy
+                on_release: app.start_read()

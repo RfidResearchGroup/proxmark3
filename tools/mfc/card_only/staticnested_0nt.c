@@ -272,7 +272,9 @@ static uint64_t **unpredictable_nested(NtpKs1List *pNKL, uint32_t keyCounts[]) {
             pthread_cond_wait(&status_cond, &status_mutex);
             activeThreads = 0;
             for (int i = 0; i < NUM_THREADS; i++) {
-                if (thread_status[i]) activeThreads++;
+                if (thread_status[i]) {
+                    activeThreads++;
+                }
             }
         }
 

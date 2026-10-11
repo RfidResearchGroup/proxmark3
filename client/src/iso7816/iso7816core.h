@@ -31,6 +31,7 @@ typedef enum {
     ISODEP_NFCA,
     ISODEP_NFCB,
     ISODEP_NFCV,
+    ISODEP_NFCB_PRIME,
 } isodep_state_t;
 
 typedef enum {

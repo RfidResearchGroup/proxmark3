@@ -7,21 +7,23 @@ on:
       - 'docker/**'
       - 'traces/**'
       - '.vscode/**'
+      - '**.md'
   pull_request:
     paths-ignore:
       - 'doc/**'
       - 'docker/**'
       - 'traces/**'
       - '.vscode/**'
+      - '**.md'
 
 jobs:
   macos-make:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -35,11 +37,14 @@ jobs:
         run: brew update
         continue-on-error: true
 
+      - name: Trust brew repo
+        run: brew trust rfidresearchgroup/proxmark3
+
       - name: Tap RfidResearchGroup/proxmark3
         run: brew tap RfidResearchGroup/proxmark3
 
       - name: Install dependencies
-        run: brew install readline coreutils qt@5 RfidResearchGroup/proxmark3/arm-none-eabi-gcc openssl gd
+        run: brew install readline coreutils qt RfidResearchGroup/proxmark3/arm-none-eabi-gcc openssl gd
         continue-on-error: true
 
       - name: Install Python dependencies
@@ -60,9 +65,9 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -76,11 +81,14 @@ jobs:
         run: brew update
         continue-on-error: true
 
+      - name: Trust brew repo
+        run: brew trust rfidresearchgroup/proxmark3
+
       - name: Tap RfidResearchGroup/proxmark3
         run: brew tap RfidResearchGroup/proxmark3
 
       - name: Install dependencies
-        run: brew install readline coreutils qt@5 RfidResearchGroup/proxmark3/arm-none-eabi-gcc openssl gd
+        run: brew install readline coreutils qt RfidResearchGroup/proxmark3/arm-none-eabi-gcc openssl gd
         continue-on-error: true
 
       - name: Install Python dependencies
@@ -102,9 +110,9 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -118,11 +126,14 @@ jobs:
         run: brew update
         continue-on-error: true
 
+      - name: Trust brew repo
+        run: brew trust rfidresearchgroup/proxmark3
+
       - name: Tap RfidResearchGroup/proxmark3
         run: brew tap RfidResearchGroup/proxmark3
 
       - name: Install dependencies
-        run: brew install readline coreutils qt@5 RfidResearchGroup/proxmark3/arm-none-eabi-gcc openssl gd
+        run: brew install readline coreutils qt RfidResearchGroup/proxmark3/arm-none-eabi-gcc openssl gd
         continue-on-error: true
 
       - name: Install Python dependencies

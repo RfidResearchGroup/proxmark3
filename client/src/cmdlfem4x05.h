@@ -22,6 +22,7 @@
 #include "common.h"
 
 #define EM_SERIAL_BLOCK     1
+#define EM_PWD_BLOCK        2
 #define EM_CONFIG_BLOCK     4
 #define EM4305_PROT1_BLOCK  14
 #define EM4305_PROT2_BLOCK  15

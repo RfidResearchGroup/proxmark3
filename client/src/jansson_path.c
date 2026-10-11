@@ -34,23 +34,26 @@ static json_malloc_t do_malloc = malloc;
 static json_free_t do_free = free;
 
 static void *jsonp_malloc(size_t size) {
-    if (!size)
+    if (size == 0) {
         return NULL;
+    }
 
     return (*do_malloc)(size);
 }
 
 static void jsonp_free(void *ptr) {
-    if (!ptr)
+    if (ptr == NULL) {
         return;
+    }
 
     (*do_free)(ptr);
 }
 
 static char *jsonp_strndup(const char *str, size_t len) {
     char *new_str = jsonp_malloc(len + 1);
-    if (!new_str)
+    if (new_str == NULL) {
         return NULL;
+    }
 
     memcpy(new_str, str, len);
     new_str[len] = '\0';
@@ -85,18 +88,20 @@ static void jsonp_error_init(json_error_t *error, const char *source) {
         error->line = -1;
         error->column = -1;
         error->position = 0;
-        if (source)
+        if (source) {
             jsonp_error_set_source(error, source);
-        else
+        } else {
             error->source[0] = '\0';
+        }
     }
 }
 
 static void jsonp_error_vset(json_error_t *error, int line, int column,
                              size_t position, enum json_error_code code,
                              const char *msg, va_list ap) {
-    if (!error)
+    if (error == NULL) {
         return;
+    }
 
     if (error->text[0] != '\0') {
         /* error already set */
@@ -131,10 +136,11 @@ json_t *json_path_get(const json_t *json, const char *path) {
     char *token, *buf, *peek, *endptr, delim = '\0';
     const char *expect;
 
-    if (!json || !path || path[0] != root_chr)
+    if (!json || !path || path[0] != root_chr) {
         return NULL;
-    else
+    } else {
         buf = jsonp_strdup(path);
+    }
 
     peek = buf + 1;
     cursor = json;
@@ -142,27 +148,37 @@ json_t *json_path_get(const json_t *json, const char *path) {
     expect = path_delims;
 
     while (peek && *peek && cursor) {
+
         char *last_peek = peek;
         peek = strpbrk(peek, expect);
+
         if (peek) {
-            if (!token && peek != last_peek)
+            if (!token && peek != last_peek) {
                 goto fail;
+            }
             delim = *peek;
             *peek++ = '\0';
+
         } else if (expect != path_delims || !token) {
             goto fail;
         }
 
         if (expect == path_delims) {
+
             if (token) {
                 cursor = json_object_get(cursor, token);
             }
+
             expect = (delim == array_open ? array_close : path_delims);
             token = peek;
+
         } else if (expect == array_close) {
+
             size_t index = strtol(token, &endptr, 0);
-            if (*endptr)
+            if (*endptr) {
                 goto fail;
+            }
+
             cursor = json_array_get(cursor, index);
             token = NULL;
             expect = path_delims;
@@ -236,7 +252,7 @@ int json_path_set_new(json_t *json, const char *path, json_t *value, size_t flag
                 parent = cursor;
                 cursor = json_object_get(parent, token);
 
-                if (!cursor) {
+                if (cursor == NULL) {
                     if (!json_is_object(parent)) {
                         jsonp_error_set(error, -1, -1, peek - buf, json_error_item_not_found, "object expected");
                         goto fail;
@@ -261,16 +277,19 @@ int json_path_set_new(json_t *json, const char *path, json_t *value, size_t flag
                 jsonp_error_set(error, -1, -1, peek - buf, json_error_item_not_found, "array expected");
                 goto fail;
             }
+
             index = strtol(token, &endptr, 0);
             if (*endptr) {
                 jsonp_error_set(error, -1, -1, peek - buf, json_error_item_not_found, "invalid array index");
                 goto fail;
             }
+
             cursor = json_array_get(parent, index);
-            if (!cursor) {
+            if (cursor == NULL) {
                 jsonp_error_set(error, -1, -1, peek - buf, json_error_item_not_found, "array index out of bound");
                 goto fail;
             }
+
             index_saved = index;
             token = NULL;
             expect = path_delims;

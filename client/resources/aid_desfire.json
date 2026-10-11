@@ -36,7 +36,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Description": "Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -44,7 +44,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Description": "Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -52,7 +52,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Description": "Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -60,7 +60,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Description": "Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -68,7 +68,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Description": "Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -76,7 +76,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Description": "Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -84,7 +84,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Description": "Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -92,7 +92,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Description": "Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -100,7 +100,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Description": "Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -108,7 +108,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Description": "Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -116,7 +116,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Description": "Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -124,7 +124,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Description": "Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -132,7 +132,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Unused Cardax Card Data Application (Alternative Endian)",
+        "Description": "Unused Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -140,7 +140,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Unused Cardax Card Data Application (Alternative Endian)",
+        "Description": "Unused Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -148,7 +148,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Unused Cardax Card Data Application (Alternative Endian)",
+        "Description": "Unused Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -156,7 +156,23 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Card Application Directory (CAD) (Alternative Endian)",
+        "Description": "Card Application Directory (CAD)",
+        "Type": "pacs"
+    },
+    {
+        "AID": "416343",
+        "Vendor": "Ubiquiti Inc",
+        "Country": "US",
+        "Name": "UniFi Access ACC App",
+        "Description": "Application created after enrollment into the system, containins unique authentication info",
+        "Type": "pacs"
+    },
+    {
+        "AID": "454955",
+        "Vendor": "Ubiquiti Inc",
+        "Country": "US",
+        "Name": "UniFi Access Touch Pass Apple Wallet Express",
+        "Description": "AID value is 'UIE' (UniFi Express) reversed. This app is selectable with or without auth",
         "Type": "pacs"
     },
     {
@@ -176,6 +192,14 @@
         "Type": "pacs"
     },
     {
+        "AID": "534955",
+        "Vendor": "Ubiquiti Inc",
+        "Country": "US",
+        "Name": "UniFi Access Touch Pass Apple Wallet Secure",
+        "Description": "AID value is 'UIS' (UniFi Secure) reversed. This app is selectable only after manual auth",
+        "Type": "pacs"
+    },
+    {
         "AID": "6F706C",
         "Vendor": "Openpath",
         "Country": "US",
@@ -189,6 +213,22 @@
         "Country": "CA",
         "Name": "BlueLINE EV1 PACS Credential",
         "Description": "Access Control",
+        "Type": "pacs"
+    },
+    {
+        "AID": "764970",
+        "Vendor": "Ubiquiti Inc",
+        "Country": "US",
+        "Name": "UniFi Access VID App",
+        "Description": "Contains issuer-signed static credential information used for KDF & other authentication operations",
+        "Type": "pacs"
+    },
+    {
+        "AID": "84D3FC",
+        "Vendor": "Ubiquiti Inc",
+        "Country": "US",
+        "Name": "UniFi Access FCD App",
+        "Description": "Contains static credential information used for KDF & other authentication operations",
         "Type": "pacs"
     },
     {
@@ -211,7 +251,7 @@
         "AID": "F47300",
         "Vendor": "Inner Range Pty Ltd",
         "Country": "AU",
-        "Name": "SIFER-P / SIFER-U Credential",
+        "Name": "SIFER-P / SIFER-U / SIFER-C Credential",
         "Description": "Inner Range Access Control",
         "Type": "pacs"
     },
@@ -221,134 +261,6 @@
         "Country": "US",
         "Name": "Securitron DESFire EV2 Credential",
         "Description": "Securitron DESFire EV2 Credential",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F48120",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F48121",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F48122",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F48123",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F48124",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F48125",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F48126",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F48127",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F48128",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F48129",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F4812A",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F4812B",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F4812C",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Unused Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F4812D",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Unused Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F4812E",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Unused Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F4812F",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Card Application Directory (CAD)",
         "Type": "pacs"
     },
     {
@@ -379,8 +291,8 @@
         "AID": "F48EF1",
         "Vendor": "Salto Systems",
         "Country": "ES",
-        "Name": "Salto Systems",
-        "Description": "Access Control",
+        "Name": "Salto Systems / Uni Delft",
+        "Description": "Access Control. Also issued as the TU Delft (NL) student card",
         "Type": "pacs"
     },
     {
@@ -392,11 +304,27 @@
         "Type": "pacs"
     },
     {
+        "AID": "F51780",
+        "Vendor": "ASSA ABLOY",
+        "Country": "SE",
+        "Name": "SMARTair",
+        "Description": "SMARTair Credential",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F70090",
+        "Vendor": "ASSA ABLOY (Timelox / VingCard Elsafe)",
+        "Country": "SE",
+        "Name": "Visionline",
+        "Description": "Hotel access credential",
+        "Type": "pacs"
+    },
+    {
         "AID": "F51BC0",
         "Vendor": "STid Group",
         "Country": "FR",
         "Name": "CCT Card / DTA Tag / PCG Fob",
-        "Description": "STid Easyline / Architect Access Credetials",
+        "Description": "STid Easyline / Architect Access Credentials",
         "Type": "pacs"
     },
     {
@@ -432,6 +360,86 @@
         "Type": "pacs"
     },
     {
+        "AID": "F52100",
+        "Vendor": "Lucid Group / dormakaba",
+        "Country": "US / CH",
+        "Name": "Lucid Motors Valet Card / Kaba evolo - Access",
+        "Description": "Used by both Lucid Motors valet card and Kaba evolo - KabaApplication.Access",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F52130",
+        "Vendor": "dormakaba",
+        "Country": "CH",
+        "Name": "Kaba evolo - Common",
+        "Description": "Kaba evolo - KabaApplication.Common",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F52140",
+        "Vendor": "dormakaba",
+        "Country": "CH",
+        "Name": "Kaba evolo - Biometric",
+        "Description": "Kaba evolo - KabaApplication.Biometric",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F52160",
+        "Vendor": "dormakaba",
+        "Country": "CH",
+        "Name": "Kaba evolo - MasterA",
+        "Description": "Kaba evolo - KabaApplication.MasterA",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F52161",
+        "Vendor": "dormakaba",
+        "Country": "CH",
+        "Name": "Kaba evolo - MasterB",
+        "Description": "Kaba evolo - KabaApplication.MasterB",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F52162",
+        "Vendor": "dormakaba",
+        "Country": "CH",
+        "Name": "Kaba evolo - DealerCode",
+        "Description": "Kaba evolo - KabaApplication.DealerCode",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F52163",
+        "Vendor": "dormakaba",
+        "Country": "CH",
+        "Name": "Kaba evolo - Upgrade",
+        "Description": "Kaba evolo - KabaApplication.Upgrade",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F52164",
+        "Vendor": "dormakaba",
+        "Country": "CH",
+        "Name": "Kaba evolo - MasterC",
+        "Description": "Kaba evolo - KabaApplication.MasterC",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F52165",
+        "Vendor": "dormakaba",
+        "Country": "CH",
+        "Name": "Kaba evolo - MasterTPrimary",
+        "Description": "Kaba evolo - KabaApplication.MasterTPrimary",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F52166",
+        "Vendor": "dormakaba",
+        "Country": "CH",
+        "Name": "Kaba evolo - MasterTSecondary",
+        "Description": "Kaba evolo - KabaApplication.MasterTSecundary",
+        "Type": "pacs"
+    },
+    {
         "AID": "F53280",
         "Vendor": "dormakaba",
         "Country": "CH",
@@ -440,11 +448,115 @@
         "Type": "pacs"
     },
     {
+        "AID": "F532F0",
+        "Vendor": "Schlage via Allegion PLC",
+        "Country": "US",
+        "Name": "Schlage Access Credential / LEAF",
+        "Description": "FKA aptiQ Access Credential. LEAF reuses this AID for backwards compatibility",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F51CD6",
+        "Vendor": "LEAF",
+        "Country": "US",
+        "Name": "LEAF Verified Open Application",
+        "Description": "LEAF Verified Open Application",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F51CD8",
+        "Vendor": "LEAF",
+        "Country": "US",
+        "Name": "LEAF Si Universal",
+        "Description": "LEAF Si Universal",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F51CD9",
+        "Vendor": "LEAF",
+        "Country": "US",
+        "Name": "LEAF Si Universal",
+        "Description": "LEAF Si Universal",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F51CDA",
+        "Vendor": "LEAF",
+        "Country": "US",
+        "Name": "LEAF Cc Enterprise",
+        "Description": "LEAF Cc Enterprise",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F51CDB",
+        "Vendor": "LEAF",
+        "Country": "US",
+        "Name": "LEAF Cc Enterprise",
+        "Description": "LEAF Cc Enterprise",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F51CDE",
+        "Vendor": "LEAF",
+        "Country": "US",
+        "Name": "LEAF Cc Enterprise (Old)",
+        "Description": "LEAF Cc Enterprise (Old)",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F51CDF",
+        "Vendor": "LEAF",
+        "Country": "US",
+        "Name": "LEAF Cc Enterprise (Apple Wallet)",
+        "Description": "LEAF Cc Enterprise app found on Apple Wallet credentials",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F51CDC",
+        "Vendor": "LEAF",
+        "Country": "US",
+        "Name": "LEAF Campus",
+        "Description": "LEAF Campus",
+        "Type": "pacs"
+    },
+    {
+        "AID": "42494F",
+        "Vendor": "LEAF",
+        "Country": "US",
+        "Name": "LEAF Biometrics",
+        "Description": "LEAF Biometrics",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F532F1",
+        "Vendor": "LEAF",
+        "Country": "US",
+        "Name": "LEAF User Privileges",
+        "Description": "LEAF User Privileges",
+        "Type": "pacs"
+    },
+    {
         "AID": "F534F1",
         "Vendor": "MOBOTIX AG",
         "Country": "DE",
         "Name": "MOBOTIX AG Access Credential",
         "Description": "T26 Outdoor Station and Access Module Credential",
+        "Type": "pacs"
+    },
+    {
+        "AID": "FE137A",
+        "Vendor": "Fermax Electronica SAU",
+        "Country": "ES",
+        "Name": "Fermax AC-MAX",
+        "Description": "Fermax Proximity Card/Keyring DESFire EV2/EV3 2k Credential",
+        "Type": "pacs"
+    },
+    {
+        "AID": "FE69AE",
+        "Vendor": "Fermax Electronica SAU",
+        "Country": "ES",
+        "Name": "Fermax DESFire entry card",
+        "Description": "Fermax Proximity Card/Keyring DESFire EV2/EV3 2k Credential",
         "Type": "pacs"
     },
     {
@@ -534,46 +646,6 @@
         "Name": "European Student Card (ESC)",
         "Description": "Multiservice Student Card",
         "Type": "student"
-    },
-    {
-        "AID": "764970",
-        "Vendor": "Ubiquiti Inc",
-        "Country": "N/A",
-        "Name": "UniFi Access VID App",
-        "Description": "Contains issuer-signed static credential information used for KDF & other authentication operations",
-        "Type": "pacs"
-    },
-    {
-        "AID": "84D3FC",
-        "Vendor": "Ubiquiti Inc",
-        "Country": "N/A",
-        "Name": "UniFi Access FCD App",
-        "Description": "Contains static credential information used for KDF & other authentication operations",
-        "Type": "pacs"
-    },
-    {
-        "AID": "416343",
-        "Vendor": "Ubiquiti Inc",
-        "Country": "N/A",
-        "Name": "UniFi Access ACC App",
-        "Description": "Application created after enrollment into the system, containins unique authentication info",
-        "Type": "pacs"
-    },
-    {
-        "AID": "454955",
-        "Vendor": "Ubiquiti Inc",
-        "Country": "N/A",
-        "Name": "UniFi Access Touch Pass Apple Wallet Express",
-        "Description": "AID value is 'UIE' (UniFi Express) reversed. This app is selectable with or without auth",
-        "Type": "pacs"
-    },
-    {
-        "AID": "534955",
-        "Vendor": "Ubiquiti Inc",
-        "Country": "N/A",
-        "Name": "UniFi Access Touch Pass Apple Wallet Secure",
-        "Description": "AID value is 'UIS' (UniFi Secure) reversed. This app is selectable only after manual auth",
-        "Type": "pacs"
     },
     {
         "AID": "535501",
@@ -784,14 +856,6 @@
         "Type": "student"
     },
     {
-        "AID": "F48EF1",
-        "Vendor": "TU Delft",
-        "Country": "NL",
-        "Name": "Uni Delft",
-        "Description": "",
-        "Type": "student"
-    },
-    {
         "AID": "F5217D",
         "Vendor": "TU Delft",
         "Country": "NL",
@@ -806,6 +870,30 @@
         "Name": "Uni Delft",
         "Description": "",
         "Type": "student"
+    },
+    {
+        "AID": "008800",
+        "Vendor": "PT Bank Mega Tbk",
+        "Country": "ID",
+        "Name": "MEGACASH",
+        "Description": "Indonesian stored-value card // FIDs 01: Card Identification; 02: Stored Value; 03: Transaction Records",
+        "Type": "payment system"
+    },
+    {
+        "AID": "1010F6",
+        "Vendor": "VDE",
+        "Country": "DE",
+        "Name": "VDE EV charging",
+        "Description": "Found on a DESFire card",
+        "Type": "payment system"
+    },
+    {
+        "AID": "168711",
+        "Vendor": "icash Co., Ltd.",
+        "Country": "TW",
+        "Name": "ICASH 2.0",
+        "Description": "Multi-purpose reloadable electronic wallet",
+        "Type": "payment system"
     },
     {
         "AID": "27E178",
@@ -880,19 +968,43 @@
         "Type": "payment system"
     },
     {
+        "AID": "4B4550",
+        "Vendor": "Lucid Motors via Lucid Group",
+        "Country": "US",
+        "Name": "Lucid Motors Valet Card",
+        "Description": "Lucid Motors Valet Card",
+        "Type": "vehicle access"
+    },
+    {
         "AID": "C26001",
-        "Vendor": "car2go",
+        "Vendor": "Free2move",
         "Country": "DE",
-        "Name": "MemberCard",
-        "Description": "car2go - Member Card // Multi Functional Badge / Private Application #1",
-        "Type": "carsharing"
+        "Name": "car2go Defunct Membership Card",
+        "Description": "car2go Defunct Membership Card // Defunct // Private Application #1",
+        "Type": "vehicle access"
     },
     {
         "AID": "000001",
         "Vendor": "Invalid / Reserved",
         "Country": "",
         "Name": "Invalid / Reserved",
-        "Description": "Used by ATL Breeze, MAD Tarjeta Transporte Publico, and YVR Compass",
+        "Description": "Used by ATL Breeze, EWR SmartLink, IAD Smart Trip (Mobile), LJU Urbana, MIA Easy, PHL FREEDOM, BRI BRIZZI, and YVR Compass",
+        "Type": "transport"
+    },
+    {
+        "AID": "000002",
+        "Vendor": "Javnim Podjetjem Ljubljanski Potniski Promet DOO (LPP)",
+        "Country": "SI",
+        "Name": "Urbana Card (LJU)",
+        "Description": "LJU Urbana Card",
+        "Type": "transport"
+    },
+    {
+        "AID": "000005",
+        "Vendor": "Transports Metropolitans de Barcelona (TMB) / Javnim Podjetjem LPP DOO (LPP)",
+        "Country": "ES / SI",
+        "Name": "T-mobilitat Card (BCN) / Urbana Card (LJU)",
+        "Description": "BCN T-mobilitat Card / LJU Urbana Card",
         "Type": "transport"
     },
     {
@@ -905,7 +1017,7 @@
     },
     {
         "AID": "002000",
-        "Vendor": "Metrolinx",
+        "Vendor": "Metrolinx via Accenture",
         "Country": "CA",
         "Name": "PRESTO Card (YYZ/YHM/YOW)",
         "Description": "FIDs 00,0F: Backup Data; 08-0E,10-14: Standard Data",
@@ -913,10 +1025,10 @@
     },
     {
         "AID": "010000",
-        "Vendor": "Consorcio Regional de Transportes Publicos Regulares de Madrid (CRTM)",
-        "Country": "ES",
-        "Name": "Tarjeta Transporte Publico (MAD) (Alternative Endian)",
-        "Description": "MAD Public Transport Card",
+        "Vendor": "Consorcio Regional de Transportes Publicos Regulares de Madrid (CRTM) / AF Payments Inc (AFPI)",
+        "Country": "ES / PH",
+        "Name": "Tarjeta Transporte Publico (MAD) / beep Card (MNL)",
+        "Description": "MAD Public Transport Card / MNL beep Card",
         "Type": "transport"
     },
     {
@@ -937,9 +1049,9 @@
     },
     {
         "AID": "015342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM) / Bangkok Mass Transit System PCL (BTS)",
         "Country": "TH",
-        "Name": "MRT Stored Value Card (BKK)",
+        "Name": "BEM MRT Stored Value Card (BKK) / BTS Rabbit Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
@@ -952,6 +1064,14 @@
         "Type": "transport"
     },
     {
+        "AID": "020000",
+        "Vendor": "AF Payments Inc (AFPI)",
+        "Country": "PH",
+        "Name": "beep Card (MNL)",
+        "Description": "MNL beep Card",
+        "Type": "transport"
+    },
+    {
         "AID": "024D44",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
@@ -961,9 +1081,9 @@
     },
     {
         "AID": "025342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM) / Bangkok Mass Transit System PCL (BTS)",
         "Country": "TH",
-        "Name": "MRT Stored Value Card (BKK)",
+        "Name": "BEM MRT Stored Value Card (BKK) / BTS Rabbit Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
@@ -976,6 +1096,14 @@
         "Type": "transport"
     },
     {
+        "AID": "030000",
+        "Vendor": "AF Payments Inc (AFPI)",
+        "Country": "PH",
+        "Name": "beep Card (MNL)",
+        "Description": "MNL beep Card",
+        "Type": "transport"
+    },
+    {
         "AID": "034D44",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
@@ -985,9 +1113,9 @@
     },
     {
         "AID": "035342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM) / Bangkok Mass Transit System PCL (BTS)",
         "Country": "TH",
-        "Name": "MRT Stored Value Card (BKK)",
+        "Name": "BEM MRT Stored Value Card (BKK) / BTS Rabbit Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
@@ -997,6 +1125,14 @@
         "Country": "PL",
         "Name": "URBANCARD (WRO)",
         "Description": "WRO URBANCARD (URBANCARD Term App)",
+        "Type": "transport"
+    },
+    {
+        "AID": "040000",
+        "Vendor": "AF Payments Inc (AFPI)",
+        "Country": "PH",
+        "Name": "beep Card (MNL)",
+        "Description": "MNL beep Card",
         "Type": "transport"
     },
     {
@@ -1017,9 +1153,9 @@
     },
     {
         "AID": "045342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM) / Bangkok Mass Transit System PCL (BTS)",
         "Country": "TH",
-        "Name": "MRT Stored Value Card (BKK)",
+        "Name": "BEM MRT Stored Value Card (BKK) / BTS Rabbit Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
@@ -1041,9 +1177,9 @@
     },
     {
         "AID": "055342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM) / Bangkok Mass Transit System PCL (BTS)",
         "Country": "TH",
-        "Name": "MRT Stored Value Card (BKK)",
+        "Name": "BEM MRT Stored Value Card (BKK) / BTS Rabbit Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
@@ -1065,9 +1201,9 @@
     },
     {
         "AID": "065342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM) / Bangkok Mass Transit System PCL (BTS)",
         "Country": "TH",
-        "Name": "MRT Stored Value Card (BKK)",
+        "Name": "BEM MRT Stored Value Card (BKK) / BTS Rabbit Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
@@ -1081,17 +1217,25 @@
     },
     {
         "AID": "075342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM) / Bangkok Mass Transit System PCL (BTS)",
         "Country": "TH",
-        "Name": "MRT Stored Value Card (BKK)",
+        "Name": "BEM MRT Stored Value Card (BKK) / BTS Rabbit Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
     {
+        "AID": "081117",
+        "Vendor": "JourneyTech Inc",
+        "Country": "PH",
+        "Name": "TRIPKO Card (MNL)",
+        "Description": "MNL MYTRIP Card",
+        "Type": "transport"
+    },
+    {
         "AID": "085342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM) / Bangkok Mass Transit System PCL (BTS)",
         "Country": "TH",
-        "Name": "MRT Stored Value Card (BKK)",
+        "Name": "BEM MRT Stored Value Card (BKK) / BTS Rabbit Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
@@ -1105,15 +1249,15 @@
     },
     {
         "AID": "095342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM) / Bangkok Mass Transit System PCL (BTS)",
         "Country": "TH",
-        "Name": "MRT Stored Value Card (BKK)",
+        "Name": "BEM MRT Stored Value Card (BKK) / BTS Rabbit Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
     {
         "AID": "0A5342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM)",
         "Country": "TH",
         "Name": "MRT Stored Value Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
@@ -1121,7 +1265,7 @@
     },
     {
         "AID": "0B5342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM)",
         "Country": "TH",
         "Name": "MRT Stored Value Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
@@ -1129,7 +1273,7 @@
     },
     {
         "AID": "0C5342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM)",
         "Country": "TH",
         "Name": "MRT Stored Value Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
@@ -1137,7 +1281,7 @@
     },
     {
         "AID": "0D5342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM)",
         "Country": "TH",
         "Name": "MRT Stored Value Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
@@ -1145,7 +1289,7 @@
     },
     {
         "AID": "0E5342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM)",
         "Country": "TH",
         "Name": "MRT Stored Value Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
@@ -1153,7 +1297,7 @@
     },
     {
         "AID": "0F5342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM)",
         "Country": "TH",
         "Name": "MRT Stored Value Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
@@ -1161,7 +1305,7 @@
     },
     {
         "AID": "105342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM)",
         "Country": "TH",
         "Name": "MRT Stored Value Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
@@ -1169,7 +1313,7 @@
     },
     {
         "AID": "115342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM)",
         "Country": "TH",
         "Name": "MRT Stored Value Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
@@ -1181,6 +1325,22 @@
         "Country": "IE",
         "Name": "TFI Leap Card (DUB)",
         "Description": "DUB Leap Card // Transport for Ireland // FIDs: 01,1F: Backup Data; 02-0A: Standard Data",
+        "Type": "transport"
+    },
+    {
+        "AID": "402301",
+        "Vendor": "Ministry of Transport, Communications and Works of the Republic of Cyprus",
+        "Country": "CY",
+        "Name": "motion BUS CARD (ECN)",
+        "Description": "ECN motion BUS CARD (App 1)",
+        "Type": "transport"
+    },
+    {
+        "AID": "415431",
+        "Vendor": "Athens Urban Transport Organisation (OASA)",
+        "Country": "GR",
+        "Name": "ATH.ENA CARD (ATH)",
+        "Description": "ATH ATH.ENA CARD",
         "Type": "transport"
     },
     {
@@ -1249,15 +1409,31 @@
     },
     {
         "AID": "4F5931",
-        "Vendor": "Transport for London (TfL)",
+        "Vendor": "Transport for London (TfL) via Cubic Transportation Systems",
         "Country": "UK",
-        "Name": "Oyster Card (LHR)",
+        "Name": "Oyster Card (LCY)",
         "Description": "FIDs: 00-07: Standard Data",
         "Type": "transport"
     },
     {
+        "AID": "502301",
+        "Vendor": "Ministry of Transport, Communications and Works of the Republic of Cyprus",
+        "Country": "CY",
+        "Name": "motion BUS CARD (ECN)",
+        "Description": "ECN motion BUS CARD (App 2)",
+        "Type": "transport"
+    },
+    {
+        "AID": "530053",
+        "Vendor": "Metro via Masabi Ltd",
+        "Country": "US",
+        "Name": "Ride On (STL)",
+        "Description": "STL Ride On; Masabi Justride Tap and Ride DESFire Smartcard",
+        "Type": "transport"
+    },
+    {
         "AID": "534531",
-        "Vendor": "Transport for New South Wales (TfNSW)",
+        "Vendor": "Transport for New South Wales (TfNSW) via Pearl Consortium",
         "Country": "AU",
         "Name": "Opal Card (SYD)",
         "Description": "FIDs 00-06: Standard Data; 07: Card Balance/Number and Trip History",
@@ -1265,7 +1441,7 @@
     },
     {
         "AID": "554000",
-        "Vendor": "Auckland Transport",
+        "Vendor": "Auckland Transport via Thales Group",
         "Country": "NZ",
         "Name": "AT HOP Card (AKL)",
         "Description": "FIDs: 00: Backup Data; 08/09/0A",
@@ -1288,6 +1464,14 @@
         "Type": "transport"
     },
     {
+        "AID": "602301",
+        "Vendor": "Ministry of Transport, Communications and Works of the Republic of Cyprus",
+        "Country": "CY",
+        "Name": "motion BUS CARD (ECN)",
+        "Description": "ECN motion BUS CARD (App 3)",
+        "Type": "transport"
+    },
+    {
         "AID": "634000",
         "Vendor": "Doha Metro and Lusail Tram via Qatar Rail",
         "Country": "QA",
@@ -1304,11 +1488,51 @@
         "Type": "transport"
     },
     {
+        "AID": "6C006C",
+        "Vendor": "Lehigh and Northampton Transportation Authority (LANta) via Masabi Ltd",
+        "Country": "US",
+        "Name": "ValleyRide Card (ABE)",
+        "Description": "ABE ValleyRide Card; Masabi Justride Tap and Ride DESFire Smartcard",
+        "Type": "transport"
+    },
+    {
+        "AID": "7A007A",
+        "Vendor": "Regional Transportation Commission of Southern Nevada (RTC) via Masabi Ltd",
+        "Country": "US",
+        "Name": "RTC TAP & GO Card (LAS)",
+        "Description": "LAS TAP & GO Card; Masabi Justride Tap and Ride DESFire Smartcard",
+        "Type": "transport"
+    },
+    {
         "AID": "784000",
         "Vendor": "Roads & Transport Authority (Government of Dubai)",
         "Country": "AE",
         "Name": "nol Card (DXB)",
         "Description": "DXB nol Card",
+        "Type": "transport"
+    },
+    {
+        "AID": "7D0005",
+        "Vendor": "Rejsekort & Rejseplan A/S",
+        "Country": "DK",
+        "Name": "Rejsekort (CPH)",
+        "Description": "CPH Rejsekort",
+        "Type": "transport"
+    },
+    {
+        "AID": "8013F2",
+        "Vendor": "The Port Authority of New York & New Jersey via Cubic Transportation Systems",
+        "Country": "US",
+        "Name": "Total Access PATH Payment (TAPP) Card (EWR)",
+        "Description": "EWR Total Access PATH Payment (TAPP) Card; ISO-FID: 3821; ISO DF-Name: 637001FF4F5454205631",
+        "Type": "transport"
+    }, 
+    {
+        "AID": "818000",
+        "Vendor": "Cairo Metro",
+        "Country": "EG",
+        "Name": "Cairo Metro Card (CAI)",
+        "Description": "CAI Cairo Metro Card",
         "Type": "transport"
     },
     {
@@ -1322,8 +1546,8 @@
     {
         "AID": "A00216",
         "Vendor": "ITSO Ltd",
-        "Country": "UK",
-        "Name": "GWR touch (BRS) / EMR Smartcard (EMA) / WYTCL MCard (LBA)",
+        "Country": "GB",
+        "Name": "ITSO Smartcard / The Key Card / touch Card (GBR)",
         "Description": "ITSO Public Transport Application // Provision of Citizen Services #0",
         "Type": "transport"
     },
@@ -1333,6 +1557,14 @@
         "Country": "US / CA",
         "Name": "Umo Mobility Card",
         "Description": "Umo Mobility Card",
+        "Type": "transport"
+    },
+    {
+        "AID": "C1B1A1",
+        "Vendor": "AHORROBUS via MOBILITY ADO",
+        "Country": "MX",
+        "Name": "AHORROBUS Card (MEX)",
+        "Description": "MEX AHORROBUS Card",
         "Type": "transport"
     },
     {
@@ -1363,8 +1595,8 @@
         "AID": "D000D0",
         "Vendor": "Greater Dayton Regional Transit Authority (RTA) via Masabi Ltd",
         "Country": "US",
-        "Name": "RTA Tapp Pay Card (DAY)",
-        "Description": "DAY RTA Tapp Pay Card; Masabi Justride Tap and Ride DESFire Smartcard",
+        "Name": "Tapp Pay Card (DAY)",
+        "Description": "DAY Tapp Pay Card; Masabi Justride Tap and Ride DESFire Smartcard",
         "Type": "transport"
     },
     {
@@ -1376,11 +1608,51 @@
         "Type": "transport"
     },
     {
+        "AID": "F213E0",
+        "Vendor": "San Diego Metropolitan Transit System (MTS)",
+        "Country": "US",
+        "Name": "PRONTO Card (SAN)",
+        "Description": "SAN PRONTO Card",
+        "Type": "transport"
+    },
+    {
         "AID": "EF2011",
         "Vendor": "Helsinki Region Transport (HRT)",
         "Country": "FI",
         "Name": "HSL Card (HEL/TLL/TAY)",
-        "Description": "HEL/TLL/TAY HSL Card",
+        "Description": "HEL/TLL/TAY HSL Card (Old green card before 2016)",
+        "Type": "transport"
+    },
+    {
+        "AID": "EF2014",
+        "Vendor": "Helsinki Region Transport (HRT)",
+        "Country": "FI",
+        "Name": "HSL Card (HEL/TLL/TAY)",
+        "Description": "HEL/TLL/TAY HSL Card (New blue card after 2016)",
+        "Type": "transport"
+    },
+    {
+        "AID": "EF2101",
+        "Vendor": "Tampereen seudun joukkoliikenne (Nysse)",
+        "Country": "FI",
+        "Name": "Nysse Card (TMP)",
+        "Description": "Tampere region travel card",
+        "Type": "transport"
+    },
+    {
+        "AID": "AB1000",
+        "Vendor": "Waltti Solutions Oy",
+        "Country": "FI",
+        "Name": "Waltti Card",
+        "Description": "Finnish regional travel card used outside the HSL area",
+        "Type": "transport"
+    },
+    {
+        "AID": "4B5443",
+        "Vendor": "Transports publics fribourgeois (TPF)",
+        "Country": "CH",
+        "Name": "TPF Card (FRI)",
+        "Description": "Fribourg public transport card, AID is ASCII \"KTC\"",
         "Type": "transport"
     },
     {
@@ -1392,11 +1664,43 @@
         "Type": "transport"
     },
     {
+        "AID": "F00230",
+        "Vendor": "Consorcio de Transportes de Bizkaia (CTB)",
+        "Country": "ES",
+        "Name": "Barik Card (BIO)",
+        "Description": "BIO Barik Card",
+        "Type": "transport"
+    },
+    {
+        "AID": "F121A0",
+        "Vendor": "Urban Mobility Center",
+        "Country": "BG",
+        "Name": "Sofia Mobile Transit Card (SOF)",
+        "Description": "DESFire-based mobile transit card",
+        "Type": "transport"
+    },
+    {
+        "AID": "F20330",
+        "Vendor": "NJ Transit via Conduent Inc and G+D GmbH",
+        "Country": "US",
+        "Name": "FARE-PAY Card (EWR)",
+        "Description": "EWR FARE-PAY Card",
+        "Type": "transport"
+    },
+    {
         "AID": "F206B0",
         "Vendor": "Adelaide Metro via Affiliated Computer Services (ACS)",
         "Country": "AU",
         "Name": "metroCARD (ADL)",
         "Description": "FIDs 00,02-07,09-0B,10-17,1B-1C: Backup Data; 01,1D: Linear Record File; 08: ABNote/HID Adelaide; 1E: Standard Data; 0C-0F: Card Balance",
+        "Type": "transport"
+    },
+    {
+        "AID": "F20701",
+        "Vendor": "Abu Dhabi Mobility",
+        "Country": "AE",
+        "Name": "Hafilat Card (AUH)",
+        "Description": "AUH Hafilat Card",
         "Type": "transport"
     },
     {
@@ -1409,15 +1713,23 @@
     },
     {
         "AID": "F21050",
-        "Vendor": "Metro Christchurch via INIT / Arc",
-        "Country": "NZ / CA",
-        "Name": "Metrocard (CHC) / Arc (YEG)",
+        "Vendor": "Metro Christchurch via INIT / Arc via Vix Technologies / Valley Metro via Vix Technologies",
+        "Country": "NZ / CA / US",
+        "Name": "Metrocard (CHC) / Arc (YEG) / Copper Card (PHX)",
         "Description": "CHC FIDs: 00: Backup Data; 01/02: Trip History; 03: Card Balance",
         "Type": "transport"
     },
     {
+        "AID": "F210C0",
+        "Vendor": "Ubian",
+        "Country": "SK",
+        "Name": "Ubian digital transit card (BTS)",
+        "Description": "DESFire-based virtual transit card",
+        "Type": "transport"
+    },
+    {
         "AID": "F210E0",
-        "Vendor": "TriMet",
+        "Vendor": "TriMet via INIT",
         "Country": "US",
         "Name": "hop fastpass (PDX)",
         "Description": "PDX hop fastpass Card",
@@ -1459,16 +1771,16 @@
         "AID": "F21191",
         "Vendor": "Metropolitan Transportation Commission via Cubic",
         "Country": "US",
-        "Name": "Clipper Card (Mobile)",
-        "Description": "",
+        "Name": "Clipper Card (SFO)",
+        "Description": "Mobile",
         "Type": "transport"
     },
     {
         "AID": "F21201",
-        "Vendor": "Green Bay Metro Transit via Genfare / Winnipeg Transit",
-        "Country": "US / CA",
-        "Name": "Tap-N-Go Card (GRB) / peggo card (YWG)",
-        "Description": "GRB Tap-N-Go Card / YWG peggo card",
+        "Vendor": "Green Bay Metro Transit via Genfare / Winnipeg Transit via Genfare / Palm Tran via Genfare",
+        "Country": "US / CA / US",
+        "Name": "Tap-N-Go Card (GRB) / peggo card (YWG) / Paradise Pass (PBI)",
+        "Description": "GRB Tap-N-Go Card / YWG peggo card / PBI Paradise Pass",
         "Type": "transport"
     },
     {
@@ -1480,16 +1792,32 @@
         "Type": "transport"
     },
     {
+        "AID": "F21240",
+        "Vendor": "Sacramento Area Council of Governments (SACOG) via INIT",
+        "Country": "US",
+        "Name": "Connect Transit Card (SMF)",
+        "Description": "SMF Connect Transit Card",
+        "Type": "transport"
+    },
+    {
         "AID": "F212A0",
-        "Vendor": "CTtransit",
+        "Vendor": "CTtransit via Genfare",
         "Country": "US",
         "Name": "Go CT Card (BDL)",
         "Description": "BDL Go CT Card",
         "Type": "transport"
     },
     {
+        "AID": "F212D0",
+        "Vendor": "Grand River Transit",
+        "Country": "CA",
+        "Name": "EasyGO Card (YKF)",
+        "Description": "YKF EasyGO Card",
+        "Type": "transport"
+    },
+    {
         "AID": "F21360",
-        "Vendor": "INIT",
+        "Vendor": "The City and County of Honolulu via INIT",
         "Country": "US",
         "Name": "HOLO Card (HNL)",
         "Description": "HNL HOLO Card",
@@ -1505,7 +1833,7 @@
     },
     {
         "AID": "F21390",
-        "Vendor": "Multiple NZ Transit Agencies via Otago Regional Council",
+        "Vendor": "Otago Regional Council via INIT",
         "Country": "NZ",
         "Name": "Bee Card (DUD)",
         "Description": "Multi-Modal Transit #0 // FIDs 00: Backup Data; 01-02: Trip History; 03: Card Balance",
@@ -1528,46 +1856,86 @@
         "Type": "transport"
     },
     {
+        "AID": "F21400",
+        "Vendor": "Spokane Transit Authority (STA) via INIT",
+        "Country": "US",
+        "Name": "Connect Card (GEG)",
+        "Description": "GEG Connect Card",
+        "Type": "transport"
+    },
+    {
+        "AID": "F21420",
+        "Vendor": "Metrolinx via Accenture",
+        "Country": "CA",
+        "Name": "PRESTO Card (YYZ/YHM/YOW)",
+        "Description": "YYZ/YHM/YOW PRESTO Card",
+        "Type": "transport"
+    },
+    {
+        "AID": "F21450",
+        "Vendor": "Metropolitan Atlanta Rapid Transit Authority (MARTA)",
+        "Country": "US",
+        "Name": "MARTA Breeze Card (ATL)",
+        "Description": "ATL MARTA Breeze Card",
+        "Type": "transport"
+    },
+    {
         "AID": "F40110",
         "Vendor": "ITSO Ltd",
-        "Country": "UK",
-        "Name": "GWR touch (BRS) / EMR Smartcard (EMA)",
+        "Country": "GB",
+        "Name": "ITSO Smartcard / The Key Card / touch Card (GBR)",
         "Description": "UK National Smartcard Project // Provision of Citizen Services #1",
         "Type": "transport"
     },
     {
         "AID": "F40111",
         "Vendor": "ITSO Ltd",
-        "Country": "UK",
-        "Name": "GWR touch (BRS) / EMR Smartcard (EMA)",
+        "Country": "GB",
+        "Name": "ITSO Smartcard / The Key Card / touch Card (GBR)",
         "Description": "UK National Smartcard Project // Provision of Citizen Services #2",
         "Type": "transport"
     },
     {
         "AID": "F40112",
         "Vendor": "ITSO Ltd",
-        "Country": "UK",
-        "Name": "GWR touch (BRS) / EMR Smartcard (EMA)",
+        "Country": "GB",
+        "Name": "ITSO Smartcard / The Key Card / touch Card (GBR)",
         "Description": "UK National Smartcard Project // Provision of Citizen Services #3",
         "Type": "transport"
     },
     {
         "AID": "F40113",
         "Vendor": "ITSO Ltd",
-        "Country": "UK",
-        "Name": "GWR touch (BRS) / EMR Smartcard (EMA)",
+        "Country": "GB",
+        "Name": "ITSO Smartcard / The Key Card / touch Card (GBR)",
         "Description": "UK National Smartcard Project // Provision of Citizen Services #4",
         "Type": "transport"
     },
     {
+        "AID": "F40114",
+        "Vendor": "ITSO Ltd",
+        "Country": "GB",
+        "Name": "ITSO Smartcard / The Key Card / touch Card (GBR)",
+        "Description": "UK National Smartcard Project // Provision of Citizen Services #5",
+        "Type": "transport"
+    },
+    {
+        "AID": "F88522",
+        "Vendor": "Ubian",
+        "Country": "SK",
+        "Name": "Ubian digital transit card (BTS)",
+        "Description": "DESFire-based virtual transit card secondary application",
+        "Type": "transport"
+    },
+    {
         "AID": "FF30FF",
-        "Vendor": "Metrolinx",
+        "Vendor": "Metrolinx via Accenture",
         "Country": "CA",
         "Name": "PRESTO Card (YYZ/YHM/YOW)",
         "Description": "FID 08: Standard Data",
         "Type": "transport"
     },
-    {
+        {
         "AID": "FFFFFF",
         "Vendor": "Reserved for Future Use",
         "Country": "",

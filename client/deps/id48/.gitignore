@@ -1,0 +1,52 @@
+# Now ignore any "build" directory anywhere under this directory
+build/
+**/build/
+
+*.log
+*.eml
+*.html
+*.o
+*.a
+*.d
+*.elf
+*.s19
+*.map
+*.bin
+*.dll
+*.moc.cpp
+*.z
+*.gz
+*.Td
+*.DS_Store
+*.exe
+*.dsym
+*.json
+*.old
+*.swp
+*.json.bak
+*.pyc
+*.bmp
+
+
+# cmake
+CMakeFiles/
+client/CMakeFiles/
+client/deps/**
+!client/deps/id48/
+!client/deps/id48/**
+client/build/
+client/android/build/
+CMakeCache.txt
+*.cmake
+.cache
+
+# Coverity
+cov-int/
+.coverity.conf
+
+# .tmp files are created during compilation
+*.tmp
+
+# local codeql
+_codeql*
+/codeql

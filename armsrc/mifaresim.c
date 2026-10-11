@@ -33,9 +33,10 @@
 
 #include "iso14443a.h"
 #include "BigBuf.h"
+#include "fpga_loader.h"
 #include "string.h"
 #include "mifareutil.h"
-#include "fpgaloader.h"
+#include "fpga_apis.h"
 #include "proxmark3_arm.h"
 #include "cmd.h"
 #include "protocols.h"
@@ -44,7 +45,7 @@
 #include "commonutil.h"
 #include "crc16.h"
 #include "dbprint.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "parity.h"
 
 static bool IsKeyBReadable(uint8_t blockNo) {
@@ -459,7 +460,12 @@ bool MifareSimInit(uint16_t flags, uint8_t *uid, uint16_t atqa, uint8_t sak, tag
     // 53 * 8 data bits, 53 * 1 parity bits, 18 start bits, 18 stop bits, 18 correction bits  ->   need 571 bytes buffer
 #define ALLOCATED_TAG_MODULATION_BUFFER_SIZE 571
 
-    uint8_t *free_buffer = BigBuf_malloc(ALLOCATED_TAG_MODULATION_BUFFER_SIZE);
+    uint8_t *free_buffer = BigBuf_calloc(ALLOCATED_TAG_MODULATION_BUFFER_SIZE);
+    if (free_buffer == NULL) {
+        Dbprintf("ERROR: " _RED_("Failed to allocate modulation buffer"));
+        return false;
+    }
+
     // modulation buffer pointer and current buffer free space size
     uint8_t *free_buffer_pointer = free_buffer;
     size_t free_buffer_size = ALLOCATED_TAG_MODULATION_BUFFER_SIZE;
@@ -513,7 +519,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t
     struct Crypto1State *pcs;
     pcs = &mpcs;
 
-    uint32_t numReads = 0; //Counts numer of times reader reads a block
+    uint32_t numReads = 0; // Counts numer of times reader reads a block
     uint8_t receivedCmd[MAX_MIFARE_FRAME_SIZE] = {0x00};
     uint8_t receivedCmd_dec[MAX_MIFARE_FRAME_SIZE] = {0x00};
     uint8_t receivedCmd_par[MAX_MIFARE_PARITY_SIZE] = {0x00};
@@ -526,10 +532,10 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t
     uint8_t rats_len = 0;
 
 
-    //Here, we collect UID,sector,keytype,NT,AR,NR,NT2,AR2,NR2
+    // Here, we collect UID,sector,keytype,NT,AR,NR,NT2,AR2,NR2
     // This will be used in the reader-only attack.
 
-    //allow collecting up to 16 sets of nonces to allow recovery of up to 16 keys
+    // allow collecting up to 16 sets of nonces to allow recovery of up to 16 keys
 #define ATTACK_KEY_COUNT 16
     nonces_t ar_nr_resp[ATTACK_KEY_COUNT]; // for moebius attack type
     memset(ar_nr_resp, 0x00, sizeof(ar_nr_resp));
@@ -541,8 +547,17 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t
 
     const tUart14a *uart = GetUart14a();
 
+    //-----------------------------------------------------------------------------
+    // Note: we call FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF) here although the
+    // FPGA isn't needed yet. iso14443a_setup() below does it otherwise, and a
+    // bitstream download frees and clears BigBuf - which by then holds the
+    // Emulator Memory and the precompiled anticollision responses.
+    //-----------------------------------------------------------------------------
+    FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF);
+
     // free eventually allocated BigBuf memory but keep Emulator Memory
     BigBuf_free_keep_EM();
+    clear_trace();
 
     if (MifareSimInit(flags, uid, atqa, sak, &responses, &cuid, &uid_len, &rats, &rats_len) == false) {
         BigBuf_free_keep_EM();
@@ -552,8 +567,6 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t
     // We need to listen to the high-frequency, peak-detected path.
     iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 
-    // clear trace
-    clear_trace();
     set_tracing(true);
     LED_D_ON();
     ResetSspClk();
@@ -579,41 +592,30 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t
             counter++;
         }
 
-        /*
-                // find reader field
-                if (cardSTATE == MFEMUL_NOFIELD) {
-
-                    vHf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
-
-                    if (vHf > MF_MINFIELDV) {
-                        cardSTATE_TO_IDLE();
-                        LED_A_ON();
-                    }
-                    button_pushed = BUTTON_PRESS();
-                    continue;
-                }
-                */
-
         FpgaEnableTracing();
-        //Now, get data
+        // Now, get data
         int res = EmGetCmd(receivedCmd, sizeof(receivedCmd), &receivedCmd_len, receivedCmd_par);
 
-        if (res == 2) { //Field is off!
-            //FpgaDisableTracing();
+        if (res == 2) { // Field is off!
+            // FpgaDisableTracing();
             if ((flags & FLAG_CVE21_0430) == FLAG_CVE21_0430) {
                 p_em[1] = 0x21;
                 cve_flipper = 0;
             }
             LEDsoff();
             cardSTATE = MFEMUL_NOFIELD;
-            if (g_dbglevel >= DBG_EXTENDED)
+
+            if (g_dbglevel >= DBG_EXTENDED) {
                 Dbprintf("cardSTATE = MFEMUL_NOFIELD");
+            }
             continue;
+
         } else if (res == 1) { // button pressed
             FpgaDisableTracing();
             button_pushed = true;
-            if (g_dbglevel >= DBG_EXTENDED)
+            if (g_dbglevel >= DBG_EXTENDED) {
                 Dbprintf("Button pressed");
+            }
             break;
         }
 
@@ -760,10 +762,6 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t
             // WORK
             case MFEMUL_WORK: {
 
-                if (g_dbglevel >= DBG_EXTENDED) {
-                    // Dbprintf("[MFEMUL_WORK] Enter in case");
-                }
-
                 if (receivedCmd_len == 0) {
                     if (g_dbglevel >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] NO CMD received");
                     break;
@@ -809,10 +807,11 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t
                     if (g_dbglevel >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] KEY %c: %012" PRIx64, (cardAUTHKEY == 0) ? 'A' : 'B', emlGetKey(cardAUTHSC, cardAUTHKEY));
 
                     // sector out of range - do not respond
-                    if (cardAUTHSC >= cardMaxSEC) {
+                    if ((cardAUTHSC >= cardMaxSEC) && (flags & FLAG_MF_ALLOW_OOB_AUTH) == 0) {
                         cardAUTHKEY = AUTHKEYNONE; // not authenticated
                         cardSTATE_TO_IDLE();
-                        if (g_dbglevel >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] Out of range sector %d(0x%02x)", cardAUTHSC, cardAUTHSC);
+                        if (g_dbglevel >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] Out of range sector %d(0x%02x) >= %d(0x%02x)", cardAUTHSC, cardAUTHSC, cardMaxSEC, cardMaxSEC);
+                        LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
                         break;
                     }
 
@@ -1039,8 +1038,8 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t
                         }
                     }
                     AddCrc14A(response, MIFARE_BLOCK_SIZE);
-                    mf_crypto1_encrypt(pcs, response, MAX_MIFARE_FRAME_SIZE, response_par);
-                    EmSendCmdPar(response, MAX_MIFARE_FRAME_SIZE, response_par);
+                    mf_crypto1_encrypt(pcs, response, MIFARE_BLOCK_SIZE + CRC16_SIZE, response_par);
+                    EmSendCmdPar(response, MIFARE_BLOCK_SIZE + CRC16_SIZE, response_par);
                     FpgaDisableTracing();
 
                     if (g_dbglevel >= DBG_EXTENDED) {
@@ -1052,7 +1051,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t
                     numReads++;
 
                     if (exitAfterNReads > 0 && numReads == exitAfterNReads) {
-                        Dbprintf("[MFEMUL_WORK] %d reads done, exiting", numReads);
+                        Dbprintf("[MFEMUL_WORK] " _YELLOW_("%u") " reads done, exiting", numReads);
                         finished = true;
                     }
                     break;
@@ -1309,7 +1308,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t
             // WRITE BL2
             case MFEMUL_WRITEBL2: {
 
-                if (receivedCmd_len == MAX_MIFARE_FRAME_SIZE) {
+                if (receivedCmd_len == MIFARE_BLOCK_SIZE + CRC16_SIZE) {
 
                     mf_crypto1_decryptEx(pcs, receivedCmd, receivedCmd_len, receivedCmd_dec);
 
@@ -1456,12 +1455,13 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t
             }
         }
     }
+
     if (g_dbglevel >= DBG_ERROR) {
         Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ", get_tracing(), BigBuf_get_traceLen());
     }
 
     if ((flags & FLAG_INTERACTIVE) == FLAG_INTERACTIVE) {  // Interactive mode flag, means we need to send ACK
-        //Send the collected ar_nr in the response
+        // Send the collected ar_nr in the response
         reply_ng(CMD_HF_MIFARE_SIMULATE, button_pushed ? PM3_EOPABORTED : PM3_SUCCESS, (uint8_t *)&ar_nr_resp[index], sizeof(nonces_t));
     }
 

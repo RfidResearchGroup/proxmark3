@@ -150,7 +150,7 @@ static int CmdNoralsyReader(const char *Cmd) {
     do {
         lf_read(false, 8000);
         demodNoralsy(!cm);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
     return PM3_SUCCESS;
 }
 

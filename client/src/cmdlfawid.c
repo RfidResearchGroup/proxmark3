@@ -349,7 +349,7 @@ static int CmdAWIDReader(const char *Cmd) {
     do {
         lf_read(false, 12000);
         demodAWID(!cm);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }

@@ -29,6 +29,7 @@
 #include "cmdhficlass.h"  // pagemap
 #include "iclass_cmd.h"
 #include "iso15.h"
+#include "hitag.h"
 
 #ifdef _WIN32
 #include "scandir.h"
@@ -72,9 +73,7 @@ DumpFileType_t get_filetype(const char *filename) {
     size_t len = strlen(filename);
     if (len > 4) {
         //  check if valid file extension and attempt to load data
-        char s[FILE_PATH_SIZE];
-        memset(s, 0, sizeof(s));
-        memcpy(s, filename, len);
+        char *s = str_dup(filename);
         str_lower(s);
 
         if (str_endswith(s, "bin")) {
@@ -91,12 +90,18 @@ DumpFileType_t get_filetype(const char *filename) {
             o = FLIPPER;
         } else if (str_endswith(s, "picopass")) {
             o = FLIPPER;
+        } else if (str_endswith(s, "xml")) {
+            o = TAGINFO;
+        } else if (str_endswith(s, "rfid")) {
+            o = BRUCE;
         } else {
             // mfd, trc, trace is binary
             o = BIN;
             // log is text
             // .pm3 is text values of signal data
         }
+
+        free(s);
     }
     return o;
 }
@@ -123,18 +128,272 @@ int fileExists(const char *filename) {
  * @param filename
  * @return
  */
-static bool is_directory(const char *filename) {
+bool path_is_directory(const char *path) {
+    if (path == NULL) {
+        return false;
+    }
 #ifdef _WIN32
     struct _stat st;
-    if (_stat(filename, &st) == -1)
+    if (_stat(path, &st) == -1)
         return false;
 #else
     struct stat st;
 //    stat(filename, &st);
-    if (lstat(filename, &st) == -1)
+    if (lstat(path, &st) == -1)
         return false;
 #endif
     return S_ISDIR(st.st_mode) != 0;
+}
+
+bool path_is_regular_file(const char *path) {
+    if (path == NULL) {
+        return false;
+    }
+#ifdef _WIN32
+    struct _stat st;
+    if (_stat(path, &st) == -1)
+        return false;
+#else
+    struct stat st;
+    if (stat(path, &st) == -1)
+        return false;
+#endif
+    return S_ISREG(st.st_mode) != 0;
+}
+
+/**
+ * @brief checks if path is an absolute path.
+ * @param path
+ * @return
+ */
+bool path_is_absolute(const char *path) {
+    if (path == NULL || path[0] == '\0') {
+        return false;
+    }
+
+    if ((path[0] == '/') || (path[0] == '\\')) {
+        return true;
+    }
+
+#ifdef _WIN32
+    // drive letter,  "C:/..." or "C:\..."
+    if (isalpha((unsigned char)path[0]) && (path[1] == ':') && ((path[2] == '/') || (path[2] == '\\'))) {
+        return true;
+    }
+#endif
+    return false;
+}
+
+/**
+ * @brief expands a leading "~" into the user home directory.
+ *
+ * The pm3 prompt is not a shell, so nobody expands "~" for us and it wouldotherwise be taken as a directory named "~".
+ *
+ * "~user/..." is not supported and is returned unchanged.
+ *
+ * @param path
+ * @return newly allocated string, caller must free.  NULL on failure
+ */
+char *path_expand_homedir(const char *path) {
+    if (path == NULL) {
+        return NULL;
+    }
+
+    // only a leading "~", "~/" or "~\" is expanded
+    if ((path[0] != '~') || ((path[1] != '\0') && (path[1] != '/') && (path[1] != '\\'))) {
+        return str_dup(path);
+    }
+
+    const char *user_path = get_my_user_directory();
+    if (user_path == NULL) {
+        return str_dup(path);
+    }
+
+    // skip the "~" and the path separators directly after it
+    const char *tail = path + 1;
+    while ((*tail == '/') || (*tail == '\\')) {
+        tail++;
+    }
+
+    bool sep = ((*tail != '\0') &&
+                (str_endswith(user_path, "/") == false) &&
+                (str_endswith(user_path, "\\") == false));
+
+    size_t n = strlen(user_path) + (sep ? strlen(PATHSEP) : 0) + strlen(tail) + 1;
+    char *res = (char *)calloc(n, sizeof(uint8_t));
+    if (res == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return NULL;
+    }
+
+    snprintf(res, n, "%s%s%s", user_path, sep ? PATHSEP : "", tail);
+    return res;
+}
+
+const char *path_basename(const char *path) {
+    if (path == NULL) {
+        return "";
+    }
+
+    const char *base = strrchr(path, '/');
+    const char *base_win = strrchr(path, '\\');
+    if (base == NULL || (base_win != NULL && base_win > base)) {
+        base = base_win;
+    }
+    return (base == NULL) ? path : (base + 1);
+}
+
+void path_basename_without_ext(const char *path, char *out, size_t out_len) {
+    if (out == NULL || out_len == 0) {
+        return;
+    }
+    out[0] = '\0';
+
+    const char *base = path_basename(path);
+    if (base[0] == '\0') {
+        return;
+    }
+
+    snprintf(out, out_len, "%s", base);
+    char *dot = strrchr(out, '.');
+    if (dot != NULL && dot != out) {
+        *dot = '\0';
+    }
+}
+
+// the extension of the last path component, leading dot included, or NULL when
+// there is none.   "dumps/vg20180106.mfd" -> ".mfd",   "dumps/vg20180106" -> NULL
+static const char *path_extension(const char *path) {
+    const char *base = path_basename(path);
+    const char *dot = strrchr(base, '.');
+    if ((dot == NULL) || (dot == base) || (dot[1] == '\0')) {
+        return NULL;
+    }
+    return dot;
+}
+
+static bool path_has_extension(const char *path) {
+    return (path_extension(path) != NULL);
+}
+
+// true when two extensions denote the same kind of file, ie ".mfd" and ".bin"
+// are both binary.  Classified with get_filetype() so the save path and the
+// load path can never drift apart.
+static bool same_filetype(const char *ext_a, const char *ext_b) {
+    if (ext_a == NULL || ext_b == NULL) {
+        return false;
+    }
+    char a[64] = {0};
+    char b[64] = {0};
+    snprintf(a, sizeof(a), "dump%s", ext_a);
+    snprintf(b, sizeof(b), "dump%s", ext_b);
+    return (get_filetype(a) == get_filetype(b));
+}
+
+static int qsort_path_cmp(const void *a, const void *b) {
+    const char *pa = (const char *)a;
+    const char *pb = (const char *)b;
+    return strcmp(pa, pb);
+}
+
+static char *path_list_slot(char *paths, size_t path_len, size_t index) {
+    return paths + (index * path_len);
+}
+
+int collect_file_paths_recursive(const char *dirpath, char *paths, size_t path_len,
+                                 size_t max_paths, size_t *count, bool include_hidden, size_t max_depth) {
+    if (dirpath == NULL || paths == NULL || path_len == 0 || count == NULL) {
+        return PM3_EINVARG;
+    }
+
+    DIR *dir = opendir(dirpath);
+    if (dir == NULL) {
+        return PM3_EFILE;
+    }
+
+    struct dirent *entry = NULL;
+    while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 ||
+                (include_hidden == false && entry->d_name[0] == '.')) {
+            continue;
+        }
+
+        char *fullpath = calloc(path_len, sizeof(char));
+        if (fullpath == NULL) {
+            closedir(dir);
+            return PM3_EMALLOC;
+        }
+        const char *sep = "";
+        size_t dir_len = strlen(dirpath);
+        if (dir_len > 0 && dirpath[dir_len - 1] != '/' && dirpath[dir_len - 1] != '\\') {
+            sep = PATHSEP;
+        }
+        if (snprintf(fullpath, path_len, "%s%s%s", dirpath, sep, entry->d_name) >= (int)path_len) {
+            free(fullpath);
+            continue;
+        }
+
+        if (path_is_directory(fullpath)) {
+            if (max_depth == 0) {
+                free(fullpath);
+                continue;
+            }
+            int res = collect_file_paths_recursive(fullpath, paths, path_len, max_paths, count, include_hidden, max_depth - 1);
+            free(fullpath);
+            if (res != PM3_SUCCESS) {
+                closedir(dir);
+                return res;
+            }
+            continue;
+        }
+
+        if (!path_is_regular_file(fullpath)) {
+            free(fullpath);
+            continue;
+        }
+        if (*count >= max_paths) {
+            free(fullpath);
+            closedir(dir);
+            return PM3_EOVFLOW;
+        }
+        if (snprintf(path_list_slot(paths, path_len, *count), path_len, "%s", fullpath) >= (int)path_len) {
+            free(fullpath);
+            continue;
+        }
+        free(fullpath);
+        (*count)++;
+    }
+
+    closedir(dir);
+    return PM3_SUCCESS;
+}
+
+int collect_resource_file_paths(const char *resource_dir, char *paths, size_t path_len,
+                                size_t max_paths, size_t *count, bool include_hidden, size_t max_depth) {
+    if (resource_dir == NULL || resource_dir[0] == '\0' || paths == NULL || path_len == 0 || count == NULL) {
+        return PM3_EINVARG;
+    }
+
+    char *rootdir = NULL;
+    int res = searchFile(&rootdir, RESOURCES_SUBDIR, resource_dir, "", true);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    if (!path_is_directory(rootdir)) {
+        free(rootdir);
+        return PM3_EFILE;
+    }
+
+    *count = 0;
+    res = collect_file_paths_recursive(rootdir, paths, path_len, max_paths, count, include_hidden, max_depth);
+    free(rootdir);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    qsort(paths, *count, path_len, qsort_path_cmp);
+    return PM3_SUCCESS;
 }
 
 bool setDefaultPath(savePaths_t pathIndex, const char *path) {
@@ -152,7 +411,15 @@ bool setDefaultPath(savePaths_t pathIndex, const char *path) {
 
         size_t len = strlen(path);
 
-        g_session.defaultPaths[pathIndex] = (char *)realloc(g_session.defaultPaths[pathIndex], len + 1);
+        char *tmp = (char *)realloc(g_session.defaultPaths[pathIndex], len + 1);
+        if (tmp == NULL) {
+            // keep the old path.  Dropping it would leave a NULL in defaultPaths[]
+            // for every later file search to walk over
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            return false;
+        }
+
+        g_session.defaultPaths[pathIndex] = tmp;
         strcpy(g_session.defaultPaths[pathIndex], path);
         return true;
     }
@@ -163,12 +430,21 @@ static char *filenamemcopy(const char *preferredName, const char *suffix) {
     if (preferredName == NULL) return NULL;
     if (suffix == NULL) return NULL;
 
-    char *fileName = (char *) calloc(strlen(preferredName) + strlen(suffix) + 1, sizeof(uint8_t));
-    if (fileName == NULL) {
+    char *expanded = path_expand_homedir(preferredName);
+    if (expanded == NULL) {
         return NULL;
     }
 
-    strcpy(fileName, preferredName);
+    char *fileName = (char *) calloc(strlen(expanded) + strlen(suffix) + 1, sizeof(uint8_t));
+    if (fileName == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        free(expanded);
+        return NULL;
+    }
+
+    strcpy(fileName, expanded);
+    free(expanded);
+
     if (str_endswith(fileName, suffix)) {
         return fileName;
     }
@@ -193,6 +469,11 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
         return NULL;
     }
 
+    char *expanded = path_expand_homedir(preferredName);
+    if (expanded == NULL) {
+        return NULL;
+    }
+
     // 1: null terminator
     // 16: room for filenum to ensure new filename
     // save_path_len + strlen(PATHSEP):  the user preference save paths
@@ -201,13 +482,14 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
 
     char *fileName = (char *) calloc(len, sizeof(uint8_t));
     if (fileName == NULL) {
+        free(expanded);
         return NULL;
     }
 
     char *pfn = fileName;
 
     // if given path is not an absolute path
-    if ((preferredName[0] !=  '/') && (preferredName[0] !=  '\\')) {
+    if (path_is_absolute(expanded) == false) {
         // user preference save paths
         size_t save_path_len = path_size(e_save_path);
         if (save_path_len && save_path_len < (FILE_PATH_SIZE - strlen(PATHSEP))) {
@@ -217,29 +499,34 @@ char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePath
         }
     }
 
-    // remove file extension if exist in name
-    size_t p_namelen = strlen(preferredName);
-    if (str_endswith(preferredName, suffix)) {
-        p_namelen -= strlen(suffix);
+    // strip the extension the name came with, if any, and decide which one to write.
+    // An extension of the same kind as the file we are about to write is the user's
+    // choice, keep it,  `-f card.mfd` saves the binary as card.mfd.
+    // Any other is swapped for ours, so the same `-f card.mfd` saves the json as
+    // card.json instead of card.mfd.json
+    size_t p_namelen = strlen(expanded);
+    const char *ext = suffix;
+
+    const char *p_ext = path_extension(expanded);
+    if (p_ext != NULL) {
+        if (same_filetype(p_ext, suffix)) {
+            ext = p_ext;
+        }
+        p_namelen -= strlen(p_ext);
     }
 
-    len -= strlen(suffix) + 1;
-    len -= p_namelen;
-
-    // modify filename
-    snprintf(pfn, len, "%.*s%s", (int)p_namelen, preferredName, suffix);
-
-    // "-001"
-    len -= 4;
+    // modify filename.  len is what is left of fileName from pfn onwards
+    snprintf(pfn, len, "%.*s%s", (int)p_namelen, expanded, ext);
 
     int num = 1;
     // check complete path/filename if exists
     while (fileExists(fileName)) {
         // modify filename
-        snprintf(pfn, len, "%.*s-%03d%s", (int)p_namelen, preferredName, num, suffix);
+        snprintf(pfn, len, "%.*s-%03d%s", (int)p_namelen, expanded, num, ext);
         num++;
     }
 
+    free(expanded);
     return fileName;
 }
 
@@ -277,7 +564,7 @@ int saveFileEx(const char *preferredName, const char *suffix, const void *data, 
 
     // Opening file for writing in binary mode
     FILE *f = fopen(fileName, "wb");
-    if (!f) {
+    if (f == NULL) {
         PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", fileName);
         free(fileName);
         return PM3_EFILE;
@@ -288,6 +575,571 @@ int saveFileEx(const char *preferredName, const char *suffix, const void *data, 
     PrintAndLogEx(SUCCESS, "Saved " _YELLOW_("%zu") " bytes to binary file `" _YELLOW_("%s") "`", datalen, fileName);
     free(fileName);
     return PM3_SUCCESS;
+}
+
+int saveFileTXT(const char *preferredName, const char *suffix, const void *data, size_t datalen, savePaths_t e_save_path) {
+    if (data == NULL || datalen == 0) {
+        return PM3_EINVARG;
+    }
+
+    char *fileName = newfilenamemcopyEx(preferredName, suffix, e_save_path);
+    if (fileName == NULL) {
+        return PM3_EMALLOC;
+    }
+
+    // We should have a valid filename now, e.g. dumpdata-3.txt
+
+    // Opening file for writing in text mode
+    FILE *f = fopen(fileName, "w");
+    if (f == NULL) {
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", fileName);
+        free(fileName);
+        return PM3_EFILE;
+    }
+    fwrite(data, 1, datalen, f);
+    fflush(f);
+    fclose(f);
+    PrintAndLogEx(SUCCESS, "Saved " _YELLOW_("%zu") " bytes to text file `" _YELLOW_("%s") "`", datalen, fileName);
+    free(fileName);
+    return PM3_SUCCESS;
+}
+
+// Writes the iso15_tag_t body of a `15693 v4` or `15693 v5` JSON.
+//
+// The two revisions differ in exactly one field: v4 stored pagesCount in a byte,
+// v5 in two, once 0xA0 pages stopped being enough for an SLIX2. Everything else
+// is identical, so the width is a parameter rather than a second copy.
+//
+// pagesCount is serialized little endian, byte for byte what an x86 client
+// writes out of the struct, so dumps stay readable across hosts.
+static void json15_save_tag(json_t *root, const iso15_tag_t *tag, size_t pagescount_len) {
+
+    char path[PATH_MAX_LENGTH] = {0};
+    uint8_t pagescount[2] = { tag->pagesCount & 0xFF, (tag->pagesCount >> 8) & 0xFF };
+
+    JsonSaveBufAsHexCompact(root, "$.Card.uid", (uint8_t *)tag->uid, sizeof(tag->uid));
+    JsonSaveBufAsHexCompact(root, "$.Card.dsfid", (uint8_t *)&tag->dsfid, 1);
+    JsonSaveBufAsHexCompact(root, "$.Card.dsfidlock", (uint8_t *)&tag->dsfidLock, 1);
+    JsonSaveBufAsHexCompact(root, "$.Card.afi", (uint8_t *)&tag->afi, 1);
+    JsonSaveBufAsHexCompact(root, "$.Card.afilock", (uint8_t *)&tag->afiLock, 1);
+    JsonSaveBufAsHexCompact(root, "$.Card.bytesperpage", (uint8_t *)&tag->bytesPerPage, 1);
+    JsonSaveBufAsHexCompact(root, "$.Card.pagescount", pagescount, pagescount_len);
+    JsonSaveBufAsHexCompact(root, "$.Card.ic", (uint8_t *)&tag->ic, 1);
+    JsonSaveBufAsHexCompact(root, "$.Card.locks", (uint8_t *)tag->locks, tag->pagesCount);
+    JsonSaveBufAsHexCompact(root, "$.Card.random", (uint8_t *)tag->random, sizeof(tag->random));
+    JsonSaveBufAsHexCompact(root, "$.Card.privacypasswd", (uint8_t *)tag->privacyPasswd, sizeof(tag->privacyPasswd));
+    JsonSaveBufAsHexCompact(root, "$.Card.state", (uint8_t *)&tag->state, 1);
+
+    for (uint16_t i = 0 ; i < tag->pagesCount ; i++) {
+
+        if (((i + 1) * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) {
+            break;
+        }
+
+        snprintf(path, sizeof(path), "$.blocks.%u", i);
+        JsonSaveBufAsHexCompact(root
+                                , path
+                                , (uint8_t *)&tag->data[i * tag->bytesPerPage]
+                                , tag->bytesPerPage
+                               );
+    }
+}
+
+//-----------------------------------------------------------------------------
+// DESFire card image (jsfMfDesfire_v1) helpers.
+// Token spellings match what the `hf mfdes` CLI already accepts, so a value
+// read out of a dump file can be handed straight back to a command.
+//-----------------------------------------------------------------------------
+static const char *desfire_algo_name(uint8_t algo) {
+    static const char *tbl[] = {"des", "2tdea", "3tdea", "aes"};
+    return (algo < ARRAYLEN(tbl)) ? tbl[algo] : "unknown";
+}
+
+static const char *desfire_comm_mode_name(uint8_t mode) {
+    static const char *tbl[] = {"plain", "mac", "plain_rfu", "encrypt"};
+    return (mode < ARRAYLEN(tbl)) ? tbl[mode] : "unknown";
+}
+
+static const char *desfire_file_type_name(uint8_t type) {
+    static const char *tbl[] = {
+        "standard", "backup", "value", "linear_record", "cyclic_record", "transaction_mac"
+    };
+    return (type < ARRAYLEN(tbl)) ? tbl[type] : "unknown";
+}
+
+// JsonSaveBufAsHexCompact() runs through sprint_hex_inrow(), which silently
+// truncates past ~4 kbyte.  File contents get that big,  so build the hex
+// string in a right-sized heap buffer instead
+static int desfire_json_save_hex(json_t *root, const char *path, const uint8_t *data, size_t datalen) {
+
+    if (data == NULL || datalen == 0) {
+        return PM3_EINVARG;
+    }
+
+    char *hex = calloc((datalen * 2) + 1, sizeof(uint8_t));
+    if (hex == NULL) {
+        return PM3_EMALLOC;
+    }
+
+    for (size_t i = 0; i < datalen; i++) {
+        snprintf(hex + (i * 2), 3, "%02X", data[i]);
+    }
+
+    int res = JsonSaveStr(root, path, hex);
+    free(hex);
+    return res;
+}
+
+// JsonSaveHex() goes through JsonSaveBufAsHex(),  which space-separates the
+// bytes.  Everything else in this format is compact,  so keep 2-byte fields that
+// way too
+static int desfire_json_save_u16(json_t *root, const char *path, uint16_t value) {
+    uint8_t b[2] = { value >> 8, value & 0xFF };
+    return JsonSaveBufAsHexCompact(root, path, b, sizeof(b));
+}
+
+static uint8_t desfire_algo_keylen(uint8_t algo) {
+    switch (algo) {
+        case T_DES:
+            return DES_KEY_LEN;
+        case T_3DES:
+            return T2DES_KEY_LEN;
+        case T_3K3DES:
+            return T3DES_KEY_LEN;
+        case T_AES:
+            return AES_KEY_LEN;
+        default:
+            return 0;
+    }
+}
+
+// A key entry exists as soon as we know anything about the key.  "Version"
+// without "Key" is the normal shape for a key we saw but could not recover --
+// a missing "Key" never means the key is all zeros
+static void desfire_json_save_keys(json_t *root, const char *prefix, uint8_t algo, const desfire_dump_keys_t *keys) {
+
+    char path[PATH_MAX_LENGTH] = {0};
+    uint8_t keylen = desfire_algo_keylen(algo);
+
+    for (uint8_t keyno = 0; keyno < DESFIRE_MAX_KEY_COUNT; keyno++) {
+
+        if (keys->versionknown[keyno]) {
+            snprintf(path, sizeof(path), "%s.Keys.%u.Version", prefix, keyno);
+            JsonSaveBufAsHexCompact(root, path, (uint8_t *)&keys->version[keyno], 1);
+        }
+
+        if (keys->present[keyno] && keylen) {
+            snprintf(path, sizeof(path), "%s.Keys.%u.Key", prefix, keyno);
+            JsonSaveBufAsHexCompact(root, path, (uint8_t *)keys->key[keyno], keylen);
+        }
+    }
+}
+
+// The PICC level is application 000000 and takes the same path through here
+static void desfire_json_save_app(json_t *root, char *path, size_t pathlen, const desfire_dump_app_t *app) {
+
+    char apath[PATH_MAX_LENGTH] = {0};
+    snprintf(apath, sizeof(apath), "$.Applications.%06X", app->aid);
+
+    if (app->isofid != 0) {
+        snprintf(path, pathlen, "%s.ISOFileID", apath);
+        desfire_json_save_u16(root, path, app->isofid);
+    }
+
+    if (app->dfnamelen > 0) {
+        snprintf(path, pathlen, "%s.DFName", apath);
+        JsonSaveBufAsHexCompact(root, path, (uint8_t *)app->dfname, app->dfnamelen);
+    }
+
+    if (app->settings_ok) {
+        snprintf(path, pathlen, "%s.KeySettings", apath);
+        JsonSaveBufAsHexCompact(root, path, (uint8_t *)&app->keysettings, 1);
+        snprintf(path, pathlen, "%s.NumKeysRaw", apath);
+        JsonSaveBufAsHexCompact(root, path, (uint8_t *)&app->numkeysraw, 1);
+        snprintf(path, pathlen, "%s.NumKeys", apath);
+        JsonSaveInt(root, path, app->numkeys);
+        snprintf(path, pathlen, "%s.KeyType", apath);
+        JsonSaveStr(root, path, desfire_algo_name(app->keytype));
+    }
+
+    snprintf(path, pathlen, "%s.Authenticated", apath);
+    JsonSaveBoolean(root, path, app->auth_ok);
+
+    desfire_json_save_keys(root, apath, app->keytype, &app->keys);
+
+    uint8_t filecount = app->filecount;
+    if (filecount > DESFIRE_MAX_FILE_COUNT) {
+        filecount = DESFIRE_MAX_FILE_COUNT;
+    }
+
+    for (uint8_t n = 0; n < filecount; n++) {
+
+        const desfire_dump_file_t *f = &app->files[n];
+        char fpath[PATH_MAX_LENGTH] = {0};
+        snprintf(fpath, sizeof(fpath), "%s.Files.%02X", apath, f->num);
+
+        if (f->settings_ok) {
+            snprintf(path, pathlen, "%s.Type", fpath);
+            JsonSaveStr(root, path, desfire_file_type_name(f->type));
+            snprintf(path, pathlen, "%s.TypeRaw", fpath);
+            JsonSaveBufAsHexCompact(root, path, (uint8_t *)&f->type, 1);
+            snprintf(path, pathlen, "%s.CommMode", fpath);
+            JsonSaveStr(root, path, desfire_comm_mode_name(f->commmode));
+            snprintf(path, pathlen, "%s.AccessRights", fpath);
+            desfire_json_save_u16(root, path, f->accessrights);
+
+            for (uint8_t a = 0; a < f->addrights_len && a < ARRAYLEN(f->addrights); a++) {
+                snprintf(path, pathlen, "%s.AdditionalAccessRights.%u", fpath, a);
+                desfire_json_save_u16(root, path, f->addrights[a]);
+            }
+        }
+
+        if (f->isofid != 0) {
+            snprintf(path, pathlen, "%s.ISOFileID", fpath);
+            desfire_json_save_u16(root, path, f->isofid);
+        }
+
+        switch (f->type) {
+            case 0x00:
+            case 0x01: {
+                snprintf(path, pathlen, "%s.FileSize", fpath);
+                JsonSaveInt(root, path, f->size);
+                break;
+            }
+            case 0x02: {
+                snprintf(path, pathlen, "%s.LowerLimit", fpath);
+                JsonSaveInt(root, path, f->lowerlimit);
+                snprintf(path, pathlen, "%s.UpperLimit", fpath);
+                JsonSaveInt(root, path, f->upperlimit);
+                snprintf(path, pathlen, "%s.LimitedCredit", fpath);
+                JsonSaveBufAsHexCompact(root, path, (uint8_t *)&f->limitedcredit, 1);
+                if (f->read_ok) {
+                    snprintf(path, pathlen, "%s.Value", fpath);
+                    JsonSaveInt(root, path, f->value);
+                }
+                break;
+            }
+            case 0x03:
+            case 0x04: {
+                snprintf(path, pathlen, "%s.RecordSize", fpath);
+                JsonSaveInt(root, path, f->recordsize);
+                snprintf(path, pathlen, "%s.MaxRecords", fpath);
+                JsonSaveInt(root, path, f->maxrecords);
+                snprintf(path, pathlen, "%s.CurRecords", fpath);
+                JsonSaveInt(root, path, f->currecords);
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+
+        // "Read" says whether we got the contents.  A reader must not
+        // treat a missing "Data" as an empty file
+        snprintf(path, pathlen, "%s.Read", fpath);
+        JsonSaveBoolean(root, path, f->read_ok);
+
+        if (f->read_ok == false || f->data == NULL || f->datalen == 0) {
+            continue;
+        }
+
+        if (f->type == 0x03 || f->type == 0x04) {
+            // record files are stored one hex string per record
+            uint32_t reclen = f->recordsize;
+            if (reclen == 0 || (f->datalen % reclen) != 0) {
+                snprintf(path, pathlen, "%s.Data", fpath);
+                desfire_json_save_hex(root, path, f->data, f->datalen);
+            } else {
+                for (uint32_t r = 0; r < f->datalen / reclen; r++) {
+                    snprintf(path, pathlen, "%s.Records.%u", fpath, r);
+                    desfire_json_save_hex(root, path, f->data + (r * reclen), reclen);
+                }
+            }
+        } else if (f->type != 0x02) {
+            snprintf(path, pathlen, "%s.Data", fpath);
+            desfire_json_save_hex(root, path, f->data, f->datalen);
+        }
+    }
+}
+
+static uint8_t desfire_algo_from_name(const char *name) {
+    if (name == NULL) {
+        return T_DES;
+    }
+    for (uint8_t i = 0; i < DESFIRE_MAX_ALGO_COUNT; i++) {
+        if (strcmp(name, desfire_algo_name(i)) == 0) {
+            return i;
+        }
+    }
+    return T_DES;
+}
+
+static uint8_t desfire_comm_mode_from_name(const char *name) {
+    if (name == NULL) {
+        return 0;
+    }
+    for (uint8_t i = 0; i < 4; i++) {
+        if (strcmp(name, desfire_comm_mode_name(i)) == 0) {
+            return i;
+        }
+    }
+    return 0;
+}
+
+static uint32_t json_load_int(json_t *root, const char *path, uint32_t def) {
+    json_t *elm = json_path_get((const json_t *)root, path);
+    if (json_is_integer(elm) == false) {
+        return def;
+    }
+    return (uint32_t)json_integer_value(elm);
+}
+
+static const char *json_load_str(json_t *root, const char *path) {
+    json_t *elm = json_path_get((const json_t *)root, path);
+    if (json_is_string(elm) == false) {
+        return NULL;
+    }
+    return json_string_value(elm);
+}
+
+// read a hex string of unknown length into a freshly allocated buffer.
+// *dst stays NULL when the element is missing or empty
+static int desfire_json_load_hex_alloc(json_t *root, const char *path, uint8_t **dst, uint32_t *dstlen) {
+
+    *dst = NULL;
+    *dstlen = 0;
+
+    const char *hex = json_load_str(root, path);
+    if (hex == NULL) {
+        return PM3_SUCCESS;
+    }
+
+    size_t n = strlen(hex) / 2;
+    if (n == 0) {
+        return PM3_SUCCESS;
+    }
+
+    uint8_t *buf = calloc(n, sizeof(uint8_t));
+    if (buf == NULL) {
+        PrintAndLogEx(ERR, "loadFileJSONex: failed to allocate %zu bytes for `%s`", n, path);
+        return PM3_EMALLOC;
+    }
+
+    size_t len = 0;
+    if (JsonLoadBufAsHex(root, path, buf, n, &len) != 0) {
+        free(buf);
+        return PM3_SUCCESS;
+    }
+
+    *dst = buf;
+    *dstlen = len;
+    return PM3_SUCCESS;
+}
+
+// record files are stored one hex string per record.  Concatenate them back
+// into the flat buffer the rest of the client works with
+static int desfire_json_load_records(json_t *root, desfire_dump_file_t *f) {
+
+    char path[PATH_MAX_LENGTH] = {0};
+
+    // a record file we could not split stays a flat "Data" blob
+    json_t *recs = json_path_get((const json_t *)root, "$.Records");
+    if (json_is_object(recs) == false && json_is_array(recs) == false) {
+        return desfire_json_load_hex_alloc(root, "$.Data", &f->data, &f->datalen);
+    }
+
+    // a record file cannot hold more records than the PICC has bytes,  so the
+    // container size is the bound.  Records must be contiguous from 0
+    size_t bound = json_is_array(recs) ? json_array_size(recs) : json_object_size(recs);
+
+    uint32_t count = 0;
+    uint32_t reclen = 0;
+    for (uint32_t r = 0; r < bound; r++) {
+        snprintf(path, sizeof(path), "$.Records.%u", r);
+        const char *hex = json_load_str(root, path);
+        if (hex == NULL) {
+            break;
+        }
+        if (r == 0) {
+            reclen = strlen(hex) / 2;
+        }
+        count++;
+    }
+
+    if (count == 0 || reclen == 0) {
+        return PM3_SUCCESS;
+    }
+
+    uint8_t *buf = calloc((size_t)count * reclen, sizeof(uint8_t));
+    if (buf == NULL) {
+        PrintAndLogEx(ERR, "loadFileJSONex: failed to allocate %u bytes of record data", count * reclen);
+        return PM3_EMALLOC;
+    }
+
+    for (uint32_t r = 0; r < count; r++) {
+        snprintf(path, sizeof(path), "$.Records.%u", r);
+        size_t len = 0;
+        JsonLoadBufAsHex(root, path, buf + ((size_t)r * reclen), reclen, &len);
+    }
+
+    f->data = buf;
+    f->datalen = count * reclen;
+    if (f->recordsize == 0) {
+        f->recordsize = reclen;
+    }
+    return PM3_SUCCESS;
+}
+
+static void desfire_json_load_keys(json_t *root, uint8_t algo, desfire_dump_keys_t *keys) {
+
+    char path[PATH_MAX_LENGTH] = {0};
+    uint8_t keylen = desfire_algo_keylen(algo);
+
+    for (uint8_t keyno = 0; keyno < DESFIRE_MAX_KEY_COUNT; keyno++) {
+
+        size_t len = 0;
+        snprintf(path, sizeof(path), "$.Keys.%u.Version", keyno);
+        if (JsonLoadBufAsHex(root, path, &keys->version[keyno], 1, &len) == 0 && len == 1) {
+            keys->versionknown[keyno] = 1;
+        }
+
+        if (keylen == 0) {
+            continue;
+        }
+
+        len = 0;
+        snprintf(path, sizeof(path), "$.Keys.%u.Key", keyno);
+        if (JsonLoadBufAsHex(root, path, keys->key[keyno], keylen, &len) == 0 && len == keylen) {
+            keys->present[keyno] = 1;
+        }
+    }
+}
+
+// read one application, PICC included, out of the Applications object
+static int desfire_json_load_app(json_t *japp, const char *aidstr, desfire_dump_app_t *app) {
+
+    char path[PATH_MAX_LENGTH] = {0};
+    uint8_t tmp[2] = {0};
+    size_t len = 0;
+
+    app->aid = strtoul(aidstr, NULL, 16) & 0xFFFFFF;
+
+    JsonLoadBufAsHex(japp, "$.ISOFileID", tmp, sizeof(tmp), &len);
+    if (len == 2) {
+        app->isofid = (tmp[0] << 8) | tmp[1];
+    }
+
+    len = 0;
+    JsonLoadBufAsHex(japp, "$.DFName", app->dfname, sizeof(app->dfname), &len);
+    app->dfnamelen = len;
+
+    len = 0;
+    JsonLoadBufAsHex(japp, "$.KeySettings", &app->keysettings, 1, &len);
+    app->settings_ok = (len == 1);
+    JsonLoadBufAsHex(japp, "$.NumKeysRaw", &app->numkeysraw, 1, &len);
+    app->numkeys = json_load_int(japp, "$.NumKeys", 0);
+    app->keytype = desfire_algo_from_name(json_load_str(japp, "$.KeyType"));
+    app->auth_ok = json_is_true(json_path_get((const json_t *)japp, "$.Authenticated"));
+
+    desfire_json_load_keys(japp, app->keytype, &app->keys);
+
+    json_t *files = json_object_get(japp, "Files");
+    if (json_is_object(files) == false) {
+        return PM3_SUCCESS;
+    }
+
+    const char *fidstr = NULL;
+    json_t *jfile = NULL;
+
+    json_object_foreach(files, fidstr, jfile) {
+
+        if (app->filecount >= DESFIRE_MAX_FILE_COUNT) {
+            PrintAndLogEx(WARNING, "loadFileJSONex: more than %d files in application %06X, ignoring the rest", DESFIRE_MAX_FILE_COUNT, app->aid);
+            break;
+        }
+
+        desfire_dump_file_t *f = &app->files[app->filecount];
+        f->num = strtoul(fidstr, NULL, 16) & 0xFF;
+
+        len = 0;
+        JsonLoadBufAsHex(jfile, "$.TypeRaw", &f->type, 1, &len);
+        f->settings_ok = (len == 1);
+
+        f->commmode = desfire_comm_mode_from_name(json_load_str(jfile, "$.CommMode"));
+
+        len = 0;
+        JsonLoadBufAsHex(jfile, "$.AccessRights", tmp, sizeof(tmp), &len);
+        if (len == 2) {
+            f->accessrights = (tmp[0] << 8) | tmp[1];
+        }
+
+        len = 0;
+        JsonLoadBufAsHex(jfile, "$.ISOFileID", tmp, sizeof(tmp), &len);
+        if (len == 2) {
+            f->isofid = (tmp[0] << 8) | tmp[1];
+        }
+
+        for (uint8_t a = 0; a < ARRAYLEN(f->addrights); a++) {
+            snprintf(path, sizeof(path), "$.AdditionalAccessRights.%u", a);
+            len = 0;
+            JsonLoadBufAsHex(jfile, path, tmp, sizeof(tmp), &len);
+            if (len != 2) {
+                break;
+            }
+            f->addrights[a] = (tmp[0] << 8) | tmp[1];
+            f->addrights_len = a + 1;
+        }
+
+        f->size = json_load_int(jfile, "$.FileSize", 0);
+        f->lowerlimit = json_load_int(jfile, "$.LowerLimit", 0);
+        f->upperlimit = json_load_int(jfile, "$.UpperLimit", 0);
+        f->value = json_load_int(jfile, "$.Value", 0);
+        f->recordsize = json_load_int(jfile, "$.RecordSize", 0);
+        f->maxrecords = json_load_int(jfile, "$.MaxRecords", 0);
+        f->currecords = json_load_int(jfile, "$.CurRecords", 0);
+        JsonLoadBufAsHex(jfile, "$.LimitedCredit", &f->limitedcredit, 1, &len);
+
+        f->read_ok = json_is_true(json_path_get((const json_t *)jfile, "$.Read"));
+
+        app->filecount++;
+
+        if (f->read_ok == false) {
+            continue;
+        }
+
+        // value files carry their payload in "Value", nothing else to load
+        if (f->type == 0x02) {
+            continue;
+        }
+
+        if (f->type == 0x03 || f->type == 0x04) {
+            if (desfire_json_load_records(jfile, f) != PM3_SUCCESS) {
+                return PM3_EMALLOC;
+            }
+            continue;
+        }
+
+        if (desfire_json_load_hex_alloc(jfile, "$.Data", &f->data, &f->datalen) != PM3_SUCCESS) {
+            return PM3_EMALLOC;
+        }
+    }
+
+    return PM3_SUCCESS;
+}
+
+void desfire_dump_free(desfire_dump_t *dump) {
+
+    if (dump == NULL) {
+        return;
+    }
+
+    for (uint8_t i = 0; i < DESFIRE_MAX_APP_COUNT; i++) {
+        for (uint8_t n = 0; n < DESFIRE_MAX_FILE_COUNT; n++) {
+            free(dump->app[i].files[n].data);
+            dump->app[i].files[n].data = NULL;
+            dump->app[i].files[n].datalen = 0;
+        }
+    }
 }
 
 int prepareJSON(json_t *root, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *)) {
@@ -439,15 +1291,53 @@ int prepareJSON(json_t *root, JSONFileType ftype, uint8_t *data, size_t datalen,
             }
             break;
         }
-        case jsfHitag: {
-            uint8_t uid[4] = {0};
-            memcpy(uid, data, 4);
-            JsonSaveStr(root, "FileType", "hitag");
-            JsonSaveBufAsHexCompact(root, "$.Card.UID", uid, sizeof(uid));
+        // Hitag 1 and Hitag 2 both start with the UID in block 0.  Hitag 2 also
+        // carries its configuration in block 3, so record it when the dump is
+        // long enough to hold one.
+        case jsfHitag1:
+        case jsfHitag2: {
+            JsonSaveStr(root, "FileType", (ftype == jsfHitag1) ? "hitag1" : "hitag2");
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", data, HITAG_UID_SIZE);
 
-            for (size_t i = 0; i < (datalen / 4); i++) {
+            if ((ftype == jsfHitag2) && (datalen >= 16)) {
+                JsonSaveBufAsHexCompact(root, "$.Card.Config", data + 12, HITAG_BLOCK_SIZE);
+            }
+
+            JsonSaveInt(root, "$.Card.Blocks", (int)(datalen / HITAG_BLOCK_SIZE));
+
+            for (size_t i = 0; i < (datalen / HITAG_BLOCK_SIZE); i++) {
                 snprintf(path, sizeof(path), "$.blocks.%zu", i);
-                JsonSaveBufAsHexCompact(root, path, data + (i * 4), 4);
+                JsonSaveBufAsHexCompact(root, path, data + (i * HITAG_BLOCK_SIZE), HITAG_BLOCK_SIZE);
+            }
+            break;
+        }
+        // Hitag S keeps the UID in page 0 and the configuration in page 1
+        case jsfHitagS: {
+            JsonSaveStr(root, "FileType", "hitags");
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", data + (HITAGS_UID_PADR * HITAGS_PAGE_SIZE), HITAG_UID_SIZE);
+
+            if (datalen >= ((HITAGS_CONFIG_PADR + 1) * HITAGS_PAGE_SIZE)) {
+                JsonSaveBufAsHexCompact(root, "$.Card.Config", data + (HITAGS_CONFIG_PADR * HITAGS_PAGE_SIZE), HITAGS_PAGE_SIZE);
+            }
+
+            JsonSaveInt(root, "$.Card.Blocks", (int)(datalen / HITAGS_PAGE_SIZE));
+
+            for (size_t i = 0; i < (datalen / HITAGS_PAGE_SIZE); i++) {
+                snprintf(path, sizeof(path), "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, data + (i * HITAGS_PAGE_SIZE), HITAGS_PAGE_SIZE);
+            }
+            break;
+        }
+        // Hitag u has a 6 byte UID and an ICR that the tag reports separately from
+        // its pages, so neither can be recovered from `data`.  The caller supplies
+        // them through the save callback, see pm3_save_dump_cb().
+        case jsfHitagU: {
+            JsonSaveStr(root, "FileType", "hitagu");
+            JsonSaveInt(root, "$.Card.Blocks", (int)(datalen / HITAGU_BLOCK_SIZE));
+
+            for (size_t i = 0; i < (datalen / HITAGU_BLOCK_SIZE); i++) {
+                snprintf(path, sizeof(path), "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, data + (i * HITAGU_BLOCK_SIZE), HITAGU_BLOCK_SIZE);
             }
             break;
         }
@@ -500,35 +1390,10 @@ int prepareJSON(json_t *root, JSONFileType ftype, uint8_t *data, size_t datalen,
             break;
         }
         // handles ISO15693 in iso15_tag_t format
-        case jsf15_v4: {
-            JsonSaveStr(root, "FileType", "15693 v4");
-            iso15_tag_t *tag = (iso15_tag_t *)data;
-            JsonSaveBufAsHexCompact(root, "$.Card.uid", tag->uid, sizeof(tag->uid));
-            JsonSaveBufAsHexCompact(root, "$.Card.dsfid", &tag->dsfid, 1);
-            JsonSaveBufAsHexCompact(root, "$.Card.dsfidlock", (uint8_t *)&tag->dsfidLock, 1);
-            JsonSaveBufAsHexCompact(root, "$.Card.afi", &tag->afi, 1);
-            JsonSaveBufAsHexCompact(root, "$.Card.afilock", (uint8_t *)&tag->afiLock, 1);
-            JsonSaveBufAsHexCompact(root, "$.Card.bytesperpage", &tag->bytesPerPage, 1);
-            JsonSaveBufAsHexCompact(root, "$.Card.pagescount", &tag->pagesCount, 1);
-            JsonSaveBufAsHexCompact(root, "$.Card.ic", &tag->ic, 1);
-            JsonSaveBufAsHexCompact(root, "$.Card.locks", tag->locks, tag->pagesCount);
-            JsonSaveBufAsHexCompact(root, "$.Card.random", tag->random, 2);
-            JsonSaveBufAsHexCompact(root, "$.Card.privacypasswd", tag->privacyPasswd, sizeof(tag->privacyPasswd));
-            JsonSaveBufAsHexCompact(root, "$.Card.state", (uint8_t *)&tag->state, 1);
-
-            for (uint8_t i = 0 ; i < tag->pagesCount ; i++) {
-
-                if (((i + 1) * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) {
-                    break;
-                }
-
-                snprintf(path, sizeof(path), "$.blocks.%u", i);
-                JsonSaveBufAsHexCompact(root
-                                        , path
-                                        , &tag->data[i * tag->bytesPerPage]
-                                        , tag->bytesPerPage
-                                       );
-            }
+        case jsf15_v4:
+        case jsf15_v5: {
+            JsonSaveStr(root, "FileType", (ftype == jsf15_v5) ? "15693 v5" : "15693 v4");
+            json15_save_tag(root, (iso15_tag_t *)data, (ftype == jsf15_v5) ? 2 : 1);
             break;
         }
         case jsfLegic_v2: {
@@ -652,6 +1517,107 @@ int prepareJSON(json_t *root, JSONFileType ftype, uint8_t *data, size_t datalen,
                     snprintf(path, sizeof(path), "$.K3KDES.%d.Key", i);
                     JsonSaveBufAsHexCompact(root, path, &dvdata[3][i][1], T3DES_KEY_LEN);
                 }
+            }
+            break;
+        }
+        case jsfMfDesfireKeys_v2: {
+
+            // key lengths and names, indexed by DesfireCryptoAlgorithm
+            static const char *algo_name[DESFIRE_MAX_ALGO_COUNT] = {"DES", "2TDEA", "3TDEA", "AES"};
+            static const uint8_t algo_keylen[DESFIRE_MAX_ALGO_COUNT] = {
+                DES_KEY_LEN, T2DES_KEY_LEN, T3DES_KEY_LEN, AES_KEY_LEN
+            };
+
+            desfire_keys_dump_t *dump = (desfire_keys_dump_t *)(void *)data;
+
+            JsonSaveStr(root, "FileType", "mfdes v2");
+
+            if (dump->card_info.uidlen > 0) {
+                JsonSaveBufAsHexCompact(root, "$.Card.UID", dump->card_info.uid, dump->card_info.uidlen);
+                JsonSaveBufAsHexCompact(root, "$.Card.SAK", &dump->card_info.sak, 1);
+                JsonSaveBufAsHexCompact(root, "$.Card.ATQA", dump->card_info.atqa, 2);
+                if (dump->card_info.ats_len > 0) {
+                    JsonSaveBufAsHexCompact(root, "$.Card.ATS", dump->card_info.ats, dump->card_info.ats_len);
+                }
+            }
+
+            uint8_t appcount = dump->appcount;
+            if (appcount > DESFIRE_MAX_APP_COUNT) {
+                appcount = DESFIRE_MAX_APP_COUNT;
+            }
+
+            for (uint8_t i = 0; i < appcount; i++) {
+
+                desfire_app_keys_t *app = &dump->app[i];
+
+                for (uint8_t algo = 0; algo < DESFIRE_MAX_ALGO_COUNT; algo++) {
+
+                    for (uint8_t keyno = 0; keyno < DESFIRE_MAX_KEY_COUNT; keyno++) {
+
+                        if (app->keys[algo][keyno][0] == 0) {
+                            continue;
+                        }
+
+                        snprintf(path, sizeof(path), "$.Applications.%06X.%s.%u.Key",
+                                 app->aid, algo_name[algo], keyno);
+
+                        JsonSaveBufAsHexCompact(root, path, &app->keys[algo][keyno][1], algo_keylen[algo]);
+                    }
+                }
+            }
+            break;
+        }
+        case jsfMfDesfire_v1: {
+
+            if (datalen != sizeof(desfire_dump_t)) {
+                return PM3_EINVARG;
+            }
+
+            const desfire_dump_t *dump = (const desfire_dump_t *)(const void *)data;
+
+            JsonSaveStr(root, "FileType", "mfdes v1");
+            JsonSaveInt(root, "$.Version", 1);
+
+            // $.Card is card identity only.  Key settings and keys belong to an
+            // application, and the PICC level is application 000000
+            if (dump->card_info.uidlen > 0) {
+                JsonSaveBufAsHexCompact(root, "$.Card.UID", (uint8_t *)dump->card_info.uid, dump->card_info.uidlen);
+                JsonSaveBufAsHexCompact(root, "$.Card.ATQA", (uint8_t *)dump->card_info.atqa, 2);
+                JsonSaveBufAsHexCompact(root, "$.Card.SAK", (uint8_t *)&dump->card_info.sak, 1);
+                if (dump->card_info.ats_len > 0) {
+                    JsonSaveBufAsHexCompact(root, "$.Card.ATS", (uint8_t *)dump->card_info.ats, dump->card_info.ats_len);
+                }
+            }
+
+            if (dump->versionhwlen > 0) {
+                JsonSaveBufAsHexCompact(root, "$.Card.VersionHW", (uint8_t *)dump->versionhw, dump->versionhwlen);
+            }
+
+            if (dump->versionswlen > 0) {
+                JsonSaveBufAsHexCompact(root, "$.Card.VersionSW", (uint8_t *)dump->versionsw, dump->versionswlen);
+            }
+
+            if (dump->versionprodlen > 0) {
+                JsonSaveBufAsHexCompact(root, "$.Card.VersionProd", (uint8_t *)dump->versionprod, dump->versionprodlen);
+            }
+
+            if (dump->signaturelen > 0) {
+                JsonSaveBufAsHexCompact(root, "$.Card.Signature", (uint8_t *)dump->signature, dump->signaturelen);
+            }
+
+            if (dump->freemem_ok) {
+                JsonSaveInt(root, "$.Card.FreeMem", dump->freemem);
+            }
+
+            desfire_json_save_app(root, path, sizeof(path), &dump->picc);
+
+            uint8_t appcount = dump->appcount;
+            if (appcount > DESFIRE_MAX_APP_COUNT) {
+                appcount = DESFIRE_MAX_APP_COUNT;
+            }
+
+            for (uint8_t i = 0; i < appcount; i++) {
+                desfire_json_save_app(root, path, sizeof(path), &dump->app[i]);
             }
             break;
         }
@@ -793,8 +1759,9 @@ int saveFileJSONroot(const char *preferredName, void *root, size_t flags, bool v
 }
 
 int saveFileJSONrootEx(const char *preferredName, const void *root, size_t flags, bool verbose, bool overwrite, savePaths_t e_save_path) {
-    if (root == NULL)
+    if (root == NULL) {
         return PM3_EINVARG;
+    }
 
     char *filename = NULL;
     if (overwrite)
@@ -946,7 +1913,7 @@ int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, const sector
     }
 
     for (int i = 0; i < sectorsCnt; i++) {
-        if (e_sector[i].foundKey[0])
+        if (e_sector[i].foundKey[1])
             num_to_bytes(e_sector[i].Key[1], sizeof(tmp), tmp);
         else
             memcpy(tmp, empty, sizeof(tmp));
@@ -974,7 +1941,7 @@ int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata,
     }
 
     FILE *f = fopen(path, "rb");
-    if (!f) {
+    if (f == NULL) {
         PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
         free(path);
         return PM3_EFILE;
@@ -993,8 +1960,8 @@ int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata,
     }
 
     *pdata = calloc(fsize, sizeof(uint8_t));
-    if (!*pdata) {
-        PrintAndLogEx(FAILED, "error, cannot allocate memory");
+    if (*pdata == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         fclose(f);
         return PM3_EMALLOC;
     }
@@ -1013,6 +1980,58 @@ int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata,
 
     if (verbose) {
         PrintAndLogEx(SUCCESS, "Loaded " _YELLOW_("%zu") " bytes from binary file `" _YELLOW_("%s") "`", bytes_read, preferredName);
+    }
+    return PM3_SUCCESS;
+}
+
+int loadFile_TXTsafe(const char *preferredName, const char *suffix, void **pdata, size_t *datalen, bool verbose) {
+
+    char *path;
+    int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, suffix, false);
+    if (res != PM3_SUCCESS) {
+        return PM3_EFILE;
+    }
+
+    FILE *f = fopen(path, "r");
+    if (f == NULL) {
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
+        free(path);
+        return PM3_EFILE;
+    }
+    free(path);
+
+    // get filesize in order to malloc memory
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    if (fsize <= 0) {
+        PrintAndLogEx(FAILED, "error, when getting filesize");
+        fclose(f);
+        return PM3_EFILE;
+    }
+
+    *pdata = calloc(fsize, sizeof(uint8_t));
+    if (*pdata == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        fclose(f);
+        return PM3_EMALLOC;
+    }
+
+    size_t bytes_read = fread(*pdata, 1, fsize, f);
+
+    fclose(f);
+
+    if (bytes_read != fsize) {
+        PrintAndLogEx(FAILED, "error, bytes read mismatch file size");
+        free(*pdata);
+        return PM3_EFILE;
+    }
+
+    *datalen = bytes_read;
+
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "Loaded " _YELLOW_("%zu") " bytes from text file `" _YELLOW_("%s") "`", bytes_read, preferredName);
     }
     return PM3_SUCCESS;
 }
@@ -1044,8 +2063,8 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
     }
 
     *pdata = calloc(fsize, sizeof(uint8_t));
-    if (!*pdata) {
-        PrintAndLogEx(FAILED, "error, cannot allocate memory");
+    if (*pdata == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         fclose(f);
         return PM3_EMALLOC;
     }
@@ -1091,6 +2110,7 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
 
     uint8_t *newdump = realloc(*pdata, counter);
     if (newdump == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(*pdata);
         return PM3_EMALLOC;
     } else {
@@ -1101,6 +2121,58 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
         *datalen = counter;
 
     return retval;
+}
+
+// Convert a run of "XX XX XX ..." hex text into bytes.
+//
+// `head` is the part of the line the caller already has, `more` says whether the
+// line continued past the caller's buffer, in which case the rest is pulled from
+// `f` one character at a time and converted as it goes.  That keeps the caller's
+// line buffer small: an ISO15693 "Data Content" line carries the whole tag and
+// runs to several thousand characters.
+//
+// Returns the number of bytes the text held, which may be larger than `destlen`.
+// Only the first `destlen` bytes are stored, so the caller can spot an overflow.
+static size_t hexstream_to_bytes(FILE *f, const char *head, bool more, uint8_t *dest, size_t destlen) {
+
+    size_t cnt = 0;
+    int hi = -1;
+
+    for (;;) {
+
+        int c;
+        if (*head) {
+            c = (unsigned char) * head++;
+        } else if (more) {
+            c = fgetc(f);
+        } else {
+            break;
+        }
+
+        if ((c == EOF) || (c == '\n') || (c == '\r')) {
+            break;
+        }
+
+        if (isxdigit(c) == 0) {
+            // separator
+            continue;
+        }
+
+        int v = (c <= '9') ? (c - '0') : ((c | 0x20) - 'a' + 10);
+
+        if (hi < 0) {
+            hi = v;
+            continue;
+        }
+
+        if (cnt < destlen) {
+            dest[cnt] = (hi << 4) | v;
+        }
+        cnt++;
+        hi = -1;
+    }
+
+    return cnt;
 }
 
 int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, nfc_df_e ft) {
@@ -1119,7 +2191,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
     }
 
     FILE *f = fopen(path, "r");
-    if (!f) {
+    if (f == NULL) {
         PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
         free(path);
         return PM3_EFILE;
@@ -1133,6 +2205,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
     udata_t udata = (udata_t)data;
     int n = 0;
     uint32_t counter = 0;
+    size_t iso15_datalen = 0;
 
     while (!feof(f)) {
 
@@ -1151,14 +2224,74 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
             continue;
         }
 
+        // did this fgets reach the end of the line, or is the line longer than
+        // the buffer?  ISO15693 puts a whole tag on its "Data Content" line.
+        bool line_truncated = ((strchr(line, '\n') == NULL) && (feof(f) == false));
+
         str_cleanrn(line, sizeof(line));
         str_lower(line);
 
         if (str_startswith(line, "uid:")) {
             if (ft == NFC_DF_MFC) {
 //                param_gethex_to_eol(line + 4, 0, udata.mfc->card_info.uid, sizeof(udata.mfc->card_info.uid), &n);
+            } else if (ft == NFC_DF_15) {
+                // iso15_tag_t keeps the UID in transmission order (LSB first),
+                // Flipper writes it the way it is displayed (MSB first).
+                param_gethex_to_eol(line + 4, 0, udata.iso15->uid, sizeof(udata.iso15->uid), &n);
+                reverse_array(udata.iso15->uid, sizeof(udata.iso15->uid));
             }
             continue;
+        }
+
+        if (ft == NFC_DF_15) {
+
+            if (str_startswith(line, "dsfid:")) {
+                uint8_t v = 0;
+                param_gethex_to_eol(line + 6, 0, &v, sizeof(v), &n);
+                udata.iso15->dsfid = v;
+                continue;
+            }
+
+            if (str_startswith(line, "afi:")) {
+                uint8_t v = 0;
+                param_gethex_to_eol(line + 4, 0, &v, sizeof(v), &n);
+                udata.iso15->afi = v;
+                continue;
+            }
+
+            if (str_startswith(line, "ic reference:")) {
+                uint8_t v = 0;
+                param_gethex_to_eol(line + 13, 0, &v, sizeof(v), &n);
+                udata.iso15->ic = v;
+                continue;
+            }
+
+            // Flipper writes the block count in decimal but the block size in hex
+            if (str_startswith(line, "block count:")) {
+                int v = 0;
+                sscanf(line, "block count: %d", &v);
+                udata.iso15->pagesCount = v;
+                continue;
+            }
+
+            if (str_startswith(line, "block size:")) {
+                uint8_t v = 0;
+                param_gethex_to_eol(line + 11, 0, &v, sizeof(v), &n);
+                udata.iso15->bytesPerPage = v;
+                continue;
+            }
+
+            if (str_startswith(line, "data content:")) {
+                iso15_datalen = hexstream_to_bytes(f, line + 13, line_truncated
+                                                   , udata.iso15->data
+                                                   , sizeof(udata.iso15->data));
+                continue;
+            }
+
+            if (str_startswith(line, "password privacy:")) {
+                param_gethex_to_eol(line + 17, 0, udata.iso15->privacyPasswd, sizeof(udata.iso15->privacyPasswd), &n);
+                continue;
+            }
         }
 
         if (str_startswith(line, "atqa:")) {
@@ -1332,6 +2465,48 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
         *datalen = counter;
     } else if (ft == NFC_DF_MFU) {
         *datalen += MFU_DUMP_PREFIX_LENGTH;
+    } else if (ft == NFC_DF_15) {
+
+        if ((udata.iso15->pagesCount == 0) || (udata.iso15->bytesPerPage == 0)) {
+            fclose(f);
+            PrintAndLogEx(FAILED, "missing block count / block size in `" _YELLOW_("%s") "`", preferredName);
+            return PM3_ESOFT;
+        }
+
+        if (udata.iso15->pagesCount > ISO15693_TAG_MAX_PAGES) {
+            fclose(f);
+            PrintAndLogEx(FAILED, "block count ( %u ) exceeds max ( %u )"
+                          , udata.iso15->pagesCount
+                          , ISO15693_TAG_MAX_PAGES);
+            return PM3_ESOFT;
+        }
+
+        uint32_t expected = (uint32_t)udata.iso15->pagesCount * udata.iso15->bytesPerPage;
+        if (expected > ISO15693_TAG_MAX_SIZE) {
+            fclose(f);
+            PrintAndLogEx(FAILED, "tag memory ( %u bytes ) exceeds max ( %u bytes )"
+                          , expected
+                          , ISO15693_TAG_MAX_SIZE);
+            return PM3_ESOFT;
+        }
+
+        if (iso15_datalen > sizeof(udata.iso15->data)) {
+            fclose(f);
+            PrintAndLogEx(FAILED, "data content ( %zu bytes ) exceeds max ( %zu bytes )"
+                          , iso15_datalen
+                          , sizeof(udata.iso15->data));
+            return PM3_ESOFT;
+        }
+
+        if (iso15_datalen != expected) {
+            PrintAndLogEx(WARNING, "data content is %zu bytes, header says %u x %u = %u bytes"
+                          , iso15_datalen
+                          , udata.iso15->pagesCount
+                          , udata.iso15->bytesPerPage
+                          , expected);
+        }
+
+        *datalen = sizeof(iso15_tag_t);
     }
 
     fclose(f);
@@ -1366,8 +2541,8 @@ int loadFileMCT_safe(const char *preferredName, void **pdata, size_t *datalen) {
     }
 
     *pdata = calloc(fsize, sizeof(uint8_t));
-    if (!*pdata) {
-        PrintAndLogEx(FAILED, "error, cannot allocate memory");
+    if (*pdata == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         fclose(f);
         return PM3_EMALLOC;
     }
@@ -1414,6 +2589,7 @@ int loadFileMCT_safe(const char *preferredName, void **pdata, size_t *datalen) {
 
     uint8_t *newdump = realloc(*pdata, counter);
     if (newdump == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(*pdata);
         return PM3_EMALLOC;
     } else {
@@ -1441,9 +2617,42 @@ static int load_file_sanity(char *s, uint32_t datalen, int i, size_t len) {
 int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, void (*callback)(json_t *)) {
     return loadFileJSONex(preferredName, data, maxdatalen, datalen, true, callback);
 }
+// Loads one metadata field of an iso15_tag_t.
+//
+// JsonLoadBufAsHex writes whatever it managed to parse *before* it bails, so a
+// caller that discards the return value keeps a half-written field. Dumps in the
+// wild carry a two byte `pagescount` from when that member was a uint16_t; the
+// old code took the first byte of it ("0001" -> 0) and then tripped over its own
+// layout check with a message that pointed nowhere near the real problem.
+//
+// A malformed value is always fatal. A missing key is only fatal for the fields
+// the memory layout is computed from.
+static int json15_load_field(json_t *root, const char *path, uint8_t *dst, size_t len, size_t *datalen, bool required) {
+
+    int res = JsonLoadBufAsHex(root, path, dst, len, datalen);
+    if (res == 0) {
+        return PM3_SUCCESS;
+    }
+
+    // do not leave a partial value behind
+    memset(dst, 0, len);
+
+    if (res == 1) {
+        if (required == false) {
+            return PM3_SUCCESS;
+        }
+        PrintAndLogEx(ERR, "loadFileJSONex: `" _YELLOW_("%s") "` is missing", path);
+    } else {
+        PrintAndLogEx(ERR, "loadFileJSONex: `" _YELLOW_("%s") "` is not a %zu byte hex value", path, len);
+    }
+    return PM3_EFILE;
+}
+
 int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, bool verbose, void (*callback)(json_t *)) {
 
-    if (data == NULL) return PM3_EINVARG;
+    if (data == NULL) {
+        return PM3_EINVARG;
+    }
 
     *datalen = 0;
     int retval = PM3_SUCCESS;
@@ -1614,7 +2823,20 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         goto out;
     }
 
+    // The four Hitag flavours share one block layout on disk and differ only in
+    // how many blocks they carry, so one reader serves all of them.  A file
+    // written before the per-flavour types existed says only "hitag" and cannot
+    // say which tag it came from - treat those as Hitag 2 and tell the user.
     if (!strcmp(ctype, "hitag")) {
+        PrintAndLogEx(WARNING, "`" _YELLOW_("hitag") "` is the legacy dump type and does not record which tag it came from");
+        PrintAndLogEx(INFO, "Reading it as " _YELLOW_("Hitag 2") ", re-dump the tag to get a versioned file");
+    }
+
+    if (!strcmp(ctype, "hitag") ||
+            !strcmp(ctype, "hitag1") ||
+            !strcmp(ctype, "hitag2") ||
+            !strcmp(ctype, "hitags") ||
+            !strcmp(ctype, "hitagu")) {
         size_t sptr = 0;
         for (int i = 0; i < (maxdatalen / 4); i++) {
             if (sptr + 4 > maxdatalen) {
@@ -1873,15 +3095,55 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         goto out;
     }
 
-    if (!strcmp(ctype, "15693 v4")) {
+    if (!strcmp(ctype, "15693 v4") || !strcmp(ctype, "15693 v5")) {
+
+        bool is_v5 = (strcmp(ctype, "15693 v5") == 0);
+        if (is_v5 == false) {
+            PrintAndLogEx(WARNING, "loadFileJSONex: loading deprecated 15693 v4 format");
+        }
+
+        if (maxdatalen < sizeof(iso15_tag_t)) {
+            PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu, need %zu for an iso15_tag_t"
+                          , maxdatalen
+                          , sizeof(iso15_tag_t)
+                         );
+            retval = PM3_EMALLOC;
+            goto out;
+        }
+
         iso15_tag_t *tag = (iso15_tag_t *)udata.bytes;
-        JsonLoadBufAsHex(root, "$.Card.uid", tag->uid, 8, datalen);
-        JsonLoadBufAsHex(root, "$.Card.dsfid", &tag->dsfid, 1, datalen);
-        JsonLoadBufAsHex(root, "$.Card.dsfidlock", (uint8_t *)&tag->dsfidLock, 1, datalen);
-        JsonLoadBufAsHex(root, "$.Card.afi", &tag->afi, 1, datalen);
-        JsonLoadBufAsHex(root, "$.Card.afilock", (uint8_t *)&tag->afiLock, 1, datalen);
-        JsonLoadBufAsHex(root, "$.Card.bytesperpage", &tag->bytesPerPage, 1, datalen);
-        JsonLoadBufAsHex(root, "$.Card.pagescount", &tag->pagesCount, 1, datalen);
+
+        // pagesCount is the only field the two revisions disagree on: one byte
+        // in v4, two in v5, little endian. The width belongs to the format, so
+        // it is taken from the FileType and a value of the wrong width is an
+        // error, not something to accommodate. Read into a scratch buffer and
+        // assemble, so a v4 file cannot leave the high byte of a uint16_t
+        // member holding whatever the caller's buffer had in it.
+        uint8_t pagescount[2] = {0};
+
+        const struct {
+            const char *path;
+            uint8_t *dst;
+            size_t len;
+            bool required;
+        } hdr[] = {
+            { "$.Card.uid",          tag->uid,                          sizeof(tag->uid), true  },
+            { "$.Card.dsfid",        &tag->dsfid,                       1,                false },
+            { "$.Card.dsfidlock", (uint8_t *) &tag->dsfidLock,        1,                false },
+            { "$.Card.afi",          &tag->afi,                         1,                false },
+            { "$.Card.afilock", (uint8_t *) &tag->afiLock,          1,                false },
+            { "$.Card.bytesperpage", &tag->bytesPerPage,                1,                true  },
+            { "$.Card.pagescount",   pagescount,                        is_v5 ? 2 : 1,    true  },
+        };
+
+        for (size_t n = 0; n < ARRAYLEN(hdr); n++) {
+            retval = json15_load_field(root, hdr[n].path, hdr[n].dst, hdr[n].len, datalen, hdr[n].required);
+            if (retval != PM3_SUCCESS) {
+                goto out;
+            }
+        }
+
+        tag->pagesCount = pagescount[0] | (pagescount[1] << 8);
 
         if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
                 ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
@@ -1897,14 +3159,27 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             goto out;
         }
 
-        JsonLoadBufAsHex(root, "$.Card.ic", &tag->ic, 1, datalen);
-        JsonLoadBufAsHex(root, "$.Card.locks", tag->locks, tag->pagesCount, datalen);
-        JsonLoadBufAsHex(root, "$.Card.random", tag->random, 2, datalen);
-        JsonLoadBufAsHex(root, "$.Card.privacypasswd", tag->privacyPasswd, 4, datalen);
-        JsonLoadBufAsHex(root, "$.Card.state", (uint8_t *)&tag->state, 1, datalen);
+        const struct {
+            const char *path;
+            uint8_t *dst;
+            size_t len;
+        } rest[] = {
+            { "$.Card.ic",            &tag->ic,                   1                          },
+            { "$.Card.locks",         tag->locks,                 tag->pagesCount            },
+            { "$.Card.random",        tag->random,                sizeof(tag->random)        },
+            { "$.Card.privacypasswd", tag->privacyPasswd,         sizeof(tag->privacyPasswd) },
+            { "$.Card.state", (uint8_t *) &tag->state,     1                          },
+        };
+
+        for (size_t n = 0; n < ARRAYLEN(rest); n++) {
+            retval = json15_load_field(root, rest[n].path, rest[n].dst, rest[n].len, datalen, false);
+            if (retval != PM3_SUCCESS) {
+                goto out;
+            }
+        }
 
         size_t sptr = 0;
-        for (uint8_t i = 0; i < tag->pagesCount ; i++) {
+        for (uint16_t i = 0; i < tag->pagesCount ; i++) {
 
             if (((i + 1) * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) {
                 PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen"
@@ -2064,6 +3339,147 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         goto out;
     }
 
+    if (!strcmp(ctype, "mfdes v1")) {
+
+        if (maxdatalen < sizeof(desfire_dump_t)) {
+            PrintAndLogEx(ERR, "loadFileJSONex: buffer too small for a DESFire card image. %zu < %zu", maxdatalen, sizeof(desfire_dump_t));
+            retval = PM3_EMALLOC;
+            goto out;
+        }
+
+        desfire_dump_t *dump = udata.mfdesdump;
+        memset(dump, 0, sizeof(desfire_dump_t));
+
+        len = 0;
+        JsonLoadBufAsHex(root, "$.Card.UID", dump->card_info.uid, sizeof(dump->card_info.uid), &len);
+        dump->card_info.uidlen = len;
+
+        JsonLoadBufAsHex(root, "$.Card.ATQA", dump->card_info.atqa, sizeof(dump->card_info.atqa), &len);
+        JsonLoadBufAsHex(root, "$.Card.SAK", &dump->card_info.sak, 1, &len);
+
+        len = 0;
+        JsonLoadBufAsHex(root, "$.Card.ATS", dump->card_info.ats, sizeof(dump->card_info.ats), &len);
+        dump->card_info.ats_len = len;
+
+        len = 0;
+        JsonLoadBufAsHex(root, "$.Card.VersionHW", dump->versionhw, sizeof(dump->versionhw), &len);
+        dump->versionhwlen = len;
+
+        len = 0;
+        JsonLoadBufAsHex(root, "$.Card.VersionSW", dump->versionsw, sizeof(dump->versionsw), &len);
+        dump->versionswlen = len;
+
+        len = 0;
+        JsonLoadBufAsHex(root, "$.Card.VersionProd", dump->versionprod, sizeof(dump->versionprod), &len);
+        dump->versionprodlen = len;
+
+        len = 0;
+        JsonLoadBufAsHex(root, "$.Card.Signature", dump->signature, sizeof(dump->signature), &len);
+        dump->signaturelen = len;
+
+        json_t *jfree = json_path_get(root, "$.Card.FreeMem");
+        if (json_is_integer(jfree)) {
+            dump->freemem = json_integer_value(jfree);
+            dump->freemem_ok = true;
+        }
+
+        dump->picc.aid = 0x000000;
+
+        json_t *apps = json_object_get(root, "Applications");
+        if (json_is_object(apps) == false) {
+            *datalen = sizeof(desfire_dump_t);
+            goto out;
+        }
+
+        const char *aidstr = NULL;
+        json_t *japp = NULL;
+
+        json_object_foreach(apps, aidstr, japp) {
+
+            // AID 000000 is the PICC level, it is not one of the applications
+            uint32_t aid = strtoul(aidstr, NULL, 16) & 0xFFFFFF;
+            desfire_dump_app_t *app = NULL;
+
+            if (aid == 0x000000) {
+                app = &dump->picc;
+            } else {
+                if (dump->appcount >= DESFIRE_MAX_APP_COUNT) {
+                    PrintAndLogEx(WARNING, "loadFileJSONex: more than %d applications in file, ignoring the rest", DESFIRE_MAX_APP_COUNT);
+                    break;
+                }
+                app = &dump->app[dump->appcount];
+                dump->appcount++;
+            }
+
+            if (desfire_json_load_app(japp, aidstr, app) != PM3_SUCCESS) {
+                retval = PM3_EMALLOC;
+                goto out;
+            }
+        }
+
+        *datalen = sizeof(desfire_dump_t);
+        goto out;
+    }
+
+    if (!strcmp(ctype, "mfdes v2")) {
+
+        if (maxdatalen < sizeof(desfire_keys_dump_t)) {
+            PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu, need %zu for a mfdes v2 dump", maxdatalen, sizeof(desfire_keys_dump_t));
+            retval = PM3_EMALLOC;
+            goto out;
+        }
+
+        JsonLoadBufAsHex(root, "$.Card.UID", udata.mfdes->card_info.uid, sizeof(udata.mfdes->card_info.uid), &len);
+        udata.mfdes->card_info.uidlen = len;
+        JsonLoadBufAsHex(root, "$.Card.SAK", &udata.mfdes->card_info.sak, 1, &len);
+        JsonLoadBufAsHex(root, "$.Card.ATQA", udata.mfdes->card_info.atqa, 2, &len);
+        JsonLoadBufAsHex(root, "$.Card.ATS", udata.mfdes->card_info.ats, sizeof(udata.mfdes->card_info.ats), &len);
+        udata.mfdes->card_info.ats_len = len;
+
+        // key lengths indexed by DesfireCryptoAlgorithm
+        static const char *algo_name[DESFIRE_MAX_ALGO_COUNT] = {"DES", "2TDEA", "3TDEA", "AES"};
+        static const uint8_t algo_keylen[DESFIRE_MAX_ALGO_COUNT] = {
+            DES_KEY_LEN, T2DES_KEY_LEN, T3DES_KEY_LEN, AES_KEY_LEN
+        };
+
+        json_t *apps = json_object_get(root, "Applications");
+        if (json_is_object(apps)) {
+
+            const char *aidstr = NULL;
+            json_t *value = NULL;
+
+            json_object_foreach(apps, aidstr, value) {
+
+                if (udata.mfdes->appcount >= DESFIRE_MAX_APP_COUNT) {
+                    PrintAndLogEx(WARNING, "loadFileJSONex: more than %d applications in file, ignoring the rest", DESFIRE_MAX_APP_COUNT);
+                    break;
+                }
+
+                desfire_app_keys_t *app = &udata.mfdes->app[udata.mfdes->appcount];
+                app->aid = strtoul(aidstr, NULL, 16) & 0xFFFFFF;
+
+                for (uint8_t algo = 0; algo < DESFIRE_MAX_ALGO_COUNT; algo++) {
+
+                    for (uint8_t keyno = 0; keyno < DESFIRE_MAX_KEY_COUNT; keyno++) {
+
+                        snprintf(blocks, sizeof(blocks), "$.%s.%u.Key", algo_name[algo], keyno);
+
+                        len = 0;
+                        JsonLoadBufAsHex(value, blocks, &app->keys[algo][keyno][1], algo_keylen[algo], &len);
+                        if (len == algo_keylen[algo]) {
+                            app->keys[algo][keyno][0] = 0x01;
+                        }
+                    }
+                }
+
+                udata.mfdes->appcount++;
+            }
+        }
+
+        *datalen = sizeof(desfire_keys_dump_t);
+        goto out;
+    }
+
     if (!strcmp(ctype, "14b v2")) {
         size_t sptr = 0;
         for (int i = 0; i < (maxdatalen / 4); i++) {
@@ -2160,6 +3576,12 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         goto out;
     }
 
+    // Nothing above claimed this file. Falling through to `out` used to return
+    // PM3_SUCCESS with datalen 0, which reads to the caller as "loaded, empty".
+    PrintAndLogEx(ERR, "loadFileJSONex: unsupported FileType `" _YELLOW_("%s") "`", ctype);
+    PrintAndLogEx(HINT, "Hint: the file may have been written by a newer client version");
+    retval = PM3_EFILE;
+
 out:
     if (callback != NULL) {
         (*callback)(root);
@@ -2218,6 +3640,8 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
     return loadFileDICTIONARYEx(preferredName, data, 0, datalen, keylen, keycnt, 0, NULL, true);
 }
 
+// this function handles exceptional large dictionaries,
+// using start position and end position parameters.
 int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, uint8_t keylen, uint32_t *keycnt,
                          size_t startFilePosition, size_t *endFilePosition, bool verbose) {
 
@@ -2243,17 +3667,17 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
     int retval = PM3_SUCCESS;
 
     FILE *f = fopen(path, "r");
-    if (!f) {
+    if (f == NULL) {
         PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
-        retval = PM3_EFILE;
-        goto out;
+        free(path);
+        return PM3_EFILE;
     }
 
     if (startFilePosition) {
         if (fseek(f, startFilePosition, SEEK_SET) < 0) {
             fclose(f);
-            retval = PM3_EFILE;
-            goto out;
+            free(path);
+            return PM3_EFILE;
         }
     }
 
@@ -2261,6 +3685,7 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
 
     // read file
     while (!feof(f)) {
+
         long filepos = ftell(f);
 
         if (!fgets(line, sizeof(line), f)) {
@@ -2270,13 +3695,20 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
             break;
         }
 
-        // add null terminator
-        line[keylen] = 0;
-
         // smaller keys than expected is skipped
         if (strlen(line) < keylen) {
             continue;
         }
+
+        // a longer run of hex than asked for is a key of a different size, not
+        // this key with something appended.  A comment or trailing whitespace
+        // after the key is still fine
+        if (isxdigit((unsigned char)line[keylen])) {
+            continue;
+        }
+
+        // add null terminator
+        line[keylen] = 0;
 
         // The line start with # is comment, skip
         if (line[0] == '#') {
@@ -2318,7 +3750,7 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
     if (keycnt) {
         *keycnt = vkeycnt;
     }
-out:
+
     free(path);
     return retval;
 }
@@ -2343,12 +3775,11 @@ int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, vo
     // mf desfire == 3des3k 24 bytes
     // iclass == 8 bytes
     // default to 6 bytes.
-    if (keylen != 4 && keylen != 5 && keylen != 6 && keylen != 8 && keylen != 16 && keylen != 24) {
+    if (keylen != 4 && keylen != 5 && keylen != 6 && keylen != 8 && keylen != 12 && keylen != 16 && keylen != 24) {
         keylen = 6;
     }
 
-    size_t mem_size;
-    size_t block_size = 10 * keylen;
+    size_t block_size = 1000 * keylen;
 
     // double up since its chars
     keylen <<= 1;
@@ -2358,13 +3789,14 @@ int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, vo
     // allocate some space for the dictionary
     *pdata = calloc(block_size, sizeof(uint8_t));
     if (*pdata == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(path);
         return PM3_EFILE;
     }
-    mem_size = block_size;
+    size_t mem_size = block_size;
 
     FILE *f = fopen(path, "r");
-    if (!f) {
+    if (f == NULL) {
         PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
         retval = PM3_EFILE;
         goto out;
@@ -2377,15 +3809,19 @@ int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, vo
         if ((*keycnt * (keylen >> 1)) >= mem_size) {
 
             mem_size += block_size;
-            *pdata = realloc(*pdata, mem_size);
 
-            if (*pdata == NULL) {
+            uint8_t *tmp = (uint8_t *)realloc(*pdata, mem_size);
+            if (tmp == NULL) {
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
+                free(*pdata);
+                *pdata = NULL;
                 retval = PM3_EFILE;
                 fclose(f);
                 goto out;
-            } else {
-                memset((uint8_t *)*pdata + (mem_size - block_size), 0, block_size);
             }
+
+            *pdata = tmp;
+            memset((uint8_t *)*pdata + (mem_size - block_size), 0, block_size);
         }
 
         // The line start with # is comment, skip
@@ -2395,6 +3831,7 @@ int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, vo
 
         // remove newline/linefeed
         str_cleanrn(line, strlen(line));
+        str_trim(line);
 
         // smaller keys than expected is skipped
         if (strlen(line) < keylen) {
@@ -2412,6 +3849,7 @@ int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, vo
 
         // larger keys than expected is skipped
         if (strlen(line) > keylen) {
+            PrintAndLogEx(INFO, "too long line (%zu) ... %s", strlen(line), line);
             continue;
         }
 
@@ -2419,10 +3857,9 @@ int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, vo
             continue;
         }
 
-        if (hex_to_bytes(
-                    line,
-                    (uint8_t *)*pdata + (*keycnt * (keylen >> 1)),
-                    keylen >> 1) != (keylen >> 1)) {
+        int ret = hex_to_bytes(line, (uint8_t *)*pdata + (*keycnt * (keylen >> 1)),  keylen >> 1);
+        if (ret != (keylen >> 1)) {
+            PrintAndLogEx(INFO, "hex to bytes wrong  %i", ret);
             continue;
         }
 
@@ -2441,16 +3878,16 @@ out:
     return retval;
 }
 
-int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya, void **keyb, size_t *alen, size_t *blen) {
+int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya, void **keyb, size_t *alen, size_t *blen, bool verbose) {
 
     char *path;
     int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, suffix, false);
     if (res != PM3_SUCCESS) {
-        return PM3_EFILE;
+        return PM3_ENOFILE;
     }
 
     FILE *f = fopen(path, "rb");
-    if (!f) {
+    if (f == NULL) {
         PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
         free(path);
         return PM3_EFILE;
@@ -2473,7 +3910,7 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
 
     *keya = calloc(fsize, sizeof(uint8_t));
     if (*keya == NULL) {
-        PrintAndLogEx(FAILED, "error, cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         fclose(f);
         free(path);
         return PM3_EMALLOC;
@@ -2483,7 +3920,7 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
 
     *keyb = calloc(fsize, sizeof(uint8_t));
     if (*keyb == NULL) {
-        PrintAndLogEx(FAILED, "error, cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         fclose(f);
         free(*keya);
         free(path);
@@ -2493,7 +3930,9 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
     *blen = fread(*keyb, 1, fsize, f);
     fclose(f);
 
-    PrintAndLogEx(SUCCESS, "Loaded binary key file `" _YELLOW_("%s") "`", path);
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "Loaded binary key file `" _YELLOW_("%s") "`", path);
+    }
     free(path);
     return PM3_SUCCESS;
 }
@@ -2568,7 +4007,7 @@ int detect_nfc_dump_format(const char *preferredName, nfc_df_e *dump_type, bool 
     }
 
     FILE *f = fopen(path, "r");
-    if (!f) {
+    if (f == NULL) {
         PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
         free(path);
         return PM3_EFILE;
@@ -2595,7 +4034,10 @@ int detect_nfc_dump_format(const char *preferredName, nfc_df_e *dump_type, bool 
         str_cleanrn(line, sizeof(line));
         str_lower(line);
 
-        if (str_startswith(line, "device type: ntag")) {
+        // older Flipper files name the exact chip, the current format writes
+        // the family name instead
+        if (str_startswith(line, "device type: ntag") ||
+                str_startswith(line, "device type: mifare ultralight")) {
             *dump_type = NFC_DF_MFU;
             break;
         }
@@ -2617,6 +4059,10 @@ int detect_nfc_dump_format(const char *preferredName, nfc_df_e *dump_type, bool 
         }
         if (str_startswith(line, "device type: iso14443-4a")) {
             *dump_type = NFC_DF_14_4A;
+            break;
+        }
+        if (str_startswith(line, "device type: iso15693")) {
+            *dump_type = NFC_DF_15;
             break;
         }
         if (str_startswith(line, "filetype: flipper picopass device")) {
@@ -2651,6 +4097,9 @@ int detect_nfc_dump_format(const char *preferredName, nfc_df_e *dump_type, bool 
             case NFC_DF_PICOPASS:
                 PrintAndLogEx(INFO, "Detected PICOPASS based dump format");
                 break;
+            case NFC_DF_15:
+                PrintAndLogEx(INFO, "Detected ISO15693 based dump format");
+                break;
             case NFC_DF_UNKNOWN:
                 PrintAndLogEx(WARNING, "Failed to detected dump format");
                 break;
@@ -2663,6 +4112,7 @@ static int convert_plain_mfu_dump(uint8_t **dump, size_t *dumplen, bool verbose)
 
     mfu_dump_t *mfu = (mfu_dump_t *) calloc(sizeof(mfu_dump_t), sizeof(uint8_t));
     if (mfu == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -2700,6 +4150,7 @@ static int convert_old_mfu_dump(uint8_t **dump, size_t *dumplen, bool verbose) {
 
     mfu_dump_t *mfu_dump = (mfu_dump_t *) calloc(sizeof(mfu_dump_t), sizeof(uint8_t));
     if (mfu_dump == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -2750,6 +4201,127 @@ int convert_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose) {
     }
 }
 
+// Every iso15_tag_t revision carries the same fields in the same order and
+// differs only in the width of pagesCount and the length of locks[]. A .bin has
+// no version field, so its length is its version -- and a conversion is a matter
+// of reading the fields at the right offsets, not one struct type per revision.
+//
+//    bytes   pagesCount   locks[]   note
+//    2139    u8           0x40
+//    2235    u8           0xA0      ISO15_V4_DUMP_LENGTH, iso15_tag_v4_t
+//    2236    u16          0xA0      pagesCount widened first
+//    2331    u16          0xFF      then locks[], briefly to 0xFF
+//    2332    u16          0x100     ISO15_V5_DUMP_LENGTH, the current struct
+//
+// The two lengths that have a struct to compare against are asserted below, so a
+// future edit to iso15_tag_t cannot drift away from this table unnoticed.
+_Static_assert(sizeof(iso15_tag_t) == ISO15_V5_DUMP_LENGTH, "iso15_tag_t is not ISO15_V5_DUMP_LENGTH bytes");
+_Static_assert(sizeof(iso15_tag_v4_t) == ISO15_V4_DUMP_LENGTH, "iso15_tag_v4_t is not ISO15_V4_DUMP_LENGTH bytes");
+
+static const struct {
+    size_t len;
+    uint8_t pagescount_sz;
+    uint16_t locks_sz;
+} g_iso15_layouts[] = {
+    { 2139,                 1, 0x40  },
+    { ISO15_V4_DUMP_LENGTH, 1, 0xA0  },
+    { 2236,                 2, 0xA0  },
+    { 2331,                 2, 0xFF  },
+    { ISO15_V5_DUMP_LENGTH, 2, 0x100 },
+};
+
+// Upgrades a raw iso15_tag_t dump to the current struct revision. A dump that
+// already is the current revision passes through untouched, so this is safe to
+// call on any buffer that came out of pm3_load_dump().
+int convert_15_dump_format(uint8_t **dump, size_t *dumplen, bool verbose) {
+
+    if ((dump == NULL) || (*dump == NULL) || (dumplen == NULL)) {
+        return PM3_EINVARG;
+    }
+
+    if (*dumplen == ISO15_V5_DUMP_LENGTH) {
+        return PM3_SUCCESS;
+    }
+
+    size_t n = 0;
+    for (; n < ARRAYLEN(g_iso15_layouts); n++) {
+        if (g_iso15_layouts[n].len == *dumplen) {
+            break;
+        }
+    }
+
+    if (n == ARRAYLEN(g_iso15_layouts)) {
+        PrintAndLogEx(FAILED, "Unsupported ISO15693 dump length ( %zu bytes )", *dumplen);
+        PrintAndLogEx(HINT, "Hint: known lengths are 2139, %d, 2236, 2331 and %d bytes"
+                      , ISO15_V4_DUMP_LENGTH
+                      , ISO15_V5_DUMP_LENGTH
+                     );
+        return PM3_ESOFT;
+    }
+
+    uint8_t pagescount_sz = g_iso15_layouts[n].pagescount_sz;
+    uint16_t locks_sz = g_iso15_layouts[n].locks_sz;
+
+    iso15_tag_t *tag = (iso15_tag_t *)calloc(1, sizeof(iso15_tag_t));
+    if (tag == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    const uint8_t *old = *dump;
+    size_t o = 0;
+
+    memcpy(tag->uid, old + o, sizeof(tag->uid));
+    o += sizeof(tag->uid);
+
+    tag->dsfid = old[o++];
+    tag->dsfidLock = (old[o++] != 0);
+    tag->afi = old[o++];
+    tag->afiLock = (old[o++] != 0);
+    tag->bytesPerPage = old[o++];
+
+    tag->pagesCount = old[o];
+    if (pagescount_sz == 2) {
+        tag->pagesCount |= (old[o + 1] << 8);
+    }
+    o += pagescount_sz;
+
+    tag->ic = old[o++];
+
+    // a shorter locks[] leaves the tail of the current one zeroed
+    memcpy(tag->locks, old + o, MIN(locks_sz, sizeof(tag->locks)));
+    o += locks_sz;
+
+    memcpy(tag->data, old + o, sizeof(tag->data));
+    o += sizeof(tag->data);
+    memcpy(tag->random, old + o, sizeof(tag->random));
+    o += sizeof(tag->random);
+    memcpy(tag->privacyPasswd, old + o, sizeof(tag->privacyPasswd));
+    o += sizeof(tag->privacyPasswd);
+
+    // the state enumerators have never been renumbered, so the value carries over
+    memcpy(&tag->state, old + o, sizeof(tag->state));
+    o += sizeof(tag->state);
+
+    tag->expectFast = (old[o++] != 0);
+    tag->expectFsk = (old[o++] != 0);
+
+    free(*dump);
+    *dump = (uint8_t *)tag;
+    *dumplen = ISO15_V5_DUMP_LENGTH;
+
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "Converted ISO15693 dump, " _YELLOW_("%zu") " byte layout -> " _GREEN_("v5")
+                      "  ( pagesCount u%u, locks[0x%X] )"
+                      , g_iso15_layouts[n].len
+                      , pagescount_sz * 8
+                      , locks_sz
+                     );
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int filelist(const char *path, const char *ext, uint8_t last, bool tentative, uint8_t indent, uint16_t strip) {
     struct dirent **namelist;
     int n;
@@ -2776,11 +4348,9 @@ static int filelist(const char *path, const char *ext, uint8_t last, bool tentat
     for (int i = 0; i < n; i++) {
 
         char tmp_fullpath[1024] = {0};
-        strncat(tmp_fullpath, path, sizeof(tmp_fullpath) - 1);
-        tmp_fullpath[1023] = 0x00;
-        strncat(tmp_fullpath, namelist[i]->d_name, strlen(tmp_fullpath) - 1);
+        snprintf(tmp_fullpath, sizeof(tmp_fullpath), "%s%s", path, namelist[i]->d_name);
 
-        if (is_directory(tmp_fullpath)) {
+        if (path_is_directory(tmp_fullpath)) {
 
             char newpath[1024];
             if (strcmp(namelist[i]->d_name, ".") == 0 || strcmp(namelist[i]->d_name, "..") == 0)
@@ -2846,6 +4416,7 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
     // explicit absolute (/) or relative path (./) => try only to match it directly
     char *filename = calloc(strlen(searchname) + 1, sizeof(char));
     if (filename == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -2873,6 +4444,10 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
     // try the session paths
     PrintAndLogEx(DEBUG, "Searching preferences paths");
     for (int i = 0; i < spItemCount; i++) {
+
+        if (g_session.defaultPaths[i] == NULL) {
+            continue;
+        }
 
         size_t sn = strlen(g_session.defaultPaths[i]) + strlen(filename) + strlen(PATHSEP) + 1;
         char *default_path = calloc(sn, sizeof(char));
@@ -3031,32 +4606,161 @@ out:
 
 int searchFile(char **foundpath, const char *pm3dir, const char *searchname, const char *suffix, bool silent) {
 
-    if (foundpath == NULL)
+    if (foundpath == NULL) {
         return PM3_EINVARG;
+    }
 
-    if (searchname == NULL || strlen(searchname) == 0)
+    if (searchname == NULL || strlen(searchname) == 0) {
         return PM3_EINVARG;
-
-    if (is_directory(searchname))
-        return PM3_EINVARG;
+    }
 
     char *filename = filenamemcopy(searchname, suffix);
-    if (filename == NULL)
+    if (filename == NULL) {
         return PM3_EMALLOC;
+    }
 
     if (strlen(filename) == 0) {
         free(filename);
         return PM3_EFILE;
     }
 
-    int res = searchFinalFile(foundpath, pm3dir, filename, silent);
-    if (res != PM3_SUCCESS) {
-        if ((res == PM3_EFILE) && (!silent)) {
-            PrintAndLogEx(FAILED, "Error - can't find `" _YELLOW_("%s") "`", filename);
+    if (path_is_directory(filename)) {
+        free(filename);
+        return PM3_EINVARG;
+    }
+
+    // the given name already carries an extension of its own, ie `-f dump.mfd`
+    // while the caller asks for ".bin".  Honour what the user typed before
+    // falling back to dump.mfd.bin
+    int res = PM3_EFILE;
+    char *asis = NULL;
+    if (path_has_extension(searchname) && (str_endswith(searchname, suffix) == false)) {
+
+        asis = filenamemcopy(searchname, "");
+        if (asis == NULL) {
+            free(filename);
+            return PM3_EMALLOC;
+        }
+
+        if ((strlen(asis) == 0) || path_is_directory(asis)) {
+            free(asis);
+            asis = NULL;
+        } else {
+            res = searchFinalFile(foundpath, pm3dir, asis, silent);
         }
     }
+
+    if (res != PM3_SUCCESS) {
+        res = searchFinalFile(foundpath, pm3dir, filename, silent);
+    }
+
+    if (res != PM3_SUCCESS) {
+        if ((res == PM3_EFILE) && (!silent)) {
+            if (asis != NULL) {
+                PrintAndLogEx(FAILED, "Error - can't find `" _YELLOW_("%s") "` nor `" _YELLOW_("%s") "`", asis, filename);
+            } else {
+                PrintAndLogEx(FAILED, "Error - can't find `" _YELLOW_("%s") "`", filename);
+            }
+        }
+    }
+
+    free(asis);
     free(filename);
     return res;
+}
+
+/**
+ * Inserts a line into a text file only if it does not already exist.
+ * Returns PM3_SUCCES or, PM3_EFILE;
+ *
+ * @param filepath Path to the file.
+ * @param keystr     Line to insert (should not contain a trailing newline).
+ */
+int insert_line_if_not_exists(const char *preferredName, const char *keystr) {
+
+    char *path;
+    int res = searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic", false);
+    if (res != PM3_SUCCESS) {
+        return PM3_EFILE;
+    }
+
+    FILE *f = fopen(path, "r");
+    if (f == NULL) {
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
+        free(path);
+        return PM3_EFILE;
+    }
+
+    // Maximum line length we assume (adjust as necessary for your use case)
+    char line[255];
+    bool key_exists = false;
+
+    char *keystrdup = str_dup(keystr);
+    str_upper(keystrdup);
+
+    // First pass: check if the line exists
+    while (fgets(line, sizeof(line), f)) {
+
+        // The line start with # is comment, skip
+        if (line[0] == '#') {
+            continue;
+        }
+
+        // Remove trailing newline for comparison
+        line[strcspn(line, "\n")] = '\0';
+
+        // UPPER CASE
+        str_upper(line);
+
+        key_exists = str_startswith(line, keystrdup);
+        if (key_exists) {
+            fclose(f);
+            free(path);
+            PrintAndLogEx(INFO, "already in there...");
+            return PM3_SUCCESS;
+        }
+    }
+
+    fclose(f);
+
+
+    // Reopen for appending if line doesn't exist
+    f = fopen(path, "a");
+    if (f == NULL) {
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
+        free(path);
+        return PM3_EFILE;
+    }
+
+    free(path);
+
+    // Append the line with a newline
+    if (fprintf(f, "%s\n", keystrdup) < 0) {
+        PrintAndLogEx(WARNING, "error writing to file");
+        fclose(f);
+        return PM3_EFILE;
+    }
+
+    fclose(f);
+    return PM3_SUCCESS;
+}
+
+static int load_dump_check_len(const char *fn, void **pdump, size_t *dumplen, size_t maxdumplen) {
+    if (*dumplen <= maxdumplen) {
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(FAILED, "`" _YELLOW_("%s") "` is %zu bytes, expected at most %zu"
+                  , fn
+                  , *dumplen
+                  , maxdumplen
+                 );
+    PrintAndLogEx(HINT, "Hint: the file may come from a different client version, or not be a dump of this tag type");
+
+    free(*pdump);
+    *pdump = NULL;
+    *dumplen = 0;
+    return PM3_EFILE;
 }
 
 int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumplen) {
@@ -3066,22 +4770,22 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
     switch (dt) {
         case BIN: {
             res = loadFile_safe(fn, ".bin", pdump, dumplen);
-            if (res == PM3_SUCCESS && *dumplen > maxdumplen) {
-                *dumplen = maxdumplen;
+            if (res == PM3_SUCCESS) {
+                res = load_dump_check_len(fn, pdump, dumplen, maxdumplen);
             }
             break;
         }
         case EML: {
             res = loadFileEML_safe(fn, pdump, dumplen);
-            if (res == PM3_SUCCESS && *dumplen > maxdumplen) {
-                *dumplen = maxdumplen;
+            if (res == PM3_SUCCESS) {
+                res = load_dump_check_len(fn, pdump, dumplen, maxdumplen);
             }
             break;
         }
         case JSON: {
             *pdump = calloc(maxdumplen, sizeof(uint8_t));
             if (*pdump == NULL) {
-                PrintAndLogEx(WARNING, "fail, cannot allocate memory");
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
                 return PM3_EMALLOC;
             }
 
@@ -3105,11 +4809,12 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
         }
         case MCT: {
             res = loadFileMCT_safe(fn, pdump, dumplen);
-            if (res == PM3_SUCCESS && *dumplen > maxdumplen) {
-                *dumplen = maxdumplen;
+            if (res == PM3_SUCCESS) {
+                res = load_dump_check_len(fn, pdump, dumplen, maxdumplen);
             }
             break;
         }
+        case BRUCE:
         case FLIPPER: {
             nfc_df_e dumptype = NFC_DF_UNKNOWN;
             res = detect_nfc_dump_format(fn, &dumptype, true);
@@ -3117,11 +4822,11 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
                 break;
             }
 
-            if (dumptype == NFC_DF_MFC || dumptype == NFC_DF_MFU || dumptype == NFC_DF_PICOPASS) {
+            if (dumptype == NFC_DF_MFC || dumptype == NFC_DF_MFU || dumptype == NFC_DF_PICOPASS || dumptype == NFC_DF_15) {
 
                 *pdump = calloc(maxdumplen, sizeof(uint8_t));
                 if (*pdump == NULL) {
-                    PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+                    PrintAndLogEx(WARNING, "Failed to allocate memory");
                     return PM3_EMALLOC;
                 }
                 res = loadFileNFC_safe(fn, *pdump, maxdumplen, dumplen, dumptype);
@@ -3142,8 +4847,33 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
             }
             break;
         }
+        case TAGINFO: {
+            //res = loadFileXML_safe(fn, ".xml", pdump, dumplen);
+            break;
+        }
     }
     return res;
+}
+
+// Saves a dump as JSON only, no .bin alongside.
+//
+// For ISO15693 the .bin is the raw iso15_tag_t, and its only identity on disk is
+// its length. Nothing in the file says which struct revision wrote it or what
+// the block size is -- you have to already know the layout to find the field
+// that tells you. Every past change to the struct therefore turned older .bin
+// files into silently misparsed ones. The JSON names every field, so it survives
+// the next change. Reading .bin stays supported, writing it does not.
+int pm3_save_dump_json(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
+    if (fn == NULL || strlen(fn) == 0) {
+        return PM3_EINVARG;
+    }
+    if (d == NULL || n == 0) {
+        PrintAndLogEx(INFO, "No data to save, skipping...");
+        return PM3_EINVARG;
+    }
+
+    saveFileJSON(fn, jsft, d, n, NULL);
+    return PM3_SUCCESS;
 }
 
 int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
@@ -3154,8 +4884,23 @@ int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
         PrintAndLogEx(INFO, "No data to save, skipping...");
         return PM3_EINVARG;
     }
+
     saveFile(fn, ".bin", d, n);
     saveFileJSON(fn, jsft, d, n, NULL);
+    return PM3_SUCCESS;
+}
+
+int pm3_save_dump_cb(const char *fn, uint8_t *d, size_t n, JSONFileType jsft, void (*callback)(json_t *)) {
+    if (fn == NULL || strlen(fn) == 0) {
+        return PM3_EINVARG;
+    }
+    if (d == NULL || n == 0) {
+        PrintAndLogEx(INFO, "No data to save, skipping...");
+        return PM3_EINVARG;
+    }
+
+    saveFile(fn, ".bin", d, n);
+    saveFileJSON(fn, jsft, d, n, callback);
     return PM3_SUCCESS;
 }
 
@@ -3206,4 +4951,3 @@ int pm3_save_fm11rf08s_nonces(const char *fn, iso14a_fm11rf08s_nonces_with_data_
     }
     return PM3_SUCCESS;
 }
-

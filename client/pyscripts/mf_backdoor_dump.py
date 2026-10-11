@@ -22,18 +22,18 @@ for bk, sz in BACKDOOR_KEYS:
     p.console(f"hf mf ecfill --{sz} -c 4 -k {bk}")
     output = p.grabbed_output.split('\n')
 
-    if "[#] Card not found" in output:
+    if any("Card not found" in output_line for output_line in output):
         print("Error reading the tag:")
         print("\n".join(output))
         break
-    elif "[-] Fill ( fail )" in output:
+    elif any("Fill ( fail )" in output_line for output_line in output):
         continue
-    elif "[+] Fill ( ok )" not in output:
-        print("Unexpected output, exiting:")
-        print("\n".join(output))
+    elif any("Fill ( ok )" in output_line for output_line in output):
+        WORKING_KEY = bk
         break
     else:
-        WORKING_KEY = bk
+        print("Unexpected output, exiting:")
+        print("\n".join(output))
         break
 
 if WORKING_KEY is None:
@@ -41,4 +41,4 @@ if WORKING_KEY is None:
 else:
     print(f"Backdoor key {WORKING_KEY} seems to work, dumping data...")
     print("IMPORTANT: Only data blocks and access bytes can be dumped; keys will be shown as all 0's")
-    p.console(f"hf mf eview --{sz}", True)
+    p.console(f"hf mf eview --{sz}", quiet=False)

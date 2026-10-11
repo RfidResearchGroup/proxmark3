@@ -24,7 +24,7 @@
 
 #define PROXPROMPT_MAX_SIZE 255
 
-#define PROXPROMPT_COMPOSE "[" "%s%s%s" "] pm3 --> "
+#define PROXPROMPT_COMPOSE "[" "%s%s%s" "] %s --> "
 
 #define PROXPROMPT_CTX_SCRIPTFILE  "|" _RL_GREEN_("script")
 #define PROXPROMPT_CTX_SCRIPTCMD   "|" _RL_GREEN_("script")
@@ -60,6 +60,7 @@ extern "C" {
 #endif
 
 int push_cmdscriptfile(char *path, bool stayafter);
+int flash_pm3(char *serial_port_name, uint8_t num_files, const char *filenames[], bool can_write_bl, bool force);
 const char *get_my_executable_path(void);
 const char *get_my_executable_directory(void);
 const char *get_my_user_directory(void);

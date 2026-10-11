@@ -25,13 +25,14 @@
 #include "standalone.h"
 #include "proxmark3_arm.h"
 #include "appmain.h"
-#include "fpgaloader.h"
+#include "fpga_apis.h"
+#include "fpga_loader.h"
 #include "util.h"
 #include "dbprint.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "lfops.h"
+#include "commonutil.h"    // ARRAYLEN
 
-#define ARRAYLEN(x) (sizeof(x) / sizeof((x)[0]))
 #define MAX_IND 4
 
 void LED_Slot(int i);

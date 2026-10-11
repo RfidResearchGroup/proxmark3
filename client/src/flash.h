@@ -23,7 +23,6 @@
 #include "elf.h"
 
 #define FLASH_MAX_FILES 4
-#define ONE_KB 1024
 
 typedef struct {
     void *data;
@@ -36,17 +35,26 @@ typedef struct {
     uint8_t *elf;
     Elf32_Phdr_t *phdrs;
     uint16_t num_phdrs;
+    struct version_information_t *ver_info; // point to an address in *elf, no need to free.
     int can_write_bl;
     int num_segs;
     flash_seg_t *segments;
 } flash_file_t;
 
-int flash_load(flash_file_t *ctx, bool force);
-int flash_prepare(flash_file_t *ctx, int can_write_bl, int flash_size);
-int flash_start_flashing(int enable_bl_writes, char *serial_port_name, uint32_t *max_allowed);
+typedef struct {
+    uint32_t chiptype; // see: main_chip_type_t
+    uint32_t block_size;
+    uint32_t flash_start;
+    uint32_t flash_end;
+    uint32_t boot_size; // Boot must be at the top of the flash, so flash_start is boot_start.
+    uint32_t boot_end;
+} flash_dev_t;
+
 int flash_reboot_bootloader(char *serial_port_name, bool wait_appear);
-int flash_write(flash_file_t *ctx);
+int flash_load(flash_file_t *ctx, bool force);
+int flash_prepare(flash_file_t *ctx, int can_write_bl, flash_dev_t *flash_dev);
+int flash_start_flashing(int enable_bl_writes, char *serial_port_name, flash_dev_t *flash_dev, flash_file_t *files, uint8_t num_files);
+int flash_write(flash_file_t *ctx, flash_dev_t *flash_dev);
 void flash_free(flash_file_t *ctx);
 int flash_stop_flashing(void);
 #endif
-

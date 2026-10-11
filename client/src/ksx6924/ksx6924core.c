@@ -97,7 +97,7 @@ typedef struct {
    }; \
    const char* KSX6924Lookup ## NAME ( \
          KEY_TYPE key, const char* defaultValue) { \
-      struct _ksx6924_enum_ ## KEY_TYPE *r = bsearch( \
+      const struct _ksx6924_enum_ ## KEY_TYPE *r = bsearch( \
          &key, KSX6924_ENUM_ ## NAME, \
          ARRAYLEN(KSX6924_ENUM_ ## NAME), \
          sizeof(KSX6924_ENUM_ ## NAME [0]), \

@@ -1,0 +1,2162 @@
+[
+  {
+    "name": "Google Pixel 3",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007001",
+    "sources": [
+      "https://raw.githubusercontent.com/TheMuppets/proprietary_vendor_google/7bc30dbbb0f010a9d2c8b77285ad7f99089a716f/blueline/proprietary/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 3 XL",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007002",
+    "sources": [
+      "https://raw.githubusercontent.com/TheMuppets/proprietary_vendor_google/7bc30dbbb0f010a9d2c8b77285ad7f99089a716f/crosshatch/proprietary/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 3a XL",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007003",
+    "sources": [
+      "https://raw.githubusercontent.com/TheMuppets/proprietary_vendor_google/7bc30dbbb0f010a9d2c8b77285ad7f99089a716f/bonito/proprietary/product/etc/felica/common.cfg",
+      "https://gitlab.com/Android-Dumps/google/bonito/-/raw/af378178a63a66ee1a7e535fddff740f2d52bf31/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 3a",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007004",
+    "sources": [
+      "https://raw.githubusercontent.com/TheMuppets/proprietary_vendor_google/7bc30dbbb0f010a9d2c8b77285ad7f99089a716f/sargo/proprietary/product/etc/felica/common.cfg",
+      "https://gitlab.com/Android-Dumps/google/sargo/-/raw/252c35161f17cee2ae12b17b2f81952a6ec9ab23/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 4 XL",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007005",
+    "sources": [
+      "https://raw.githubusercontent.com/TheMuppets/proprietary_vendor_google/7bc30dbbb0f010a9d2c8b77285ad7f99089a716f/coral/proprietary/product/etc/felica/common.cfg",
+      "https://gitlab.com/Android-Dumps/google/coral/-/raw/1228599f98b375349130a424658b560803167cf5/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 4",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007006",
+    "sources": [
+      "https://raw.githubusercontent.com/TheMuppets/proprietary_vendor_google/7bc30dbbb0f010a9d2c8b77285ad7f99089a716f/flame/proprietary/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 4a",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007007",
+    "sources": [
+      "https://raw.githubusercontent.com/leddaz-dump-stash/google_sunfish_dump/5aeffe419aa1e98ecd716507b62f696c61a38458/product/etc/felica/common.cfg",
+      "https://gitlab.com/Android-Dumps/google/sunfish/-/raw/db5ef689bed531c9ed6a2a6432b01873b9a071f4/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 4a (5G)",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007008",
+    "sources": [
+      "https://raw.githubusercontent.com/TheMuppets/proprietary_vendor_google/7bc30dbbb0f010a9d2c8b77285ad7f99089a716f/bramble/proprietary/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 5",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007009",
+    "sources": [
+      "https://raw.githubusercontent.com/leddaz-dump-stash/google_redfin_dump/db6aeb0b463c9b47cfa55ce41dd2bb5622bd9499/product/etc/felica/common.cfg",
+      "https://gitlab.com/nateomg187/google_redfin_dump_30350/-/raw/63b920cb427219096c441f5644cd01652fce2af1/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 5a (5G)",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007010",
+    "sources": [
+      "https://raw.githubusercontent.com/TheMuppets/proprietary_vendor_google/7bc30dbbb0f010a9d2c8b77285ad7f99089a716f/barbet/proprietary/product/etc/felica/common.cfg",
+      "https://gitlab.com/Android-Dumps/google/barbet/-/raw/257551769079a62e572b5107463a79dadab3591c/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 6",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007011",
+    "sources": [
+      "https://raw.githubusercontent.com/TheMuppets/proprietary_vendor_google_oriole/aaf170e50b1f9a7bffdf08bc5a13be7598bd7311/proprietary/product/etc/felica/common.cfg",
+      "https://gitlab.com/Van-Firmware-Dumps/google/oriole/-/raw/fddcecbe75f1623c91f6a7cf0630797260ecb176/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 6 Pro",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007012",
+    "sources": [
+      "https://raw.githubusercontent.com/TheMuppets/proprietary_vendor_google_raven/e59f76dc7fc2df0c81a48beb5f934082cce1278c/proprietary/product/etc/felica/common.cfg",
+      "https://gitlab.com/Van-Firmware-Dumps/google/raven/-/raw/69ccbe9ab9c0f8d8639420bf25df84b3f4937c65/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 6a",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007014",
+    "sources": [
+      "https://raw.githubusercontent.com/Klozz/google_bluejay_dump/a5268397676544f2236b3b83a7dd7cc01d537041/product/etc/felica/common.cfg",
+      "https://gitlab.com/Van-Firmware-Dumps/google/bluejay/-/raw/64b6c44fffe2c9647ce346d81a5a69cd88e2e299/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 7",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007015",
+    "sources": [
+      "https://raw.githubusercontent.com/Klozz/google_panther_dump/fd7027dd250f2aa6236627ee5ca19d288e268cd6/product/etc/felica/common.cfg",
+      "https://gitlab.com/Van-Firmware-Dumps/google/panther/-/raw/a84bbbe80b9696df85739b42d8aeaa93991e720e/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 7 Pro",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007016",
+    "sources": [
+      "https://raw.githubusercontent.com/TheMuppets/proprietary_vendor_google_cheetah/4d5a8741da365bb99e46956b19b3694001b9018a/proprietary/product/etc/felica/common.cfg",
+      "https://gitlab.com/Van-Firmware-Dumps/google/cheetah/-/raw/9abc4494928dbb01c61669a52fc3eb32b7211267/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 7a",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007017",
+    "sources": [
+      "https://raw.githubusercontent.com/TheMuppets/proprietary_vendor_google_lynx/0ef7cc270c7eb1a016a3e15b485edf1eb82ec4c9/proprietary/product/etc/felica/common.cfg",
+      "https://gitlab.com/Van-Firmware-Dumps/google/lynx/-/raw/88cc31abd09c1286f13910b116ea95cc565fe2e8/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel Fold",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007018",
+    "sources": [
+      "https://raw.githubusercontent.com/TheMuppets/proprietary_vendor_google_felix/f727917855e1c957eeee0ed27673bd1a712022f9/proprietary/product/etc/felica/common.cfg",
+      "https://gitlab.com/Van-Firmware-Dumps/google/felix/-/raw/805eedce0478c25eb0142162fa1b22bc1623843c/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 8 Pro",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007019",
+    "sources": [
+      "https://raw.githubusercontent.com/TheMuppets/proprietary_vendor_google_husky/0ccc8396943ef48ac99c7657d3e790ab5c2f9704/proprietary/product/etc/felica/common.cfg",
+      "https://gitlab.com/sarthaks-dumps/google/husky_005433/-/raw/9fba80274b975f4bbccb1594d75c0e6d405ceb0a/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 8",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007020",
+    "sources": [
+      "https://raw.githubusercontent.com/TheMuppets/proprietary_vendor_google_shiba/0e5433db35dd3efd8680531dd45cc9319346f71c/proprietary/product/etc/felica/common.cfg",
+      "https://gitlab.com/Van-Firmware-Dumps/google/shiba/-/raw/60b59e91c068c22fd46fc6d0f70ccc83694f77ee/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 8a",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007021",
+    "sources": [
+      "https://raw.githubusercontent.com/TheMuppets/proprietary_vendor_google_akita/ff6bd2e5251da58f29bacabeceb0d19aa7e612fd/proprietary/product/etc/felica/common.cfg",
+      "https://gitlab.com/Van-Firmware-Dumps/google/akita/-/raw/2ac9a18d2e3e04b2ab298ec207e6882347744c09/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 9 Pro Fold",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007022",
+    "sources": [
+      "https://raw.githubusercontent.com/TheMuppets/proprietary_vendor_google_comet/3d0e1bab5ceed70390c34453f9996073914751b1/proprietary/product/etc/felica/common.cfg",
+      "https://gitlab.com/Van-Firmware-Dumps/google/comet/-/raw/199bcd4ef723c0d84102dc2f2583462704de12c1/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 9 Pro XL",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007023",
+    "sources": [
+      "https://raw.githubusercontent.com/TheMuppets/proprietary_vendor_google_komodo/7b2a7a89a7605a71b61a913596b7b0320853d867/proprietary/product/etc/felica/common.cfg",
+      "https://gitlab.com/Van-Firmware-Dumps/google/komodo/-/raw/81cdbfb70db974d69b30d45e8506be4995d155ac/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 9 Pro",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007024",
+    "sources": [
+      "https://raw.githubusercontent.com/gm-stuffs/google_caiman_dump/b708779d6a8e250267332b77e220266eeb5291cf/product/etc/felica/common.cfg",
+      "https://gitlab.com/Van-Firmware-Dumps/google/caiman/-/raw/ddc2b6437a6c7ab5ce8a3253dfbee2fb80ca710d/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 9",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007025",
+    "sources": [
+      "https://raw.githubusercontent.com/TheMuppets/proprietary_vendor_google_tokay/d33a7be49517d4763d1238d715e14cf3edc9f543/proprietary/product/etc/felica/common.cfg",
+      "https://gitlab.com/Van-Firmware-Dumps/google/tokay/-/raw/d594083ef841ef08f4625b8214e8682779dcabb0/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 9a",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007026",
+    "sources": [
+      "https://raw.githubusercontent.com/gm-stuffs/google_tegu_dump/0f0ac378cde550d217949e32ca4f87240b664e1e/product/etc/felica/common.cfg",
+      "https://gitlab.com/Van-Firmware-Dumps/google/tegu/-/raw/22c27417b7c8fe97cff631a19f11c9d855dcedd6/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 10 Pro Fold",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007027",
+    "sources": [
+      "https://raw.githubusercontent.com/Jiovanni-dump/google_rango_dump/465901973be4234fb33dc205381c3653a82c1488/product/etc/felica/common.cfg",
+      "https://gitlab.com/Van-Firmware-Dumps/google/rango/-/raw/6a63ee188e1599a6b3cefb02a9cd519b92891261/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 10",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007028",
+    "sources": [
+      "https://raw.githubusercontent.com/Klozz/google_frankel_dump/0a262d9b538a2bafee7729c865122559f8ee38be/product/etc/felica/common.cfg",
+      "https://gitlab.com/noescape-firmware-dumps/GOOGLE/frankel/-/raw/b46c6b143310ddba2c0b05928e45b49c29efe7b4/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 10 Pro",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007029",
+    "sources": [
+      "https://raw.githubusercontent.com/306bobby-android/blazer-dump/c28b401672ba002592d514eac9254b3205787ce0/product/etc/felica/common.cfg",
+      "https://gitlab.com/noescape-firmware-dumps/GOOGLE/blazer/-/raw/342aab98e32a5498fe59f0d2e91f353d8a63c44a/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 10 Pro XL",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007030",
+    "sources": [
+      "https://raw.githubusercontent.com/gm-stuffs/google_mustang_dump/12c4fb58093a30da53829e7aeb36589e3754ef9c/product/etc/felica/common.cfg",
+      "https://gitlab.com/noescape-firmware-dumps/GOOGLE/mustang/-/raw/84d26413f401519bcd3645cb88d0b7e8172748a7/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel 10a",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007031",
+    "sources": [
+      "https://raw.githubusercontent.com/SLEZxE-dumps/google_stallion_dump/28a148203a21e6ea04e19c765fb4fea232170f98/product/etc/felica/common.cfg",
+      "https://gitlab.com/noescape-firmware-dumps/GOOGLE/stallion/-/raw/6aa46b8d254d6ea095685aa170726c53f2a112af/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel Watch (LTE)",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A01001",
+    "sources": [
+      "https://raw.githubusercontent.com/leddaz-dump-stash/google_r11_dump/0a6e8628cfe1dc702c462fa689d5f9b2bbb143e9/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel Watch (WiFi)",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A01002",
+    "sources": [
+      "https://raw.githubusercontent.com/leddaz-dump-stash/google_r11btwifi_dump/692106268dec4af1a81a97fbe7403e760a56d2a5/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel Watch 2 (WiFi)",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A01003",
+    "sources": [
+      "https://raw.githubusercontent.com/leddaz-dump-stash/google_aurora_dump/b441e0de94920ad509e4258bf98383d687bc38b2/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel Watch 2 (LTE)",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A01004",
+    "sources": [
+      "https://raw.githubusercontent.com/leddaz-dump-stash/google_eos_dump/3f7a5d367a7442afd601e8721a650fcf7d103e12/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel Watch 3 (LTE, 41/45)",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A01005",
+    "sources": [
+      "https://raw.githubusercontent.com/WOA-Project/firmware_oem_pixel_watch_seluna/6988350e6a0717fcfd497d08b3542ef3d61f24a2/extracted/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel Watch 3 (WiFi, 41/45)",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A01007",
+    "sources": [
+      "https://raw.githubusercontent.com/WOA-Project/firmware_oem_pixel_watch_solios/a22259302f6f6901a1e8f87e4fb371d5d4a96ef4/extracted/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Google Pixel Watch 4 (WiFi, 41/45)",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A01009",
+    "sources": [
+      "https://dl.google.com/dl/android/aosp/menari_btwifi-cp2a.260603.001.s1-factory-afc3f5c3.zip"
+    ]
+  },
+  {
+    "name": "Google Pixel Watch 4 (LTE, 41/45)",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A01010",
+    "sources": [
+      "https://dl.google.com/dl/android/aosp/menari_lte-cp2a.260603.001-factory-4e10d715.zip"
+    ]
+  },
+  {
+    "name": "Nothing Phone (2a) / Nothing Phone (2a) Plus",
+    "model": "A142 / A142P",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "018001",
+    "sources": [
+      "https://raw.githubusercontent.com/RandomPush/nothing_pacman_dump/084b0d9eab7eb3f4b391d2bb0a23856434d6b944/vendor/etc/felica/common.cfg",
+      "https://gitlab.com/noescape-firmware-dumps/NOTHING/PacmanPro/-/raw/b6bb108886d5317dc5095444abc4270ef8279d8b/vendor/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Nothing Phone (3a) / Nothing Phone (3a) Pro",
+    "model": "A059 / A059P",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "018002",
+    "sources": [
+      "https://raw.githubusercontent.com/leddaz-dump-stash/nothing_asteroids_dump/6c10386180c83031c983f569c3c956ebfe8a9c27/vendor/etc/felica/common.cfg",
+      "https://gitlab.com/noescape-firmware-dumps/NOTHING/Asteroids/-/raw/ff2fe7d3a8ffd74cc594309c637bc50405dfd09e/vendor/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Nothing Phone (3)",
+    "model": "A024",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "018003",
+    "sources": [
+      "https://raw.githubusercontent.com/PHATWalrus/android_vendor_nothing_metroid/8251ed72176dee64ff255247146c3da8dcb25f39/proprietary/vendor/etc/felica/common.cfg",
+      "https://gitlab.com/noescape-firmware-dumps/NOTHING/Metroid/-/raw/2e8194e858594f0bde64c257c752f5fd55720a75/vendor/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "CMF Phone 2 Pro",
+    "model": "A001",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "018004",
+    "sources": [
+      "https://gitlab.com/noescape-firmware-dumps/NOTHING/Galaga/-/raw/d1ab9154d7979dee9b72648822d338c91ee4acf4/vendor/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Nothing Phone (3a) Lite",
+    "model": "A001T",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "018005",
+    "sources": [
+      "https://gitlab.com/noescape-firmware-dumps/NOTHING/Galaxian/-/raw/564164e681b9acb84047b64e19f5eff3466060ba/vendor/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Nothing Phone (4a)",
+    "model": "A069",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "018006",
+    "sources": [
+      "https://raw.githubusercontent.com/FroggerSpace/proprietary_vendor_nothing_frogger/a0a1ee9c981601d167f63ca19b4479185d3c57f3/proprietary/vendor/etc/felica/common.cfg",
+      "https://gitlab.com/noescape-firmware-dumps/NOTHING/Frogger/-/raw/245e6bf43a7e4274bd1cfc0f1e62c35e383c9590/vendor/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Nothing Phone (4a) Pro",
+    "model": "A069P",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "018007",
+    "sources": [
+      "https://gitlab.com/noescape-firmware-dumps/NOTHING/FroggerPro/-/raw/16b603f807ba4def7df360e8a876a52a24ed5da5/vendor/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Nothing Phone (4b)",
+    "model": "A009P",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "018008",
+    "sources": [
+      "https://gitlab.com/noescape-firmware-dumps/NOTHING/SuperContra/-/raw/e1bed26916ce2cb168709a47005b2a478076e124/vendor/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Zenfone 8",
+    "model": "ZS590KS",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "014001",
+    "sources": [
+      "https://gitlab.com/Van-Firmware-Dumps/asus/ASUS_I006D/-/raw/8c31d9a0ffc75a2a45d0ed21ecafdbd2801c456f/vendor/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Zenfone 9",
+    "model": "AI2202",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "014002",
+    "sources": [
+      "https://gitlab.com/Van-Firmware-Dumps/asus/ASUS_AI2202/-/raw/692c1811829322535d6f9e9e80f44bc29c59ac36/vendor/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Zenfone 10",
+    "model": "AI2302",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "014003",
+    "sources": [
+      "https://gitlab.com/Van-Firmware-Dumps/asus/ASUS_AI2302/-/raw/f133f14e194ceb7a23aaebb3ec2c696830733b3f/vendor/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "ROG Phone 8",
+    "model": "ASUS_AI2401_C",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "014004",
+    "sources": [
+      "https://gitlab.com/Van-Firmware-Dumps/asus/ASUS_AI2401/-/raw/336c7d9256c347cf8f9b362adf301275328c28de/vendor/etc/felica/ASUS_AI2401_C/common.cfg"
+    ]
+  },
+  {
+    "name": "ROG Phone 8 Pro / Pro Edition",
+    "model": "ASUS_AI2401_D",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "014005",
+    "sources": [
+      "https://gitlab.com/Van-Firmware-Dumps/asus/ASUS_AI2401/-/raw/336c7d9256c347cf8f9b362adf301275328c28de/vendor/etc/felica/ASUS_AI2401_D/common.cfg"
+    ]
+  },
+  {
+    "name": "Zenfone 11 Ultra",
+    "model": "ASUS_AI2401_H",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "014006",
+    "sources": [
+      "https://gitlab.com/Van-Firmware-Dumps/asus/ASUS_AI2401/-/raw/336c7d9256c347cf8f9b362adf301275328c28de/vendor/etc/felica/ASUS_AI2401_H/common.cfg"
+    ]
+  },
+  {
+    "name": "ROG Phone 9",
+    "model": "ASUSAI2501B",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "014007",
+    "sources": [
+      "https://raw.githubusercontent.com/Jiovanni-dump/asus_asusai2501_dump/62f32bc581bb3ada8926e7be17dd553fc3ec8cd7/vendor/etc/felica/ASUSAI2501B/common.cfg",
+      "https://dumps.tadiphone.dev/api/v4/projects/5497/repository/files/vendor%2Fetc%2Ffelica%2FASUSAI2501B%2Fcommon.cfg/raw?ref=qssi_64-user-16-BQ2A.250525.001-36.0810.1810.43-0-release-keys"
+    ]
+  },
+  {
+    "name": "ROG Phone 9 Pro / Pro Edition",
+    "model": "ASUSAI2501C",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "014008",
+    "sources": [
+      "https://raw.githubusercontent.com/Jiovanni-dump/asus_asusai2501_dump/62f32bc581bb3ada8926e7be17dd553fc3ec8cd7/vendor/etc/felica/ASUSAI2501C/common.cfg",
+      "https://dumps.tadiphone.dev/api/v4/projects/5497/repository/files/vendor%2Fetc%2Ffelica%2FASUSAI2501C%2Fcommon.cfg/raw?ref=qssi_64-user-16-BQ2A.250525.001-36.0810.1810.43-0-release-keys"
+    ]
+  },
+  {
+    "name": "Zenfone 12 Ultra",
+    "model": "ASUSAI2501H",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "014009",
+    "sources": [
+      "https://raw.githubusercontent.com/Jiovanni-dump/asus_asusai2501_dump/62f32bc581bb3ada8926e7be17dd553fc3ec8cd7/vendor/etc/felica/ASUSAI2501H/common.cfg",
+      "https://dumps.tadiphone.dev/api/v4/projects/5497/repository/files/vendor%2Fetc%2Ffelica%2FASUSAI2501H%2Fcommon.cfg/raw?ref=qssi_64-user-16-BQ2A.250525.001-36.0810.1810.43-0-release-keys"
+    ]
+  },
+  {
+    "name": "moto g52j 5G",
+    "model": "XT2219-1",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "016001",
+    "sources": [
+      "https://raw.githubusercontent.com/nattolecats/vendor_motorola_felica/372698b86d9c5e350ed5a57b21982288357f729f/blobs/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "moto g53j 5G / moto g84 5G",
+    "model": "XT2335-5 / XT2347-2",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "016002",
+    "sources": [
+      "https://raw.githubusercontent.com/nattolecats/vendor_motorola_felica/6c37ab39705e56174f235c609ec8cddab5f5fed7/proprietary/product/etc/felica/common.cfg",
+      "https://gitlab.com/noescape-firmware-dumps/MOTOROLA/bangkk/-/raw/8920b858cfa12b6a7f5b7f20ad6f5dfa716409be/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "motorola edge 40",
+    "model": "XT2303-3",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "016003",
+    "sources": [
+      "https://raw.githubusercontent.com/motorola-lyriq-dev/motorola_lyriq_dump/14ef73dfaffc0b54c1d80a4abfd9c7fb4361e882/product/etc/felica/common.cfg",
+      "https://gitlab.com/Android-Dumps/motorola/lyriq/-/raw/12989918d43fc304ff34bc04e780ff325517b9c1/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "motorola razr 40",
+    "model": "XT2323-4",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "016004",
+    "sources": [
+      "https://gitlab.com/Van-Firmware-Dumps/motorola/lynkco/-/raw/290a3f0fc633507a50d82999e56027f7758b140f/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "moto g54 5G",
+    "model": "XT2343-4",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "016005",
+    "sources": [
+      "https://dumps.tadiphone.dev/api/v4/projects/4425/repository/files/product%2Fetc%2Ffelica%2Fcommon.cfg/raw?ref=user-13-SQ1A.220105.002-1449d9-release-keys"
+    ]
+  },
+  {
+    "name": "motorola edge 40 neo",
+    "model": "XT2307-3",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "016006",
+    "sources": [
+      "https://gitlab.com/shibushaji199818/android_dump_motorola_manaus/-/raw/35a773de64fdf7d5ad1bff16b2ca8c91ebd70e6a/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "motorola edge 50 pro",
+    "model": "XT2403-4",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "016007",
+    "sources": [
+      "https://raw.githubusercontent.com/Jiovanni-dump/motorola_eqe_dump/23a3b6d29aafb3a9aa7bf39575f5d88d0a806f0a/product/etc/felica/common.cfg",
+      "https://gitlab.com/Van-Firmware-Dumps/motorola/eqe/-/raw/ee22c20346987b74412e8c662f93d2b3e2c41526/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "moto g64 5G",
+    "model": "XT2431-3",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "016008",
+    "sources": [
+      "https://raw.githubusercontent.com/ussr1674/device_motorola_cancunf/45c5e9b10bf7e6cb4c3ba66e97420f5434943fbf/configs/felica/retjp/common.cfg",
+      "https://gitlab.com/noescape-firmware-dumps/MOTOROLA/cancunf/-/raw/4ff1e55f97a9bf87e898fb3838c22811f5ddf6c8/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "motorola razr 50",
+    "model": "XT2453-9",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "016009",
+    "sources": [
+      "https://gitlab.com/Van-Firmware-Dumps/motorola/aito/-/raw/d74f2b4de1b39d82bb8d9ca4280704eec4a797a7/product/etc/felica_aito/common.cfg"
+    ]
+  },
+  {
+    "name": "motorola razr 50 ultra",
+    "model": "XT2451-5 / A404MO",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "016010",
+    "sources": [
+      "https://mirrors.lolinet.com/firmware/lenomola/2024/arcfox/official/Softbank/XT2451-5_ARCFOX_SOFTBANK_15_V2UXS35.47-37-6-7_subsidy-DEFAULT_regulatory-DEFAULT_cid50_CFC.xml.zip",
+      "https://gitlab.com/SavedByLight/android_dump_motorola_arcfox/-/raw/c08438af5401df95711f61645d41d2f623353f9e/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "moto g66j 5G / moto g66y 5G",
+    "model": "XT2529-3 / A501MO",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "016011",
+    "sources": [
+      "https://gitlab.com/sarthaks-dumps/motorola/bogota_013100/-/raw/438efe6eec30920b032b128e75542de880a924df/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "motorola edge 60 pro",
+    "model": "XT2507-6",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "016012",
+    "sources": [
+      "https://raw.githubusercontent.com/rahulsnair/android_device_motorola_cybert/19e2a7d00a2ad1689d46bad9a0a3ee5bb5a003e2/configs/felica_docomo/common.cfg",
+      "https://gitlab.com/Van-Firmware-Dumps/motorola/cybert/-/raw/0e2b7bdb5596d0e4851f1c3654ada401f6a73aab/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "motorola razr 60",
+    "model": "XT2553-8",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "016013",
+    "sources": [
+      "https://gitlab.com/Van-Firmware-Dumps/motorola/aito/-/raw/d74f2b4de1b39d82bb8d9ca4280704eec4a797a7/product/etc/felica_aito25/common.cfg"
+    ]
+  },
+  {
+    "name": "motorola razr 60 ultra",
+    "model": "XT2551-7",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "016014",
+    "sources": [
+      "https://dumps.tadiphone.dev/api/v4/projects/5637/repository/files/product%2Fetc%2Ffelica%2Fcommon.cfg/raw?ref=user-15-VVL35V.42-60-ST3.5-f8cee2-release-keys"
+    ]
+  },
+  {
+    "name": "motorola edge 60",
+    "model": "XT2505-5",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "016015",
+    "sources": [
+      "https://gitlab.com/fw-dumps/motorola/scout/-/raw/b5579ec6b8fa682b25c148c0316bb8f5f4ab427c/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "moto g37j",
+    "model": "XT2625-9",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "016016",
+    "sources": [
+      "https://gitlab.com/Van-Firmware-Dumps/motorola/sydney/-/raw/e5f31b13b90d23e64c38e31e425afceae53089e6/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "moto g64y 5G",
+    "model": "A401MO",
+    "carrier": "Y!mobile",
+    "format_version_carrier_info": "0001000063",
+    "mobile_phone_model_info": "A401MO",
+    "sources": [
+      "https://mirrors.lolinet.com/firmware/lenomola/2024/cancunp/official/YMOBILE/XT2431-2_CANCUNF_AP_YMOBILE_15_V1TDJS35H.83-20-6-3_subsidy-DEFAULT_regulatory-DEFAULT_cid50_CFC.xml.zip",
+      "https://raw.githubusercontent.com/ussr1674/device_motorola_cancunf/45c5e9b10bf7e6cb4c3ba66e97420f5434943fbf/configs/felica/ymobile/common.cfg",
+      "https://gitlab.com/sarthaks-dumps/motorola/cancunf_030928/-/raw/7fbe014e8bcdaaa877f30ec0ed24b643e677e26d/product/etc/felica_ymobile/common.cfg"
+    ]
+  },
+  {
+    "name": "moto g53y 5G",
+    "model": "A301MO",
+    "carrier": "Y!mobile",
+    "format_version_carrier_info": "0001000063",
+    "mobile_phone_model_info": "motog53y5G",
+    "sources": [
+      "https://mirrors.lolinet.com/firmware/lenomola/2023/penang/official/Softbank/XT2335-4_PENANG_SOFTBANK_14_U1TPJS34.29-83-6-3-9_subsidy-DEFAULT_regulatory-DEFAULT_cid50_CFC.xml.zip",
+      "https://raw.githubusercontent.com/Moto-Sedona/android_device_motorola_penang/f4f3472ddf8272e827af5877e9e0cd7419969939/configs/felica_sb/common.cfg",
+      "https://gitlab.com/yoshi3jp/android_dump_motorola_penang/-/raw/5e0c869e9ab52ef265defa0c576ba976943779f2/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "motorola edge 50s pro",
+    "model": "A402MO",
+    "carrier": "SoftBank",
+    "format_version_carrier_info": "0001000063",
+    "mobile_phone_model_info": "A402MO",
+    "sources": [
+      "https://mirrors.lolinet.com/firmware/lenomola/2024/eqe/official/Softbank/XT2403-5_EQE_SOFTBANK_15_V1UMS35H.10-67-1-7_subsidy-DEFAULT_regulatory-DEFAULT_cid50_CFC.xml.zip",
+      "https://raw.githubusercontent.com/moto-sm7550-dev/android_device_motorola_eqe/a07484d38f0dd60fe4d4fc4f201ddb143987543f/configs/felica_sb/common.cfg"
+    ]
+  },
+  {
+    "name": "Mi 11 Lite 5G",
+    "model": "M2101K9R",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "013001",
+    "sources": [
+      "https://raw.githubusercontent.com/Failedmush/Vendor-xiaomi-renoir/1aa43accfae269be6e17540089cdeb2371d27415/proprietary/vendor/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Xiaomi 11T Pro",
+    "model": "2107113SR",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "013002",
+    "sources": [
+      "https://raw.githubusercontent.com/soralis0912/magisk-module-vili-jp-felica/5af6bf0e48a991004f50d948cc0e985e0fa45e09/system/vendor/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Redmi Note 10T",
+    "model": "22021119KR / A101XM",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "013003",
+    "sources": [
+      "https://raw.githubusercontent.com/soralis0912/magisk-module-lilac-jp-felica/0af9e8fcfe108366ec7145653549b5338d3fc978/system/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Redmi Note 11 Pro 5G",
+    "model": "2201116SR",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "013004",
+    "sources": [
+      "https://raw.githubusercontent.com/soralis0912/magisk-module-veux-jp-felica/42d3fa5e2532fc8c32ba69939aa5c1a47492f73b/system/vendor/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Xiaomi 12T Pro",
+    "model": "22081212R",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "013005",
+    "sources": [
+      "https://raw.githubusercontent.com/soralis0912/magisk-module-diting-jp-felica/a43621c12384008da50989b296e672e383d952ff/system/vendor/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Redmi 12 5G",
+    "model": "23076RA4BR",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "013006",
+    "sources": [
+      "https://raw.githubusercontent.com/soralis0912/magisk-module-sky-jp-felica/f751aacc6e2f3fb3a60cfcdaab58b7bd8ba7742a/system/vendor/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Redmi Note 13 Pro+ 5G",
+    "model": "24040RA98R",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "013009",
+    "sources": [
+      "https://raw.githubusercontent.com/soralis0912/magisk-module-zircon-jp-felica/37d2c443ead80f46c79d919abe9a43833f136561/system/vendor/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Xiaomi 14T Pro",
+    "model": "2407FPN8ER / A402XM",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "013010",
+    "sources": [
+      "https://raw.githubusercontent.com/Jiovanni-dump/xiaomi_mgvi_64_armv82_dump/ba38f07f459edf957af4c8e80d6fac6f6cb1bf5c/product/etc/felica/common.cfg",
+      "https://gitlab.com/clexan/firmware_dump_rothko/-/raw/881c89179945b6a741f469a10adcf3b1d6d6cc0c/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Redmi 15 5G",
+    "model": "25057RN09R / A501XM",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "013011",
+    "sources": [
+      "https://raw.githubusercontent.com/Jiovanni-dump/redmi_spring_dump/5fa9f589c0fc22638fa44f902b815f36d35473fb/product/etc/felica/common.cfg",
+      "https://gitlab.com/noescape-firmware-dumps/REDMI/spring/-/raw/b5801107ff7fe231c40cd057cbc4689a2e38a4ce/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Xiaomi 15T Pro",
+    "model": "2506BPN68R",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "013012",
+    "sources": [
+      "https://gitlab.com/Van-Firmware-Dumps/xiaomi/klimt/-/raw/7ddf57421406c1f94d858b60e060911f0e0eb7a3/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "REDMI Note 15 Pro 5G",
+    "model": "25080RABDR",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "013013",
+    "sources": [
+      "https://gitlab.com/fw-dumps/redmi/lapis/-/raw/a8e5d203daf693a9f67f774a175eb4edacd7a439/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Xiaomi 17T Pro",
+    "model": "2602EPTC0R",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "013014",
+    "sources": [
+      "https://gitlab.com/Van-Firmware-Dumps/xiaomi/warhol/-/raw/092c3884755feb765373f5b990009f9018ef4489/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Redmi Note 9T",
+    "model": "A001XM",
+    "carrier": "SoftBank",
+    "format_version_carrier_info": "0001000063",
+    "mobile_phone_model_info": "A001XM",
+    "sources": [
+      "https://raw.githubusercontent.com/soralis0912/magisk-module-canong-jp-felica/3930f4d1784ea47308f3ade670928d4154dda8e7/system/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Xiaomi 13T Pro",
+    "model": "A301XM",
+    "carrier": "SoftBank",
+    "format_version_carrier_info": "0001000063",
+    "mobile_phone_model_info": "A301XM",
+    "sources": [
+      "https://raw.githubusercontent.com/soralis0912/magisk-module-corot-jp-felica/658720b4471f58161d25e04e2862c317ea3ba8d6/system/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Redmi Note 10 JE",
+    "model": "XIG02",
+    "carrier": "au",
+    "format_version_carrier_info": "0001000062",
+    "mobile_phone_model_info": "XIG02",
+    "sources": [
+      "https://dumps.tadiphone.dev/api/v4/projects/1103/repository/files/vendor%2Fetc%2Ffelica%2Fcommon.cfg/raw?ref=missi_phoneext4_global-user-13-TKQ1.220905.001-V14.0.21.0.TKRJPKD-release-keys"
+    ]
+  },
+  {
+    "name": "Xiaomi 13T",
+    "model": "XIG04",
+    "carrier": "au",
+    "format_version_carrier_info": "0001000062",
+    "mobile_phone_model_info": "XIG04",
+    "sources": [
+      "https://raw.githubusercontent.com/soralis0912/magisk-module-aristotle-jp-felica/9b696117546c97dd462db1e1ae4d72d740d4eebf/system/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Xiaomi 14T",
+    "model": "XIG07",
+    "carrier": "au",
+    "format_version_carrier_info": "0001000062",
+    "mobile_phone_model_info": "XIG07",
+    "sources": [
+      "https://raw.githubusercontent.com/Jiovanni-dump/xiaomi_degas_dump/bd5ab231c6b514cdb870f18b4a1126c61b6cd23c/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "arrows Alpha",
+    "model": "F-51F",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000061",
+    "mobile_phone_model_info": "F51F",
+    "sources": [
+      "https://raw.githubusercontent.com/arrows-development/device_fcnt_fuji/805f5c2e8f8bdc4fbd7c7cbd5182efce4bd57ec8/configs/felica_docomo/common.cfg"
+    ]
+  },
+  {
+    "name": "arrows We2",
+    "model": "F-52E",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000061",
+    "mobile_phone_model_info": "F52E",
+    "sources": [
+      "https://raw.githubusercontent.com/nattolecats/device_fcnt_itc/8887dad4d04c6bad092ab118269ab14aee5f559b/configs/felica/docomo/common.cfg"
+    ]
+  },
+  {
+    "name": "arrows We3",
+    "model": "F-52G",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000061",
+    "mobile_phone_model_info": "F52G",
+    "sources": [
+      "https://gitlab.com/arrows-development/vendor_fcnt_sbuya/-/raw/a7e59dae8ad6da58d81bb4ff77971c3f2f9e619c/proprietary/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "arrows We2",
+    "model": "FCG02",
+    "carrier": "au",
+    "format_version_carrier_info": "0001000062",
+    "mobile_phone_model_info": "FCG02",
+    "sources": [
+      "https://raw.githubusercontent.com/nattolecats/device_fcnt_itc/8887dad4d04c6bad092ab118269ab14aee5f559b/configs/felica/kddi/common.cfg",
+      "https://gitlab.com/nattolecats/fcnt_itc_dump/-/raw/11735564fdfbaf42a78f750823d6100ac9008e79/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "arrows Alpha",
+    "model": "M08",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "002018",
+    "sources": [
+      "https://gitlab.com/arrows-development/fcnt_fuji_dump/-/raw/8bc02bf845512cf72c78dc12464c4af925fda1e3/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "arrows We2 Plus",
+    "model": "M06",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "002015",
+    "sources": [
+      "https://raw.githubusercontent.com/nattolecats/vendor_fcnt_m06/81874867580892073dec5605d892b2da16127e02/proprietary/product/etc/felica/common.cfg",
+      "https://gitlab.com/nattolecats/fcnt_m06_dump/-/raw/9f10323d0e6fbf20b2afce68743d478144f35e98/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Xperia 5",
+    "model": "J9260",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "001004",
+    "sources": [
+      "https://raw.githubusercontent.com/kazuiton/magisk-module-j9260-felica/110270f35fbd8263a9afbec9ad7bb4565ea34ac7/system/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Xperia 5 III",
+    "model": "XQ-BQ42",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "001010",
+    "sources": [
+      "https://raw.githubusercontent.com/r-ca/pdx214-osaifu/15f0596f3bcfee5931a3ee5f3601b883d1c95ab6/system/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Xperia 1 IV",
+    "model": "XQ-CT44",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "001013",
+    "sources": [
+      "https://gitlab.com/e2102/sony_pdx223_dump/-/raw/f9604323060cc39a4067424397f0aa8247266e9c/vendor/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Xperia 1",
+    "model": "802SO",
+    "carrier": "SoftBank",
+    "format_version_carrier_info": "0001000063",
+    "mobile_phone_model_info": "802SO",
+    "sources": [
+      "https://gitlab.com/AndroPlus/xperia-1-griffin-dump/-/raw/537b95fef92d1a79755fbfdcb108ec60503d85fe/system/system/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Xperia 1 V",
+    "model": "SO-51D",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000061",
+    "mobile_phone_model_info": "SO51D",
+    "sources": [
+      "https://raw.githubusercontent.com/RandomPush/docomo_pdx234_docomo_dump/04bccc9f375a67e4759815c3f72d428c96d4629f/vendor/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Xperia Ace",
+    "model": "SO-02L",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000011",
+    "mobile_phone_model_info": "SO02L",
+    "sources": [
+      "https://dumps.tadiphone.dev/api/v4/projects/4495/repository/files/system%2Fsystem%2Fetc%2Ffelica%2Fcommon.cfg/raw?ref=houou-user-9-P-GANGES-DOCOMO-190930-0911-1-dev-keys"
+    ]
+  },
+  {
+    "name": "Rakuten Mini",
+    "model": "C330",
+    "carrier": "Rakuten Mobile",
+    "format_version_carrier_info": "0001000018",
+    "mobile_phone_model_info": "008001",
+    "sources": [
+      "https://raw.githubusercontent.com/AndroPlus-org/magisk-module-c330-gsi/e2b042dc908a7af115c37382c83de69997950a3c/system/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Xperia XZ2 Compact",
+    "model": "SO-05K",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000011",
+    "mobile_phone_model_info": "SO05K",
+    "sources": [
+      "https://raw.githubusercontent.com/ROM-Dump/sony_apollo_docomo_dump/f5b75cab4c55e66314189bd5e6a9b7bcf2434c5a/system/system/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Samsung GALAXY J",
+    "model": "SC-02F",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000011",
+    "mobile_phone_model_info": "SC02F",
+    "sources": [
+      "https://raw.githubusercontent.com/linhphi9x94/MIUI8_Patchrom_Samsung_js01lte/f97b4e4669a0159187cdf9da18976e7f3749b3d9/stockrom/system/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Feel2",
+    "model": "SC-02L",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000011",
+    "mobile_phone_model_info": "SC02L",
+    "sources": [
+      "https://dumps.tadiphone.dev/api/v4/projects/5510/repository/files/system%2Fsystem%2Fetc%2Ffelica%2Fcommon.cfg/raw?ref=jackpotveltedcm-user-10-QP1A.190711.020-SC02LOMS1CVK2-release-keys"
+    ]
+  },
+  {
+    "name": "AQUOS SERIE mini",
+    "model": "SHV33",
+    "carrier": "au",
+    "format_version_carrier_info": "0001000012",
+    "mobile_phone_model_info": "03SHV33",
+    "sources": [
+      "https://raw.githubusercontent.com/JerryCheng1/AQUOS_phone_official_dump/86551fbe4c10c06355c112d4053b5961f39ddd64/system/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "AQUOS CRYSTAL X",
+    "model": "402SH",
+    "carrier": "SoftBank",
+    "format_version_carrier_info": "0001000013",
+    "mobile_phone_model_info": "402SH",
+    "sources": [
+      "https://raw.githubusercontent.com/JerryCheng1/AQUOS_phone_official_dump/651c54ff25e7dd285f67af1fb1b9ce84e5d9c3a5/system/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "AQUOS Xx / AQUOS Xx-Y",
+    "model": "404SH",
+    "carrier": "",
+    "format_version_carrier_info": "0001000013",
+    "mobile_phone_model_info": "404SH",
+    "sources": [
+      "https://raw.githubusercontent.com/JerryCheng1/AQUOS_phone_official_dump/41c238e6c76f867bc07cf9465d1a98148e1bd33f/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "AQUOS Xx2 mini",
+    "model": "503SH",
+    "carrier": "SoftBank",
+    "format_version_carrier_info": "0001000013",
+    "mobile_phone_model_info": "503SH",
+    "sources": [
+      "https://raw.githubusercontent.com/JerryCheng1/AQUOS_phone_official_dump/1b90785a8e5ec25da2b1016432e2bfdbe08db3be/system/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Disney Mobile on docomo",
+    "model": "DM-01H",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000011",
+    "mobile_phone_model_info": "DM01H",
+    "sources": [
+      "https://raw.githubusercontent.com/JerryCheng1/AQUOS_phone_official_dump/e202dd522684192a7c2c0d55838824ca3f9ebd79/system/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "AQUOS SERIE",
+    "model": "SHL25",
+    "carrier": "au",
+    "format_version_carrier_info": "0001000012",
+    "mobile_phone_model_info": "03SHL25",
+    "sources": [
+      "https://raw.githubusercontent.com/JerryCheng1/AQUOS_phone_official_dump/e375ca4896b5525dbaf53b6b8f12fa76a2923cdc/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Xperia XZ1",
+    "model": "SOV36",
+    "carrier": "au",
+    "format_version_carrier_info": "0001000012",
+    "mobile_phone_model_info": "03SOV36",
+    "sources": [
+      "https://raw.githubusercontent.com/Lycra-GX/proprietary_vendor_sony_tama-common/398b9bb4c6098320c8c7c2413d20e8a1f11f2639/proprietary/etc/felica/common.cfg",
+      "https://gitlab.com/zhz8888-Developing/sony-yoshino/vendor_sony_poplar_kddi/-/raw/7ea6afcc840c738d9863856a20c100602dfb4593/proprietary/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy S7 edge",
+    "model": "SC-02H",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000011",
+    "mobile_phone_model_info": "SC02H",
+    "sources": [
+      "https://dumps.tadiphone.dev/api/v4/projects/4662/repository/files/system%2Fetc%2Ffelica%2Fcommon.cfg/raw?ref=hero2qltedcm-user-8.0.0-R16NW-SC02HOMU1CSI1-release-keys"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy S24",
+    "model": "SCG25",
+    "carrier": "au",
+    "format_version_carrier_info": "0001000062",
+    "mobile_phone_model_info": "SCG25",
+    "sources": [
+      "https://dumps.tadiphone.dev/api/v4/projects/5198/repository/files/system%2Fsystem%2Fetc%2Ffelica%2Fcommon.cfg/raw?ref=e1qkdix-user-14-UP1A.231005.007-SCG25KDS1AYA2-release-keys"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy A25 5G",
+    "model": "SC-53F",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000061",
+    "mobile_phone_model_info": "SC53F",
+    "sources": [
+      "https://gitlab.com/Van-Firmware-Dumps/samsung/a25ex/-/raw/571440ff1e6492f35289f004890c01bf92b9bef4/system/system/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy A25 5G",
+    "model": "SM-A253Z",
+    "carrier": "SoftBank",
+    "format_version_carrier_info": "0001000063",
+    "mobile_phone_model_info": "SMA253Z",
+    "sources": [
+      "https://gitlab.com/yoshi3jp/android_dump_samsung_a25ex/-/raw/54ef87c13059ece65f91f4ca4d02d2f1b8ee091d/system/system/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Z Fold8 Ultra",
+    "model": "SM-F976Q",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "009040",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-F976Q_1_20260725023054_egracm89pq_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Z Fold8",
+    "model": "SM-F971Q",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "009041",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-F971Q_1_20260725041240_0u1ylarj9j_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Z Flip8",
+    "model": "SM-F776Q",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "009039",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-F776Q_1_20260725003751_m31r4ozl29_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Z Fold7",
+    "model": "SM-F966Q",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "009024",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-F966Q_2_20260603061401_6d7q82viiv_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Z Flip7",
+    "model": "SM-F766Q",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "009023",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-F766Q_2_20260609132321_kau5bh2l48_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy A25 5G",
+    "model": "SM-A253Q",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "009021",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-A253Q_3_20260703102701_c1zyxcm2dq_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy S25 Ultra",
+    "model": "SM-S938Q",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "009020",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-S938Q_2_20260506171041_lrr4b87hmu_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy S25",
+    "model": "SM-S931Q",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "009019",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-S931Q_3_20260603035651_xfyfevp2np_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy S25",
+    "model": "SC-51F",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000061",
+    "mobile_phone_model_info": "SC51F",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SC-51F_3_20260603032131_vq7wvokki3_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy S25",
+    "model": "SCG31",
+    "carrier": "au",
+    "format_version_carrier_info": "0001000062",
+    "mobile_phone_model_info": "SCG31",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SCG31_2_20260603033521_zktkp3mb91_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy S26",
+    "model": "SM-S942Q",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "009028",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-S942Q_1_20260615195242_kpd3befqx8_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy S26",
+    "model": "SC-51G",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000061",
+    "mobile_phone_model_info": "SC51G",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SC-51G_1_20260615202341_1s20d7ld9h_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy S26+",
+    "model": "SM-S947Q",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "009029",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-S947Q_1_20260615192511_hsmcek9ywb_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy S26+",
+    "model": "SC-52G",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000061",
+    "mobile_phone_model_info": "SC52G",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SC-52G_1_20260615202321_mylutqxqv2_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy S26 Ultra",
+    "model": "SM-S948Q",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "009030",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-S948Q_1_20260615185031_8q4kn88jld_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy S26 Ultra",
+    "model": "SC-53G",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000061",
+    "mobile_phone_model_info": "SC53G",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SC-53G_1_20260615202301_9v0vf8er4a_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy A57 5G",
+    "model": "SM-A576Q",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "009035",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-A576Q_1_20260430131140_gki25wuvro_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy A36 5G",
+    "model": "SM-A366Q",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "009022",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-A366Q_3_20260623154231_gnqtn362xv_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy A23 5G",
+    "model": "SC-56C",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000061",
+    "mobile_phone_model_info": "SC56C",
+    "sources": [
+      "https://gitlab.com/Van-Firmware-Dumps/samsung/a23ex/-/raw/2b082cca245d20aabb314c8c612573757143467a/system/system/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Xperia XZ1 Compact",
+    "model": "SO-02K",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000011",
+    "mobile_phone_model_info": "SO02K",
+    "sources": [
+      "https://raw.githubusercontent.com/log1cs/proprietary_vendor_sony_lilacdcm/43f724515c31f102a4133852de0a3e08be4ba20c/proprietary/vendor/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Samsung GALAXY S III α",
+    "model": "SC-03E",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000011",
+    "mobile_phone_model_info": "SC03E",
+    "sources": [
+      "https://raw.githubusercontent.com/AOSB/proprietary_vendor_samsung/c2c523aaa3005bc9eb7293296d25d2ffd052e551/sc03e/proprietary/system/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Samsung GALAXY S III",
+    "model": "SC-06D",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000011",
+    "mobile_phone_model_info": "SC06D",
+    "sources": [
+      "https://raw.githubusercontent.com/gunspeederdaiy/android_vendor_samsung_felica-common/385d4aecb489202c243aae52f7c15353e2b3942f/proprietary/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "V30+",
+    "model": "L-01K",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000011",
+    "mobile_phone_model_info": "L01K",
+    "sources": [
+      "https://raw.githubusercontent.com/toufune/proprietary_vendor_lge_l01k/92bf0f201390aa0462e31ea79465662b2dbf70e1/proprietary/system/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "LG style3",
+    "model": "L-41A",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000011",
+    "mobile_phone_model_info": "L41A",
+    "sources": [
+      "https://dumps.tadiphone.dev/api/v4/projects/5318/repository/files/product%2Fetc%2Ffelica%2Fcommon.cfg/raw?ref=style3lm_dcm_jp-user-10-QKQ1.200308.002-2012901066540-release-keys"
+    ]
+  },
+  {
+    "name": "LG V60 ThinQ 5G",
+    "model": "L-51A",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000011",
+    "mobile_phone_model_info": "L51A",
+    "sources": [
+      "https://raw.githubusercontent.com/AlcatrazDev-Android-Devices/vendor_lge_sm8250-common/28277fe3d624b42176cf18aea6815a3b5e01cecd/proprietary/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Android One X5",
+    "model": "X5-LG",
+    "carrier": "Y!mobile",
+    "format_version_carrier_info": "0001000013",
+    "mobile_phone_model_info": "X5LG",
+    "sources": [
+      "https://dumps.tadiphone.dev/api/v4/projects/1125/repository/files/product%2Fetc%2Ffelica%2Fcommon.cfg/raw?ref=phoenix_sb_jp-user-11-RKQ1.201123.002-2134412239185-release-keys"
+    ]
+  },
+  {
+    "name": "Xiaomi 12T Pro",
+    "model": "A201XM",
+    "carrier": "SoftBank",
+    "format_version_carrier_info": "0001000063",
+    "mobile_phone_model_info": "A201XM",
+    "sources": [
+      "https://raw.githubusercontent.com/soralis0912/magisk-module-A201XM-jp-felica/5aa2605441b2e06662d6cbebc653ccb6e3c68326/system/vendor/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Redmi Note 13 Pro 5G",
+    "model": "XIG05",
+    "carrier": "au",
+    "format_version_carrier_info": "0001000062",
+    "mobile_phone_model_info": "XIG05",
+    "sources": [
+      "https://raw.githubusercontent.com/toufune/proprietary_vendor_xiaomi_garnet/3a8d18f07d5106d4b82ac7581ac291ecb1609fd6/proprietary/vendor/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "arrows ケータイ",
+    "model": "F-03L",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000011",
+    "mobile_phone_model_info": "F03L",
+    "sources": [
+      "https://raw.githubusercontent.com/IonAgorria/F03L-system-vendor/ad6e90dc988df78b12fd58d000f9f75b9d4bc684/system/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Natural AI Phone",
+    "model": "BGX5",
+    "carrier": "SoftBank",
+    "format_version_carrier_info": "0001000063",
+    "mobile_phone_model_info": "BGX5",
+    "sources": [
+      "https://gitlab.com/Toufu/brain_naturalaiphone_dump/-/raw/1215a8ebefe6487b13d4af8c68d63ba36eb82b54/product/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy A21",
+    "model": "SC-42A",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000011",
+    "mobile_phone_model_info": "SC42A",
+    "sources": [
+      "https://gitlab.com/Van-Firmware-Dumps/samsung/a10eu/-/raw/622d37d563e0f67ddcdaf8f9f0d18c9a1032be8c/system/system/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy A22 5G",
+    "model": "SC-56B",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000061",
+    "mobile_phone_model_info": "SC56B",
+    "sources": [
+      "https://gitlab.com/Van-Firmware-Dumps/samsung/a22ex/-/raw/3e5b13ef6b57a18a8012687bb0eef93212d056f0/system/system/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "OPPO Reno5 A",
+    "model": "CPH2199",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "006005",
+    "sources": [
+      "https://gauss-componentotamanual.allawnofs.com/remove-57366a8808896441b4295ca76fc69c71/component-ota/22/03/09/09feba1a8f7d4a0ab804eca9ec2c12da.zip"
+    ]
+  },
+  {
+    "name": "OPPO Reno7 A",
+    "model": "CPH2353",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "006006",
+    "sources": [
+      "https://gauss-componentotamanual.allawnofs.com/remove-5df502df4c209c5b7ea513a9e410196c/component-ota/22/10/19/3c086e17e89e4f82b88a242c79f36dcf.zip"
+    ]
+  },
+  {
+    "name": "OPPO Reno9 A",
+    "model": "CPH2523",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "006008",
+    "sources": [
+      "https://gauss-componentotamanual.allawnofs.com/remove-67535d048ec307a6a05a2aa43088e6b2/component-ota/24/07/02/44119543add24b63be4b617b639af352.zip"
+    ]
+  },
+  {
+    "name": "OPPO Reno10 Pro 5G",
+    "model": "CPH2541",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "006009",
+    "sources": [
+      "https://gauss-componentotamanual.allawnofs.com/remove-aaef041af17e4304fccd08ad1d4c9840/component-ota/23/12/27/1d3d1463ec5343fa9d06e10db59c2df2.zip"
+    ]
+  },
+  {
+    "name": "OPPO Reno11 A",
+    "model": "CPH2603",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "006011",
+    "sources": [
+      "https://gauss-componentotamanual.allawnofs.com/remove-2bc0a008d8db39020bd5c302b85b1c30/component-ota/24/12/06/f435325e3f004e41b6b28bb3570f12ee.zip"
+    ]
+  },
+  {
+    "name": "OPPO Reno13 A",
+    "model": "CPH2699",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "006013",
+    "sources": [
+      "https://gauss-componentotamanual.allawnofs.com/remove-d9b20d73887088529dc4f016fd97746b/component-ota/25/11/11/a5dad63432854021b7b12ee50724a1a4.zip"
+    ]
+  },
+  {
+    "name": "OPPO Reno15 A",
+    "model": "CPH2801",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "006016",
+    "sources": [
+      "https://component-ota-sg.allawnos.com/downloadCheck?c=6da42817ef836084cff568a1f1c5f411&p=f088224e006d1388a1bcc60343328430407c44c62933c0ec7a1e9e86cbc1d13712e1364ef4562be74d0f452b5ef4&d=b7ce601143611397f3f2d646007a853e1a3c4ed07f2b97f43c4dd1d191cbd2714cbd320fe30771e9&g=10eab6008d5642cf42abd2aa41f847cb&id=6a2243bc007ddc01813de2ae&taste=0&supportDLTaste=0&mode=1&tr=manual&s=86d5779535dc4875be76dbac49bea826"
+    ]
+  },
+  {
+    "name": "OPPO A79 5G",
+    "model": "CPH2557",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "006010",
+    "sources": [
+      "https://gauss-componentotamanual.allawnofs.com/remove-b0a2e7d904079e2ac2adc1ebf4922f89/component-ota/24/06/13/c89af1271d114bcc872405bebd88f583.zip"
+    ]
+  },
+  {
+    "name": "OPPO A3 5G",
+    "model": "CPH2639",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "006012",
+    "sources": [
+      "https://gauss-componentotamanual.allawnofs.com/remove-4b24ed728b016b16ffef0e2bd6500c9e/component-ota/24/12/30/35932477dc724031a5a4788a6ee531fa.zip"
+    ]
+  },
+  {
+    "name": "OPPO A5 5G",
+    "model": "CPH2735",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "006014",
+    "sources": [
+      "https://gauss-componentotamanual.allawnofs.com/remove-9e61635cadae658e8272ad3754216f32/component-ota/26/03/06/5476490ca888443e8ccb96981cc0fd08.zip"
+    ]
+  },
+  {
+    "name": "OPPO Find X9",
+    "model": "CPH2797",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "006015",
+    "sources": [
+      "https://component-ota-sg.allawnos.com/downloadCheck?c=3667acbb100e6e9c496be74707ec9549&p=f088224e006d1388a7bc95074336df60442d12972a64c0ed2e1ac689cfc1d66417e3674dff5527e1105e452b5ef4&d=b7ce601143611397f3f2d646007a853e1a3c4ed07f2b97f43c4dd1d191cbd2714cbd320fe30771e9&g=10eab6008d5642cf42abd2aa41f847cb&id=6a435e689e207b01827c6c81&taste=0&supportDLTaste=0&mode=1&tr=manual&s=1a85ac174436f5004299c5d39546d610"
+    ]
+  },
+  {
+    "name": "REDMAGIC 10 Pro / 10S Pro",
+    "model": "NX789J",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "019001",
+    "sources": [
+      "https://rom.download.nubia.com/Europe%26Asia/NX789J/V2.0.0B05MR/update.zip"
+    ]
+  },
+  {
+    "name": "REDMAGIC 11 Pro / 11S Pro",
+    "model": "NX809J",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "019002",
+    "sources": [
+      "https://rom.download.nubia.com/Europe%26Asia/NX809J/REDMAGICOS11.0.19MR2/update.zip"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Watch6 (WiFi, 40)",
+    "model": "SM-R930",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A02003",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-R930_3_20260706161441_gs48m3j2dn_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Watch6 Classic (WiFi, 43)",
+    "model": "SM-R950",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A02005",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-R950_3_20260706161331_qv4dvgpmox_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Watch6 / Watch6 Classic (WiFi, 44/47)",
+    "model": "SM-R940 / SM-R960",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A02004",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-R940_3_20260706161411_0otk0mm6vg_fac.zip.enc4",
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-R960_12_20260706155641_nx7zkxr5e6_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Watch6 (LTE, 44)",
+    "model": "SM-R945F",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A02002",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-R945F_3_20260708181640_8orsuv1ec0_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Watch6 (LTE, 40)",
+    "model": "SM-R935F",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A02001",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-R935F_3_20260708181740_ktuqxg6cl9_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Watch7 (WiFi, 40)",
+    "model": "SM-L300",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A02010",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-L300_2_20260706103911_h392hzuijr_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Watch7 (LTE, 40)",
+    "model": "SM-L305F",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A02007",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-L305F_2_20260709070330_mv65zzzggm_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Watch7 (WiFi, 44)",
+    "model": "SM-L310",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A02011",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-L310_2_20260706105133_rdq63ikyce_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Watch7 (LTE, 44)",
+    "model": "SM-L315F",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A02008",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-L315F_2_20260709070840_tdcpgfy2m0_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Watch8 (WiFi, 40)",
+    "model": "SM-L320",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A02015",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-L320_1_20260706153840_kjoj1yd4yv_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Watch8 (WiFi, 44)",
+    "model": "SM-L330",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A02016",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-L330_1_20260706153911_rcfyt4g4uy_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Watch8 Classic (WiFi, 46)",
+    "model": "SM-L500",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A02017",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-L500_1_20260706153940_64ldbxnyza_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Watch8 (LTE, 40)",
+    "model": "SM-L325F",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A02012",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-L325F_1_20260708145240_ny8faonjrt_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Watch8 (LTE, 44)",
+    "model": "SM-L335F",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A02013",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-L335F_1_20260708145410_x4u6wvfexs_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Watch8 Classic (LTE, 46)",
+    "model": "SM-L505F",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A02014",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-L505F_1_20260708145640_9rkb9e73nn_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Watch Ultra (LTE, 47)",
+    "model": "SM-L705F",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A02009",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-L705F_2_20260709071311_o2imccaz15_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Watch Ultra 2 (LTE, 47)",
+    "model": "SM-L715F",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A0202B",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/911/SM-L715F_1_20260804114541_t8fq62rd11_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Watch9 (WiFi, 40)",
+    "model": "SM-L340",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A02018",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/911/SM-L340_1_20260723154201_v0z01ipl15_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Watch9 (WiFi, 44)",
+    "model": "SM-L350",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A0202@",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/911/SM-L350_1_20260723155231_zzu7y8pnnx_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Watch9 (LTE, 40)",
+    "model": "SM-L345F",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A02019",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/911/SM-L345F_1_20260804111211_rcwga6xulo_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Watch9 (LTE, 44)",
+    "model": "SM-L355F",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "A0202A",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/911/SM-L355F_1_20260804105730_pjmzitwc2x_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy S26",
+    "model": "SCG36",
+    "carrier": "au",
+    "format_version_carrier_info": "0001000062",
+    "mobile_phone_model_info": "SCG36",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SCG36_1_20260615195251_6a1p14qs8g_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy S26",
+    "model": "SM-S942Z",
+    "carrier": "SoftBank",
+    "format_version_carrier_info": "0001000063",
+    "mobile_phone_model_info": "SMS942Z",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-S942Z_1_20260612121511_zxqpwkvf3r_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy S26",
+    "model": "SM-S942C",
+    "carrier": "Rakuten Mobile",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "009031",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-S942C_1_20260612121631_th4nq3iwhu_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Android One X3",
+    "model": "X3-KC",
+    "carrier": "Y!mobile",
+    "format_version_carrier_info": "0001000013",
+    "mobile_phone_model_info": "X3-KC",
+    "sources": [
+      "https://raw.githubusercontent.com/2by2-Project-Devices/proprietary_vendor_kyocera_X3-KC_sprout/aac5f19e381e467d76d859960a46025c6c8c8f22/proprietary/system/etc/felica/common.cfg"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy S26 Ultra",
+    "model": "SCG37",
+    "carrier": "au",
+    "format_version_carrier_info": "0001000062",
+    "mobile_phone_model_info": "SCG37",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SCG37_1_20260615181501_aa3em6owqt_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy S26+",
+    "model": "SM-S947Z",
+    "carrier": "SoftBank",
+    "format_version_carrier_info": "0001000063",
+    "mobile_phone_model_info": "SMS947Z",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-S947Z_1_20260612123211_8jrs1xf6gv_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy S26+",
+    "model": "SM-S947C",
+    "carrier": "Rakuten Mobile",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "009032",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-S947C_1_20260612124051_texwfwwbo2_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "motorola razr 50d",
+    "model": "M-51E",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000061",
+    "mobile_phone_model_info": "M51E",
+    "sources": [
+      "https://mirrors.lolinet.com/firmware/lenomola/2024/aito/official/Docomo/XT2453-8_AITO_DOCOMO_14_U4UCS34.36-80-1-2_subsidy-DEFAULT_regulatory-DEFAULT_cid50_CFC.xml.zip"
+    ]
+  },
+  {
+    "name": "motorola razr 50s",
+    "model": "A403MO",
+    "carrier": "SoftBank",
+    "format_version_carrier_info": "0001000063",
+    "mobile_phone_model_info": "A403MO",
+    "sources": [
+      "https://mirrors.lolinet.com/firmware/lenomola/2024/aito/official/Softbank/XT2453-7_AITO_SOFTBANK_14_U3UCS34.63-105-13-5_subsidy-DEFAULT_regulatory-DEFAULT_cid50_CFC.xml.zip"
+    ]
+  },
+  {
+    "name": "motorola razr 40s",
+    "model": "A303MO",
+    "carrier": "SoftBank",
+    "format_version_carrier_info": "0001000063",
+    "mobile_phone_model_info": "A303MO",
+    "sources": [
+      "https://mirrors.lolinet.com/firmware/lenomola/2023/lynkco/official/Softbank/XT2323-7_LYNKCO_SB_15_V1TV35H.41-48-5_subsidy-DEFAULT_regulatory-DEFAULT_cid50_CFC.xml.zip"
+    ]
+  },
+  {
+    "name": "motorola edge 60s pro",
+    "model": "A502MO",
+    "carrier": "SoftBank",
+    "format_version_carrier_info": "0001000063",
+    "mobile_phone_model_info": "A502MO",
+    "sources": [
+      "https://mirrors.lolinet.com/firmware/lenomola/2025/cybert/official/Softbank/XT2507-3_CYBERT_SOFTBANK_15_V2VVA35.58-46-4_subsidy-DEFAULT_regulatory-DEFAULT_cid50_CFC.xml.zip"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy S26 Ultra",
+    "model": "SM-S948Z",
+    "carrier": "SoftBank",
+    "format_version_carrier_info": "0001000063",
+    "mobile_phone_model_info": "SMS948Z",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-S948Z_1_20260612130230_fow2y43j03_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy S26+",
+    "model": "SCG38",
+    "carrier": "au",
+    "format_version_carrier_info": "0001000062",
+    "mobile_phone_model_info": "SCG38",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SCG38_1_20260615190011_gy64pzfibn_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy S26 Ultra",
+    "model": "SM-S948C",
+    "carrier": "Rakuten Mobile",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "009033",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-S948C_1_20260612130250_3s6vr2ve9h_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Google Pixel 11 Pro",
+    "model": "",
+    "carrier": "",
+    "format_version_carrier_info": "0001000068",
+    "mobile_phone_model_info": "007033",
+    "sources": [
+      "https://android.googleapis.com/packages/ota-api/package/e68f6fe815801d1f4daa66844517ffbcc41c5c79.zip"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy A57 5G",
+    "model": "SC-54G",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000061",
+    "mobile_phone_model_info": "SC54G",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SC-54G_1_20260430134401_9bqovv0sfx_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy A57 5G",
+    "model": "SM-A576Z",
+    "carrier": "SoftBank",
+    "format_version_carrier_info": "0001000063",
+    "mobile_phone_model_info": "SMA576Z",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-A576Z_1_20260430131110_kznaw63b6d_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Z Flip8",
+    "model": "SCG40",
+    "carrier": "au",
+    "format_version_carrier_info": "0001000062",
+    "mobile_phone_model_info": "SCG40",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SCG40_1_20260724233541_w3dsp2e63g_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Z Flip8",
+    "model": "SC-55G",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000061",
+    "mobile_phone_model_info": "SC55G",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SC-55G_1_20260724224001_kkogk2x80x_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Z Flip8",
+    "model": "SM-F776Z",
+    "carrier": "SoftBank",
+    "format_version_carrier_info": "0001000063",
+    "mobile_phone_model_info": "SMF776Z",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-F776Z_1_20260724234550_9l9fplkszq_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Z Fold7",
+    "model": "SC-56F",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000061",
+    "mobile_phone_model_info": "SC56F",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SC-56F_2_20260603081241_cdd4830mk7_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Z Fold7",
+    "model": "SCG34",
+    "carrier": "au",
+    "format_version_carrier_info": "0001000062",
+    "mobile_phone_model_info": "SCG34",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SCG34_2_20260603060141_b4mawqn8q0_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Z Flip7",
+    "model": "SM-F766Z",
+    "carrier": "SoftBank",
+    "format_version_carrier_info": "0001000063",
+    "mobile_phone_model_info": "SMF766Z",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-F766Z_2_20260609100140_1bzl93ammt_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Z Fold7",
+    "model": "SM-F966Z",
+    "carrier": "SoftBank",
+    "format_version_carrier_info": "0001000063",
+    "mobile_phone_model_info": "SMF966Z",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-F966Z_2_20260603061341_pxjuxum559_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Z Fold8",
+    "model": "SC-57G",
+    "carrier": "NTT Docomo",
+    "format_version_carrier_info": "0001000061",
+    "mobile_phone_model_info": "SC57G",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SC-57G_1_20260725032331_h9owiimchz_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Z Fold8",
+    "model": "SCG41",
+    "carrier": "au",
+    "format_version_carrier_info": "0001000062",
+    "mobile_phone_model_info": "SCG41",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SCG41_1_20260725032951_wem3zvfcyp_fac.zip.enc4"
+    ]
+  },
+  {
+    "name": "Samsung Galaxy Z Fold8",
+    "model": "SM-F971Z",
+    "carrier": "SoftBank",
+    "format_version_carrier_info": "0001000063",
+    "mobile_phone_model_info": "SMF971Z",
+    "sources": [
+      "http://cloud-neofussvr.samsungmobile.com/NF_SmartDownloadBinaryForMass.do?file=/neofus/910/SM-F971Z_1_20260725041220_aj53bo2p3u_fac.zip.enc4"
+    ]
+  }
+]

@@ -1,0 +1,207 @@
+#:import theme epassport.ui.theme
+#:import Guilloche epassport.ui.widgets.guilloche.Guilloche
+#:import Portrait epassport.ui.widgets.portrait.Portrait
+#:import MrzStrip epassport.ui.widgets.mrzstrip.MrzStrip
+#:import DataField epassport.ui.widgets.fields.DataField
+
+<PassportPage>:
+    canvas.before:
+        Color:
+            rgba: 0, 0, 0, 0.20
+        Rectangle:
+            pos: self.x + dp(4), self.y - dp(4)
+            size: self.size
+
+    # No StencilView wrapper here: Guilloche clips its own security print to
+    # the printed frame, and nesting that inside another stencil stops the
+    # inner one taking effect - Kivy's nested stencils do not intersect.
+    Guilloche:
+        pos: root.pos
+        size: root.size
+        bottom_inset: root.height * root.band_fraction
+
+    BoxLayout:
+        orientation: "vertical"
+        pos: root.pos
+        size: root.size
+        padding: 0, root.height * theme.PAGE_TOP_PAD, 0, 0
+        spacing: root.height * theme.PAGE_GAP
+
+        # ---- header band -------------------------------------------------
+        BoxLayout:
+            size_hint_y: None
+            height: root.height * theme.PAGE_HEADER
+            padding: root.height * 0.062, 0, root.height * 0.062, 0
+
+            Label:
+                text: (root.mrz.issuing_state_name.upper() if root.mrz else "NO DOCUMENT LOADED")
+                font_name: theme.FONT_VALUE
+                font_size: root.height * 0.044
+                color: theme.LABEL
+                halign: "left"
+                valign: "middle"
+                text_size: self.size
+                shorten: True
+
+            Label:
+                text: (root.mrz.document_type if root.mrz else "")
+                font_name: theme.FONT_LABEL_BOLD
+                font_size: root.height * 0.026
+                color: theme.LABEL
+                halign: "right"
+                valign: "middle"
+                text_size: self.size
+
+        # ---- portrait column + field column ------------------------------
+        BoxLayout:
+            spacing: root.height * 0.040
+            padding: root.height * 0.062, 0, root.height * 0.062, root.height * theme.PAGE_BOTTOM_PAD
+
+            # The portrait is sized from the page WIDTH and the real 35x45
+            # photo aspect, capped against the space above the MRZ band - a
+            # fraction of page height alone makes it swallow a short card.
+            BoxLayout:
+                orientation: "vertical"
+                size_hint_x: None
+                width: root.width * theme.PHOTO_WIDTH_FRACTION
+                spacing: root.height * 0.016
+
+                # The frame keeps the 35x45 photo shape whichever constraint
+                # binds, so the image never letterboxes inside white bars.
+                Portrait:
+                    png: root.record.portrait_png if root.record else b""
+                    size_hint: None, None
+                    height: min(root.width * theme.PHOTO_WIDTH_FRACTION / theme.PHOTO_ASPECT, root.height * root.content_fraction * theme.PHOTO_MAX_CONTENT_SHARE)
+                    width: self.height * theme.PHOTO_ASPECT
+
+                BoxLayout:
+                    size_hint_y: None
+                    height: root.height * root.content_fraction * 0.22
+                    spacing: root.height * 0.018
+
+                    Portrait:
+                        png: root.record.portrait_png if root.record else b""
+                        ghost: True
+                        size_hint_x: None
+                        width: self.height * theme.PHOTO_ASPECT
+
+                    Portrait:
+                        png: root.record.signature_png if root.record else b""
+                        ghost: True
+                        opacity_level: 0.85
+
+                Widget:
+
+            # ---- the fields, laid out row by row --------------------------
+            BoxLayout:
+                orientation: "vertical"
+                spacing: root.height * 0.004
+
+                BoxLayout:
+                    size_hint_y: 0.135
+                    spacing: root.height * 0.020
+                    DataField:
+                        size_hint_x: 0.16
+                        label_text: "TYPE"
+                        value_text: root.mrz.document_code if root.mrz else ""
+                        value_font_size: root.height * 0.038
+                        label_font_size: root.height * 0.0185
+                    DataField:
+                        size_hint_x: 0.20
+                        label_text: "CODE"
+                        value_text: root.mrz.issuing_state if root.mrz else ""
+                        value_font_size: root.height * 0.038
+                        label_font_size: root.height * 0.0185
+                    DataField:
+                        size_hint_x: 0.64
+                        label_text: "PASSPORT No. / No. DU PASSEPORT"
+                        value_text: root.value("document_number") if root.mrz else ""
+                        check: root.check_state("document_number") if root.mrz else "none"
+                        value_font_size: root.height * 0.038
+                        label_font_size: root.height * 0.0185
+
+                DataField:
+                    size_hint_y: 0.165
+                    label_text: "SURNAME / NOM"
+                    value_text: root.record.surname if root.record else ""
+                    value_font_size: root.height * 0.046
+                    label_font_size: root.height * 0.0185
+
+                DataField:
+                    size_hint_y: 0.165
+                    label_text: "GIVEN NAMES / PRENOMS"
+                    value_text: root.record.given_names if root.record else ""
+                    value_font_size: root.height * 0.046
+                    label_font_size: root.height * 0.0185
+
+                BoxLayout:
+                    size_hint_y: 0.145
+                    spacing: root.height * 0.020
+                    DataField:
+                        size_hint_x: 0.40
+                        label_text: "NATIONALITY / NATIONALITE"
+                        value_text: (root.mrz.nationality_name.upper() if root.mrz else "")
+                        value_font_size: root.height * 0.031
+                        label_font_size: root.height * 0.0185
+                    DataField:
+                        size_hint_x: 0.42
+                        label_text: "DATE OF BIRTH"
+                        value_text: root.record.full_date_of_birth if root.record else ""
+                        check: root.check_state("date_of_birth") if root.mrz else "none"
+                        value_font_size: root.height * 0.031
+                        label_font_size: root.height * 0.0185
+                    DataField:
+                        size_hint_x: 0.18
+                        label_text: "SEX / SEXE"
+                        value_text: (root.mrz.sex_label if root.mrz else "")
+                        value_font_size: root.height * 0.031
+                        label_font_size: root.height * 0.0185
+
+                BoxLayout:
+                    size_hint_y: 0.145
+                    spacing: root.height * 0.020
+                    DataField:
+                        size_hint_x: 0.56
+                        label_text: "PLACE OF BIRTH / LIEU DE NAISSANCE"
+                        value_text: (root.record.place_of_birth or "-") if root.record else ""
+                        dim: not (root.record and root.record.place_of_birth) or root.record.is_missing(root.record.place_of_birth)
+                        value_font_size: root.height * 0.031
+                        label_font_size: root.height * 0.0185
+                    DataField:
+                        size_hint_x: 0.44
+                        label_text: ("PERSONAL No. (FROM " + root.record.personal_number_source + ")") if (root.record and root.record.personal_number_source in ("MRZ", "DG13")) else "PERSONAL No. / No. PERSONNEL"
+                        value_text: (root.record.personal_number or "-") if root.record else ""
+                        dim: not (root.record and root.record.personal_number) or root.record.is_missing(root.record.personal_number)
+                        value_font_size: root.height * 0.031
+                        label_font_size: root.height * 0.0185
+
+                BoxLayout:
+                    size_hint_y: 0.145
+                    spacing: root.height * 0.020
+                    DataField:
+                        size_hint_x: 0.30
+                        label_text: "DATE OF ISSUE"
+                        value_text: (root.record.date_of_issue or "-") if root.record else ""
+                        dim: not (root.record and root.record.date_of_issue) or root.record.is_missing(root.record.date_of_issue)
+                        value_font_size: root.height * 0.028
+                        label_font_size: root.height * 0.0185
+                    DataField:
+                        size_hint_x: 0.40
+                        label_text: "AUTHORITY / AUTORITE"
+                        value_text: (root.record.issuing_authority or "-") if root.record else ""
+                        dim: not (root.record and root.record.issuing_authority) or root.record.is_missing(root.record.issuing_authority)
+                        value_font_size: root.height * 0.025
+                        label_font_size: root.height * 0.0185
+                    DataField:
+                        size_hint_x: 0.30
+                        label_text: "DATE OF EXPIRY"
+                        value_text: (root.mrz.expiry_text if root.mrz else "")
+                        check: root.check_state("date_of_expiry") if root.mrz else "none"
+                        value_font_size: root.height * 0.028
+                        label_font_size: root.height * 0.0185
+
+        # ---- MRZ strip ---------------------------------------------------
+        MrzStrip:
+            lines: root.mrz.lines if root.mrz else []
+            size_hint_y: None
+            height: root.height * root.band_fraction

@@ -287,7 +287,7 @@ static int CmdNexWatchReader(const char *Cmd) {
     do {
         lf_read(false, 20000);
         demodNexWatch(!cm);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
     return PM3_SUCCESS;
 }
 

@@ -376,8 +376,8 @@ static uint64_t recoverkey(Hitag_State *hstate, char *uidstr, char *nRstr) {
     // key lower 16 bits are lower 16 bits of prng state
     key = hstate->shiftreg & 0xffff;
     nRxork = (hstate->shiftreg >> 16) & 0xffffffff;
-    uid = rev32(hexreversetoulong(uidstr));
-    nRenc = rev32(hexreversetoulong(nRstr));
+    uid = rev32(hexreversetouint32(uidstr));
+    nRenc = rev32(hexreversetouint32(nRstr));
 
     uidtmp = uid;
     // rollback and extract bits b

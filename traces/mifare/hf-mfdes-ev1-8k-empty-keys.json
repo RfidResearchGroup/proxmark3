@@ -1,0 +1,11 @@
+{
+    "Created": "proxmark3",
+    "FileType": "mfdes v2",
+    "Card": {
+        "UID": "04268512A25680",
+        "SAK": "20",
+        "ATQA": "4403",
+        "ATS": "06757781028002F0"
+    },
+    "Applications": {}
+}

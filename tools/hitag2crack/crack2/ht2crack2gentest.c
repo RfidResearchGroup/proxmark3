@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
         hstate.shiftreg = 0;
         hstate.lfsr = 0;
 
-        hitag2_init(&hstate, rev64(hexreversetoulonglong(key)), rev32(hexreversetoulong(uid)), rev32(hexreversetoulong(nR)));
+        hitag2_init(&hstate, rev64(hexreversetouint64(key)), rev32(hexreversetouint32(uid)), rev32(hexreversetouint32(nR)));
 
         hitag2_nstep(&hstate, 64);
 

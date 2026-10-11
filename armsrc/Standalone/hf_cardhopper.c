@@ -19,16 +19,21 @@
 #include "appmain.h"
 #include "BigBuf.h"
 #include "dbprint.h"
-#include "fpgaloader.h"
+#include "fpga_apis.h"
+#include "fpga_loader.h"
 #include "iso14443a.h"
 #include "protocols.h"
 #include "proxmark3_arm.h"
 #include "standalone.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "util.h"
 #include "usart.h"
 #include "cmd.h"
-#include "usb_cdc.h"
+#include "usb_cdc_apis.h"
+#include "usb_read_ng.h"
+
+// To enable CARDHOPPER_USB, add the following line in your Makefile.platform
+// STANDALONE_PLATFORM_DEFS+=-DCARDHOPPER_USB
 
 #ifdef CARDHOPPER_USB
 #define cardhopper_write usb_write
@@ -62,10 +67,10 @@ static const uint8_t magicERR [4] = "\xff" "ERR";
 static const uint8_t magicACK [1] = "\xfe";
 
 // Forward declarations
-static void become_reader(void);
+static void __attribute__((noinline)) become_reader(void);
 static void select_card(void);
 
-static void become_card(void);
+static void __attribute__((noinline)) become_card(void);
 static void prepare_emulation(uint8_t *, uint16_t *, uint8_t *, packet_t *);
 static void cook_ats(packet_t *, uint8_t, uint8_t);
 static bool try_use_canned_response(const uint8_t *, int, tag_response_info_t *);
@@ -138,7 +143,7 @@ void RunMod(void) {
 }
 
 
-static void become_reader(void) {
+static void __attribute__((noinline)) become_reader(void) {
     iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
     select_card(); // also sends UID, ATS
 
@@ -222,21 +227,25 @@ static void select_card(void) {
 }
 
 
-static void become_card(void) {
+static void __attribute__((noinline)) become_card(void) {
     iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 
     uint8_t tagType;
     uint16_t flags = 0;
-    uint8_t data[PM3_CMD_DATA_SIZE] = { 0 };
+    // only the UID is ever read out of this by SimulateIso14443aInit(), at most
+    // 10 bytes for a triple-cascade UID.  It used to be PM3_CMD_DATA_SIZE, which
+    // put 624 bytes on the stack for nothing.
+    uint8_t data[10] = {0x00};
     packet_t ats = { 0 };
     prepare_emulation(&tagType, &flags, data, &ats);
 
     tag_response_info_t *canned;
     uint32_t cuid;
-    uint32_t counters[3] = { 0 };
-    uint8_t tearings[3] = { 0xbd, 0xbd, 0xbd };
     uint8_t pages;
-    SimulateIso14443aInit(tagType, flags, data, NULL, 0, &canned, &cuid, counters, tearings, &pages);
+    if (SimulateIso14443aInit(tagType, flags, data, NULL, 0, &canned, &cuid, &pages, NULL) == false) {
+        DbpString(_RED_("Error initializing the emulation process!"));
+        return;
+    }
 
     DbpString(_CYAN_("[@]") " Setup done - entering emulation loop");
     int fromReaderLen;
@@ -249,7 +258,7 @@ static void become_card(void) {
     while (1) {
         WDT_HIT();
 
-        if (!GetIso14443aCommandFromReaderInterruptible(fromReaderDat, sizeof(fromReaderDat), parity, &fromReaderLen)) {
+        if (GetIso14443aCommandFromReaderInterruptible(fromReaderDat, sizeof(fromReaderDat), parity, &fromReaderLen) == false) {
             if (cardhopper_data_available()) {
                 read_packet(rx);
                 if (memcmp(magicRSRT, rx->dat, sizeof(magicRSRT)) == 0) {
@@ -534,7 +543,7 @@ static bool GetIso14443aCommandFromReaderInterruptible(uint8_t *received, uint16
 
     Uart14aInit(received, received_max_len, par);
 
-    uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+    uint8_t b = (uint8_t)FPGA_SSC_RX_Value();
     (void)b;
 
     uint8_t flip = 0;
@@ -554,8 +563,8 @@ static bool GetIso14443aCommandFromReaderInterruptible(uint8_t *received, uint16
             checker = 4000;
         }
 
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
+        if (FPGA_SSC_RX_Ready()) {
+            b = (uint8_t)FPGA_SSC_RX_Value();
             if (MillerDecoding(b, 0)) {
                 *len = GetUart14a()->len;
                 return true;

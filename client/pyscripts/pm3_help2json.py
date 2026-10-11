@@ -133,7 +133,7 @@ def build_metadata(extra_data, command_data):
     logging.info('Building metadata...')
     metadata = {
         'extracted_by': get_version(),
-        'extracted_on': datetime.datetime.utcnow().replace(microsecond=0).isoformat(),
+        'extracted_on': datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat(),
         'commands_extracted': len(command_data)
     }
     for key, value in metadata.items():

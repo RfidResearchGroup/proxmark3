@@ -25,12 +25,12 @@
 #include "at91sam7s512.h"
 #include "config_gpio.h"
 #include "pm3_cmd.h"
+#include "gpio_apis.h"
+#include "wdt_apis.h"
 
 // Check bootrom.c for actual clock settings
 #define MAINCK                                  16000000
 #define MCK                                     (3 * MAINCK)
-
-#define WDT_HIT()                               AT91C_BASE_WDTC->WDTC_WDCR = 0xa5000001
 
 #define PWM_CH_MODE_PRESCALER(x)                ((x) << 0)
 #define PWM_CHANNEL(x)                          (1 << (x))
@@ -70,14 +70,58 @@
 #define UDP_CSR_BYTES_RECEIVED(x)               (((x) >> 16) & 0x7ff)
 //**************************************************************
 
+// ------------------------------------------------------------------------------
+// For LED, is high on or low on?
+// For BTN, is high pressed or low pressed?
+// 0 = LOW, 1 = HIGH
+// ------------------------------------------------------------------------------
+#ifdef PM5
+#define LED_PIN_DIR       0 // LOW = ON
+#define BTN_PIN_DIR       1 // HIGH = PRESSED
+#else
+#define LED_PIN_DIR       1 // HIGH = ON
+#define BTN_PIN_DIR       0 // LOW = PRESSED
+#endif
 
+#if LED_PIN_DIR // Is the light on when the PIN is high?
+#define LED_A_ON()        Gpio_LED_A_High()
+#define LED_A_OFF()       Gpio_LED_A_Low()
+#define LED_B_ON()        Gpio_LED_B_High()
+#define LED_B_OFF()       Gpio_LED_B_Low()
+#define LED_C_ON()        Gpio_LED_C_High()
+#define LED_C_OFF()       Gpio_LED_C_Low()
+#define LED_D_ON()        Gpio_LED_D_High()
+#define LED_D_OFF()       Gpio_LED_D_Low()
+#else
+#define LED_A_ON()        Gpio_LED_A_Low()
+#define LED_A_OFF()       Gpio_LED_A_High()
+#define LED_B_ON()        Gpio_LED_B_Low()
+#define LED_B_OFF()       Gpio_LED_B_High()
+#define LED_C_ON()        Gpio_LED_C_Low()
+#define LED_C_OFF()       Gpio_LED_C_High()
+#define LED_D_ON()        Gpio_LED_D_Low()
+#define LED_D_OFF()       Gpio_LED_D_High()
+#endif
 
-#define LOW(x)      AT91C_BASE_PIOA->PIO_CODR |= (x)
-#define HIGH(x)     AT91C_BASE_PIOA->PIO_SODR |= (x)
+#define LED_A_INV()       Gpio_LED_A_Inv()
+#define LED_B_INV()       Gpio_LED_B_Inv()
+#define LED_C_INV()       Gpio_LED_C_Inv()
+#define LED_D_INV()       Gpio_LED_D_Inv()
 
-#define GETBIT(x)   (AT91C_BASE_PIOA->PIO_ODSR & (x)) ? 1:0
-#define SETBIT(x, y) (y) ? (HIGH(x)):(LOW(x))
-#define INVBIT(x)   SETBIT((x), !(GETBIT(x)))
+#if BTN_PIN_DIR // Is the button pressed by the PIN is high?
+#define BUTTON_PRESS()    Gpio_Button_Read()
+#else
+#define BUTTON_PRESS()    (!Gpio_Button_Read())
+#endif
+#define WAIT_BUTTON_RELEASED() { while ( BUTTON_PRESS() )  { WDT_HIT(); }; }
+
+#define RELAY_ON()        Gpio_Relay_High()
+#define RELAY_OFF()       Gpio_Relay_Low()
+
+// NVDD goes LOW when USB is attached.
+// see: https://github.com/RfidResearchGroup/proxmark3/blob/8ce72a9dfe37a30d6a5f88c6490ad1b45f8b8ece/doc/original_proxmark3/system.txt#L104
+// This IO port is using in a very old pm3 device.
+#define USB_ATTACHED()    !Gpio_NVDD_Read()
 
 // Setup for SPI current modes
 #define SPI_FPGA_MODE   0
@@ -88,47 +132,7 @@
 #define COTAG_BITS 264
 #endif
 
-#define LED_A_ON()        HIGH(GPIO_LED_A)
-#define LED_A_OFF()       LOW(GPIO_LED_A)
-#define LED_A_INV()       INVBIT(GPIO_LED_A)
-#define LED_B_ON()        HIGH(GPIO_LED_B)
-#define LED_B_OFF()       LOW(GPIO_LED_B)
-#define LED_B_INV()       INVBIT(GPIO_LED_B)
-#define LED_C_ON()        HIGH(GPIO_LED_C)
-#define LED_C_OFF()       LOW(GPIO_LED_C)
-#define LED_C_INV()       INVBIT(GPIO_LED_C)
-#define LED_D_ON()        HIGH(GPIO_LED_D)
-#define LED_D_OFF()       LOW(GPIO_LED_D)
-#define LED_D_INV()       INVBIT(GPIO_LED_D)
-
-
-// SPI
-#define SCK_LOW           LOW(GPIO_SPCK)
-#define SCK_HIGH          HIGH(GPIO_SPCK)
-#define MOSI_HIGH         HIGH(GPIO_MOSI)
-#define MOSI_LOW          LOW(GPIO_MOSI)
-#define MISO_VALUE        (AT91C_BASE_PIOA->PIO_PDSR & GPIO_MISO)
-
-// fpga
-#define NCS_0_LOW         LOW(GPIO_NCS0)
-#define NCS_0_HIGH        HIGH(GPIO_NCS0)
-
-// flash mem PA1
-#define NCS_1_LOW         LOW(GPIO_NCS2)
-#define NCS_1_HIGH        HIGH(GPIO_NCS2)
-
-#define RELAY_ON()        HIGH(GPIO_RELAY)
-#define RELAY_OFF()       LOW(GPIO_RELAY)
-
-#define BUTTON_PRESS()         !((AT91C_BASE_PIOA->PIO_PDSR & GPIO_BUTTON) == GPIO_BUTTON)
-#define WAIT_BUTTON_RELEASED() { while ( BUTTON_PRESS() )  { WDT_HIT(); }; }
-
-//NVDD goes LOW when USB is attached.
-#define USB_ATTACHED()    !((AT91C_BASE_PIOA->PIO_PDSR & GPIO_NVDD_ON) == GPIO_NVDD_ON)
-
-
 #define DBG  if (g_dbglevel >= DBG_EXTENDED)
-
 
 // VERSION_INFORMATION is now in common.h
 

@@ -152,7 +152,7 @@ static int CmdJablotronReader(const char *Cmd) {
     do {
         lf_read(false, 16000);
         demodJablotron(!cm);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }

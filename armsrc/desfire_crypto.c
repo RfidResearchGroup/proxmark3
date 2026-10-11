@@ -334,7 +334,10 @@ void cmac(const desfirekey_t key, uint8_t *ivect, const uint8_t *data, size_t le
         return;
     }
 
-    uint8_t *buffer = BigBuf_malloc(padded_data_length(len, kbs));
+    uint8_t *buffer = BigBuf_calloc(padded_data_length(len, kbs));
+    if (buffer == NULL) {
+        return;
+    }
 
     memcpy(buffer, data, len);
 
@@ -599,6 +602,15 @@ void *mifare_cryto_postprocess_data(desfiretag_t tag, void *data, size_t *nbytes
                 case AS_LEGACY: {
 
                     if ((communication_settings & MAC_VERIFY) == MAC_VERIFY) {
+
+                        if (*nbytes < key_macing_length(key)) {
+                            *nbytes = -1;
+                            res = NULL;
+#ifdef WITH_DEBUG
+                            Dbprintf("No room for MAC!");
+#endif
+                            break;
+                        }
 
                         *nbytes -= key_macing_length(key);
 

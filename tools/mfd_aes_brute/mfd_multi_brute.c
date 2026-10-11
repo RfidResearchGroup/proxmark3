@@ -163,6 +163,7 @@ static void print_time(uint64_t at) {
 
     time_t t = at;
     struct tm lt;
+    memset(&lt, 0, sizeof(struct tm));
 
 #if defined(_WIN32)
     (void)localtime_s(&lt, &t);

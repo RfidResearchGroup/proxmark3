@@ -12,33 +12,31 @@ cov-build --dir "$COVDIR" --initialize
 #########################################
 # Build Host prerequisites              #
 #########################################
-cov-build --dir "$COVDIR" --c-coverage=gcov --no-network-coverage --no-generate-build-id --force make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD fpga_compress
+cov-build --dir "$COVDIR" make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD fpga_compress
 
 #########################################
 # Build ARM, no test coverage           #
 #########################################
-cov-build --dir "$COVDIR" --no-generate-build-id --force make recovery
+cov-build --dir "$COVDIR" make recovery
 
 #########################################
 # Build client                          #
 #########################################
 # make sure to do client after ARM because Coverity retains one build info per file
 # and we want the client-side of the common/ analysis
-cov-build --dir "$COVDIR" --c-coverage=gcov --no-network-coverage --no-generate-build-id --force make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD mfkey
-cov-build --dir "$COVDIR" --c-coverage=gcov --no-network-coverage --no-generate-build-id --force make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD nonce2key
-cov-build --dir "$COVDIR" --c-coverage=gcov --no-network-coverage --no-generate-build-id --force make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD mf_nonce_brute
-cov-build --dir "$COVDIR" --c-coverage=gcov --no-network-coverage --no-generate-build-id --force make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD mfd_aes_brute
-cov-build --dir "$COVDIR" --c-coverage=gcov --no-network-coverage --no-generate-build-id --force make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD client
+cov-build --dir "$COVDIR" make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD cryptorf
+cov-build --dir "$COVDIR" make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD mfc_card_only
+cov-build --dir "$COVDIR" make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD mfc_card_reader
+cov-build --dir "$COVDIR" make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD mfulc_des_brute
+cov-build --dir "$COVDIR" make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD mfd_aes_brute
+cov-build --dir "$COVDIR" make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD hitag2crack
+cov-build --dir "$COVDIR" make CC=$HOSTCC CXX=$HOSTCXX LD=$HOSTLD client
 
-#########################################
-# Run tests                             #
-#########################################
-cov-build --dir "$COVDIR" --c-coverage=gcov --no-network-coverage --test-capture tools/pm3_tests.sh --long
-#cov-manage-emit --dir "$COVDIR" list-coverage-known
+# test-capture step dropped — Test Advisor only, not in the free tarball
 
 #########################################
 # Import Git annotations (~ git blame)  #
 #########################################
-cov-import-scm --dir "$COVDIR" --scm git --filename-regex "$PWD" --log ""$COVDIR"/cov-import-scm-log.txt"
+cov-import-scm --dir "$COVDIR" --scm git --filename-regex "$PWD" --log "$COVDIR/cov-import-scm-log.txt"
 
 post_build_hook

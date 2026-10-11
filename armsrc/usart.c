@@ -17,6 +17,7 @@
 //-----------------------------------------------------------------------------
 #include "usart.h"
 #include "proxmark3_arm.h"
+#include "string.h"   // memcpy
 
 #define Dbprintf_usb(...) {\
         bool tmpfpc = g_reply_via_fpc;\
@@ -74,97 +75,103 @@ void usart_close(void) {
 }
 */
 
+// PDC receive double buffer.  The peripheral fills one bank while the other is
+// armed as "next"; when a bank fills, the hardware promotes the armed one into
+// US_RPR/US_RCR and clears US_RNCR.  We consume straight out of these two banks.
+//
+// There used to be an extra USART_FIFOLEN (1 kB) software ring stacked on top of
+// them, which every byte was copied into and then out of again.  It cost 1 kB of
+// .bss - which on AT91 comes straight out of BigBuf - bought no extra tolerance
+// (the window before an overrun is set by the two PDC banks, not by the ring),
+// and its free/used accounting could not tell "exactly full" from "empty":
+// filling it to precisely sizeof(us_rxfifo) left low == high, so
+// usart_rxdata_available() returned 0 and the next bank overwrote all of it.
 static uint8_t us_in_a[USART_BUFFLEN];
 static uint8_t us_in_b[USART_BUFFLEN];
-static uint8_t *usart_cur_inbuf = NULL;
-static uint16_t usart_cur_inbuf_off = 0;
-static uint8_t us_rxfifo[USART_FIFOLEN];
-static size_t us_rxfifo_low = 0;
-static size_t us_rxfifo_high = 0;
 
+static uint8_t *us_rx_cur = NULL;     // bank the PDC is filling right now
+static uint16_t us_rx_cur_off = 0;    // bytes already handed to the caller from it
+static uint8_t *us_rx_done = NULL;    // bank the PDC has finished, not yet drained
+static uint16_t us_rx_done_off = 0;   // bytes already handed to the caller from it
 
-static void usart_fill_rxfifo(void) {
-
-    uint16_t rxfifo_free;
-
-    if (pUS1->US_RNCR == 0) { // One buffer got filled, backup buffer being used
-
-        if (us_rxfifo_low > us_rxfifo_high) {
-            rxfifo_free = us_rxfifo_low - us_rxfifo_high;
-        } else {
-            rxfifo_free = sizeof(us_rxfifo) - us_rxfifo_high + us_rxfifo_low;
-        }
-
-        uint16_t available = USART_BUFFLEN - usart_cur_inbuf_off;
-
-        if (available <= rxfifo_free) {
-
-            for (uint16_t i = 0; i < available; i++) {
-                us_rxfifo[us_rxfifo_high++] = usart_cur_inbuf[usart_cur_inbuf_off + i];
-                if (us_rxfifo_high == sizeof(us_rxfifo)) {
-                    us_rxfifo_high = 0;
-                }
-            }
-
-            // Give next buffer
-            pUS1->US_RNPR = (uint32_t)usart_cur_inbuf;
-            pUS1->US_RNCR = USART_BUFFLEN;
-
-            // Swap current buff
-            if (usart_cur_inbuf == us_in_a) {
-                usart_cur_inbuf = us_in_b;
-            } else {
-                usart_cur_inbuf = us_in_a;
-            }
-
-            usart_cur_inbuf_off = 0;
-        } else {
-            // Take only what we have room for
-            available = rxfifo_free;
-            for (uint16_t i = 0; i < available; i++) {
-
-                us_rxfifo[us_rxfifo_high++] = usart_cur_inbuf[usart_cur_inbuf_off + i];
-
-                if (us_rxfifo_high == sizeof(us_rxfifo)) {
-                    us_rxfifo_high = 0;
-                }
-            }
-            usart_cur_inbuf_off += available;
-            return;
-        }
-    }
-
-    if (pUS1->US_RCR < USART_BUFFLEN - usart_cur_inbuf_off) { // Current buffer partially filled
-
-        if (us_rxfifo_low > us_rxfifo_high) {
-            rxfifo_free = (us_rxfifo_low - us_rxfifo_high);
-        } else {
-            rxfifo_free = (sizeof(us_rxfifo) - us_rxfifo_high + us_rxfifo_low);
-        }
-
-        uint16_t available = (USART_BUFFLEN - pUS1->US_RCR - usart_cur_inbuf_off);
-
-        if (available > rxfifo_free) {
-            available = rxfifo_free;
-        }
-
-        for (uint16_t i = 0; i < available; i++) {
-            us_rxfifo[us_rxfifo_high++] = usart_cur_inbuf[usart_cur_inbuf_off + i];
-            if (us_rxfifo_high == sizeof(us_rxfifo)) {
-                us_rxfifo_high = 0;
-            }
-        }
-        usart_cur_inbuf_off += available;
+// Notice a completed bank.  US_RNCR == 0 means the PDC finished the bank it was
+// filling and promoted the one we had armed.  Only one completed bank can be
+// tracked at a time: until it is drained and re-armed the peripheral has no spare,
+// so a second bank filling up would overrun - the same 2 x USART_BUFFLEN window
+// the ring-based version had.
+static void usart_rx_rearm_done(void) {
+    if ((us_rx_done != NULL) && (us_rx_done_off == USART_BUFFLEN)) {
+        pUS1->US_RNPR = (uint32_t)us_rx_done;
+        pUS1->US_RNCR = USART_BUFFLEN;
+        us_rx_done = NULL;
+        us_rx_done_off = 0;
     }
 }
 
-uint16_t usart_rxdata_available(void) {
-    usart_fill_rxfifo();
-    if (us_rxfifo_low <= us_rxfifo_high) {
-        return (us_rxfifo_high - us_rxfifo_low);
-    } else {
-        return (sizeof(us_rxfifo) - us_rxfifo_low + us_rxfifo_high);
+static void usart_rx_poll(void) {
+    // give a drained bank back before looking for a new one, so the peripheral
+    // spends as little time as possible with no spare bank armed
+    usart_rx_rearm_done();
+
+    if ((us_rx_done == NULL) && (pUS1->US_RNCR == 0)) {
+        us_rx_done = us_rx_cur;
+        us_rx_done_off = us_rx_cur_off;
+        us_rx_cur = (us_rx_cur == us_in_a) ? us_in_b : us_in_a;
+        us_rx_cur_off = 0;
+        // the promoted bank may already have been fully consumed before it
+        // completed, in which case it can go straight back
+        usart_rx_rearm_done();
     }
+}
+
+// how many bytes the peripheral has already written into the bank it is filling.
+// US_RCR counts down as bytes land, so this is a lower bound - never an
+// over-estimate, which is the safe direction.
+static inline uint16_t usart_rx_cur_filled(void) {
+    uint16_t filled = USART_BUFFLEN - pUS1->US_RCR;
+    return (filled > us_rx_cur_off) ? (filled - us_rx_cur_off) : 0;
+}
+
+uint16_t usart_rxdata_available(void) {
+    usart_rx_poll();
+    uint16_t n = usart_rx_cur_filled();
+    if (us_rx_done != NULL) {
+        n += USART_BUFFLEN - us_rx_done_off;
+    }
+    return n;
+}
+
+// Copy out at most "want" bytes, completed bank first so ordering is preserved.
+static uint16_t usart_rx_take(uint8_t *dst, uint16_t want) {
+    uint16_t got = 0;
+
+    while (want && (us_rx_done != NULL)) {
+        uint16_t chunk = USART_BUFFLEN - us_rx_done_off;
+        if (chunk > want) {
+            chunk = want;
+        }
+        memcpy(dst + got, us_rx_done + us_rx_done_off, chunk);
+        us_rx_done_off += chunk;
+        got += chunk;
+        want -= chunk;
+
+        // fully drained - hand it back to the PDC as the next target
+        usart_rx_rearm_done();
+    }
+
+    if (want) {
+        uint16_t chunk = usart_rx_cur_filled();
+        if (chunk > want) {
+            chunk = want;
+        }
+        if (chunk) {
+            memcpy(dst + got, us_rx_cur + us_rx_cur_off, chunk);
+            us_rx_cur_off += chunk;
+            got += chunk;
+        }
+    }
+
+    return got;
 }
 
 uint32_t usart_read_ng(uint8_t *data, size_t len) {
@@ -175,7 +182,6 @@ uint32_t usart_read_ng(uint8_t *data, size_t len) {
 
     uint32_t bytes_rcv = 0;
     uint32_t try = 0;
-//    uint32_t highest_observed_try = 0;
     // Empirical max try observed: 3000000 / USART_BAUD_RATE
     // Let's take 10x
 
@@ -190,32 +196,27 @@ uint32_t usart_read_ng(uint8_t *data, size_t len) {
     while (len) {
 
         uint32_t available = usart_rxdata_available();
-        uint32_t packetSize = MIN(available, len);
 
         if (available > 0) {
-//            Dbprintf_usb("Dbg USART ask %d bytes, available %d bytes, packetsize %d bytes", len, available, packetSize);
-//            highest_observed_try = MAX(highest_observed_try, try);
             try = 0;
         }
 
-        len -= packetSize;
+        uint16_t want = (available < len) ? (uint16_t)available : (uint16_t)len;
 
-        while (packetSize--) {
-            if (us_rxfifo_low == sizeof(us_rxfifo)) {
-                us_rxfifo_low = 0;
-            }
-            data[bytes_rcv++] = us_rxfifo[us_rxfifo_low++];
+        if (want) {
+            uint16_t got = usart_rx_take(data + bytes_rcv, want);
+            bytes_rcv += got;
+            len -= got;
         }
 
         if (try++ == maxtry) {
-//            Dbprintf_usb("Dbg USART TIMEOUT");
                 break;
             }
     }
-//    highest_observed_try = MAX(highest_observed_try, try);
-//    Dbprintf_usb("Dbg USART max observed try %i", highest_observed_try);
+
     return bytes_rcv;
 }
+
 
 // transfer from device to client
 int usart_writebuffer_sync(const uint8_t *data, size_t len) {
@@ -317,14 +318,14 @@ void usart_init(uint32_t baudrate, uint8_t parity) {
     pUS1->US_TNCR = 0;
     pUS1->US_RPR = (uint32_t)us_in_a;
     pUS1->US_RCR = USART_BUFFLEN;
-    usart_cur_inbuf = us_in_a;
-    usart_cur_inbuf_off = 0;
     pUS1->US_RNPR = (uint32_t)us_in_b;
     pUS1->US_RNCR = USART_BUFFLEN;
 
-    // Initialize our fifo
-    us_rxfifo_low = 0;
-    us_rxfifo_high = 0;
+    // Track the banks the same way the hardware does
+    us_rx_cur = us_in_a;
+    us_rx_cur_off = 0;
+    us_rx_done = NULL;
+    us_rx_done_off = 0;
 
     // re-enable receiver / transmitter
     pUS1->US_CR = (AT91C_US_RXEN | AT91C_US_TXEN);

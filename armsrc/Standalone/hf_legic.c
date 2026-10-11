@@ -21,10 +21,11 @@
 #include "proxmark3_arm.h"
 #include "BigBuf.h"
 #include "appmain.h"
-#include "fpgaloader.h"
+#include "fpga_apis.h"
+#include "fpga_loader.h"
 #include "util.h"
 #include "dbprint.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "legicrf.h"
 #include "legicrfsim.h"
 #include "legic.h"          // legic_card_select_t struct

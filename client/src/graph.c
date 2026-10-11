@@ -648,3 +648,21 @@ size_t restore_buffer8(buffer_savestate_t saveState, uint8_t *dest) {
 
     return index;
 }
+
+// Save/restore the graph buffer as a unit: contents, length and grid offset.
+// A caller that drops restore_bufferS32()'s return leaves g_GraphTraceLen short.
+buffer_savestate_t save_graphbuffer(void) {
+    buffer_savestate_t saveState = save_bufferS32(g_GraphBuffer, g_GraphTraceLen);
+    saveState.offset = g_GridOffset;
+    return saveState;
+}
+
+void restore_graphbuffer(buffer_savestate_t saveState) {
+    size_t len = restore_bufferS32(saveState, g_GraphBuffer);
+    if (len == 0) {
+        // nothing was restored, so leave the buffer and its length alone
+        return;
+    }
+    g_GraphTraceLen = len;
+    g_GridOffset = saveState.offset;
+}

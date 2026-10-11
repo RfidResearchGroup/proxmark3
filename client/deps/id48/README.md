@@ -48,3 +48,25 @@ provided the first half of the key, and at least one successful
 authentication trio of nonce, challenge, and response, then
 the library can recover all potentially valid values for the
 second half of the key.
+
+## Building
+
+This project uses CMake, and thus should be easy to integrate
+into any existing project using CMake.
+
+The following commands can be run from the root of this depot,
+and places all build artifacts into `./build`:
+
+```bash
+# Configure cmake for the current environment
+# -S: explicitly specify the source directory
+# -B: explicitly specify the directory for build artifacts
+cmake -S . -B build
+
+# Optionally (recommended) do a clean build each time
+cmake --build ./build --parallel --target clean
+
+# build everything
+cmake --build ./build --parallel --target all
+```
+

@@ -115,9 +115,9 @@ end
 -- reads the number of bytes specified in arg1 (arg0 in c-struct)
 -- @param usbpacket the data received from the device
 local function getResponseData(usbpacket)
-    local resp = Command.parse(usbpacket)
-    local len = tonumber(resp.arg1) * 2
-    return string.sub(tostring(resp.data), 0, len);
+    local _rlen, _sel, _raw = parseRaw('14a', usbpacket)
+    if _rlen == nil then return nil end
+    return tohex(_raw)
 end
 ---
 --
@@ -127,13 +127,9 @@ local function sendRaw(rawdata, options)
                 + lib14a.ISO14A_COMMAND.ISO14A_RAW
                 + lib14a.ISO14A_COMMAND.ISO14A_APPEND_CRC
 
-    local c = Command:newMIX{cmd = cmds.CMD_HF_ISO14443A_READER,
-                arg1 = flags,
-                -- arg2 contains the length, which is half the length of the ASCII-string rawdata
-                arg2 = string.len(rawdata)/2,
-                data = rawdata}
+    local c = Command:newRaw{ tech = '14a', flags = flags, data = rawdata }
 
-    return c:sendMIX(options.ignore_response)
+    return c:sendNG(options.ignore_response)
 end
 ---
 --

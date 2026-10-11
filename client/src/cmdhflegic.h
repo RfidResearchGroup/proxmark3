@@ -31,5 +31,11 @@ int legic_get_type(legic_card_select_t *card);
 void legic_chk_iv(uint32_t *iv);
 void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes);
 int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uint16_t *outlen);
+int legic_migrate_dump(uint8_t *dump, size_t bytes_read, bool rewrite_kgh, const uint8_t dcf[2], bool allow_dcf);
+void legic_xor_with_crc(uint8_t *data, uint16_t cardsize, uint8_t crc);
+bool legic_clone_update_segment_crcs(uint8_t *data, size_t bytes_read, const uint8_t uid[4]);
+bool legic_clone_update_kgh_crcs(uint8_t *data, size_t bytes_read, const uint8_t uid[4]);
+int legic_write_bytes_to_tag(uint16_t offset, uint8_t iv, const uint8_t *data, size_t bytes_read, const char *verb);
+int legic_write_dump_to_tag(uint8_t *dump, size_t bytes_read);
 
 #endif

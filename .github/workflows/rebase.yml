@@ -8,7 +8,7 @@ jobs:
     steps:
     - uses: actions/checkout@master
     - name: Changelog Reminder
-      uses: peterjgrainger/action-changelog-reminder@v1.2.0
+      uses: peterjgrainger/action-changelog-reminder@v1.3.0
       with:
         changelog_regex: 'CHANGELOG.md'
         customPrMessage: 'You are welcome to add an entry to the CHANGELOG.md as well'

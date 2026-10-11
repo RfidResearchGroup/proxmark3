@@ -16,8 +16,9 @@
 // Low frequency EM4x70 commands
 //-----------------------------------------------------------------------------
 
-#include "fpgaloader.h"
-#include "ticks.h"
+#include "fpga_loader.h"
+#include "ticks_apis.h"
+#include "fpga_apis.h"
 #include "dbprint.h"
 #include "lfadc.h"
 #include "commonutil.h"
@@ -45,12 +46,12 @@
 #define DPRINTF_EXTENDED(x) do { if ((FORCE_ENABLE_LOGGING) || (g_dbglevel >= DBG_EXTENDED)) { Dbprintf x ; } } while (0);
 #define DPRINTF_PROLIX(x)   do { if ((FORCE_ENABLE_LOGGING) || (g_dbglevel >  DBG_EXTENDED)) { Dbprintf x ; } } while (0);
 // EM4170 requires a parity bit on commands, other variants do not.
-static bool g_command_parity = true;
+static bool g_deprecated_command_parity = false;
 static em4x70_tag_t g_tag = { 0 };
 
 
 
-#if 1 // Calculation of ticks for timing functions
+// Calculation of ticks for timing functions
 // Nearly every calculation is done in terms of Field Codes (FC) aka RF periods
 // 1 us = 1.5 ticks
 // 1RF Period = 8us = 12 Ticks
@@ -80,9 +81,9 @@ static em4x70_tag_t g_tag = { 0 };
 #define EM4X70_COMMAND_LIW_SEARCH_RETRIES    5 // Attempts to send/read command
 #define EM4X70_MAX_SEND_BITCOUNT            96u // Authentication == CMD(4) + NONCE(56) + DIVERGENCY(7) + FRND(28) == 6 + 56 + 35 == 56 + 41 == 95 bits (NOTE: RM(2) is handled as part of LIW detection)
 #define EM4X70_MAX_RECEIVE_BITCOUNT         64u // Maximum bits to receive in response to any command (NOTE: This is EXCLUDING the 16-bit header of 0b1111'1111'1111'0000)
-#endif // Calculation of ticks for timing functions
 
-#if 1 // EM4x70 Command IDs and notes
+
+// EM4x70 Command IDs and notes
 /**
  * These IDs are from the EM4170 datasheet.
  * Some versions of the chip require a
@@ -198,7 +199,7 @@ static em4x70_tag_t g_tag = { 0 };
 // 3. Elif ID  w/o  parity -- If successful, command parity is NOT required, Type is EM4070/V4070
 // 4. Elif ID  with parity -- If successful, command parity IS     required, Type is EM4070/V4070
 // 5. Else                 -- Error ... no tag or other error?
-#endif // EM4x70 Command IDs
+
 
 // Constants used to determine high/low state of signal
 #define EM4X70_NOISE_THRESHOLD  13  // May depend on noise in environment
@@ -222,7 +223,6 @@ static void init_tag(void) {
 }
 
 static void em4x70_setup_read(void) {
-
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
@@ -235,15 +235,14 @@ static void em4x70_setup_read(void) {
     FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125);
 
     // Connect the A/D to the peak-detected low-frequency path.
-    SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
+    SetAdcMuxFor(ADC_MUXSEL_LOPKD);
 
     // Steal this pin from the SSP (SPI communication channel with fpga) and
     // use it to control the modulation
-    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
-    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
+    gpio_fpga_mod_only_setup();
 
     // Disable modulation at default, which means enable the field
-    LOW(GPIO_SSC_DOUT);
+    Gpio_SSC_DOUT_Low();
 
     // Start the timer
     StartTicks();
@@ -263,7 +262,9 @@ static bool get_signalproperties(void) {
         // about 2 samples per bit period
         WaitTicks(EM4X70_T_TAG_HALF_PERIOD);
 
-        if (AT91C_BASE_SSC->SSC_RHR > HIGH_SIGNAL_THRESHOLD) {
+        FPGA_SSC_RX_READY_WAIT();
+
+        if (FPGA_SSC_RX_Value() > HIGH_SIGNAL_THRESHOLD) {
             return true;
         }
     }
@@ -279,19 +280,35 @@ static uint32_t get_falling_pulse_length(void) {
 
     uint32_t timeout = GetTicks() + EM4X70_T_TAG_TIMEOUT;
 
-    while (IS_HIGH(AT91C_BASE_SSC->SSC_RHR) && !IS_TIMEOUT(timeout));
+    FPGA_SSC_RX_READY_WAIT();
+
+    uint32_t sample = FPGA_SSC_RX_Value();
+
+    while (IS_HIGH(sample) && !IS_TIMEOUT(timeout)) {
+        if (FPGA_SSC_RX_Ready()) {
+            sample = FPGA_SSC_RX_Value();
+        }
+    }
 
     if (IS_TIMEOUT(timeout))
         return 0;
 
     uint32_t start_ticks = GetTicks();
 
-    while (IS_LOW(AT91C_BASE_SSC->SSC_RHR) && !IS_TIMEOUT(timeout));
+    while (IS_LOW(sample) && !IS_TIMEOUT(timeout)) {
+        if (FPGA_SSC_RX_Ready()) {
+            sample = FPGA_SSC_RX_Value();
+        }
+    }
 
     if (IS_TIMEOUT(timeout))
         return 0;
 
-    while (IS_HIGH(AT91C_BASE_SSC->SSC_RHR) && !IS_TIMEOUT(timeout));
+    while (IS_HIGH(sample) && !IS_TIMEOUT(timeout)) {
+        if (FPGA_SSC_RX_Ready()) {
+            sample = FPGA_SSC_RX_Value();
+        }
+    }
 
     if (IS_TIMEOUT(timeout))
         return 0;
@@ -308,19 +325,35 @@ static uint32_t get_rising_pulse_length(void) {
 
     uint32_t timeout = GetTicks() + EM4X70_T_TAG_TIMEOUT;
 
-    while (IS_LOW(AT91C_BASE_SSC->SSC_RHR) && !IS_TIMEOUT(timeout));
+    FPGA_SSC_RX_READY_WAIT();
+
+    uint32_t sample = FPGA_SSC_RX_Value();
+
+    while (IS_LOW(sample) && !IS_TIMEOUT(timeout)) {
+        if (FPGA_SSC_RX_Ready()) {
+            sample = FPGA_SSC_RX_Value();
+        }
+    }
 
     if (IS_TIMEOUT(timeout))
         return 0;
 
     uint32_t start_ticks = GetTicks();
 
-    while (IS_HIGH(AT91C_BASE_SSC->SSC_RHR) && !IS_TIMEOUT(timeout));
+    while (IS_HIGH(sample) && !IS_TIMEOUT(timeout)) {
+        if (FPGA_SSC_RX_Ready()) {
+            sample = FPGA_SSC_RX_Value();
+        }
+    }
 
     if (IS_TIMEOUT(timeout))
         return 0;
 
-    while (IS_LOW(AT91C_BASE_SSC->SSC_RHR) && !IS_TIMEOUT(timeout));
+    while (IS_LOW(sample) && !IS_TIMEOUT(timeout)) {
+        if (FPGA_SSC_RX_Ready()) {
+            sample = FPGA_SSC_RX_Value();
+        }
+    }
 
     if (IS_TIMEOUT(timeout))
         return 0;
@@ -345,7 +378,7 @@ static bool check_pulse_length(uint32_t pulse_tick_length, uint32_t target_tick_
             (pulse_tick_length <= (target_tick_length + EM4X70_T_TAG_TOLERANCE)));
 }
 
-#if 1 // brute force logging of sent buffer
+// brute force logging of sent buffer
 
 // e.g., authenticate sends 93 bits (2x RM, 56x rnd, 7x div, 28x frnd) == 2+56+35 = 58+35 = 93
 // NOTE: unlike the bitstream functions, the logs include sending of the two `RM` bits
@@ -437,7 +470,6 @@ static void log_received_bits(uint8_t *byte_per_bit_array, size_t array_element_
         g_Log->receive.bits_used += array_element_count;
     }
 }
-#endif // brute force logging of sent buffer
 
 // This is the only function that actually toggles modulation for sending bits
 static void em4x70_send_bit(bool bit) {
@@ -449,22 +481,22 @@ static void em4x70_send_bit(bool bit) {
     if (bit == 0) {
 
         // disable modulation (drop the field) n cycles of carrier
-        LOW(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_Low();
         while (TICKS_ELAPSED(start_ticks) <= EM4X70_T_TAG_BITMOD);
 
         // enable modulation (activates the field) for remaining first
         // half of bit period
-        HIGH(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_High();
         while (TICKS_ELAPSED(start_ticks) <= EM4X70_T_TAG_HALF_PERIOD);
 
         // disable modulation for second half of bit period
-        LOW(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_Low();
         while (TICKS_ELAPSED(start_ticks) <= EM4X70_T_TAG_FULL_PERIOD);
 
     } else {
 
         // bit = "1" means disable modulation for full bit period
-        LOW(GPIO_SSC_DOUT);
+        Gpio_SSC_DOUT_Low();
         while (TICKS_ELAPSED(start_ticks) <= EM4X70_T_TAG_FULL_PERIOD);
     }
     log_sent_bit_end(GetTicks());
@@ -487,7 +519,7 @@ static bool check_ack(void) {
     return false;
 }
 
-#if  1 // #pragma region    // Bitstream structures / enumerations
+// Bitstream structures / enumerations
 #define EM4X70_MAX_BITSTREAM_BITS MAX(EM4X70_MAX_SEND_BITCOUNT, EM4X70_MAX_RECEIVE_BITCOUNT)
 
 // _Static_assert(EM4X70_MAX_SEND_BITCOUNT    <= 255, "EM4X70_MAX_SEND_BITCOUNT    must fit in uint8_t");
@@ -535,8 +567,7 @@ typedef struct _em4x70_command_generators_t {
     bitstream_command_generator_write_t write;
 } em4x70_command_generators_t;
 
-#endif // #pragma endregion // Bitstream structures / enumerations
-#if  1 // #pragma region    // Functions to dump bitstreams to debug output
+// Functions to dump bitstreams to debug output
 static void bitstream_dump_helper(const em4x70_bitstream_t *bitstream, bool is_transmit) {
     // mimic the log's output format to make comparisons easier
     char const *const  direction = is_transmit ? "sent >>>" : "recv <<<";
@@ -544,7 +575,7 @@ static void bitstream_dump_helper(const em4x70_bitstream_t *bitstream, bool is_t
         if (g_dbglevel >= DBG_INFO || true) {
             DPRINTF_EXTENDED(("%s: no data", direction));
         }
-    } else if (bitstream->bitcount > 0xFEu) {
+    } else if (bitstream->bitcount > EM4X70_MAX_BITSTREAM_BITS) {
         DPRINTF_ERROR(("INTERNAL ERROR: Too many bits to dump: %d", bitstream->bitcount));
     } else {
         char bitstring[EM4X70_MAX_BITSTREAM_BITS + 1];
@@ -566,8 +597,8 @@ static void bitstream_dump(const em4x70_command_bitstream_t *cmd_bitstream) {
     bitstream_dump_helper(&cmd_bitstream->to_send,    true);
     bitstream_dump_helper(&cmd_bitstream->to_receive, false);
 }
-#endif // #pragma region    // Functions to dump bitstreams to debug output
-#if  1 // #pragma region    // Functions to send bitstreams, with options to receive data
+
+// Functions to send bitstreams, with options to receive data
 
 /// @brief Internal function to send a bitstream to the tag.
 /// @details This function presumes a validated structure, and sends the bitstream without delays, to support timing-sensitive operations.
@@ -835,8 +866,8 @@ static bool send_bitstream_wait_ack_wait_ack(em4x70_command_bitstream_t *command
     bitstream_dump(command_bitstream);
     return result;
 }
-#endif // #pragma region    // Functions to send bitstreams, with options to receive data
-#if  1 // #pragma region    // Create bitstreams for each type of EM4x70 command
+
+// Create bitstreams for each type of EM4x70 command
 
 static bool add_bit_to_bitstream(em4x70_bitstream_t *s, bool b) {
     uint8_t i = s->bitcount;
@@ -905,8 +936,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_id(em4x70_command_bitstream_t
     bool result = true;
     memset(out_cmd_bitstream, 0, sizeof(em4x70_command_bitstream_t));
     out_cmd_bitstream->command = EM4X70_COMMAND_ID;
-    //uint8_t cmd = with_command_parity ? 0x3u : 0x1u;
-    uint8_t cmd = 0x3u;
+    uint8_t cmd = 0x3u; // CMD + Parity bit == 0b001'1
     result = result && add_nibble_to_bitstream(&out_cmd_bitstream->to_send, cmd, false);
     out_cmd_bitstream->to_receive.bitcount = 32;
     if (out_cmd_bitstream->to_send.bitcount != expected_bits_to_send) {
@@ -920,8 +950,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_um1(em4x70_command_bitstream_
     bool result = true;
     memset(out_cmd_bitstream, 0, sizeof(em4x70_command_bitstream_t));
     out_cmd_bitstream->command = EM4X70_COMMAND_UM1;
-    //uint8_t cmd = with_command_parity ? 0x5u : 0x2u;
-    uint8_t cmd = 0x5u;
+    uint8_t cmd = 0x5u; // CMD + Parity bit == 0b010'1
     result = result && add_nibble_to_bitstream(&out_cmd_bitstream->to_send, cmd, false);
     out_cmd_bitstream->to_receive.bitcount = 32;
     if (out_cmd_bitstream->to_send.bitcount != expected_bits_to_send) {
@@ -935,8 +964,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_um2(em4x70_command_bitstream_
     bool result = true;
     memset(out_cmd_bitstream, 0, sizeof(em4x70_command_bitstream_t));
     out_cmd_bitstream->command = EM4X70_COMMAND_UM2;
-    //uint8_t cmd = with_command_parity ? 0xFu : 0x7u;
-    uint8_t cmd = 0xFu;
+    uint8_t cmd = 0xFu;  // CMD + Parity bit == 0b111'1
     result = result && add_nibble_to_bitstream(&out_cmd_bitstream->to_send, cmd, false);
     out_cmd_bitstream->to_receive.bitcount = 64;
     if (out_cmd_bitstream->to_send.bitcount != expected_bits_to_send) {
@@ -954,8 +982,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_auth(em4x70_command_bitstream
 
     em4x70_bitstream_t *s = &out_cmd_bitstream->to_send;
 
-    // uint8_t cmd = with_command_parity ? 0x6u : 0x3u;
-    uint8_t cmd = 0x6u; // HACK - always sent with cmd parity
+    uint8_t cmd = 0x6u; // CMD + Parity bit == 0b011'0
     result = result && add_nibble_to_bitstream(s, cmd, false);
 
     // Reader:     [RM][0][Command][N55..N0][0000000][f(RN)27..f(RN)0]
@@ -1004,8 +1031,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_pin(em4x70_command_bitstream_
 
     out_cmd_bitstream->command = EM4X70_COMMAND_PIN;
 
-    //uint8_t cmd = with_command_parity ? 0x9u : 0x4u;
-    uint8_t cmd = 0x9u; // HACK - always sent with cmd parity, with extra zero bit in RM?
+    uint8_t cmd = 0x9u; // CMD + Parity bit == 0b100'1
     result = result && add_nibble_to_bitstream(s, cmd, false);
 
     // Send tag's ID ... indexes 4 .. 35
@@ -1037,8 +1063,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_write(em4x70_command_bitstrea
 
     em4x70_bitstream_t *s = &out_cmd_bitstream->to_send;
 
-    //uint8_t cmd = with_command_parity ? 0xAu : 0x5u;
-    uint8_t cmd = 0xAu; // HACK - always sent with cmd parity, with extra zero bit in RM?
+    uint8_t cmd = 0xAu; // CMD + Parity bit == 0b101'0
     result = result && add_nibble_to_bitstream(s, cmd, false);
 
     if ((address & 0x0Fu) != address) {
@@ -1088,7 +1113,6 @@ const em4x70_command_generators_t legacy_em4x70_command_generators = {
     .pin   = create_legacy_em4x70_bitstream_for_cmd_pin,
     .write = create_legacy_em4x70_bitstream_for_cmd_write
 };
-#endif // #pragma endregion // Create bitstreams for each type of EM4x70 command
 
 // TODO: define and use structs for rnd, frnd, response
 //       Or, just use the structs defined by IDLIB48?
@@ -1097,7 +1121,7 @@ static int authenticate(const uint8_t *rnd, const uint8_t *frnd, uint8_t *respon
     em4x70_command_bitstream_t auth_cmd;
 
     const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
-    generator->auth(&auth_cmd, g_command_parity, rnd, frnd);
+    generator->auth(&auth_cmd, g_deprecated_command_parity, rnd, frnd);
 
     bool result = send_bitstream_and_read(&auth_cmd);
     if (result) {
@@ -1185,7 +1209,7 @@ static int bruteforce(const uint8_t address, const uint8_t *rnd, const uint8_t *
 static int send_pin(const uint32_t pin) {
     em4x70_command_bitstream_t send_pin_cmd;
     const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
-    generator->pin(&send_pin_cmd, g_command_parity, &g_tag.data[4], pin);
+    generator->pin(&send_pin_cmd, g_deprecated_command_parity, &g_tag.data[4], pin);
 
     bool result = send_bitstream_wait_ack_wait_read(&send_pin_cmd);
     return result ? PM3_SUCCESS : PM3_ESOFT;
@@ -1196,7 +1220,7 @@ static int write(const uint16_t word, const uint8_t address) {
     em4x70_command_bitstream_t write_cmd;
 
     const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
-    generator->write(&write_cmd, g_command_parity, word, address);
+    generator->write(&write_cmd, g_deprecated_command_parity, word, address);
 
     bool result = send_bitstream_wait_ack_wait_ack(&write_cmd);
     if (!result) {
@@ -1283,7 +1307,7 @@ static uint8_t encoded_bit_array_to_byte(const uint8_t *bits, int count_of_bits)
 static bool em4x70_read_id(void) {
     em4x70_command_bitstream_t read_id_cmd;
     const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
-    generator->id(&read_id_cmd, g_command_parity);
+    generator->id(&read_id_cmd, g_deprecated_command_parity);
 
     bool result = send_bitstream_and_read(&read_id_cmd);
     if (result) {
@@ -1300,7 +1324,7 @@ static bool em4x70_read_id(void) {
 static bool em4x70_read_um1(void) {
     em4x70_command_bitstream_t read_um1_cmd;
     const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
-    generator->um1(&read_um1_cmd, g_command_parity);
+    generator->um1(&read_um1_cmd, g_deprecated_command_parity);
 
     bool result = send_bitstream_and_read(&read_um1_cmd);
     if (result) {
@@ -1319,7 +1343,7 @@ static bool em4x70_read_um1(void) {
 static bool em4x70_read_um2(void) {
     em4x70_command_bitstream_t read_um2_cmd;
     const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
-    generator->um2(&read_um2_cmd, g_command_parity);
+    generator->um2(&read_um2_cmd, g_deprecated_command_parity);
 
     bool result = send_bitstream_and_read(&read_um2_cmd);
     if (result) {
@@ -1435,7 +1459,7 @@ void em4x70_info(const em4x70_data_t *etd, bool ledcontrol) {
     bool success_with_UM2 = false;
 
     // Support tags with and without command parity bits
-    g_command_parity = etd->parity;
+    g_deprecated_command_parity = false;
 
     init_tag();
     em4x70_setup_read();
@@ -1448,8 +1472,8 @@ void em4x70_info(const em4x70_data_t *etd, bool ledcontrol) {
         success_with_UM2 = em4x70_read_um2();
     }
 
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     StopTicks();
-    lf_finalize(ledcontrol);
     int status = success ? PM3_SUCCESS : PM3_ESOFT;
     size_t data_size =
         success && success_with_UM2 ? 32 :
@@ -1463,10 +1487,10 @@ void em4x70_info(const em4x70_data_t *etd, bool ledcontrol) {
 void em4x70_write(const em4x70_data_t *etd, bool ledcontrol) {
     int status = PM3_ESOFT;
 
-    g_command_parity = etd->parity;
+    g_deprecated_command_parity = false;
 
     // Disable to prevent sending corrupted data to the tag.
-    if (g_command_parity) {
+    if (g_deprecated_command_parity) {
         DPRINTF_ALWAYS(("Use of `--par` option with `lf em 4x70 write` is  non-functional and may corrupt data on the tag."));
         // reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
         // return;
@@ -1490,8 +1514,9 @@ void em4x70_write(const em4x70_data_t *etd, bool ledcontrol) {
         }
     }
 
+    if (ledcontrol) LEDsoff();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     StopTicks();
-    lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_WRITE, status, g_tag.data, sizeof(g_tag.data));
 }
 
@@ -1499,7 +1524,7 @@ void em4x70_unlock(const em4x70_data_t *etd, bool ledcontrol) {
 
     int status = PM3_ESOFT;
 
-    g_command_parity = etd->parity;
+    g_deprecated_command_parity = false;
 
     init_tag();
     em4x70_setup_read();
@@ -1523,8 +1548,9 @@ void em4x70_unlock(const em4x70_data_t *etd, bool ledcontrol) {
         }
     }
 
+    if (ledcontrol) LEDsoff();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     StopTicks();
-    lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_UNLOCK, status, g_tag.data, sizeof(g_tag.data));
 }
 
@@ -1534,10 +1560,10 @@ void em4x70_auth(const em4x70_data_t *etd, bool ledcontrol) {
 
     uint8_t response[3] = {0};
 
-    g_command_parity = etd->parity;
+    g_deprecated_command_parity = false;
 
     // Disable to prevent sending corrupted data to the tag.
-    if (g_command_parity) {
+    if (g_deprecated_command_parity) {
         DPRINTF_ALWAYS(("Use of `--par` option with `lf em 4x70 auth` is  non-functional."));
         // reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
         // return;
@@ -1553,8 +1579,9 @@ void em4x70_auth(const em4x70_data_t *etd, bool ledcontrol) {
         status = authenticate(etd->rnd, etd->frnd, response);
     }
 
+    if (ledcontrol) LEDsoff();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     StopTicks();
-    lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_AUTH, status, response, sizeof(response));
 }
 
@@ -1562,10 +1589,10 @@ void em4x70_brute(const em4x70_data_t *etd, bool ledcontrol) {
     int status = PM3_ESOFT;
     uint8_t response[2] = {0};
 
-    g_command_parity = etd->parity;
+    g_deprecated_command_parity = false;
 
     // Disable to prevent sending corrupted data to the tag.
-    if (g_command_parity) {
+    if (g_deprecated_command_parity) {
         DPRINTF_ALWAYS(("Use of `--par` option with `lf em 4x70 brute` is  non-functional and may corrupt data on the tag."));
         // reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
         // return;
@@ -1581,8 +1608,9 @@ void em4x70_brute(const em4x70_data_t *etd, bool ledcontrol) {
         status = bruteforce(etd->address, etd->rnd, etd->frnd, etd->start_key, response);
     }
 
+    if (ledcontrol) LEDsoff();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     StopTicks();
-    lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_BRUTE, status, response, sizeof(response));
 }
 
@@ -1590,10 +1618,10 @@ void em4x70_write_pin(const em4x70_data_t *etd, bool ledcontrol) {
 
     int status = PM3_ESOFT;
 
-    g_command_parity = etd->parity;
+    g_deprecated_command_parity = false;
 
     // Disable to prevent sending corrupted data to the tag.
-    if (g_command_parity) {
+    if (g_deprecated_command_parity) {
         DPRINTF_ALWAYS(("Use of `--par` option with `lf em 4x70 setpin` is non-functional and may corrupt data on the tag."));
         // reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
         // return;
@@ -1630,8 +1658,9 @@ void em4x70_write_pin(const em4x70_data_t *etd, bool ledcontrol) {
         }
     }
 
+    if (ledcontrol) LEDsoff();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     StopTicks();
-    lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_SETPIN, status, g_tag.data, sizeof(g_tag.data));
 }
 
@@ -1639,10 +1668,10 @@ void em4x70_write_key(const em4x70_data_t *etd, bool ledcontrol) {
 
     int status = PM3_ESOFT;
 
-    g_command_parity = etd->parity;
+    g_deprecated_command_parity = false;
 
     // Disable to prevent sending corrupted data to the tag.
-    if (g_command_parity) {
+    if (g_deprecated_command_parity) {
         DPRINTF_ALWAYS(("Use of `--par` option with `lf em 4x70 setkey` is non-functional and may corrupt data on the tag."));
         // reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
         // return;
@@ -1677,7 +1706,8 @@ void em4x70_write_key(const em4x70_data_t *etd, bool ledcontrol) {
         }
     }
 
+    if (ledcontrol) LEDsoff();
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     StopTicks();
-    lf_finalize(ledcontrol);
     reply_ng(CMD_LF_EM4X70_SETKEY, status, g_tag.data, sizeof(g_tag.data));
 }

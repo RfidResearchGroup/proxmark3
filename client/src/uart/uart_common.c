@@ -39,31 +39,36 @@
 #endif
 
 bool uart_bind(void *socket, const char *bindAddrStr, const char *bindPortStr, bool isBindingIPv6) {
-    if (bindAddrStr == NULL && bindPortStr == NULL)
+    if (bindAddrStr == NULL && bindPortStr == NULL) {
         return true; // no need to bind
+    }
 
     struct sockaddr_storage bindSockaddr;
     memset(&bindSockaddr, 0, sizeof(bindSockaddr));
     int bindPort = 0; // 0: port unspecified
-    if (bindPortStr != NULL)
+    if (bindPortStr != NULL) {
         bindPort = atoi(bindPortStr);
+    }
 
-    if (!isBindingIPv6) {
+    if (isBindingIPv6 == false) {
         struct sockaddr_in *bindSockaddr4 = (struct sockaddr_in *)&bindSockaddr;
         bindSockaddr4->sin_family = AF_INET;
         bindSockaddr4->sin_port = htons(bindPort);
-        if (bindAddrStr == NULL)
+        if (bindAddrStr == NULL) {
             bindSockaddr4->sin_addr.s_addr = INADDR_ANY;
-        else
+        } else {
             bindSockaddr4->sin_addr.s_addr = inet_addr(bindAddrStr);
+        }
+
     } else {
         struct sockaddr_in6 *bindSockaddr6 = (struct sockaddr_in6 *)&bindSockaddr;
         bindSockaddr6->sin6_family = AF_INET6;
         bindSockaddr6->sin6_port = htons(bindPort);
-        if (bindAddrStr == NULL)
+        if (bindAddrStr == NULL) {
             bindSockaddr6->sin6_addr = in6addr_any;
-        else
+        } else {
             inet_pton(AF_INET6, bindAddrStr, &(bindSockaddr6->sin6_addr));
+        }
     }
 #ifdef _WIN32
     int res = bind(*(SOCKET *)socket, (struct sockaddr *)&bindSockaddr, sizeof(bindSockaddr));

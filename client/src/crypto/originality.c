@@ -44,7 +44,12 @@ const ecdsa_publickey_ng_t manufacturer_public_keys[] = {
     },
     // ref: AN11350 NTAG 21x Originality Signature Validation
     {
-        PK_MFUL,    MBEDTLS_ECP_DP_SECP128R1, 33, "NXP NTAG21x (2013)",
+        PK_MFUL,    MBEDTLS_ECP_DP_SECP128R1, 33, "NXP NTAG21x",
+        "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"
+    },
+    // same key used on NTAG 5
+    {
+        PK_15,    MBEDTLS_ECP_DP_SECP128R1, 33, "NXP NTAG 5 link, NTAG 5 boost",
         "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"
     },
 
@@ -57,6 +62,12 @@ const ecdsa_publickey_ng_t manufacturer_public_keys[] = {
     {
         PK_MFULAES, MBEDTLS_ECP_DP_SECP192R1, 49, "NXP Ultralight AES (alt key)",
         "04DC34DAA903F2726A6225B11C692AF6AB4396575CA12810CBBCE3F781A097B3833B50AB364A70D9C2B641A728A599AE74"
+    },
+
+    // ref: AN12998 NTAG 22x DNA (StatusDetect) - Features and hints
+    {
+        PK_MFULAES, MBEDTLS_ECP_DP_SECP192R1, 49, "NXP NTAG 22x DNA",
+        "0485D5B9353B4FAA77581BA2AE96630C5876D6E8603308ABE9A81A0B506F52D02D04FEE6F2D365B3DEE7B9FAD9133E2976"
     },
 
     {
@@ -120,7 +131,7 @@ const ecdsa_publickey_ng_t manufacturer_public_keys[] = {
     },
 
     {
-        PK_15,      MBEDTLS_ECP_DP_SECP128R1, 33, "NXP ICODE DNA, ICODE SLIX2",
+        PK_15,      MBEDTLS_ECP_DP_SECP128R1, 33, "NXP ICODE DNA, ICODE 3, ICODE SLIX2",
         "048878A2A2D3EEC336B4F261A082BD71F9BE11C4E2E896648B32EFA59CEA6E59F0"
     },
     {
@@ -184,8 +195,7 @@ int originality_check_verify_ex(uint8_t *data, uint8_t data_len, uint8_t *signat
 
 int originality_check_print(uint8_t *signature, int signature_len, int index) {
 
-    PrintAndLogEx(NORMAL, "");
-
+    // sanity check
     if ((index < 0) || (index >= ARRAYLEN(manufacturer_public_keys))) {
 
         PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 16));

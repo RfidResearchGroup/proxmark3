@@ -244,8 +244,11 @@ local function LoadEmulator(uid, blocks)
         io.write( _..',')
         io.flush()
         core.clearCommandBuffer()
-        cmd = Command:newMIX{cmd = cmds.CMD_HF_MIFARE_EML_MEMSET, arg1 = _ ,arg2 = 1,arg3 = 16, data = blockdata}
-        local err, msg = cmd:sendMIX(true)
+        -- payload: u16 blockno, u8 blockcnt, u8 blockwidth, u8 data[]
+        -- payload: u16 blockno, u8 blockcnt, u8 blockwidth, u8 data[]
+        local eml_payload = ('%02X%02X%02X%02X'):format(_ % 256, math.floor(_ / 256) % 256, 1, 16) .. blockdata
+        cmd = Command:newNG{cmd = cmds.CMD_HF_MIFARE_EML_MEMSET, data = eml_payload}
+        local err, msg = cmd:sendNG(true)
         if err == nil then return err, msg end
     end
     io.write('\n')

@@ -6,8 +6,8 @@ local ansicolors = require('ansicolors')
 local amiibo_tools = require('amiibo_tools')
 
 copyright = ''
-author = 'George Talusan'
-version = 'v0.0.2'
+author = 'George Talusan, modified by Lee Hambley'
+version = 'v0.0.3'
 desc = [[
 This script will try to load a binary datadump of an Amiibo.
 It will recalculate PWD and PACK if necessary.
@@ -82,7 +82,11 @@ local function LoadEmulator(uid, blocks)
         io.write('.')
         io.flush()
         core.clearCommandBuffer()
-        cmd = Command:newNG{cmd = cmds.CMD_HF_MIFARE_EML_MEMSET, data = ('%02x%02x%02x%s'):format(i, 1, 4, blockdata)}
+        -- Pack blockno (uint16_t LE) + blockcnt (uint8_t) + blockwidth (uint8_t) + data
+        local block_lo = bit32.band(i, 0xff)
+        local block_hi = bit32.rshift(i, 8)
+        local payload = ('%02x%02x%02x%02x'):format(block_lo, block_hi, 1, 4)..blockdata
+        cmd = Command:newNG{cmd = cmds.CMD_HF_MIFARE_EML_MEMSET, data = payload}
         local err, msg = cmd:sendNG(true)
         if err == nil then return err, msg end
     end

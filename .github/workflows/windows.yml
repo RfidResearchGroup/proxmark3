@@ -7,13 +7,14 @@ on:
       - 'docker/**'
       - 'traces/**'
       - '.vscode/**'
+      - '**.md'
   pull_request:
     paths-ignore:
       - 'doc/**'
       - 'docker/**'
       - 'traces/**'
       - '.vscode/**'
-
+      - '**.md'
 
 jobs:
   proxspace:
@@ -22,9 +23,8 @@ jobs:
       run:
         shell: pwsh
     env:
-      PATH: C:/ProxSpace/msys2/mingw64/bin;C:/ProxSpace/msys2/usr/local/bin;C:/ProxSpace/msys2/usr/bin;C:/ProxSpace/msys2/bin
-      MSYSTEM: MINGW64
-      PYTHONHOME: /mingw64
+      MSYSTEM: UCRT64
+      PYTHONHOME: /ucrt64
 
     steps:
       - name: ProxSpace download
@@ -39,6 +39,53 @@ jobs:
       - name: ProxSpace rename folder
         run: Get-ChildItem -Path "C:\ProxSpace-*" | Rename-Item -NewName (Split-Path C:\ProxSpace -Leaf)
 
+      - name: ProxSpace overwrite packages.txt for UCRT64
+        run: |
+          @'
+          ##############################
+          #         General           #
+          ##############################
+          git
+          make
+          pkg-config
+          mingw-w64-ucrt-x86_64-cmake
+          procps
+          base-devel
+          ##############################
+          #         Proxmark3         #
+          ##############################
+          mingw-w64-ucrt-x86_64-gcc
+          mingw-w64-ucrt-x86_64-arm-none-eabi-gcc
+          mingw-w64-ucrt-x86_64-arm-none-eabi-gdb
+          mingw-w64-ucrt-x86_64-arm-none-eabi-binutils
+          mingw-w64-ucrt-x86_64-arm-none-eabi-newlib
+          mingw-w64-ucrt-x86_64-readline
+          mingw-w64-ucrt-x86_64-libsndfile
+          mingw-w64-ucrt-x86_64-lua
+          mingw-w64-ucrt-x86_64-bzip2
+          mingw-w64-ucrt-x86_64-python
+          mingw-w64-ucrt-x86_64-python-pip
+          mingw-w64-ucrt-x86_64-python-setuptools
+          mingw-w64-ucrt-x86_64-python-cryptography
+          mingw-w64-ucrt-x86_64-jansson
+          mingw-w64-ucrt-x86_64-qt6-base
+          mingw-w64-ucrt-x86_64-gdb
+          mingw-w64-ucrt-x86_64-openocd
+          mingw-w64-ucrt-x86_64-opencl-icd
+          mingw-w64-ucrt-x86_64-lz4
+          mingw-w64-ucrt-x86_64-libgd
+          mingw-w64-ucrt-x86_64-openssl
+          ##############################
+          #       ChameleonMini       #
+          ##############################
+          #mingw-w64-ucrt-x86_64-dfu-programmer
+          #mingw-w64-ucrt-x86_64-avrdude
+          #mingw-w64-ucrt-x86_64-avr-binutils
+          #mingw-w64-ucrt-x86_64-avr-gcc
+          #mingw-w64-ucrt-x86_64-avr-gdb
+          #mingw-w64-ucrt-x86_64-avr-libc
+          '@ | Set-Content -Path "C:\ProxSpace\setup\packages.txt" -Encoding UTF8
+
       - name: ProxSpace version
         run: |
           $psversion = (Select-String -Pattern 'PSVERSION=' -SimpleMatch -Path "C:\ProxSpace\setup\09-proxspace_setup.post").Line.Split("""")[1]
@@ -46,9 +93,36 @@ jobs:
 
       - name: ProxSpace initial startup
         working-directory: C:\ProxSpace
-        run: ./runme64.bat -c "exit"
+        run: |
+            $maxAttempts = 3
+            $delay = 20
+            for ($i = 1; $i -le $maxAttempts; $i++) {
+                Write-Host "Attempt $i..."
+                ./runme64.bat -c "exit"
+                if ($LASTEXITCODE -eq 0) { exit 0 }
+                if ($i -lt $maxAttempts) { Start-Sleep -Seconds $delay }
+            }
+            exit 1
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+
+      # Prepend MSYS2 tools to PATH only for steps after checkout, so actions/checkout
+      # keeps using the runner's native git (MSYS2's git.exe mangles refs like
+      # 'tag^{commit}' due to its own bash-style argv reparsing).
+      - name: Add ProxSpace/MSYS2 to PATH
+        run: |
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\ProxSpace\msys2\ucrt64\bin"
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\ProxSpace\msys2\usr\local\bin"
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\ProxSpace\msys2\usr\bin"
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\ProxSpace\msys2\bin"
+          # Not set by an MSYS2 login shell here, so pkg-config wouldn't otherwise
+          # find the ucrt64 .pc files (zlib, jansson, gdlib, python3, etc).
+          Add-Content -Path $env:GITHUB_ENV -Value "PKG_CONFIG_PATH=/ucrt64/lib/pkgconfig:/ucrt64/share/pkgconfig"
+
+      # TODO workaround: "error: linker script file 'xxxx' appears multiple times"
+      # This should be reverted once MSYS2 ships a non-broken version of the linker.
+      - name: Downgrade ARM linker (Windows, temporary)
+        run: pacman -U --noconfirm https://repo.msys2.org/mingw/ucrt64/mingw-w64-ucrt-x86_64-arm-none-eabi-binutils-2.46.1-1-any.pkg.tar.zst
 
       - name: make clean
         run: make clean
@@ -98,9 +172,9 @@ jobs:
 
     steps:
       - name: WSL setup
-        uses: Vampire/setup-wsl@v3
+        uses: Vampire/setup-wsl@v7
         with:
-          distribution: Ubuntu-22.04
+          distribution: Ubuntu-24.04
           update: "true"
           additional-packages: git
             ca-certificates
@@ -111,32 +185,24 @@ jobs:
             libnewlib-dev
             libbz2-dev
             liblz4-dev
-            qtbase5-dev
+            qt6-base-dev
             cmake
             libpython3-dev
-            python3
-            python3-pip
-            python3-dev
-            libpython3-all-dev
             libssl-dev
             libgd-dev
 
-      - name: Install Python dependencies
+      - name: Install uv
         run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install setuptools
-          python3 -m pip install ansicolors sslcrypto
-
-      - name: WSL QT fix
-        run: sudo strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so.5
-
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          install -m 0755 /root/.local/bin/uv /usr/local/bin/
+          install -m 0755 /root/.local/bin/uvx /usr/local/bin/
       - name: Set git to use LF
         shell: bash
         run: |
           git config --global core.autocrlf false
           git config --global core.eol lf
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: make clean
         run: make clean

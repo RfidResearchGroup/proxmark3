@@ -40,15 +40,15 @@
 
 #include "proxmark3_arm.h"
 #include "appmain.h"
-#include "fpgaloader.h"
+#include "fpga_apis.h"
+#include "fpga_loader.h"
 #include "lfsampling.h"
 #include "util.h"
 #include "dbprint.h"
 #include "spiffs.h"
-#include "ticks.h"
+#include "ticks_apis.h"
 #include "lfops.h"
 #include "BigBuf.h"
-#include "fpgaloader.h"
 #include "parity.h"
 
 // What card number should be used for the bruteforce?

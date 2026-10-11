@@ -22,9 +22,9 @@
 #include "common.h"
 #include "hitag.h"
 
-void SniffHitag2(bool ledcontrol);
+void SniffHitag2(bool ledcontrol, uint8_t threshold);
 void hitag_sniff(void);
-void SimulateHitag2(bool ledcontrol);
+void SimulateHitag2(uint8_t threshold, uint16_t twait, uint8_t flags, uint8_t sof, uint8_t duty, bool ledcontrol);
 void ReaderHitag(const lf_hitag_data_t *payload, bool ledcontrol);
 void WriterHitag(const lf_hitag_data_t *payload, bool ledcontrol);
 
