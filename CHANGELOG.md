@@ -37,6 +37,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed `hf 14a info`  now correctly handles NAK when receiving RATS (@iceman1001)
 - Fixed `hf mfu restore` to support Ultralight AES (@iceman1001)
 - Fixed `hf mfu info` to print UL-AES config pages again (@iceman1001)
+- Added FPGA opensource (@xianglin1998)
 
 ## [Frosty Lemon.4.23346][2026-09-18]
 - Fixed `hf mfdes sim` - the ATS now advertises 106 kbit/s only, PPS to a higher rate is refused, a selected card ignores REQA/WUPA, and ISO-DEP block recovery now follows the card sequence (@mistial-dev)
