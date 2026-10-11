@@ -16,6 +16,9 @@
 // NFC Data Exchange Format (NDEF) functions
 //-----------------------------------------------------------------------------
 
+#ifndef _WIN32
+#define _POSIX_C_SOURCE 200112L
+#endif
 #include "ndef.h"
 
 #include <string.h>
@@ -1009,13 +1012,15 @@ static int ndefDecodeMime_vcard(NDEFHeader_t *ndef) {
 
     char *s = strstr((char *)ndef->Payload, "PHOTO");
     if (s) {
-        s = strtok(s, ";");
+        char *saveptr = NULL;
+        s = strtok_r(s, ";", &saveptr);
         while (s) {
             char *tmp = s;
             if (strncmp(tmp, "ENCODING", 8) == 0) {
             } else if (strncmp(tmp, "TYPE", 4) == 0) {
 
-                char *part = strtok(tmp + 4, ":");
+                char *part_saveptr = NULL;
+                char *part = strtok_r(tmp + 4, ":", &part_saveptr);
                 while (part) {
 
                     if (strncmp(part, "=image/", 7) == 0) {
@@ -1024,10 +1029,10 @@ static int ndefDecodeMime_vcard(NDEFHeader_t *ndef) {
                         // should be in the BASE64 data part now.
                         ShowBase64PictureWindow("VCARD photo", part);
                     }
-                    part = strtok(NULL, ":");
+                    part = strtok_r(NULL, ":", &part_saveptr);
                 }
             }
-            s = strtok(NULL, ";");
+            s = strtok_r(NULL, ";", &saveptr);
         }
     }
     return PM3_SUCCESS;
