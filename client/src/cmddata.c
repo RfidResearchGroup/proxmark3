@@ -15,6 +15,9 @@
 //-----------------------------------------------------------------------------
 // Data and Graph commands
 //-----------------------------------------------------------------------------
+#ifndef _WIN32
+#define _POSIX_C_SOURCE 200809L
+#endif
 #include "cmddata.h"
 #include <stdio.h>
 #include <string.h>
@@ -3511,10 +3514,11 @@ static int CmdAtrLookup(const char *Cmd) {
 
     char *copy = str_dup(getAtrInfo((char *)data));
 
-    char *token = strtok(copy, "\n");
+    char *saveptr = NULL;
+    char *token = strtok_r(copy, "\n", &saveptr);
     while (token != NULL) {
         PrintAndLogEx(INFO, "    %s", token);
-        token = strtok(NULL, "\n");
+        token = strtok_r(NULL, "\n", &saveptr);
     }
     free(copy);
     return PM3_SUCCESS;
@@ -3728,7 +3732,8 @@ static int CmdBinaryMap(const char *Cmd) {
         template[1] = 0;
     }
 
-    char *token = strtok((char *)template, ",");
+    char *saveptr = NULL;
+    char *token = strtok_r((char *)template, ",", &saveptr);
 
     // header
     PrintAndLogEx(INFO, "---+-------------------------");
@@ -3751,7 +3756,7 @@ static int CmdBinaryMap(const char *Cmd) {
         }
 
         PrintAndLogEx(NORMAL, "");
-        token = strtok(NULL, ",");
+        token = strtok_r(NULL, ",", &saveptr);
         cnt++;
     }
 

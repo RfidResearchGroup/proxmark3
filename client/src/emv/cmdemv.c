@@ -16,6 +16,9 @@
 // EMV commands
 //-----------------------------------------------------------------------------
 
+#ifndef _WIN32
+#define _POSIX_C_SOURCE 200809L
+#endif
 #include "cmdemv.h"
 #include <string.h>
 #include "comms.h"          // DropField
@@ -292,7 +295,8 @@ static int emv_parse_track1(const uint8_t *d, size_t n, bool verbose) {
     char *tmp = str_ndup((const char *)d, n);
     uint8_t i = 0;
     const char delim[2] = "^";
-    char *token = strtok(tmp, delim);
+    char *saveptr = NULL;
+    char *token = strtok_r(tmp, delim, &saveptr);
     while (token != NULL) {
 
         switch (i) {
@@ -340,7 +344,7 @@ static int emv_parse_track1(const uint8_t *d, size_t n, bool verbose) {
             default:
                 break;
         }
-        token = strtok(0, delim);
+        token = strtok_r(NULL, delim, &saveptr);
         i++;
     }
     free(tmp);
@@ -3171,4 +3175,3 @@ int CmdEMV(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
-
