@@ -59,18 +59,22 @@ PAR_OPTIONS = -t 1
 # To enable these modules WITH_LF _MUST_NOT_ be defined
 # WITH_HF0 enable HF reader (see also WITH_HF_15 below)
 # WITH_HF_15 select "iso15 2sc mode" extensions instead of original
+#          (the iso15 low-signal reader detection thresholds are selected at runtime
+#           in hi_reader.v, based on subcarrier/minor mode -- no separate define)
 # WITH_HF1 enable HF simulated tag
 # WITH_HF2 enable HF ISO14443-A
 # WITH_HF3 enable sniff
 # WITH_HF4 enable HF ISO18092 FeliCa
 # WITH_HF5 enable HF get trace
 
+# WITH_TIMODE enable TI mode (for SPI_SSC. PM5 only currently)
+
 # RDV40/Generic - Enable LF and all the LF modules
 TARGET1_OPTIONS = -define \{WITH_LF WITH_LF0 WITH_LF1 WITH_LF2 WITH_LF3\}
 # RDV40/Generic - Enable all HF modules except Felica
 TARGET2_OPTIONS = -define \{WITH_HF0 WITH_HF1 WITH_HF2 WITH_HF3 WITH_HF5\}
 # RDV40/Generic - Enable all HF modules except Felica and ISO14443, select HF_15 instead of HF
-TARGET3_OPTIONS = -define \{WITH_HF0 WITH_HF1 WITH_HF3 WITH_HF5 WITH_HF_15 WITH_HF_15_LOWSIGNAL\}
+TARGET3_OPTIONS = -define \{WITH_HF0 WITH_HF1 WITH_HF3 WITH_HF5 WITH_HF_15\}
 # RDV40/Generic - Enable all HF modules except ISO14443
 TARGET4_OPTIONS = -define \{WITH_HF0 WITH_HF1 WITH_HF3 WITH_HF4 WITH_HF5\}
 # ICOPYX

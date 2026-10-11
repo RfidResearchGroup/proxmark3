@@ -42,15 +42,30 @@ assign adc_clk = ck_1356meg;  // sample frequency is 13,56 MHz
 // using AM. Do this the same way that we do it for the simulated tag.
 reg after_hysteresis, after_hysteresis_prev, after_hysteresis_prev_prev;
 reg [11:0] has_been_low_for;
+
+// Reader-carrier detection thresholds, selected at runtime by the configured mode.
+// The lower thresholds (240 / 63 instead of 255 / 0) allow the reader signal to still be recovered
+// when the received level is weak.  They are meant for ISO15693: the 2-subcarrier modes, plus the
+// amplitude sniffer that "hf 15 sniff" uses -- including the plain SNIFF_AMPLITUDE that its jam
+// sequence switches to and keeps for the rest of the command.
+// This module is shared with other protocols (ISO14443B sniff reads the very same
+// after_hysteresis bits) and must keep the rail-to-rail thresholds there, so the selection is done
+// at runtime instead of with a compile-time switch.
+wire low_signal_mode = (subcarrier_frequency == `FPGA_HF_READER_2SUBCARRIERS_424_484_KHZ)
+                    || (minor_mode == `FPGA_HF_READER_MODE_SNIFF_AMPLITUDE);
+
 always @(negedge adc_clk)
 begin
-`ifdef WITH_HF_15_LOWSIGNAL
-    if (& adc_d[7:4]) after_hysteresis <= 1'b1;
-    else if (~(| adc_d[7:6])) after_hysteresis <= 1'b0;
-`else
-    if (& adc_d[7:0]) after_hysteresis <= 1'b1;
-    else if (~(| adc_d[7:0])) after_hysteresis <= 1'b0;
-`endif
+    if (low_signal_mode)
+    begin
+        if (& adc_d[7:4]) after_hysteresis <= 1'b1;
+        else if (~(| adc_d[7:6])) after_hysteresis <= 1'b0;
+    end
+    else
+    begin
+        if (& adc_d[7:0]) after_hysteresis <= 1'b1;
+        else if (~(| adc_d[7:0])) after_hysteresis <= 1'b0;
+    end
 
     if (after_hysteresis)
     begin
