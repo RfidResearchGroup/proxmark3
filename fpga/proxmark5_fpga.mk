@@ -43,9 +43,12 @@ PM5_OUT  = $(PREFIX)build_$(PM5_NAME)
 
 # The oss-cad-suite launchers need their root, and both bin/ and lib/ on PATH
 # (lib/ carries the shared libraries), otherwise they exit without a message.
+# The suite bundles its own python, named per platform. With OSS_CAD_SUITE
+# unset everything comes from PATH instead, which is what sourcing the suite's
+# environment script gives you.
 ifneq ($(OSS_CAD_SUITE),)
-OC_ENV    = YOSYSHQ_ROOT="$(OSS_CAD_SUITE)/" PATH="$(OSS_CAD_SUITE)/bin:$(OSS_CAD_SUITE)/lib:$$PATH" PYTHON_EXECUTABLE="$(OSS_CAD_SUITE)/lib/python3.exe"
-OC_PYTHON = $(OSS_CAD_SUITE)/lib/python3.exe
+OC_PYTHON = $(firstword $(wildcard $(OSS_CAD_SUITE)/lib/python3.exe $(OSS_CAD_SUITE)/py3bin/python3 $(OSS_CAD_SUITE)/lib/python3 $(OSS_CAD_SUITE)/bin/python3) python3)
+OC_ENV    = YOSYSHQ_ROOT="$(OSS_CAD_SUITE)/" PATH="$(OSS_CAD_SUITE)/bin:$(OSS_CAD_SUITE)/lib:$$PATH" LD_LIBRARY_PATH="$(OSS_CAD_SUITE)/lib:$$LD_LIBRARY_PATH" PYTHON_EXECUTABLE="$(OC_PYTHON)"
 else
 OC_ENV    =
 OC_PYTHON = python3
