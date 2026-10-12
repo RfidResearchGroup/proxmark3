@@ -36,17 +36,10 @@ jobs:
           # front of PATH itself, so nothing else needs to be exported
           echo "OSS_CAD_SUITE=$RUNNER_TEMP/oss-cad-suite" >> "$GITHUB_ENV"
 
-      - name: Show the toolchain
-        run: |
-          set -euo pipefail
-          # the same resolution the build uses, then the versions for the log
-          make -C fpga -f proxmark5_fpga.mk check-tools
-          set +u
-          source "$OSS_CAD_SUITE/environment"
-          set -u
-          yosys -V
-          nextpnr-himbaechel --version
-          python3 -c "import apycula; print('apycula:', apycula.__file__)"
+      # Runs the real tools through the same environment the build uses, so a
+      # suite that cannot run fails here instead of half way through the build.
+      - name: Check the toolchain
+        run: make -C fpga -f proxmark5_fpga.mk smoke
 
       # Place and route fails the job on a timing violation, so this does not
       # only prove the design still elaborates.

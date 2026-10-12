@@ -43,12 +43,22 @@ PM5_OUT  = $(PREFIX)build_$(PM5_NAME)
 
 # The oss-cad-suite launchers need their root, and both bin/ and lib/ on PATH
 # (lib/ carries the shared libraries), otherwise they exit without a message.
-# The suite bundles its own python, named per platform. With OSS_CAD_SUITE
-# unset everything comes from PATH instead, which is what sourcing the suite's
-# environment script gives you.
+# The suite is laid out per platform, and each of its own environment scripts
+# says what to put where. On Windows the shared libraries sit in lib/ and are
+# found through PATH, as environment.bat does. Everywhere else they are found by
+# the tools themselves, and adding lib/ to PATH or LD_LIBRARY_PATH makes yosys
+# load the suite's libstdc++ instead of the system one and segfault at startup.
+# With OSS_CAD_SUITE unset the tools come from PATH, which is what sourcing the
+# suite's environment gives you.
 ifneq ($(OSS_CAD_SUITE),)
-OC_PYTHON = $(firstword $(wildcard $(OSS_CAD_SUITE)/lib/python3.exe $(OSS_CAD_SUITE)/py3bin/python3 $(OSS_CAD_SUITE)/lib/python3 $(OSS_CAD_SUITE)/bin/python3) python3)
-OC_ENV    = YOSYSHQ_ROOT="$(OSS_CAD_SUITE)/" PATH="$(OSS_CAD_SUITE)/bin:$(OSS_CAD_SUITE)/lib:$$PATH" LD_LIBRARY_PATH="$(OSS_CAD_SUITE)/lib:$$LD_LIBRARY_PATH" PYTHON_EXECUTABLE="$(OC_PYTHON)"
+ifneq ($(wildcard $(OSS_CAD_SUITE)/lib/python3.exe),)
+OC_PATH   = $(OSS_CAD_SUITE)/bin:$(OSS_CAD_SUITE)/lib
+OC_PYTHON = $(OSS_CAD_SUITE)/lib/python3.exe
+else
+OC_PATH   = $(OSS_CAD_SUITE)/bin:$(OSS_CAD_SUITE)/py3bin
+OC_PYTHON = $(firstword $(wildcard $(OSS_CAD_SUITE)/py3bin/python3 $(OSS_CAD_SUITE)/bin/python3) python3)
+endif
+OC_ENV = YOSYSHQ_ROOT="$(OSS_CAD_SUITE)/" PATH="$(OC_PATH):$$PATH" PYTHON_EXECUTABLE="$(OC_PYTHON)"
 else
 OC_ENV    =
 OC_PYTHON = python3
@@ -57,7 +67,7 @@ endif
 PM5_BUILD_HDL = $(addprefix ../,$(PM5_HDL))
 PM5_DEFS      = $(foreach d,$(PM5_DEFINES),-D $(d))
 
-.PHONY: all clean help check-tools $(PM5_NAME)
+.PHONY: all clean help check-tools smoke $(PM5_NAME)
 
 all: $(PM5_NAME)
 
@@ -121,6 +131,15 @@ check-tools:
 		echo "[!] point OSS_CAD_SUITE at oss-cad-suite, or add its bin/ to PATH"; \
 		exit 1; \
 	fi
+
+# Compile a two line design through the same toolchain and environment the
+# build uses, so a suite that cannot run fails here with a clear message
+# instead of half way through the build.
+smoke: | check-tools $(PM5_OUT)
+	$(Q)$(OC_ENV) yosys -V
+	$(Q)printf '%s\n' "module smoke(input a, output b);" "    assign b = ~a;" "endmodule" > $(PM5_OUT)/smoke.v
+	$(Q)cd $(PM5_OUT) && $(OC_ENV) yosys -q -p "read_verilog smoke.v; synth_gowin -json smoke.json"
+	$(Q)test -s $(PM5_OUT)/smoke.json && echo "[=] SMOKE ok"
 
 # ALWAYS have some hardcoded text after $(PREFIX) to avoid rm -rf * or rm -rf /* situations if PREFIX is incorrectly set to empty "" or just "/"
 clean:
