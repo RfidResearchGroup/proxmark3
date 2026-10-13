@@ -1733,6 +1733,8 @@ out:
 
     restore_graphbuffer(saveState_gb);
 
+    free_buffer_savestate(saveState_db);
+    free_buffer_savestate(saveState_gb);
     return retval;
 }
 
