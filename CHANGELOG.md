@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed weak fc/2 PSK tags (Indala, NexWatch, IDTECK, ...) misreading or failing: when the wave tracker has errors, the PSK demod falls back to `pm3_psk_demod` (@mfcarroll)
 - Fixed `lf t55xx detect -p` - the password is no longer sent to a tag whose PWD bit could not be confirmed, which could set it and destroy the tag's data; pass `-o` to override (@mfcarroll)
 - Fixed `hf mf hardnested`/`hf mf autopwn` on PM5 with hardened MIFARE Classic EV1 (#3595, #3664)  (@ByteOrderMarc)
 - Added PM5 FPGA open source (@xianglin1998)
