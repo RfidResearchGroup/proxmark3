@@ -50,6 +50,7 @@ int demodzx(bool verbose) {
     if (ASKDemod_ext(64, 0, 0, 0, false, false, false, 1, &st) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - ZX: ASK/Manchester Demod failed");
         restore_graphbuffer(saveState);
+        free_buffer_savestate(saveState);
         return PM3_ESOFT;
     }
     size_t size = g_DemodBufferLen;
@@ -65,6 +66,7 @@ int demodzx(bool verbose) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - ZX: ans: %d", ans);
 
         restore_graphbuffer(saveState);
+        free_buffer_savestate(saveState);
         return PM3_ESOFT;
     }
     setDemodBuff(g_DemodBuffer, 96, ans);
@@ -78,6 +80,7 @@ int demodzx(bool verbose) {
     // test checksums
 
     PrintAndLogEx(SUCCESS, "ZX8211 - Card " _GREEN_("%u"), raw1);
+    free_buffer_savestate(saveState);
     return PM3_SUCCESS;
 }
 

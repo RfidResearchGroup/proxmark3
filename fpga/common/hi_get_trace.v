@@ -29,7 +29,7 @@ module hi_get_trace(
 reg [6:0] clock_cnt;
 always @(negedge ck_1356megb)
 begin
-    clock_cnt <= clock_cnt + 1;
+    clock_cnt <= clock_cnt + 1'b1;
 end
 
 // sample at 13,56MHz / 8. The highest signal frequency (subcarrier) is 848,5kHz, i.e. in this case we oversample by a factor of 2
@@ -39,7 +39,7 @@ begin
     if (sample_clock == 3'd7)
         sample_clock <= 3'd0;
     else
-        sample_clock <= sample_clock + 1;
+        sample_clock <= sample_clock + 1'b1;
 end
 
 
@@ -62,7 +62,7 @@ begin
             if (addr == 12'd3071)
                 addr <= 12'd0;
             else
-                addr <= addr + 1;
+                addr <= addr + 1'b1;
         end
     end
     else if (major_mode != `FPGA_MAJOR_MODE_OFF)
@@ -89,7 +89,7 @@ begin
                 end
                 else
                 begin
-                    addr <= addr + 1;
+                    addr <= addr + 1'b1;
                 end
             end
         end
@@ -156,10 +156,21 @@ begin
 
     ssp_clk <= ~clock_cnt[3];       // ssp_clk frequency = 13,56MHz / 16 = 847,5 kHz
 
+`ifdef WITH_TIMODE
+    // Toggle once every 8 ssp_clk cycles
+    // TI mode 7D112: starts with the TI frame start signal; the line is driven high at the (128-16)th ssp_clk cycle.
+    if(clock_cnt[6:0] == 7'd112)
+        ssp_frame <= 1'b1;
+
+    // Clear the frame signal at the new frame start (0th ssp_clk cycle)
+    if(clock_cnt[6:0] == 7'd0)
+        ssp_frame <= 1'b0;
+`else
     if (clock_cnt[6:4] == 3'b000)    // set ssp_frame for 0...31
         ssp_frame <= 1'b1;
     else
         ssp_frame <= 1'b0;
+`endif
 
 end
 

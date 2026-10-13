@@ -230,14 +230,14 @@ static int CmdBWMWifi(const char *Cmd) {
                   "Sub-actions (no dashes): 'status' shows state, 'stop' tears WiFi down.",
                   "hw bwm wifi status                              --> show connection state + IP\n"
                   "hw bwm wifi stop                                --> tear down WiFi, back to BLE-only\n"
-                  "hw bwm wifi --ssid Home --pwd secret            --> bring up, port 7777\n"
+                  "hw bwm wifi --ssid Home --pwd secret            --> bring up, port 18888\n"
                   "hw bwm wifi --ssid Home --pwd secret --port 9000");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0(NULL, "ssid", "<ssid>", "WiFi SSID to join"),
         arg_str0(NULL, "pwd",  "<pwd>",  "WiFi password (omit for open network)"),
-        arg_int0(NULL, "port", "<dec>",  "TCP server listen port (default 7777)"),
+        arg_int0(NULL, "port", "<dec>",  "TCP server listen port (default 18888)"),
         arg_str0(NULL, "hostname", "<name>", "DHCP hostname (default Proxmark5)"),
         arg_param_end
     };
@@ -251,7 +251,7 @@ static int CmdBWMWifi(const char *Cmd) {
     int pwd_len = 0;
     CLIParamStrToBuf(arg_get_str(ctx, 2), pwd, sizeof(pwd) - 1, &pwd_len);
 
-    int port = arg_get_int_def(ctx, 3, 7777);
+    int port = arg_get_int_def(ctx, 3, 18888);
 
     uint8_t host[33] = {0};
     int host_len = 0;
@@ -309,6 +309,7 @@ static int CmdBWMWifi(const char *Cmd) {
     PrintAndLogEx(HINT, "Connect with: " _YELLOW_("pm3 -p tcp:%u.%u.%u.%u:%d"),
                   ip & 0xFF, (ip >> 8) & 0xFF, (ip >> 16) & 0xFF, (ip >> 24) & 0xFF, port);
     PrintAndLogEx(HINT, "Or by name (router-dependent): " _YELLOW_("pm3 -p tcp:%s:%d"), host, port);
+    PrintAndLogEx(HINT, "Or by mDNS (BWM fw with mDNS): " _YELLOW_("pm3 -p tcp:%s.local:%d"), host, port);
     return PM3_SUCCESS;
 }
 

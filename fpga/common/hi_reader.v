@@ -42,15 +42,31 @@ assign adc_clk = ck_1356meg;  // sample frequency is 13,56 MHz
 // using AM. Do this the same way that we do it for the simulated tag.
 reg after_hysteresis, after_hysteresis_prev, after_hysteresis_prev_prev;
 reg [11:0] has_been_low_for;
+
+// Reader-carrier detection thresholds, selected at runtime by the configured mode.
+// The lower thresholds (240 / 63 instead of 255 / 0) allow the reader signal to still be recovered
+// when the received level is weak.  They are meant for ISO15693: the 2-subcarrier modes, plus the
+// amplitude sniffer that "hf 15 sniff" uses -- including the plain SNIFF_AMPLITUDE that its jam
+// sequence switches to and keeps for the rest of the command.
+// This module is shared with other protocols (ISO14443B sniff reads the very same
+// after_hysteresis bits) and must keep the rail-to-rail thresholds there, so the selection is done
+// at runtime instead of with a compile-time switch.
+wire low_signal_mode = (subcarrier_frequency == `FPGA_HF_READER_2SUBCARRIERS_424_484_KHZ)
+                    || (minor_mode == `FPGA_HF_READER_MODE_SNIFF_AMPLITUDE);
+
 always @(negedge adc_clk)
 begin
-`ifdef WITH_HF_15_LOWSIGNAL
-    if (& adc_d[7:4]) after_hysteresis <= 1'b1;
-    else if (~(| adc_d[7:6])) after_hysteresis <= 1'b0;
-`else
-    if (& adc_d[7:0]) after_hysteresis <= 1'b1;
-    else if (~(| adc_d[7:0])) after_hysteresis <= 1'b0;
-`endif
+    // TODO DXL - 阈值是绝对值，这是否会在PM5上导致问题？需要考虑判定的adc值是否和场的信号同步，待测
+    if (low_signal_mode)
+    begin
+        if (& adc_d[7:4]) after_hysteresis <= 1'b1;
+        else if (~(| adc_d[7:6])) after_hysteresis <= 1'b0;
+    end
+    else
+    begin
+        if (& adc_d[7:0]) after_hysteresis <= 1'b1;
+        else if (~(| adc_d[7:0])) after_hysteresis <= 1'b0;
+    end
 
     if (after_hysteresis)
     begin
@@ -64,7 +80,7 @@ begin
             after_hysteresis <= 1'b1;
         end
         else
-            has_been_low_for <= has_been_low_for + 1;
+            has_been_low_for <= has_been_low_for + 1'b1;
     end
 end
 
@@ -75,7 +91,7 @@ end
 // We need a 6-bit counter for the timing.
 reg [5:0] corr_i_cnt;
 always @(negedge adc_clk)
-    corr_i_cnt <= corr_i_cnt + 1;
+    corr_i_cnt <= corr_i_cnt + 1'b1;
 
 `ifdef WITH_HF_15
 reg [1:0] fskout = 2'd0;
@@ -147,8 +163,8 @@ begin
                     begin
                         if (match28 < match32)
                         begin
-                            diff28 = match32 - match28;
-                            diff16 = match16 - match28;
+                            diff28 = (match32 - match28) & 8'hFF;
+                            diff16 = (match16 - match28) & 8'hFF;
                             if (diff28*2 > diff16)
                                 fskout = 2'b01;
                             else if (!last0)
@@ -158,8 +174,8 @@ begin
                         end
                         else //if (match32 <= match28)
                         begin
-                            diff32 = match28 - match32;
-                            diff16 = match16 - match32;
+                            diff32 = (match28 - match32) & 8'hFF;
+                            diff16 = (match16 - match32) & 8'hFF;
                             if (diff32*2 > diff16)
                                 fskout = 2'b10;
                             else if (!last0)
@@ -368,7 +384,15 @@ begin
 
 end
 
-// ssp clock and frame signal for communication to and from ARM
+`ifdef WITH_TIMODE // In TI mode, the frame signal goes high during the last `ssp_clk` pulse (at the 60th clock cycle, i.e., 64-4).
+    `define HI_READER_FRAME_SET  6'd60
+    `define HI_READER_FRAME_CLR  6'd0
+`else
+    `define HI_READER_FRAME_SET  6'd1
+    `define HI_READER_FRAME_CLR  6'd3
+`endif
+
+// ssp clock and frame signal for communication to and from ARM, not SPI TI-MODE
 //                _____       _____       _____       _
 // ssp_clk       |     |_____|     |_____|     |_____|
 //                   _____
@@ -380,18 +404,18 @@ end
 //
 always @(negedge adc_clk)
 begin
-    if (corr_i_cnt[1:0] == 2'b00)
+    if (corr_i_cnt[1:0] == 2'b00) // High level for 2 cycles (rising edge at cycle 0 or 4)
         ssp_clk <= 1'b1;
 
-    if (corr_i_cnt[1:0] == 2'b10)
+    if (corr_i_cnt[1:0] == 2'b10) // Low level for 2 cycles (falling edge at the second cycle)
         ssp_clk <= 1'b0;
 
     // set ssp_frame signal for corr_i_cnt = 1..3
     // (send one frame with 16 Bits)
-    if (corr_i_cnt == 6'd1)
+    if (corr_i_cnt == `HI_READER_FRAME_SET)
         ssp_frame <= 1'b1;
 
-    if (corr_i_cnt == 6'd3)
+    if (corr_i_cnt == `HI_READER_FRAME_CLR)
         ssp_frame <= 1'b0;
 end
 
@@ -405,10 +429,14 @@ always @(negedge adc_clk)
 begin
     if (corr_i_cnt == 6'd0)
     begin
-        jam_counter <= jam_counter + 1;
+        jam_counter <= jam_counter + 1'b1;
         jam_signal <= jam_counter[1] ^ jam_counter[3];
     end
 end
+
+// ---
+// pwr_hi is used to control the 1356 clk enable on PM5, not clk output.
+// ---
 
 always @(*)
 begin
@@ -417,22 +445,38 @@ begin
 
     if (minor_mode == `FPGA_HF_READER_MODE_SEND_SHALLOW_MOD)
     begin
+`ifdef PM5
+        pwr_hi  = 1'b1;
+`else
         pwr_hi  = ck_1356meg;
+`endif
         pwr_oe4 = ssp_dout;
     end
     else if (minor_mode == `FPGA_HF_READER_MODE_SEND_SHALLOW_MOD_RDV4)
     begin
+`ifdef PM5
+        pwr_hi  = 1'b1;
+`else
         pwr_hi  = ck_1356meg;
+`endif
         pwr_oe1 = ssp_dout;
     end
     else if (minor_mode == `FPGA_HF_READER_MODE_SEND_FULL_MOD)
     begin
+`ifdef PM5
+        pwr_hi  = ~ssp_dout;
+`else
         pwr_hi  = ck_1356meg & ~ssp_dout;
+`endif
         pwr_oe4 = 1'b0;
     end
     else if (minor_mode == `FPGA_HF_READER_MODE_SEND_JAM)
     begin
+`ifdef PM5
+        pwr_hi  = jam_signal;
+`else
         pwr_hi  = ck_1356meg & jam_signal;
+`endif
         pwr_oe4 = 1'b0;
     end
     else if (minor_mode == `FPGA_HF_READER_MODE_SNIFF_IQ
@@ -444,7 +488,11 @@ begin
     end
     else // receiving from tag
     begin
+`ifdef PM5
+        pwr_hi  = 1'b1;
+`else
         pwr_hi  = ck_1356meg;
+`endif
         pwr_oe4 = 1'b0;
     end
 end

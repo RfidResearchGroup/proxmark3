@@ -29,7 +29,7 @@ module lo_read(
     input lf_field,
 
     output ssp_din,
-    output ssp_frame,
+    output reg ssp_frame,
     output ssp_clk,
     output adc_clk,
     output pwr_lo,
@@ -74,8 +74,27 @@ end
 assign ssp_din = to_arm_shiftreg[7] && !pck_divclk;
 // SSP clock always runs at 24MHz
 assign ssp_clk = pck0;
-// SSP frame is gated by pck_divclk and goes high when pck_cnt=8..15
-assign ssp_frame = (pck_cnt[7:3] == 5'd1) && !pck_divclk;
+
+// ssp_frame window: TI = 1-cycle pulse (at counter 7), SSP = spans the entire data window (counts 8-15).
+// Note: The 'always' block below reads the value of pck_cnt *before* it toggles for the current cycle,
+// so SET is triggered at the window start minus 1, and CLR is triggered at the window end.
+`ifdef WITH_TIMODE
+  `define LO_READ_FRAME_SET  8'd6
+  `define LO_READ_FRAME_CLR  8'd7
+`else
+  `define LO_READ_FRAME_SET  8'd7
+  `define LO_READ_FRAME_CLR  8'd15
+`endif
+
+// Frame signal generation.
+always @(posedge pck0)
+begin
+  if ((pck_cnt == `LO_READ_FRAME_SET) && !pck_divclk)
+      ssp_frame <= 1'b1;
+  if ((pck_cnt == `LO_READ_FRAME_CLR) && !pck_divclk)
+      ssp_frame <= 1'b0;
+end
+
 // unused signals tied low
 assign pwr_hi  = 1'b0;
 // always on outputs, unused
@@ -85,8 +104,17 @@ assign pwr_oe3 = 1'b0;
 assign pwr_oe4 = 1'b0;
 // this is the antenna driver signal
 assign pwr_lo = lf_field & pck_divclk;
+
 // ADC clock out of phase with antenna driver
+`ifdef PM5
+// Since the PM5's ADC sampling occurs on the rising edge,
+// whereas the falling edge of the field signal causes a rapid voltage rise, making it unsuitable for sampling,
+// the phase was adjusted to align them.
+assign adc_clk = pck_divclk;
+`else
 assign adc_clk = ~pck_divclk;
+`endif
+
 // ADC clock also routed to debug pin
 assign debug = adc_clk;
 endmodule
