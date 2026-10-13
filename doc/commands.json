@@ -14594,24 +14594,25 @@
         },
         "lf t55xx detect": {
             "command": "lf t55xx detect",
-            "description": "Try detecting the tag modulation from reading the configuration block",
+            "description": "Try detecting the tag modulation from reading the configuration block. * * * WARNING * * * Use of detect with password on a tag not configured for a password can damage the tag * * * * * * * * * *",
             "notes": [
                 "lf t55xx detect",
                 "lf t55xx detect -1",
-                "lf t55xx detect -p 11223344"
+                "lf t55xx detect -p 11223344 -o"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-1 extract using data from graphbuffer",
                 "-p, --pwd <hex> password (4 hex bytes)",
+                "-o, --override override safety check",
                 "--r0 downlink - fixed bit length (detected def)",
                 "--r1 downlink - long leading reference",
                 "--r2 downlink - leading zero",
                 "--r3 downlink - 1 of 4 coding reference",
                 "--all try all downlink modes"
             ],
-            "usage": "lf t55xx detect [-h1] [-p <hex>] [--r0] [--r1] [--r2] [--r3] [--all]"
+            "usage": "lf t55xx detect [-h1o] [-p <hex>] [--r0] [--r1] [--r2] [--r3] [--all]"
         },
         "lf t55xx deviceconfig": {
             "command": "lf t55xx deviceconfig",
