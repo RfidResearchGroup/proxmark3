@@ -200,7 +200,7 @@ reg zero = 1'b0; // Manchester first halfbit low second high corresponds to this
 reg [8:0] ssp_cnt = 9'd0;
 
 always @(posedge adc_clk)
-    ssp_cnt <= (ssp_cnt + 1);
+    ssp_cnt <= (ssp_cnt + 1'b1);
 
 always @(negedge adc_clk)
     if (ssp_cnt[5:0] == 6'd32)
@@ -242,9 +242,26 @@ end
 //maybe change it so that ARM sends preamble as well.
 //then: ready bits sent to ARM, 8 bits sent from ARM (all ones), then preamble (all zeros, presumably) - which starts modulation
 
+// SSP(FRAME_H)     ~speed -> 9'd31                      speed -> 8'd15
+// SSP(FRAME_L)     ~speed -> 9'b1011111(d95 OF 512)     speed -> 8'b101111(d47 OF 256)
+// TIMODE(FRAME_H)  ~speed -> 9'd(512-64)                speed -> 8'd(256-32)
+// TIMODE(FRAME_L)  ~speed -> 9'b0                       speed -> 8'b0
+`ifdef WITH_TIMODE
+    `define HI_FLITE_FRAME_SET_L  9'd448
+    `define HI_FLITE_FRAME_SET_H  8'd224
+    `define HI_FLITE_FRAME_CLR_L  9'd0
+    `define HI_FLITE_FRAME_CLR_H  8'd0
+`else
+    `define HI_FLITE_FRAME_SET_L  9'd31
+    `define HI_FLITE_FRAME_SET_H  8'd15
+    `define HI_FLITE_FRAME_CLR_L  9'b1011111   // 95 = 96 - 1
+    `define HI_FLITE_FRAME_CLR_H  8'b101111    // 47 = 48 - 1
+`endif
+
 always @(negedge adc_clk)
 begin
     //count fc/64 - transfer bits to ARM at the rate they are received
+    //At speed 0, clk rises at 0 or 64; at speed 1, clk rises at 0 or 32.
     if( ((~speed) && (ssp_cnt[5:0] == 6'b000000) ) || (speed && (ssp_cnt[4:0] == 5'b00000)) )
     begin
         ssp_clk <= 1'b1;
@@ -270,15 +287,16 @@ begin
             ssp_din <= curbit;
         end
     end
+    // At speed 0, clk falls at 32; at speed 1, clk falls at 16.
     if( ( (~speed) && (ssp_cnt[5:0] == 6'b100000)) ||(speed && ssp_cnt[4:0] == 5'b10000))
         ssp_clk <= 1'b0;
     //create frame pulses. TBH, I still don't know what they do exactly, but they are crucial for ARM->FPGA transfer. If the frame is in the beginning of the byte, transfer slows to a crawl for some reason
     // took me a day to figure THAT out.
-    if(( (~speed) && (ssp_cnt[8:0] == 9'd31)) || (speed && ssp_cnt[7:0] == 8'd15))
+    if(( (~speed) && (ssp_cnt[8:0] == `HI_FLITE_FRAME_SET_L)) || (speed && ssp_cnt[7:0] == `HI_FLITE_FRAME_SET_H))
     begin
         ssp_frame <= 1'b1;
     end
-    if(( (~speed) && (ssp_cnt[8:0] == 9'b1011111)) || (speed &&ssp_cnt[7:0] == 8'b101111) )
+    if(( (~speed) && (ssp_cnt[8:0] == `HI_FLITE_FRAME_CLR_L)) || (speed && ssp_cnt[7:0] == `HI_FLITE_FRAME_CLR_H))
     begin
         ssp_frame <= 1'b0;
     end
@@ -315,7 +333,7 @@ begin
     // Watchdog clock, see `stalebit. It runs first so that the three places
     // that clear it below - a clean desync, a successful Manchester lock, and
     // the watchdog firing itself - all override it.
-    stale <= stale + 1;
+    stale <= stale + 1'b1;
 
     //envelope follow code...
   ////////////
@@ -338,7 +356,7 @@ begin
             if (power)
                 bit_counts <= 0;
             else
-                bit_counts <= bit_counts + 1;
+                bit_counts <= bit_counts + 1'b1;
     end
     else
     begin
@@ -348,7 +366,7 @@ begin
         end
         else
         begin
-            fccount <= fccount + 1;
+            fccount <= fccount + 1'b1;
         end
     end
 
@@ -453,7 +471,7 @@ begin
                 acc <= 0;
             end
             else
-                tsinceedge <= (tsinceedge + 1);
+                tsinceedge <= (tsinceedge + 1'b1);
         end
     end
 
@@ -541,7 +559,11 @@ always @(ck_1356meg or ssp_dout or power or disabl or mod)
 begin
     if (power)
     begin
+`ifdef PM5 // pwr_hi is used to control the 1356 clk enable on PM5, not clk output.
+        pwr_hi  <= 1'b1; // enable 1356 clk output
+`else
         pwr_hi  <= ck_1356meg;
+`endif
         pwr_lo  <= 1'b0;
         pwr_oe1 <= 1'b0;//mod;
         pwr_oe2 <= 1'b0;//mod;

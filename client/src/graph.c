@@ -666,3 +666,8 @@ void restore_graphbuffer(buffer_savestate_t saveState) {
     g_GraphTraceLen = len;
     g_GridOffset = saveState.offset;
 }
+
+// restore_*() copy out of the save state, the owner frees it after its last restore
+void free_buffer_savestate(buffer_savestate_t saveState) {
+    free((void *)saveState.buffer);
+}

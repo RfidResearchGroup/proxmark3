@@ -1,0 +1,89 @@
+name: FPGA PM5 Build
+
+on:
+  push:
+    paths:
+      - 'fpga/**'
+      - '.github/workflows/fpga-pm5.yml'
+  pull_request:
+    paths:
+      - 'fpga/**'
+      - '.github/workflows/fpga-pm5.yml'
+  workflow_dispatch:
+
+env:
+  # oss-cad-suite is released daily; bump the date to move to a newer one.
+  OSS_CAD_SUITE_VERSION: '2026-10-11'
+
+permissions:
+  contents: read
+
+jobs:
+  pm5:
+    name: Build PM5 bitstream
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install oss-cad-suite
+        run: |
+          set -euo pipefail
+          url="https://github.com/YosysHQ/oss-cad-suite-build/releases/download/${OSS_CAD_SUITE_VERSION}/oss-cad-suite-linux-x64-${OSS_CAD_SUITE_VERSION//-/}.tgz"
+          echo "Fetching $url"
+          curl -sSL "$url" | tar -xz -C "$RUNNER_TEMP"
+          # the makefile puts the suite's bin/, lib/ and bundled python3 in
+          # front of PATH itself, so nothing else needs to be exported
+          echo "OSS_CAD_SUITE=$RUNNER_TEMP/oss-cad-suite" >> "$GITHUB_ENV"
+
+      # Runs the real tools through the same environment the build uses, so a
+      # suite that cannot run fails here instead of half way through the build.
+      - name: Check the toolchain
+        run: make -C fpga -f proxmark5_fpga.mk smoke
+
+      # Place and route fails the job on a timing violation, so this does not
+      # only prove the design still elaborates.
+      - name: Build the PM5 bitstream
+        run: make -C fpga pm5
+
+      - name: Check the bitstream
+        run: |
+          set -euo pipefail
+          bin_size=$(stat -c%s fpga/fpga_pm5.bin)
+          fs_size=$(stat -c%s fpga/fpga_pm5.fs)
+          echo "fpga_pm5.bin ${bin_size} bytes"
+          echo "fpga_pm5.fs  ${fs_size} bytes"
+          # the .bin is the bitstream the ARM JTAG loader shifts out, the .fs is
+          # its ASCII form: 8 characters plus a newline per byte
+          test "$bin_size" -gt 100000
+          test "$fs_size" -gt $((bin_size * 6))
+          test "$fs_size" -lt $((bin_size * 10))
+
+          # The device only accepts a bitstream naming its own IDCODE and
+          # otherwise stays unconfigured, with nothing driving the antennas.
+          # apycula's GW1N-4 database writes the plain GW1N-4, so the build
+          # stamps the part's in (fpga/common/gowin_devid.py) - keep it that way.
+          # The IDCODE is the four bytes at 0x1C of the header.
+          idcode=$(od -An -tx1 -j 28 -N 4 fpga/fpga_pm5.bin | tr -d ' \n')
+          echo "device idcode in the bitstream: 0x${idcode}"
+          test "$idcode" = "1100381b"
+
+      # A rebuild from scratch has to produce the same bytes; the tools carry no
+      # timestamp, so a difference means something started leaking one in, and
+      # a released bitstream could no longer be checked against the sources.
+      - name: Check the build is reproducible
+        run: |
+          set -euo pipefail
+          md5sum fpga/fpga_pm5.fs fpga/fpga_pm5.bin > "$RUNNER_TEMP/bitstream.md5"
+          make -C fpga -f proxmark5_fpga.mk clean
+          make -C fpga pm5
+          md5sum -c "$RUNNER_TEMP/bitstream.md5"
+
+      - name: Upload the bitstream
+        uses: actions/upload-artifact@v6
+        with:
+          name: fpga-pm5-bitstream
+          path: |
+            fpga/fpga_pm5.fs
+            fpga/fpga_pm5.bin
+          if-no-files-found: error

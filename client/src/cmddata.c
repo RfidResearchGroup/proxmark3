@@ -2933,6 +2933,7 @@ static int try_detect_modulation(void) {
             }
             //undo trim samples
             restore_graphbuffer(saveState);
+            free_buffer_savestate(saveState);
         }
     }
 

@@ -100,6 +100,7 @@ int demodTI(bool verbose) {
     int retval = PM3_ESOFT;
 
     if (g_GraphTraceLen < convLen) {
+        free_buffer_savestate(saveState);
         return retval;
     }
     for (i = 0; i < g_GraphTraceLen - convLen; i++) {
@@ -280,6 +281,7 @@ out:
         restore_graphbuffer(saveState);
     }
 
+    free_buffer_savestate(saveState);
     return retval;
 }
 

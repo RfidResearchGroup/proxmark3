@@ -72,7 +72,7 @@ module lp20khz_1MSa_iir_filter(
                 // We could use 9bit x registers for that, but that would be
                 // a waste, let's just add the constant during the computation
                 // (x0+109) + 2*(x1+109) + (x2+109) = x0 + 2*x1 + x2 + 436
-                x0 + {x1, 1'b0} + adc_d + 436
+                x0 + {x1, 1'b0} + adc_d + 14'd436
                 // we want "- y0 * 0xd6 / 0x100" using only shift and add
                 // 0xd6 == 0b11010110
                 // so *0xd6/0x100 is equivalent to
