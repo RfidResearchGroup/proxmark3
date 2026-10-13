@@ -1,0 +1,72 @@
+name: FPGA PM3 Build
+
+on:
+  push:
+    paths:
+      - 'fpga/**'
+      - '.github/workflows/fpga-pm3.yml'
+  pull_request:
+    paths:
+      - 'fpga/**'
+      - '.github/workflows/fpga-pm3.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # The PM3, PM3-ULT and iCopy-X images are Spartan-II and Spartan-3E, and
+  # WebPack ISE 10.1 is the only tool chain that places and routes them. It is a
+  # licensed multi gigabyte install, so the build runs inside this image, the
+  # one doc/fpga_arm_notes.md points at. Pinned by digest rather than by the
+  # tag, which has been re-pushed since it was first published.
+  ISE_IMAGE: nhutton/prox-container@sha256:b42abab7f88df928e59ab97ce3a557b547bc5fc967c19e49f30d7cfb8d3a5a15
+
+jobs:
+  build:
+    name: Build the PM3 bitstreams
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      # The image is 8 GB unpacked, so keep an eye on the runner's disk.
+      - name: Pull the ISE image
+        run: |
+          df -h /
+          docker pull "$ISE_IMAGE"
+
+      - name: Build the PM3 bitstreams
+        run: |
+          set -euo pipefail
+          docker run --rm -v "$PWD:/src" -w /src "$ISE_IMAGE" bash -euc '
+            # The image exports its PATH from ~/.bashrc, which returns early in
+            # a non interactive shell, so name the ISE bin directory here.
+            export PATH="$PATH:/opt/Xilinx/10.1/ISE/bin/lin"
+            # XST cannot create its project temp directory on the mounted
+            # volume, so build a copy inside the container and copy the
+            # bitstreams back out over the checked out ones.
+            rm -rf /build && mkdir /build && cp -r /src/fpga/. /build/
+            cd /build
+            make all -j"$(nproc)"
+            cp *.bit /src/fpga/
+          '
+
+      - name: Check the bitstreams
+        run: |
+          set -euo pipefail
+          # fpga_icopyx_felica, fpga_icopyx_hf_15 and fpga_icopyx_lf have no
+          # target of their own and stay empty; the rest must have content
+          for t in fpga_pm3_lf fpga_pm3_hf fpga_pm3_hf_15 fpga_pm3_felica \
+                   fpga_pm3_ult_lf fpga_pm3_ult_hf fpga_pm3_ult_hf_15 \
+                   fpga_pm3_ult_felica fpga_icopyx_hf; do
+            size=$(stat -c%s "fpga/$t.bit")
+            echo "fpga/$t.bit ${size} bytes"
+            test "$size" -gt 1000
+          done
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: fpga-pm3-bitstreams
+          path: fpga/*.bit
+          if-no-files-found: error

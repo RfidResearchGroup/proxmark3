@@ -32,7 +32,7 @@ module clk_divider(
             div_cnt_ <= 8'd0;
             div_clk_ = !div_clk_;
         end else
-            div_cnt_ <= div_cnt_ + 1;
+            div_cnt_ <= div_cnt_ + 1'b1;
     end
 
 endmodule

@@ -2356,6 +2356,7 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
         // remove the CRC from the cmd
         cmd_len -= 2;
         recvLen = 0;
+        error = 0; // inventory mask mismatch left it set
 
         tag->expectFast = ((cmd[0] & ISO15_REQ_DATARATE_HIGH) == ISO15_REQ_DATARATE_HIGH);
         tag->expectFsk = ((cmd[0] & ISO15_REQ_SUBCARRIER_TWO) == ISO15_REQ_SUBCARRIER_TWO);
