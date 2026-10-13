@@ -22,6 +22,11 @@
 #endif
 #ifdef WITH_CEP
 #include "pm5_cep.h"
+#else
+// receive_ng_internal()'s `cep` parameter is always false without WITH_CEP,
+// so this is never actually called - just keeps those call sites free of
+// per-site #if defined(WITH_CEP) guards.
+static inline void cep_spi_resync(void) {}
 #endif
 #include "crc16.h"
 #include "string.h"
@@ -91,6 +96,9 @@ int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const v
     if (g_reply_via_cep) {
 #if defined(WITH_CEP)
         resultcep = cep_spi_write_sync((uint8_t *)&txcmd, sizeof(PacketResponseOLD));
+        if (resultcep != PM3_SUCCESS) {
+            cep_spi_resync();
+        }
 #else
         return PM3_EDEVNOTSUPP;
 #endif
@@ -173,6 +181,9 @@ static int reply_ng_internal(uint16_t cmd, int8_t status, uint8_t reason, const 
     if (g_reply_via_cep) {
 #if defined(WITH_CEP)
         resultcep = cep_spi_write_sync((uint8_t *)tx, txBufferNGLen);
+        if (resultcep != PM3_SUCCESS) {
+            cep_spi_resync();
+        }
 #else
         return PM3_EDEVNOTSUPP;
 #endif
@@ -214,6 +225,7 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
     }
 
     if (bytes != sizeof(PacketCommandNGPreamble)) {
+        if (cep) cep_spi_resync();
         return PM3_EIO;
     }
 
@@ -225,27 +237,33 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
 
     if (rx->magic == COMMANDNG_PREAMBLE_MAGIC) { // New style NG command
         if (length > PM3_CMD_DATA_SIZE) {
+            if (cep) cep_spi_resync();
             return PM3_EOVFLOW;
         }
 
         // Get the core and variable length payload
         bytes = read_ng((uint8_t *)&rx_raw.data, length);
         if (bytes != length) {
+            if (cep) cep_spi_resync();
             return PM3_EIO;
         }
 
         // Get the postamble
         bytes = read_ng((uint8_t *)&rx_raw.foopost, sizeof(PacketCommandNGPostamble));
         if (bytes != sizeof(PacketCommandNGPostamble)) {
+            if (cep) cep_spi_resync();
             return PM3_EIO;
         }
 
-        // Check CRC, accept MAGIC as placeholder
+        // Check CRC, accept MAGIC as placeholder - a mismatch here is the
+        // AT32 errata's own recommended trigger to reset SPI (see
+        // cep_spi_resync()'s comment).
         rx->crc = rx_raw.foopost.crc;
         if (rx->crc != COMMANDNG_POSTAMBLE_MAGIC) {
             uint8_t first, second;
             compute_crc(CRC_14443_A, (uint8_t *)&rx_raw, sizeof(PacketCommandNGPreamble) + length, &first, &second);
             if ((first << 8) + second != rx->crc) {
+                if (cep) cep_spi_resync();
                 return PM3_EIO;
             }
         }
@@ -264,6 +282,7 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
         } else {
             uint64_t arg[3] = {0};
             if (length < sizeof(arg)) {
+                if (cep) cep_spi_resync();
                 return PM3_EIO;
             }
 

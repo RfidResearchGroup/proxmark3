@@ -45,13 +45,39 @@
 #define CEP_HANDSHAKE_STRING     "iamf0rupm5"
 #define CEP_HANDSHAKE_STX        0x02
 #define CEP_SPI_BYTE_TIMEOUT     100000  // spin-wait iterations per byte (matches source)
+// The Flipper master only clocks the bus in bursts roughly every ~120ms
+// (its own idle poll cadence) - CEP_SPI_BYTE_TIMEOUT alone (~3-10ms real
+// time) is far shorter than that gap, so the first reply byte - the one
+// racing against the master's next poll - needs a budget that actually
+// spans it. Once that byte clears, the master is mid-CS and keeps
+// clocking continuously, so every later byte stays on the short timeout.
+// Took measured CEP reply success from ~22% to ~100% in testing.
+#define CEP_SPI_HEADER_BYTE_TIMEOUT  2000000
 #define CEP_SPI_RESPONSE_TIMEOUT_US  (1000 * 1000)  // 1s, matches source
 #define CEP_HANDSHAKE_RX_TIMEOUT_MS  2000  // bail out of the receive loop rather than ever hang the main loop
+#define CEP_HANDSHAKE_REPLY_MAX_RETRIES 3  // bound the stall-recovery loop below - still-attached isn't still-working forever
+
+// 0x55 filler the Flipper sends while its own SPI poll finds nothing new -
+// discard it so the real length header is recognized as soon as it starts,
+// instead of ever reading a 0x55 byte as (part of) a frame length.
+#define CEP_SYNC_BYTE            0x55
+#define CEP_SYNC_MAX_DISCARD     600
+
+// How long cep_attach_poll() will go without seeing a real SPI poll from the
+// Flipper before deciding the FAP has quit (see the comment at its one use
+// below) and letting AppMain() go back to sleeping between iterations.
+#define CEP_ACTIVITY_TIMEOUT_MS      3000
 
 static bool s_cep_active = false;   // handshake completed, SPI transport live
+static bool s_cep_attached = false; // CC controller reports a physical attach
+static uint32_t s_last_spi_activity_tick = 0; // last time a real SPI poll was seen
 
 bool cep_is_active(void) {
     return s_cep_active;
+}
+
+bool cep_is_attached(void) {
+    return s_cep_attached;
 }
 
 // ---------------------------------------------------------------------------
@@ -155,6 +181,20 @@ static void cep_spi_init(void) {
     spi_enable(SPI1, TRUE);
 }
 
+// AT32F435/437 errata ES0003, "CS falling edge not synchronized in SPI
+// slave hardware CS mode": the peripheral's internal clock sync isn't
+// guaranteed to reset on every CS edge, so a bad sync can persist across
+// transactions. Artery's documented recovery is to detect the corruption
+// (we already do, via the NG frame's CRC) and reset SPI before retrying -
+// a register re-init alone isn't enough, the peripheral needs resetting
+// through the clock/reset controller to actually clear that state.
+void cep_spi_resync(void) {
+    spi_enable(SPI1, FALSE);
+    crm_periph_reset(CRM_SPI1_PERIPH_RESET, TRUE);
+    crm_periph_reset(CRM_SPI1_PERIPH_RESET, FALSE);
+    cep_spi_init();
+}
+
 void cep_init(void) {
     cep_usart_init();
     cep_spi_init();
@@ -208,13 +248,23 @@ static bool cep_do_handshake(void) {
     uint8_t response[] = {0x04, 0x00, 'y', 'e', 's', 0x00};
     for (size_t i = 0; i < sizeof(response); i++) {
         uint32_t wait_start = GetTicks();
+        int recovery_attempts = 0;
         while (spi_i2s_flag_get(SPI1, SPI_I2S_TDBE_FLAG) == RESET) {
             if (GetTicks() - wait_start > CEP_SPI_RESPONSE_TIMEOUT_US) {
+                // Bound this: "still attached" isn't "still working" forever,
+                // and I2C_BufferReadRaw() needs the ticks timer running like
+                // every other call site (see cep_attach_poll()'s comment).
+                if (++recovery_attempts > CEP_HANDSHAKE_REPLY_MAX_RETRIES) {
+                    return false;
+                }
+                StartTicks();
+                I2C_init(true);
                 uint8_t cc_ctrl_data;
                 bool ret = I2C_BufferReadRaw(&cc_ctrl_data, 1, CEP_CC_STATUS_REG, CEP_CC_CONTROLLER_ADDR << 1);
-                if (ret && ((cc_ctrl_data >> 6 & 0x03) == 0)) {
-                    return false;   // disconnected mid-reply
+                if (!ret || ((cc_ctrl_data >> 6 & 0x03) == 0)) {
+                    return false;   // disconnected mid-reply, or can't tell - bail either way
                 }
+                wait_start = GetTicks();
             }
         }
         spi_i2s_data_transmit(SPI1, response[i]);
@@ -248,6 +298,7 @@ void cep_attach_poll(void) {
     }
 
     bool attached = ((cc_ctrl_data >> 6 & 0x03) != 0);
+    s_cep_attached = attached;
 
     if (!attached) {
         s_cep_active = false;
@@ -263,6 +314,18 @@ void cep_attach_poll(void) {
         // can't hang the main loop.
         if (usart_flag_get(USART1, USART_RDBF_FLAG) != RESET) {
             s_cep_active = cep_do_handshake();
+            if (s_cep_active) {
+                s_last_spi_activity_tick = GetTickCount();
+            }
+        }
+
+        // The FAP quitting doesn't touch the CC controller's attach bit - the
+        // cable stays connected, so `attached` alone can't tell us it's gone.
+        // Losing its SPI poll cadence (normally every 20-120ms) is what
+        // actually means it has - fall back to the slower/idle main loop
+        // once that cadence has been missing this long.
+        if (s_cep_active && (GetTickCountDelta(s_last_spi_activity_tick) > CEP_ACTIVITY_TIMEOUT_MS)) {
+            s_cep_active = false;
         }
     }
 
@@ -277,19 +340,57 @@ void cep_attach_poll(void) {
 // SPI NG-frame transport (verbatim from the unit test - already correct)
 // ---------------------------------------------------------------------------
 
+static bool cep_spi_read_byte(uint8_t *out) {
+    uint64_t timeout = 0;
+    while (spi_i2s_flag_get(SPI1, SPI_I2S_RDBF_FLAG) == RESET) {
+        if (timeout++ > CEP_SPI_BYTE_TIMEOUT) {
+            return false;
+        }
+    }
+    *out = spi_i2s_data_receive(SPI1);
+    return true;
+}
+
+// Genuinely non-blocking - a single flag read, no spin-wait at all. For
+// data_available()'s use (armsrc/util.c): a tight sampling loop calls that
+// every pass purely to notice an incoming CMD_BREAK_LOOP promptly, so it
+// needs to cost nothing when idle. cep_spi_data_available() isn't a fit
+// here - it waits (bounded, but non-zero) for a first byte to actually
+// arrive, which is fine for receive_ng()'s own cadence but would add that
+// wait to every iteration of every LF/HF reader loop in the codebase.
+bool cep_spi_rx_pending(void) {
+    return spi_i2s_flag_get(SPI1, SPI_I2S_RDBF_FLAG) != RESET;
+}
+
 bool cep_spi_data_available(void) {
     uint8_t len_header[2] = {0x00};
-    for (size_t i = 0; i < sizeof(len_header); ++i) {
-        uint64_t timeout = 0;
-        while (spi_i2s_flag_get(SPI1, SPI_I2S_RDBF_FLAG) == RESET) {
-            if (timeout++ > CEP_SPI_BYTE_TIMEOUT) {
-                return false;
-            }
+    size_t discarded = 0;
+    while (1) {
+        if (!cep_spi_read_byte(&len_header[0])) {
+            return false;
         }
-        len_header[i] = spi_i2s_data_receive(SPI1);
+        if (len_header[0] != CEP_SYNC_BYTE) {
+            break;
+        }
+        if (++discarded > CEP_SYNC_MAX_DISCARD) {
+            // More sync bytes than the FAP's real preamble (500) can only
+            // mean a desynced read (AT32 errata ES0003, see
+            // cep_spi_resync()) or bus noise - resync now rather than
+            // leaving SPI1 in that state until a later CRC/length check
+            // catches it, which may be a full frame away.
+            cep_spi_resync();
+            return false;
+        }
     }
+    if (!cep_spi_read_byte(&len_header[1])) {
+        return false;
+    }
+    s_last_spi_activity_tick = GetTickCount(); // FAP is still polling, valid frame or not
     uint16_t data_len = (len_header[1] << 8) | len_header[0];
     if (data_len > PM3_CMD_DATA_SIZE * 2) {
+        // Same reasoning: an implausible length is itself evidence of a
+        // desynced read, not just "no frame yet."
+        cep_spi_resync();
         return false;
     }
     return true;
@@ -308,25 +409,58 @@ uint32_t cep_spi_read_ng(uint8_t *data, size_t len) {
     return len;
 }
 
+// PM5 is the SPI slave: TDBE only clears when the master is actively
+// clocking, which happens on the Flipper's own ~20-120ms poll schedule,
+// completely async to when PM5 has a reply ready. An unbounded wait here
+// hangs the main loop forever (no recovery, not even a watchdog reset) the
+// moment a reply is queued between two master polls - bound every wait so
+// a slow/absent master degrades to a dropped reply, not a dead device.
+static bool cep_spi_wait_tdbe(uint64_t timeout_limit) {
+    uint64_t timeout = 0;
+    while (spi_i2s_flag_get(SPI1, SPI_I2S_TDBE_FLAG) == RESET) {
+        if (timeout++ > timeout_limit) {
+            return false;
+        }
+    }
+    return true;
+}
+
 int cep_spi_write_sync(uint8_t *data, size_t len) {
-    while (spi_i2s_flag_get(SPI1, SPI_I2S_TDBE_FLAG) == RESET);
+    // These two length-header bytes are the ones racing against the
+    // master's next poll - see CEP_SPI_HEADER_BYTE_TIMEOUT's comment.
+    if (!cep_spi_wait_tdbe(CEP_SPI_HEADER_BYTE_TIMEOUT)) {
+        return PM3_EIO;
+    }
     spi_i2s_data_transmit(SPI1, len & 0xFF);
 
-    while (spi_i2s_flag_get(SPI1, SPI_I2S_TDBE_FLAG) == RESET);
+    if (!cep_spi_wait_tdbe(CEP_SPI_HEADER_BYTE_TIMEOUT)) {
+        return PM3_EIO;
+    }
     spi_i2s_data_transmit(SPI1, (len >> 8) & 0xFF);
 
     for (size_t i = 0; i < len; ++i) {
-        while (spi_i2s_flag_get(SPI1, SPI_I2S_TDBE_FLAG) == RESET);
+        if (!cep_spi_wait_tdbe(CEP_SPI_BYTE_TIMEOUT)) {
+            return PM3_EIO;
+        }
         spi_i2s_data_transmit(SPI1, data[i]);
     }
 
     // Two trailing zero bytes: the agreed "no more data" idle marker.
-    while (spi_i2s_flag_get(SPI1, SPI_I2S_TDBE_FLAG) == RESET);
+    if (!cep_spi_wait_tdbe(CEP_SPI_BYTE_TIMEOUT)) {
+        return PM3_EIO;
+    }
     spi_i2s_data_transmit(SPI1, 0x00);
-    while (spi_i2s_flag_get(SPI1, SPI_I2S_TDBE_FLAG) == RESET);
+    if (!cep_spi_wait_tdbe(CEP_SPI_BYTE_TIMEOUT)) {
+        return PM3_EIO;
+    }
     spi_i2s_data_transmit(SPI1, 0x00);
 
-    while (spi_i2s_flag_get(SPI1, SPI_I2S_BF_FLAG) == SET);
+    uint64_t timeout = 0;
+    while (spi_i2s_flag_get(SPI1, SPI_I2S_BF_FLAG) == SET) {
+        if (timeout++ > CEP_SPI_BYTE_TIMEOUT) {
+            return PM3_EIO;
+        }
+    }
 
     return PM3_SUCCESS;
 }

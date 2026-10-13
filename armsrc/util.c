@@ -28,6 +28,9 @@
 #ifdef WITH_BWM_FORWARD
 #include "bwm_forward.h"
 #endif
+#ifdef WITH_CEP
+#include "pm5_cep.h"
+#endif
 #include "BigBuf.h"        // trace_restart_timeline
 #ifdef WITH_SMARTCARD
 #include "i2c.h"           // sc_log_trace_reset
@@ -330,28 +333,42 @@ int BUTTON_HELD(int ms) {
 // This function returns false if no data is available or
 // the USB connection is invalid.
 bool data_available(void) {
+    bool avail;
 #if defined(WITH_BWM_FORWARD)
     // The BWM (BLE / WiFi) link is the host connection on a Proxmark5, so it
     // has to be polled here too or CMD_BREAK_LOOP is never seen over it.
-    return usb_poll_validate_length() || (bwm_fwd_rxdata_available() > 0);
+    avail = usb_poll_validate_length() || (bwm_fwd_rxdata_available() > 0);
 #elif defined(WITH_FPC_USART_HOST)
-    return usb_poll_validate_length() || (usart_rxdata_available() > 0);
+    avail = usb_poll_validate_length() || (usart_rxdata_available() > 0);
 #else
-    return usb_poll_validate_length();
+    avail = usb_poll_validate_length();
 #endif
+#if defined(WITH_CEP)
+    // CEP is independent of BWM/FPC (both may be live at once) - a Flipper
+    // sending CMD_BREAK_LOOP into a running reader loop is otherwise
+    // invisible here, leaving the loop (and its RF field) running until an
+    // unrelated USB command happens to arrive.
+    avail = avail || cep_spi_rx_pending();
+#endif
+    return avail;
 }
 
 // This function doesn't check if the USB connection is valid.
 // In most of the cases, you should use data_available() unless
 // the timing is critical.
 bool data_available_fast(void) {
+    bool avail;
 #if defined(WITH_BWM_FORWARD)
-    return usb_available_length() || (bwm_fwd_rxdata_available() > 0);
+    avail = usb_available_length() || (bwm_fwd_rxdata_available() > 0);
 #elif defined(WITH_FPC_USART_HOST)
-    return usb_available_length() || (usart_rxdata_available() > 0);
+    avail = usb_available_length() || (usart_rxdata_available() > 0);
 #else
-    return usb_available_length();
+    avail = usb_available_length();
 #endif
+#if defined(WITH_CEP)
+    avail = avail || cep_spi_rx_pending();
+#endif
+    return avail;
 }
 
 // Combined function to convert an unsigned int to an array of hex values corresponding to the last three bits of k1

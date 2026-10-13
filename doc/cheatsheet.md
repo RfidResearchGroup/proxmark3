@@ -713,7 +713,7 @@ pm3 --> mem load -f iclass_default_keys --iclass
 
 Upgrade Sim Module firmware
 ```
-pm3 --> smart upgrade -f sim014.bin
+pm3 --> smart upgrade -f sim024.bin
 ```
 
 ## Smart Card

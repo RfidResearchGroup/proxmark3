@@ -228,8 +228,8 @@ python3 pm5_ble_bridge.py --pty        # default link /tmp/pm5-ble
 **b) TCP listener** — bridge listens, client connects in:
 
 ```
-python3 pm5_ble_bridge.py --tcp 7777   # or HOST:PORT
-./pm3 -p tcp:127.0.0.1:7777
+python3 pm5_ble_bridge.py --tcp 18888   # or HOST:PORT
+./pm3 -p tcp:127.0.0.1:18888
 ```
 
 **c) Outbound TCP** (`--connect`) — bridge dials **out** to a listener. Pairs with
@@ -237,13 +237,13 @@ the client's `--wait` mode ([2.3](#23-client-listen-mode--pm3----wait)) and cros
 the WSL2 NAT boundary:
 
 ```
-python3 pm5_ble_bridge.py --connect 127.0.0.1:7777
+python3 pm5_ble_bridge.py --connect 127.0.0.1:18888
 ```
 
 **d) Relay only** (no BLE) — TCP listener ↔ PTY, for chaining:
 
 ```
-python3 pm5_ble_bridge.py --relay --listen 7777 --pty
+python3 pm5_ble_bridge.py --relay --listen 18888 --pty
 ```
 
 > [!NOTE]
@@ -258,10 +258,10 @@ bridge at it with `--connect`. This removes the relay/PTY hop.
 
 ```
 # window 1 — client listens (blocks until something connects)
-./pm3 -p tcp:127.0.0.1:7777 --wait
+./pm3 -p tcp:127.0.0.1:18888 --wait
 
 # window 2 — bridge dials in (on the machine with the radio)
-python3 pm5_ble_bridge.py --connect 127.0.0.1:7777
+python3 pm5_ble_bridge.py --connect 127.0.0.1:18888
 ```
 
 > [!NOTE]
@@ -283,14 +283,18 @@ limited to 10 minutes per session (the limit resets after quitting the app).
 
 | Setting          | Value                                                             |
 | ---------------- | ----------------------------------------------------------------- |
-| Device A         | Start TCP server (default port `54321`)                           |
+| Device A         | Start TCP server, use client default port:`18888`                 |
 | Device B         | Connect to BLE device → `Proxmark5`                               |
 | Characteristic   | the last one: service `0000ae86-…`, characteristic `0000ae88-…`, for RX+TX |
 
-3. In Termux, connect over the local port:
+1. In Termux, connect over the local port:
 
 ```
-./client/proxmark3 tcp:localhost:54321
+./client/proxmark3 tcp:localhost:18888
+```
+Or, as we're using the default port, just
+```
+./client/proxmark3 tcp:localhost
 ```
 
 No pairing is needed (the BWM has no BLE security). The same app also does classic
@@ -320,7 +324,7 @@ hw bwm wifi --ssid <ssid> [--pwd <password>] [--port <n>] [--hostname <name>]
 | ------------------- | ---------------------------------------- |
 | `--ssid <ssid>`     | WiFi network to join **(required)**      |
 | `--pwd <password>`  | WiFi password (omit for an open network) |
-| `--port <dec>`      | TCP server listen port (default `7777`)  |
+| `--port <dec>`      | TCP server listen port (default `18888`) |
 | `--hostname <name>` | DHCP hostname (default `Proxmark5`)      |
 
 Two sub-actions take no other arguments and are positional (no dashes):
@@ -337,21 +341,26 @@ strings:
 
 ```
 [+] BWM on WiFi at 192.168.1.77
-[?] Connect with: pm3 -p tcp:192.168.1.77:7777
-[?] Or by name (router-dependent): pm3 -p tcp:pm5-lab:7777
+[?] Connect with: pm3 -p tcp:192.168.1.77:18888
+[?] Or by name (router-dependent): pm3 -p tcp:pm5-lab:18888
 ```
 
 ### 3.2 Connect over WiFi
 
 ```
-./pm3 -p tcp:192.168.1.77:7777
+./pm3 -p tcp:192.168.1.77:18888
+```
+Or, as we're using the default port, just
+```
+./pm3 -p tcp:192.168.1.77
 ```
 
 > [!NOTE]
 > Connecting **by hostname** works only if your router registers DHCP client names
 > in its local DNS (some need a suffix like `<name>.lan` or `<name>.home`; some
-> don't do it at all). There is **no mDNS / `.local`** responder, so the IP is the
-> reliable path.
+> don't do it at all). BWM firmware with mDNS also answers `<name>.local`, e.g.
+> `./pm3 -p tcp:pm5-lab.local:18888`; this needs an mDNS-capable resolver on the host
+> (Avahi/nss-mdns or systemd-resolved on Linux; built in on macOS and Windows 10+).
 
 ### 3.3 Check WiFi status — `hw bwm wifi status`
 

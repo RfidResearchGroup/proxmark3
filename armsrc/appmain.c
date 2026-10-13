@@ -4098,6 +4098,20 @@ static void PacketReceived(PacketCommandNG *packet) {
             SendCapabilities();
             break;
         }
+        case CMD_CEP_STATUS: {
+            cep_status_t status = {0};
+#ifdef WITH_CEP
+            status.cep_active = cep_is_active();
+#endif
+#ifdef WITH_BWM_STATUS
+            bwm_read_battery_info(&status.battery);
+#endif
+            if (CheckValidInformationMagic(&g_version_information)) {
+                strncpy(status.fw_version, g_version_information.gitversion, sizeof(status.fw_version) - 1);
+            }
+            reply_ng(CMD_CEP_STATUS, PM3_SUCCESS, (uint8_t *)&status, sizeof(status));
+            break;
+        }
         case CMD_PING: {
             reply_ng(CMD_PING, PM3_SUCCESS, packet->data.asBytes, packet->length);
             break;
@@ -4614,6 +4628,12 @@ static void PacketReceived(PacketCommandNG *packet) {
 #endif
             break;
         }
+        case CMD_PM5_BWM_GET_BATTERY: {
+            bwm_battery_info_t info;
+            bwm_read_battery_info(&info);
+            reply_ng(CMD_PM5_BWM_GET_BATTERY, PM3_SUCCESS, (uint8_t *)&info, sizeof(info));
+            break;
+        }
 #endif // WITH_BWM_STATUS
         case CMD_PM5_POWERSAVE: {
             // Payload: 1 byte, non-zero = enable (the default), zero = disable.
@@ -4859,7 +4879,18 @@ void __attribute__((noreturn)) AppMain(void) {
         }
 
 #ifdef PM5
-        pm5_power_idle();
+        // WFI sleep adds ~40-50ms of latency before the main loop notices a
+        // fresh byte on CEP's SPI1 - fine at idle, but it's what made the
+        // original attach handshake miss bytes (see cep_attach_poll()'s own
+        // comment on the attach-edge bug this caused, GH #3667). Skip the
+        // sleep entirely while a Flipper is attached so the loop polls as
+        // fast as the hardware allows; cep_is_attached() drops back to false
+        // within CEP_ACTIVITY_TIMEOUT_MS of the FAP going away, so this
+        // isn't a permanent always-on cost.
+#ifdef WITH_CEP
+        if (!cep_is_attached())
+#endif
+            pm5_power_idle();
 #endif
     }
 }
