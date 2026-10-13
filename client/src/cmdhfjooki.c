@@ -557,7 +557,7 @@ static int CmdHF14AJookiSim(const char *Cmd) {
         uint16_t chunk_size = MIN(max_avail_blocks, datalen);
         uint16_t blocks_to_send = chunk_size / blockwidth;
 
-        if (mf_eml_set_mem_xt(data + counter, blockno, blocks_to_send, blockwidth) != PM3_SUCCESS) {
+        if (mf_eml_set_mem_xt(data + counter, blockno, blocks_to_send, blockwidth, 0) != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Cant set emul block: %3d", blockno);
             free(data);
             return PM3_ESOFT;

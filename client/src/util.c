@@ -36,7 +36,7 @@
 #include "comms.h"  // SendCommandNG / WaitForResponseTimeout (set_rgb)
 #include "pm3_cmd.h" // CMD_PM5_RGB_SET
 
-#define UTIL_BUFFER_SIZE_SPRINT 8196
+#define UTIL_BUFFER_SIZE_SPRINT 16384
 // global client debug variable
 uint8_t g_debugMode = 0;
 // global client enable/disable printing/logging/grabbing variable
@@ -740,6 +740,38 @@ int parse_uint32_hex_or_dec(const char *text, uint32_t *out) {
 
 bool bytes_equal_not_null(const void *a, size_t a_len, const void *b, size_t b_len) {
     return a_len == b_len && a != NULL && b != NULL && memcmp(a, b, a_len) == 0;
+}
+
+// Append a formatted string to buf without ever writing past buf_len.
+// Returns the length of the resulting string.
+// buf must already be a valid NULL terminated string.
+size_t str_append(char *buf, size_t buf_len, const char *fmt, ...) {
+
+    if (buf == NULL || buf_len == 0 || fmt == NULL) {
+        return 0;
+    }
+
+    size_t len = strlen(buf);
+
+    // no room for another character and its terminator
+    if (len + 1 >= buf_len) {
+        return len;
+    }
+
+    size_t avail = buf_len - len;
+
+    va_list args;
+    va_start(args, fmt);
+    int n = vsnprintf(buf + len, avail, fmt, args);
+    va_end(args);
+
+    if (n < 0) {
+        // encoding error. leave the string as we found it
+        buf[len] = '\0';
+        return len;
+    }
+
+    return ((size_t)n < avail) ? (len + (size_t)n) : (buf_len - 1);
 }
 
 int buffer_append_bytes_with_offset(uint8_t *buf, size_t buf_len, size_t *offset, const void *data, size_t data_len) {

@@ -418,8 +418,8 @@ static int l_kbd_enter_pressed(lua_State *L) {
  * lua-scripts to do stuff like "core.console('hf mf mifare')"
  *     core.console(cmd [, capture [, quiet]])
  *
- *  Same idea as the python binding 
- *     `capture` hands the command's output back as a string, 
+ *  Same idea as the python binding
+ *     `capture` hands the command's output back as a string,
  *     `quiet` keeps it off the// terminal
  * @param L
  * @return

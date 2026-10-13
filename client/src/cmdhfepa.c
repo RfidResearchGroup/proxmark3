@@ -81,7 +81,7 @@ static int CmdHFEPACollectPACENonces(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        const epa_result_t *r = (const epa_result_t *)resp.data.asBytes;
+        const epa_result_t *r = (const epa_result_t *)(const void *)resp.data.asBytes;
 
         if (r->step != 0) {
             PrintAndLogEx(FAILED, "Error in step %u, Return code: %d", r->step, r->func_return);
@@ -211,7 +211,7 @@ static int CmdHFEPAPACEReplay(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    const epa_result_t *rr = (const epa_result_t *)resp.data.asBytes;
+    const epa_result_t *rr = (const epa_result_t *)(const void *)resp.data.asBytes;
 
     if (rr->step != 0) {
         PrintAndLogEx(SUCCESS, "\nPACE replay failed in step %u!", rr->step);
@@ -273,7 +273,7 @@ static int CmdHFEPAPACESimulate(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    const epa_result_t *sr = (const epa_result_t *)resp.data.asBytes;
+    const epa_result_t *sr = (const epa_result_t *)(const void *)resp.data.asBytes;
     const uint32_t *data = sr->timings;
 
     if (sr->step != 0) {

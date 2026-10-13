@@ -49,6 +49,15 @@ void des_decrypt_cbc(void *out, const void *in, const int length, const void *ke
 void des3_encrypt(void *out, const void *in, const void *key, uint8_t keycount);
 void des3_decrypt(void *out, const void *in, const void *key, uint8_t keycount);
 
+// desMAC according to [FIPS 113]. The data is zero padded to a multiple of the
+// DES block size and encrypted in CBC mode with a zero IV; the MAC is the most
+// significant mac_len bytes of the final cipher block. key is 8 bytes, mac_len
+// is 1..8.
+int des_mac(const void *key, const void *input, size_t length, uint8_t *mac, size_t mac_len);
+
+// Check des_mac against the worked example of [FIPS 113]
+int des_mac_test(bool verbose);
+
 int aes_encode(uint8_t *iv, const uint8_t *key, uint8_t *input, uint8_t *output, int length);
 int aes_decode(uint8_t *iv, const uint8_t *key, uint8_t *input, uint8_t *output, int length);
 

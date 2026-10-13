@@ -114,6 +114,14 @@ int MADDFDecodeAndPrint(uint32_t short_aid, bool verbose);
 int MADCardHolderInfoDecode(const uint8_t *data, size_t datalen, bool verbose);
 void MADPrintHeader(void);
 bool HasMADKey(const mad1_sector_t *s0);
+// First sector carrying this AID, 1..15, or -1. The MAD is how an application
+// says which sectors are its own, so every dump parser that keys off an AID
+// wants this.
+int mad_find_aid(const mad1_sector_t *s0, uint16_t aid);
+
+// Count of sectors carrying this AID
+int mad_count_aid(const mad1_sector_t *s0, uint16_t aid);
+
 int DetectHID(const mad1_sector_t *s0, uint16_t manufacture);
 int convert_mad_to_arr(const mad1_sector_t *s0, const mad2_sector_t *s16,
                        size_t dump_len,

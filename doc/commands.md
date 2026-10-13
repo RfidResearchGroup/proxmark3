@@ -238,7 +238,6 @@ Check column "offline" for their availability.
 |`hf 14b wrbl            `|N       |`Write data to a SRI512/SRIX4 tag`
 |`hf 14b tearoff         `|N       |`Tear-off attack on ST25TB/SRx counter blocks`
 |`hf 14b view            `|Y       |`Display content from tag dump file`
-|`hf 14b valid           `|Y       |`SRIX4 checksum test`
 |`hf 14b ctdump          `|N       |`Dump ASK CTS/C-ticket`
 |`hf 14b ctrdbl          `|N       |`Read ASK CTS/C-ticket block`
 |`hf 14b setuid          `|N       |`Set UID for magic card`
@@ -749,16 +748,16 @@ Check column "offline" for their availability.
 |`hf mfu pwdgen          `|Y       |`Generate pwd from known algos`
 |`hf mfu otptear         `|N       |`Tear-off test on OTP bits`
 |`hf mfu countertear     `|N       |`Tear-off test on Ev1/NTAG Counter bits`
+|`hf mfu chk             `|N       |`Ultralight C/AES - Authentication dictionary check`
 |`hf mfu cauth           `|N       |`Ultralight-C - Authentication`
-|`hf mfu cchk            `|N       |`Ultralight-C - Authentication dictionary check`
 |`hf mfu desbrute        `|Y       |`Ultralight-C - 3DES key segment brute force`
 |`hf mfu aesauth         `|N       |`Ultralight-AES - Authentication`
-|`hf mfu aeschk          `|N       |`Ultralight-AES - Authentication dictionary check`
 |`hf mfu aesgetuid       `|N       |`Ultralight-AES - Get UID when RID in use`
 |`hf mfu setkey          `|N       |`Ultralight C/AES - Set 3DES/AES keys`
 |`hf mfu dump            `|N       |`Dump MIFARE Ultralight family tag to binary file`
 |`hf mfu incr            `|N       |`Increments Ev1/NTAG counter`
 |`hf mfu info            `|N       |`Tag information`
+|`hf mfu ndefformat      `|N       |`Format tag as NDEF, writes the Capability Container`
 |`hf mfu ndefread        `|N       |`Prints NDEF records from card`
 |`hf mfu ndefwrite       `|N       |`Write NDEF records to card`
 |`hf mfu rdbl            `|N       |`Read block`
@@ -816,6 +815,12 @@ Check column "offline" for their availability.
 |`hf mfdes getfileisoids `|N       |`Get File ISO IDs list`
 |`hf mfdes lsfiles       `|N       |`Show all files list`
 |`hf mfdes dump          `|N       |`Dump all files`
+|`hf mfdes view          `|Y       |`Display content from tag dump file`
+|`hf mfdes eload         `|N       |`Upload file into emulator memory`
+|`hf mfdes esave         `|N       |`Save emulator memory to file`
+|`hf mfdes eview         `|N       |`View emulator memory`
+|`hf mfdes sim           `|N       |`Simulate DESFire card from emulator memory`
+|`hf mfdes etest         `|N       |`Drive the simulation from the host, no RF`
 |`hf mfdes createfile    `|N       |`Create Standard/Backup File`
 |`hf mfdes createvaluefile`|N       |`Create Value File`
 |`hf mfdes createrecordfile`|N       |`Create Linear/Cyclic Record File`
@@ -850,6 +855,8 @@ Check column "offline" for their availability.
 |`hf ntag424 getfs       `|N       |`Get file settings`
 |`hf ntag424 changefs    `|N       |`Change file settings`
 |`hf ntag424 changekey   `|N       |`Change key`
+|`hf ntag424 gettt       `|N       |`Get Tag Tamper status`
+|`hf ntag424 setconfig   `|N       |`Set PICC configuration option`
 
 
 ### hf saflok
@@ -937,8 +944,9 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hf thinfilm help       `|Y       |`This help`
 |`hf thinfilm info       `|N       |`Tag information`
-|`hf thinfilm list       `|Y       |`List NFC Barcode / Thinfilm history - not correct`
+|`hf thinfilm list       `|Y       |`List NFC Barcode / Thinfilm history`
 |`hf thinfilm sim        `|N       |`Fake Thinfilm tag`
+|`hf thinfilm sniff      `|N       |`Sniff Thinfilm tag communication`
 
 
 ### hf topaz
@@ -1016,11 +1024,12 @@ Check column "offline" for their availability.
 |`hw fpga                `|N       |`Fpga commands`
 |`hw fpgaoff             `|N       |`Turn off FPGA on device`
 |`hw ant_pm5             `|N       |`Control the antennal of pm5`
-|`hw qc_pm5              `|N       |`Perform QC test for the PM5`
+|`hw qc_pm5              `|N       |`Perform QC test (hardware or IO) for the PM5`
 |`hw factorydata         `|N       |`Get/Set the factory data for Device`
 |`hw lcd                 `|N       |`Send command/data to LCD`
 |`hw lcdreset            `|N       |`Hardware reset LCD`
 |`hw ping                `|N       |`Test if the Proxmark3 is responsive`
+|`hw powersave           `|N       |`Enable/disable the PM5 power-save idle`
 |`hw readmem             `|N       |`Read from MCU flash`
 |`hw reset               `|N       |`Reset the device`
 |`hw setlfdivisor        `|N       |`Drive LF antenna at 12MHz / (divisor + 1)`
@@ -1028,13 +1037,41 @@ Check column "offline" for their availability.
 |`hw setmux              `|N       |`Set the ADC mux to a specific value`
 |`hw standalone          `|N       |`Start installed standalone mode on device`
 |`hw tia                 `|N       |`Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider`
-|`hw bwmsetcap           `|N       |`Set BWM fuel-gauge design capacity (PM5, run once after battery change)`
-|`hw bwmvchg             `|N       |`Set BWM charger charge-voltage target (PM5, default 4100 mV)`
-|`hw bwmcharge           `|N       |`Enable/disable BWM battery charging (PM5, one-shot)`
-|`hw bwmautooff          `|N       |`Toggle auto power-off on USB unplug (PM5, BWM)`
-|`hw bwmwifi             `|N       |`Bring up BWM WiFi (STA + TCP server) for a tcp: connection (PM5)`
 |`hw tune                `|N       |`Measure tuning of device antenna`
 |`hw decay               `|N       |`Measure HF antenna decay after field-off`
+
+
+### hw bwm
+
+ { BWM (battery/wireless module) commands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hw bwm help            `|Y       |`This help`
+|`hw bwm autooff         `|N       |`Show/set auto power-off (USB unplug, idle on battery)`
+|`hw bwm charge          `|N       |`Enable/disable battery charging (one-shot)`
+|`hw bwm name            `|N       |`Get/set the BWM BLE advertising name`
+|`hw bwm powersave       `|N       |`Show/set the BWM power-save switch (DFS, light sleep, slow adv)`
+|`hw bwm setcap          `|N       |`Set fuel-gauge design capacity (run once after battery change)`
+|`hw bwm upgrade         `|N       |`Reflash BWM (ESP32) firmware over the BWM link, no header`
+|`hw bwm vchg            `|N       |`Set charger charge-voltage target (default 4100 mV)`
+|`hw bwm wifi            `|N       |`Bring up WiFi (STA + TCP server) for a tcp: connection`
+|`hw bwm wifipower       `|N       |`WiFi fully off, or the modem power-save type (none/min/max)`
+
+
+### hw bwm ble
+
+ { BLE: on/off, pairing, bonded devices, TX power... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hw bwm ble help        `|Y       |`This help`
+|`hw bwm ble status      `|N       |`Show BLE settings: on/off, pairing, bonded devices, TX power`
+|`hw bwm ble on          `|N       |`Switch BLE on (persisted)`
+|`hw bwm ble off         `|N       |`Switch BLE off (persisted) - nothing can connect`
+|`hw bwm ble pairing     `|N       |`Require pairing with a passkey, set the passkey`
+|`hw bwm ble forget      `|N       |`Remove bonded devices`
+|`hw bwm ble txpower     `|N       |`Set advertising / connection TX power`
 
 
 ### lf
@@ -1667,6 +1704,7 @@ Check column "offline" for their availability.
 
 |command                  |offline |description
 |-------                  |------- |-----------
+|`nfc type2 format       `|N       |`format MIFARE Ultralight / NTAG as NFC Forum Tag Type 2`
 |`nfc type2 read         `|N       |`read NFC Forum Tag Type 2`
 |`nfc type2 write        `|N       |`write NFC Forum Tag Type 2`
 |`nfc type2 help         `|Y       |`This help`
@@ -1775,6 +1813,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`trace help             `|Y       |`This help`
+|`trace clear            `|Y       |`Clear the client side trace buffer`
 |`trace extract          `|Y       |`Extract authentication challenges found in trace`
 |`trace list             `|Y       |`List protocol data in trace buffer`
 |`trace load             `|Y       |`Load trace from file`

@@ -11,4 +11,9 @@ if [ -n "$UART_PORT" ]; then
 else
     DEV=""
 fi
-docker run $DEV $DOCKER_PLATFORM --volume="$(pwd)/../..:/home/rrg/proxmark3" -w /home/rrg/proxmark3 --net=host --rm -it "$DOCKER_IMAGE"
+TEST_PATH=$(basename $(pwd -L))
+DOCKER_COMMAND=()
+if [ "$1" = "tests" ]; then
+    DOCKER_COMMAND=("docker/$TEST_PATH/run_tests.sh")
+fi
+docker run $DEV $DOCKER_PLATFORM --volume="$(pwd)/../..:/home/rrg/proxmark3" -w /home/rrg/proxmark3 --net=host --rm -it "$DOCKER_IMAGE" "${DOCKER_COMMAND[@]}"

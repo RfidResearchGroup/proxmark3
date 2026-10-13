@@ -35,6 +35,7 @@
 #include "crypto/duoxcrypto.h"
 #include "protocols.h"
 #include "parsers/parsehrt.h"
+#include "parsers/parsenortic.h"
 #include "cmdtrace.h"
 #include "cliparser.h"
 #include "iso7816/apduinfo.h"       // APDU manipulation / errorcodes
@@ -52,11 +53,20 @@
 #include "generator.h"
 #include "mifare/aiddesfire.h"
 #include "mifare/prime.h"
+#include "mifare/desfireem.h"   // emulator memory card image
 #include "util.h"
 #include "crypto/originality.h"
 
+// How many distinct candidates `hf mfdes detect` remembers per key number so it
+// does not send the same cipher to the card twice.
+#define MFDES_DETECT_TRIED_MAX  256
+
 #define MAX_KEY_LEN        24
 #define MAX_KEYS_LIST_LEN  1024
+// how many errors in a row from the card before we give up on a key number
+#define MFDES_CHK_MAX_ERRORS 10
+// bundled dictionary used when no -f is given
+#define MFDES_DEFAULT_DICT "mfdes_default_keys"
 #define MFDES_BRUTEAID_RESELECT_ATTEMPTS 5
 #define MFDES_BRUTEAID_RESELECT_WAIT_MS  200
 #define MFDES_BRUTEAID_MAD_START         0xF0000FU
@@ -656,7 +666,14 @@ static int DesfirePCRun(DesfireContext_t *dctx, const uint8_t proximity_key[MFDE
     size_t prepare_resp_len = 0;
     uint8_t respcode = 0xFF;
     res = DesfireExchangeEx(activate_field, dctx, MFDES_PREPARE_PC, NULL, 0, &respcode, prepare_resp, &prepare_resp_len, true, 0);
-    if (res != PM3_SUCCESS) {
+    if (res != PM3_SUCCESS || respcode != MFDES_S_OPERATION_OK) {
+        // DesfireExchangeEx reports the transport result; the card's own status
+        // comes back in respcode and an error there still reads as success. It
+        // also ends the authentication, so drop our side of the session.
+        if (res == PM3_SUCCESS) {
+            res = PM3_EAPDU_FAIL;
+        }
+        DesfireClearSession(dctx);
         uint16_t sw = status(respcode);
         PrintAndLogEx(ERR, "Prepare proximity check command failed. Result: %d %s", res, DesfireGetErrorString(res, &sw));
         goto out;
@@ -710,7 +727,11 @@ static int DesfirePCRun(DesfireContext_t *dctx, const uint8_t proximity_key[MFDE
         respcode = 0xFF;
 
         res = DesfireExchange(dctx, MFDES_PROXIMITY_CHECK, round_payload, challenge_part_len + 1, &respcode, round_resp, &round_resp_len);
-        if (res != PM3_SUCCESS) {
+        if (res != PM3_SUCCESS || respcode != MFDES_S_OPERATION_OK) {
+            if (res == PM3_SUCCESS) {
+                res = PM3_EAPDU_FAIL;
+            }
+            DesfireClearSession(dctx);
             uint16_t sw = status(respcode);
             PrintAndLogEx(ERR, "Proximity check round %u command failed. Result: %d %s", (unsigned int)round + 1, res, DesfireGetErrorString(res, &sw));
             goto out;
@@ -762,7 +783,11 @@ static int DesfirePCRun(DesfireContext_t *dctx, const uint8_t proximity_key[MFDE
     size_t verify_resp_len = 0;
     respcode = 0xFF;
     res = DesfireExchange(dctx, MFDES_VERIFY_PC, verify_cmd_mac, sizeof(verify_cmd_mac), &respcode, verify_resp, &verify_resp_len);
-    if (res != PM3_SUCCESS) {
+    if (res != PM3_SUCCESS || respcode != MFDES_S_OPERATION_OK) {
+        if (res == PM3_SUCCESS) {
+            res = PM3_EAPDU_FAIL;
+        }
+        DesfireClearSession(dctx);
         uint16_t sw = status(respcode);
         PrintAndLogEx(ERR, "Verify proximity check command failed. Result: %d %s", res, DesfireGetErrorString(res, &sw));
         goto out;
@@ -818,14 +843,14 @@ static int CmdHF14ADesDefault(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0("n",  "keyno", "<dec>", "Key number"),
-        arg_str0("t",  "algo", "<DES|2TDEA|3TDEA|AES>", "Crypt algo"),
-        arg_str0("k",  "key", "<hex>", "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
-        arg_str0(NULL, "kdf", "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"),
-        arg_str0("i",  "kdfi", "<hex>", "KDF input (1-31 hex bytes)"),
-        arg_str0("m",  "cmode", "<plain|mac|encrypt>", "Communicaton mode"),
-        arg_str0("c",  "ccset", "<native|niso|iso>", "Communicaton command set"),
-        arg_str0(NULL,  "schann", "<d40|ev1|ev2|lrp>", "Secure channel"),
+        arg_int0("n",  "keyno",  "<dec>", "Key number"),
+        arg_str0("t",  "algo",   "<DES|2TDEA|3TDEA|AES>", "Crypt algo"),
+        arg_str0("k",  "key",    "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
+        arg_str0(NULL, "kdf",    "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"),
+        arg_str0("i",  "kdfi",   "<hex>", "KDF input (1-31 hex bytes)"),
+        arg_str0("m",  "cmode",  "<plain|mac|encrypt>", "Communicaton mode"),
+        arg_str0("c",  "ccset",  "<native|niso|iso>", "Communicaton command set"),
+        arg_str0(NULL, "schann", "<d40|ev1|ev2|lrp>", "Secure channel"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -856,14 +881,14 @@ static int CmdHF14ADesDefault(const char *Cmd) {
 
     PrintAndLogEx(INFO, "-----------" _CYAN_("Default parameters") "---------------------------------");
 
-    PrintAndLogEx(INFO, "Key Num     : %d", defaultKeyNum);
-    PrintAndLogEx(INFO, "Algo        : %s", CLIGetOptionListStr(DesfireAlgoOpts, defaultAlgoId));
-    PrintAndLogEx(INFO, "Key         : %s", sprint_hex(defaultKey, desfire_get_key_length(defaultAlgoId)));
-    PrintAndLogEx(INFO, "KDF algo    : %s", CLIGetOptionListStr(DesfireKDFAlgoOpts, defaultKdfAlgo));
-    PrintAndLogEx(INFO, "KDF input   : [%d] %s", defaultKdfInputLen, sprint_hex(defaultKdfInput, defaultKdfInputLen));
-    PrintAndLogEx(INFO, "Secure chan : %s", CLIGetOptionListStr(DesfireSecureChannelOpts, defaultSecureChannel));
-    PrintAndLogEx(INFO, "Command set : %s", CLIGetOptionListStr(DesfireCommandSetOpts, defaultCommSet));
-    PrintAndLogEx(INFO, "Comm mode   : %s", CLIGetOptionListStr(DesfireCommunicationModeOpts, defaultCommMode));
+    PrintAndLogEx(INFO, "Key num........ %d", defaultKeyNum);
+    PrintAndLogEx(INFO, "Algo........... %s", CLIGetOptionListStr(DesfireAlgoOpts, defaultAlgoId));
+    PrintAndLogEx(INFO, "Key............ %s", sprint_hex_inrow(defaultKey, desfire_get_key_length(defaultAlgoId)));
+    PrintAndLogEx(INFO, "KDF algo....... %s", CLIGetOptionListStr(DesfireKDFAlgoOpts, defaultKdfAlgo));
+    PrintAndLogEx(INFO, "KDF input...... [%d] %s", defaultKdfInputLen, sprint_hex_inrow(defaultKdfInput, defaultKdfInputLen));
+    PrintAndLogEx(INFO, "Sec chann...... %s", CLIGetOptionListStr(DesfireSecureChannelOpts, defaultSecureChannel));
+    PrintAndLogEx(INFO, "Command set.... %s", CLIGetOptionListStr(DesfireCommandSetOpts, defaultCommSet));
+    PrintAndLogEx(INFO, "Command mode... %s", CLIGetOptionListStr(DesfireCommunicationModeOpts, defaultCommMode));
 
     return PM3_SUCCESS;
 }
@@ -897,7 +922,6 @@ static bool DesfirePrintVersionInfo(const mfdes_info_res_t *info, nxp_cardtype_t
     if (local_cardtype == NXP_UNKNOWN && prodtype == DESFIRE_UNKNOWN_PROD) {
         PrintAndLogEx(INFO, "HW Version.. %s", sprint_hex_inrow(info->versionHW, sizeof(info->versionHW)));
         PrintAndLogEx(INFO, "SW Version.. %s", sprint_hex_inrow(info->versionSW, sizeof(info->versionSW)));
-        PrintAndLogEx(INFO, "Version data identification failed. Report to Iceman!");
         return false;
     }
 
@@ -1272,14 +1296,113 @@ static void DesFill2bPattern(
     (*startPattern)++;
 }
 
+static void DesChkPrependKey(uint8_t *keyList, size_t stride, uint32_t *keyListLen, const uint8_t *key) {
+
+    uint32_t len = *keyListLen;
+    if (len >= MAX_KEYS_LIST_LEN) {
+        len = MAX_KEYS_LIST_LEN - 1;
+    }
+
+    memmove(keyList + stride, keyList, len * stride);
+    memcpy(keyList, key, stride);
+    *keyListLen = len + 1;
+}
+
+// Try every key in `keyList` against every key number the `usedkeys` map marks as
+// in use on the currently selected application.  Found keys are stored in `found`.
+// Returns PM3_SUCCESS, or an error when the application can no longer be selected.
+static int AuthCheckDesfireKeyType(DesfireContext_t *dctx,
+                                   DesfireSecureChannel secureChannel,
+                                   uint32_t curaid,
+                                   DesfireCryptoAlgorithm keytype,
+                                   const char *keytypestr,
+                                   const uint8_t *keyList, size_t keyListStride, uint32_t keyListLen,
+                                   const int *usedkeys,
+                                   desfire_app_keys_t *found,
+                                   bool *result) {
+
+    size_t keylen = desfire_get_key_length(keytype);
+
+    for (uint8_t keyno = 0; keyno < DESFIRE_MAX_KEY_COUNT; keyno++) {
+
+        if (usedkeys[keyno] != 1 || found->keys[keytype][keyno][0] != 0) {
+            continue;
+        }
+
+        size_t errcount = 0;
+
+        for (uint32_t curkey = 0; curkey < keyListLen; curkey++) {
+
+            const uint8_t *key = &keyList[curkey * keyListStride];
+
+            DesfireSetKeyNoClear(dctx, keyno, keytype, (uint8_t *)key);
+
+            int res = DesfireAuthenticate(dctx, secureChannel, false);
+            if (res == PM3_SUCCESS) {
+                // the AID is already on the "Checking aid" line above
+                PrintAndLogEx(SUCCESS, "Found " _GREEN_("%s") " Key %02u... " _GREEN_("%s"),
+                              keytypestr, keyno, sprint_hex_inrow(key, keylen));
+
+                found->keys[keytype][keyno][0] = 0x01;
+                memcpy(&found->keys[keytype][keyno][1], key, keylen);
+                *result = true;
+
+                // EV2 and LRP turn an authenticated context into a "non first"
+                // auth for the next key number.  Start each one clean instead.
+                DesfireClearSession(dctx);
+                break;
+            }
+
+            // anything below 7 means the card gave up before the crypto stage,
+            // the channel is gone and the application has to be selected again
+            if (res < 7) {
+                DropField();
+                int selres = DesfireSelectAIDHex(dctx, curaid, false, 0);
+                if (selres != PM3_SUCCESS) {
+                    return selres;
+                }
+            }
+
+            // 4  - answer length doesn't match the algo
+            // 50 - PICC didn't answer AES,  51 - PICC didn't answer LRP
+            // the application doesn't use this key type, skip the rest of it
+            if (res == 4 || res == 50 || res == 51) {
+                return PM3_SUCCESS;
+            }
+
+            // 3 - invalid key number.  Every key fails the same way, but the
+            // remaining key numbers are still worth checking
+            if (res == 3) {
+                break;
+            }
+
+            // 1, 2, 5, 6 - transmit or local crypto error.  Carry on with the next
+            // key and only give up on this key number after a run of them
+            if (res < 7) {
+                errcount++;
+                if (errcount > MFDES_CHK_MAX_ERRORS) {
+                    if (g_debugMode) {
+                        PrintAndLogEx(DEBUG, "AID 0x%06X, %s key %02u... too many errors from card, skipping", curaid, keytypestr, keyno);
+                    }
+                    break;
+                }
+            } else {
+                errcount = 0;
+            }
+        }
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int AuthCheckDesfire(DesfireContext_t *dctx,
                             DesfireSecureChannel secureChannel,
                             const uint8_t *aid,
                             uint8_t deskeyList[MAX_KEYS_LIST_LEN][8], uint32_t deskeyListLen,
                             uint8_t aeskeyList[MAX_KEYS_LIST_LEN][16], uint32_t aeskeyListLen,
                             uint8_t k3kkeyList[MAX_KEYS_LIST_LEN][24], uint32_t k3kkeyListLen,
-                            uint8_t cmdKdfAlgo, uint8_t kdfInputLen, uint8_t *kdfInput,
-                            uint8_t foundKeys[4][0xE][24 + 1],
+                            bool autoschann,
+                            desfire_app_keys_t *found,
                             bool *result,
                             bool verbose) {
 
@@ -1292,204 +1415,189 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
         return PM3_ESOFT;
     }
 
-    int usedkeys[0xF] = {0};
+    int usedkeys[DESFIRE_MAX_KEY_COUNT + 1] = {0};
     bool des = false;
     bool tdes = false;
     bool aes = false;
     bool k3kdes = false;
 
+    bool uselrp = false;
+    uint8_t numkeys = 0;
+
     uint8_t data[250] = {0};
     size_t datalen = 0;
 
     res = DesfireGetKeySettings(dctx, data, &datalen);
-    if (res != PM3_SUCCESS && datalen < 2) {
-        PrintAndLogEx(ERR, "Could not get key settings");
-        return res;
-    }
-    uint8_t num_keys = data[1];
-    switch (num_keys >> 6) {
-        case 0:
+    if (res == PM3_SUCCESS && datalen >= 2) {
+
+        numkeys = data[1] & 0x0F;
+
+        switch (data[1] >> 6) {
+            case 0:
+                des = true;
+                tdes = true;
+                break;
+            case 1:
+                k3kdes = true;
+                break;
+            case 2:
+                aes = true;
+                break;
+            default:
+                break;
+        }
+
+    } else {
+
+        // key settings are not readable.  Ask the card which AUTH commands it
+        // answers instead, the same way `hf mfdes detect` does
+        AuthCommandsChk_t authCmdCheck = {0};
+        DesfireCheckAuthCommands(ISW6bAID, curaid, NULL, 0, &authCmdCheck);
+
+        if (authCmdCheck.checked == false) {
+            PrintAndLogEx(ERR, "AID 0x%06X, could not get key settings", curaid);
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        if (authCmdCheck.auth) {
             des = true;
             tdes = true;
-            break;
-        case 1:
+        }
+
+        // 0x1A covers DES, 2TDEA and 3TDEA alike, so it cannot tell them apart
+        // but it is the only command a 3TDEA application answers at all.
+        if (authCmdCheck.authISO) {
             k3kdes = true;
-            break;
-        case 2:
+        }
+
+        if (authCmdCheck.authAES || authCmdCheck.authEV2) {
             aes = true;
-            break;
-        default:
-            break;
+        }
+
+        if (authCmdCheck.authLRP) {
+            aes = true;
+            uselrp = true;
+        }
+
+        if (des == false && tdes == false && aes == false && k3kdes == false) {
+            PrintAndLogEx(ERR, "AID 0x%06X, card answers no known auth command", curaid);
+            DropField();
+            return PM3_ESOFT;
+        }
+
+        // the probe dropped the field behind us
+        res = DesfireSelectAIDHex(dctx, curaid, false, 0);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "AID 0x%06X, can't re-select after the auth command probe", curaid);
+            DropField();
+            return PM3_ESOFT;
+        }
     }
 
     // always check master key
     usedkeys[0] = 1;
 
-    if (curaid != 0) {
-        FileList_t fileList = {{0}};
-        size_t filescount = 0;
-        bool isopresent = 0;
-        res = DesfireFillFileList(dctx, fileList, &filescount, &isopresent);
-        if (res == PM3_SUCCESS) {
-            if (filescount > 0) {
-                for (int i = 0; i < filescount; i++) {
-                    if (fileList[i].fileSettings.rAccess < 0x0e)
-                        usedkeys[fileList[i].fileSettings.rAccess] = 1;
-                    if (fileList[i].fileSettings.wAccess < 0x0e)
-                        usedkeys[fileList[i].fileSettings.wAccess] = 1;
-                    if (fileList[i].fileSettings.rwAccess < 0x0e)
-                        usedkeys[fileList[i].fileSettings.rwAccess] = 1;
-                    if (fileList[i].fileSettings.chAccess < 0x0e)
-                        usedkeys[fileList[i].fileSettings.chAccess] = 1;
-                }
-            } else {
-                for (int i = 0; i < 0xE; i++)
-                    usedkeys[i] = 1;
-            }
-        } else {
-            for (int i = 0; i < 0xE; i++)
-                usedkeys[i] = 1;
+    if (numkeys > 0) {
+
+        uint8_t keynolast = (numkeys <= DESFIRE_MAX_KEY_COUNT) ? numkeys : DESFIRE_MAX_KEY_COUNT;
+        for (uint8_t k = 0; k < keynolast; k++) {
+            usedkeys[k] = 1;
         }
+
+    } else if (curaid != 0) {
+
+        // Key settings were not readable, which means the application master key
+        // settings deny it without authentication. The same bit gates GetFileIDs
+        // and GetFileSettings, so the file access rights cannot name the key
+        // numbers either.  GetKeyVersion is not gated by it at all, so ask the
+        // application which key numbers it actually has
+        uint8_t keyvercount = 0;
+        for (uint8_t k = 0; k < DESFIRE_MAX_KEY_COUNT; k++) {
+
+            uint8_t keyno = k;
+            uint8_t kvbuf[250] = {0};
+            size_t kvbuflen = 0;
+
+            if (DesfireGetKeyVersion(dctx, &keyno, 1, kvbuf, &kvbuflen) == PM3_SUCCESS) {
+                usedkeys[k] = 1;
+                keyvercount++;
+            }
+        }
+
+        // the card named none of them, so there is nothing to narrow it down with
+        if (keyvercount == 0) {
+            for (int i = 0; i < DESFIRE_MAX_KEY_COUNT; i++) {
+                usedkeys[i] = 1;
+            }
+        }
+    }
+
+    // An AES application runs either the EV1/EV2 channel or LRP and the key
+    // settings don't say which, so it takes one probe to tell them apart.
+    if (autoschann && aes && uselrp == false) {
+
+        uselrp = DesfireCheckAuthCmd(ISW6bAID, curaid, 0, MFDES_AUTHENTICATE_EV2F, true);
+
+        // the probe dropped the field behind us
+        res = DesfireSelectAIDHex(dctx, curaid, false, 0);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "AID 0x%06X, can't re-select after the LRP probe", curaid);
+            DropField();
+            return PM3_ESOFT;
+        }
+    }
+
+    if (autoschann && uselrp) {
+        secureChannel = DACLRP;
     }
 
     if (verbose) {
         PrintAndLogEx(INFO, "Check: %s %s %s %s " NOLF, (des) ? "DES" : "", (tdes) ? "2TDEA" : "", (k3kdes) ? "3TDEA" : "", (aes) ? "AES" : "");
+        PrintAndLogEx(NORMAL, "channel: %s " NOLF, CLIGetOptionListStr(DesfireSecureChannelOpts, secureChannel));
         PrintAndLogEx(NORMAL, "keys: " NOLF);
-        for (int i = 0; i < 0xE; i++)
-            if (usedkeys[i] == 1)
+        for (int i = 0; i < DESFIRE_MAX_KEY_COUNT; i++) {
+            if (usedkeys[i] == 1) {
                 PrintAndLogEx(NORMAL, "%02x " NOLF, i);
+            }
+        }
         PrintAndLogEx(NORMAL, "");
     }
 
-    bool badlen = false;
+    const struct {
+        bool check;
+        DesfireCryptoAlgorithm keytype;
+        const char *name;
+        const uint8_t *list;
+        size_t stride;
+        uint32_t len;
+    } checks[] = {
+        { des,    T_DES,    "DES", (const uint8_t *)deskeyList, sizeof(deskeyList[0]), deskeyListLen },
+        { tdes,   T_3DES,   "2TDEA", (const uint8_t *)aeskeyList, sizeof(aeskeyList[0]), aeskeyListLen },
+        { aes,    T_AES,    "AES", (const uint8_t *)aeskeyList, sizeof(aeskeyList[0]), aeskeyListLen },
+        { k3kdes, T_3K3DES, "3TDEA", (const uint8_t *)k3kkeyList, sizeof(k3kkeyList[0]), k3kkeyListLen },
+    };
 
-    if (des) {
+    for (size_t i = 0; i < ARRAYLEN(checks); i++) {
 
-        for (uint8_t keyno = 0; keyno < 0xE; keyno++) {
+        if (checks[i].check == false) {
+            continue;
+        }
 
-            if (usedkeys[keyno] == 1 && foundKeys[0][keyno][0] == 0) {
-                for (uint32_t curkey = 0; curkey < deskeyListLen; curkey++) {
-                    DesfireSetKeyNoClear(dctx, keyno, T_DES, deskeyList[curkey]);
-                    res = DesfireAuthenticate(dctx, secureChannel, false);
-                    if (res == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found DES Key %02u... " _GREEN_("%s"), curaid, keyno, sprint_hex(deskeyList[curkey], 8));
-                        foundKeys[0][keyno][0] = 0x01;
-                        *result = true;
-                        memcpy(&foundKeys[0][keyno][1], deskeyList[curkey], 8);
-                        break;
-                    } else if (res < 7) {
-                        badlen = true;
-                        DropField();
-                        res = DesfireSelectAIDHex(dctx, curaid, false, 0);
-                        if (res != PM3_SUCCESS) {
-                            return res;
-                        }
-                        break;
-                    }
-                }
-                if (badlen == true) {
-                    badlen = false;
-                    break;
-                }
-            }
+        // LRP only ever carries AES keys
+        if (secureChannel == DACLRP && checks[i].keytype != T_AES) {
+            continue;
+        }
+
+        res = AuthCheckDesfireKeyType(dctx, secureChannel, curaid, checks[i].keytype, checks[i].name,
+                                      checks[i].list, checks[i].stride, checks[i].len,
+                                      usedkeys, found, result);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
         }
     }
 
-    if (tdes) {
-
-        for (uint8_t keyno = 0; keyno < 0xE; keyno++) {
-
-            if (usedkeys[keyno] == 1 && foundKeys[1][keyno][0] == 0) {
-                for (uint32_t curkey = 0; curkey < aeskeyListLen; curkey++) {
-                    DesfireSetKeyNoClear(dctx, keyno, T_3DES, aeskeyList[curkey]);
-                    res = DesfireAuthenticate(dctx, secureChannel, false);
-                    if (res == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 2TDEA Key %02u... " _GREEN_("%s"), curaid, keyno, sprint_hex_inrow(aeskeyList[curkey], 16));
-                        foundKeys[1][keyno][0] = 0x01;
-                        *result = true;
-                        memcpy(&foundKeys[1][keyno][1], aeskeyList[curkey], 16);
-                        break;
-                    } else if (res < 7) {
-                        badlen = true;
-                        DropField();
-                        res = DesfireSelectAIDHex(dctx, curaid, false, 0);
-                        if (res != PM3_SUCCESS) {
-                            return res;
-                        }
-                        break;
-                    }
-                }
-                if (badlen == true) {
-                    badlen = false;
-                    break;
-                }
-            }
-        }
-    }
-
-    if (aes) {
-
-        for (uint8_t keyno = 0; keyno < 0xE; keyno++) {
-
-            if (usedkeys[keyno] == 1 && foundKeys[2][keyno][0] == 0) {
-                for (uint32_t curkey = 0; curkey < aeskeyListLen; curkey++) {
-                    DesfireSetKeyNoClear(dctx, keyno, T_AES, aeskeyList[curkey]);
-                    res = DesfireAuthenticate(dctx, secureChannel, false);
-                    if (res == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found AES Key %02u... " _GREEN_("%s"), curaid, keyno, sprint_hex_inrow(aeskeyList[curkey], 16));
-                        foundKeys[2][keyno][0] = 0x01;
-                        *result = true;
-                        memcpy(&foundKeys[2][keyno][1], aeskeyList[curkey], 16);
-                        break;
-                    } else if (res < 7) {
-                        badlen = true;
-                        DropField();
-                        res = DesfireSelectAIDHex(dctx, curaid, false, 0);
-                        if (res != PM3_SUCCESS) {
-                            return res;
-                        }
-                        break;
-                    }
-                }
-                if (badlen == true) {
-                    badlen = false;
-                    break;
-                }
-            }
-        }
-    }
-
-    if (k3kdes) {
-
-        for (uint8_t keyno = 0; keyno < 0xE; keyno++) {
-
-            if (usedkeys[keyno] == 1 && foundKeys[3][keyno][0] == 0) {
-                for (uint32_t curkey = 0; curkey < k3kkeyListLen; curkey++) {
-                    DesfireSetKeyNoClear(dctx, keyno, T_3K3DES, k3kkeyList[curkey]);
-                    res = DesfireAuthenticate(dctx, secureChannel, false);
-                    if (res == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found 3TDEA Key %02u... " _GREEN_("%s"), curaid, keyno, sprint_hex_inrow(k3kkeyList[curkey], 24));
-                        foundKeys[3][keyno][0] = 0x01;
-                        *result = true;
-                        memcpy(&foundKeys[3][keyno][1], k3kkeyList[curkey], 16);
-                        break;
-                    } else if (res < 7) {
-                        badlen = true;
-                        DropField();
-                        res = DesfireSelectAIDHex(dctx, curaid, false, 0);
-                        if (res != PM3_SUCCESS) {
-                            return res;
-                        }
-                        break;
-                    }
-                }
-
-                if (badlen == true) {
-                    break;
-                }
-            }
-        }
-    }
     DropField();
     return PM3_SUCCESS;
 }
@@ -1502,22 +1610,23 @@ static int CmdHF14aDesChk(const char *Cmd) {
     uint32_t deskeyListLen = 0;
     uint32_t aeskeyListLen = 0;
     uint32_t k3kkeyListLen = 0;
-    uint8_t foundKeys[4][0xE][24 + 1] = {{{0}}};
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes chk",
                   "Checks keys with MIFARE DESFire card.",
-                  "hf mfdes chk --aid 123456 -k 000102030405060708090a0b0c0d0e0f  -> check key on aid 0x123456\n"
-                  "hf mfdes chk -f mfdes_default_keys                     -> check keys against all existing aid on card\n"
-                  "hf mfdes chk -f mfdes_default_keys --aid 123456        -> check keys against aid 0x123456\n"
-                  "hf mfdes chk --aid 123456 --pattern1b -j keys          -> check all 1-byte keys pattern on aid 0x123456 and save found keys to `keys.json`\n"
-                  "hf mfdes chk --aid 123456 --pattern2b --startp2b FA00  -> check all 2-byte keys pattern on aid 0x123456. Start from key FA00FA00...FA00");
+                  "hf mfdes chk -f mfdes_default_keys                             -> check keys against all existing AID on card\n"
+                  "hf mfdes chk --aid 123456 -f mfdes_default_keys                -> check keys against AID 0x123456\n"
+                  "hf mfdes chk --aid 123456 --pattern1b -j keys                  -> check all 1-byte keys pattern on AID 0x123456 and save found keys to `keys.json`\n"
+                  "hf mfdes chk --aid 123456 --pattern2b --startp2b FA00          -> check all 2-byte keys pattern on AID 0x123456. Start from key FA00FA00...FA00\n"
+                  "hf mfdes chk --aid 123456 -k 000102030405060708090a0b0c0d0e0f  -> check key on AID 0x123456\n"
+                  "hf mfdes chk -f mfdes_default_keys --schann lrp                -> check keys, forcing the LRP secure channel\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0(NULL, "aid",        "<hex>", "Use specific AID (3 hex bytes, big endian)"),
-        arg_str0("k",  "key",        "<hex>", "Key for checking (HEX 16 bytes)"),
-        arg_str0("f", "file",        "<fn>",  "Filename of dictionary"),
+        arg_str0("k",  "key",        "<hex>", "Key for authenticate (8|16|24 hex bytes)"),
+        arg_str0("f", "file",        "<fn>",  "Filename of dictionary (default: `" MFDES_DEFAULT_DICT "`)"),
         arg_lit0(NULL, "pattern1b",  "Check all 1-byte combinations of key (0000...0000, 0101...0101, 0202...0202, ...)"),
         arg_lit0(NULL, "pattern2b",  "Check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)"),
         arg_str0(NULL, "startp2b",   "<pattern>", "Start key (2-byte HEX) for 2-byte search (use with `--pattern2b`)"),
@@ -1525,10 +1634,11 @@ static int CmdHF14aDesChk(const char *Cmd) {
         arg_lit0("v",  "verbose",    "Verbose output"),
         arg_int0(NULL, "kdf",        "<0|1|2>", "Key Derivation Function (KDF) (0=None, 1=AN10922, 2=Gallagher)"),
         arg_str0("i",  "kdfi",       "<hex>", "KDF input (1-31 hex bytes)"),
+        arg_str0(NULL, "schann",     "<d40|ev1|ev2|lrp>", "Secure channel (default: detected per application)"),
         arg_lit0("a",  "apdu",       "Show APDU requests and responses"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int aidlength = 0;
     uint8_t aid[3] = {0};
@@ -1536,7 +1646,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     swap24(aid);
 
-    uint8_t vkey[16] = {0};
+    uint8_t vkey[MAX_KEY_LEN] = {0};
     int vkeylen = 0;
     CLIGetHexWithReturn(ctx, 2, vkey, &vkeylen);
 
@@ -1548,7 +1658,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
             memcpy(&aeskeyList[aeskeyListLen], vkey, 16);
             aeskeyListLen++;
         } else if (vkeylen == 24) {
-            memcpy(&k3kkeyList[k3kkeyListLen], vkey, 16);
+            memcpy(&k3kkeyList[k3kkeyListLen], vkey, 24);
             k3kkeyListLen++;
         } else {
             PrintAndLogEx(ERR, "Specified key must have 8, 16 or 24 bytes length.");
@@ -1567,6 +1677,12 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     bool pattern1b = arg_get_lit(ctx, 4);
     bool pattern2b = arg_get_lit(ctx, 5);
+
+    // No dictionary and no pattern asked for means the bundled DESFire
+    // dictionary, which is what `hf mfdes detect` already falls back to.
+    if (dict_filenamelen == 0 && pattern1b == false && pattern2b == false) {
+        dict_filenamelen = snprintf((char *)dict_filename, sizeof(dict_filename), "%s", MFDES_DEFAULT_DICT);
+    }
 
     if (pattern1b && pattern2b) {
         PrintAndLogEx(ERR, "Pattern search mode must be 2-byte or 1-byte only.");
@@ -1614,7 +1730,19 @@ static int CmdHF14aDesChk(const char *Cmd) {
     int kdfInputLen = 0;
     CLIGetHexWithReturn(ctx, 10, kdfInput, &kdfInputLen);
 
-    bool APDULogging = arg_get_lit(ctx, 11);
+    // the secure channel is detected per application unless the user pins one
+    DesfireSecureChannel secureChannel = DACEV1;
+    bool autoschann = (arg_get_str(ctx, 11)->count == 0);
+    if (autoschann == false) {
+        int schann = DACEV1;
+        if (CLIGetOptionList(arg_get_str(ctx, 11), DesfireSecureChannelOpts, &schann)) {
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+        secureChannel = schann;
+    }
+
+    bool APDULogging = arg_get_lit(ctx, 12);
 
     CLIParserFree(ctx);
     SetAPDULogging(APDULogging);
@@ -1640,7 +1768,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
     }
 
     bool result = false;
-    uint8_t app_ids[78] = {0};
+    uint8_t app_ids[DESFIRE_MAX_APP_COUNT * 3] = {0};
     size_t app_ids_len = 0;
 
     clearCommandBuffer();
@@ -1649,7 +1777,6 @@ static int CmdHF14aDesChk(const char *Cmd) {
     DesfireSetKdf(&dctx, cmdKDFAlgo, kdfInput, kdfInputLen);
     DesfireSetCommandSet(&dctx, DCCNativeISO);
     DesfireSetCommMode(&dctx, DCMPlain);
-    DesfireSecureChannel secureChannel = DACEV1;
 
     // save card UID to dctx
     DesfireGetCardUID(&dctx);
@@ -1662,11 +1789,28 @@ static int CmdHF14aDesChk(const char *Cmd) {
     }
 
 
-    res = DesfireGetAIDList(&dctx, app_ids, &app_ids_len);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Can't get list of applications on tag");
-        DropField();
-        return PM3_ESOFT;
+    // AID 000000 is the PICC level.
+    // GetApplicationIDs never lists it, so it has to be seeded manually
+    memset(app_ids, 0x00, 3);
+    app_ids_len = 3;
+
+    uint8_t aidbuf[250] = {0};
+    size_t aidbuflen = 0;
+    res = DesfireGetAIDList(&dctx, aidbuf, &aidbuflen);
+    if (res == PM3_SUCCESS) {
+
+        if (aidbuflen > sizeof(app_ids) - 3) {
+            PrintAndLogEx(WARNING, "Card returned " _YELLOW_("%zu") " applications, only checking the first " _YELLOW_("%d"), aidbuflen / 3, DESFIRE_MAX_APP_COUNT - 1);
+            aidbuflen = sizeof(app_ids) - 3;
+        }
+
+        memcpy(&app_ids[3], aidbuf, aidbuflen);
+        app_ids_len += aidbuflen;
+
+    } else {
+        // the application list is gated by PICC key settings bit 1, so a locked
+        // card refuses it without auth. That is no reason to give up on the PICC master key
+        PrintAndLogEx(WARNING, "Can't get list of applications on tag, checking PICC level only");
     }
 
     if (aidlength != 0) {
@@ -1730,10 +1874,23 @@ static int CmdHF14aDesChk(const char *Cmd) {
         }
     }
 
+    desfire_keys_dump_t *dump = calloc(1, sizeof(desfire_keys_dump_t));
+    if (dump == NULL) {
+        PrintAndLogEx(ERR, "Failed to allocate memory");
+        DropField();
+        return PM3_EMALLOC;
+    }
+    dump->appcount = app_ids_len / 3;
+
     for (uint32_t x = 0; x < app_ids_len / 3; x++) {
 
         uint32_t curaid = (app_ids[x * 3] & 0xFF) + ((app_ids[(x * 3) + 1] & 0xFF) << 8) + ((app_ids[(x * 3) + 2] & 0xFF) << 16);
         PrintAndLogEx(INFO, "Checking aid " _YELLOW_("%06X"), curaid);
+
+        // found keys are tracked per application.  A key number recovered on one
+        // AID must not stop us from checking the same key number on the next one
+        desfire_app_keys_t *found = &dump->app[x];
+        found->aid = curaid;
 
         bool loadedAllKeys = false;
         size_t desReadStart = 0;
@@ -1791,23 +1948,43 @@ static int CmdHF14aDesChk(const char *Cmd) {
                     }
                 }
             } else {
-                // single key given with --key
+                // only the key given with --key, inserted below
+                deskeyListLen = 0;
+                aeskeyListLen = 0;
+                k3kkeyListLen = 0;
                 loadedAllKeys = true;
             }
 
-            res = AuthCheckDesfire(&dctx, secureChannel, &app_ids[x * 3], deskeyList, deskeyListLen, aeskeyList, aeskeyListLen, k3kkeyList, k3kkeyListLen, cmdKDFAlgo, kdfInputLen, kdfInput, foundKeys, &foundKeyThisRound, verbose);
-            if (res == PM3_EOPABORTED) {
-                break;
+            // the fills above reset the lengths and refill from index 0, so the
+            // key given with `--key` goes back to the head of its list every
+            // round.  First tried, and never the one that gets dropped
+            if (vkeylen == 8) {
+                DesChkPrependKey((uint8_t *)deskeyList, sizeof(deskeyList[0]), &deskeyListLen, vkey);
+            } else if (vkeylen == 16) {
+                DesChkPrependKey((uint8_t *)aeskeyList, sizeof(aeskeyList[0]), &aeskeyListLen, vkey);
+            } else if (vkeylen == 24) {
+                DesChkPrependKey((uint8_t *)k3kkeyList, sizeof(k3kkeyList[0]), &k3kkeyListLen, vkey);
             }
 
-            result = (result || foundKeyThisRound);
+            if (deskeyListLen || aeskeyListLen || k3kkeyListLen) {
 
-            if (foundKeyThisRound == true && verbose == false) {
-                if (pattern1b || pattern2b) {
-                    PrintAndLogEx(NORMAL, "p" NOLF);
-                } else if (dict_filenamelen) {
-                    PrintAndLogEx(NORMAL, "d" NOLF);
+                res = AuthCheckDesfire(&dctx,
+                                       secureChannel,
+                                       &app_ids[x * 3],
+                                       deskeyList, deskeyListLen,
+                                       aeskeyList, aeskeyListLen,
+                                       k3kkeyList, k3kkeyListLen,
+                                       autoschann,
+                                       found,
+                                       &foundKeyThisRound,
+                                       verbose
+                                      );
+
+                if (res == PM3_EOPABORTED) {
+                    break;
                 }
+
+                result = (result || foundKeyThisRound);
             }
         }
 
@@ -1816,8 +1993,8 @@ static int CmdHF14aDesChk(const char *Cmd) {
         }
 
     }
-    if (verbose == false) {
-        PrintAndLogEx(NORMAL, "");
+    if (result == false) {
+        PrintAndLogEx(WARNING, "No keys found");
     }
 
     // save keys to json
@@ -1829,31 +2006,19 @@ static int CmdHF14aDesChk(const char *Cmd) {
         uint8_t sel_1813 = 0;
         if (WaitForIso14aReply(&resp, 2500, NULL, &sel_1813) == false) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply");
+            free(dump);
             return PM3_ETIMEOUT;
         }
 
-        iso14a_card_select_t card;
-        memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
-
         uint64_t select_status = sel_1813; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
-
-        uint8_t data[10 + 1 + 2 + 1 + 256 + (4 * 0xE * (24 + 1))] = {0};
-        uint8_t atslen = 0;
         if (select_status == 1 || select_status == 2) {
-            memcpy(data, card.uid, card.uidlen);
-            data[10] = card.sak;
-            data[11] = card.atqa[1];
-            data[12] = card.atqa[0];
-            atslen = card.ats_len;
-            data[13] = atslen;
-            memcpy(&data[14], card.ats, atslen);
+            memcpy(&dump->card_info, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
         }
 
-        // length: UID(10b)+SAK(1b)+ATQA(2b)+ATSlen(1b)+ATS(atslen)+foundKeys[2][64][AES_KEY_LEN + 1]
-        memcpy(&data[14 + atslen], foundKeys, 4 * 0xE * (24 + 1));
-        saveFileJSON((char *)jsonname, jsfMfDesfireKeys, data, 0xE, NULL);
+        saveFileJSON((char *)jsonname, jsfMfDesfireKeys_v2, (uint8_t *)dump, sizeof(desfire_keys_dump_t), NULL);
     }
 
+    free(dump);
     DropField();
     return PM3_SUCCESS;
 }
@@ -1869,35 +2034,45 @@ static int DesfireAuthCheck(DesfireContext_t *dctx, DesfireISOSelectWay way, uin
     if (res == PM3_SUCCESS) {
         memcpy(dctx->key, key, desfire_get_key_length(dctx->keyType));
         return PM3_SUCCESS;
-    } else if (res < 7) {
+    }
+
+    //  4 - the challenge the PICC sent is the wrong length for this algo
+    // 50 - PICC didn't answer AES,  51 - PICC didn't answer LRP
+    // the application holds no key of this type, so every key in the list fails
+    // the same way and there is nothing to learn from trying the rest
+    bool wrongalgo = (res == 4 || res == 50 || res == 51);
+
+    if (res < 7) {
         DropField();
-        res = DesfireSelect(dctx, way, appID, NULL);
-        if (res != PM3_SUCCESS) {
+        if (DesfireSelect(dctx, way, appID, NULL) != PM3_SUCCESS) {
             return -10;
         }
-        return -11;
+        return (wrongalgo) ? -12 : -11;
     }
-    return -1;
+
+    return (wrongalgo) ? -12 : -1;
 }
 
 
 static int CmdHF14aDesDetect(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes detect",
-                  "Detect key type and tries to find one from the list.",
-                  "hf mfdes detect                            -> detect key 0 from PICC level\n"
-                  "hf mfdes detect --schann d40               -> detect key 0 from PICC level via secure channel D40\n"
-                  "hf mfdes detect -f mfdes_default_keys      -> detect key 0 from PICC level with help of the standard dictionary\n"
-                  "hf mfdes detect --aid 123456 -n 2 --save   -> detect key 2 from app 123456 and if succeed - save params to defaults (`default` command)\n"
-                  "hf mfdes detect --isoid df01 --save        -> detect key 0 and save to defaults with card in the LRP mode");
+                  "Detect PICC master key, key type, communication mode, command set and channel mode.\n"
+                  "Uses `mfdes_default_keys.dic` per default\n"
+                  "   `--save` it saves details to be used with `hf mfdes default`\n",
+                  "hf mfdes detect\n"
+                  "hf mfdes detect --schann d40               -> detect from PICC level via secure channel D40\n"
+                  "hf mfdes detect -f my_keys                 -> detect from PICC level with your own dictionary\n"
+                  "hf mfdes detect --aid 123456 -n 2 --save   -> detect key 2 from app 123456 and save params to defaults\n"
+                  "hf mfdes detect --isoid df01 --save        -> detect and save to defaults with card in the LRP mode");
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
-        arg_int0("n",  "keyno",   "<dec>", "Key number"),
+        arg_int0("n",  "keyno",   "<dec>", "Key number (def: all)"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>", "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>", "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>", "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -1906,7 +2081,7 @@ static int CmdHF14aDesDetect(const char *Cmd) {
         arg_str0(NULL, "aid",     "<hex>", "Application ID (3 hex bytes, big endian)"),
         arg_str0(NULL, "isoid",   "<hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)."),
         arg_str0(NULL, "dfname",  "<hex>", "Application ISO DF Name (5-16 hex bytes, big endian)"),
-        arg_str0("f", "file",     "<fn>",  "Filename of dictionary"),
+        arg_str0("f", "file",     "<fn>",  "Filename of dictionary (default: `" MFDES_DEFAULT_DICT "`)"),
         arg_lit0(NULL, "save",    "Save found key and parameters to defaults"),
         arg_param_end
     };
@@ -1935,6 +2110,19 @@ static int CmdHF14aDesDetect(const char *Cmd) {
 
     bool save = arg_get_lit(ctx, 15);
 
+    // whether the user pinned a secure channel, or we get to detect one
+    bool schannset = (arg_get_str(ctx, 10)->count > 0);
+
+    // whether the user asked for one key number, or we sweep the application
+    bool keynoset = (arg_get_int_count(ctx, 3) > 0);
+
+    // no dictionary given - use the bundled DESFire one.  The built-in
+    // g_mifare_plus_default_keys list is 16 byte AES only, so it can produce
+    // neither the DES nor the 3K3DES defaults this card family ships with
+    if (dict_filenamelen == 0) {
+        dict_filenamelen = snprintf((char *)dict_filename, sizeof(dict_filename), "%s", MFDES_DEFAULT_DICT);
+    }
+
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
@@ -1942,12 +2130,12 @@ static int CmdHF14aDesDetect(const char *Cmd) {
     res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, true, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
     bool keytypes[4] = {0};
     bool uselrp = false;
+    uint8_t numkeys = 0;
 
     uint8_t data[250] = {0};
     size_t datalen = 0;
@@ -1956,6 +2144,7 @@ static int CmdHF14aDesDetect(const char *Cmd) {
     if (res == PM3_SUCCESS && datalen >= 2) {
 
         uint8_t num_keys = data[1];
+        numkeys = num_keys & 0x0F;
 
         switch (num_keys >> 6) {
             case 0: {
@@ -1986,10 +2175,13 @@ static int CmdHF14aDesDetect(const char *Cmd) {
             if (authCmdCheck.auth) {
                 keytypes[T_DES] = true;
                 keytypes[T_3DES] = true;
+            }
 
-                if (authCmdCheck.authISO) {
-                    keytypes[T_3K3DES] = true;
-                }
+            // 0x1A covers DES, 2TDEA and 3TDEA alike, so it cannot tell them
+            // apart - but it is the only command a 3TDEA application answers at
+            // all.  Read it on its own or such an application names no key type
+            if (authCmdCheck.authISO) {
+                keytypes[T_3K3DES] = true;
             }
 
             if (authCmdCheck.authAES || authCmdCheck.authEV2) {
@@ -2010,19 +2202,74 @@ static int CmdHF14aDesDetect(const char *Cmd) {
         res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, true, verbose);
         if (res != PM3_SUCCESS) {
             DropField();
-            PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
             return res;
         }
     }
 
-    if (verbose) {
+    // An AES application runs either the EV1/EV2 channel or LRP, and the key
+    // settings byte reads the same for both, so it takes one probe to tell them
+    // apart.  Without this an LRP card is only caught when the key settings
+    // happen to be unreadable and the fallback above runs.
+    if (schannset == false && uselrp == false && keytypes[T_AES]) {
 
-        if (DesfireMFSelected(selectway, id)) {
-            PrintAndLogEx(INFO, "Check PICC key num: %d (0x%02x)", dctx.keyNum, dctx.keyNum);
-        } else {
-            PrintAndLogEx(INFO, "Check: %s key num: %d (0x%02x)", DesfireWayIDStr(selectway, id), dctx.keyNum, dctx.keyNum);
+        uselrp = DesfireCheckAuthCmd(selectway, id, dctx.keyNum, MFDES_AUTHENTICATE_EV2F, true);
+        if (uselrp) {
+            securechann = DACLRP;
         }
 
+        // the probe dropped the field behind us
+        res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, true, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
+    }
+
+    // Without -n we sweep every key number the application declares.
+    // All keys in one DESFire application share an algo
+    uint8_t keynofirst = dctx.keyNum;
+    uint8_t keynolast = dctx.keyNum;
+    if (keynoset == false) {
+        keynofirst = 0;
+        keynolast = (numkeys > 0 && numkeys <= DESFIRE_MAX_KEY_COUNT) ? (numkeys - 1) : (DESFIRE_MAX_KEY_COUNT - 1);
+    }
+
+    char algostr[64] = {0};
+    size_t algolen = 0;
+    for (uint8_t t = T_DES; t <= T_AES; t++) {
+        if (keytypes[t] == false) {
+            continue;
+        }
+
+        int n = snprintf(algostr + algolen, sizeof(algostr) - algolen, "%s%s", (algolen) ? "/" : "", CLIGetOptionListStr(DesfireAlgoOpts, t));
+        if (n < 0) {
+            break;
+        }
+        algolen += (size_t)n;
+        if (algolen >= sizeof(algostr)) {
+            algolen = sizeof(algostr) - 1;
+            break;
+        }
+    }
+    if (algolen == 0) {
+        snprintf(algostr, sizeof(algostr), "unknown");
+    }
+
+    char keynostr[32] = {0};
+    if (keynofirst == keynolast) {
+        snprintf(keynostr, sizeof(keynostr), _YELLOW_("0x%02x"), keynofirst);
+    } else {
+        snprintf(keynostr, sizeof(keynostr), _YELLOW_("0x%02x") ".." _YELLOW_("0x%02x"), keynofirst, keynolast);
+    }
+
+    PrintAndLogEx(INFO, "%s... key num %s, algo " _YELLOW_("%s") ", channel " _YELLOW_("%s"),
+                  (DesfireMFSelected(selectway, id)) ? "PICC level" : DesfireWayIDStr(selectway, id),
+                  keynostr,
+                  algostr,
+                  CLIGetOptionListStr(DesfireSecureChannelOpts, securechann)
+                 );
+
+    if (verbose) {
         PrintAndLogEx(INFO, "keys: DES: %s 2TDEA: %s 3TDEA: %s AES: %s LRP: %s",
                       keytypes[T_DES] ? _GREEN_("YES") : _RED_("NO"),
                       keytypes[T_3DES] ? _GREEN_("YES") : _RED_("NO"),
@@ -2032,71 +2279,45 @@ static int CmdHF14aDesDetect(const char *Cmd) {
                      );
     }
 
-    // for key types
-    bool found = false;
-    size_t errcount = 0;
-    for (uint8_t ktype = T_DES; ktype <= T_AES; ktype++) {
+    uint8_t foundcount = 0;
+    uint8_t totalkeys = keynolast - keynofirst + 1;
+    bool nocard = false;
 
-        if (keytypes[ktype] == false) {
-            continue;
-        }
+    // the first key we find is what --save stores
+    DesfireContext_t savedctx = {0};
+    bool savedctxvalid = false;
 
-        dctx.keyType = ktype;
+    for (uint8_t keyno = keynofirst; keyno <= keynolast && nocard == false; keyno++) {
 
-        if (verbose) {
-            PrintAndLogEx(INFO, "Scan key type: %s", CLIGetOptionListStr(DesfireAlgoOpts, dctx.keyType));
-        }
+        dctx.keyNum = keyno;
+        bool found = false;
+        uint8_t tried[MFDES_DETECT_TRIED_MAX][1 + DESFIRE_MAX_KEY_SIZE] = {0};
+        uint16_t triedcount = 0;
+        uint32_t skipped = 0;
 
-        if (dict_filenamelen == 0) {
-            // keys from mifaredefault.h
-            for (int i = 0; i < g_mifare_plus_default_keys_len; i++) {
+        // for key types
+        for (uint8_t ktype = T_DES; ktype <= T_AES && found == false; ktype++) {
 
-                uint8_t key[DESFIRE_MAX_KEY_SIZE] = {0};
-                if (hex_to_bytes(g_mifare_plus_default_keys[i], key, 16) != 16) {
-                    continue;
-                }
-
-                if (ktype == T_3K3DES) {
-                    memcpy(&key[16], key, 8);
-                }
-
-                res = DesfireAuthCheck(&dctx, selectway, id, securechann, key);
-                if (res == PM3_SUCCESS) {
-                    found = true;
-                    break; // all the params already in the dctx
-                }
-
-                if (res == -10) {
-
-                    if (verbose) {
-                        PrintAndLogEx(ERR, "Can't select AID. There is no connection with card.");
-                    }
-
-                    found = false;
-                    break; // we can't select app after invalid 1st auth stages
-                }
-
-                if (res == -11) {
-
-                    if (errcount > 10) {
-                        if (verbose) {
-                            PrintAndLogEx(ERR, "Too much errors (%zu) from card", errcount);
-                        }
-                        break;
-                    }
-                    errcount++;
-
-                } else {
-                    errcount = 0;
-                }
+            if (keytypes[ktype] == false) {
+                continue;
             }
 
-        } else {
-            // keys from file
+            dctx.keyType = ktype;
+
+            if (verbose) {
+                PrintAndLogEx(INFO, "Scan key num %d (0x%02x) type: %s", keyno, keyno, CLIGetOptionListStr(DesfireAlgoOpts, dctx.keyType));
+            }
+
+            // candidate keys come from the dictionary
             uint8_t keyList[MAX_KEYS_LIST_LEN * MAX_KEY_LEN] = {0};
             uint32_t keyListLen = 0;
             size_t keylen = desfire_get_key_length(dctx.keyType);
             size_t endFilePosition = 0;
+
+            // errors are counted per key type.  A bad run on one must not cut
+            // the next one short before it has tried a single key
+            size_t errcount = 0;
+            bool wrongalgo = false;
 
             while (found == false) {
 
@@ -2105,9 +2326,50 @@ static int CmdHF14aDesDetect(const char *Cmd) {
                     break;
                 }
 
-                for (int i = 0; i < keyListLen; i++) {
+                for (uint32_t i = 0; i < keyListLen; i++) {
 
-                    res = DesfireAuthCheck(&dctx, selectway, id, securechann, &keyList[i * keylen]);
+                    uint8_t *candidate = &keyList[i * keylen];
+
+                    // fingerprint: the cipher this key really drives
+                    uint8_t fp[1 + DESFIRE_MAX_KEY_SIZE] = {0};
+                    uint8_t fplen;
+
+                    if (dctx.keyType == T_DES ||
+                            (
+                                (dctx.keyType == T_3DES) &&
+                                (keylen == 16) &&
+                                (memcmp(candidate, candidate + 8, 8) == 0)
+                            )) {
+
+                        fp[0] = T_DES;              // single DES, however it was written
+                        memcpy(fp + 1, candidate, 8);
+                        fplen = 1 + 8;
+
+                    } else {
+                        fp[0] = dctx.keyType;
+                        memcpy(fp + 1, candidate, keylen);
+                        fplen = 1 + keylen;
+                    }
+
+                    bool already = false;
+                    for (uint16_t d = 0; d < triedcount; d++) {
+                        if (memcmp(tried[d], fp, fplen) == 0) {
+                            already = true;
+                            break;
+                        }
+                    }
+
+                    if (already) {
+                        skipped++;
+                        continue;
+                    }
+
+                    if (triedcount < MFDES_DETECT_TRIED_MAX) {
+                        memcpy(tried[triedcount], fp, sizeof(fp));
+                        triedcount++;
+                    }
+
+                    res = DesfireAuthCheck(&dctx, selectway, id, securechann, candidate);
                     if (res == PM3_SUCCESS) {
                         found = true;
                         break; // all the params already in the dctx
@@ -2118,8 +2380,18 @@ static int CmdHF14aDesDetect(const char *Cmd) {
                             PrintAndLogEx(ERR, "Can't select AID. There is no connection with card.");
                         }
 
-                        found = false;
+                        nocard = true;
                         break; // we can't select app after invalid 1st auth stages
+                    }
+
+                    if (res == -12) {
+                        if (verbose) {
+                            PrintAndLogEx(INFO, "Key type %s is not used by this application, skipping it",
+                                          CLIGetOptionListStr(DesfireAlgoOpts, dctx.keyType));
+                        }
+
+                        wrongalgo = true;
+                        break;
                     }
 
                     if (res == -11) {
@@ -2135,51 +2407,73 @@ static int CmdHF14aDesDetect(const char *Cmd) {
                     } else {
                         errcount = 0;
                     }
+                }
 
+                if (nocard || wrongalgo) {
+                    break;
                 }
 
                 if (endFilePosition == 0) {
                     break;
                 }
             }
+        }
 
+        if (verbose && skipped) {
+            PrintAndLogEx(INFO, "Skipped " _YELLOW_("%u") " duplicate keys", skipped);
         }
 
         if (found) {
-            break;
+
+            foundcount++;
+
+            if (DesfireMFSelected(selectway, id)) {
+                PrintAndLogEx(INFO, _GREEN_("Found") " key num: %d (0x%02x)", dctx.keyNum, dctx.keyNum);
+            } else {
+                PrintAndLogEx(INFO, "Found key for: %s key num: %d (0x%02x)", DesfireWayIDStr(selectway, id), dctx.keyNum, dctx.keyNum);
+            }
+
+            PrintAndLogEx(INFO, "Channel " _GREEN_("%s") " key " _GREEN_("%s") " [%d]: " _GREEN_("%s"),
+                          CLIGetOptionListStr(DesfireSecureChannelOpts, securechann),
+                          CLIGetOptionListStr(DesfireAlgoOpts, dctx.keyType),
+                          desfire_get_key_length(dctx.keyType),
+                          sprint_hex_inrow(dctx.key, desfire_get_key_length(dctx.keyType))
+                         );
+
+            // every key in an application uses the same algo,  so the rest of
+            // the key numbers only have to try the one that just worked
+            for (uint8_t t = T_DES; t <= T_AES; t++) {
+                keytypes[t] = (t == dctx.keyType);
+            }
+
+            if (savedctxvalid == false) {
+                savedctx = dctx;
+                savedctxvalid = true;
+            }
+
+        } else if (verbose && nocard == false) {
+            PrintAndLogEx(INFO, "Key num: %d (0x%02x) " _RED_("not found"), keyno, keyno);
         }
     }
 
-    if (found) {
-
-        if (DesfireMFSelected(selectway, id)) {
-            PrintAndLogEx(INFO, _GREEN_("Found") " key num: %d (0x%02x)", dctx.keyNum, dctx.keyNum);
-        } else {
-            PrintAndLogEx(INFO, "Found key for: %s key num: %d (0x%02x)", DesfireWayIDStr(selectway, id), dctx.keyNum, dctx.keyNum);
-        }
-
-        PrintAndLogEx(INFO, "channel " _GREEN_("%s") " key " _GREEN_("%s") " [%d]: " _GREEN_("%s"),
-                      CLIGetOptionListStr(DesfireSecureChannelOpts, securechann),
-                      CLIGetOptionListStr(DesfireAlgoOpts, dctx.keyType),
-                      desfire_get_key_length(dctx.keyType),
-                      sprint_hex(dctx.key, desfire_get_key_length(dctx.keyType)));
-
-    } else {
+    if (foundcount == 0) {
         PrintAndLogEx(INFO, "Key " _RED_("not found"));
+    } else if (totalkeys > 1) {
+        PrintAndLogEx(INFO, "Found " _GREEN_("%u") " of %u keys", foundcount, totalkeys);
     }
 
     DropField();
 
-    if (found && save) {
+    if (savedctxvalid && save) {
 
-        defaultKeyNum = dctx.keyNum;
-        defaultAlgoId = dctx.keyType;
-        memcpy(defaultKey, dctx.key, DESFIRE_MAX_KEY_SIZE);
-        defaultKdfAlgo = dctx.kdfAlgo;
-        defaultKdfInputLen = dctx.kdfInputLen;
-        memcpy(defaultKdfInput, dctx.kdfInput, sizeof(dctx.kdfInput));
+        defaultKeyNum = savedctx.keyNum;
+        defaultAlgoId = savedctx.keyType;
+        memcpy(defaultKey, savedctx.key, DESFIRE_MAX_KEY_SIZE);
+        defaultKdfAlgo = savedctx.kdfAlgo;
+        defaultKdfInputLen = savedctx.kdfInputLen;
+        memcpy(defaultKdfInput, savedctx.kdfInput, sizeof(savedctx.kdfInput));
         defaultSecureChannel = securechann;
-        defaultCommSet = dctx.cmdSet;
+        defaultCommSet = savedctx.cmdSet;
 
         PrintAndLogEx(INFO, "-----------" _CYAN_("Default parameters") "---------------------------------");
         PrintAndLogEx(INFO, "Key Num....... %d", defaultKeyNum);
@@ -2215,7 +2509,7 @@ static int CmdHF14aDesMAD(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -2389,7 +2683,7 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -2980,6 +3274,7 @@ static int DesfireGetDelegatedInfoNoFieldOn(DesfireContext_t *dctx, uint16_t dam
     }
 
     if (respcode != MFDES_S_OPERATION_OK) {
+        DesfireClearSession(dctx);
         return PM3_EAPDU_FAIL;
     }
 
@@ -3235,7 +3530,6 @@ static int CmdHF14ADesBruteISOFIDs(const char *Cmd) {
     res = DesfireSelectAndAuthenticateW(&dctx, securechann, selectway, appid, false, 0, true, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, appid), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -3332,7 +3626,7 @@ static int CmdHF14ADesBruteDAMSlots(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number (default: 0 / PICC key)"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -3538,7 +3832,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>", "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>", "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -3573,7 +3867,6 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, false, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -3637,7 +3930,7 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>", "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -3708,12 +4001,6 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
     res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, false, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication ( %s ) Result [%d] %s %s",
-                      DesfireWayIDStr(selectway, id),
-                      res,
-                      DesfireAuthErrorToStr(res),
-                      _RED_("failed")
-                     );
         return res;
     }
 
@@ -3735,8 +4022,8 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
                   "Change crypto algorithm for PICC key is possible, \n"
                   "but for APP keys crypto algorithm is set by createapp command and can't be changed wo application delete\n"
                   "\n"
-                  "hf mfdes changekey --aid 123456    -> execute with default factory setup. change des key 0 in the app 123456 from 00..00 to 00..00\n"
-                  "hf mfdes changekey --isoid df01 -t aes --schann lrp --newkeyno 01    -> change key 01 via lrp channel"
+                  "hf mfdes changekey --aid 123456                                                                    -> execute with default factory setup. change des key 0 in the app 123456 from 00..00 to 00..00\n"
+                  "hf mfdes changekey --isoid df01 -t aes --schann lrp --newkeyno 01                                  -> change key 01 via lrp channel"
                   "hf mfdes changekey -t des --newalgo aes --newkey 11223344556677889900112233445566 --newver a5      -> change card master key to AES one\n"
                   "hf mfdes changekey --aid 123456 -t aes --key 00000000000000000000000000000000 --newkey 11223344556677889900112233445566 -> change app master key\n"
                   "hf mfdes changekey --aid 123456 -t des -n 0 --newkeyno 1 --oldkey 5555555555555555 --newkey 1122334455667788  -> change key 1 with auth from key 0\n"
@@ -3748,7 +4035,7 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>", "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -3850,7 +4137,6 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
     res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, false, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -3910,7 +4196,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -4087,7 +4373,7 @@ static int CmdHF14ADesCreateDelegateApp(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -4404,7 +4690,7 @@ static int CmdHF14ADesGetDelegateAppInfo(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number (default: 0 / PICC key)"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -4496,7 +4782,7 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -4560,7 +4846,7 @@ static int CmdHF14ADesGetUID(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -4592,7 +4878,6 @@ static int CmdHF14ADesGetUID(const char *Cmd) {
     res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, false, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -4723,7 +5008,7 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -4780,7 +5065,7 @@ static int CmdHF14ADesGetFreeMem(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -4845,7 +5130,7 @@ static int CmdHF14ADesChKeySettings(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -4919,7 +5204,7 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number for authentication"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -4974,7 +5259,6 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
     res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -5024,7 +5308,7 @@ static int CmdHF14ADesGetKeySettings(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -5104,7 +5388,7 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -5176,7 +5460,7 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -5239,9 +5523,10 @@ static int CmdHF14ADesGetFileIDs(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes getfileids",
                   "Get File IDs list from card. Master key needs to be provided or flag --no-auth set.",
-                  "hf mfdes getfileids --aid 123456 -> execute with defaults from `default` command\n"
-                  "hf mfdes getfileids -n 0 -t des -k 0000000000000000 --kdf none --aid 123456   -> execute with default factory setup\n"
-                  "hf mfdes getfileids --dfname D2760000850100 -> select DF by name and get file IDs");
+                  "hf mfdes getfileids --aid 123456                                   -> execute with defaults from `default` command\n"
+                  "hf mfdes getfileids --dfname D2760000850100                        -> select DF by name and get file IDs\n"
+                  "hf mfdes getfileids -n 0 -t des -k 0000000000000000 --aid 123456   -> execute with default factory setup\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -5249,7 +5534,7 @@ static int CmdHF14ADesGetFileIDs(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -5283,7 +5568,6 @@ static int CmdHF14ADesGetFileIDs(const char *Cmd) {
     res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -5326,7 +5610,7 @@ static int CmdHF14ADesGetFileISOIDs(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -5360,7 +5644,6 @@ static int CmdHF14ADesGetFileISOIDs(const char *Cmd) {
     res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -5401,7 +5684,7 @@ static int CmdHF14ADesGetFileSettings(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -5442,7 +5725,6 @@ static int CmdHF14ADesGetFileSettings(const char *Cmd) {
     res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -5572,7 +5854,7 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -5645,7 +5927,6 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
     res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -5715,7 +5996,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -5853,7 +6134,7 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo (deft: 2TDEA)"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -5979,7 +6260,7 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -6098,7 +6379,7 @@ static int CmdHF14ADesCreateTrMACFile(const char *Cmd) {
         arg_lit0("v",  "verbose",   "Verbose output"),
         arg_int0("n",  "keyno",     "<dec>", "Key number"),
         arg_str0("t",  "algo",      "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",       "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",       "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",      "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",     "<plain|mac|encrypt>", "Communicaton mode"),
@@ -6180,7 +6461,6 @@ static int CmdHF14ADesCreateTrMACFile(const char *Cmd) {
     res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -6215,7 +6495,7 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -6260,7 +6540,6 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
     res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -6275,6 +6554,23 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
 
     DropField();
     return PM3_SUCCESS;
+}
+
+// Which access rights can grant each value file operation. Credit needs read&write
+// only, the others are granted by any of read / write / read&write. The FreeValue
+// option bit makes GetValue free whatever the rights say.
+// Measured on DESFire EV2 hw, `ev1` and `ev2` secure channels.
+static DesfireCommunicationMode DesfireValueOpCommMode(DesfireContext_t *dctx, const FileSettings_t *fsettings, uint8_t vop) {
+    if (vop == MFDES_GET_VALUE && (fsettings->limitedCredit & 0x02) != 0)
+        return DCMPlain;
+
+    if (vop == MFDES_CREDIT) {
+        const uint8_t rwonly[] = { fsettings->rwAccess };
+        return DesfireEffectiveCommMode(dctx, fsettings->commMode, rwonly, ARRAYLEN(rwonly));
+    }
+
+    const uint8_t anyright[] = { fsettings->rAccess, fsettings->wAccess, fsettings->rwAccess };
+    return DesfireEffectiveCommMode(dctx, fsettings->commMode, anyright, ARRAYLEN(anyright));
 }
 
 static int CmdHF14ADesValueOperations(const char *Cmd) {
@@ -6293,7 +6589,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo (deft: 2TDEA)"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -6351,26 +6647,57 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
     res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication ( %s )" _RED_("failed") " Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
     if (verbose)
         PrintAndLogEx(INFO, "%s file %02x operation: %s value: 0x%08x", DesfireWayIDStr(selectway, id), fileid, CLIGetOptionListStr(DesfireValueFileOperOpts, op), value);
 
+    // the PICC picks the communication mode from the file settings and the access rights,
+    // so read them instead of guessing from the command line
+    FileSettings_t fsettings = {0};
+    bool havesettings = false;
+
+    DesfireCommunicationMode chmode = dctx.commMode;
+    DesfireSetCommMode(&dctx, DCMMACed);
+    res = DesfireFileSettingsStruct(&dctx, fileid, &fsettings);
+    DesfireSetCommMode(&dctx, chmode);
+
+    if (res == PM3_SUCCESS) {
+        havesettings = true;
+
+        if (fsettings.fileType != 0x02) {
+            PrintAndLogEx(WARNING, "File %02x is " _RED_("not") " a value file, got %s", fileid, GetDesfireFileType(fsettings.fileType));
+        }
+
+        if (verbose) {
+            PrintAndLogEx(INFO, "Value file %02x comm mode: %s", fileid, CLIGetOptionListStr(DesfireCommunicationModeOpts, fsettings.commMode));
+        }
+
+    } else {
+        PrintAndLogEx(WARNING, "GetFileSettings error. Can't get the file communication mode.");
+    }
+
     if (op != 0xff) {
+        if (havesettings) {
+            DesfireSetCommMode(&dctx, DesfireValueOpCommMode(&dctx, &fsettings, op));
+        }
+
         res = DesfireValueFileOperations(&dctx, fileid, op, &value);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire ValueFileOperations (0x%02x) command ( " _RED_("error") " ) Result: %d", op, res);
             DropField();
             return PM3_ESOFT;
         }
-        if (verbose)
+
+        if (verbose) {
             PrintAndLogEx(INFO, "Operation ( %s )" _GREEN_("ok"), CLIGetOptionListStr(DesfireValueFileOperOpts, op));
+        }
 
         if (op == MFDES_GET_VALUE) {
             PrintAndLogEx(SUCCESS, "Value: " _GREEN_("%d (0x%08x)"), value, value);
         } else {
+
             DesfireSetCommMode(&dctx, DCMMACed);
             res = DesfireCommitTransaction(&dctx, false, 0);
             if (res != PM3_SUCCESS) {
@@ -6378,44 +6705,32 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
                 DropField();
                 return PM3_ESOFT;
             }
-            if (verbose)
+
+            if (verbose) {
                 PrintAndLogEx(INFO, "Commit ( " _GREEN_("ok") " )");
+            }
 
             PrintAndLogEx(SUCCESS, "Value changed " _GREEN_("successfully"));
         }
     } else {
-        DesfireCommunicationMode fileCommMode = dctx.commMode;
+        if (havesettings == false || fsettings.fileType != 0x02) {
+            PrintAndLogEx(ERR, "Need the value file settings to clear it");
+            DropField();
+            return PM3_ESOFT;
+        }
 
+        DesfireSetCommMode(&dctx, DesfireValueOpCommMode(&dctx, &fsettings, MFDES_GET_VALUE));
         res = DesfireValueFileOperations(&dctx, fileid, MFDES_GET_VALUE, &value);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire GetValue command ( " _RED_("error") ") Result: %d", res);
             DropField();
             return PM3_ESOFT;
         }
-        if (verbose)
+        if (verbose) {
             PrintAndLogEx(INFO, _YELLOW_("GetValue") " command is " _GREEN_("ok") ". Current value: 0x%08x", value);
-
-        uint8_t buf[250] = {0};
-        size_t buflen = 0;
-
-        DesfireSetCommMode(&dctx, DCMMACed);
-        res = DesfireGetFileSettings(&dctx, fileid, buf, &buflen);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire GetFileSettings command ( " _RED_("error") " ) Result: %d", res);
-            DropField();
-            return PM3_ESOFT;
         }
 
-        if (verbose)
-            PrintAndLogEx(INFO, _YELLOW_("GetFileSettings") " is " _GREEN_("ok") " . File settings[%zu]: %s", buflen, sprint_hex(buf, buflen));
-
-        if (buflen < 8 || buf[0] != 0x02) {
-            PrintAndLogEx(ERR, "Desfire GetFileSettings command returns " _RED_("wrong") " data");
-            DropField();
-            return PM3_ESOFT;
-        }
-
-        int32_t minvalue = (int)MemLeToUint4byte(&buf[4]);
+        int32_t minvalue = (int)fsettings.lowerLimit;
         uint32_t delta = ((int64_t)value > minvalue) ? value - minvalue : 0;
         if (verbose) {
             PrintAndLogEx(INFO, "value: 0x%08x (%d)", value, value);
@@ -6424,10 +6739,11 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
         }
 
         if (delta > 0) {
-            DesfireSetCommMode(&dctx, fileCommMode);
+            DesfireSetCommMode(&dctx, DesfireValueOpCommMode(&dctx, &fsettings, MFDES_DEBIT));
 
             uint32_t maxdelta = 0x7fffffff;
             if (delta > maxdelta) {
+
                 res = DesfireValueFileOperations(&dctx, fileid, MFDES_DEBIT, &maxdelta);
                 if (res != PM3_SUCCESS) {
                     PrintAndLogEx(ERR, "Desfire Debit maxdelta operation ( " _RED_("error") " ) Result: %d", res);
@@ -6449,8 +6765,9 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
                 return PM3_ESOFT;
             }
 
-            if (verbose)
+            if (verbose) {
                 PrintAndLogEx(INFO, "Value debited " _GREEN_("ok"));
+            }
 
             DesfireSetCommMode(&dctx, DCMMACed);
             res = DesfireCommitTransaction(&dctx, false, 0);
@@ -6460,11 +6777,13 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
                 return PM3_ESOFT;
             }
 
-            if (verbose)
+            if (verbose) {
                 PrintAndLogEx(INFO, "Transaction :" _GREEN_("committed"));
+            }
         } else {
-            if (verbose)
+            if (verbose) {
                 PrintAndLogEx(INFO, "Nothing to clear. Value already in the minimum level.");
+            }
         }
 
         PrintAndLogEx(SUCCESS, "Value cleared " _GREEN_("successfully"));
@@ -6478,7 +6797,7 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes clearrecfile",
                   "Clear record file. Master key needs to be provided or flag --no-auth set (depend on cards settings).",
-                  "hf mfdes clearrecfile --aid 123456 --fid 01 -> clear record file for: app=123456, file=01 with defaults from `default` command\n"
+                  "hf mfdes clearrecfile --aid 123456 --fid 01                          -> clear record file for: app=123456, file=01 with defaults from `default` command\n"
                   "hf mfdes clearrecfile --isoid df01 --fid 01 --schann lrp -t aes -n 3 -> clear record file for lrp channel with key number 3");
 
     void *argtable[] = {
@@ -6487,7 +6806,7 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -6532,7 +6851,6 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
     res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -6658,7 +6976,7 @@ static int CmdHF14ADesMakeMFCLicense(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("v", "verbose",                     "Show more output"),
-        arg_str0("k",  "key", "<hex>",               "Key for computing the MAC, must be HEX 16(AES)"),
+        arg_str0("k",  "key", "<hex>",               "Key for computing the MAC (16 hex bytes)"),
         arg_str0("b",  "blk", "<num>[,<num>[,...]]", "The MFC blocks to map, must be given in ascending order (use the special value 'all' for all blocks)"),
         arg_lit0(NULL, "ka",                         "Allow updating key A from inside sector trailers mapped to DESFire files"),
         arg_lit0(NULL, "kb",                         "Allow updating key B from inside sector trailers mapped to DESFire files"),
@@ -6893,7 +7211,7 @@ static int CmdHF14ADesCreateMFCMapping(const char *Cmd) {
         arg_lit0("v",  "verbose",                         "Verbose output"),
         arg_int0("n",  "keyno", "<dec>",                  "Key number"),
         arg_str0("t",  "algo", "<DES|2TDEA|3TDEA|AES>",   "Crypt algo"),
-        arg_str0("k",  "key", "<hex>",                    "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf", "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi", "<hex>",                   "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode", "<plain|mac|encrypt>",    "Communicaton mode"),
@@ -7064,7 +7382,6 @@ static int CmdHF14ADesCreateMFCMapping(const char *Cmd) {
     res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, false, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -7225,14 +7542,18 @@ static int DesfileReadFileAndPrint(DesfireContext_t *dctx,
                 }
             }
 
-            commMode = fsettings.commMode;
+            // free access (0x0e) makes the PICC answer in plain, whatever the file comm mode is
+            if (filetype == RFTValue) {
+                commMode = DesfireValueOpCommMode(dctx, &fsettings, MFDES_GET_VALUE);
+            } else {
+                const uint8_t rrights[] = { fsettings.rAccess, fsettings.rwAccess };
+                commMode = DesfireEffectiveCommMode(dctx, fsettings.commMode, rrights, ARRAYLEN(rrights));
+            }
+
             // lrp needs to point exact mode
             if (dctx->secureChannel == DACLRP) {
                 // read right == free
                 if (fsettings.rAccess == 0xe)
-                    commMode = DCMPlain;
-                // get value access == free
-                if (filetype == RFTValue && (fsettings.limitedCredit & 0x02) != 0)
                     commMode = DCMPlain;
             }
 
@@ -7256,7 +7577,7 @@ static int DesfileReadFileAndPrint(DesfireContext_t *dctx,
                 PrintAndLogEx(INFO, _CYAN_("File type:") " %s  Option: %s  comm mode: %s",
                               GetDesfireFileType(fsettings.fileType),
                               CLIGetOptionListStr(DesfireReadFileTypeOpts, filetype),
-                              CLIGetOptionListStr(DesfireCommunicationModeOpts, fsettings.commMode)
+                              CLIGetOptionListStr(DesfireCommunicationModeOpts, commMode)
                              );
             }
         } else {
@@ -7410,7 +7731,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -7488,7 +7809,6 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     res = DesfireSelectAndAuthenticateW(&dctx, securechann, selectway, id, fileisoidpresent, fileisoid, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -7582,7 +7902,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -7691,7 +8011,6 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     res = DesfireSelectAndAuthenticateW(&dctx, securechann, selectway, id, fileisoidpresent, fileisoid, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -7708,8 +8027,9 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         return res;
     }
 
-    // get file settings
-    if (op == RFTAuto) {
+    // get file settings. Needed for the file type in `auto` mode, and always for the
+    // communication mode the PICC expects for this operation
+    {
         FileSettings_t fsettings;
 
         DesfireCommunicationMode commMode = dctx.commMode;
@@ -7718,38 +8038,46 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         DesfireSetCommMode(&dctx, commMode);
 
         if (res == PM3_SUCCESS) {
-            switch (fsettings.fileType) {
-                case 0x00:
-                case 0x01: {
-                    op = RFTData;
-                    if (!commit)
-                        commit = (fsettings.fileType == 0x01);
-                    break;
-                }
-                case 0x02: {
-                    op = RFTValue;
-                    commit = true;
-                    break;
-                }
-                case 0x03:
-                case 0x04: {
-                    op = RFTRecord;
-                    commit = true;
-                    if (datalen > fsettings.recordSize)
-                        PrintAndLogEx(WARNING, "Record size (%d) " _RED_("is less") " than data length (%d)", fsettings.recordSize, datalen);
-                    break;
-                }
-                case 0x05: {
-                    op = RFTMAC;
-                    commit = false;
-                    break;
-                }
-                default: {
-                    break;
+            if (op == RFTAuto) {
+                switch (fsettings.fileType) {
+                    case 0x00:
+                    case 0x01: {
+                        op = RFTData;
+                        if (!commit)
+                            commit = (fsettings.fileType == 0x01);
+                        break;
+                    }
+                    case 0x02: {
+                        op = RFTValue;
+                        commit = true;
+                        break;
+                    }
+                    case 0x03:
+                    case 0x04: {
+                        op = RFTRecord;
+                        commit = true;
+                        if (datalen > fsettings.recordSize)
+                            PrintAndLogEx(WARNING, "Record size (%d) " _RED_("is less") " than data length (%d)", fsettings.recordSize, datalen);
+                        break;
+                    }
+                    case 0x05: {
+                        op = RFTMAC;
+                        commit = false;
+                        break;
+                    }
+                    default: {
+                        break;
+                    }
                 }
             }
 
-            DesfireSetCommMode(&dctx, fsettings.commMode);
+            // free access (0x0e) makes the PICC expect the command in plain, whatever the file comm mode is
+            if (op == RFTValue) {
+                DesfireSetCommMode(&dctx, DesfireValueOpCommMode(&dctx, &fsettings, (debit) ? MFDES_DEBIT : MFDES_CREDIT));
+            } else {
+                const uint8_t wrights[] = { fsettings.wAccess, fsettings.rwAccess };
+                DesfireSetCommMode(&dctx, DesfireEffectiveCommMode(&dctx, fsettings.commMode, wrights, ARRAYLEN(wrights)));
+            }
 
             if (fsettings.fileCommMode != 0 && noauth)
                 PrintAndLogEx(WARNING, "File needs communication mode `%s` but there is no authentication", CLIGetOptionListStr(DesfireCommunicationModeOpts, fsettings.commMode));
@@ -7764,7 +8092,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
                 PrintAndLogEx(INFO, "Got file type: %s. Option: %s. comm mode: %s",
                               GetDesfireFileType(fsettings.fileType),
                               CLIGetOptionListStr(DesfireReadFileTypeOpts, op),
-                              CLIGetOptionListStr(DesfireCommunicationModeOpts, fsettings.commMode));
+                              CLIGetOptionListStr(DesfireCommunicationModeOpts, dctx.commMode));
         } else {
             PrintAndLogEx(WARNING, "GetFileSettings error. Can't get file type.");
         }
@@ -7922,7 +8250,7 @@ static int CmdHF14ADesLsFiles(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -7956,7 +8284,6 @@ static int CmdHF14ADesLsFiles(const char *Cmd) {
     res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
 
@@ -7976,8 +8303,13 @@ static int CmdHF14ADesLsFiles(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "------------------------------------------ " _CYAN_("File list") " -----------------------------------------------------");
-    for (int i = 0; i < filescount; i++)
+    for (int i = 0; i < filescount; i++) {
+        if (FileList[i].fileSettingsRead == false) {
+            PrintAndLogEx(WARNING, "File " _YELLOW_("0x%02x") " settings could not be read", FileList[i].fileNum);
+            continue;
+        }
         DesfirePrintFileSettingsTable((i == 0), FileList[i].fileNum, isopresent, FileList[i].fileISONum, &FileList[i].fileSettings);
+    }
 
     DropField();
     return PM3_SUCCESS;
@@ -7997,7 +8329,7 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -8050,11 +8382,395 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+//-----------------------------------------------------------------------------
+// DESFire card image collection.
+//
+// `hf mfdes dump` walks the whole PICC into a desfire_dump_t and writes it out
+// as a jsfMfDesfire_v1 json file.  `hf mfdes view` reads one back.
+// See doc/mfdes_dump_format.md for the on-disk schema.
+//-----------------------------------------------------------------------------
+
+// the 14a select answer carries UID/ATQA/SAK/ATS,  none of which the DESFire
+// layer keeps around
+static int DesfireDumpFillCardInfo(iso14a_card_select_t *card_info) {
+
+    DropField();
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
+
+    PacketResponseNG resp;
+    uint8_t select_status = 0;
+    if (WaitForIso14aReply(&resp, 2500, NULL, &select_status) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for card select");
+        return PM3_ETIMEOUT;
+    }
+
+    // 0: couldn't read, 1: OK with ATS, 2: OK no ATS, 3: proprietary anticollision
+    if (select_status != 1 && select_status != 2) {
+        return PM3_ESOFT;
+    }
+
+    memcpy(card_info, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+    return PM3_SUCCESS;
+}
+
+// record a key we authenticated with.  The algo is the application's, not the
+// key's, so it is not stored here -- see desfire_dump_app_t.keytype
+static void DesfireDumpStoreKey(desfire_dump_app_t *app, uint8_t keyno, uint8_t algo, const uint8_t *key) {
+
+    if (keyno >= DESFIRE_MAX_KEY_COUNT) {
+        return;
+    }
+
+    app->keytype = algo;
+    app->keys.present[keyno] = 1;
+    memcpy(app->keys.key[keyno], key, desfire_get_key_length(algo));
+}
+
+// pull keyno for `aid` out of a `hf mfdes chk` key file,  NULL when we have none
+static const uint8_t *DesfireDumpFindKey(const desfire_keys_dump_t *keyfile, uint32_t aid, uint8_t algo, uint8_t keyno) {
+
+    if (keyfile == NULL || keyno >= DESFIRE_MAX_KEY_COUNT || algo >= DESFIRE_MAX_ALGO_COUNT) {
+        return NULL;
+    }
+
+    for (uint8_t i = 0; i < keyfile->appcount && i < DESFIRE_MAX_APP_COUNT; i++) {
+        if (keyfile->app[i].aid != aid) {
+            continue;
+        }
+        if (keyfile->app[i].keys[algo][keyno][0] == 0) {
+            return NULL;
+        }
+        return &keyfile->app[i].keys[algo][keyno][1];
+    }
+    return NULL;
+}
+
+static void DesfireDumpFillAppMeta(desfire_dump_app_t *app, const AppListElm_t *src) {
+
+    app->aid = src->appNum;
+    app->isofid = src->appISONum;
+    app->keysettings = src->keySettings;
+    app->numkeysraw = src->numKeysRaw;
+    app->numkeys = src->numberOfKeys;
+    app->keytype = src->keyType;
+    app->settings_ok = (src->numKeysRaw != 0);
+
+    for (uint8_t i = 0; i < src->numberOfKeys && i < DESFIRE_MAX_KEY_COUNT; i++) {
+        app->keys.version[i] = src->keyVersions[i];
+        app->keys.versionknown[i] = 1;
+    }
+
+    app->dfnamelen = str_nlen((char *)src->appDFName, sizeof(src->appDFName));
+    memcpy(app->dfname, src->appDFName, app->dfnamelen);
+}
+
+// find the application the user named on the command line in the PICC's own
+// list, so an --isoid or --dfname dump still records the AID and key settings
+static int DesfireDumpFindApp(const AppListS appList, size_t appcount, const DesfireContext_t *dctx,
+                              DesfireISOSelectWay selectway, uint32_t id) {
+
+    for (size_t i = 0; i < appcount && i < DESFIRE_MAX_APP_COUNT; i++) {
+
+        switch (selectway) {
+            case ISW6bAID:
+                if (appList[i].appNum == id) {
+                    return i;
+                }
+                break;
+            case ISWIsoID:
+                if (appList[i].appISONum == id) {
+                    return i;
+                }
+                break;
+            case ISWDFName:
+                if (dctx->selectedDFNameLen > 0 &&
+                        memcmp(appList[i].appDFName, dctx->selectedDFName, dctx->selectedDFNameLen) == 0) {
+                    return i;
+                }
+                break;
+            case ISWMF:
+                break;
+        }
+    }
+    return -1;
+}
+
+static void DesfireDumpFillFileSettings(const FileSettings_t *fs, desfire_dump_file_t *f, bool settings_ok) {
+
+    // Settings we never read are not a 0 byte standard data file. Leave the
+    // whole record at its defaults and say so, the same way read_ok does for
+    // contents -- a simulator built from this image must not invent a file.
+    if (settings_ok == false) {
+        f->settings_ok = false;
+        return;
+    }
+
+    f->type = fs->fileType;
+    f->commmode = fs->fileCommMode;
+    f->accessrights = fs->rawAccessRights;
+    f->size = fs->fileSize;
+    f->lowerlimit = fs->lowerLimit;
+    f->upperlimit = fs->upperLimit;
+    f->limitedcredit = fs->limitedCredit;
+    f->recordsize = fs->recordSize;
+    f->maxrecords = fs->maxRecordCount;
+    f->currecords = fs->curRecordCount;
+
+    f->addrights_len = fs->additionalAccessRightsLength;
+    if (f->addrights_len > ARRAYLEN(f->addrights)) {
+        f->addrights_len = ARRAYLEN(f->addrights);
+    }
+    for (uint8_t i = 0; i < f->addrights_len; i++) {
+        f->addrights[i] = fs->additionalAccessRights[i];
+    }
+
+    f->settings_ok = true;
+}
+
+// read one file into the image.  Leaves f->read_ok false when the contents
+// could not be fetched -- the caller must not turn that into zeroed data
+static int DesfireDumpReadFile(DesfireContext_t *dctx, const FileSettings_t *fs, desfire_dump_file_t *f,
+                               uint32_t maxdatafilelength, bool verbose) {
+
+    f->read_ok = false;
+
+    int filetype;
+    switch (fs->fileType) {
+        case 0x00:
+        case 0x01:
+            filetype = RFTData;
+            break;
+        case 0x02:
+            filetype = RFTValue;
+            break;
+        case 0x03:
+        case 0x04:
+            filetype = RFTRecord;
+            break;
+        case 0x05:
+            filetype = RFTMAC;
+            break;
+        default:
+            // nothing was sent, the session is still good
+            return PM3_EINVARG;
+    }
+
+    // iso chaining works in the lrp mode
+    dctx->isoChaining |= (dctx->secureChannel == DACLRP);
+
+    DesfireCommunicationMode commMode;
+    if (filetype == RFTValue) {
+        commMode = DesfireValueOpCommMode(dctx, fs, MFDES_GET_VALUE);
+    } else {
+        const uint8_t rrights[] = { fs->rAccess, fs->rwAccess };
+        commMode = DesfireEffectiveCommMode(dctx, fs->commMode, rrights, ARRAYLEN(rrights));
+    }
+
+    // lrp needs to point exact mode
+    if (dctx->secureChannel == DACLRP && fs->rAccess == 0x0e) {
+        commMode = DCMPlain;
+    }
+
+    if (fs->rAccess == 0x0f && fs->rwAccess == 0x0f) {
+        if (verbose) {
+            PrintAndLogEx(INFO, "File 0x%02x read access is denied (0x0F), skipping contents", f->num);
+        }
+        // nothing was sent, the session is still good
+        return PM3_EINVARG;
+    }
+
+    DesfireSetCommMode(dctx, commMode);
+
+    if (filetype == RFTValue) {
+        uint32_t value = 0;
+        if (DesfireValueFileOperations(dctx, f->num, MFDES_GET_VALUE, &value) != PM3_SUCCESS) {
+            return PM3_ESOFT;
+        }
+        f->value = value;
+        f->read_ok = true;
+        return PM3_SUCCESS;
+    }
+
+    uint8_t *resp = calloc(DESFIRE_BUFFER_SIZE, sizeof(uint8_t));
+    if (resp == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+    size_t resplen = 0;
+    int res;
+
+    if (filetype == RFTRecord) {
+
+        size_t reclen = fs->recordSize;
+        res = DesfireReadRecords(dctx, f->num, 0, 0, resp, &resplen);
+        if (res != PM3_SUCCESS) {
+            free(resp);
+            return PM3_ESOFT;
+        }
+
+        if (reclen == 0 && resplen > 0) {
+            reclen = resplen;
+        }
+        f->recordsize = reclen;
+
+    } else {
+        uint32_t length = 0;
+        if (filetype == RFTData && maxdatafilelength && (maxdatafilelength < fs->fileSize)) {
+            length = maxdatafilelength;
+        }
+
+        res = DesfireReadFile(dctx, f->num, 0, length, resp, &resplen);
+        if (res != PM3_SUCCESS) {
+            free(resp);
+            return PM3_ESOFT;
+        }
+    }
+
+    if (resplen == 0) {
+        // an empty answer is a successful read of nothing,  keep read_ok true
+        // so a reader can tell it apart from "we never got there"
+        free(resp);
+        f->read_ok = true;
+        return PM3_SUCCESS;
+    }
+
+    f->data = calloc(resplen, sizeof(uint8_t));
+    if (f->data == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        free(resp);
+        return PM3_EMALLOC;
+    }
+
+    memcpy(f->data, resp, resplen);
+    f->datalen = resplen;
+    f->read_ok = true;
+    free(resp);
+    return PM3_SUCCESS;
+}
+
+static void DesfireDumpPrintFile(const desfire_dump_file_t *f, bool isopresent) {
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--------------------------------- " _CYAN_("File %02x") " ----------------------------------", f->num);
+    PrintAndLogEx(SUCCESS, "File ID         : " _GREEN_("%02x"), f->num);
+    if (isopresent) {
+        if (f->isofid != 0) {
+            PrintAndLogEx(SUCCESS, "File ISO ID     : %04x", f->isofid);
+        } else {
+            PrintAndLogEx(SUCCESS, "File ISO ID     : " _YELLOW_("n/a"));
+        }
+    }
+
+    if (f->read_ok == false) {
+        PrintAndLogEx(WARNING, "Contents        : " _YELLOW_("not read"));
+        return;
+    }
+
+    if (f->type == 0x02) {
+        PrintAndLogEx(SUCCESS, "Value           : %u (0x%08x)", f->value, f->value);
+        return;
+    }
+
+    if (f->datalen == 0) {
+        PrintAndLogEx(SUCCESS, "Contents        : " _YELLOW_("empty"));
+        return;
+    }
+
+    if ((f->type == 0x03 || f->type == 0x04) && f->recordsize > 0 && (f->datalen % f->recordsize) == 0) {
+        uint32_t reccount = f->datalen / f->recordsize;
+        PrintAndLogEx(SUCCESS, "Read %u bytes from file 0x%02x, %u record(s) of %u bytes", f->datalen, f->num, reccount, f->recordsize);
+        for (uint32_t i = 0; i < reccount; i++) {
+            if (i != 0) {
+                PrintAndLogEx(SUCCESS, "Record %u", i);
+            }
+            print_buffer_with_offset(f->data + (i * f->recordsize), f->recordsize, 0, (i == 0));
+        }
+        return;
+    }
+
+    PrintAndLogEx(SUCCESS, "Read %u bytes from file 0x%02x", f->datalen, f->num);
+    print_buffer_with_offset(f->data, f->datalen, 0, true);
+}
+
+// collect one application.  The caller has already selected and authenticated
+static int DesfireDumpCollectApp(DesfireContext_t *dctx, desfire_dump_app_t *app, uint32_t maxlength,
+                                 DesfireISOSelectWay selectway, uint32_t id, int securechann,
+                                 bool noauth, bool verbose) {
+
+    FileList_t FileList = {{0}};
+    size_t filescount = 0;
+    bool isopresent = false;
+
+    int res = DesfireFillFileList(dctx, FileList, &filescount, &isopresent);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Can't get file list for application " _YELLOW_("%06X"), app->aid);
+        return res;
+    }
+
+    // the ISO file id probe in DesfireFillFileList makes the PICC end the session on
+    // applications without ISO file ids, so get it back before reading the files
+    if (noauth == false && DesfireIsAuthenticated(dctx) == false) {
+        DesfireSetCommMode(dctx, DCMPlain);
+        res = DesfireSelectAndAuthenticateAppW(dctx, securechann, selectway, id, noauth, verbose);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "Application " _CYAN_("%s") " have " _GREEN_("%zu") " files", DesfireWayIDStr(selectway, id), filescount);
+
+    if (selectway == ISW6bAID) {
+        DesfirePrintAIDFunctions(id);
+    }
+
+    app->filecount = 0;
+    bool session_lost = false;
+
+    for (size_t i = 0; i < filescount && i < DESFIRE_MAX_FILE_COUNT; i++) {
+
+        // a refused exchange ends the PICC session,  re-open it before the next file.
+        // a file we chose not to read never reached the card and costs us nothing
+        if (session_lost) {
+            DesfireSetCommMode(dctx, DCMPlain);
+            if (DesfireSelectAndAuthenticateAppW(dctx, securechann, selectway, id, noauth, verbose) != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "Lost the session on application " _YELLOW_("%06X") ", stopping here", app->aid);
+                break;
+            }
+            session_lost = false;
+        }
+
+        desfire_dump_file_t *f = &app->files[app->filecount];
+        f->num = FileList[i].fileNum;
+        f->isofid = FileList[i].fileISONum;
+        DesfireDumpFillFileSettings(&FileList[i].fileSettings, f, FileList[i].fileSettingsRead);
+        app->filecount++;
+
+        if (FileList[i].fileSettingsRead == false) {
+            // without the settings we do not know the file's type, so there is
+            // no sensible read command to send
+            PrintAndLogEx(WARNING, "File " _YELLOW_("0x%02x") " settings could not be read, contents skipped", f->num);
+            continue;
+        }
+
+        session_lost = (DesfireDumpReadFile(dctx, &FileList[i].fileSettings, f, maxlength, verbose) == PM3_ESOFT);
+
+        DesfireDumpPrintFile(f, isopresent);
+        DesfirePrintFileSettingsExtended(&FileList[i].fileSettings);
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14ADesDump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes dump",
-                  "For each application show fil list and then file content. Key needs to be provided for authentication or flag --no-auth set (depend on cards settings).",
-                  "hf mfdes dump --aid 123456     -> show file dump for: app=123456 with channel defaults from `default` command/n"
+                  "Dump a DESFire card to a json file. Walks every application and every file\n"
+                  "unless an application is named with --aid / --isoid / --dfname.\n"
+                  "Key needs to be provided for authentication or flag --no-auth set (depend on cards settings).",
+                  "hf mfdes dump                  -> dump the whole PICC with channel defaults from `default` command\n"
+                  "hf mfdes dump --aid 123456     -> dump only application 123456\n"
+                  "hf mfdes dump --keys hf-mfdes-0102030405-keys.json  -> use recovered keys per application\n"
                   "hf mfdes dump --isoid df01 --schann lrp -t aes --length 000090    -> lrp default settings with length limit");
 
     void *argtable[] = {
@@ -8063,7 +8779,7 @@ static int CmdHF14ADesDump(const char *Cmd) {
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
         arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (8|16|24 hex bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -8074,6 +8790,9 @@ static int CmdHF14ADesDump(const char *Cmd) {
         arg_str0(NULL, "dfname",  "<hex>", "Application ISO DF Name (5-16 hex bytes, big endian)"),
         arg_str0("l", "length",   "<hex>", "Maximum length for read data files (3 hex bytes, big endian)"),
         arg_lit0(NULL, "no-auth", "Execute without authentication"),
+        arg_str0("f",  "file",    "<fn>", "Save dump to file, if no <fn> UID will be used as filename"),
+        arg_str0(NULL, "keys",    "<fn>", "Load application keys from a `hf mfdes chk` key file"),
+        arg_lit0(NULL, "ns",      "No save to file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -8081,6 +8800,21 @@ static int CmdHF14ADesDump(const char *Cmd) {
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
     bool noauth = arg_get_lit(ctx, 15);
+
+    // an application was named on the command line?  then dump only that one
+    bool single_app = (arg_get_str(ctx, 11)->count > 0) ||
+                      (arg_get_str(ctx, 12)->count > 0) ||
+                      (arg_get_str(ctx, 13)->count > 0);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 16), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    int keyfnlen = 0;
+    char keyfilename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 17), (uint8_t *)keyfilename, FILE_PATH_SIZE, &keyfnlen);
+
+    bool nosave = arg_get_lit(ctx, 18);
 
     DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
@@ -8101,60 +8835,1017 @@ static int CmdHF14ADesDump(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
+    desfire_dump_t *dump = calloc(1, sizeof(desfire_dump_t));
+    if (dump == NULL) {
+        PrintAndLogEx(ERR, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    // UID / ATQA / SAK / ATS come from the 14a layer, grab them before we talk DESFire
+    DesfireDumpFillCardInfo(&dump->card_info);
+    DropField();
+
+    // no --keys given?  look for the key file this card would have been saved
+    // under, the same `hf-mfdes-<UID>-...` template the dump itself uses
+    bool autokeys = false;
+    if (keyfnlen == 0 && dump->card_info.uidlen > 0) {
+        strcat(keyfilename, "hf-mfdes-");
+        FillFileNameByUID(keyfilename, dump->card_info.uid, "-keys", dump->card_info.uidlen);
+        keyfnlen = strlen(keyfilename);
+        autokeys = true;
+    }
+
+    // optional key file from `hf mfdes chk`
+    desfire_keys_dump_t *keyfile = NULL;
+    if (keyfnlen > 0) {
+        keyfile = calloc(1, sizeof(desfire_keys_dump_t));
+        if (keyfile == NULL) {
+            PrintAndLogEx(ERR, "Failed to allocate memory");
+            free(dump);
+            return PM3_EMALLOC;
+        }
+
+        // a key file we went looking for on our own is not expected to exist,
+        // so probe quietly first rather than let loadFileJSON complain
+        char *found = NULL;
+        bool exists = (searchFile(&found, RESOURCES_SUBDIR, keyfilename, ".json", autokeys) == PM3_SUCCESS);
+        free(found);
+
+        size_t klen = 0;
+        if (exists == false || loadFileJSON(keyfilename, keyfile, sizeof(desfire_keys_dump_t), &klen, NULL) != PM3_SUCCESS) {
+            if (autokeys == false) {
+                PrintAndLogEx(WARNING, "Could not load key file `" _YELLOW_("%s") "`, continuing without it", keyfilename);
+            } else if (verbose) {
+                PrintAndLogEx(INFO, "No key file `" _YELLOW_("%s") "` found", keyfilename);
+            }
+            free(keyfile);
+            keyfile = NULL;
+        } else {
+            PrintAndLogEx(INFO, "Loaded keys for " _YELLOW_("%u") " application(s) from `" _YELLOW_("%s") "`", keyfile->appcount, keyfilename);
+        }
+    }
+
+    uint8_t buf[255] = {0};
+    size_t buflen = 0;
+
+    // GetVersion and the originality signature are answered unauthenticated.
+    // Asking for them from inside the authenticated session instead would put
+    // them in the wrong communication mode and every answer would come back
+    // looking like a MAC failure
+    DesfireContext_t plainctx = {0};
+    plainctx.commMode = DCMPlain;
+    plainctx.cmdSet = DCCNative;
+
+    if (DesfireAnticollision(verbose) == PM3_SUCCESS) {
+
+        // GetVersion answers 7 + 7 + 14 bytes over three chained frames. Split
+        // them here rather than storing one blob: the third frame is not the
+        // same shape across generations, and HW major/minor is what identifies
+        // which generation we are impersonating
+        if (DesfireGetVersion(&plainctx, buf, &buflen) == PM3_SUCCESS) {
+
+            size_t off = 0;
+            struct {
+                uint8_t *dst;
+                uint8_t *dstlen;
+                size_t   want;
+            } part[] = {
+                { dump->versionhw,   &dump->versionhwlen,   sizeof(dump->versionhw)   },
+                { dump->versionsw,   &dump->versionswlen,   sizeof(dump->versionsw)   },
+                { dump->versionprod, &dump->versionprodlen, sizeof(dump->versionprod) },
+            };
+
+            for (size_t i = 0; i < ARRAYLEN(part) && off < buflen; i++) {
+                size_t n = MIN(part[i].want, buflen - off);
+                memcpy(part[i].dst, buf + off, n);
+                *part[i].dstlen = n;
+                off += n;
+            }
+        }
+
+        buflen = 0;
+        if (DesfireReadSignature(&plainctx, 0x00, buf, &buflen) == PM3_SUCCESS && buflen <= sizeof(dump->signature)) {
+            memcpy(dump->signature, buf, buflen);
+            dump->signaturelen = buflen;
+        }
+    }
+
+    DropField();
+
+    res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, ISW6bAID, 0x000000, noauth, verbose);
     if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "PICC level select/auth " _RED_("failed"));
         DropField();
-        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
+        free(keyfile);
+        free(dump);
         return res;
     }
 
-    FileList_t FileList = {{0}};
-    size_t filescount = 0;
-    bool isopresent = false;
-    res = DesfireFillFileList(&dctx, FileList, &filescount, &isopresent);
+    // the PICC level is application 000000
+    dump->picc.aid = 0x000000;
+    dump->picc.auth_ok = (noauth == false);
+    if (dump->picc.auth_ok) {
+        DesfireDumpStoreKey(&dump->picc, dctx.keyNum, dctx.keyType, dctx.key);
+    }
+
+    // DesfireFillAppList() -> DesfireFillPICCInfo() already asks for free memory,
+    // key settings and key version 0, so don't ask a second time
+    PICCInfo_t PICCInfo = {0};
+    AppListS AppList = {{0}};
+    DesfireFillAppList(&dctx, &PICCInfo, AppList, false, false, true);
+
+    // DesfireFillPICCInfo() reports a refused GetFreeMem as 0xffffffff
+    dump->freemem_ok = (PICCInfo.freemem != 0xffffffff);
+    if (dump->freemem_ok) {
+        dump->freemem = PICCInfo.freemem;
+    }
+
+    dump->picc.keysettings = PICCInfo.keySettings;
+    dump->picc.numkeysraw = PICCInfo.numKeysRaw;
+    dump->picc.numkeys = PICCInfo.numberOfKeys;
+    dump->picc.settings_ok = true;
+
+    // the PICC only hands out the version of key 0
+    dump->picc.keys.version[0] = PICCInfo.keyVersion0;
+    dump->picc.keys.versionknown[0] = 1;
+
+    PrintAndLogEx(NORMAL, "");
+    DesfirePrintPICCInfo(&dctx, &PICCInfo);
+
+    if (single_app) {
+
+        // only the application the user named
+        desfire_dump_app_t *app = &dump->app[0];
+        dump->appcount = 1;
+
+        int idx = DesfireDumpFindApp(AppList, PICCInfo.appCount, &dctx, selectway, id);
+        if (idx >= 0) {
+            DesfireDumpFillAppMeta(app, &AppList[idx]);
+        } else {
+            // not in the PICC's list, record what the selector told us
+            app->aid = (selectway == ISW6bAID) ? id : 0;
+            app->isofid = (selectway == ISWIsoID) ? id : 0;
+            app->dfnamelen = dctx.selectedDFNameLen;
+            memcpy(app->dfname, dctx.selectedDFName, app->dfnamelen);
+        }
+
+        res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Select/auth of %s " _RED_("failed"), DesfireWayIDStr(selectway, id));
+            DropField();
+            desfire_dump_free(dump);
+            free(keyfile);
+            free(dump);
+            return res;
+        }
+
+        app->auth_ok = (noauth == false);
+        if (app->auth_ok) {
+            DesfireDumpStoreKey(app, dctx.keyNum, dctx.keyType, dctx.key);
+        }
+
+        DesfireDumpCollectApp(&dctx, app, maxlength, selectway, id, securechann, noauth, verbose);
+
+    } else {
+
+        uint8_t appcount = (PICCInfo.appCount > DESFIRE_MAX_APP_COUNT) ? DESFIRE_MAX_APP_COUNT : PICCInfo.appCount;
+        if (PICCInfo.appCount > DESFIRE_MAX_APP_COUNT) {
+            PrintAndLogEx(WARNING, "PICC has %zu applications, dumping the first %d", PICCInfo.appCount, DESFIRE_MAX_APP_COUNT);
+        }
+
+        dump->appcount = appcount;
+
+        // the key we authenticated the PICC with is the fallback for every
+        // application, so keep a copy -- picking a key out of the key file for
+        // one application must not carry over into the next
+        uint8_t basekey[DESFIRE_MAX_KEY_SIZE] = {0};
+        memcpy(basekey, dctx.key, sizeof(basekey));
+        DesfireCryptoAlgorithm basealgo = dctx.keyType;
+
+        for (uint8_t i = 0; i < appcount; i++) {
+
+            desfire_dump_app_t *app = &dump->app[i];
+            DesfireDumpFillAppMeta(app, &AppList[i]);
+
+            // a key from the key file beats the one on the command line
+            // DesfireSetKey() would clear the whole context -- command set,
+            // comm mode, KDF and UID all came from the command line and have to
+            // survive, so only the key itself is swapped
+            const uint8_t *appkey = DesfireDumpFindKey(keyfile, app->aid, app->keytype, dctx.keyNum);
+            if (appkey != NULL) {
+                DesfireSetKeyNoClear(&dctx, dctx.keyNum, app->keytype, (uint8_t *)appkey);
+                if (verbose) {
+                    PrintAndLogEx(INFO, "Application " _YELLOW_("%06X") " using key %u from the key file", app->aid, dctx.keyNum);
+                }
+            } else {
+                DesfireSetKeyNoClear(&dctx, dctx.keyNum, basealgo, basekey);
+            }
+
+            res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, ISW6bAID, app->aid, noauth, verbose);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "Application " _YELLOW_("%06X") " select/auth " _RED_("failed") ", skipping", app->aid);
+                continue;
+            }
+
+            app->auth_ok = (noauth == false);
+            if (app->auth_ok) {
+                DesfireDumpStoreKey(app, dctx.keyNum, dctx.keyType, dctx.key);
+            }
+
+            DesfireDumpCollectApp(&dctx, app, maxlength, ISW6bAID, app->aid, securechann, noauth, verbose);
+        }
+    }
+
+    DropField();
+
+    if (nosave) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "Called with no save option");
+        PrintAndLogEx(NORMAL, "");
+        desfire_dump_free(dump);
+        free(keyfile);
+        free(dump);
+        return PM3_SUCCESS;
+    }
+
+    if (fnlen < 1) {
+        if (dump->card_info.uidlen == 0) {
+            PrintAndLogEx(WARNING, "No UID to build a filename from, use " _YELLOW_("-f <fn>"));
+            desfire_dump_free(dump);
+            free(keyfile);
+            free(dump);
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(INFO, "Using UID as filename");
+        strcat(filename, "hf-mfdes-");
+        FillFileNameByUID(filename, dump->card_info.uid, "-dump", dump->card_info.uidlen);
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    pm3_save_dump_json(filename, (uint8_t *)dump, sizeof(desfire_dump_t), jsfMfDesfire_v1);
+
+    desfire_dump_free(dump);
+    free(keyfile);
+    free(dump);
+    return PM3_SUCCESS;
+}
+
+static void DesfireViewPrintKeys(const desfire_dump_app_t *app) {
+
+    for (uint8_t keyno = 0; keyno < DESFIRE_MAX_KEY_COUNT; keyno++) {
+
+        const desfire_dump_keys_t *keys = &app->keys;
+
+        if (keys->versionknown[keyno] == 0 && keys->present[keyno] == 0) {
+            continue;
+        }
+
+        char ver[16] = "??";
+        if (keys->versionknown[keyno]) {
+            snprintf(ver, sizeof(ver), "%02X", keys->version[keyno]);
+        }
+
+        if (keys->present[keyno]) {
+            PrintAndLogEx(SUCCESS, "    Key %02u (ver %s). " _GREEN_("%s")
+                          , keyno
+                          , ver
+                          , sprint_hex_inrow(keys->key[keyno], desfire_get_key_length(app->keytype))
+                         );
+        } else {
+            PrintAndLogEx(SUCCESS, "    Key %02u (ver %s). " _YELLOW_("not recovered"), keyno, ver);
+        }
+    }
+}
+
+// the PICC is application 000000 and prints the same way as the rest
+static void DesfireViewPrintApp(const desfire_dump_app_t *app) {
+
+    PrintAndLogEx(NORMAL, "");
+    if (app->aid == 0x000000) {
+        PrintAndLogEx(INFO, "--- " _CYAN_("AID 000000") " ( PICC level ) ---------------------");
+    } else {
+        // name it from the aid_desfire dictionary when we know it
+        const char *known = AIDDFGetCommentStr(app->aid);
+        if (known && known[0] != '\0') {
+            PrintAndLogEx(INFO, "--- " _CYAN_("AID %06X") " --- " _YELLOW_("%s"), app->aid, known);
+        } else {
+            PrintAndLogEx(INFO, "--- " _CYAN_("AID %06X") " --------------------------------", app->aid);
+        }
+    }
+
+    if (app->isofid != 0) {
+        PrintAndLogEx(SUCCESS, "    ISO DF ID.... %04X", app->isofid);
+    }
+    if (app->dfnamelen > 0) {
+        // DF names are often plain ascii, show both the way `lsapp` does
+        PrintAndLogEx(SUCCESS, "    DF name...... " _YELLOW_("%s") " ( %s )"
+                      , sprint_ascii(app->dfname, app->dfnamelen)
+                      , sprint_hex_inrow(app->dfname, app->dfnamelen)
+                     );
+    }
+    if (app->settings_ok) {
+        PrintAndLogEx(SUCCESS, "    Key settings. %02X, %u %s key(s)"
+                      , app->keysettings
+                      , app->numkeys
+                      , CLIGetOptionListStr(DesfireAlgoOpts, app->keytype)
+                     );
+    }
+    PrintAndLogEx(SUCCESS, "    Authenticated %s", app->auth_ok ? _GREEN_("yes") : _YELLOW_("no"));
+
+    DesfireViewPrintKeys(app);
+
+    PrintAndLogEx(SUCCESS, "    Files........ %u", app->filecount);
+
+    for (uint8_t n = 0; n < app->filecount && n < DESFIRE_MAX_FILE_COUNT; n++) {
+
+        const desfire_dump_file_t *f = &app->files[n];
+
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(SUCCESS, "  File " _GREEN_("%02X") " - %s", f->num, GetDesfireFileType(f->type));
+
+        if (f->isofid != 0) {
+            PrintAndLogEx(SUCCESS, "    ISO file ID.. %04X", f->isofid);
+        }
+
+        if (f->settings_ok) {
+            // f->commmode is the raw file comm mode byte, not a DesfireCommunicationMode
+            PrintAndLogEx(SUCCESS, "    Comm mode.... %s", CLIGetOptionListStr(DesfireCommunicationModeOpts, DesfireFileCommModeToCommMode(f->commmode)));
+            PrintAndLogEx(SUCCESS, "    Access rights %04X", f->accessrights);
+        }
+
+        switch (f->type) {
+            case 0x00:
+            case 0x01:
+                PrintAndLogEx(SUCCESS, "    File size.... %u", f->size);
+                break;
+            case 0x02:
+                PrintAndLogEx(SUCCESS, "    Limits....... %u ... %u", f->lowerlimit, f->upperlimit);
+                break;
+            case 0x03:
+            case 0x04:
+                PrintAndLogEx(SUCCESS, "    Records...... %u of %u, %u bytes each", f->currecords, f->maxrecords, f->recordsize);
+                break;
+            default:
+                break;
+        }
+
+        if (f->read_ok == false) {
+            PrintAndLogEx(WARNING, "    Contents..... " _YELLOW_("not read"));
+            continue;
+        }
+
+        if (f->type == 0x02) {
+            PrintAndLogEx(SUCCESS, "    Value........ " _GREEN_("%u") " (0x%08X)", f->value, f->value);
+            continue;
+        }
+
+        if (f->datalen == 0) {
+            PrintAndLogEx(SUCCESS, "    Contents..... " _YELLOW_("empty"));
+            continue;
+        }
+
+        PrintAndLogEx(NORMAL, "");
+        if ((f->type == 0x03 || f->type == 0x04) && f->recordsize > 0 && (f->datalen % f->recordsize) == 0) {
+            for (uint32_t r = 0; r < f->datalen / f->recordsize; r++) {
+                PrintAndLogEx(SUCCESS, "    Record %u", r);
+                print_buffer_with_offset(f->data + (r * f->recordsize), f->recordsize, 0, (r == 0));
+            }
+        } else {
+            print_buffer_with_offset(f->data, f->datalen, 0, true);
+        }
+    }
+}
+
+static int CmdHF14ADesSim(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes sim",
+                  "Simulate the DESFire card image currently in emulator memory.\n"
+                  "Load one first with `hf mfdes eload`, and read back what a reader\n"
+                  "changed with `hf mfdes esave`.\n"
+                  "\n"
+                  "UID, ATQA, SAK and ATS all come out of the loaded image",
+                  "hf mfdes sim");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_DESFIRE_SIMULATE, NULL, 0);
+
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
+
+    PacketResponseNG resp;
+    bool keypress = kbd_enter_pressed();
+    while (keypress == false) {
+
+        keypress = kbd_enter_pressed();
+
+        if (WaitForResponseTimeout(CMD_HF_DESFIRE_SIMULATE, &resp, 1500) == false) {
+            continue;
+        }
+
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Simulation stopped, no card image in emulator memory?");
+            PrintAndLogEx(HINT, "Hint: load one with " _YELLOW_("`hf mfdes eload -f <fn>`"));
+            return resp.status;
+        }
+        break;
+    }
+
+    if (keypress) {
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+    }
+
+    PrintAndLogEx(INFO, "Done!");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfdes esave`") " to see what a reader changed");
+    return PM3_SUCCESS;
+}
+
+// One `hf mfdes etest` operation: send it and hand back the answer
+static int desfire_etest_exchange(uint8_t op, const uint8_t *data, uint16_t len, PacketResponseNG *resp) {
+
+    uint8_t buf[PM3_CMD_DATA_SIZE] = {0};
+    desfire_sim_test_cmd_t *cmd = (desfire_sim_test_cmd_t *)buf;
+
+    if (len > sizeof(buf) - sizeof(*cmd)) {
+        return PM3_EINVARG;
+    }
+
+    cmd->op = op;
+    cmd->len = len;
+    if (len) {
+        memcpy(cmd->data, data, len);
+    }
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_DESFIRE_SIM_TEST, buf, sizeof(*cmd) + len);
+
+    if (WaitForResponseTimeout(CMD_HF_DESFIRE_SIM_TEST, resp, 2000) == false) {
+        return PM3_ETIMEOUT;
+    }
+
+    return resp->status;
+}
+
+// uppercase hex into a caller's buffer, sprint_hex_inrow() has one static one
+static void desfire_etest_hex(char *dst, size_t dstlen, const uint8_t *src, size_t n) {
+    size_t i = 0;
+    for (; i < n && (2 * i + 2) < dstlen; i++) {
+        snprintf(dst + 2 * i, dstlen - 2 * i, "%02X", src[i]);
+    }
+    dst[2 * i] = 0;
+}
+
+static int CmdHF14ADesETest(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes etest",
+                  "Drive the DESFire simulation from the host over USB, no RF involved.\n"
+                  "The card image in emulator memory answers each --apdu, native or ISO 7816\n"
+                  "wrapped, as `hf mfdes sim` would over the air. Bytes given with --random are\n"
+                  "drawn in order by the next random UID (3, at --scan on a random-id image) and\n"
+                  "RndB (8 or 16, at the next authentication), so a recorded session can be replayed.\n"
+                  "\n"
+                  "One action per call. Load an image first with `hf mfdes eload`",
+                  "hf mfdes etest --begin\n"
+                  "hf mfdes etest --scan\n"
+                  "hf mfdes etest --random 0102030405060708\n"
+                  "hf mfdes etest --apdu 900A0000010000 -j\n"
+                  "hf mfdes etest --state -j\n"
+                  "hf mfdes etest --end");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "begin",    "Check the image, clear the random queue"),
+        arg_lit0(NULL, "end",      "Drop the state and the random queue"),
+        arg_lit0(NULL, "scan",     "RF reset and activation, show UID/ATQA/SAK/ATS"),
+        arg_str0(NULL, "apdu",     "<hex>", "Send one command, show the answer"),
+        arg_str0(NULL, "random",   "<hex>", "Queue bytes for the next RndB / random UID draws"),
+        arg_lit0(NULL, "fieldoff", "RF reset, session dropped"),
+        arg_lit0(NULL, "state",    "Show session and random queue state"),
+        arg_lit0("j",  "json",     "One line of JSON instead of text"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    bool begin = arg_get_lit(ctx, 1);
+    bool end = arg_get_lit(ctx, 2);
+    bool scan = arg_get_lit(ctx, 3);
+    bool has_apdu = (arg_get_str(ctx, 4)->count > 0);
+    bool has_random = (arg_get_str(ctx, 5)->count > 0);
+    bool fieldoff = arg_get_lit(ctx, 6);
+    bool state = arg_get_lit(ctx, 7);
+    bool json = arg_get_lit(ctx, 8);
+
+    int apdulen = 0;
+    uint8_t apdu[PM3_CMD_DATA_SIZE - sizeof(desfire_sim_test_cmd_t)] = {0};
+    if (CLIParamHexToBuf(arg_get_str(ctx, 4), apdu, sizeof(apdu), &apdulen)) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    int rndlen = 0;
+    uint8_t rnd[DESFIRE_SIM_TEST_RANDOM_MAX] = {0};
+    if (CLIParamHexToBuf(arg_get_str(ctx, 5), rnd, sizeof(rnd), &rndlen)) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    CLIParserFree(ctx);
+
+    if (begin + end + scan + has_apdu + has_random + fieldoff + state != 1) {
+        PrintAndLogEx(WARNING, "Give exactly one action");
+        return PM3_EINVARG;
+    }
+
+    if ((has_apdu && apdulen == 0) || (has_random && rndlen == 0)) {
+        PrintAndLogEx(WARNING, "Need at least one byte");
+        return PM3_EINVARG;
+    }
+
+    uint8_t op;
+    const char *name;
+    const uint8_t *data = NULL;
+    uint16_t len = 0;
+
+    if (begin) {
+        op = DESFIRE_SIM_TEST_BEGIN;
+        name = "begin";
+    } else if (end) {
+        op = DESFIRE_SIM_TEST_END;
+        name = "end";
+    } else if (scan) {
+        op = DESFIRE_SIM_TEST_SCAN;
+        name = "scan";
+    } else if (has_apdu) {
+        op = DESFIRE_SIM_TEST_APDU;
+        name = "apdu";
+        data = apdu;
+        len = apdulen;
+    } else if (has_random) {
+        op = DESFIRE_SIM_TEST_RANDOM;
+        name = "random";
+        data = rnd;
+        len = rndlen;
+    } else if (fieldoff) {
+        op = DESFIRE_SIM_TEST_FIELDOFF;
+        name = "fieldoff";
+    } else {
+        op = DESFIRE_SIM_TEST_STATE;
+        name = "state";
+    }
+
+    PacketResponseNG resp;
+    int res = desfire_etest_exchange(op, data, len, &resp);
+
+    // the JSON fields of a successful answer, nothing for the plain acks
+    char fields[2 * PM3_CMD_DATA_SIZE + 128] = {0};
+
+    if (res == PM3_SUCCESS && op == DESFIRE_SIM_TEST_SCAN) {
+        if (resp.length < sizeof(iso14a_card_select_t)) {
+            res = PM3_EFAILED;
+        } else {
+            iso14a_card_select_t card;
+            memcpy(&card, resp.data.asBytes, sizeof(card));
+
+            char uid[2 * sizeof(card.uid) + 1];
+            char atqa[2 * sizeof(card.atqa) + 1];
+            char ats[2 * sizeof(card.ats) + 1];
+            desfire_etest_hex(uid, sizeof(uid), card.uid, card.uidlen);
+            desfire_etest_hex(atqa, sizeof(atqa), card.atqa, sizeof(card.atqa));
+            desfire_etest_hex(ats, sizeof(ats), card.ats, card.ats_len);
+
+            if (json) {
+                snprintf(fields, sizeof(fields), ",\"uid\":\"%s\",\"atqa\":\"%s\",\"sak\":\"%02X\",\"ats\":\"%s\"", uid, atqa, card.sak, ats);
+            } else {
+                PrintAndLogEx(SUCCESS, "UID.... %s", uid);
+                PrintAndLogEx(SUCCESS, "ATQA... %s", atqa);
+                PrintAndLogEx(SUCCESS, "SAK.... %02X", card.sak);
+                PrintAndLogEx(SUCCESS, "ATS.... %s", ats);
+            }
+        }
+    }
+
+    if (res == PM3_SUCCESS && op == DESFIRE_SIM_TEST_APDU) {
+        char hex[2 * PM3_CMD_DATA_SIZE + 1];
+        desfire_etest_hex(hex, sizeof(hex), resp.data.asBytes, resp.length);
+        if (json) {
+            snprintf(fields, sizeof(fields), ",\"data\":\"%s\"", hex);
+        } else {
+            PrintAndLogEx(INFO, "<- %s", resp.length ? hex : "(no answer)");
+        }
+    }
+
+    if (res == PM3_SUCCESS && op == DESFIRE_SIM_TEST_STATE) {
+        if (resp.length < sizeof(desfire_sim_test_state_t)) {
+            res = PM3_EFAILED;
+        } else {
+            desfire_sim_test_state_t st;
+            memcpy(&st, resp.data.asBytes, sizeof(st));
+            if (json) {
+                snprintf(fields, sizeof(fields),
+                         ",\"ready\":%s,\"authenticated\":%s,\"auth_keyno\":%u,\"aid\":\"%02X%02X%02X\",\"random_remaining\":%u,\"random_underflow\":%s",
+                         st.ready ? "true" : "false",
+                         st.authenticated ? "true" : "false",
+                         st.auth_keyno,
+                         st.aid[0], st.aid[1], st.aid[2],
+                         st.random_remaining,
+                         st.random_underflow ? "true" : "false");
+            } else {
+                PrintAndLogEx(SUCCESS, "Ready............ %s", st.ready ? _GREEN_("yes") : _RED_("no"));
+                PrintAndLogEx(SUCCESS, "Selected AID..... %02X%02X%02X", st.aid[0], st.aid[1], st.aid[2]);
+                PrintAndLogEx(SUCCESS, "Authenticated.... %s", st.authenticated ? _GREEN_("yes") : "no");
+                if (st.authenticated) {
+                    PrintAndLogEx(SUCCESS, "Key number....... %u", st.auth_keyno);
+                }
+                PrintAndLogEx(SUCCESS, "Random queued.... %u byte(s)", st.random_remaining);
+                PrintAndLogEx(SUCCESS, "Random underflow. %s", st.random_underflow ? _RED_("yes") : "no");
+            }
+        }
+    }
+
     if (res != PM3_SUCCESS) {
-        DropField();
+        const char *why;
+        switch (res) {
+            case PM3_ENODATA:
+                why = "no card image in emulator memory";
+                break;
+            case PM3_EOVFLOW:
+                why = "random queue full";
+                break;
+            case PM3_ETIMEOUT:
+                why = "no answer, firmware too old or built without DESFire simulation";
+                break;
+            case PM3_EFAILED:
+                why = "short answer";
+                break;
+            default:
+                why = (op == DESFIRE_SIM_TEST_APDU) ? "not activated, --scan first" : "invalid request";
+                break;
+        }
+
+        if (json) {
+            PrintAndLogEx(NORMAL, "{\"command\":\"%s\",\"ok\":false,\"error\":\"%s\"}", name, why);
+        } else {
+            PrintAndLogEx(FAILED, "%s failed, %s", name, why);
+            if (res == PM3_ENODATA) {
+                PrintAndLogEx(HINT, "Hint: load one with " _YELLOW_("`hf mfdes eload -f <fn>`"));
+            }
+        }
+        return res;
+    }
+
+    bool plain_ack = (op == DESFIRE_SIM_TEST_BEGIN || op == DESFIRE_SIM_TEST_END ||
+                      op == DESFIRE_SIM_TEST_RANDOM || op == DESFIRE_SIM_TEST_FIELDOFF);
+    if (json) {
+        PrintAndLogEx(NORMAL, "{\"command\":\"%s\",\"ok\":true%s}", name, fields);
+    } else if (plain_ack) {
+        PrintAndLogEx(SUCCESS, "%s ( " _GREEN_("ok") " )", name);
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int CmdHF14ADesELoad(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes eload",
+                  "Load a DESFire card dump into emulator memory.\n"
+                  "The dump is packed into the on-device card image, see doc/mfdes_dump_format.md",
+                  "hf mfdes eload -f hf-mfdes-01020304050607-dump.json");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<fn>", "Filename of dump"),
+        arg_lit0("v", "verbose", "Verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    bool verbose = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    desfire_dump_t *dump = calloc(1, sizeof(desfire_dump_t));
+    if (dump == NULL) {
+        PrintAndLogEx(ERR, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    size_t dlen = 0;
+    int res = loadFileJSON(filename, dump, sizeof(desfire_dump_t), &dlen, NULL);
+    if (res != PM3_SUCCESS) {
+        free(dump);
+        return res;
+    }
+
+    if (dlen != sizeof(desfire_dump_t)) {
+        PrintAndLogEx(ERR, "`" _YELLOW_("%s") "` is not a DESFire card dump", filename);
+        desfire_dump_free(dump);
+        free(dump);
+        return PM3_EINVARG;
+    }
+
+    // the device tells us how much emulator memory it has, so a platform with
+    // more of it holds a bigger card with no change here
+    size_t emsize = g_conn.em_size;
+    if (emsize == 0) {
+        PrintAndLogEx(ERR, "Device did not report an emulator memory size");
+        desfire_dump_free(dump);
+        free(dump);
+        return PM3_EDEVNOTSUPP;
+    }
+
+    uint8_t *img = calloc(emsize, sizeof(uint8_t));
+    if (img == NULL) {
+        PrintAndLogEx(ERR, "Failed to allocate memory");
+        desfire_dump_free(dump);
+        free(dump);
+        return PM3_EMALLOC;
+    }
+
+    size_t used = 0;
+    res = desfire_em_pack(dump, img, emsize, &used);
+    desfire_dump_free(dump);
+    free(dump);
+
+    if (res != PM3_SUCCESS) {
+        free(img);
+        return res;
+    }
+
+    if (verbose) {
+        desfire_em_print(img, emsize);
+    }
+
+    res = desfire_em_upload(img, emsize);
+    free(img);
+
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    PrintAndLogEx(SUCCESS, "Done!");
+    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfdes eview`") " to verify");
+    return PM3_SUCCESS;
+}
+
+static int CmdHF14ADesESave(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes esave",
+                  "Save the card image in emulator memory to a dump file.\n"
+                  "Shows what a reader left behind if one has been talking to the simulation.\n"
+                  "A deleted application or file is kept in the image as a tombstone, because the\n"
+                  "memory it held stays spent until a FormatPICC. By default those are left out, so\n"
+                  "the dump is the card as a reader sees it. Use `--keep` to save them as well, which\n"
+                  "is what you want to see everything a reader did rather than only the result",
+                  "hf mfdes esave -f myfile\n"
+                  "hf mfdes esave -f myfile --keep   -> keep applications and files a reader deleted");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<fn>", "Filename, if no <fn> UID will be used as filename"),
+        arg_lit0("v", "verbose", "Verbose output"),
+        arg_lit0(NULL, "keep", "Keep applications and files that were deleted"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool keep_deleted = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+
+    size_t emsize = g_conn.em_size;
+    if (emsize == 0) {
+        PrintAndLogEx(ERR, "Device did not report an emulator memory size");
+        return PM3_EDEVNOTSUPP;
+    }
+
+    uint8_t *img = calloc(emsize, sizeof(uint8_t));
+    if (img == NULL) {
+        PrintAndLogEx(ERR, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    int res = desfire_em_download(img, emsize);
+    if (res != PM3_SUCCESS) {
+        free(img);
+        return res;
+    }
+
+    if (verbose) {
+        desfire_em_print(img, emsize);
+    }
+
+    desfire_dump_t *dump = calloc(1, sizeof(desfire_dump_t));
+    if (dump == NULL) {
+        PrintAndLogEx(ERR, "Failed to allocate memory");
+        free(img);
+        return PM3_EMALLOC;
+    }
+
+    res = desfire_em_unpack_ex(img, emsize, dump, keep_deleted);
+    free(img);
+
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(HINT, "Hint: emulator memory holds no DESFire card image, try " _YELLOW_("`hf mfdes eload`"));
+        free(dump);
+        return res;
+    }
+
+    if (fnlen < 1) {
+        if (dump->card_info.uidlen == 0) {
+            PrintAndLogEx(WARNING, "No UID to build a filename from, use " _YELLOW_("-f <fn>"));
+            desfire_dump_free(dump);
+            free(dump);
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(INFO, "Using UID as filename");
+        strcat(filename, "hf-mfdes-");
+        FillFileNameByUID(filename, dump->card_info.uid, "-dump", dump->card_info.uidlen);
+    }
+
+    pm3_save_dump_json(filename, (uint8_t *)dump, sizeof(desfire_dump_t), jsfMfDesfire_v1);
+
+    desfire_dump_free(dump);
+    free(dump);
+    return PM3_SUCCESS;
+}
+
+static int CmdHF14ADesEView(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes eview",
+                  "Show the DESFire card image currently in emulator memory",
+                  "hf mfdes eview");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("v", "verbose", "Also print every application and file"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool verbose = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    size_t emsize = g_conn.em_size;
+    if (emsize == 0) {
+        PrintAndLogEx(ERR, "Device did not report an emulator memory size");
+        return PM3_EDEVNOTSUPP;
+    }
+
+    uint8_t *img = calloc(emsize, sizeof(uint8_t));
+    if (img == NULL) {
+        PrintAndLogEx(ERR, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    int res = desfire_em_download(img, emsize);
+    if (res != PM3_SUCCESS) {
+        free(img);
         return res;
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "Application " _CYAN_("%s") " have " _GREEN_("%zu") " files", DesfireWayIDStr(selectway, id), filescount);
+    desfire_em_print(img, emsize);
 
-    if (selectway == ISW6bAID)
-        DesfirePrintAIDFunctions(id);
+    if (verbose) {
+        desfire_dump_t *dump = calloc(1, sizeof(desfire_dump_t));
+        if (dump != NULL) {
+            if (desfire_em_unpack(img, emsize, dump) == PM3_SUCCESS) {
+                DesfireViewPrintApp(&dump->picc);
+                for (uint8_t i = 0; i < dump->appcount && i < DESFIRE_MAX_APP_COUNT; i++) {
+                    DesfireViewPrintApp(&dump->app[i]);
+                }
+            }
+            desfire_dump_free(dump);
+            free(dump);
+        }
+    }
 
-    if (filescount == 0) {
-        PrintAndLogEx(INFO, "There is no files in the application %s", DesfireWayIDStr(selectway, id));
-        DropField();
+    free(img);
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
+static int CmdHF14ADesView(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes view",
+                  "Print a DESFire card dump file (json)",
+                  "hf mfdes view -f hf-mfdes-01020304050607-dump.json\n"
+                  "hf mfdes view --selftest");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<fn>", "Filename of dump"),
+        arg_lit0("v", "verbose", "Verbose output"),
+        arg_lit0(NULL, "selftest", "Run the dump parsers self tests and exit"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool selftest = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+
+    if (selftest) {
+        return nortic_selftest();
+    }
+
+    if (fnlen == 0) {
+        PrintAndLogEx(ERR, "Specify a filename with `-f` or run `--selftest`");
+        return PM3_EINVARG;
+    }
+
+    desfire_dump_t *dump = calloc(1, sizeof(desfire_dump_t));
+    if (dump == NULL) {
+        PrintAndLogEx(ERR, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    size_t dlen = 0;
+    int res = loadFileJSON(filename, dump, sizeof(desfire_dump_t), &dlen, NULL);
+    if (res != PM3_SUCCESS) {
+        free(dump);
         return res;
     }
 
-    res = PM3_SUCCESS;
-    for (int i = 0; i < filescount; i++) {
-        if (res != PM3_SUCCESS) {
-            DesfireSetCommMode(&dctx, DCMPlain);
-            res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, noauth, verbose);
-            if (res != PM3_SUCCESS) {
-                DropField();
-                return res;
-            }
-        }
-
-        PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "--------------------------------- " _CYAN_("File %02x") " ----------------------------------", FileList[i].fileNum);
-        PrintAndLogEx(SUCCESS, "File ID         : " _GREEN_("%02x"), FileList[i].fileNum);
-        if (isopresent) {
-            if (FileList[i].fileISONum != 0)
-                PrintAndLogEx(SUCCESS, "File ISO ID     : %04x", FileList[i].fileISONum);
-            else
-                PrintAndLogEx(SUCCESS, "File ISO ID     : " _YELLOW_("n/a"));
-        }
-        DesfirePrintFileSettingsExtended(&FileList[i].fileSettings);
-
-        res = DesfileReadFileAndPrint(&dctx, FileList[i].fileNum, RFTAuto, 0, 0, maxlength, noauth, verbose);
+    if (dlen != sizeof(desfire_dump_t)) {
+        PrintAndLogEx(ERR, "`" _YELLOW_("%s") "` is not a DESFire card dump", filename);
+        desfire_dump_free(dump);
+        free(dump);
+        return PM3_EINVARG;
     }
 
-    DropField();
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
+
+    if (dump->card_info.uidlen > 0) {
+        PrintAndLogEx(SUCCESS, "UID.............. " _GREEN_("%s"), sprint_hex_inrow(dump->card_info.uid, dump->card_info.uidlen));
+        // the file keeps ATQA in wire order, `hf 14a info` prints it the other way round
+        PrintAndLogEx(SUCCESS, "ATQA............. %02X %02X", dump->card_info.atqa[1], dump->card_info.atqa[0]);
+        PrintAndLogEx(SUCCESS, "SAK.............. %02X", dump->card_info.sak);
+        if (dump->card_info.ats_len > 0) {
+            PrintAndLogEx(SUCCESS, "ATS.............. %s", sprint_hex_inrow(dump->card_info.ats, dump->card_info.ats_len));
+        }
+    }
+
+    if (dump->versionhwlen > 0) {
+        PrintAndLogEx(SUCCESS, "Version HW....... %s", sprint_hex_inrow(dump->versionhw, dump->versionhwlen));
+        if (dump->versionhwlen >= 5) {
+            PrintAndLogEx(SUCCESS, "                  %s", mifare_prime_get_version_str(dump->versionhw[1], dump->versionhw[3], dump->versionhw[4]));
+        }
+        if (dump->versionhwlen >= 6) {
+            PrintAndLogEx(SUCCESS, "  Storage size... %s", mifare_prime_get_card_size_str(dump->versionhw[5]));
+        }
+    }
+
+    if (dump->versionswlen > 0) {
+        PrintAndLogEx(SUCCESS, "Version SW....... %s", sprint_hex_inrow(dump->versionsw, dump->versionswlen));
+    }
+
+    if (dump->versionprodlen > 0) {
+        PrintAndLogEx(SUCCESS, "Production....... %s", sprint_hex_inrow(dump->versionprod, dump->versionprodlen));
+    }
+
+    if (dump->signaturelen > 0) {
+        PrintAndLogEx(SUCCESS, "Signature........ %s", sprint_hex_inrow(dump->signature, dump->signaturelen));
+    }
+
+    if (dump->freemem_ok) {
+        PrintAndLogEx(SUCCESS, "Free memory...... " _GREEN_("%u") " bytes", dump->freemem);
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Applications") " ------------------------------");
+    PrintAndLogEx(SUCCESS, "%u application(s) plus the PICC level", dump->appcount);
+
+    DesfireViewPrintApp(&dump->picc);
+
+    for (uint8_t i = 0; i < dump->appcount && i < DESFIRE_MAX_APP_COUNT; i++) {
+        DesfireViewPrintApp(&dump->app[i]);
+    }
+
+    if (is_valid_nortic_card(dump)) {
+        (void)nortic_parser_parse(dump);
+    }
+
+    if (verbose) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "Loaded `" _YELLOW_("%s") "`", filename);
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    desfire_dump_free(dump);
+    free(dump);
     return PM3_SUCCESS;
 }
 
@@ -9413,7 +11104,7 @@ static int CmdHF14ADesVerifyCert(const char *Cmd) {
         arg_lit0("v",  "verbose",   "Verbose output"), // 3
         arg_int0("n",  "keyno",     "<dec>", "Key number for DESFire authentication"), // 4
         arg_str0("t",  "algo",      "<DES|2TDEA|3TDEA|AES>",  "DESFire auth crypt algo"), // 5
-        arg_str0("k",  "key",       "<hex>", "DESFire authentication key"), // 6
+        arg_str0("k",  "key",       "<hex>", "Key for authenticate (8|16|24 hex bytes)"), // 6
         arg_str0(NULL, "kdf",       "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"), // 7
         arg_str0("i",  "kdfi",      "<hex>", "KDF input (1-31 hex bytes)"), // 8
         arg_str0("m",  "cmode",     "<plain|mac|encrypt>", "Communication mode"), // 9
@@ -9424,8 +11115,7 @@ static int CmdHF14ADesVerifyCert(const char *Cmd) {
         arg_str0(NULL, "dfname",    "<hex>", "Certificate application DF name (1-16 bytes)"), // 14
         arg_str0(NULL, "fid",       "<hex>", "Certificate file ID (1 byte)"), // 15
         arg_lit0(NULL, "no-auth",   "Read certificate file without authentication"), // 16
-        arg_strn(NULL, "ca", "<name|cert|pubkey|path|skip>", 0, MFDES_VERIFYCERT_MAX_CAS,
-                 "CA input, or `skip` to skip certificate signature validation. Repeat --ca for multiple entries"), // 17
+        arg_strn(NULL, "ca", "<name|cert|pubkey|path|skip>", 0, MFDES_VERIFYCERT_MAX_CAS, "CA input, or `skip` to skip validation"), // 17
         arg_str0(NULL, "keyaid",    "<hex>", "Key application ID (default: cert app)"), // 18
         arg_str0(NULL, "keyisoid",  "<hex>", "Key application ISO DF ID (2 bytes)"), // 19
         arg_str0(NULL, "keydfname", "<hex>", "Key application DF name (default: cert app)"), // 20
@@ -9811,6 +11501,12 @@ static command_t CommandTable[] = {
     {"getfileisoids",    CmdHF14ADesGetFileISOIDs,    IfPm3Iso14443a,  "Get File ISO IDs list"},
     {"lsfiles",          CmdHF14ADesLsFiles,          IfPm3Iso14443a,  "Show all files list"},
     {"dump",             CmdHF14ADesDump,             IfPm3Iso14443a,  "Dump all files"},
+    {"view",             CmdHF14ADesView,             AlwaysAvailable, "Display content from tag dump file"},
+    {"eload",            CmdHF14ADesELoad,            IfPm3Iso14443a,  "Upload file into emulator memory"},
+    {"esave",            CmdHF14ADesESave,            IfPm3Iso14443a,  "Save emulator memory to file"},
+    {"eview",            CmdHF14ADesEView,            IfPm3Iso14443a,  "View emulator memory"},
+    {"sim",              CmdHF14ADesSim,              IfPm3Iso14443a,  "Simulate DESFire card from emulator memory"},
+    {"etest",            CmdHF14ADesETest,            IfPm3Iso14443a,  "Drive the simulation from the host, no RF"},
     {"createfile",       CmdHF14ADesCreateFile,       IfPm3Iso14443a,  "Create Standard/Backup File"},
     {"createvaluefile",  CmdHF14ADesCreateValueFile,  IfPm3Iso14443a,  "Create Value File"},
     {"createrecordfile", CmdHF14ADesCreateRecordFile, IfPm3Iso14443a,  "Create Linear/Cyclic Record File"},

@@ -1,4 +1,4 @@
-# Notes to install corss-platform support
+# Notes to install cross-platform support
 ```
 sudo apt install qemu-user qemu-user-binfmt binfmt-support
 ```

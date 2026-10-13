@@ -77,10 +77,10 @@ define KNOWN_STANDALONE_DEFINITIONS
 | HF_14BSNIFF      | 14b sniff to flashmem (rdv4) or ram    |
 |                  |                                        |
 +-----------------------------------------------------------+
-| HF_15SNIFF       | 15693 sniff to flashmem (rdv4) or ram  |
+| HF_15SIM         | 15693 tag simulator                    |
 |                  |                                        |
 +-----------------------------------------------------------+
-| HF_15SIM         | 15693 tag simulator                    |
+| HF_15SNIFF       | 15693 sniff to flashmem (rdv4) or ram  |
 |                  |                                        |
 +-----------------------------------------------------------+
 | HF_AVEFUL        | Mifare ultralight read/simulation      |
@@ -103,6 +103,9 @@ define KNOWN_STANDALONE_DEFINITIONS
 +-----------------------------------------------------------+
 | HF_DOEGOX_COMMIT | DESFire suspended commit               |
 |                  | - Philippe Teuwen                      |
++-----------------------------------------------------------+
+| HF_EMVPNG        | Read and emulate EMV Visa cards        |
+|                  | - Davi Mikael (Penegui)                |
 +-----------------------------------------------------------+
 | HF_ICECLASS      | Simulate HID iCLASS legacy ags         |
 | (RDV4 only)      | storing in flashmem                    |
@@ -146,15 +149,12 @@ define KNOWN_STANDALONE_DEFINITIONS
 | DANKARMULTI      | Load multiple standalone modes.        |
 |                  | - Daniel Karling                       |
 +-----------------------------------------------------------+
-| HF_EMVPNG        | Read and emulate EMV Visa cards        |
-|                  | - Davi Mikael (Penegui)                |
-+-----------------------------------------------------------+
 endef
 
 
 STANDALONE_MODES := LF_SKELETON
 STANDALONE_MODES += LF_EM4100EMUL LF_EM4100RSWB LF_EM4100RSWW LF_EM4100RWC LF_HIDBRUTE LF_HIDFCBRUTE LF_ICEHID LF_MULTIHID LF_NEDAP_SIM LF_NEXID LF_PROXBRUTE LF_PROX2BRUTE LF_SAMYRUN LF_THAREXDE
-STANDALONE_MODES += HF_14ASNIFF HF_14BSNIFF HF_15SNIFF HF_15SIM HF_AVEFUL HF_BOG HF_CARDHOPPER HF_COLIN HF_CRAFTBYTE HF_DOEGOX_AUTH0 HF_DOEGOX_COMMIT HF_ICECLASS HF_LEGIC HF_LEGIC_RDV4 HF_LEGICSIM HF_MATTYRUN HF_MFCSIM HF_MSDSAL HF_REBLAY HF_ST25_TEAROFF HF_TCPRST HF_TMUDFORD HF_UNISNIFF HF_YOUNG HF_EMVPNG
+STANDALONE_MODES += HF_14ASNIFF HF_14BSNIFF HF_15SIM HF_15SNIFF HF_AVEFUL HF_BOG HF_CARDHOPPER HF_COLIN HF_CRAFTBYTE HF_DOEGOX_AUTH0 HF_DOEGOX_COMMIT HF_EMVPNG HF_ICECLASS HF_LEGIC HF_LEGIC_RDV4 HF_LEGICSIM HF_MATTYRUN HF_MFCSIM HF_MSDSAL HF_REBLAY HF_ST25_TEAROFF HF_TCPRST HF_TMUDFORD HF_UNISNIFF HF_YOUNG
 STANDALONE_MODES += DANKARMULTI
 STANDALONE_MODES_REQ_BT := HF_CARDHOPPER HF_REBLAY
 STANDALONE_MODES_REQ_SMARTCARD :=

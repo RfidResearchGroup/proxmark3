@@ -37,6 +37,9 @@ jobs:
         run: brew update
         continue-on-error: true
 
+      - name: Trust brew repo
+        run: brew trust rfidresearchgroup/proxmark3
+
       - name: Tap RfidResearchGroup/proxmark3
         run: brew tap RfidResearchGroup/proxmark3
 
@@ -77,6 +80,9 @@ jobs:
       - name: Update brew repos
         run: brew update
         continue-on-error: true
+
+      - name: Trust brew repo
+        run: brew trust rfidresearchgroup/proxmark3
 
       - name: Tap RfidResearchGroup/proxmark3
         run: brew tap RfidResearchGroup/proxmark3
@@ -119,6 +125,9 @@ jobs:
       - name: Update brew repos
         run: brew update
         continue-on-error: true
+
+      - name: Trust brew repo
+        run: brew trust rfidresearchgroup/proxmark3
 
       - name: Tap RfidResearchGroup/proxmark3
         run: brew tap RfidResearchGroup/proxmark3

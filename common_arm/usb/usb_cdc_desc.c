@@ -158,84 +158,100 @@ const char bosDescriptor[12] = {
     0x0
 };
 
-// Microsoft OS Extended Configuration Compatible ID Descriptor
-/*
-const char CompatIDFeatureDescriptor[] = {
-        0x28, 0x00, 0x00, 0x00,                         // Descriptor Length 40bytes (0x28)
-        0x00, 0x01,                                     // Version ('1.0')
-        MS_EXTENDED_COMPAT_ID, 0x00,                    // Compatibility ID Descriptor Index  0x0004
-        0x01,                                           // Number of sections. 0x1
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,       // Reserved (7bytes)
-        // -----function section 1------
-        0x00,                                           // Interface Number #0
-        0x01,                                           // reserved (0x1)
-        0x57, 0x49, 0x4E, 0x55, 0x53, 0x42, 0x00, 0x00, // Compatible ID  ('WINUSB\0\0')  (8bytes)
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Sub-Compatible ID (8byte)
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00              // Reserved (6bytes)
-};
-*/
+// Only the AT91 driver answers the WCID vendor request that carries these.
+#ifndef PM5
 
-// Microsoft Extended Properties Feature Descriptor
-/*
-const char OSprop[] = {
-        // u32 Descriptor Length (10+132+64+102 == 308
-        0x34, 0x01, 0, 0,
-        // u16 Version ('1.0')
-        0, 1,
-        // u16 wIndex
-        MS_EXTENDED_PROPERTIES, 0,
-        // u16 wCount  -- three section
-        3, 0,
+// Microsoft OS 1.0 Extended Compat ID Feature Descriptor, returned for
+// bmRequestType 0xC0 / wIndex 0x0004. The compatible ID is left empty so
+// Windows keeps its normal CDC driver match instead of loading WinUSB.
+const char CompatIDFeatureDescriptor[40] = {
+    0x28, 0x00, 0x00, 0x00,                         // Descriptor length (40)
+    0x00, 0x01,                                     // Version ('1.0')
+    MS_EXTENDED_COMPAT_ID, 0x00,                    // Index 0x0004
+    0x01,                                           // Number of sections
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,       // Reserved (7 bytes)
 
-        // -----property section 1------
-        // u32 size  ( 14+40+78 == 132)
-        132, 0, 0, 0,
-        // u32 type
-        1, 0, 0, 0,  // unicode string
-        // u16 namelen  (20*2 = 40)
-        40, 0,
-        // name  DeviceInterfaceGUID
-        'D',0,'e',0,'v',0,'i',0,'c',0,'e',0,'I',0,'n',0,'t',0,'e',0,'r',0,'f',0,'a',0,'c',0,'e',0,'G',0,'U',0,'I',0,'D',0,0,0,
-        // u32 datalen  (39*2 = 78)
-        78, 0, 0, 0,
-        // data {4D36E978-E325-11CE-BFC1-08002BE10318}
-        '{',0,'4',0,'d',0,'3',0,'6',0,'e',0,'9',0,'7',0,'8',0,'-',0,'e',0,'3',0,'2',0,'5',0,
-        '-',0,'1',0,'1',0,'c',0,'e',0,'-',0,'b',0,'f',0,'c',0,'1',0,'-',0,'0',0,'8',0,'0',0,
-        '0',0,'2',0,'b',0,'e',0,'1',0,'0',0,'3',0,'1',0,'8',0,'}',0,0,0,
-
-        // -----property section 2------
-        // u32 size  ( 14+12+38 == 64)
-        64, 0, 0, 0,
-        // u32 type
-        1, 0, 0, 0,  // unicode string
-        // u16 namelen (12)
-        12, 0,
-        // name Label
-        'L',0,'a',0,'b',0,'e',0,'l',0,0,0,
-        // u32 datalen ( 19*2 = 38 )
-        38, 0, 0, 0,
-        // data 'Awesome PM3 Device'
-        'A',0,'w',0,'e',0,'s',0,'o',0,'m',0,'e',0,' ',0,'P',0,'M',0,'3',0,' ',0,'D',0,'e',0,'v',0,'i',0,'c',0,'e',0,0,0,
-
-        // -----property section 3------
-        // u32 size ( 14+12+76 == 102)
-        102, 0, 0, 0,
-        // u32 type
-        2, 0, 0, 0,  //Unicode string with environment variables
-        // u16 namelen (12)
-        12, 0,
-        // name Icons
-        'I',0,'c',0,'o',0,'n',0,'s',0,0,0,
-        // u32 datalen ( 38*2 ==  76)
-        76, 0, 0, 0,
-        // data '%SystemRoot%\\system32\\Shell32.dll,-13'
-        '%',0,'S',0,'y',0,'s',0,'t',0,'e',0,'m',0,'R',0,'o',0,'o',0,'t',0,'%',0,
-        '\\',0,'s',0,'y',0,'s',0,'t',0,'e',0,'m',0,'3',0,'2',0,'\\',0,
-        'S',0,'h',0,'e',0,'l',0,'l',0,'3',0,'2',0,'.',0,'d',0,'l',0,'l',0,',',0,
-        '-',0,'1',0,'3',0,0,0
+    // ----- function section 1 -----
+    0x00,                                           // Interface number #0
+    0x01,                                           // Reserved
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Compatible ID     (none)
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Sub-compatible ID (none)
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00              // Reserved (6 bytes)
 };
 
-*/
+// Microsoft OS 1.0 Extended Properties Feature Descriptor, returned for
+// bmRequestType 0xC1 / wIndex 0x0005.
+const char OSprop[304] = {
+    // u32 Descriptor length (10 + 132 + 60 + 102 == 304)
+    LBYTE(304), HBYTE(304), 0, 0,
+    // u16 Version ('1.0')
+    0, 1,
+    // u16 wIndex
+    MS_EXTENDED_PROPERTIES, 0,
+    // u16 wCount
+    3, 0,
+
+    // ----- property section 1 -----
+    // u32 size (14 + 40 + 78 == 132)
+    132, 0, 0, 0,
+    // u32 type
+    1, 0, 0, 0,  // unicode string
+    // u16 namelen (40)
+    40, 0,
+    // name DeviceInterfaceGUID
+    'D', 0, 'e', 0, 'v', 0, 'i', 0, 'c', 0, 'e', 0,
+    'I', 0, 'n', 0, 't', 0, 'e', 0, 'r', 0, 'f', 0,
+    'a', 0, 'c', 0, 'e', 0, 'G', 0, 'U', 0, 'I', 0,
+    'D', 0, 0, 0,
+    // u32 datalen (78)
+    78, 0, 0, 0,
+    // data {9ac44b8f-1ce1-4ceb-abee-01ce1cebabee}
+    '{', 0, '9', 0, 'a', 0, 'c', 0, '4', 0, '4', 0,
+    'b', 0, '8', 0, 'f', 0, '-', 0, '1', 0, 'c', 0,
+    'e', 0, '1', 0, '-', 0, '4', 0, 'c', 0, 'e', 0,
+    'b', 0, '-', 0, 'a', 0, 'b', 0, 'e', 0, 'e', 0,
+    '-', 0, '0', 0, '1', 0, 'c', 0, 'e', 0, '1', 0,
+    'c', 0, 'e', 0, 'b', 0, 'a', 0, 'b', 0, 'e', 0,
+    'e', 0, '}', 0, 0, 0,
+
+    // ----- property section 2 -----
+    // u32 size (14 + 12 + 34 == 60)
+    60, 0, 0, 0,
+    // u32 type
+    1, 0, 0, 0,  // unicode string
+    // u16 namelen (12)
+    12, 0,
+    // name Label
+    'L', 0, 'a', 0, 'b', 0, 'e', 0, 'l', 0, 0, 0,
+    // u32 datalen (34)
+    34, 0, 0, 0,
+    // data Proxmark3 Iceman
+    'P', 0, 'r', 0, 'o', 0, 'x', 0, 'm', 0, 'a', 0,
+    'r', 0, 'k', 0, '3', 0, ' ', 0, 'I', 0, 'c', 0,
+    'e', 0, 'm', 0, 'a', 0, 'n', 0, 0, 0,
+
+    // ----- property section 3 -----
+    // u32 size (14 + 12 + 76 == 102)
+    102, 0, 0, 0,
+    // u32 type
+    2, 0, 0, 0,  // unicode string with environment variables
+    // u16 namelen (12)
+    12, 0,
+    // name Icons
+    'I', 0, 'c', 0, 'o', 0, 'n', 0, 's', 0, 0, 0,
+    // u32 datalen (76)
+    76, 0, 0, 0,
+    // data %SystemRoot%\system32\Shell32.dll,-13
+    '%', 0, 'S', 0, 'y', 0, 's', 0, 't', 0, 'e', 0,
+    'm', 0, 'R', 0, 'o', 0, 'o', 0, 't', 0, '%', 0,
+    '\\', 0, 's', 0, 'y', 0, 's', 0, 't', 0, 'e', 0,
+    'm', 0, '3', 0, '2', 0, '\\', 0, 'S', 0, 'h', 0,
+    'e', 0, 'l', 0, 'l', 0, '3', 0, '2', 0, '.', 0,
+    'd', 0, 'l', 0, 'l', 0, ',', 0, '-', 0, '1', 0,
+    '3', 0, 0, 0
+};
+
+#endif
 
 const char StrLanguageCodes[4] = {
     4,          // Length

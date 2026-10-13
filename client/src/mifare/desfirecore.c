@@ -258,7 +258,7 @@ const char *DesfireAuthErrorToStr(int error) {
         case 6:
             return "mbedtls_aes_setkey_enc failed";
         case 7:
-            return "Sending auth command failed";
+            return "Sending auth response (2nd frame) failed";
         case 8:
             return "Authentication failed. Card timeout.";
         case 9:
@@ -302,6 +302,13 @@ const char *DesfireAuthErrorToStr(int error) {
         default:
             break;
     }
+
+    // the select / auth helpers hand PM3_E* codes straight back to the caller,
+    // so translate those here instead of returning an empty string
+    if (error < 0) {
+        return DesfireGetErrorString(error, NULL);
+    }
+
     return "";
 }
 
@@ -327,7 +334,7 @@ char *DesfireWayIDStr(DesfireISOSelectWay way, uint32_t id) {
     if (way == ISWMF || way == ISWDFName)
         snprintf(str, sizeof(str), "%s", DesfireSelectWayToStr(way));
     else
-        snprintf(str, sizeof(str), "%s %0*x", DesfireSelectWayToStr(way), (way == ISW6bAID) ? 6 : 4, id);
+        snprintf(str, sizeof(str), "%s %0*X", DesfireSelectWayToStr(way), (way == ISW6bAID) ? 6 : 4, id);
 
     return str;
 }
@@ -430,6 +437,41 @@ void DesfirePrintContext(DesfireContext_t *ctx) {
     }
 }
 
+// Table 11 of M075031 footnotes five status codes as "not expected to appear
+// during normal operation": the card saying it has damaged or disabled itself.
+// Those are never noise, so they are reported whether or not APDU logging is on.
+// Everything else is an ordinary refusal, and the caller decides what to say.
+// The command a chained 0xAF frame belongs to. 0xAF on its own says nothing
+// about which command was being continued, and that is exactly what you want to
+// know when a card dies on one.
+static uint8_t s_desfire_logical_cmd = 0;
+
+static void DesfireReportUnrecoverable(uint8_t cmd, uint8_t respcode) {
+
+    if (respcode != MFDES_E_PICC_INTEGRITY &&
+            respcode != MFDES_E_PICC_DISABLED &&
+            respcode != MFDES_E_APPL_INTEGRITY &&
+            respcode != MFDES_E_FILE_INTEGRITY &&
+            respcode != MFDES_E_EEPROM) {
+        return;
+    }
+
+    uint16_t sw = DESFIRE_GET_ISO_STATUS(respcode);
+
+    if (cmd == MFDES_ADDITIONAL_FRAME && s_desfire_logical_cmd != 0 && s_desfire_logical_cmd != MFDES_ADDITIONAL_FRAME) {
+        PrintAndLogEx(WARNING, "Desfire command " _YELLOW_("0x%02X") " frame " _YELLOW_("0xAF") " -> " _RED_("0x%02X") " %s"
+                      , s_desfire_logical_cmd
+                      , respcode
+                      , DesfireGetErrorString(PM3_EAPDU_FAIL, &sw));
+        return;
+    }
+
+    PrintAndLogEx(WARNING, "Desfire command " _YELLOW_("0x%02X") " -> " _RED_("0x%02X") " %s"
+                  , cmd
+                  , respcode
+                  , DesfireGetErrorString(PM3_EAPDU_FAIL, &sw));
+}
+
 static int DESFIRESendApduEx(bool activate_field, sAPDU_t apdu, uint16_t le, uint8_t *result, uint32_t max_result_len, uint32_t *result_len, uint16_t *sw) {
     if (result_len) *result_len = 0;
     if (sw) *sw = 0;
@@ -476,6 +518,11 @@ static int DESFIRESendApduEx(bool activate_field, sAPDU_t apdu, uint16_t le, uin
             isw != DESFIRE_GET_ISO_STATUS(MFDES_S_SIGNATURE) &&
             isw != DESFIRE_GET_ISO_STATUS(MFDES_S_ADDITIONAL_FRAME) &&
             isw != DESFIRE_GET_ISO_STATUS(MFDES_S_NO_CHANGES)) {
+
+        if ((isw >> 8) == 0x91) {
+            DesfireReportUnrecoverable(apdu.INS, isw & 0xFF);
+        }
+
         if (GetAPDULogging()) {
             if (isw >> 8 == 0x61) {
                 PrintAndLogEx(ERR, "APDU chaining len: 0x%02x -->", isw & 0xff);
@@ -559,6 +606,8 @@ static int DESFIRESendRaw(bool activate_field, uint8_t *data, size_t datalen, ui
     }
 
     if (!rcode_ok) {
+
+        DesfireReportUnrecoverable(data[0], rcode);
 
         if (GetAPDULogging()) {
             PrintAndLogEx(ERR, "Command (%02x) ERROR: 0x%02x", data[0], rcode);
@@ -935,6 +984,8 @@ static int DesfireExchangeExSplit(bool activate_field, DesfireContext_t *ctx, ui
 
     size_t databuflen = 0;
 
+    s_desfire_logical_cmd = cmd;
+
     switch (ctx->cmdSet) {
         case DCCNative:
         case DCCNativeISO:
@@ -966,6 +1017,15 @@ static int DesfireExchangeExSplit(bool activate_field, DesfireContext_t *ctx, ui
             return PM3_EAPDU_FAIL;
             break;
     }
+
+    // the status the card gave, whichever path produced it. Every card error
+    // collapses to PM3_EAPDU_FAIL on the way out, so callers that want to name
+    // it have to read it from here
+    if (respcode != NULL) {
+        ctx->lastRespCode = *respcode;
+    }
+
+    s_desfire_logical_cmd = 0;
 
     free(databuf);
     return res;
@@ -1132,7 +1192,7 @@ int DesfireSelectAndAuthenticateEx(DesfireContext_t *dctx, DesfireSecureChannel 
     if (aid == 0x000000) {
         res = DesfireAnticollision(verbose);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire anticollision " _RED_("fail"));
+            PrintAndLogEx(FAILED, "Desfire anticollision " _RED_("failed"));
             return 200;
         }
 
@@ -1143,7 +1203,7 @@ int DesfireSelectAndAuthenticateEx(DesfireContext_t *dctx, DesfireSecureChannel 
     } else {
         res = DesfireSelectAIDHex(dctx, aid, false, 0);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("fail"));
+            PrintAndLogEx(FAILED, "Desfire %s select " _RED_("failed"), DesfireWayIDStr(ISW6bAID, aid));
             return 200;
         }
 
@@ -1160,15 +1220,16 @@ int DesfireSelectAndAuthenticateEx(DesfireContext_t *dctx, DesfireSecureChannel 
 
         res = DesfireAuthenticate(dctx, secureChannel, verbose);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire authenticate " _RED_("fail") ". Result: [%d] %s", res, DesfireAuthErrorToStr(res));
+            PrintAndLogEx(FAILED, "Desfire %s authentication " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(ISW6bAID, aid), res, DesfireAuthErrorToStr(res));
             return res;
         }
 
         if (DesfireIsAuthenticated(dctx)) {
             if (verbose) {
-                PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
+                PrintAndLogEx(INFO, "Desfire " _GREEN_("authenticated"));
             }
         } else {
+            PrintAndLogEx(FAILED, "Desfire %s authentication " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(ISW6bAID, aid), 201, DesfireAuthErrorToStr(201));
             return 201;
         }
     }
@@ -1195,7 +1256,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
 
         res = DesfireISOSelect(dctx, ISSDFName, dctx->selectedDFName, dctx->selectedDFNameLen, resp, &resplen);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire DF name select " _RED_("error"));
+            PrintAndLogEx(FAILED, "Desfire DF name select " _RED_("failed"));
             if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
                 return res;
             }
@@ -1216,7 +1277,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
 
                 res = DesfireSelectAIDHex(dctx, id, false, 0);
                 if (res != PM3_SUCCESS) {
-                    PrintAndLogEx(ERR, "Desfire select " _RED_("error"));
+                    PrintAndLogEx(FAILED, "Desfire %s select " _RED_("failed"), DesfireWayIDStr(ISW6bAID, id));
                     if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
                         return res;
                     }
@@ -1232,7 +1293,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
             } else {
                 res = DesfireSelectEx(dctx, false, way, id, NULL);
                 if (res != PM3_SUCCESS) {
-                    PrintAndLogEx(ERR, "Desfire %s select " _RED_("error"), DesfireSelectWayToStr(way));
+                    PrintAndLogEx(FAILED, "Desfire %s select " _RED_("failed"), DesfireWayIDStr(way, id));
                     if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
                         return res;
                     }
@@ -1247,7 +1308,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
             // Also select by ISO ID if specified
             res = DesfireSelectEx(dctx, false, way, id, NULL);
             if (res != PM3_SUCCESS) {
-                PrintAndLogEx(ERR, "Desfire %s select " _RED_("error"), DesfireSelectWayToStr(way));
+                PrintAndLogEx(FAILED, "Desfire %s select " _RED_("failed"), DesfireWayIDStr(way, id));
                 if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
                     return res;
                 }
@@ -1266,7 +1327,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
 
         res = DesfireSelectAIDHex(dctx, id, false, 0);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("error"));
+            PrintAndLogEx(FAILED, "Desfire %s select " _RED_("failed"), DesfireWayIDStr(ISW6bAID, id));
             if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
                 return res;
             }
@@ -1282,7 +1343,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
     } else {
         res = DesfireSelectEx(dctx, true, way, id, NULL);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire %s select " _RED_("error"), DesfireSelectWayToStr(way));
+            PrintAndLogEx(FAILED, "Desfire %s select " _RED_("failed"), DesfireWayIDStr(way, id));
             if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
                 return res;
             }
@@ -1296,7 +1357,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
     if (selectfile) {
         res = DesfireSelectEx(dctx, false, ISWIsoID, isofileid, NULL);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire iso file select " _RED_("error"));
+            PrintAndLogEx(FAILED, "Desfire %s iso file %04x select " _RED_("failed"), DesfireWayIDStr(way, id), isofileid);
             if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
                 return res;
             }
@@ -1311,15 +1372,16 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
     if (noauth == false) {
         res = DesfireAuthenticate(dctx, secureChannel, verbose);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: [%d] %s", res, DesfireAuthErrorToStr(res));
+            PrintAndLogEx(FAILED, "Desfire %s authentication " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(way, id), res, DesfireAuthErrorToStr(res));
             return res;
         }
 
         if (DesfireIsAuthenticated(dctx)) {
             if (verbose) {
-                PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
+                PrintAndLogEx(INFO, "Desfire " _GREEN_("authenticated"));
             }
         } else {
+            PrintAndLogEx(FAILED, "Desfire %s authentication " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(way, id), 201, DesfireAuthErrorToStr(201));
             return 201;
         }
     }
@@ -1990,10 +2052,60 @@ int DesfireFillAppList(DesfireContext_t *dctx, PICCInfo_t *PICCInfo, AppListS ap
     for (int i = 0; i < buflen; i += 3)
         appList[i / 3].appNum = DesfireAIDByteToUint(&buf[i]);
 
+    // GetDFNames must never be sent inside an authenticated session.  Measured on
+    // three DESFire EV1 8K cards: with a session open, the card answers the first
+    // 0xAF continuation frame of the chained response with 0xC1
+    // PICC_INTEGRITY_ERROR, "PICC will be disabled", and is dead from then on.
+    // Unauthenticated the identical frames are answered normally.
+    //
+    // The EV1 datasheet never says how secure messaging applies across 0xAF
+    // frames; EV3 had to spell it out later (ev3.pdf 7.3.2.2), and EV2/EV3
+    // dropped the self-disable status codes altogether.
+    //
+    // Key settings bit 1 governs whether the directory commands need
+    // authentication, and its "needs auth" branch does not name GetDFNames at
+    // all (M134034 p.39), so no configuration obliges us to send it in-session.
+    // A card that refuses the plain command costs us the DF names; sending it
+    // authenticated costs the card.
+    //
+    // It is the PICC's session that has to go, not ours -- clearing the context
+    // alone would leave the card still authenticated and change nothing.
+    // SelectApplication is what ends it on the card side: "each
+    // SelectApplication command invalidates the current authentication status"
+    // (M134034 9.4.5).  Afterwards put the caller's session back.
+    DesfireSecureChannel savedchann = dctx->secureChannel;
+    uint32_t savedaid = dctx->selectedAID;
+    bool reauth = DesfireIsAuthenticated(dctx);
+
+    if (reauth && dctx->selectedDFNameLen > 0) {
+        // selected by DF name rather than by AID, so there is no AID to go back
+        // to. Not worth guessing with someone's card -- leave the names empty.
+        PrintAndLogEx(DEBUG, "Selected by DF name, skipping the DF name list");
+        reauth = false;
+        goto dfnames_done;
+    }
+
+    if (reauth) {
+        int sres = DesfireSelectAIDHex(dctx, 0x000000, false, 0);
+        if (sres != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Could not drop the PICC session, skipping the DF names");
+            reauth = false;
+            goto dfnames_done;
+        }
+    }
+
     // result bytes: 3, 2, 1-16. total record size = 24
     res = DesfireGetDFList(dctx, buf, &buflen);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Desfire GetDFList command " _RED_("error") ". Result: %d", res);
+        // an error ends the authentication on the PICC as well, so our side is
+        // down either way.  Callers that keep using the card re-authenticate.
+        dctx->secureChannel = DACNone;
+        uint16_t dfsw = DESFIRE_GET_ISO_STATUS(dctx->lastRespCode);
+        PrintAndLogEx(DEBUG, "Desfire GetDFList command " _RED_("error") ". Result: %d, card said " _RED_("0x%02X") " %s"
+                      , res
+                      , dctx->lastRespCode
+                      , DesfireGetErrorString(PM3_EAPDU_FAIL, &dfsw));
+
     } else if (buflen > 0) {
         for (int i = 0; i < buflen; i++) {
             int indx = AppListSearchAID(DesfireAIDByteToUint(&buf[i * 24 + 1]), appList, PICCInfo->appCount);
@@ -2009,6 +2121,24 @@ int DesfireFillAppList(DesfireContext_t *dctx, PICCInfo_t *PICCInfo, AppListS ap
         }
     }
 
+dfnames_done:
+
+    if (reauth) {
+        // Back to the session the caller handed us, on whatever was selected
+        // then.  This is not always the PICC: the issuer info path selects and
+        // authenticates an application before it gets here, and re-authenticating
+        // AID 000000 with that application's key would simply fail.
+        int rres = DesfireSelectAIDHex(dctx, savedaid, false, 0);
+        if (rres == PM3_SUCCESS) {
+            rres = DesfireAuthenticate(dctx, savedchann, false);
+        }
+
+        if (rres != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Could not restore the session on %06X after reading the DF names, continuing without it", savedaid);
+            DesfireClearSession(dctx);
+        }
+    }
+
     // field on-off zone
     DesfireFillPICCInfo(dctx, PICCInfo, deepmode);
 
@@ -2021,7 +2151,7 @@ int DesfireFillAppList(DesfireContext_t *dctx, PICCInfo_t *PICCInfo, AppListS ap
             if (res != PM3_SUCCESS)
                 continue;
 
-            DesfireGetKeySettings(dctx, buf, &buflen);
+            res = DesfireGetKeySettings(dctx, buf, &buflen);
             if (res == PM3_SUCCESS && buflen >= 2) {
                 appList[i].keySettings = buf[0];
                 appList[i].numKeysRaw = buf[1];
@@ -2117,7 +2247,11 @@ void DesfirePrintAppList(DesfireContext_t *dctx, PICCInfo_t *PICCInfo, AppListS 
                                 PrintAndLogEx(SUCCESS, "File ISO ID     : " _YELLOW_("n/a"));
                             }
                         }
-                        DesfirePrintFileSettingsExtended(&appList[i].fileList[fnum].fileSettings);
+                        if (appList[i].fileList[fnum].fileSettingsRead) {
+                            DesfirePrintFileSettingsExtended(&appList[i].fileList[fnum].fileSettings);
+                        } else {
+                            PrintAndLogEx(WARNING, "File settings   : " _YELLOW_("could not be read"));
+                        }
                     }
                 }
                 PrintAndLogEx(NORMAL, "");
@@ -2147,6 +2281,24 @@ static int DesfireCommandEx(DesfireContext_t *dctx, uint8_t cmd, uint8_t *data, 
     }
 
     if (respcode != MFDES_S_OPERATION_OK) {
+        // Keep and print which status the card returned. Every card error
+        // collapses to PM3_EAPDU_FAIL on the way out, so without this the
+        // difference between 0x1C ILLEGAL_COMMAND_CODE, 0xCA COMMAND_ABORTED and
+        // 0xC1 PICC_INTEGRITY_ERROR -- the card saying it has just disabled
+        // itself -- never reaches the caller or the log.
+        dctx->lastRespCode = respcode;
+        uint16_t sw = DESFIRE_GET_ISO_STATUS(respcode);
+        PrintAndLogEx(DEBUG, "Desfire command " _YELLOW_("0x%02X") " returned " _RED_("0x%02X") " %s"
+                      , cmd
+                      , respcode
+                      , DesfireGetErrorString(PM3_EAPDU_FAIL, &sw));
+
+        // The PICC ends the authentication on a command error, so drop our side
+        // of the session too. Left set, every following command is still framed
+        // as MACed against a session the card has thrown away: the plain answer
+        // gets parsed as a CMAC, and the card sees a run of frames whose
+        // integrity it cannot verify. Callers that keep going re-authenticate.
+        DesfireClearSession(dctx);
         free(xresp);
         return PM3_EAPDU_FAIL;
     }
@@ -2221,6 +2373,7 @@ int DesfireReadSignature(DesfireContext_t *dctx, uint8_t sid, uint8_t *resp, siz
     }
 
     if (respcode != 0x90) {
+        DesfireClearSession(dctx);
         return PM3_EAPDU_FAIL;
     }
 
@@ -2274,6 +2427,7 @@ int DesfireCreateDelegatedApplication(DesfireContext_t *dctx, uint8_t *appdata, 
         return res;
     }
     if (respcode != MFDES_S_OPERATION_OK) {
+        DesfireClearSession(dctx);
         return PM3_EAPDU_FAIL;
     }
 
@@ -2351,19 +2505,32 @@ int DesfireFillFileList(DesfireContext_t *dctx, FileList_t FileList, size_t *fil
 
     for (int i = 0; i < buflen; i++) {
         FileList[i].fileNum = buf[i];
-        DesfireFileSettingsStruct(dctx, FileList[i].fileNum, &FileList[i].fileSettings);
+        FileList[i].fileSettingsRead =
+            (DesfireFileSettingsStruct(dctx, FileList[i].fileNum, &FileList[i].fileSettings) == PM3_SUCCESS);
     }
     *filescount = buflen;
 
     buflen = 0;
     res = DesfireGetFileISOIDList(dctx, buf, &buflen);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Desfire GetFileISOIDList command, res " _RED_("%d"), res);
+        // An application created without ISO file IDs answers 0x91F0 here, and the PICC
+        // ends the authentication on a command error. Drop our side of the session too,
+        // otherwise the next command is still framed as MACed and the plain response to
+        // it gets parsed as a CMAC. Callers that keep using the card re-authenticate.
+        dctx->secureChannel = DACNone;
+        PrintAndLogEx(DEBUG, "Desfire GetFileISOIDList command, res " _RED_("%d") ". Session dropped by the PICC", res);
     }
 
     size_t isoindx = 0;
     if (buflen > 0) {
         for (int i = 0; i < *filescount; i++) {
+            if (FileList[i].fileSettingsRead == false) {
+                // we do not know this file's type, so we cannot tell whether it
+                // takes an entry. Stop rather than hand out ISO ids that belong
+                // to other files.
+                PrintAndLogEx(DEBUG, "File 0x%02x settings unknown, ISO ID mapping stops here", FileList[i].fileNum);
+                break;
+            }
             if (FileList[i].fileSettings.fileType != 0x02 && FileList[i].fileSettings.fileType != 0x05) {
                 FileList[i].fileISONum = MemLeToUint2byte(&buf[isoindx * 2]);
                 isoindx++;
@@ -2373,7 +2540,7 @@ int DesfireFillFileList(DesfireContext_t *dctx, FileList_t FileList, size_t *fil
         if (isoindx * 2 != buflen)
             PrintAndLogEx(WARNING, "Wrong ISO ID list length. must be %zu but %zu", buflen, isoindx * 2);
     } else {
-        PrintAndLogEx(WARNING, "ISO ID list returned no data");
+        PrintAndLogEx(DEBUG, "ISO ID list returned no data");
     }
 
     *isopresent = (isoindx > 0);
@@ -2452,20 +2619,6 @@ int DesfireValueFileOperations(DesfireContext_t *dctx, uint8_t fid, uint8_t oper
     size_t resplen = 0;
 
     int res = DesfireCommand(dctx, operation, data, datalen, resp, &resplen, -1);
-
-    // Auto-detection fallback: if MAC mode fails with length error, retry with plain mode
-    if ((res == 0x7E || res == -20) && dctx->commMode == DCMMACed) {
-        PrintAndLogEx(INFO, "MAC mode failed with length error, retrying with plain mode");
-        DesfireCommunicationMode original_mode = dctx->commMode;
-        dctx->commMode = DCMPlain;
-
-        memset(resp, 0, sizeof(resp));
-        resplen = 0;
-        res = DesfireCommand(dctx, operation, data, datalen, resp, &resplen, -1);
-
-        // Restore original mode for future commands
-        dctx->commMode = original_mode;
-    }
 
     if (resplen == 4 && value) {
         *value = MemLeToUint4byte(resp);
@@ -3190,8 +3343,12 @@ int DesfireISOSelectEx(DesfireContext_t *dctx, bool fieldon, DesfireISOSelectCon
     if (res == PM3_EAPDU_FAIL && sw == 0 && xresplen == 0) {
         return PM3_ECARDEXCHANGE;
     }
-    if (res == PM3_SUCCESS && sw != ISO7816_OK)
+    if (res == PM3_SUCCESS && sw != ISO7816_OK) {
+        // the success path below clears the session because a select ends the
+        // authentication; a refused select ends it just the same
+        DesfireClearSession(dctx);
         return PM3_ESOFT;
+    }
 
     if (resp != NULL && resplen != NULL) {
         *resplen = xresplen;
@@ -3260,8 +3417,11 @@ int DesfireISOReadBinary(DesfireContext_t *dctx, bool use_file_id, uint8_t filei
 
     uint16_t sw = 0;
     int res = DesfireExchangeISO(false, dctx, (sAPDU_t) {0x00, ISO7816_READ_BINARY, p1, p2, 0, NULL}, (length == 0) ? APDU_INCLUDE_LE_00 : length, resp, resplen, &sw);
-    if (res == PM3_SUCCESS && sw != ISO7816_OK)
+    if (res == PM3_SUCCESS && sw != ISO7816_OK) {
+        // an error ends the authentication on the card, so drop our side too
+        DesfireClearSession(dctx);
         return PM3_ESOFT;
+    }
 
     return res;
 }
@@ -3279,8 +3439,11 @@ int DesfireISOUpdateBinary(DesfireContext_t *dctx, bool use_file_id, uint8_t fil
 
     uint16_t sw = 0;
     int res = DesfireExchangeISO(false, dctx, (sAPDU_t) {0x00, ISO7816_UPDATE_BINARY, p1, p2, datalen, data}, 0, resp, &resplen, &sw);
-    if (res == PM3_SUCCESS && sw != ISO7816_OK)
+    if (res == PM3_SUCCESS && sw != ISO7816_OK) {
+        // an error ends the authentication on the card, so drop our side too
+        DesfireClearSession(dctx);
         return PM3_ESOFT;
+    }
 
     return res;
 }
@@ -3290,8 +3453,11 @@ int DesfireISOReadRecords(DesfireContext_t *dctx, uint8_t recordnum, bool read_a
 
     uint16_t sw = 0;
     int res = DesfireExchangeISO(false, dctx, (sAPDU_t) {0x00, ISO7816_READ_RECORDS, recordnum, p2, 0, NULL}, (length == 0) ? APDU_INCLUDE_LE_00 : length, resp, resplen, &sw);
-    if (res == PM3_SUCCESS && sw != ISO7816_OK)
+    if (res == PM3_SUCCESS && sw != ISO7816_OK) {
+        // an error ends the authentication on the card, so drop our side too
+        DesfireClearSession(dctx);
         return PM3_ESOFT;
+    }
 
     return res;
 }
@@ -3304,8 +3470,11 @@ int DesfireISOAppendRecord(DesfireContext_t *dctx, uint8_t fileid, uint8_t *data
 
     uint16_t sw = 0;
     int res = DesfireExchangeISO(false, dctx, (sAPDU_t) {0x00, ISO7816_APPEND_RECORD, 0x00, p2, datalen, data}, 0, resp, &resplen, &sw);
-    if (res == PM3_SUCCESS && sw != ISO7816_OK)
+    if (res == PM3_SUCCESS && sw != ISO7816_OK) {
+        // an error ends the authentication on the card, so drop our side too
+        DesfireClearSession(dctx);
         return PM3_ESOFT;
+    }
 
     return res;
 }

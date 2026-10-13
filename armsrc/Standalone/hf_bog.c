@@ -76,6 +76,14 @@ static void RAMFUNC SniffAndStore(uint8_t param) {
 
     // The DMA buffer, used to stream samples from the FPGA
     uint8_t *dmaBuf = BigBuf_calloc(DMA_BUFFER_SIZE);
+
+    if (capturedPwds == NULL || receivedCmd == NULL || receivedCmdPar == NULL ||
+            receivedResp == NULL || receivedRespPar == NULL || dmaBuf == NULL) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("hf bog: failed to allocate buffers");
+        BigBuf_free();
+        return;
+    }
+
     uint8_t *data = dmaBuf;
 
     uint8_t previous_data = 0;

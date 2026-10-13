@@ -1,5 +1,6 @@
 #include "pm3_cmd.h"
 #include "ticks_apis.h"
+#include "wdt_apis.h"
 #include "usb_cdc_apis.h"
 #include "usb_read_ng.h"
 #include "usb_cdc_desc.h"
@@ -16,6 +17,13 @@
 static otg_core_type otg_core_struct;
 static usbd_core_type *udev = &(otg_core_struct.dev);
 static usbd_desc_t vp_desc;
+
+// Spin-wait iteration bound for usb_write()'s tx-complete wait, not a time
+// unit - g_tx_completed is set from the USB core's own IN-endpoint ISR, so
+// this can't use the shared ticks timer (see ticks_apis.h StartTicks()/
+// StopTicks() callers elsewhere in armsrc - it's routinely stopped by
+// LF/HF code at the exact moments a reply may need to go out).
+#define USB_TX_COMPLETE_TIMEOUT  2000000
 
 /**
   * @brief  get device descriptor
@@ -161,26 +169,23 @@ static usbd_desc_handler cdc_desc_handler = {
   */
 static void usb_clock48m_select(usb_clk48_s clk_s) {
     if (clk_s == USB_CLK_HICK) {
-        /* UNUSED!!!
-
+        // HICK-48 (also makes SCLK-from-HICK 48 MHz), trimmed by the ACC against
+        // the USB SOF to +/-0.25%. Independent of the PLL, so the PLL can be
+        // powered down at idle (armsrc/pm5_power.c) without touching USB.
         crm_usb_clock_source_select(CRM_USB_CLOCK_SOURCE_HICK);
 
-        // enable the acc calibration ready interrupt
         crm_periph_clock_enable(CRM_ACC_PERIPH_CLOCK, TRUE);
 
-        // update the c1\c2\c3 value
+        // compare window around the ideal 8000 HICK/6 counts per 1 ms SOF
         acc_write_c1(7980);
         acc_write_c2(8000);
         acc_write_c3(8020);
-        #if (USB_ID == 0)
+#if (USB_ID == 0)
         acc_sof_select(ACC_SOF_OTG1);
-        #else
+#else
         acc_sof_select(ACC_SOF_OTG2);
-        #endif
-        // open acc calibration
+#endif
         acc_calibration_mode_enable(ACC_CAL_HICKTRIM, TRUE);
-
-        */
     } else {
         switch (system_core_clock) {
             /* 48MHz */
@@ -373,7 +378,11 @@ void usb_enable(void) {
     usb_gpio_config();
 
     crm_periph_clock_enable(OTG_CLOCK, TRUE); // enable otgfs clock
+#ifdef AS_BOOTROM
     usb_clock48m_select(USB_CLK_HEXT); // select usb 48m clcok source
+#else
+    usb_clock48m_select(USB_CLK_HICK); // crystal-less, survives the idle PLL-off (pm5_power.c)
+#endif
     nvic_irq_enable(OTG_IRQ, 0, 0); // enable otgfs irq
     usbd_init(&otg_core_struct, USB_FULL_SPEED_CORE_ID, USB_ID, &cdc_class_handler, &cdc_desc_handler); // init usb
 
@@ -431,10 +440,23 @@ uint16_t usb_available_length(void) {
  * @return
  */
 bool usb_poll_validate_length(void) {
+#ifndef AS_BOOTROM
+    // A previous USB packet may already contain the next command.
+    if (usb_read_ng_has_buffered_data()) {
+        return true;
+    }
+#endif
     if (usb_poll() == false) {
         return false;
     }
-    return usb_available_length() > 0;
+    if (usb_available_length() > 0) {
+        return true;
+    }
+
+    // Consume a terminating zero-length packet and rearm the OUT endpoint.
+    // Otherwise no subsequent command can be received.
+    usb_vcp_get_rxdata(udev, NULL, 0);
+    return false;
 }
 
 /**
@@ -500,8 +522,12 @@ int usb_write(const uint8_t *data, const size_t len) {
 
     // wait for send complete
     cdc_struct_type *pcdc = (cdc_struct_type *)(udev->class_handler->pdata);
+    uint32_t tx_timeout = 0;
     while (pcdc->g_tx_completed != 1) {
         if (usb_check() == false) {
+            return PM3_EIO;
+        }
+        if (tx_timeout++ > USB_TX_COMPLETE_TIMEOUT) {
             return PM3_EIO;
         }
         // working for send to HOST...
@@ -516,8 +542,12 @@ int usb_write(const uint8_t *data, const size_t len) {
         if (usb_vcp_send_data(udev, (uint8_t *) data, 0) != SUCCESS) {
             return PM3_EIO;
         }
+        tx_timeout = 0;
         while (pcdc->g_tx_completed != 1) {
             if (usb_check() == false) {
+                return PM3_EIO;
+            }
+            if (tx_timeout++ > USB_TX_COMPLETE_TIMEOUT) {
                 return PM3_EIO;
             }
         }
@@ -552,10 +582,25 @@ int async_usb_write_start(void) {
     otg_device_type *dev = OTG_DEVICE(udev->usb_reg);
 
     // check usb state
-    if (!usb_check()) return PM3_EIO;
+    if (!usb_check()) {
+        return PM3_EIO;
+    }
 
     // wait for tx end if working...
-    while (!is_write_completed(ept_in)) if (!usb_check()) return PM3_EIO;
+    uint32_t spins = 0;
+    while (!is_write_completed(ept_in)) {
+
+        if (!usb_check()) {
+            return PM3_EIO;
+        }
+
+        WDT_HIT();
+
+        if (++spins > ASYNC_WRITE_SPIN_LIMIT) {
+            async_usb_write_discard();
+            break;
+        }
+    }
 
     // disable fifo empty irq.
     dev->diepempmsk &= ~(1 << (USBD_CDC_BULK_IN_EPT & 0x7F));
@@ -618,24 +663,56 @@ bool async_usb_write_requestWrite(void) {
 }
 
 /**
+ * Drop a transfer the host refuses to collect.
+ * Disables the IN endpoint and flushes its tx fifo, otherwise the endpoint
+ * stays busy forever and every later usb_write() bails out, which looks
+ * like a dead device.
+ */
+void async_usb_write_discard(void) {
+    usbd_ept_in_check_fifo(udev, USBD_CDC_BULK_IN_EPT & 0x7F);
+    async_write_buf_select = 0;
+    async_write_index = 0;
+}
+
+/**
  * Stop send and wait finish.
  * @return SUCCESS if send stop success, otherwise ERROR
  */
 int async_usb_write_stop(void) {
     otg_eptin_type *ept_in = USB_INEPT(udev->usb_reg, (USBD_CDC_BULK_IN_EPT & 0x7F));
+    uint32_t spins = 0;
 
     // Wait for the end of transfer
-    while (!is_write_completed(ept_in)) if (!usb_check()) return PM3_EIO;
+    while (!is_write_completed(ept_in)) {
 
-    // still have data on local buffer, we need send before write stop.
-    if (async_write_index != 0) {
-        if (!async_usb_write_requestWrite()) {
+        if (!usb_check()) {
             return PM3_EIO;
+        }
+
+        WDT_HIT();
+
+        if (++spins > ASYNC_WRITE_SPIN_LIMIT) {
+            async_usb_write_discard();
+            return PM3_ETIMEOUT;
         }
     }
 
+    // Send a final packet. When the local buffer still holds data this flushes it,
+    // if empty, send a zero length packet.
+    if (!async_usb_write_requestWrite()) {
+        return PM3_EIO;
+    }
+
     // Wait for the end of fifo flush transfer.
-    while (!is_write_completed(ept_in)) if (!usb_check()) return PM3_EIO;
+    spins = 0;
+    while (!is_write_completed(ept_in)) {
+        if (!usb_check()) return PM3_EIO;
+        WDT_HIT();
+        if (++spins > ASYNC_WRITE_SPIN_LIMIT) {
+            async_usb_write_discard();
+            return PM3_ETIMEOUT;
+        }
+    }
 
     return PM3_SUCCESS;
 }

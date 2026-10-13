@@ -735,7 +735,7 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
 
 // Annex C uses CRC-B and continuous frames without parity.
 static int hf14a_timeslot_exchange(const uint8_t *data, uint16_t len, bool request,
-                                  PacketResponseNG *resp, uint16_t *rlen) {
+                                   PacketResponseNG *resp, uint16_t *rlen) {
     uint8_t frame[11];
     if (len > sizeof(frame) - 2) {
         return PM3_EINVARG;
@@ -753,7 +753,7 @@ static int hf14a_timeslot_exchange(const uint8_t *data, uint16_t len, bool reque
     clearCommandBuffer();
     // Timeouts in 128/fc units; inter-frame delay in microseconds.
     SendIso14aReaderEx(flags, frame, len, len, request ? 7 : 0,
-                      request ? 79 : 547, request ? 0 : 1100);
+                       request ? 79 : 547, request ? 0 : 1100);
     if (WaitForIso14aReply(resp, 1500, rlen, NULL) == false || *rlen == 0) {
         return PM3_ETIMEOUT;
     }
@@ -2049,20 +2049,28 @@ static int CmdHF14AAntiFuzz(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a antifuzz",
-                  "Tries to fuzz the ISO14443a anticollision phase",
-                  "hf 14a antifuzz -4\n");
+                  "Tries to fuzz the ISO14443a anticollision phase.\n"
+                  "Default keeps the cascade bit set in every SAK, so the reader asks for\n"
+                  "one more cascade level until its UID buffer gives up.  With --coll only\n"
+                  "the first UID byte goes out clean and every bit after it collides, so the\n"
+                  "reader has to resolve 24 bits one round trip at a time; it is then given a\n"
+                  "BCC that checks out, and the SAK sends it round again one level deeper.",
+                  "hf 14a antifuzz -4\n"
+                  "hf 14a antifuzz --10 --coll\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("4",   NULL,  "4 byte uid"),
-        arg_lit0("7",   NULL,  "7 byte uid"),
-        arg_lit0(NULL,  "10",  "10 byte uid"),
+        arg_lit0("4",   NULL,   "4 byte uid"),
+        arg_lit0("7",   NULL,   "7 byte uid"),
+        arg_lit0(NULL,  "10",   "10 byte uid"),
+        arg_lit0(NULL,  "coll", "collision storm instead of cascade overflow"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     struct {
         uint8_t flag;
+        uint8_t mode;
     } PACKED param;
     param.flag = 0;
     FLAG_SET_UID_IN_DATA(param.flag, 4);
@@ -2072,10 +2080,32 @@ static int CmdHF14AAntiFuzz(const char *Cmd) {
     if (arg_get_lit(ctx, 3)) {
         FLAG_SET_UID_IN_DATA(param.flag, 10);
     }
+    param.mode = arg_get_lit(ctx, 4) ? ANTIFUZZ_MODE_COLLISION : ANTIFUZZ_MODE_CASCADE;
 
     CLIParserFree(ctx);
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443A_ANTIFUZZ, (uint8_t *)&param, sizeof(param));
+
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort");
+
+    PacketResponseNG resp;
+    bool keypress = kbd_enter_pressed();
+    while (keypress == false) {
+        keypress = kbd_enter_pressed();
+
+        if (WaitForResponseTimeout(CMD_HF_ISO14443A_ANTIFUZZ, &resp, 500)) {
+            break;
+        }
+    }
+
+    if (keypress) {
+        // inform device to break the fuzz loop since the client has exited
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+        WaitForResponse(CMD_HF_ISO14443A_ANTIFUZZ, &resp);
+    }
+
+    PrintAndLogEx(INFO, "Done!");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 14a list") "` to view the fuzzed anticollision");
     return PM3_SUCCESS;
 }
 
@@ -2964,9 +2994,11 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             return PM3_ETIMEOUT;
         }
 
-        memcpy(card.ats, resp.data.asBytes, rlen_2863);
-        card.ats_len = rlen_2863; // note: ats_len includes CRC Bytes
-        if (card.ats_len > 3) {
+        // Only a well formed ATS, TL plus the bytes TL counts plus CRC, means the
+        // PICC entered ISO14443-4.  A 4 bit NAK to RATS is not an ATS.
+        if ((rlen_2863 > 3) && (resp.data.asBytes[0] == rlen_2863 - 2)) {
+            memcpy(card.ats, resp.data.asBytes, rlen_2863);
+            card.ats_len = rlen_2863; // note: ats_len includes CRC Bytes
             select_status = 4;
         }
     }
@@ -3222,7 +3254,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 int16_t fsci = card.ats[1] & 0x0f;
 
                 PrintAndLogEx(INFO, "     ..." _YELLOW_("%02X") "............  T0    TA1 is%s present, TB1 is%s present, "
-                                    "TC1 is%s present, FSCI is %d (FSC = %d)",
+                              "TC1 is%s present, FSCI is %d (FSC = %d)",
                               card.ats[1],
                               (ta1 ? "" : _RED_(" NOT")),
                               (tb1 ? "" : _RED_(" NOT")),
@@ -3244,7 +3276,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 if (strlen(ds) != 0) ds[strlen(ds) - 2] = '\0';
                 if (strlen(dr) != 0) dr[strlen(dr) - 2] = '\0';
                 PrintAndLogEx(INFO, "     ......" _YELLOW_("%02X") ".........  TA1   different divisors are%s supported, "
-                                    "DR: [%s], DS: [%s]",
+                              "DR: [%s], DS: [%s]",
                               card.ats[pos],
                               ((card.ats[pos] & 0x80) ? _RED_(" NOT") : ""),
                               dr,

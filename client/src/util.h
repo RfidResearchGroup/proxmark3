@@ -107,6 +107,7 @@ int hex_to_bytes(const char *hexValue, uint8_t *bytesValue, size_t maxBytesValue
 int parse_uint32_hex_or_dec(const char *text, uint32_t *out);
 bool bytes_equal_not_null(const void *a, size_t a_len, const void *b, size_t b_len);
 int buffer_append_bytes_with_offset(uint8_t *buf, size_t buf_len, size_t *offset, const void *data, size_t data_len);
+size_t str_append(char *buf, size_t buf_len, const char *fmt, ...);
 void num_to_bytebits(uint64_t n, size_t len, uint8_t *dest);
 void num_to_bytebitsLSBF(uint64_t n, size_t len, uint8_t *dest);
 void bytes_to_bytebits(const void *src, const size_t srclen, void *dest);

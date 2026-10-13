@@ -1,3 +1,15 @@
+
+# This Makefile might have been called directly, not via the root Makefile, so:
+ifeq ($(PLTNAME),)
+    PLATFORM_FILE ?= ../Makefile.platform
+    -include $(PLATFORM_FILE)
+    -include ../.Makefile.options.cache
+    include ../common_arm/Makefile.hal
+    ifeq ($(PLATFORM_CHANGED), true)
+        $(error platform definitions have been changed, please "make clean" at the root of the project)
+    endif
+endif
+
 include ../common_arm/Makefile.common
 
 INSTALLFW = recovery.bin

@@ -62,6 +62,10 @@ void RAMFUNC SniffMifare(uint8_t param) {
 
     // allocate the DMA buffer, used to stream samples from the FPGA
     uint8_t *dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
+    if (dmaBuf == NULL) {
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Failed to allocate memory");
+        return;
+    }
     uint8_t *data = dmaBuf;
     uint8_t previous_data = 0;
     int dataLen, maxDataLen = 0;

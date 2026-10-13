@@ -1883,6 +1883,13 @@ int getSamplesFromBufEx(uint8_t *data, size_t sample_num, uint8_t bits_per_sampl
 
     size_t max_num = MIN(sample_num, MAX_GRAPH_TRACE_LEN);
 
+    if (sample_num > MAX_GRAPH_TRACE_LEN) {
+        PrintAndLogEx(WARNING, "graph buffer holds " _YELLOW_("%d") " samples, dropping the last " _YELLOW_("%zu")
+                      , MAX_GRAPH_TRACE_LEN
+                      , sample_num - MAX_GRAPH_TRACE_LEN
+                     );
+    }
+
     if (bits_per_sample < 8) {
 
         if (verbose) PrintAndLogEx(INFO, "Unpacking...");
@@ -2778,8 +2785,7 @@ static int try_detect_modulation(void) {
         clk = GetPskClock("", false);
         if (clk > 0) {
             // allow undo
-            buffer_savestate_t saveState = save_bufferS32(g_GraphBuffer, g_GraphTraceLen);
-            saveState.offset = g_GridOffset;
+            buffer_savestate_t saveState = save_graphbuffer();
             // skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
             CmdLtrim("-i 160");
             if ((PSKDemod(0, 0, 6, false) == PM3_SUCCESS)) {
@@ -2791,8 +2797,8 @@ static int try_detect_modulation(void) {
                 tests[hits].carrier = GetPskCarrier(false);
             }
             //undo trim samples
-            restore_bufferS32(saveState, g_GraphBuffer);
-            g_GridOffset = saveState.offset;
+            restore_graphbuffer(saveState);
+            free_buffer_savestate(saveState);
         }
     }
 

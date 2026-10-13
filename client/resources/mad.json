@@ -6225,6 +6225,13 @@
         "system_integrator": "NORALSY"
     },
     {
+        "application": "(access control and security) VIGIK",
+        "company": "PROAC",
+        "mad": "0x4982",
+        "service_provider": "PROAC",
+        "system_integrator": "PROAC"
+    },
+    {
         "application": "Card Administration, cardholder administration, access control & security, company services, miscellaneous applications",
         "company": "Ministry of Defense",
         "mad": "0x4A01",
@@ -10003,6 +10010,13 @@
         "mad": "0x6801",
         "service_provider": "Unisys",
         "system_integrator": "Unisys"
+    },
+    {
+        "application": "MICROHARD",
+        "company": "MICROHARD SRL",
+        "mad": "0x6938",
+        "service_provider": "MICROHARD SRL",
+        "system_integrator": "MICROHARD SRL"
     },
     {
         "application": "Access control, time attendance, bus ticket, hotel room card, VIP card f. club",

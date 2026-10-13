@@ -21,6 +21,7 @@
 #include "bwm_uart_at32.h"
 
 #include "pm3_cmd.h"
+#include "ticks_apis.h"      // GetTickCount / GetTickCountDelta / SpinDelay
 #include "at32f435_437.h"
 #include "at32f435_437_crm.h"
 #include "at32f435_437_gpio.h"
@@ -51,6 +52,16 @@ static volatile uint16_t s_rx_tail = 0;   // software read cursor; head comes fr
 
 static volatile bool     s_inited = false;
 static volatile uint32_t s_cur_baud = BWM_UART_BAUD;
+
+// The ESP light-sleeps BWM_ESP_AWAKE_MS after the last byte either way and loses
+// the bytes whose edges wake it, so the first write, and any after
+// BWM_ESP_WAKE_AFTER_MS of silence of ours (RX is not tracked, see bwm_uart_read),
+// leads with a disposable preamble; ESP fw without light sleep resyncs past it.
+#define BWM_ESP_AWAKE_MS        2000   // == UART_LINK_AWAKE_MS on the ESP
+#define BWM_ESP_WAKE_AFTER_MS   1000   // preamble when quiet longer than this (margin for drift)
+#define BWM_ESP_WAKE_SETTLE_MS  10     // light-sleep exit + UART driver back up
+static volatile uint32_t s_last_traffic_tick = 0;
+static volatile bool     s_tx_ever = false;      // nothing sent yet: the tick above means nothing
 
 // Bytes the DMA controller has written so far, wrapped into the ring.
 // The channel's DTCNT counts DOWN from buffer_size and reloads to buffer_size
@@ -138,7 +149,17 @@ uint32_t bwm_uart_get_baud(void) {
     return s_cur_baud;
 }
 
-int bwm_uart_write(const uint8_t *data, size_t len) {
+void bwm_uart_clock_update(void) {
+    if (s_inited == false) {
+        return;
+    }
+    // Recompute the baud divider for the new APB1 clock. usart_init() only
+    // rewrites the divider and the (unchanged) 8N1 frame bits; it does not
+    // touch the enable bits or the DMA request, so it is safe on a live port.
+    usart_init(BWM_UART, s_cur_baud, USART_DATA_8BITS, USART_STOP_1_BIT);
+}
+
+static void bwm_uart_write_raw(const uint8_t *data, size_t len) {
     for (size_t i = 0; i < len; i++) {
         while (usart_flag_get(BWM_UART, USART_TDBE_FLAG) == RESET) {
         }
@@ -146,7 +167,23 @@ int bwm_uart_write(const uint8_t *data, size_t len) {
     }
     while (usart_flag_get(BWM_UART, USART_TDC_FLAG) == RESET) {
     }
+}
+
+int bwm_uart_write(const uint8_t *data, size_t len) {
+    if ((s_tx_ever == false) || (GetTickCountDelta(s_last_traffic_tick) > BWM_ESP_WAKE_AFTER_MS)) {
+        // 0x55 = five rising edges per byte; the ESP wakes after three.
+        static const uint8_t wake[4] = { 0x55, 0x55, 0x55, 0x55 };
+        bwm_uart_write_raw(wake, sizeof(wake));
+        SpinDelay(BWM_ESP_WAKE_SETTLE_MS);
+    }
+    bwm_uart_write_raw(data, len);
+    s_last_traffic_tick = GetTickCount();
+    s_tx_ever = true;
     return PM3_SUCCESS;
+}
+
+void bwm_uart_wake_next(void) {
+    s_tx_ever = false;
 }
 
 uint16_t bwm_uart_rx_available(void) {
@@ -170,5 +207,7 @@ uint32_t bwm_uart_read(uint8_t *data, size_t len) {
         data[n++] = s_rx_ring[s_rx_tail];
         s_rx_tail = (uint16_t)((s_rx_tail + 1) & (BWM_RX_RING_SZ - 1));
     }
+    // RX does not refresh s_last_traffic_tick: the ring can be drained long after
+    // the ESP sent the bytes, so it says nothing about the module's awake window.
     return n;
 }

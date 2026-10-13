@@ -381,6 +381,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/mifare/gen4.c
         ${PM3_ROOT}/client/src/mifare/lrpcrypto.c
         ${PM3_ROOT}/client/src/mifare/desfirecrypto.c
+        ${PM3_ROOT}/client/src/mifare/desfireem.c
         ${PM3_ROOT}/client/src/mifare/desfiresecurechan.c
         ${PM3_ROOT}/client/src/mifare/desfirecore.c
         ${PM3_ROOT}/client/src/mifare/desfiretest.c
@@ -400,6 +401,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/aidsearch.c
         ${PM3_ROOT}/client/src/atrs.c
         ${PM3_ROOT}/client/src/cmdanalyse.c
+        ${PM3_ROOT}/client/src/cmdbwm.c
         ${PM3_ROOT}/client/src/cmdcrc.c
         ${PM3_ROOT}/client/src/cmddata.c
         ${PM3_ROOT}/client/src/cmdflashmem.c
@@ -498,6 +500,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/comms.c
         ${PM3_ROOT}/client/src/fileutils.c
         ${PM3_ROOT}/client/src/flash.c
+        ${PM3_ROOT}/client/src/frame_data2.c
         ${PM3_ROOT}/client/src/frame_progress.c
         ${PM3_ROOT}/client/src/graph.c
         ${PM3_ROOT}/client/src/hidsio.c
@@ -506,6 +509,13 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/jsonutils.c
         ${PM3_ROOT}/client/src/lua_bitlib.c
         ${PM3_ROOT}/client/src/parsers/parsehrt.c
+        ${PM3_ROOT}/client/src/parsers/parsehid.c
+        ${PM3_ROOT}/client/src/parsers/parsevigik.c
+        ${PM3_ROOT}/client/src/parsers/parsehexact.c
+        ${PM3_ROOT}/client/src/parsers/parsemykey.c
+        ${PM3_ROOT}/client/src/parsers/parseproac.c
+        ${PM3_ROOT}/client/src/parsers/parserkf.c
+        ${PM3_ROOT}/client/src/parsers/parsenortic.c
         ${PM3_ROOT}/client/src/parsers/hrtparser/hrtparser.c
         ${PM3_ROOT}/client/src/pla.c
         ${PM3_ROOT}/client/src/preferences.c
@@ -513,7 +523,6 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/pm3_binlib.c
         ${PM3_ROOT}/client/src/pm3_bitlib.c
         ${PM3_ROOT}/client/src/pm3_dsp.c
-
         ${PM3_ROOT}/client/src/pm3_fit.c
         ${PM3_ROOT}/client/src/pm3line.c
         ${PM3_ROOT}/client/src/pm3line_vocabulary.c
@@ -964,6 +973,27 @@ endif (NOT SKIPPYTHON EQUAL 1)
 target_link_directories(proxmark3 PRIVATE ${ADDITIONAL_LNKDIRS})
 
 install(TARGETS proxmark3 DESTINATION "bin")
+
+# Grant the capabilities the BLE connect-by-name scan needs (raw HCI: CAP_NET_RAW
+# + CAP_NET_ADMIN). Linux + Bluez only, and non-fatal: if setcap is absent, the
+# target filesystem lacks xattr support, or this is a staged/packaged install,
+# it just warns. Connect-by-address (-p ble:<MAC>) never needs this.
+if (BLUEZ_FOUND AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    find_program(SETCAP_EXECUTABLE setcap)
+    if (SETCAP_EXECUTABLE)
+        install(CODE "
+            set(_pm3_bin \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/bin/proxmark3\")
+            execute_process(
+                COMMAND \"${SETCAP_EXECUTABLE}\" cap_net_raw,cap_net_admin+eip \"\${_pm3_bin}\"
+                RESULT_VARIABLE _pm3_setcap_rc)
+            if (NOT _pm3_setcap_rc EQUAL 0)
+                message(WARNING \"setcap failed - BLE connect-by-name (-p ble:<name>) will need sudo; connect-by-MAC is unaffected\")
+            endif ()
+        ")
+    else ()
+        message(STATUS "setcap not found - BLE connect-by-name will need sudo at runtime")
+    endif ()
+endif ()
 install(DIRECTORY cmdscripts lualibs luascripts pyscripts resources dictionaries DESTINATION "share/proxmark3")
 
 add_custom_command(OUTPUT lualibs/pm3_cmd.lua

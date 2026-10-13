@@ -737,6 +737,7 @@ SRCS =  mifare/aiddesfire.c \
         aidsearch.c \
         atrs.c \
         cmdanalyse.c \
+        cmdbwm.c \
         cmdcrc.c \
         cmddata.c \
         cmdflashmem.c \
@@ -868,6 +869,7 @@ SRCS =  mifare/aiddesfire.c \
         emrtd/emrtd_pacetest.c \
         fileutils.c \
         flash.c \
+        frame_data2.c \
         frame_progress.c \
         generator.c \
         graph.c \
@@ -889,11 +891,12 @@ SRCS =  mifare/aiddesfire.c \
         lua_bitlib.c \
         mifare/lrpcrypto.c \
         mifare/desfirecrypto.c \
+        mifare/desfireem.c \
         mifare/desfirecore.c \
         mifare/desfiresecurechan.c \
         mifare/desfiretest.c \
         mifare/gallaghercore.c \
-		mifare/gallaghertest.c \
+        mifare/gallaghertest.c \
         mifare/mad.c \
         mifare/mad_test.c \
         mifare/mfkey.c \
@@ -904,6 +907,13 @@ SRCS =  mifare/aiddesfire.c \
         mifare/gen4.c \
         nfc/ndef.c \
         parsers/parsehrt.c \
+        parsers/parsehid.c \
+        parsers/parsevigik.c \
+        parsers/parsehexact.c \
+        parsers/parsemykey.c \
+        parsers/parseproac.c \
+        parsers/parserkf.c \
+        parsers/parsenortic.c \
         parsers/hrtparser/hrtparser.c \
         pm3.c \
         pm3_binlib.c \
@@ -1062,8 +1072,13 @@ endif
 install: all
 	$(info [@] Installing client to $(DESTDIR)$(PREFIX)...)
 ifneq (,$(INSTALLBIN))
-	    $(Q)$(INSTALLSUDO) $(MKDIR) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLBINRELPATH)
-	    $(Q)$(INSTALLSUDO) $(CP) $(INSTALLBIN) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLBINRELPATH)
+	$(Q)$(INSTALLSUDO) $(MKDIR) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLBINRELPATH)
+	$(Q)$(INSTALLSUDO) $(CP) $(INSTALLBIN) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLBINRELPATH)
+    ifeq ($(platform),Linux)
+        ifneq ($(SKIP_SETCAP), 1)
+	        $(Q)$(INSTALLSUDO) setcap 'cap_net_raw,cap_net_admin+eip' $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLBINRELPATH)$(PATHSEP)$(INSTALLBIN) || echo "[!] setcap failed - BLE connect-by-name (-p ble:<name>) will need sudo; connect-by-MAC is unaffected"
+        endif
+    endif
 endif
 ifneq (,$(INSTALLSHARE))
 	    $(Q)$(INSTALLSUDO) $(MKDIR) $(DESTDIR)$(PREFIX)$(PATHSEP)$(INSTALLSHARERELPATH)

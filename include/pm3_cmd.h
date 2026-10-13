@@ -276,8 +276,28 @@ typedef struct {
     // the client accepts a shorter struct from older firmware
     // PM5 can use this to inform which size they support oo.
     uint16_t max_cmd_data_size;     // device side PM3_CMD_DATA_SIZE
+
+    // Appended in version 11.
+    // How much emulator memory a card image may use, device side
+    // CARD_MEMORY_SIZE. The client sizes eload / esave from this instead of
+    // carrying its own copy of the constant, so a PM5 reporting a larger
+    // emulator memory needs no client change.
+    uint16_t em_size;
+    bool em_allocated : 1;          // is a card image resident right now
+
+    // Appended in version 12.
+    bool compiled_with_bwm : 1;     // PM5 built with PLATFORM_EXTRAS=BWM (battery/wireless module)
+
+    // Appended in version 13.
+    bool compiled_with_cep : 1;     // PM5 built with CEP (Flipper Zero, Type-C extended port; on by default, SKIP_CEP=1 to disable)
 } PACKED capabilities_t;
-#define CAPABILITIES_VERSION 9
+// Bump this whenever a command payload changes shape, so a mismatched client and
+// firmware refuse to talk instead of misparsing each other.
+//   10: CMD_HF_MIFARE_EML_MEMSET gained a flags byte
+//   11: capabilities_t gained em_size / em_allocated
+//   12: capabilities_t gained compiled_with_bwm
+//   13: capabilities_t gained compiled_with_cep
+#define CAPABILITIES_VERSION 13
 // what a pre-v9 device would have used, it could not tell us
 #define CAPABILITIES_LEGACY_CMD_DATA_SIZE 512
 extern capabilities_t g_pm3_capabilities;
@@ -366,7 +386,7 @@ typedef struct {
 
 typedef struct {
     // 64KB SRAM -> 524288 bits(max sample num) < 2^30
-    uint32_t samples :
+uint32_t samples :
     LF_SAMPLES_BITS;
     bool realtime : 1;
     bool verbose : 1;
@@ -541,6 +561,14 @@ typedef struct {
 // most 4 byte nonces that fit alongside the reply header in one frame
 #define MFC_MAX_NONCES ((PM3_CMD_DATA_SIZE - sizeof(mf_nonces_resp_t)) / 4)
 
+// ACQ_ENCRYPTED_NONCES does not store bare nonces. It stores pairs: two 4 byte
+// encrypted nonces followed by one byte holding both their encrypted parity
+// nibbles, high nibble first. num_nonces in the reply counts nonces, so the
+// payload is always (num_nonces / 2) * MFC_NONCE_PAIR_SIZE bytes and
+// num_nonces is always even.
+#define MFC_NONCE_PAIR_SIZE 9
+#define MFC_MAX_NONCE_PAIRS ((PM3_CMD_DATA_SIZE - sizeof(mf_nonces_resp_t)) / MFC_NONCE_PAIR_SIZE)
+
 // CMD_HF_MIFARE_CHKKEYS_FAST payload.
 // Replaces three bit-packed oldargs:
 //   arg0 = sectorcnt | firstchunk<<8 | lastchunk<<12 | singlesector_params<<16
@@ -586,6 +614,15 @@ typedef struct {
     uint8_t blockno;
     uint8_t data[];
 } PACKED mf_chinese_blk_t;
+
+// CMD_HF_MIFARE_CIDENT payload.
+// key/keytype are only read when is_mfc is set, but the device reads the whole
+// struct, so senders must always transmit all of it
+typedef struct {
+    uint8_t is_mfc;
+    uint8_t keytype;
+    uint8_t key[6];
+} PACKED mf_chinese_ident_t;
 
 // CMD_HF_MIFARE_GEN3UID payload
 typedef struct {
@@ -882,11 +919,112 @@ typedef struct {
 #define CMD_PM5_BWM_SET_CAP 0x0179
 // PM5, enable/disable BWM battery charging (AW32001E CEB). Used by `hw bwm charge`.
 #define CMD_PM5_BWM_CHARGE_EN 0x017A
-// PM5, toggle automatic power-off on USB unplug. Used by `hw bwm autooff`.
+// PM5, automatic power-off: USB unplug, and idle on battery. Used by `hw bwm autooff`.
+// req: [action:u8][enabled:u8][idle_s:u32 LE][unplug:u8, optional] (0xFF /
+// 0xFFFFFFFF = keep); a 1-byte req is the old enable flag. resp:
+// bwm_autooff_status_t. Persisted on the BWM.
 #define CMD_PM5_BWM_AUTOOFF 0x017B
+// Both actions are non-zero: an old firmware reads byte 0 as the enable flag,
+// so a new client can only ever leave it enabled.
+#define BWM_AUTOOFF_ACTION_GET  0x01
+#define BWM_AUTOOFF_ACTION_SET  0x02
+#define BWM_AUTOOFF_KEEP_U8     0xFF
+#define BWM_AUTOOFF_KEEP_U32    0xFFFFFFFFUL
+#define BWM_AUTOOFF_IDLE_MAX_S  (7UL * 24 * 3600)   // ms tick wraps at 49 days
+// Reply of CMD_PM5_BWM_AUTOOFF: the setting plus the live inputs of the idle decision.
+typedef struct {
+    uint8_t  enabled;
+    uint32_t idle_s;         // 0 = idle trigger off
+    uint32_t idle_now_s;     // since the last interaction
+    uint8_t  link;           // tracked wireless client (LINK_STATE broadcast)
+    uint8_t  ble_live;       // module's answer right now: 0 off 1 advertising 2 connected, 0xFF no answer
+    uint8_t  usb;            // VUSB now
+    uint8_t  usb_seen;       // VUSB seen since boot (arms the unplug trigger)
+    uint8_t  persisted;      // 1 = the setting was saved on the module, 0 = module absent or too old
+    uint8_t  unplug;         // 1 = power off when USB is pulled (default); 0 = an unplug only restarts the idle clock
+} PACKED bwm_autooff_status_t;
 #define CMD_PM5_BWM_WIFI    0x017C
 #define CMD_PM5_BWM_SET_VCHG 0x017D
 #define CMD_PM5_BWM_ESP_OTA  0x017E
+#define CMD_PM5_BWM_BLE_NAME 0x017F   // payload: [action:u8][name bytes if SET]
+#define BWM_BLE_NAME_ACTION_GET 0x00  // resp: current BLE device name string
+#define BWM_BLE_NAME_ACTION_SET 0x01  // req: name bytes follow the action byte; BWM reboots to apply
+#define BWM_BLE_NAME_MAX_LEN    15    // usable chars; ESP name buffer is 16 incl NUL
+// PM5, toggle the power-save idle (48 MHz + WFI when idle). Used by `hw powersave`.
+#define CMD_PM5_POWERSAVE    0x0180
+// PM5, BWM power-save switch on the ESP (DFS, light sleep, low-duty advertising;
+// persisted on the BWM). Used by `hw bwm powersave`.
+#define CMD_PM5_BWM_POWERSAVE 0x0181  // payload: [action:u8][state:u8 if SET]; resp: u8 applied state
+#define BWM_POWERSAVE_ACTION_GET 0x00
+#define BWM_POWERSAVE_ACTION_SET 0x01
+// PM5, BWM WiFi modem power-save type (persisted on the ESP). Used by `hw bwm wifipower`.
+#define CMD_PM5_BWM_WIFI_PS   0x0182  // payload: [action:u8][mode:u8 if SET]; resp: [mode:u8][wifi_state:u8, 0xFF = WiFi off]
+#define BWM_WIFI_PS_ACTION_GET 0x00
+#define BWM_WIFI_PS_ACTION_SET 0x01
+#define BWM_WIFI_PS_NONE       0      // modem never sleeps
+#define BWM_WIFI_PS_MIN        1      // sleeps between DTIM beacons (ESP-IDF default)
+#define BWM_WIFI_PS_MAX        2      // sleeps for the listen interval
+#define BWM_WIFI_STATE_OFF     0xFF   // wifi_state byte: WiFi stack down (BLE-only)
+// PM5, BWM BLE settings (`hw bwm ble`). req: [action:u8][args]; resp: bwm_ble_status_t
+// on success. Unknown fields (module firmware without the command) read 0xFF.
+#define CMD_PM5_BWM_BLE       0x0183
+#define BWM_BLE_ACTION_STATUS   0x00
+#define BWM_BLE_ACTION_ENABLE   0x01   // [on:u8], persisted on the module
+#define BWM_BLE_ACTION_PAIRING  0x02   // [on:u8], persisted; restarts the stack (drops a BLE client)
+#define BWM_BLE_ACTION_KEY      0x03   // [6 ASCII digits], persisted
+#define BWM_BLE_ACTION_FORGET   0x04   // [idx:u8, 0xFF = all bonded devices]
+#define BWM_BLE_ACTION_TXPOWER  0x05   // [type:u8 0 adv 1 conn][level:u8 esp_power_level_t 0..15, -24 dBm + 3/step, 15 = 20 dBm]
+#define BWM_BLE_BONDED_MAX      8
+typedef struct {
+    uint8_t enabled;       // persisted switch
+    uint8_t state;         // 0 off, 1 advertising, 2 client connected
+    uint8_t bonding;       // 1 = pairing with passkey required, SPP characteristic encrypted
+    char    passkey[6];    // ASCII digits, not NUL-terminated
+    uint8_t txp_adv;       // esp_power_level_t index
+    uint8_t txp_conn;
+    uint8_t addr[6];       // as the module reports it (big-endian display order)
+    char    name[16];      // NUL-padded
+    uint8_t bonded_count;
+    uint8_t bonded[BWM_BLE_BONDED_MAX][7];   // addr[6] + type, first bonded_count valid
+} PACKED bwm_ble_status_t;
+// Compact battery telemetry shared by `hw status`'s underlying data source and
+// any client (e.g. the Flipper Zero FAP) wanting raw numbers instead of free-text
+// Dbprintf lines. All fields zeroed if bwm_present is false or gauge_ok is false.
+typedef struct {
+    bool bwm_present;
+    bool gauge_ok;
+    uint16_t soc_pct;
+    uint16_t voltage_mv;
+    int16_t  current_ma;      // +charge / -discharge
+    uint16_t remaining_mah;
+    uint16_t full_charge_mah;
+    uint16_t design_cap_mah;
+    int16_t  temp_c10;        // tenths of a degree C
+    uint8_t  charger_fault;   // 0 = none, else AW32001E REG09 bits masked 0x3F
+    uint8_t  charge_status;   // 0=not charging,1=pre-charge,2=charging,3=done
+    uint8_t  health_pct;
+} PACKED bwm_battery_info_t;
+// PM5, read compact BWM battery telemetry (bwm_battery_info_t). Used by `hw status`'s
+// underlying data source and by clients (e.g. the Flipper Zero FAP) that want the raw
+// numbers instead of hw status's free-text Dbprintf lines.
+#define CMD_PM5_BWM_GET_BATTERY 0x0184
+// PM5, live hardware-status snapshot (CEP handshake state, battery telemetry,
+// firmware version) for the Flipper Zero FAP's status page and any future
+// client. Always answers PM3_SUCCESS with every field it can - fields for a
+// feature this build doesn't have (no WITH_CEP, no WITH_BWM_STATUS) read as
+// zero/false rather than the command failing. A client that also wants to
+// distinguish "zero" from "not built" should check CMD_CAPABILITIES'
+// compiled_with_cep/compiled_with_bwm first.
+// req: none. resp: cep_status_t.
+#define CMD_CEP_STATUS 0x0185
+typedef struct {
+    uint8_t  cep_active;        // cep_is_active(): handshake complete, SPI transport live
+    bwm_battery_info_t battery; // bwm_read_battery_info(); all-zero if WITH_BWM_STATUS not built
+    char     fw_version[24];    // g_version_information.gitversion, NUL-terminated, may truncate
+    // Appended in a future version once cep_is_attached() lands (PR #3687,
+    // not yet merged): a cep_attached byte distinguishing "physically
+    // present, handshake not yet complete" from "active".
+} PACKED cep_status_t;
 #define BWM_OTA_ACTION_BEGIN 0x00
 #define BWM_OTA_ACTION_WRITE 0x01
 #define BWM_OTA_ACTION_END   0x02
@@ -993,6 +1131,8 @@ typedef struct {
 
 #define CMD_HF_ISO15693_CSETUID 0x0316
 #define CMD_HF_ISO15693_CSETUID_V2 0x0333
+#define CMD_HF_ISO15693_CSETUID_V3 0x0334
+#define CMD_HF_ISO15693_CFINALIZE_V3 0x0335
 
 #define CMD_LF_SNIFF_RAW_ADC 0x0360
 
@@ -1154,10 +1294,12 @@ typedef struct {
 #define CMD_HF_DESFIRE_READER 0x072c
 #define CMD_HF_DESFIRE_INFO 0x072d
 #define CMD_HF_DESFIRE_COMMAND 0x072e
+#define CMD_HF_DESFIRE_SIMULATE 0x072f
 
 #define CMD_HF_MIFARE_NACK_DETECT 0x0730
 #define CMD_HF_MIFARE_STATIC_NONCE 0x0731
 #define CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE 0x0732
+#define CMD_HF_DESFIRE_SIM_TEST 0x0733
 
 // MFU OTP TearOff
 #define CMD_HF_MFU_OTP_TEAROFF 0x0740
@@ -1176,6 +1318,7 @@ typedef struct {
 // For ThinFilm Kovio
 #define CMD_HF_THINFILM_READ 0x0810
 #define CMD_HF_THINFILM_SIMULATE 0x0811
+#define CMD_HF_THINFILM_SNIFF 0x0812
 
 // For Atmel CryptoRF
 #define CMD_HF_CRYPTORF_SIM 0x0820
@@ -1249,6 +1392,15 @@ typedef struct {
     (flags & FLAG_MASK_UID) ==            \
     (len == 4 ? FLAG_4B_UID_IN_DATA : (len == 7 ? FLAG_7B_UID_IN_DATA : (len == 10 ? FLAG_10B_UID_IN_DATA : FLAG_UID_IN_EMUL))))
 #define IS_FLAG_UID_IN_EMUL(flags) ((flags & FLAG_MASK_UID) == FLAG_UID_IN_EMUL)
+
+// CMD_HF_MIFARE_EML_MEMSET flags
+// a whole-dump upload sets this on its first chunk so the device zeroes what was
+// there before writing. A partial update (esetblk) never sets it.
+#define MFEMUL_MEMSET_CLEAR 0x01
+
+// "hf 14a antifuzz" - which flavour of anticollision abuse to run
+#define ANTIFUZZ_MODE_CASCADE   0x00    // grow the reader's UID past cascade level 3
+#define ANTIFUZZ_MODE_COLLISION 0x01    // every answered bit is a collision
 
 // internal constants, use the function macros instead
 #define MIFARE_4K_MAX_BYTES 4096
@@ -1435,6 +1587,9 @@ typedef struct {
 
 /* Set if this device understands the chip type command */
 #define DEVICE_INFO_FLAG_UNDERSTANDS_CHIP_TYPE (1<<8)
+
+/* Bootrom de-frames BWM DATA_FORWARD as a byte stream (OLD cmds may span frames) */
+#define DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM (1 << 9)
 
 #define BL_VERSION_MAJOR(version) ((uint32_t)(version) >> 22)
 #define BL_VERSION_MINOR(version) (((uint32_t)(version) >> 12) & 0x3ff)

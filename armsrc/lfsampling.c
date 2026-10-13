@@ -152,6 +152,11 @@ void initSampleBufferEx(uint32_t *sample_size, bool use_malloc) {
         } else {
             *sample_size = MIN(*sample_size, BigBuf_max_traceLen());
             data.buffer = BigBuf_calloc(*sample_size);
+            if (data.buffer == NULL) {
+                Dbprintf("Failed to allocate memory, using whole BigBuf");
+                *sample_size = BigBuf_max_traceLen();
+                data.buffer = BigBuf_get_addr();
+            }
         }
 
     } else {
@@ -455,6 +460,11 @@ uint32_t SampleLF(bool verbose, uint32_t sample_size, bool ledcontrol, bool cota
  * @param reader_field - true for reading tags, false for sniffing
  * @return sampling result
 **/
+
+// how long the host is given to collect a streamed USB packet before the link is declared dead?
+// ticks run at 1.5MHz,  about 100ms
+#define LF_REALTIME_USB_TIMEOUT  (100 * 1500)
+
 int ReadLF_realtime(bool reader_field, bool cotag, uint32_t sample_limit) {
     // parameters from config and constants
     const uint8_t bits_per_sample = config.bits_per_sample;
@@ -543,10 +553,21 @@ int ReadLF_realtime(bool reader_field, bool cotag, uint32_t sample_limit) {
             last_byte = curr_byte;
 
             if (samples.total_saved == size_threshold) {
-                // Request USB transmission and change FIFO bank
+
+                // Request USB transmission and change FIFO bank.
+                // A busy IN endpoint only means the host has not collected the previous packet yet,
                 if (async_usb_write_requestWrite() == false) {
-                    return_value = PM3_EIO;
-                    goto out;
+
+                    uint32_t start_ticks = GetTicks();
+                    do {
+
+                        WDT_HIT();
+                        if (GetTicksDelta(start_ticks) > LF_REALTIME_USB_TIMEOUT) {
+                            return_value = PM3_EIO;
+                            goto out;
+                        }
+
+                    } while (async_usb_write_requestWrite() == false);
                 }
 
                 // Reset sample
@@ -568,9 +589,16 @@ int ReadLF_realtime(bool reader_field, bool cotag, uint32_t sample_limit) {
         }
     }
 
-    return_value = async_usb_write_stop();
-
 out:
+    // Always close the async write down, error paths included. Leaving it open
+    // strands the IN endpoint with a half filled FIFO, and every later usb_write() fails
+    {
+        int stop_value = async_usb_write_stop();
+        if (return_value == PM3_SUCCESS) {
+            return_value = stop_value;
+        }
+    }
+
     LED_D_OFF();
 
     // DoAcquisition() end
@@ -588,90 +616,6 @@ uint32_t SniffLF(bool verbose, uint32_t sample_size, bool ledcontrol) {
 }
 
 /**
-* acquisition of T55x7 LF signal. Similar to other LF, but adjusted with @marshmellows thresholds
-* the data is collected in BigBuf.
-**/
-void doT55x7Acquisition(size_t sample_size, bool ledcontrol) {
-
-#define T55xx_READ_UPPER_THRESHOLD 128+60  // 60 grph
-#define T55xx_READ_LOWER_THRESHOLD 128-60  // -60 grph
-#define T55xx_READ_TOL   5
-
-    uint8_t *dest = BigBuf_get_addr();
-    uint16_t bufsize = BigBuf_max_traceLen();
-
-    if (bufsize > sample_size)
-        bufsize = sample_size;
-
-    uint8_t lastSample = 0;
-    uint16_t i = 0, skipCnt = 0;
-    bool startFound = false;
-    bool highFound = false;
-    bool lowFound = false;
-
-    uint16_t checker = 0;
-
-    if (g_dbglevel >= DBG_DEBUG) {
-        Dbprintf("doT55x7Acquisition - after init");
-        print_stack_usage();
-    }
-
-    while (skipCnt < 1000 && (i < bufsize)) {
-
-        if (BUTTON_PRESS())
-            break;
-
-        if (checker == 4000) {
-            if (data_available())
-                break;
-            else
-                checker = 0;
-        } else {
-            ++checker;
-        }
-
-        WDT_HIT();
-
-        if (ledcontrol && FPGA_SSC_TX_Ready()) {
-            LED_D_ON();
-        }
-
-        if (FPGA_SSC_RX_Ready()) {
-            volatile uint8_t sample = (uint8_t)FPGA_SSC_RX_Value();
-            if (ledcontrol) LED_D_OFF();
-
-            // skip until the first high sample above threshold
-            if (!startFound && sample > T55xx_READ_UPPER_THRESHOLD) {
-                highFound = true;
-            } else if (!highFound) {
-                skipCnt++;
-                continue;
-            }
-            // skip until the first low sample below threshold
-            if (!startFound && sample < T55xx_READ_LOWER_THRESHOLD) {
-                lastSample = sample;
-                lowFound = true;
-            } else if (!lowFound) {
-                skipCnt++;
-                continue;
-            }
-
-            // skip until first high samples begin to change
-            if (startFound || sample > T55xx_READ_LOWER_THRESHOLD + T55xx_READ_TOL) {
-                // if just found start - recover last sample
-                if (startFound == false) {
-                    dest[i++] = lastSample;
-                    startFound = true;
-                }
-                // collect samples
-                if (i < bufsize) {
-                    dest[i++] = sample;
-                }
-            }
-        }
-    }
-}
-/**
 * acquisition of Cotag LF signal. Similart to other LF,  since the Cotag has such long datarate RF/384
 * and is Manchester?,  we directly gather the manchester data into bigbuff
 **/
@@ -685,13 +629,14 @@ void doT55x7Acquisition(size_t sample_size, bool ledcontrol) {
 #endif
 void doCotagAcquisition(void) {
 
-    uint16_t bufsize = BigBuf_max_traceLen();
+    uint32_t bufsize = BigBuf_max_traceLen();
     uint8_t *dest = BigBuf_calloc(bufsize);
 
     dest[0] = 0;
 
     bool firsthigh = false, firstlow = false;
-    uint16_t i = 0, noise_counter = 0;
+    uint32_t i = 0;
+    uint16_t noise_counter = 0;
 
     uint16_t checker = 0;
 

@@ -43,6 +43,11 @@
 #include "proxendian.h"
 #include "preferences.h"
 #include "mifare/gen4.h"
+#include "parsers/parsehid.h"
+#include "parsers/parsevigik.h"
+#include "parsers/parsehexact.h"
+#include "parsers/parseproac.h"
+#include "parsers/parserkf.h"
 #include "generator.h"              // keygens.
 #include "fpga.h"
 #include "mifare/mifarehost.h"
@@ -67,9 +72,21 @@ typedef struct {
 
 static int CmdHelp(const char *Cmd);
 
-static int HFMFAutoPwnSEN(sector_t *e_sector, size_t sector_cnt) {
+static int HFMFAutoPwnSEN(sector_t *e_sector, size_t sector_cnt, const char *suffix, bool no_save) {
     DropField();
-    return HFMFSENRecover(false, false, false, false, 0, 0x1, true, e_sector, sector_cnt);
+    return HFMFSENRecover(false, false, false, false, 0, 0x1, true, e_sector, sector_cnt, suffix, no_save);
+}
+
+// look for a known backdoor key which can read block 0
+static bool mf_find_backdoor_key(uint8_t *key) {
+    uint8_t blockdata[MFBLOCK_SIZE] = {0};
+    for (uint8_t i = 0; i < ARRAYLEN(fm11_backdoor_keys); i++) {
+        if (mf_read_block(0, MF_KEY_BD, fm11_backdoor_keys[i], blockdata) == PM3_SUCCESS) {
+            memcpy(key, fm11_backdoor_keys[i], MIFARE_KEY_SIZE);
+            return true;
+        }
+    }
+    return false;
 }
 
 // Static array for Saflok key levels
@@ -401,9 +418,11 @@ int mf_read_uid(uint8_t *uid, int *uidlen, int *nxptype) {
             return PM3_ETIMEOUT;
         }
 
-        memcpy(card.ats, resp.data.asBytes, rlen_398);
-        card.ats_len = rlen_398; // note: ats_len includes CRC Bytes
-        if (card.ats_len > 3) {
+        // Only a well formed ATS, TL plus the bytes TL counts plus CRC, means the
+        // PICC entered ISO14443-4.  A 4 bit NAK to RATS is not an ATS.
+        if ((rlen_398 > 3) && (resp.data.asBytes[0] == rlen_398 - 2)) {
+            memcpy(card.ats, resp.data.asBytes, rlen_398);
+            card.ats_len = rlen_398; // note: ats_len includes CRC Bytes
             select_status = 4;
         }
     }
@@ -857,6 +876,45 @@ static void mf_analyse_acl(uint16_t n, uint8_t *d) {
             }
         }
     }
+}
+
+// Everything `hf mf view` shows once the block data is in hand. Shared so a dump
+// read straight off the card gets the same treatment as one loaded from a file -
+// the key extraction and the VIGIK decode used to be reachable only via a file.
+static int mf_view_dump(uint8_t *dump, size_t bytes_read, uint16_t block_cnt, bool verbose, bool save_keys) {
+
+    mf_print_blocks(block_cnt, dump, verbose);
+
+    if (verbose) {
+        mf_print_keys(block_cnt, dump);
+        mf_analyse_acl(block_cnt, dump);
+    }
+
+    if (save_keys) {
+        mf_save_keys_from_arr(block_cnt, dump);
+    }
+
+    if (is_valid_hid_card(dump, bytes_read)) {
+        (void)hid_parser_parse(dump, bytes_read);
+    }
+
+    if (is_valid_vigik_card(dump, bytes_read)) {
+        (void)vigik_parser_parse(dump, bytes_read);
+    }
+
+    if (is_valid_hexact_card(dump, bytes_read)) {
+        (void)hexact_parser_parse(dump, bytes_read);
+    }
+
+    if (is_valid_proac_card(dump, bytes_read)) {
+        (void)proac_parser_parse(dump, bytes_read);
+    }
+
+    if (is_valid_rkf_card(dump, bytes_read)) {
+        (void)rkf_parser_parse(dump, bytes_read);
+    }
+
+    return PM3_SUCCESS;
 }
 
 /*
@@ -1655,6 +1713,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_lit0(NULL, "ns", "no save to file"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "sk", "Save extracted keys to binary file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1673,6 +1732,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
     bool m4 = arg_get_lit(ctx, 6);
     bool nosave = arg_get_lit(ctx, 7);
     bool verbose = arg_get_lit(ctx, 8);
+    bool save_keys = arg_get_lit(ctx, 9);
     CLIParserFree(ctx);
 
     uint64_t t1 = msclock();
@@ -1725,12 +1785,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "time: %" PRIu64 " seconds\n", (msclock() - t1) / 1000);
 
-    mf_print_blocks(block_cnt, mem, verbose);
-
-    if (verbose) {
-        mf_print_keys(block_cnt, mem);
-        mf_analyse_acl(block_cnt, mem);
-    }
+    mf_view_dump(mem, bytes, block_cnt, verbose, save_keys);
 
     // Skip saving card data to file
     if (nosave) {
@@ -2197,6 +2252,9 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
             case PM3_EFAILED:
                 PrintAndLogEx(FAILED, "Tag isn't vulnerable to Nested Attack (PRNG is not predictable).\n");
                 break;
+            case PM3_EWRONGANSWER:
+                PrintAndLogEx(FAILED, "Tag refused the nested authentication for block " _YELLOW_("%u") "\n", trgBlockNo);
+                break;
             case PM3_ESOFT:
                 PrintAndLogEx(FAILED, "No valid key found");
                 break;
@@ -2300,6 +2358,11 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
                         case PM3_EFAILED :
                             PrintAndLogEx(FAILED, "Tag isn't vulnerable to Nested Attack (PRNG is not predictable)\n");
                             break;
+                        case PM3_EWRONGANSWER:
+                            // tag refused this block,  nothing to gain by retrying it
+                            PrintAndLogEx(FAILED, "Tag refused the nested authentication for sector " _YELLOW_("%u") "\n", sectorNo);
+                            calibrate = false;
+                            continue;
                         case PM3_ESOFT:
                             //key not found
                             calibrate = false;
@@ -2911,6 +2974,20 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
     return isOK;
 }
 
+// how many keys are in hand right now.  a sector that can't be cracked should
+// not cost the ones that already came out
+static uint8_t mfc_found_key_count(const sector_t *e_sector, uint8_t sector_cnt) {
+    uint8_t n = 0;
+    for (uint8_t i = 0; i < sector_cnt; i++) {
+        for (uint8_t j = MF_KEY_A; j <= MF_KEY_B; j++) {
+            if (e_sector[i].foundKey[j]) {
+                n++;
+            }
+        }
+    }
+    return n;
+}
+
 static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -3141,9 +3218,11 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             return PM3_ETIMEOUT;
         }
 
-        memcpy(card.ats, resp.data.asBytes, rlen_3120);
-        card.ats_len = rlen_3120; // note: ats_len includes CRC Bytes
-        if (card.ats_len > 3) {
+        // Only a well formed ATS, TL plus the bytes TL counts plus CRC, means the
+        // PICC entered ISO14443-4.  A 4 bit NAK to RATS is not an ATS.
+        if ((rlen_3120 > 3) && (resp.data.asBytes[0] == rlen_3120 - 2)) {
+            memcpy(card.ats, resp.data.asBytes, rlen_3120);
+            card.ats_len = rlen_3120; // note: ats_len includes CRC Bytes
             select_status = 4;
         }
     }
@@ -3295,12 +3374,17 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         if (known_key) {
             has_staticnonce = detect_classic_static_encrypted_nonce(loopupblk, keytype, key);
         } else {
-            has_staticnonce = detect_classic_static_encrypted_nonce(0, MF_KEY_A, g_mifare_default_key);
+            uint8_t bdkey[MIFARE_KEY_SIZE] = {0};
+            if (mf_find_backdoor_key(bdkey)) {
+                has_staticnonce = detect_classic_static_encrypted_nonce(0, MF_KEY_BD, bdkey);
+            } else {
+                has_staticnonce = detect_classic_static_encrypted_nonce(0, MF_KEY_A, g_mifare_default_key);
+            }
         }
     }
 
     if (has_staticnonce == NONCE_STATIC_ENC) {
-        int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt);
+        int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt, outfnlen ? outfilename : NULL, no_save);
         free(e_sector);
         free(fptr);
         return sen_res;
@@ -3470,7 +3554,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     if (known_key && ((has_staticnonce == NONCE_NORMAL) || (has_staticnonce == NONCE_FAIL))) {
         has_staticnonce = detect_classic_static_encrypted_nonce(mfFirstBlockOfSector(sectorno), keytype, key);
         if (has_staticnonce == NONCE_STATIC_ENC) {
-            int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt);
+            int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt, outfnlen ? outfilename : NULL, no_save);
             free(keyBlock);
             free(e_sector);
             free(fptr);
@@ -3546,7 +3630,7 @@ noValidKeyFound:
     if (known_key && has_staticnonce == NONCE_NORMAL) {
         has_staticnonce = detect_classic_static_encrypted_nonce(mfFirstBlockOfSector(sectorno), keytype, key);
         if (has_staticnonce == NONCE_STATIC_ENC) {
-            int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt);
+            int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt, outfnlen ? outfilename : NULL, no_save);
             free(keyBlock);
             free(e_sector);
             free(fptr);
@@ -3559,8 +3643,14 @@ noValidKeyFound:
     num_to_bytes(0, MIFARE_KEY_SIZE, tmp_key);
     bool nested_failed = false;
 
+    // a refused sector prints a single line,  so it should not be wrapped in the
+    // blank line that separates the multi line output of a real attack
+    bool skipped_last = false;
+
     // Iterate over each sector and key(A/B)
     for (current_sector_i = 0; current_sector_i < sector_cnt; current_sector_i++) {
+
+        skipped_last = false;
 
         for (current_key_type_i = MF_KEY_A; current_key_type_i <= MF_KEY_B; current_key_type_i++) {
 
@@ -3662,7 +3752,10 @@ skipReadBKey:
                     if (prng_type && (nested_failed == false)) {
                         uint8_t retries = 0;
 
-                        PrintAndLogEx(NORMAL, "");
+                        if (skipped_last == false) {
+                            PrintAndLogEx(NORMAL, "");
+                        }
+
                         if (verbose) {
                             PrintAndLogEx(INFO, "--- " _CYAN_("Enter nested key recovery mode") " -----------------------------");
                             PrintAndLogEx(INFO, "Sector " _YELLOW_("%3d") " key type " _YELLOW_("%c"),
@@ -3675,9 +3768,29 @@ tryNested:
                         switch (isOK) {
                             case PM3_ETIMEOUT: {
                                 PrintAndLogEx(ERR, "\nError: No response from Proxmark3.");
+
+                                uint8_t havekeys = mfc_found_key_count(e_sector, sector_cnt);
+                                if (havekeys) {
+                                    PrintAndLogEx(INFO, "Keeping the " _YELLOW_("%u") " key%s recovered so far",
+                                                  havekeys,
+                                                  (havekeys == 1) ? "" : "s"
+                                                 );
+                                    goto all_found;
+                                }
+
                                 free(e_sector);
                                 free(fptr);
                                 return isOK;
+                            }
+                            case PM3_EWRONGANSWER: {
+                                // the tag NAKed the nested auth for this block.  it is a
+                                // refusal, so move on rather than grind the same sector
+                                PrintAndLogEx(FAILED, "Tag refused the nested authentication, skipping sector " _YELLOW_("%3d") " key type " _YELLOW_("%c"),
+                                              current_sector_i,
+                                              (current_key_type_i == MF_KEY_B) ? 'B' : 'A'
+                                             );
+                                skipped_last = true;
+                                continue;
                             }
                             case PM3_EOPABORTED: {
                                 PrintAndLogEx(WARNING, "\nButton pressed. Aborted.");
@@ -3707,7 +3820,7 @@ tryNested:
                             case PM3_ESTATIC_NONCE: {
                                 e_sector[current_sector_i].Key[current_key_type_i] = 0xffffffffffff;
                                 e_sector[current_sector_i].foundKey[current_key_type_i] = false;
-                                int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt);
+                                int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt, outfnlen ? outfilename : NULL, no_save);
                                 free(e_sector);
                                 free(fptr);
                                 return sen_res;
@@ -3765,7 +3878,7 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
                                 case PM3_ESTATIC_NONCE: {
                                     e_sector[current_sector_i].Key[current_key_type_i] = 0xffffffffffff;
                                     e_sector[current_sector_i].foundKey[current_key_type_i] = false;
-                                    int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt);
+                                    int sen_res = HFMFAutoPwnSEN(e_sector, sector_cnt, outfnlen ? outfilename : NULL, no_save);
                                     free(e_sector);
                                     free(fptr);
                                     return sen_res;
@@ -5126,7 +5239,7 @@ void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector
                       _YELLOW_("H") ":Hardnested / "
                       _YELLOW_("C") ":statiCnested / "
                       _YELLOW_("A") ":keyA "
-                            " )"
+                      " )"
                      );
         if (sectorscnt == 18) {
             PrintAndLogEx(INFO, "( " _MAGENTA_("*") " ) These sectors used for signature. Lays outside of user memory");
@@ -5448,7 +5561,11 @@ int CmdHF14AMfELoad(const char *Cmd) {
         uint16_t chunk_size = MIN(max_avail_blocks, bytes_read);
         uint16_t blocks_to_send = chunk_size / block_width;
 
-        if (mf_eml_set_mem_xt(data + offset, cnt, blocks_to_send, block_width) != PM3_SUCCESS) {
+        // the first chunk zeroes the emulator memory device side, so a dump smaller
+        // than the previous one can't leave a tail behind that reads back as card data
+        uint8_t flags = (cnt == 0) ? MFEMUL_MEMSET_CLEAR : 0;
+
+        if (mf_eml_set_mem_xt(data + offset, cnt, blocks_to_send, block_width, flags) != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Can't set emulator mem at block: %3d", cnt);
             free(data);
             return PM3_ESOFT;
@@ -6857,41 +6974,11 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         bool haveMAD2 = false;
         MAD1DecodeAndPrint(s0, swapmad, verbose, &haveMAD2);
 
-        int sector = DetectHID(s0, 0x484d);
-        if (sector > -1) {
-
-            // decode it
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(INFO, "------------------------- " _CYAN_("Wiegand") " ---------------------------");
-            PrintAndLogEx(INFO, _CYAN_("HID PACS detected"));
-
-            size_t pacs_off = mfFirstBlockOfSector(sector) * MFBLOCK_SIZE;
-            uint8_t pacs_sector[MFBLOCK_SIZE * 3] = {0};
-            if (pacs_off + sizeof(pacs_sector) <= bytes_read) {
-                memcpy(pacs_sector, dump + pacs_off, sizeof(pacs_sector));
-            }
-
-            if (pacs_sector[16] == 0x02) {
-
-                PrintAndLogEx(SUCCESS, "Raw...... " _GREEN_("%s"), sprint_hex_inrow(pacs_sector + 24, 8));
-
-                //todo:  remove preamble/sentinel
-                uint32_t top = 0, mid = 0, bot = 0;
-                char hexstr[16 + 1] = {0};
-                hex_to_buffer((uint8_t *)hexstr, pacs_sector + 24, 8, sizeof(hexstr) - 1, 0, 0, true);
-                hexstring_to_u96(&top, &mid, &bot, hexstr);
-
-                char binstr[64 + 1];
-                hextobinstring(binstr, hexstr);
-                char *pbin = binstr;
-                while (strlen(pbin) && *(++pbin) == '0');
-
-                PrintAndLogEx(SUCCESS, "Binary... " _GREEN_("%s"), pbin);
-
-                decode_wiegand(top, mid, bot, 0);
-            }
+        if (is_valid_hid_card(dump, bytes_read)) {
+            (void)hid_parser_parse(dump, bytes_read);
         }
 
+        int sector = -1;
         sector = DetectHID(s0, 0x4910);
         if (sector > -1) {
             // decode it
@@ -8466,13 +8553,15 @@ static int CmdHF14AMfView(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf view",
                   "Print a MIFARE Classic dump file (bin/eml/json)",
-                  "hf mf view -f hf-mf-01020304-dump.bin"
+                  "hf mf view -f hf-mf-01020304-dump.bin\n"
+                  "hf mf view --selftest"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
+        arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0(NULL, "sk", "Save extracted keys to binary file"),
+        arg_lit0(NULL, "selftest", "Run the dump parsers self tests and exit"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -8481,7 +8570,25 @@ static int CmdHF14AMfView(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     bool verbose = arg_get_lit(ctx, 2);
     bool save_keys = arg_get_lit(ctx, 3);
+    bool selftest = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
+
+    if (selftest) {
+        int res = vigik_selftest();
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+        res = hexact_selftest();
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+        return rkf_selftest();
+    }
+
+    if (fnlen == 0) {
+        PrintAndLogEx(ERR, "Specify a filename with `-f` or run `--selftest`");
+        return PM3_EINVARG;
+    }
 
     // read dump file
     uint8_t *dump = NULL;
@@ -8506,64 +8613,9 @@ static int CmdHF14AMfView(const char *Cmd) {
         PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, block_cnt, block_cnt);
     }
 
-    mf_print_blocks(block_cnt, dump, verbose);
-
-    if (verbose) {
-        mf_print_keys(block_cnt, dump);
-        mf_analyse_acl(block_cnt, dump);
-    }
-
-    if (save_keys) {
-        mf_save_keys_from_arr(block_cnt, dump);
-    }
-
-    const mad1_sector_t *vigik_s0 = (bytes_read >= sizeof(mad1_sector_t)) ? (const mad1_sector_t *)dump : NULL;
-
-    int sector = vigik_s0 ? DetectHID(vigik_s0, 0x4910) : -1;
-    if (sector > -1) {
-        // decode it
-        PrintAndLogEx(INFO, "");
-        PrintAndLogEx(INFO, _CYAN_("VIGIK PACS detected"));
-
-        mad_entry_list_t mad_list = {0};
-        res = MADDecode(vigik_s0, NULL, &mad_list, false, true);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "can't decode MAD");
-            return res;
-        }
-
-        typedef union UDATA {
-            uint8_t *bytes;
-            mfc_vigik_t *vigik;
-        } UDATA;
-        UDATA d;
-        d.bytes = calloc(bytes_read, sizeof(uint8_t));
-        if (d.bytes == NULL) {
-            PrintAndLogEx(WARNING, "Failed to allocate memory");
-            return PM3_EMALLOC;
-        }
-        uint16_t dlen = 0;
-
-        // vigik structure sector 0
-        memcpy(d.bytes + dlen, dump, MFBLOCK_SIZE * 3);
-        dlen += MFBLOCK_SIZE * 3;
-
-        for (size_t i = 0; i < mad_list.len; i++) {
-            if (0x4910 == mad_list.entries[i].aid || 0x4916 == mad_list.entries[i].aid) {
-                uint8_t sno = mad_list.entries[i].sector;
-                uint32_t offset = sno * MFBLOCK_SIZE * 4;
-                memcpy(d.bytes + dlen, dump + offset, MFBLOCK_SIZE * 3);
-                dlen += MFBLOCK_SIZE * 3;
-            }
-        }
-
-//          convert_mfc_2_arr(pdump, bytes_read, d, &dlen);
-        vigik_annotate(d.vigik);
-        free(d.bytes);
-    }
-
+    res = mf_view_dump(dump, bytes_read, block_cnt, verbose, save_keys);
     free(dump);
-    return PM3_SUCCESS;
+    return res;
 }
 
 static int parse_gtu_cfg(uint8_t *d, size_t n) {
@@ -9423,7 +9475,7 @@ static int CmdHF14AGen4Save(const char *Cmd) {
             uint16_t chunk_size = MIN(max_avail_blocks, bytes_left);
             uint16_t blocks_to_send = chunk_size / MFBLOCK_SIZE;
 
-            if (mf_eml_set_mem_xt(dump + offset, cnt, blocks_to_send, MFBLOCK_SIZE) != PM3_SUCCESS) {
+            if (mf_eml_set_mem_xt(dump + offset, cnt, blocks_to_send, MFBLOCK_SIZE, 0) != PM3_SUCCESS) {
                 PrintAndLogEx(FAILED, "Can't set emulator mem at block: %3d", cnt);
                 free(dump);
                 return PM3_ESOFT;
@@ -11329,7 +11381,7 @@ static int CmdHFMFHidEncode(const char *Cmd) {
     wiegand_card_t card;
     memset(&card, 0, sizeof(wiegand_card_t));
     card.FacilityCode = arg_get_u32_def(ctx, 4, 0);
-    card.CardNumber = arg_get_u32_def(ctx, 5, 0);
+    card.CardNumber = arg_get_u64_def(ctx, 5, 0);
 
     char format[16] = {0};
     int format_len = 0;
@@ -11513,9 +11565,11 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             return PM3_ETIMEOUT;
         }
 
-        memcpy(card.ats, resp.data.asBytes, rlen_11266);
-        card.ats_len = rlen_11266; // note: ats_len includes CRC Bytes
-        if (card.ats_len > 3) {
+        // Only a well formed ATS, TL plus the bytes TL counts plus CRC, means the
+        // PICC entered ISO14443-4.  A 4 bit NAK to RATS is not an ATS.
+        if ((rlen_11266 > 3) && (resp.data.asBytes[0] == rlen_11266 - 2)) {
+            memcpy(card.ats, resp.data.asBytes, rlen_11266);
+            card.ats_len = rlen_11266; // note: ats_len includes CRC Bytes
             select_status = 4;
         }
     }

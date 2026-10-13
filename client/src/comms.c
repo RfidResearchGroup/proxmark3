@@ -78,7 +78,7 @@ static uint64_t timeout_start_time;
 
 static uint64_t last_packet_time;
 
-static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd, uint32_t req_cmd);
+static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, size_t ms_timeout, bool show_warning, bool show_progress, uint32_t rec_cmd, uint32_t req_cmd);
 
 // Wait until the comm thread has actually put a queued command on the wire.
 // Callers used to sleep a fixed guess instead, which was reasonable when a
@@ -100,7 +100,7 @@ bool WaitForTxIdle(uint32_t ms_timeout) {
         if (msclock() - start >= ms_timeout) {
             return false;
         }
-        
+
         xyield(); // just to avoid CPU busy loop
     }
 }
@@ -952,6 +952,7 @@ int TestProxmark(pm3_device_t *dev) {
     g_conn.send_via_fpc_usart = g_pm3_capabilities.via_fpc;
     g_conn.uart_speed = g_pm3_capabilities.baudrate;
     g_conn.max_cmd_data_size = MIN(g_pm3_capabilities.max_cmd_data_size, (uint16_t)PM3_CMD_DATA_SIZE);
+    g_conn.em_size = g_pm3_capabilities.em_size;
 
     bool is_tcp_conn = (g_conn.send_via_ip == PM3_TCPv4 || g_conn.send_via_ip == PM3_TCPv6);
     bool is_bt_conn = (memcmp(g_conn.serial_port_name, "bt:", 3) == 0);
@@ -965,6 +966,9 @@ int TestProxmark(pm3_device_t *dev) {
                  );
     PrintAndLogEx(SUCCESS, "Max frame size: " _GREEN_("%u") " bytes",
                   g_conn.max_cmd_data_size);
+    PrintAndLogEx(SUCCESS, "Emulator memory: " _GREEN_("%u") " bytes%s",
+                  g_conn.em_size,
+                  (g_pm3_capabilities.em_allocated) ? " ( in use )" : "");
     if (g_conn.send_via_fpc_usart) {
         PrintAndLogEx(SUCCESS, "PM3 UART serial baudrate: " _GREEN_("%u") "\n", g_conn.uart_speed);
     } else {
@@ -1047,8 +1051,9 @@ static size_t communication_delay(void) {
  * @return the number of received bytes
  */
 size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, bool show_process, bool keep_raw_mode) {
-    uint8_t print_counter = 0;
     size_t last_pos = 0;
+    uint64_t last_update = 0;
+    bool printed_progress = false;
 
     // Add delay depending on the communication channel & speed
     if (ms_timeout != (size_t) - 1) {
@@ -1084,34 +1089,48 @@ size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, boo
                 break;
             }
         } else {
-            // Print process when (print_counter % 64) == 0
-            if (show_process && (print_counter & 0x3F) == 0) {
-                PrintAndLogEx(INFO, "[%zu/%zu]", pos, len);
+            // one line that updates in place, not a line per update
+            if (show_process && ((msclock() - last_update > 100) || (pos == len))) {
+                PrintAndLogEx(INPLACE, "Received " _YELLOW_("%zu") " / " _YELLOW_("%zu") " bytes  (" _YELLOW_("%zu") "%%)"
+                              , pos
+                              , len
+                              , (pos * 100) / len
+                             );
+                last_update = msclock();
+                printed_progress = true;
             }
         }
 
-        print_counter++;
         last_pos = pos;
         msleep(10);
     }
-    if (pos == len && (ms_timeout != (size_t) - 1) && (keep_raw_mode == false)) {
-        // If ms_timeout != -1, when the desired data is received, tell the arm side
-        // to stop the current process, and wait for some time to make sure the process
-        // has been stopped.
-        // If ms_timeout == -1, the user might not want to break the existing process
-        // on the arm side.
+
+    if ((ms_timeout != (size_t) - 1) && (keep_raw_mode == false)) {
         SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
         msleep(ms_timeout);
     }
+
     // Caller is about to chain another raw read: keep raw-receive mode
     // on so the comm thread never drops back into normal framed-packet
-    // parsing in between the two reads. Doing so - even briefly - lets it
+    // parsing in between the two reads. Doing so lets it
     // misparse in-flight sample bytes as a PacketResponseNG preamble and
     // corrupts every USB exchange that follows.
     if (keep_raw_mode == false) {
         SetCommunicationReceiveMode(false);
     }
+
     pos = __atomic_load_n(&comm_raw_pos, __ATOMIC_SEQ_CST);
+
+    if (printed_progress) {
+        // the loop only samples the counter every 10ms
+        // Repeat it with the final count before ending the line.
+        PrintAndLogEx(INPLACE, "Received " _YELLOW_("%zu") " / " _YELLOW_("%zu") " bytes  (" _YELLOW_("%zu") "%%)"
+                      , pos
+                      , len
+                      , (pos * 100) / len
+                     );
+        PrintAndLogEx(NORMAL, "");
+    }
     return pos;
 }
 
@@ -1228,12 +1247,12 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
         case BIG_BUF: {
             download_req_t req = { .start_index = start_index, .bytes = bytes };
             SendCommandNG(CMD_DOWNLOAD_BIGBUF, (uint8_t *)&req, sizeof(req));
-            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_DOWNLOADED_BIGBUF, CMD_DOWNLOAD_BIGBUF);
+            return dl_it(dest, bytes, response, ms_timeout, show_warning, false, CMD_DOWNLOADED_BIGBUF, CMD_DOWNLOAD_BIGBUF);
         }
         case BIG_BUF_EML: {
             download_req_t req = { .start_index = start_index, .bytes = bytes };
             SendCommandNG(CMD_DOWNLOAD_EML_BIGBUF, (uint8_t *)&req, sizeof(req));
-            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_DOWNLOADED_EML_BIGBUF, CMD_DOWNLOAD_EML_BIGBUF);
+            return dl_it(dest, bytes, response, ms_timeout, show_warning, false, CMD_DOWNLOADED_EML_BIGBUF, CMD_DOWNLOAD_EML_BIGBUF);
         }
         case SPIFFS: {
             uint8_t sbuf[PM3_CMD_DATA_SIZE] = {0};
@@ -1244,36 +1263,43 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
                 memcpy(sreq->data, data, datalen);
             }
             SendCommandNG(CMD_SPIFFS_DOWNLOAD, sbuf, sizeof(download_req_t) + datalen);
-            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_SPIFFS_DOWNLOADED, CMD_SPIFFS_DOWNLOAD);
+            return dl_it(dest, bytes, response, ms_timeout, show_warning, true, CMD_SPIFFS_DOWNLOADED, CMD_SPIFFS_DOWNLOAD);
         }
         case FLASH_MEM: {
             download_req_t req = { .start_index = start_index, .bytes = bytes };
             SendCommandNG(CMD_FLASHMEM_DOWNLOAD, (uint8_t *)&req, sizeof(req));
-            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_FLASHMEM_DOWNLOADED, CMD_FLASHMEM_DOWNLOAD);
+            return dl_it(dest, bytes, response, ms_timeout, show_warning, true, CMD_FLASHMEM_DOWNLOADED, CMD_FLASHMEM_DOWNLOAD);
         }
         case SIM_MEM: {
             //SendCommandNG(CMD_DOWNLOAD_SIM_MEM, (uint8_t *)&req, sizeof(req));
-            //return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_DOWNLOADED_SIMMEM);
+            //return dl_it(dest, bytes, response, ms_timeout, show_warning, false, CMD_DOWNLOADED_SIMMEM);
             return false;
         }
         case FPGA_MEM: {
             SendCommandNG(CMD_FPGAMEM_DOWNLOAD, NULL, 0);
-            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_FPGAMEM_DOWNLOADED, CMD_FPGAMEM_DOWNLOAD);
+            return dl_it(dest, bytes, response, ms_timeout, show_warning, false, CMD_FPGAMEM_DOWNLOADED, CMD_FPGAMEM_DOWNLOAD);
         }
         case MCU_FLASH:
         case MCU_MEM: {
             uint32_t flags = (memtype == MCU_MEM) ? READ_MEM_DOWNLOAD_FLAG_RAW : 0;
             SendCommandBL(CMD_READ_MEM_DOWNLOAD, start_index, bytes, flags, NULL, 0);
-            return dl_it(dest, bytes, response, ms_timeout, show_warning, CMD_READ_MEM_DOWNLOADED, CMD_READ_MEM_DOWNLOAD);
+            return dl_it(dest, bytes, response, ms_timeout, show_warning, true, CMD_READ_MEM_DOWNLOADED, CMD_READ_MEM_DOWNLOAD);
         }
     }
     return false;
 }
 
-static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd, uint32_t req_cmd) {
+static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, size_t ms_timeout, bool show_warning, bool show_progress, uint32_t rec_cmd, uint32_t req_cmd) {
 
     uint32_t bytes_completed = 0;
     __atomic_store_n(&timeout_start_time,  msclock(), __ATOMIC_SEQ_CST);
+
+    // Inline feedback, only for the flash backed transfers the caller asked it
+    // for.  BigBuf reads are a memcpy over USB and every command does them, so
+    // a progress line there is just noise.  Small transfers finish before a
+    // line could be read.
+    show_progress = (show_progress && (bytes > 4096));
+    uint64_t last_update = 0;
 
     // Add delay depending on the communication channel & speed
     if (ms_timeout != (size_t) - 1)
@@ -1283,17 +1309,22 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, siz
 
         if (getReply(response)) {
 
-            // the terminator is answered on the request opcode itself
+            // the terminator is answered on the request opcode itself, and carries
+            // the status of the transfer, ie: PM3_EMALLOC / PM3_EFILE
             if (response->cmd == req_cmd) {
-                if (response->status == PM3_EMALLOC) {
-                    return false;
+                if (show_progress) {
+                    PrintAndLogEx(NORMAL, "");
                 }
-                return true;
+                return (response->status == PM3_SUCCESS);
             }
             // CMD_READ_MEM_DOWNLOAD is served by the bootrom, which only speaks
             // OLD frames and still finishes with an anonymous ACK
-            if (response->cmd == CMD_ACK)
+            if (response->cmd == CMD_ACK) {
+                if (show_progress) {
+                    PrintAndLogEx(NORMAL, "");
+                }
                 return true;
+            }
 
             if (response->cmd == rec_cmd) {
 
@@ -1334,6 +1365,15 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, siz
 
                 memcpy(dest + offset, src, copy_bytes);
                 bytes_completed += copy_bytes;
+
+                if (show_progress && ((msclock() - last_update > 100) || (bytes_completed == bytes))) {
+                    PrintAndLogEx(INPLACE, "Received " _YELLOW_("%u") " / " _YELLOW_("%u") " bytes  (" _YELLOW_("%u") "%%)"
+                                  , bytes_completed
+                                  , bytes
+                                  , (bytes_completed * 100) / bytes
+                                 );
+                    last_update = msclock();
+                }
             } else if (response->cmd == CMD_WTX && response->length == sizeof(uint16_t)) {
                 uint16_t wtx = response->data.asDwords[0] & 0xFFFF;
                 PrintAndLogEx(DEBUG, "Got Waiting Time eXtension request %i ms", wtx);
@@ -1348,12 +1388,17 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, siz
             break;
         }
 
+
         if (msclock() - tmp_clk > 3000 && show_warning) {
             // 3 seconds elapsed (but this doesn't mean the timeout was exceeded)
             PrintAndLogEx(INFO, "Waiting for a response from the Proxmark3...");
             PrintAndLogEx(INFO, "You can cancel this operation by pressing the pm3 button");
             show_warning = false;
         }
+    }
+
+    if (show_progress) {
+        PrintAndLogEx(NORMAL, "");
     }
     return false;
 }

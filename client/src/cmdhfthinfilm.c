@@ -35,10 +35,9 @@ static int CmdHelp(const char *Cmd);
 //    https://github.com/nfc-tools/libnfc/blob/master/utils/nfc-barcode.c
 static int print_barcode(uint8_t *barcode, const size_t barcode_len, bool verbose) {
 
-    PrintAndLogEx(NORMAL, "");
     // remove start bit
     uint8_t mb = barcode[0] & ~0x80;
-    PrintAndLogEx(SUCCESS, "    Manufacturer : "_YELLOW_("%s") "[0x%02X]",  getTagInfo(mb), mb);
+    PrintAndLogEx(SUCCESS, "    Manufacturer : "_YELLOW_("%s")" ( %02X )", getTagInfo(mb), mb);
 
     if (verbose) {
         PrintAndLogEx(SUCCESS, "     Data format : "_YELLOW_("%02X"), barcode[1]);
@@ -52,9 +51,10 @@ static int print_barcode(uint8_t *barcode, const size_t barcode_len, bool verbos
             PrintAndLogEx(SUCCESS, "        Checksum : "_YELLOW_("too few data for checksum")" - " _RED_("fail"));
         }
         PrintAndLogEx(SUCCESS, " Data len (bits) : "_YELLOW_("%zu")" ( %s )", barcode_len * 8, (barcode_len == 16 || barcode_len == 32) ? _GREEN_("ok") : _YELLOW_("warning"));
-        PrintAndLogEx(SUCCESS, "        Raw data : "_YELLOW_("%s"), sprint_hex(barcode, barcode_len));
-        if (barcode_len < 4) // too few to go to next decoding stages
+        PrintAndLogEx(SUCCESS, "        Raw data : "_YELLOW_("%s"), sprint_hex_inrow(barcode, barcode_len));
+        if (barcode_len < 4) { // too few to go to next decoding stages
             return PM3_ESOFT;
+        }
     }
 
     char s[45];
@@ -205,6 +205,59 @@ int CmdHfThinFilmSim(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHfThinFilmSniff(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf thinfilm sniff",
+                  "Sniff the frames a Thinfilm / NFC Barcode tag beams at a reader.\n"
+                  "The tag talks first and the reader sends nothing, so only the tag side\n"
+                  "is decoded. Use `hf thinfilm list` to view collected data.",
+                  "hf thinfilm sniff\n"
+                  "hf thinfilm sniff -i"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("i", "interactive", "Console will not be returned until sniff finishes or is aborted"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool interactive = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_THINFILM_SNIFF, NULL, 0);
+
+    if (interactive == false) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort sniffing");
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort sniffing");
+
+    PacketResponseNG resp;
+    bool keypress = kbd_enter_pressed();
+
+    while (keypress == false) {
+        keypress = kbd_enter_pressed();
+
+        if (WaitForResponseTimeout(CMD_HF_THINFILM_SNIFF, &resp, 500)) {
+            break;
+        }
+    }
+
+    if (keypress) {
+        // inform device to break the sniff loop since client has exited
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+        WaitForResponse(CMD_HF_THINFILM_SNIFF, &resp);
+    }
+
+    PrintAndLogEx(INFO, "Done!");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf thinfilm list") "` to view captured tracelog");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
+    return PM3_SUCCESS;
+}
+
 static int CmdHfThinFilmList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf thinfilm", "thinfilm");
 }
@@ -212,8 +265,9 @@ static int CmdHfThinFilmList(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",    CmdHelp,            AlwaysAvailable, "This help"},
     {"info",    CmdHfThinFilmInfo,  IfPm3NfcBarcode, "Tag information"},
-    {"list",    CmdHfThinFilmList,  AlwaysAvailable, "List NFC Barcode / Thinfilm history - not correct"},
+    {"list",    CmdHfThinFilmList,  AlwaysAvailable, "List NFC Barcode / Thinfilm history"},
     {"sim",     CmdHfThinFilmSim,   IfPm3NfcBarcode, "Fake Thinfilm tag"},
+    {"sniff",   CmdHfThinFilmSniff, IfPm3NfcBarcode, "Sniff Thinfilm tag communication"},
     {NULL, NULL, NULL, NULL}
 };
 

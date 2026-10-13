@@ -475,12 +475,12 @@ static int CmdSmartRaw(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "smart raw",
                   "Sends raw bytes to card",
-                  "smart raw -s -0 -d 00a404000e315041592e5359532e4444463031  -> `1PAY.SYS.DDF01` PPSE directory with get ATR\n"
-                  "smart raw --t0 -d 00a404000e325041592e5359532e4444463031   -> `2PAY.SYS.DDF01` PPSE directory\n"
-                  "smart raw --t0 -t -d 00a4040007a0000000041010              -> Mastercard\n"
-                  "smart raw --t0 -t -d 00a4040007a0000000031010              -> Visa\n"
+                  "smart raw --t0 -s -d 00a404000e315041592e5359532e4444463031   -> `1PAY.SYS.DDF01` PPSE directory with get ATR\n"
+                  "smart raw --t0 -d 00a404000e325041592e5359532e4444463031      -> `2PAY.SYS.DDF01` PPSE directory\n"
+                  "smart raw --t0 -t -d 00a4040007a0000000041010                 -> Mastercard\n"
+                  "smart raw --t0 -t -d 00a4040007a0000000031010                 -> Visa\n"
                   "smart raw --t1 -s -d 00a404000e325041592e5359532e444446303100 -> PPSE over T=1\n"
-                  "                                                              (T=1 carries the whole APDU, so case 4 needs its Le)"
+                  "                                                                      (T=1 carries the whole APDU, so case 4 needs its Le)"
                  );
 
     void *argtable[] = {
@@ -516,7 +516,7 @@ static int CmdSmartRaw(const char *Cmd) {
     }
 
     if (use_t0 && use_t1) {
-        PrintAndLogEx(FAILED, "Choose either -0 or -1, not both");
+        PrintAndLogEx(FAILED, "Choose either --t0 or --t1, not both");
         return PM3_EINVARG;
     }
 
@@ -622,7 +622,7 @@ static int CmdSmartUpgrade(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "smart upgrade",
                   "Upgrade RDV4 sim module firmware",
-                  "smart upgrade -f sim020.bin"
+                  "smart upgrade -f sim024.bin"
                  );
 
     void *argtable[] = {
@@ -968,7 +968,7 @@ static int CmdSmartPPS(const char *Cmd) {
     }
 
     if (use_t0 && use_t1) {
-        PrintAndLogEx(FAILED, "Choose either -0 or -1, not both");
+        PrintAndLogEx(FAILED, "Choose either --t0 or --t1, not both");
         return PM3_EINVARG;
     }
 

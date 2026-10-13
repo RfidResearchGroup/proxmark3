@@ -795,6 +795,44 @@ void des_decrypt_cbc(void *out, const void *in, const int length, const void *ke
     mbedtls_des_crypt_cbc(&ctx, MBEDTLS_DES_DECRYPT, length, iv, in, out);
 }
 
+// FIPS PUB 113 - Computer Data Authentication.
+// https://csrc.nist.gov/files/pubs/fips/113/final/docs/fips113.pdf
+int des_mac(const void *key, const void *input, size_t length, uint8_t *mac, size_t mac_len) {
+
+    if (key == NULL || mac == NULL || mac_len == 0 || mac_len > 8) {
+        return PM3_EINVARG;
+    }
+
+    if (length && input == NULL) {
+        return PM3_EINVARG;
+    }
+
+    // zero pad up to a whole number of blocks, an empty message is one block
+    size_t n = (length + 7) & ~(size_t)7;
+    if (n == 0) {
+        n = 8;
+    }
+
+    uint8_t *buf = calloc(n * 2, sizeof(uint8_t));
+    if (buf == NULL) {
+        return PM3_EMALLOC;
+    }
+
+    uint8_t *out = buf + n;
+    if (length) {
+        memcpy(buf, input, length);
+    }
+
+    uint8_t iv[8] = {0};
+    des_encrypt_cbc(out, buf, (int)n, key, iv);
+
+    // the MAC is the leading bits of the last cipher block
+    memcpy(mac, out + n - 8, mac_len);
+
+    free(buf);
+    return PM3_SUCCESS;
+}
+
 void des3_encrypt(void *out, const void *in, const void *key, uint8_t keycount) {
     switch (keycount) {
         case 1:
@@ -1279,6 +1317,69 @@ int ecdsa_signature_r_s_verify(mbedtls_ecp_group_id curveid, uint8_t *key_xy, ui
 #define T_K           "7A1A7E52797FC8CAAA435D2A4DACE39158504BF204FBE19F14DBB427FAEE50AE"
 #define T_R           "2B42F576D07F4165FF65D1F3B1500F81E44C316F1F0B3EF57325B69ACA46104F"
 #define T_S           "DC42C2122D6392CD3E3A993A89502A8198C1886FE69D262C4B329BDB6B63FAF1"
+
+static int des_mac_test_one(const char *name, const uint8_t key[8], const uint8_t *data,
+                            size_t len, const uint8_t *expect, size_t expect_len, bool verbose) {
+
+    uint8_t mac[8] = {0};
+    int res = des_mac(key, data, len, mac, expect_len);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    if (memcmp(mac, expect, expect_len) != 0) {
+        if (verbose) {
+            PrintAndLogEx(FAILED, "  %s got %s", name, sprint_hex_inrow(mac, expect_len));
+        }
+        return PM3_ESOFT;
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "  %s %s ( %s )", name, sprint_hex_inrow(mac, expect_len), _GREEN_("ok"));
+    }
+    return PM3_SUCCESS;
+}
+
+int des_mac_test(bool verbose) {
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "DES-MAC FIPS 113 test");
+    } else {
+        PrintAndLogEx(INFO, "DES-MAC FIPS 113 test " NOLF);
+    }
+
+    const uint8_t key[8] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF};
+
+    // the worked example of FIPS PUB 113, which publishes the 32 bit MAC
+    const uint8_t msg[] = "7654321 Now is the time for ";
+    const uint8_t full[8] = {0xF1, 0xD3, 0x0F, 0x68, 0x49, 0x31, 0x2C, 0xA4};
+
+    int res = des_mac_test_one("FIPS 113, 64 bit", key, msg, sizeof(msg) - 1, full, 8, verbose);
+    if (res == PM3_SUCCESS) {
+        res = des_mac_test_one("FIPS 113, 32 bit", key, msg, sizeof(msg) - 1, full, 4, verbose);
+    }
+    if (res == PM3_SUCCESS) {
+        res = des_mac_test_one("FIPS 113, 16 bit", key, msg, sizeof(msg) - 1, full, 2, verbose);
+    }
+
+    // one block of zero padding only
+    if (res == PM3_SUCCESS) {
+        const uint8_t empty[8] = {0xD5, 0xD4, 0x4F, 0xF7, 0x20, 0x68, 0x3D, 0x0D};
+        res = des_mac_test_one("empty message...", key, NULL, 0, empty, 8, verbose);
+    }
+
+    // exactly one block, so no padding is added
+    if (res == PM3_SUCCESS) {
+        const uint8_t one[8] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77};
+        const uint8_t want[8] = {0xCA, 0xDB, 0x67, 0x82, 0xEE, 0x2B, 0x48, 0x23};
+        res = des_mac_test_one("one whole block.", key, one, sizeof(one), want, 8, verbose);
+    }
+
+    if (verbose == false) {
+        PrintAndLogEx(NORMAL, (res == PM3_SUCCESS) ? "( " _GREEN_("ok") " )" : "( " _RED_("fail") " )");
+    }
+    return res;
+}
 
 int ecdsa_nist_test(bool verbose) {
     int res;

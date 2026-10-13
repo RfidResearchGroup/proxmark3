@@ -23,7 +23,6 @@ jobs:
       run:
         shell: pwsh
     env:
-      PATH: C:/ProxSpace/msys2/ucrt64/bin;C:/ProxSpace/msys2/usr/local/bin;C:/ProxSpace/msys2/usr/bin;C:/ProxSpace/msys2/bin
       MSYSTEM: UCRT64
       PYTHONHOME: /ucrt64
 
@@ -106,6 +105,19 @@ jobs:
             exit 1
 
       - uses: actions/checkout@v6
+
+      # Prepend MSYS2 tools to PATH only for steps after checkout, so actions/checkout
+      # keeps using the runner's native git (MSYS2's git.exe mangles refs like
+      # 'tag^{commit}' due to its own bash-style argv reparsing).
+      - name: Add ProxSpace/MSYS2 to PATH
+        run: |
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\ProxSpace\msys2\ucrt64\bin"
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\ProxSpace\msys2\usr\local\bin"
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\ProxSpace\msys2\usr\bin"
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\ProxSpace\msys2\bin"
+          # Not set by an MSYS2 login shell here, so pkg-config wouldn't otherwise
+          # find the ucrt64 .pc files (zlib, jansson, gdlib, python3, etc).
+          Add-Content -Path $env:GITHUB_ENV -Value "PKG_CONFIG_PATH=/ucrt64/lib/pkgconfig:/ucrt64/share/pkgconfig"
 
       # TODO workaround: "error: linker script file 'xxxx' appears multiple times"
       # This should be reverted once MSYS2 ships a non-broken version of the linker.

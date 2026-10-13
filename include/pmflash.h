@@ -100,4 +100,8 @@ typedef struct {
     uint8_t  pages64k;
 } PACKED spi_flash_t;
 
+// SPIFFS errno values the client has to name when the device reports a failed
+// write.  Mirrors armsrc/spiffs.h, which is device side only
+#define SPIFFS_ERR_FULL_RDV     (-10001)
+
 #endif // __PMFLASH_H

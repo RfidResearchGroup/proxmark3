@@ -126,3 +126,7 @@ Host binaries are compiled with hardening flags (only with Makefile, not with cm
   * udev rule on Linux
 
 Same logic for `make all`, `make clean`, `make uninstall` and `make check`.
+
+The client is installed with the additional capabilities required for direct BLE connections. See `client/Makefile` for details.
+Depending on your distribution, you may need to ensure that binaries with such capabilities can be run by regular users, else an *operation not permitted* will occur.
+If you prefer to not set these capabilities, run `make install SKIP_SETCAP=1`.

@@ -32,6 +32,7 @@
 #include "protocols.h"
 #include "mbedtls/des.h"
 #include <time.h>
+#include "commonutil.h"             // ARRAYLEN
 
 static int CmdHelp(const char *Cmd);
 
@@ -3873,7 +3874,6 @@ static int CmdHFFmcosHistory(const char *Cmd) {
         {0x07, "OD limit upd"},
         {0x09, "Compound pur"},
     };
-    const size_t ntypes = sizeof(tx_types) / sizeof(tx_types[0]);
 
     PrintAndLogEx(INFO, " # | Date       | Time     | Type         | Amount     | OD Limit | Serial | Terminal");
     PrintAndLogEx(INFO, "---+------------+----------+--------------+------------+----------+--------+-------------------");
@@ -3924,7 +3924,7 @@ static int CmdHFFmcosHistory(const char *Cmd) {
         char type_hex_buf[13];
         snprintf(type_hex_buf, sizeof(type_hex_buf), "0x%02X        ", tx_type);
         const char *type_name = type_hex_buf;
-        for (size_t i = 0; i < ntypes; i++) {
+        for (size_t i = 0; i < ARRAYLEN(tx_types); i++) {
             if (tx_types[i].code == tx_type) {
                 type_name = tx_types[i].name;
                 break;

@@ -455,6 +455,13 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
     // receive command
     uint8_t *receivedCmd = BigBuf_calloc(MAX_FRAME_SIZE);
 
+    if (resp_anticoll == NULL || resp_csn == NULL || resp_conf == NULL || resp_cc == NULL ||
+            resp_ff == NULL || resp_aia == NULL || receivedCmd == NULL) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("iClass sim: failed to allocate buffers");
+        BigBuf_free_keep_EM();
+        return true;
+    }
+
     // Prepare card messages
     tosend_t *ts = get_tosend();
 
@@ -500,6 +507,12 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
     //Then storage for the modulated data
     //Each bit is doubled when modulated for FPGA, and we also have SOF and EOF (2 bytes)
     uint8_t *data_response = BigBuf_calloc((34 * 2) + 3);
+
+    if (data_generic_trace == NULL || data_response == NULL) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("iClass sim: failed to allocate buffers");
+        BigBuf_free_keep_EM();
+        return true;
+    }
 
     enum { IDLE, ACTIVATED, SELECTED, HALTED } chip_state = IDLE;
 
@@ -1098,6 +1111,13 @@ int do_iclass_simulation_nonsec(void) {
     // receive command
     uint8_t *receivedCmd = BigBuf_calloc(MAX_FRAME_SIZE);
 
+    if (resp_anticoll == NULL || resp_csn == NULL || resp_conf == NULL ||
+            resp_aia == NULL || receivedCmd == NULL) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("iClass sim nonsec: failed to allocate buffers");
+        BigBuf_free_keep_EM();
+        return true;
+    }
+
     // Prepare card messages
     tosend_t *ts = get_tosend();
     ts->max = 0;
@@ -1134,6 +1154,12 @@ int do_iclass_simulation_nonsec(void) {
     //Then storage for the modulated data
     //Each bit is doubled when modulated for FPGA, and we also have SOF and EOF (2 bytes)
     uint8_t *data_response = BigBuf_calloc((32 + 2) * 2 + 2);
+
+    if (data_generic_trace == NULL || data_response == NULL) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("iClass sim nonsec: failed to allocate buffers");
+        BigBuf_free_keep_EM();
+        return true;
+    }
 
     enum { IDLE, ACTIVATED, SELECTED, HALTED } chip_state = IDLE;
 
@@ -1634,12 +1660,12 @@ void iClass_Raw(uint8_t *msg) {
         start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
     } else {
         switch_clock_to_countsspclk();
+        start_time = GetCountSspClk();
     }
 
     uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
     uint16_t resp_len = 0;
 
-    start_time = GetCountSspClk();
     bool is_update = rawlen > 0 && ((raw[0] & 0x0F) == ICLASS_CMD_UPDATE);
     uint8_t tries = is_update ? 1 : 3;
     uint16_t timeout = is_update ? ICLASS_READER_TIMEOUT_UPDATE : ICLASS_READER_TIMEOUT_ACTALL;

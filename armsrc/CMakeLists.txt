@@ -31,6 +31,11 @@ include(${CMAKE_CURRENT_LIST_DIR}/../tools/FpgaCompress.cmake)
 
 # ---------------------------------------------------------------------------------
 
+option(ENABLE_HFMFDESETEST "Build the host-driven DESFire emulator test hook" OFF)
+if (ENABLE_HFMFDESETEST)
+    list(APPEND PLATFORM_DEFS -DENABLE_HFMFDESETEST)
+endif ()
+
 set(APP_CFLAGS ${PLATFORM_DEFS} -ffunction-sections -fdata-sections)
 
 set(INC_DIRS
@@ -104,6 +109,10 @@ set(SRC_ISO14443a
         sam_sc.c
 )
 
+if (NOT SKIP_DESFIRE_SIM)
+    list(APPEND SRC_ISO14443a desfiresim.c)
+endif ()
+
 #UNUSED: mifaresniff.c
 
 set(SRC_ISO14443b iso14443b.c)
@@ -176,6 +185,12 @@ if ("${APP_CFLAGS}" MATCHES "WITH_FPC_USART")
     set(SRC_FPC usart.c)
 else ()
     set(SRC_FPC)
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_BWM_FORWARD")
+    set(SRC_BWM bwm_uart_at32.c bwm_forward.c bwm_wifi.c bwm_frame.c)
+else ()
+    set(SRC_BWM)
 endif ()
 
 # BWM charger (AW32001) + fuel gauge (BQ27427), incl. the optional low-batt beep
@@ -262,6 +277,7 @@ set(THUMBSRC
         ${SRC_FLASH}
         ${SRC_SMARTCARD}
         ${SRC_FPC}
+        ${SRC_BWM}
         ${SRC_HITAG}
         ${SRC_EM4x50}
         ${SRC_EM4x70}
@@ -304,6 +320,7 @@ if (PM5)
     list(APPEND THUMBSRC startup_at32f435_437.s)
     list(APPEND THUMBSRC i2c.c)
     list(APPEND THUMBSRC buzzer.c) # generic mainboard buzzer (QC self-test + BWM low-batt)
+    list(APPEND THUMBSRC pm5_power.c) # low-power idle (core clock scaling + WFI)
     list(APPEND THUMBSRC at32_unit_test.c) # TODO DXL: AT32单元测试代码
 endif ()
 

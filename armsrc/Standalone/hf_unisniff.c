@@ -156,7 +156,7 @@ static void UniSniff_DownloadTraceInstructions(char *fn, const char *proto) {
 #endif
 
 void ModInfo(void) {
-    DbpString("  HF UNISNIFF - multimode HF sniffer (hazardousvoltage)");
+    DbpString("  HF UNISNIFF - multimode HF sniffer ( hazardousvoltage )");
     Dbprintf("  Compile-time default protocol... %s", HF_UNISNIFF_PROTOCOL);
 #ifdef WITH_FLASH
     DbpString("  FLASH support................... yes");

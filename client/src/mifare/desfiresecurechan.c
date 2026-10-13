@@ -235,6 +235,9 @@ static uint8_t DesfireGetCmdHeaderLen(uint8_t cmd, size_t datalen) {
 
 static const uint8_t EV1D40TransmitMAC[] = {
     MFDES_WRITE_DATA,
+    MFDES_CREDIT,
+    MFDES_DEBIT,
+    MFDES_LIMITED_CREDIT,
     MFDES_WRITE_RECORD,
     MFDES_UPDATE_RECORD,
     MFDES_COMMIT_READER_ID,

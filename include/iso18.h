@@ -90,6 +90,8 @@ typedef enum FELICA_COMMAND {
     // so reading distance and coupling can be measured rather than guessed
     FELICA_PROBE = (1 << 2),
     FELICA_RAW = (1 << 3),
+    // With CONNECT, raw[] holds the two-byte polling system code.
+    FELICA_SYSTEM_SELECT = (1 << 4),
     FELICA_APPEND_CRC = (1 << 5),
     FELICA_NO_SELECT = (1 << 6),
     FELICA_CLEARTRACE = (1 << 7),

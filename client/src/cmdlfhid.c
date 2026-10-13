@@ -346,7 +346,7 @@ static int CmdHIDSim(const char *Cmd) {
     memset(&cli, 0, sizeof(cli));
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)cli.format, sizeof(cli.format), &cli.format_len);
     cli.card.FacilityCode = arg_get_u32_def(ctx, 2, 0);
-    cli.card.CardNumber = arg_get_u32_def(ctx, 3, 0);
+    cli.card.CardNumber = arg_get_u64_def(ctx, 3, 0);
     cli.card.IssueLevel = arg_get_u32_def(ctx, 4, 0);
     cli.card.OEM = arg_get_u32_def(ctx, 5, 0);
     int res = CLIParamHexToBuf(arg_get_str(ctx, 6), cli.raw, sizeof(cli.raw), &cli.raw_len);
@@ -435,7 +435,7 @@ static int CmdHIDClone(const char *Cmd) {
     memset(&cli, 0, sizeof(cli));
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)cli.format, sizeof(cli.format), &cli.format_len);
     cli.card.FacilityCode = arg_get_u32_def(ctx, 2, 0);
-    cli.card.CardNumber = arg_get_u32_def(ctx, 3, 0);
+    cli.card.CardNumber = arg_get_u64_def(ctx, 3, 0);
     cli.card.IssueLevel = arg_get_u32_def(ctx, 4, 0);
     cli.card.OEM = arg_get_u32_def(ctx, 5, 0);
     int res = CLIParamHexToBuf(arg_get_str(ctx, 6), cli.raw, sizeof(cli.raw), &cli.raw_len);
@@ -586,7 +586,7 @@ static int CmdHIDBrute(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)field, sizeof(field), &field_len);
 
     card_hi.FacilityCode = arg_get_u32_def(ctx, 4, 0);
-    card_hi.CardNumber = arg_get_u32_def(ctx, 5, 0);
+    card_hi.CardNumber = arg_get_u64_def(ctx, 5, 0);
     card_hi.IssueLevel = arg_get_u32_def(ctx, 6, 0);
     card_hi.OEM = arg_get_u32_def(ctx, 7, 0);
 

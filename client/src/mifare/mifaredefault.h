@@ -129,6 +129,7 @@ static const uint64_t g_mifare_default_keys[] = {
     0x0000014b5c31,
     0xb578f38a5c61,
     0x96a301bce267,
+    0x06B2A8EB80A0, // Connect CIVS
 };
 
 static const uint8_t g_mifare_default_key[MIFARE_KEY_SIZE] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};

@@ -94,7 +94,7 @@ int mf_write_sector(uint8_t sectorNo, uint8_t keyType, const uint8_t *key, uint8
 int mf_eml_get_mem(uint8_t *data, int blockNum, int blocksCount);
 int mf_eml_get_mem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth);
 int mf_elm_set_mem(uint8_t *data, int blockNum, int blocksCount);
-int mf_eml_set_mem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth);
+int mf_eml_set_mem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth, uint8_t flags);
 
 int mf_chinese_set_uid(uint8_t *uid, uint8_t uidlen, const uint8_t *atqa, const uint8_t *sak, uint8_t *old_uid, uint8_t *verifed_uid, uint8_t wipecard, uint8_t gdm);
 int mf_chinese_wipe(uint8_t *uid, const uint8_t *atqa, const uint8_t *sak, uint8_t gdm);
@@ -127,7 +127,4 @@ void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool i
 
 // remove all sector trailers in a MFC dump
 int convert_mfc_2_arr(uint8_t *in, uint16_t ilen, uint8_t *out, uint16_t *olen);
-const char *vigik_get_service(uint16_t service_code);
-int vigik_verify(mfc_vigik_t *d);
-int vigik_annotate(mfc_vigik_t *d);
 #endif

@@ -27,6 +27,9 @@
 #include "bwm_forward.h"   // bwm_fwd_negotiate_baud()
 #include "bwm_wifi.h"
 #endif
+#ifdef WITH_CEP
+#include "pm5_cep.h"
+#endif
 #include "pm3_cmd.h"
 #include "proxmark3_arm.h"
 #include "dbprint.h"
@@ -68,6 +71,9 @@
 #include "mifarecmd.h"
 #include "mifaredesfire.h"
 #include "mifaresim.h"
+#ifdef WITH_DESFIRE_SIM
+#include "desfiresim.h"
+#endif
 #include "emvsim.h"
 #include "pcf7931.h"
 #include "Standalone/standalone.h"
@@ -86,38 +92,95 @@
 #include "bwm_charger.h"   // BWM charger / fuel-gauge + low-batt warning (WITH_BWM_*)
 #include "buzzer.h"        // PM5 mainboard buzzer API
 #include "rgb_indicator.h" // PM5 antenna-RGB power/battery indicator (WITH_PM5_PWR_LED)
+#include "pm5_power.h"     // PM5 power-save idle (clock scaling + WFI)
 
 
 #ifdef WITH_PM5_AUTOOFF
-// Automatic power-off on USB unplug. When the BWM keeps the PM5 alive on battery,
-// users leave it draining. This powers the board down after USB has been absent
-// continuously for a grace period, using the SAME latch release as the long-press
-// shutdown (Gpio_ARM_Power_ON_Low). Button power-ON is a hardware function and is
-// unaffected - once powered off there is no firmware running to interfere with it.
-//
-// Runtime toggle (default ON) via CMD_PM5_BWM_AUTOOFF; resets to default each boot.
-// Standalone / BLE-relay users who run unplugged on purpose can disable it.
+// Automatic power-off, through the same latch release as the long-press shutdown
+// (Gpio_ARM_Power_ON_Low); button power-ON is hardware and unaffected. Two
+// triggers: a USB unplug (g_autooff_unplug) and, opt-in, g_autooff_idle_ms idle
+// on battery. Idle resets on a command, a button press or a client coming/going.
+// The switch and both trigger settings are set over CMD_PM5_BWM_AUTOOFF, persisted
+// on the BWM and reloaded at boot; without a module the defaults hold: on, unplug
+// on, idle off.
 #ifndef PM5_AUTOOFF_POLL_MS
-#define PM5_AUTOOFF_POLL_MS    250     // how often to sample VUSB
+#define PM5_AUTOOFF_POLL_MS    250     // how often to sample VUSB and the link state
+#endif
+#ifndef PM5_AUTOOFF_IDLE_MS
+#define PM5_AUTOOFF_IDLE_MS    0       // e.g. (5 * 60 * 1000) for 5 min
 #endif
 
-bool g_autooff_enabled = true;   // default on; toggled by CMD_PM5_BWM_AUTOOFF
+bool g_autooff_enabled = true;                       // default on; CMD_PM5_BWM_AUTOOFF
+uint32_t g_autooff_idle_ms = PM5_AUTOOFF_IDLE_MS;    // 0 = no idle power-off
+bool g_autooff_unplug = true;                        // power off when USB is pulled
 
 static bool s_autooff_setup = false;
+static uint32_t s_autooff_activity_tick = 0;         // last interaction, see above
+static bool     s_autooff_usb_seen = false;
+static bool     s_autooff_link = false;
+static bool     s_autooff_persisted = false;   // setting loaded from / saved to the module
 
-// Auto power-off on USB unplug. CRITICAL: only powers off on a USB-present -> absent
-// TRANSITION - i.e. the board was running on USB and the cable was pulled. A board that
-// booted on battery (button press, no USB) must NOT auto-off, or it could never be used
-// unplugged at all (and the hw bwm autooff toggle would be unreachable, since setting it
-// needs a client/USB). So we require having seen USB present at least once this session
-// before an absent reading triggers shutdown.
+void pm5_autooff_touch(void) {
+    s_autooff_activity_tick = GetTickCount();
+}
+
+void pm5_autooff_get_status(bwm_autooff_status_t *st) {
+    st->enabled = g_autooff_enabled ? 1 : 0;
+    st->idle_s = g_autooff_idle_ms / 1000;
+    st->idle_now_s = GetTickCountDelta(s_autooff_activity_tick) / 1000;
+    st->link = s_autooff_link ? 1 : 0;
+    st->ble_live = 0xFF;
+#ifdef WITH_BWM_FORWARD
+    (void)bwm_esp_get_ble_state(&st->ble_live, 800);
+#endif
+    st->usb = Gpio_VUSB_Read() ? 1 : 0;
+    st->usb_seen = s_autooff_usb_seen ? 1 : 0;
+    st->persisted = s_autooff_persisted ? 1 : 0;
+    st->unplug = g_autooff_unplug ? 1 : 0;
+}
+
+// The setting lives on the BWM host value slots: the PM5 has no store of its own.
+static void pm5_autooff_save(void) {
+#ifdef WITH_BWM_FORWARD
+    // 1 s each: an NVS write is tens of ms, and three must still fit the client's wait.
+    s_autooff_persisted = (bwm_esp_host_value_set(BWM_HOSTVAL_AUTOOFF_ENABLED, g_autooff_enabled ? 1 : 0, 1000) == PM3_SUCCESS) &&
+                          (bwm_esp_host_value_set(BWM_HOSTVAL_AUTOOFF_IDLE_S, g_autooff_idle_ms / 1000, 1000) == PM3_SUCCESS) &&
+                          (bwm_esp_host_value_set(BWM_HOSTVAL_AUTOOFF_UNPLUG, g_autooff_unplug ? 1 : 0, 1000) == PM3_SUCCESS);
+#endif
+}
+
+static void pm5_autooff_load(void) {
+#ifdef WITH_BWM_FORWARD
+    uint32_t v = 0;
+    int r = bwm_esp_host_value_get(BWM_HOSTVAL_AUTOOFF_ENABLED, &v, 300);
+    if (r == PM3_SUCCESS) {
+        g_autooff_enabled = (v != 0);
+    }
+    if (r == PM3_SUCCESS || r == PM3_ENODATA) {
+        s_autooff_persisted = true;   // the module keeps the setting, stored or still default
+        if (bwm_esp_host_value_get(BWM_HOSTVAL_AUTOOFF_IDLE_S, &v, 300) == PM3_SUCCESS) {
+            g_autooff_idle_ms = MIN(v, BWM_AUTOOFF_IDLE_MAX_S) * 1000;
+        }
+        if (bwm_esp_host_value_get(BWM_HOSTVAL_AUTOOFF_UNPLUG, &v, 300) == PM3_SUCCESS) {
+            g_autooff_unplug = (v != 0);
+        }
+    }
+#endif
+}
+
+static void pm5_power_off(void) {
+    LEDsoff();
+    Gpio_ARM_Power_ON_Low();
+    while (1); // wait for hardware power-off (button press powers back on, in hardware)
+}
+
+// CRITICAL: the unplug trigger fires only on a USB present -> absent TRANSITION.
+// A board that booted on battery must not go off at once, or it could never be
+// used unplugged (and the toggle would be unreachable): it gets the idle timer.
 static void bwm_autooff_check(void) {
     static uint32_t last_tick = 0;
-    static bool usb_was_present = false;   // have we seen USB present since boot?
+    static bool usb_prev = false;   // VUSB at the previous poll
 
-    if (g_autooff_enabled == false) {
-        return;
-    }
     if ((last_tick != 0) && (GetTickCountDelta(last_tick) < PM5_AUTOOFF_POLL_MS)) {
         return;
     }
@@ -125,24 +188,94 @@ static void bwm_autooff_check(void) {
 
     if (s_autooff_setup == false) {
         gpio_vusb_setup();
+        pm5_autooff_load();
+#ifdef WITH_BWM_FORWARD
+        // The ESP only broadcasts link changes: ask once for the state at boot
+        // (a BLE client can outlive an AT32 reset). Silence = no ESP or old fw.
+        uint8_t st = 0;
+        if (bwm_esp_get_ble_state(&st, 300) == PM3_SUCCESS) {
+            bwm_fwd_link_seed_ble(st == BWM_BLE_STATE_CONNECTED);
+        }
+#endif
+        pm5_autooff_touch();   // the boot itself counts
         s_autooff_setup = true;
     }
+    if (g_autooff_enabled == false) {
+        usb_prev = Gpio_VUSB_Read();   // keep following VUSB: a re-enable on battery is not an unplug
+        return;
+    }
 
-    // Gpio_VUSB_Read() == true means USB power present.
+    bool link_up = false;
+#ifdef WITH_BWM_FORWARD
+    link_up = bwm_fwd_link_connected();
+#endif
+    if (link_up != s_autooff_link) {
+        s_autooff_link = link_up;
+        pm5_autooff_touch();   // a client came or went: the idle clock restarts
+    }
+
+    // Gpio_VUSB_Read() == true means USB power present: never power off.
     if (Gpio_VUSB_Read()) {
-        usb_was_present = true;   // latch: USB has been present this session
+        s_autooff_usb_seen = true;   // latch: USB has been present this session
+        usb_prev = true;
         return;
     }
 
-    // USB absent. Only power off if USB had previously been present (a real unplug).
-    // If it booted on battery and never saw USB, leave it running.
-    if (usb_was_present == false) {
-        return;
+    // USB absent after having been present: a real unplug. Off at once, or with
+    // the unplug trigger off, just restart the idle clock.
+    if (usb_prev) {
+        usb_prev = false;
+        if (g_autooff_unplug) {
+            pm5_power_off();
+        }
+        pm5_autooff_touch();
     }
 
-    LEDsoff();
-    Gpio_ARM_Power_ON_Low();
-    while (1); // wait for hardware power-off (button press powers back on, in hardware)
+    // On battery: off only after g_autooff_idle_ms with no interaction and no client.
+    if (g_autooff_idle_ms == 0) {
+        return;
+    }
+    if (GetTickCountDelta(s_autooff_activity_tick) < g_autooff_idle_ms) {
+        return;
+    }
+    if (link_up) {
+#ifdef WITH_BWM_FORWARD
+        static uint32_t last_verify_tick = 0;
+        // The timer would fire but a client is (still) tracked: the broadcast
+        // that reported it leaving could have been lost, so ask the module,
+        // at most every 10 s. Only BLE can be asked; a WiFi client is trusted.
+        if ((last_verify_tick == 0) || (GetTickCountDelta(last_verify_tick) >= 10000)) {
+            last_verify_tick = GetTickCount();
+            uint8_t st = 0;
+            if (bwm_esp_get_ble_state(&st, 300) == PM3_SUCCESS) {
+                bwm_fwd_link_seed_ble(st == BWM_BLE_STATE_CONNECTED);
+            }
+        }
+#endif
+        return;   // (a corrected flag is picked up on the next pass)
+    }
+#ifdef WITH_BWM_FORWARD
+    // A client the module never reported (module firmware without LINK_STATE, or
+    // a lost broadcast): ask once before going off; no answer means off.
+    uint8_t ble = 0;
+    if ((bwm_esp_get_ble_state(&ble, 300) == PM3_SUCCESS) && (ble == BWM_BLE_STATE_CONNECTED)) {
+        bwm_fwd_link_seed_ble(true);
+        return;
+    }
+#endif
+    pm5_power_off();
+}
+
+static void pm5_autooff_print_status(void) {
+    if (g_autooff_enabled == false) {
+        Dbprintf("  Auto power-off...... " _YELLOW_("off"));
+    } else if (g_autooff_idle_ms == 0) {
+        Dbprintf("  Auto power-off...... " _GREEN_("on") " (%s)", g_autooff_unplug ? "USB unplug only" : "no trigger set");
+    } else if (g_autooff_unplug) {
+        Dbprintf("  Auto power-off...... " _GREEN_("on") " (USB unplug, or %u s idle on battery)", g_autooff_idle_ms / 1000);
+    } else {
+        Dbprintf("  Auto power-off...... " _GREEN_("on") " (%u s idle on battery, also after an unplug)", g_autooff_idle_ms / 1000);
+    }
 }
 #endif // WITH_PM5_AUTOOFF
 
@@ -556,7 +689,7 @@ static void printConnSpeed(uint32_t wait) {
 
     Dbprintf("  Time elapsed................... %dms", delta_time);
     Dbprintf("  Bytes transferred.............. %d", bytes_transferred);
-    Dbprintf("  Frames sent.................... %d ( %d bytes on the wire each )", frames_sent, wire_len);
+    Dbprintf("  Frames sent.................... %d ( %d bytes )", frames_sent, wire_len);
     if (delta_time) {
         Dbprintf("  Transfer Speed PM3 -> Client... " _YELLOW_("%llu") " bytes/s", 1000 * (uint64_t)bytes_transferred / delta_time);
         Dbprintf("  Frame rate..................... " _YELLOW_("%llu") " frames/s", 1000 * (uint64_t)frames_sent / delta_time);
@@ -593,15 +726,56 @@ static void SendStatus(uint32_t wait) {
     {
         // Read the ESP firmware version so hw status shows what the BWM runs
         // (and lets you confirm an OTA took: the string flips after a reflash).
+        // Keep the wait short: the client gives hw status about 2 s in total. One
+        // retry - a slow light-sleep wake eats the first frame but leaves the module up.
         uint8_t bwm_ver[64] = {0};
         uint16_t bwm_ver_len = sizeof(bwm_ver) - 1;
-        if (bwm_esp_get_version(bwm_ver, &bwm_ver_len) == PM3_SUCCESS) {
+        int vres = bwm_esp_get_version(bwm_ver, &bwm_ver_len, 800);
+        if (vres == PM3_ETIMEOUT) {
+            bwm_ver_len = sizeof(bwm_ver) - 1;
+            vres = bwm_esp_get_version(bwm_ver, &bwm_ver_len, 800);
+        }
+        if (vres == PM3_SUCCESS) {
             bwm_ver[bwm_ver_len] = 0x00;
             Dbprintf("  BWM fw version...... " _YELLOW_("%s"), bwm_ver);
+            // Only once the ESP answered; older fw lacks these, so keep the wait short.
+            uint8_t ps = 0;
+            if (bwm_esp_get_power_save(&ps, 300) == PM3_SUCCESS) {
+                Dbprintf("  BWM power save...... " _YELLOW_("%s"), ps ? "on" : "off");
+            }
+            uint8_t bs = 0;
+            if (bwm_esp_get_ble_state(&bs, 300) == PM3_SUCCESS) {
+                Dbprintf("  BWM BLE............. " _YELLOW_("%s"), (bs == BWM_BLE_STATE_CONNECTED) ? "client connected" : (bs == 1) ? "advertising" : "off");
+            }
+            // Our cached copy of the ESP's LINK_STATE broadcasts (BLE or WiFi), which holds
+            // off the idle power-off. Debug only: it should agree with the live line above.
+            if (g_dbglevel >= DBG_DEBUG) {
+                Dbprintf("  BWM tracked client.. " _YELLOW_("%s"), bwm_fwd_link_connected() ? "connected (BLE or WiFi)" : "none");
+            }
         } else {
             Dbprintf("  BWM fw version...... " _YELLOW_("%s"), "unknown");
         }
     }
+    if (g_dbglevel >= DBG_DEBUG) {
+        // Flow-control diagnostics (since boot). Read before this reply is queued.
+        bwm_fc_stats_t fc;
+        bwm_fwd_fc_stats(&fc);
+        Dbprintf("  BWM fwd frames...... " _YELLOW_("%u") " sent, " _YELLOW_("%u") " acked, " _YELLOW_("%u") " errored",
+                 fc.frames, fc.acks, fc.errors);
+        Dbprintf("  BWM fwd gate........ " _YELLOW_("%u") " timeouts, " _YELLOW_("%u") " forgotten, peak in flight " _YELLOW_("%u") " B",
+                 fc.timeouts, fc.forgotten, fc.bytes_max);
+        Dbprintf("  BWM fwd now......... " _YELLOW_("%u") " frames / " _YELLOW_("%u") " B in flight",
+                 fc.in_flight_frames, fc.in_flight_bytes);
+    }
+#endif
+#ifdef PM5
+    pm5_power_print_status();
+#endif
+#ifdef WITH_PM5_AUTOOFF
+    pm5_autooff_print_status();
+#endif
+#ifdef WITH_CEP
+    Dbprintf("  CEP (Flipper) link.. " _YELLOW_("%s"), cep_is_active() ? "attached" : "not attached");
 #endif
     printConnSpeed(wait);
     DbpString(_CYAN_("Various"));
@@ -712,6 +886,8 @@ static void SendCapabilities(void) {
     capabilities.via_fpc = g_reply_via_fpc;
     capabilities.via_usb = g_reply_via_usb;
     capabilities.bigbuf_size = BigBuf_get_size();
+    capabilities.em_size = BigBuf_get_EM_size();
+    capabilities.em_allocated = BigBuf_is_EM_allocated();
     capabilities.baudrate = 0; // no real baudrate for USB-CDC
 #ifdef WITH_FPC_USART
     if (g_reply_via_fpc)
@@ -794,6 +970,16 @@ static void SendCapabilities(void) {
     capabilities.compiled_with_hitag = true;
 #else
     capabilities.compiled_with_hitag = false;
+#endif
+#if defined(WITH_BWM_STATUS) || defined(WITH_BWM_FORWARD)
+    capabilities.compiled_with_bwm = true;
+#else
+    capabilities.compiled_with_bwm = false;
+#endif
+#ifdef WITH_CEP
+    capabilities.compiled_with_cep = true;
+#else
+    capabilities.compiled_with_cep = false;
 #endif
 #ifdef WITH_EM4x50
     capabilities.compiled_with_em4x50 = true;
@@ -1293,6 +1479,17 @@ static int reply_download_chunk(uint16_t cmd, uint32_t offset, const uint8_t *da
     }
     return reply_ng(cmd, PM3_SUCCESS, buf, sizeof(download_chunk_t) + len);
 }
+
+#ifdef WITH_FLASH
+// CMD_SPIFFS_DOWNLOAD streams the file out chunk by chunk, this is the sink
+static int spiffs_download_chunk(uint32_t offset, const uint8_t *data, uint16_t len) {
+    int res = reply_download_chunk(CMD_SPIFFS_DOWNLOADED, offset, data, len);
+    if (res != PM3_SUCCESS) {
+        Dbprintf("transfer to client failed ::  | bytes between %u - %u (%u) | result: %d", offset, offset + len, len, res);
+    }
+    return res;
+}
+#endif
 
 static void reply_download_done(uint16_t cmd, uint32_t bytes_sent, uint32_t extra) {
     download_done_t done = {
@@ -1814,11 +2011,13 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_LF_EM4X50_SIM: {
             //-----------------------------------------------------------------------------
-            // Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_LF) here although FPGA is not
-            // involved in dealing with emulator memory. But if it is called later, it might
-            // destroy the Emulator Memory.
+            // The FPGA is not involved in dealing with emulator memory, but loading a
+            // bitstream later would wipe it, so the load is brought forward to here.
+            // It has to be the _keep_EM variant: FpgaDownloadAndGo() frees and clears
+            // the whole of BigBuf to make room to decompress, emulator memory included,
+            // which is the very thing this is here to preserve.
             //-----------------------------------------------------------------------------
-            FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+            FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_LF);
             em4x50_sim((const uint32_t *)packet->data.asBytes, true);
             break;
         }
@@ -1828,11 +2027,13 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_LF_EM4X50_ESET: {
             //-----------------------------------------------------------------------------
-            // Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_LF) here although FPGA is not
-            // involved in dealing with emulator memory. But if it is called later, it might
-            // destroy the Emulator Memory.
+            // The FPGA is not involved in dealing with emulator memory, but loading a
+            // bitstream later would wipe it, so the load is brought forward to here.
+            // It has to be the _keep_EM variant: FpgaDownloadAndGo() frees and clears
+            // the whole of BigBuf to make room to decompress, emulator memory included,
+            // which is the very thing this is here to preserve.
             //-----------------------------------------------------------------------------
-            FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+            FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_LF);
 
             if (packet->length < sizeof(em4x50_eset_t)) {
                 reply_ng(CMD_LF_EM4X50_ESET, PM3_EINVARG, NULL, 0);
@@ -1945,11 +2146,13 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_ISO15693_EML_SETMEM: {
             //-----------------------------------------------------------------------------
-            // Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15) here although FPGA is not
-            // involved in dealing with emulator memory. But if it is called later, it might
-            // destroy the Emulator Memory.
+            // The FPGA is not involved in dealing with emulator memory, but loading a
+            // bitstream later would wipe it, so the load is brought forward to here.
+            // It has to be the _keep_EM variant: FpgaDownloadAndGo() frees and clears
+            // the whole of BigBuf to make room to decompress, emulator memory included,
+            // which is the very thing this is here to preserve.
             //-----------------------------------------------------------------------------
-            FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
+            FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF_15);
             struct p {
                 uint32_t offset;
                 uint16_t count;
@@ -1960,7 +2163,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ISO15693_EML_GETMEM: {
-            FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
+            // keep the Emulator Memory, we are about to read it back
+            FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF_15);
             struct p {
                 uint32_t offset;
                 uint16_t length;
@@ -1973,6 +2177,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             }
 
             uint8_t *buf = BigBuf_calloc(payload->length);
+            if (buf == NULL) {
+                reply_ng(CMD_HF_ISO15693_EML_GETMEM, PM3_EMALLOC, NULL, 0);
+                return;
+            }
             emlGet(buf, payload->offset, payload->length);
             LED_B_ON();
             reply_ng(CMD_HF_ISO15693_EML_GETMEM, PM3_SUCCESS, buf, payload->length);
@@ -2003,6 +2211,18 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
             SetTag15693Uid_v2(payload->uid);
+            break;
+        }
+        case CMD_HF_ISO15693_CSETUID_V3: {
+            struct p {
+                uint8_t uid[8];
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            SetTag15693Uid_v3(payload->uid);
+            break;
+        }
+        case CMD_HF_ISO15693_CFINALIZE_V3: {
+            FinalizeTag15693_v3();
             break;
         }
         case CMD_HF_ISO15693_SLIX_DISABLE_EAS: {
@@ -2116,12 +2336,14 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_LEGIC_ESET: {
-            //-----------------------------------------------------------------------------
-            // Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_HF) here although FPGA is not
-            // involved in dealing with emulator memory. But if it is called later, it might
-            // destroy the Emulator Memory.
-            //-----------------------------------------------------------------------------
-            FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+            // No FPGA work here on purpose.  An upload arrives as a burst of
+            // back-to-back packets, and a bitstream download in the first one takes
+            // long enough that the device stops servicing USB and the packets behind
+            // it are lost -- `hf legic eload` after a command that left a different
+            // bitstream loaded used to write only its first 619 bytes.
+            // init_tag() in legicrfsim.c loads the bitstream when the simulation
+            // actually starts, and does it with the _keep_EM variant so the content
+            // uploaded here survives.
             legic_packet_t *payload = (legic_packet_t *) packet->data.asBytes;
             emlSet(payload->data, payload->offset, payload->len);
             break;
@@ -2337,9 +2559,12 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_HF_ISO14443A_ANTIFUZZ: {
             struct p {
                 uint8_t flag;
+                uint8_t mode;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            iso14443a_antifuzz(payload->flag);
+            // older clients only send the flag byte
+            uint8_t mode = (packet->length >= sizeof(struct p)) ? payload->mode : ANTIFUZZ_MODE_CASCADE;
+            iso14443a_antifuzz(payload->flag, mode);
             break;
         }
         // EPA related
@@ -2519,16 +2744,29 @@ static void PacketReceived(PacketCommandNG *packet) {
             Mifare1ksim(payload->flags, payload->exitAfter, payload->uid, payload->atqa, payload->sak);
             break;
         }
+#ifdef WITH_DESFIRE_SIM
+        case CMD_HF_DESFIRE_SIMULATE: {
+            SimulateDesfireTag();
+            break;
+        }
+#ifdef ENABLE_HFMFDESETEST
+        case CMD_HF_DESFIRE_SIM_TEST: {
+            DesfireSimTest(packet);
+            break;
+        }
+#endif
+#endif
         case CMD_HF_MIFARE_EML_MEMCLR: {
 
             //-----------------------------------------------------------------------------
             // Work with emulator memory
             //
-            // Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_HF) here although FPGA is not
-            // involved in dealing with emulator memory. But if it is called later, it might
-            // destroy the Emulator Memory.
+            // The FPGA is not involved here, but loading a bitstream later would wipe
+            // emulator memory, so the load is brought forward. _keep_EM because
+            // FpgaDownloadAndGo() frees and clears all of BigBuf to decompress into,
+            // which would drop the allocation emlClearMem() is about to fill in.
             //-----------------------------------------------------------------------------
-            FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+            FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF);
 
             // Not only clears the emulator memory,
             // also sets default MIFARE values for sector trailers.
@@ -2537,13 +2775,21 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFARE_EML_MEMSET: {
-            FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+            // keep the Emulator Memory, a partial update must not wipe the rest of it
+            FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF);
             struct p {
                 uint16_t blockno;
                 uint8_t blockcnt;
                 uint8_t blockwidth;
+                uint8_t flags;
                 uint8_t data[];
             } PACKED;
+
+            if (packet->length < sizeof(struct p)) {
+                reply_ng(CMD_HF_MIFARE_EML_MEMSET, PM3_EINVARG, NULL, 0);
+                break;
+            }
+
             struct p *payload = (struct p *) packet->data.asBytes;
 
             // backwards compat... default bytewidth
@@ -2551,12 +2797,19 @@ static void PacketReceived(PacketCommandNG *packet) {
                 payload->blockwidth = MIFARE_BLOCK_SIZE;
             }
 
+            // a whole-dump upload zeroes what was there first, so a smaller dump can't
+            // leave a tail behind that reads back as card data. esetblk never sets this.
+            if (payload->flags & MFEMUL_MEMSET_CLEAR) {
+                BigBuf_Clear_EM();
+            }
+
             emlSetMem_xt(payload->data, payload->blockno, payload->blockcnt, payload->blockwidth);
             break;
         }
         case CMD_HF_MIFARE_EML_MEMGET: {
 
-            FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+            // keep the Emulator Memory, we are about to read it back
+            FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF);
             struct p {
                 uint16_t blockno;
                 uint8_t blockcnt;
@@ -2572,6 +2825,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             }
 
             uint8_t *buf = BigBuf_calloc(size);
+            if (buf == NULL) {
+                reply_ng(CMD_HF_MIFARE_EML_MEMGET, PM3_EMALLOC, NULL, 0);
+                return;
+            }
 
             emlGetMem_xt(buf, payload->blockno, payload->blockcnt, payload->blockwidth); // data, block num, blocks count (max 4)
 
@@ -2606,12 +2863,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFARE_CIDENT: {
-            struct p {
-                uint8_t is_mfc;
-                uint8_t keytype;
-                uint8_t key[6];
-            } PACKED;
-            struct p *payload = (struct p *) packet->data.asBytes;
+            if (packet->length < sizeof(mf_chinese_ident_t)) {
+                reply_ng(CMD_HF_MIFARE_CIDENT, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            mf_chinese_ident_t *payload = (mf_chinese_ident_t *)packet->data.asBytes;
             MifareCIdent(payload->is_mfc, payload->keytype, payload->key);
             break;
         }
@@ -2778,6 +3034,11 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_THINFILM_SIMULATE: {
             SimulateThinFilm(packet->data.asBytes, packet->length);
+            break;
+        }
+        case CMD_HF_THINFILM_SNIFF: {
+            int res = SniffThinFilm();
+            reply_ng(CMD_HF_THINFILM_SNIFF, res, NULL, 0);
             break;
         }
 #endif
@@ -3015,6 +3276,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint16_t available;
             uint16_t pre_available = 0;
             uint8_t *dest = BigBuf_calloc(USART_FIFOLEN);
+            if (dest == NULL) {
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Failed to allocate memory");
+                reply_ng(CMD_USART_RX, PM3_EMALLOC, NULL, 0);
+                LED_B_OFF();
+                break;
+            }
             uint32_t wait = payload->waittime;
 
             StartTicks();
@@ -3059,6 +3326,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint16_t available;
             uint16_t pre_available = 0;
             uint8_t *dest = BigBuf_calloc(USART_FIFOLEN);
+            if (dest == NULL) {
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Failed to allocate memory");
+                reply_ng(CMD_USART_TXRX, PM3_EMALLOC, NULL, 0);
+                LED_B_OFF();
+                break;
+            }
             uint32_t wait = payload->waittime;
 
             StartTicks();
@@ -3264,9 +3537,32 @@ static void PacketReceived(PacketCommandNG *packet) {
             if (packet->length < sizeof(download_req_t)) {
                 break;
             }
+
+            if (mem == NULL) {
+                reply_download_done(CMD_DOWNLOAD_EML_BIGBUF, 0, 0);
+                LED_B_OFF();
+                break;
+            }
+
             const download_req_t *dreq = (const download_req_t *)packet->data.asBytes;
             uint32_t startidx = dreq->start_index;
             uint32_t numofbytes = dreq->bytes;
+
+            // We report the emulator memory size in capabilities_t, so honour it
+            // here as well. Without this a client asking for more than the
+            // emulator holds reads on past it into the rest of BigBuf
+            uint32_t em_size = BigBuf_get_EM_size();
+            if (startidx >= em_size) {
+                Dbprintf("Emulator memory download starts past the end, %u >= %u", startidx, em_size);
+                reply_download_done(CMD_DOWNLOAD_EML_BIGBUF, 0, 0);
+                LED_B_OFF();
+                break;
+            }
+
+            if (startidx + numofbytes > em_size) {
+                Dbprintf("Emulator memory is %u bytes, truncating download of %u to %u", em_size, numofbytes, em_size - startidx);
+                numofbytes = em_size - startidx;
+            }
 
             // arg0 = startindex
             // arg1 = length bytes to transfer
@@ -3369,40 +3665,42 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_SPIFFS_DOWNLOAD: {
             LED_B_ON();
-            uint8_t filename[32];
             if (packet->length < sizeof(download_req_t)) {
                 reply_ng(CMD_SPIFFS_DOWNLOAD, PM3_EINVARG, NULL, 0);
+                LED_B_OFF();
                 break;
             }
+
+            // a client can fill the name field, keep room for the terminator
+            char filename[SPIFFS_OBJ_NAME_LEN] = {0};
             const download_req_t *dreq = (const download_req_t *)packet->data.asBytes;
-            uint16_t fnlen = MIN((uint16_t)(packet->length - sizeof(download_req_t)), (uint16_t)SPIFFS_OBJ_NAME_LEN);
+            uint16_t fnlen = MIN((uint16_t)(packet->length - sizeof(download_req_t)), (uint16_t)(SPIFFS_OBJ_NAME_LEN - 1));
             memcpy(filename, dreq->data, fnlen);
             if (g_dbglevel >= DBG_DEBUG) Dbprintf("Filename received for spiffs dump : %s", filename);
 
-            uint32_t size = dreq->bytes;
-
-            uint8_t *buff = BigBuf_calloc(size);
-            if (buff == NULL) {
+            // a file can be bigger than BigBuf, so it is streamed out one frame at a
+            // time.  Reading it into BigBuf first used to wrap at 64KB, back when
+            // BigBuf_calloc() took a uint16_t, and read the whole file into the
+            // short buffer that produced
+            const uint16_t dl_chunk = reply_ng_max_data_size() - sizeof(download_chunk_t);
+            uint8_t *chunkbuf = BigBuf_calloc(dl_chunk);
+            if (chunkbuf == NULL) {
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("Failed to allocate memory");
                 // Trigger a finish downloading signal with an PM3_EMALLOC
                 reply_ng(CMD_SPIFFS_DOWNLOAD, PM3_EMALLOC, NULL, 0);
-            } else {
-                rdv40_spiffs_read_as_filetype((char *)filename, (uint8_t *)buff, size, RDV40_SPIFFS_SAFETY_SAFE);
-                // arg0 = filename
-                // arg1 = size
-                // arg2 = RFU
-
-                const size_t dl_chunk = reply_ng_max_data_size() - sizeof(download_chunk_t);
-                for (size_t i = 0; i < size; i += dl_chunk) {
-                    size_t len = MIN((size - i), dl_chunk);
-                    int result = reply_download_chunk(CMD_SPIFFS_DOWNLOADED, i, buff + i, len);
-                    if (result != PM3_SUCCESS)
-                        Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", i, i + len, len, result);
-                }
-                // Trigger a finish downloading signal with an ACK frame
-                reply_ng(CMD_SPIFFS_DOWNLOAD, PM3_SUCCESS, NULL, 0);
-                BigBuf_free();
+                LED_B_OFF();
+                break;
             }
+
+            int res = rdv40_spiffs_read_stream(filename, dreq->start_index, dreq->bytes, chunkbuf, dl_chunk, spiffs_download_chunk, RDV40_SPIFFS_SAFETY_SAFE);
+            if (res < 0) {
+                reply_ng(CMD_SPIFFS_DOWNLOAD, res, NULL, 0);
+            } else {
+                // Trigger a finish downloading signal with an ACK frame
+                reply_download_done(CMD_SPIFFS_DOWNLOAD, (uint32_t)res, 0);
+            }
+
+            BigBuf_free();
             LED_B_OFF();
             break;
         }
@@ -3479,6 +3777,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 Dbprintf("Destination... %s", payload->dest);
             }
             rdv40_spiffs_copy((char *)payload->src, (char *)payload->dest, RDV40_SPIFFS_SAFETY_SAFE);
+            BigBuf_free();
             reply_ng(CMD_SPIFFS_COPY, PM3_SUCCESS, NULL, 0);
             LED_B_OFF();
             break;
@@ -3486,7 +3785,21 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_SPIFFS_WRITE: {
             LED_B_ON();
 
+            if (packet->length < sizeof(flashmem_write_t)) {
+                reply_ng(CMD_SPIFFS_WRITE, PM3_EINVARG, NULL, 0);
+                LED_B_OFF();
+                break;
+            }
+
             flashmem_write_t *payload = (flashmem_write_t *)packet->data.asBytes;
+
+            // the packet size follows the negotiated frame, so do not take the
+            // client's word for how much data is in it
+            if (payload->bytes_in_packet > (packet->length - sizeof(flashmem_write_t))) {
+                reply_ng(CMD_SPIFFS_WRITE, PM3_EINVARG, NULL, 0);
+                LED_B_OFF();
+                break;
+            }
 
             if (g_dbglevel >= DBG_DEBUG) {
                 Dbprintf("SPIFFS WRITE, dest `%s` with APPEND set to: %c", payload->fn, payload->append ? 'Y' : 'N');
@@ -3498,7 +3811,10 @@ static void PacketReceived(PacketCommandNG *packet) {
                 rdv40_spiffs_write((char *) payload->fn, payload->data, payload->bytes_in_packet, RDV40_SPIFFS_SAFETY_SAFE);
             }
 
-            reply_ng(CMD_SPIFFS_WRITE, PM3_SUCCESS, NULL, 0);
+            // tell the client whether the bytes actually landed.  The SPIFFS errno
+            // rides along so it can name the reason, ie: -10001 filesystem full
+            int32_t res = rdv40_spiffs_write_status();
+            reply_ng(CMD_SPIFFS_WRITE, (res == SPIFFS_OK) ? PM3_SUCCESS : PM3_EFLASH, (uint8_t *)&res, sizeof(res));
             LED_B_OFF();
             break;
         }
@@ -3528,6 +3844,10 @@ static void PacketReceived(PacketCommandNG *packet) {
                 LED_B_OFF();
                 break;
             }
+
+            // a dump smaller than the emulator memory must not leave the tail of a
+            // previous one behind
+            BigBuf_Clear_EM();
 
             rdv40_spiffs_read_as_filetype(fn, em, size, RDV40_SPIFFS_SAFETY_SAFE);
             reply_ng(CMD_SPIFFS_ELOAD, PM3_SUCCESS, NULL, 0);
@@ -3596,6 +3916,13 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             LED_B_ON();
             uint8_t *mem = BigBuf_calloc(PM3_CMD_DATA_SIZE);
+            if (mem == NULL) {
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Failed to allocate memory");
+                reply_ng(CMD_FLASHMEM_DOWNLOAD, PM3_EMALLOC, NULL, 0);
+                LED_B_OFF();
+                break;
+            }
+
             if (packet->length < sizeof(download_req_t)) {
                 break;
             }
@@ -3636,6 +3963,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             LED_B_ON();
 
             rdv40_validation_t *info = (rdv40_validation_t *)BigBuf_calloc(sizeof(rdv40_validation_t));
+            if (info == NULL) {
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Failed to allocate memory");
+                reply_ng(CMD_FLASHMEM_GET_SIGNATURE, PM3_EMALLOC, NULL, 0);
+                LED_B_OFF();
+                break;
+            }
 
             // returns 0 when failing
             uint16_t isok = Flash_ReadData(FLASH_MEM_SIGNATURE_OFFSET_P(spi_flash_pages64k), info->signature, FLASH_MEM_SIGNATURE_LEN);
@@ -3763,6 +4096,20 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_CAPABILITIES: {
             SendCapabilities();
+            break;
+        }
+        case CMD_CEP_STATUS: {
+            cep_status_t status = {0};
+#ifdef WITH_CEP
+            status.cep_active = cep_is_active();
+#endif
+#ifdef WITH_BWM_STATUS
+            bwm_read_battery_info(&status.battery);
+#endif
+            if (CheckValidInformationMagic(&g_version_information)) {
+                strncpy(status.fw_version, g_version_information.gitversion, sizeof(status.fw_version) - 1);
+            }
+            reply_ng(CMD_CEP_STATUS, PM3_SUCCESS, (uint8_t *)&status, sizeof(status));
             break;
         }
         case CMD_PING: {
@@ -4015,7 +4362,8 @@ static void PacketReceived(PacketCommandNG *packet) {
                 res = bwm_wifi_forward_status(&state, &ip);
                 uint8_t st[5] = { state,
                                   (uint8_t)(ip & 0xFF), (uint8_t)((ip >> 8) & 0xFF),
-                                  (uint8_t)((ip >> 16) & 0xFF), (uint8_t)((ip >> 24) & 0xFF) };
+                                  (uint8_t)((ip >> 16) & 0xFF), (uint8_t)((ip >> 24) & 0xFF)
+                                };
                 reply_ng(CMD_PM5_BWM_WIFI, res, st, sizeof(st));
             } else {
                 uint16_t port = packet->data.asBytes[1] | (packet->data.asBytes[2] << 8);
@@ -4047,7 +4395,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                     // ack is lost). Replies here with a payload, unlike the others.
                     uint8_t ver[64];
                     uint16_t vlen = sizeof(ver);
-                    res = bwm_esp_get_version(ver, &vlen);
+                    res = bwm_esp_get_version(ver, &vlen, 3000);
                     reply_ng(CMD_PM5_BWM_ESP_OTA, res, ver, (res == PM3_SUCCESS) ? vlen : 0);
                     replied = true;
                     break;
@@ -4096,19 +4444,205 @@ static void PacketReceived(PacketCommandNG *packet) {
 #endif
             break;
         }
+        case CMD_PM5_BWM_BLE_NAME: {
+#ifdef WITH_BWM_FORWARD
+            // Payload: [action:u8][name bytes if SET]. GET replies with the current
+            // BLE device name string. SET stores it on the ESP (persisted to NVS) and
+            // then reboots the ESP so the new advertising name takes effect - the ESP
+            // only applies the name at BLE startup, and rebooting is easier for users
+            // than a physical power-cycle.
+            if (packet->length < 1) {
+                reply_ng(CMD_PM5_BWM_BLE_NAME, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            uint8_t action = packet->data.asBytes[0];
+            if (action == BWM_BLE_NAME_ACTION_GET) {
+                uint8_t name[BWM_BLE_NAME_MAX_LEN + 1] = {0};
+                uint16_t nlen = sizeof(name);
+                int res = bwm_esp_get_ble_name(name, &nlen);
+                reply_ng(CMD_PM5_BWM_BLE_NAME, res, name, (res == PM3_SUCCESS) ? nlen : 0);
+            } else if (action == BWM_BLE_NAME_ACTION_SET) {
+                uint16_t nlen = packet->length - 1;
+                if (nlen == 0 || nlen > BWM_BLE_NAME_MAX_LEN) {
+                    reply_ng(CMD_PM5_BWM_BLE_NAME, PM3_EINVARG, NULL, 0);
+                    break;
+                }
+                int res = bwm_esp_set_ble_name(packet->data.asBytes + 1, nlen);
+                if (res == PM3_SUCCESS) {
+                    // Best-effort: the name is already saved to NVS, so even if the
+                    // reboot ack is lost it applies on the next BLE startup anyway.
+                    (void)bwm_esp_reboot();
+                }
+                reply_ng(CMD_PM5_BWM_BLE_NAME, res, NULL, 0);
+            } else {
+                reply_ng(CMD_PM5_BWM_BLE_NAME, PM3_EINVARG, NULL, 0);
+            }
+#else
+            reply_ng(CMD_PM5_BWM_BLE_NAME, PM3_ENOTIMPL, NULL, 0);
+#endif
+            break;
+        }
+        case CMD_PM5_BWM_POWERSAVE: {
+#ifdef WITH_BWM_FORWARD
+            // Payload / reply layout: pm3_cmd.h. The ESP persists it; nothing kept here.
+            if (packet->length < 1) {
+                reply_ng(CMD_PM5_BWM_POWERSAVE, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            uint8_t action = packet->data.asBytes[0];
+            uint8_t state = 0;
+            int res;
+            if (action == BWM_POWERSAVE_ACTION_GET) {
+                res = bwm_esp_get_power_save(&state, 3000);
+            } else if (action == BWM_POWERSAVE_ACTION_SET && packet->length >= 2) {
+                res = bwm_esp_set_power_save(packet->data.asBytes[1] != 0, &state);
+            } else {
+                reply_ng(CMD_PM5_BWM_POWERSAVE, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            reply_ng(CMD_PM5_BWM_POWERSAVE, res, &state, (res == PM3_SUCCESS) ? 1 : 0);
+#else
+            reply_ng(CMD_PM5_BWM_POWERSAVE, PM3_ENOTIMPL, NULL, 0);
+#endif
+            break;
+        }
+        case CMD_PM5_BWM_BLE: {
+#ifdef WITH_BWM_FORWARD
+            // BLE settings on the module: one action, then a full status snapshot back.
+            if (packet->length < 1) {
+                reply_ng(CMD_PM5_BWM_BLE, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            uint8_t action = packet->data.asBytes[0];
+            const uint8_t *arg = &packet->data.asBytes[1];
+            uint16_t alen = packet->length - 1;
+            int res = PM3_SUCCESS;
+            bool restart = false;   // a bonding change applies at the next stack start
+            switch (action) {
+                case BWM_BLE_ACTION_STATUS:
+                    break;
+                case BWM_BLE_ACTION_ENABLE: {
+                    uint8_t stored = 0;
+                    res = (alen >= 1) ? bwm_esp_set_ble_enable(arg[0] != 0, &stored) : PM3_EINVARG;
+                    break;
+                }
+                case BWM_BLE_ACTION_PAIRING:
+                    res = (alen >= 1) ? bwm_esp_set_ble_bonding(arg[0] != 0) : PM3_EINVARG;
+                    restart = (res == PM3_SUCCESS);
+                    break;
+                case BWM_BLE_ACTION_KEY:
+                    res = (alen >= 6) ? bwm_esp_set_ble_key(arg) : PM3_EINVARG;
+                    break;
+                case BWM_BLE_ACTION_FORGET:
+                    res = (alen >= 1) ? bwm_esp_ble_forget(arg[0]) : PM3_EINVARG;
+                    break;
+                case BWM_BLE_ACTION_TXPOWER:
+                    res = (alen >= 2) ? bwm_esp_set_ble_txpower(arg[0], arg[1]) : PM3_EINVARG;
+                    break;
+                default:
+                    res = PM3_EINVARG;
+                    break;
+            }
+            if (res != PM3_SUCCESS) {
+                reply_ng(CMD_PM5_BWM_BLE, res, NULL, 0);
+                break;
+            }
+            bwm_ble_status_t st;
+            res = bwm_esp_ble_status(&st);
+            if (res != PM3_SUCCESS) {
+                reply_ng(CMD_PM5_BWM_BLE, res, NULL, 0);
+                if (restart) {
+                    (void)bwm_esp_ble_restart();
+                }
+                break;
+            }
+            reply_ng(CMD_PM5_BWM_BLE, PM3_SUCCESS, (uint8_t *)&st, sizeof(st));
+            if (restart) {
+                // Reply first: over BLE the restart drops the client's own link.
+                SpinDelay(500);
+                (void)bwm_esp_ble_restart();
+            }
+#else
+            reply_ng(CMD_PM5_BWM_BLE, PM3_ENOTIMPL, NULL, 0);
+#endif
+            break;
+        }
+        case CMD_PM5_BWM_WIFI_PS: {
+#ifdef WITH_BWM_FORWARD
+            // Payload / reply layout: pm3_cmd.h. wifi_state rides along so the host
+            // can say the type is moot while WiFi is down.
+            if (packet->length < 1) {
+                reply_ng(CMD_PM5_BWM_WIFI_PS, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            uint8_t action = packet->data.asBytes[0];
+            uint8_t out[2] = { 0, BWM_WIFI_STATE_OFF };
+            int res;
+            if (action == BWM_WIFI_PS_ACTION_GET) {
+                res = bwm_esp_get_wifi_ps(&out[0]);
+            } else if (action == BWM_WIFI_PS_ACTION_SET && packet->length >= 2 && packet->data.asBytes[1] <= BWM_WIFI_PS_MAX) {
+                res = bwm_esp_set_wifi_ps(packet->data.asBytes[1], &out[0]);
+            } else {
+                reply_ng(CMD_PM5_BWM_WIFI_PS, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            if (res == PM3_SUCCESS) {
+                uint32_t ip = 0;
+                (void)bwm_wifi_forward_status(&out[1], &ip);   // 0xFF when the WiFi stack is down
+            }
+            reply_ng(CMD_PM5_BWM_WIFI_PS, res, out, (res == PM3_SUCCESS) ? sizeof(out) : 0);
+#else
+            reply_ng(CMD_PM5_BWM_WIFI_PS, PM3_ENOTIMPL, NULL, 0);
+#endif
+            break;
+        }
         case CMD_PM5_BWM_AUTOOFF: {
-            // Toggle automatic power-off on USB unplug (runtime, default on).
-            // Payload: 1 byte, non-zero = enable (default), zero = disable.
+            // Automatic power-off switch + idle timeout. Layouts: pm3_cmd.h.
 #ifdef WITH_PM5_AUTOOFF
-            g_autooff_enabled = (packet->length >= 1) ? (packet->data.asBytes[0] != 0) : true;
-            reply_ng(CMD_PM5_BWM_AUTOOFF, PM3_SUCCESS, (uint8_t *)&g_autooff_enabled, 1);
+            if (packet->length == 1) {
+                // old client: enable flag only
+                g_autooff_enabled = (packet->data.asBytes[0] != 0);
+                pm5_autooff_touch();
+                pm5_autooff_save();
+            } else if ((packet->length >= 6) && (packet->data.asBytes[0] == BWM_AUTOOFF_ACTION_SET)) {
+                uint8_t en = packet->data.asBytes[1];
+                uint32_t idle_s;
+                memcpy(&idle_s, &packet->data.asBytes[2], sizeof(idle_s));
+                if (en != BWM_AUTOOFF_KEEP_U8) {
+                    g_autooff_enabled = (en != 0);
+                }
+                if (idle_s != BWM_AUTOOFF_KEEP_U32) {
+                    g_autooff_idle_ms = MIN(idle_s, BWM_AUTOOFF_IDLE_MAX_S) * 1000;
+                }
+                if ((packet->length >= 7) && (packet->data.asBytes[6] != BWM_AUTOOFF_KEEP_U8)) {
+                    g_autooff_unplug = (packet->data.asBytes[6] != 0);
+                }
+                pm5_autooff_touch();   // a new timeout counts from now
+                pm5_autooff_save();
+            }
+            bwm_autooff_status_t reply;
+            pm5_autooff_get_status(&reply);
+            reply_ng(CMD_PM5_BWM_AUTOOFF, PM3_SUCCESS, (uint8_t *)&reply, sizeof(reply));
 #else
             reply_ng(CMD_PM5_BWM_AUTOOFF, PM3_ENOTIMPL, NULL, 0);
 #endif
             break;
         }
-#endif
-#endif
+        case CMD_PM5_BWM_GET_BATTERY: {
+            bwm_battery_info_t info;
+            bwm_read_battery_info(&info);
+            reply_ng(CMD_PM5_BWM_GET_BATTERY, PM3_SUCCESS, (uint8_t *)&info, sizeof(info));
+            break;
+        }
+#endif // WITH_BWM_STATUS
+        case CMD_PM5_POWERSAVE: {
+            // Payload: 1 byte, non-zero = enable (the default), zero = disable.
+            pm5_power_set_enabled((packet->length >= 1) ? (packet->data.asBytes[0] != 0) : true);
+            uint8_t state = pm5_power_get_enabled() ? 1 : 0;
+            reply_ng(CMD_PM5_POWERSAVE, PM3_SUCCESS, &state, 1);
+            break;
+        }
+#endif // PM5
         default: {
             Dbprintf("%s: 0x%04x", "unknown command:", packet->cmd);
             break;
@@ -4193,10 +4727,21 @@ void __attribute__((noreturn)) AppMain(void) {
     // Negotiate the link up from the boot baud; harmless no-op if the ESP is
     // older or the target is unreachable (stays at BWM_UART_BAUD).
     bwm_fwd_negotiate_baud(BWM_UART_BAUD_TARGET);
+    // The ESP only light-sleeps once it has seen a preamble, and ours went out
+    // while it was still booting if both powered up together: send it again.
+    bwm_uart_wake_next();
 #endif
 
 #ifdef WITH_BWM_CHARGERKICK
     bwm_charger_kick();
+#endif
+
+#ifdef PM5
+    pm5_power_init();
+#endif
+
+#ifdef WITH_CEP
+    cep_init();              // USART1/SPI1 + CC-controller I2C bring-up; AFTER usb_enable()
 #endif
 
     for (;;) {
@@ -4211,6 +4756,9 @@ void __attribute__((noreturn)) AppMain(void) {
 #ifdef WITH_BWM_LOWBATT_BEEP
         bwm_lowbatt_check();
 #endif
+#ifdef WITH_CEP
+        cep_attach_poll();
+#endif
 
         if (*_stack_start != 0xdeadbeef) {
             Dbprintf("DEBUG: increase stack size, currently " _YELLOW_("%d") " bytes", (uint32_t)_stack_end - (uint32_t)_stack_start);
@@ -4220,13 +4768,22 @@ void __attribute__((noreturn)) AppMain(void) {
             while (1);
         }
 
-        // Check if there is a packet available
+        // Check if there is a packet available.  receive_ng() zeroes the
+        // payload itself, once it knows a packet is actually arriving.
         PacketCommandNG rx;
-        memset(&rx.data, 0, sizeof(rx.data));
 
         int ret = receive_ng(&rx);
         if (ret == PM3_SUCCESS) {
+#ifdef PM5
+            pm5_power_boost();   // commands assume the full 288 MHz clock
+#endif
             PacketReceived(&rx);
+#ifdef PM5
+            pm5_power_unboost();
+#endif
+#ifdef WITH_PM5_AUTOOFF
+            pm5_autooff_touch();   // a command, over any transport
+#endif
             last_activity_label = GetTickCountLabel();
             last_activity_tick = GetTickCount();
         } else if (ret != PM3_ENODATA) {
@@ -4247,6 +4804,11 @@ void __attribute__((noreturn)) AppMain(void) {
 
         // Press button for one second to enter a possible standalone mode
         button_status = BUTTON_HELD(1000);
+#ifdef WITH_PM5_AUTOOFF
+        if (button_status != BUTTON_NO_CLICK) {
+            pm5_autooff_touch();   // any press is an interaction
+        }
+#endif
         if (button_status == BUTTON_HOLD) {
             /*
             * So this is the trigger to execute a standalone mod.  Generic entrypoint by following the standalone/standalone.h headerfile
@@ -4315,5 +4877,20 @@ void __attribute__((noreturn)) AppMain(void) {
 
 #endif
         }
+
+#ifdef PM5
+        // WFI sleep adds ~40-50ms of latency before the main loop notices a
+        // fresh byte on CEP's SPI1 - fine at idle, but it's what made the
+        // original attach handshake miss bytes (see cep_attach_poll()'s own
+        // comment on the attach-edge bug this caused, GH #3667). Skip the
+        // sleep entirely while a Flipper is attached so the loop polls as
+        // fast as the hardware allows; cep_is_attached() drops back to false
+        // within CEP_ACTIVITY_TIMEOUT_MS of the FAP going away, so this
+        // isn't a permanent always-on cost.
+#ifdef WITH_CEP
+        if (!cep_is_attached())
+#endif
+            pm5_power_idle();
+#endif
     }
 }

@@ -307,6 +307,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/mifare/gen4.c
         ${PM3_ROOT}/client/src/mifare/lrpcrypto.c
         ${PM3_ROOT}/client/src/mifare/desfirecrypto.c
+        ${PM3_ROOT}/client/src/mifare/desfireem.c
         ${PM3_ROOT}/client/src/mifare/desfiresecurechan.c
         ${PM3_ROOT}/client/src/mifare/desfirecore.c
         ${PM3_ROOT}/client/src/mifare/desfiretest.c
@@ -327,6 +328,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/aidsearch.c
         ${PM3_ROOT}/client/src/atrs.c
         ${PM3_ROOT}/client/src/cmdanalyse.c
+        ${PM3_ROOT}/client/src/cmdbwm.c
         ${PM3_ROOT}/client/src/cmdcrc.c
         ${PM3_ROOT}/client/src/cmddata.c
         ${PM3_ROOT}/client/src/cmdflashmem.c
@@ -425,6 +427,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/comms.c
         ${PM3_ROOT}/client/src/fileutils.c
         ${PM3_ROOT}/client/src/flash.c
+        ${PM3_ROOT}/client/src/frame_data2.c
         ${PM3_ROOT}/client/src/frame_progress.c
         ${PM3_ROOT}/client/src/graph.c
         ${PM3_ROOT}/client/src/hidsio.c
@@ -433,6 +436,13 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/jsonutils.c
         ${PM3_ROOT}/client/src/lua_bitlib.c
         ${PM3_ROOT}/client/src/parsers/parsehrt.c
+        ${PM3_ROOT}/client/src/parsers/parsehid.c
+        ${PM3_ROOT}/client/src/parsers/parsevigik.c
+        ${PM3_ROOT}/client/src/parsers/parsehexact.c
+        ${PM3_ROOT}/client/src/parsers/parsemykey.c
+        ${PM3_ROOT}/client/src/parsers/parseproac.c
+        ${PM3_ROOT}/client/src/parsers/parserkf.c
+        ${PM3_ROOT}/client/src/parsers/parsenortic.c
         ${PM3_ROOT}/client/src/parsers/hrtparser/hrtparser.c
         ${PM3_ROOT}/client/src/pla.c
         ${PM3_ROOT}/client/src/preferences.c

@@ -20,9 +20,11 @@ set_property(CACHE PLATFORM PROPERTY STRINGS "PM3RDV4" "PM3GENERIC" "PM3ICOPYX" 
 +============================================+
 | BTADDON         | Proxmark3 RDV4 BT add-on |
 +--------------------------------------------+
+| BWM             | PM5 Battery Wireless Mod |
++--------------------------------------------+
 ]]
 set(PLATFORM_EXTRAS "" CACHE STRING "Default PLATFORM_EXTRAS is unset")
-set_property(CACHE PLATFORM_EXTRAS PROPERTY STRINGS "BTADDON" "")
+set_property(CACHE PLATFORM_EXTRAS PROPERTY STRINGS "BTADDON" "BWM" "")
 
 # Skip fpga bit stream files pack to arm's fw?
 # Some platform is no download in arm side required.
@@ -110,6 +112,13 @@ if ("${PLATFORM_EXTRAS_TMP}" MATCHES "BTADDON")
     list(APPEND PLATFORM_DEFS -DWITH_FPC_USART_HOST)
     list(REMOVE_ITEM PLATFORM_EXTRAS_TMP "BTADDON")
 endif ()
+if ("${PLATFORM_EXTRAS_TMP}" MATCHES "BWM")
+    if (NOT PLATFORM STREQUAL "PM5")
+        message(FATAL_ERROR "PLATFORM_EXTRAS token BWM is only valid on PLATFORM=PM5")
+    endif ()
+    list(APPEND PLATFORM_DEFS -DWITH_BWM_FORWARD)
+    list(REMOVE_ITEM PLATFORM_EXTRAS_TMP "BWM")
+endif ()
 if ("${PLATFORM_EXTRAS_TMP}" MATCHES "FPC_USART_DEV")
     list(APPEND PLATFORM_DEFS -DWITH_FPC_USART_DEV)
     list(REMOVE_ITEM PLATFORM_EXTRAS_TMP "FPC_USART_DEV")
@@ -150,6 +159,9 @@ if (NOT SKIP_ISO14443b)
 endif ()
 if (NOT SKIP_ISO14443a)
     list(APPEND PLATFORM_DEFS -DWITH_ISO14443a)
+endif ()
+if (NOT SKIP_DESFIRE_SIM)
+    list(APPEND PLATFORM_DEFS -DWITH_DESFIRE_SIM)
 endif ()
 if (NOT SKIP_ICLASS)
     list(APPEND PLATFORM_DEFS -DWITH_ICLASS)

@@ -17,9 +17,9 @@ extern uint8_t g_ssc_data_byte_width;
 // Is tx lsb first? If diff with rx frame settings, the data will reverse before send.
 extern bool g_tx_lsb_first;
 
-// TODO DXL 纠正SPI和DMA通道选择，为了方便修改，此处可先暂时定义SPI和DMA外设和DMA通道的对应宏
-//  spi-ti_mode 用到了 SPI4, DMA1
-//  spi-cmd     用到了 SPI3，无DMA
+// TODO DXL Move to the config header?
+//  spi-ti_mode Using SPI4, DMA1
+//  spi-cmd     Using SPI3, No DMA
 #define SPI_SSC              SPI4
 #define SPI_CRM_CLOCK_SSC    CRM_SPI4_PERIPH_CLOCK
 #define DMA_SSC              DMA1
@@ -31,7 +31,39 @@ extern bool g_tx_lsb_first;
 #define SPI_CMD              SPI3
 #define SPI_CRM_CLOCK_CMD    CRM_SPI3_PERIPH_CLOCK
 
+/**
+ * A workaround for the SPI_CSPAS_FLAG issue in AT32F435/437.
+ *
+ * ---
+ *
+ * In slave mode, once the TI mode is enabled, the SPI interface is capable of detecting CS pulse errors
+ * during data transmission, and setting the CSPAS bit (It is cleared by reading the SPI_STS) as soon as
+ * a CS pulse error is detected. At this point, the detected pulse error will be discarded by the SPI. However,
+ * since there is something wrong with the CS signal, the software should disable the SPI slave and
+ * reconfigure the SPI master before re-enabling the SPI slave for communication.
+ *
+ * (Copy from AT32F435/437 reference manual, section 13.2.7)
+ * See: https://www.arterychip.com/download/RM/RM_AT32F435_437_EN_V2.06.pdf
+ *
+ * ---
+ *
+ * DXL NOTE: Theoretically, to completely resolve this issue, strict timing control should be implemented between the SPI master and slave;
+ * the SPI slave should not be enabled until the SPI master is ready. But it is extremely difficult to implement;
+ * in many places, `FpgaSetupSsc` is called before switching the FPGA mode—an approach taken to improve transmission and reception processing speeds.
+ * So we can only use this workaround to handle the issue after it occurs, which is not ideal. but it is the only feasible solution for now.
+ *
+ * @param status The status register value of the SPI peripheral.
+ */
+#define CSPAS_WORKAROUND(status)          \
+    if (status & SPI_CSPAS_FLAG) {        \
+        SPI_SSC->ctrl1_bit.spien = FALSE; \
+        SPI_SSC->ctrl1_bit.spien = TRUE;  \
+    }
+
 STATIC_FORCE_INLINE bool FPGA_SSC_RX_Ready(void) {
+    uint32_t sts = SPI_SSC->sts;
+    CSPAS_WORKAROUND(sts);
+
     /*
      * Note that according to the manual description, if SPI receives data but does not read it after startup,
      * the SPI peripheral will generate an overflow interrupt and no longer receive new data. At this time,
@@ -47,18 +79,22 @@ STATIC_FORCE_INLINE bool FPGA_SSC_RX_Ready(void) {
     // Reading SPI_DT register and SPI_STS register sequentially can clear ROERR(Must to read DT reg)
     // Only when the ROERR flag is set, it is necessary to read DT, so the '&&' condition is very important.
     // If the former does not hold, the DT register will not be read.
-    return ((SPI_SSC->sts & (SPI_I2S_RDBF_FLAG | SPI_I2S_ROERR_FLAG)) == SPI_I2S_RDBF_FLAG)
-           || (((SPI_SSC->sts & SPI_I2S_ROERR_FLAG) == SPI_I2S_ROERR_FLAG) && (SPI_SSC->dt & 0)); // Readout data for clear the ROERR flag. IMPORTANT!
+    return ((sts & (SPI_I2S_RDBF_FLAG | SPI_I2S_ROERR_FLAG)) == SPI_I2S_RDBF_FLAG)
+           || (((sts & SPI_I2S_ROERR_FLAG) == SPI_I2S_ROERR_FLAG) && (SPI_SSC->dt & 0)); // Readout data for clear the ROERR flag. IMPORTANT!
 }
 
 STATIC_FORCE_INLINE bool FPGA_SSC_TX_Ready(void) {
     // spi_i2s_flag_get(SPI_SSC, SPI_I2S_TDBE_FLAG) == SET
-    return (SPI_SSC->sts & SPI_I2S_TDBE_FLAG) == SPI_I2S_TDBE_FLAG;
+    uint32_t sts = SPI_SSC->sts;
+    CSPAS_WORKAROUND(sts);
+    return (sts & SPI_I2S_TDBE_FLAG) == SPI_I2S_TDBE_FLAG;
 }
 
 STATIC_FORCE_INLINE bool FPGA_SSC_TX_Done(void) {
     // spi_i2s_flag_get(SPI_SSC, SPI_I2S_BF_FLAG) == RESET
-    return (SPI_SSC->sts & SPI_I2S_BF_FLAG) != SPI_I2S_BF_FLAG; // SPI currently has no transmission transactions.
+    uint32_t sts = SPI_SSC->sts;
+    CSPAS_WORKAROUND(sts);
+    return (sts & SPI_I2S_BF_FLAG) != SPI_I2S_BF_FLAG; // SPI currently has no transmission transactions.
 }
 
 STATIC_FORCE_INLINE uint32_t FPGA_SSC_RX_Value(void) {

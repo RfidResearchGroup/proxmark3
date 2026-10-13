@@ -226,12 +226,18 @@ void printHf14aConfig(void) {
     Dbprintf("  [m] Magsafe polling............ %s",
              (hf14aconfig.magsafe == 1) ? _GREEN_("enabled") : _YELLOW_("disabled")
             );
-    Dbprintf("  [p] Polling loop annotation.... %s %*D",
-             (hf14aconfig.polling_loop_annotation.frame_length <= 0) ? _YELLOW_("disabled") : _GREEN_("enabled"),
-             hf14aconfig.polling_loop_annotation.frame_length,
-             hf14aconfig.polling_loop_annotation.frame,
-             ""
-            );
+
+    // no frame to show when it is off, and %*D defaults a zero width to 16 bytes
+    if (hf14aconfig.polling_loop_annotation.frame_length <= 0) {
+        Dbprintf("  [p] Polling loop annotation.... %s", _YELLOW_("disabled"));
+    } else {
+        Dbprintf("  [p] Polling loop annotation.... %s %*D",
+                 _GREEN_("enabled"),
+                 hf14aconfig.polling_loop_annotation.frame_length,
+                 hf14aconfig.polling_loop_annotation.frame,
+                 ""
+                );
+    }
 }
 
 /**
@@ -600,7 +606,9 @@ void Demod14aReset(void) {
 }
 
 void Demod14aInit(uint8_t *d, uint16_t n, uint8_t *par) {
-    Demod.output_len = n;
+    // No ISO14443-A frame can be longer than MAX_FRAME_SIZE (FSD/FSC max out at 256 bytes),
+    // while callers happily pass PM3_CMD_DATA_SIZE sized receive buffers
+    Demod.output_len = MIN(n, MAX_FRAME_SIZE);
     Demod.output = d;
     Demod.parity = par;
     Demod14aReset();
@@ -713,12 +721,16 @@ RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_t
 }
 
 // Thinfilm, Kovio mangles ISO14443A in the way that they don't use start bit nor parity bits.
-static int ManchesterDecoding_Thinfilm(uint8_t bit) {
+// non_real_time is the sample count to timestamp with when called from a DMA sniff
+// loop, where GetCountSspClk() has already run on past the frame.  0 = read the clock.
+RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit, uint32_t non_real_time) {
 
     if (Demod.len == Demod.output_len) {
-        // Flush last parity bits
-        Demod.parityBits <<= (8 - (Demod.len & 0x0007));    // left align remaining parity bits
-        Demod.parity[Demod.parityLen++] = Demod.parityBits; // and store them
+        // Flush last parity bits.  Thinfilm has no parity bits and passes a NULL buffer
+        if (Demod.parity != NULL) {
+            Demod.parityBits <<= (8 - (Demod.len & 0x0007));    // left align remaining parity bits
+            Demod.parity[Demod.parityLen++] = Demod.parityBits; // and store them
+        }
         return true;
     }
 
@@ -746,7 +758,7 @@ static int ManchesterDecoding_Thinfilm(uint8_t bit) {
             else if ((Demod.twoBits & 0x00EE) == 0x00E0) Demod.syncBit = 0;
 
             if (Demod.syncBit != 0xFFFF) {
-                Demod.startTime = (GetCountSspClk() & 0xfffffff8);
+                Demod.startTime = non_real_time ? non_real_time : (GetCountSspClk() & 0xfffffff8);
                 Demod.startTime -= Demod.syncBit;
                 Demod.bitCount = 1;            // number of decoded data bits
                 Demod.shiftReg = 1;
@@ -1774,20 +1786,42 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
     uint8_t receivedCmd[MAX_FRAME_SIZE] = { 0x00 };
     uint8_t receivedCmdPar[MAX_PARITY_SIZE] = { 0x00 };
 
+    //-----------------------------------------------------------------------------
+    // Note: we call FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF) here although the
+    // FPGA isn't needed yet. iso14443a_setup() below does it otherwise, and a
+    // bitstream download frees and clears BigBuf - which by then holds the
+    // Emulator Memory and the precompiled anticollision responses.
+    //-----------------------------------------------------------------------------
+    FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF);
+
     // free eventually allocated BigBuf memory but keep Emulator Memory
     BigBuf_free_keep_EM();
 
-    // Allocate 512 bytes for the dynamic modulation, created when the reader queries for it
+    // clear trace before allocating. The response buffers come out of the same
+    // pool and BigBuf_malloc() won't hand out memory the trace still occupies.
+    clear_trace();
+
+    // Buffers for the dynamic response, created when the reader queries for it.
     // Such a response is less time critical, so we can prepare them on the fly
 #define DYNAMIC_RESPONSE_BUFFER_SIZE 64
-#define DYNAMIC_MODULATION_BUFFER_SIZE 512
 
     uint16_t dynamic_response_buffer_size = DYNAMIC_RESPONSE_BUFFER_SIZE;
-    uint16_t dynamic_modulation_buffer_size = DYNAMIC_MODULATION_BUFFER_SIZE;
     if (tagType == 10) {
         dynamic_response_buffer_size = ST25TA_EML_NDEF_MAX + 4;
-        dynamic_modulation_buffer_size = 4096;
     }
+
+    // prepare_tag_modulation() memcpy's the encoded answer out of the ToSend
+    // buffer, and tosend_stuffbit() hard caps that at TOSEND_BUFFER_SIZE, so the
+    // modulation can never be larger than that however big the response is.
+    // Encoding costs 9 bytes per response byte -- 8 data bits plus a parity bit --
+    // and 4 more for start, stop and the correction bit.
+    //
+    // ST25TA used to ask for a flat 4096 here, 1788 bytes more than ToSend can
+    // ever hand it, which made it the largest single allocation of any tag
+    // simulation. The 512 the other tag types got was 68 bytes short of what a
+    // full 64 byte dynamic response needs, so those were refused at modulation
+    // time with an out-of-bound message
+    uint16_t dynamic_modulation_buffer_size = MIN((9 * dynamic_response_buffer_size) + 4, TOSEND_BUFFER_SIZE);
 
     uint8_t *dynamic_response_buffer = BigBuf_calloc(dynamic_response_buffer_size);
     if (dynamic_response_buffer == NULL) {
@@ -1878,7 +1912,6 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
 
     bool odd_reply = true;
 
-    clear_trace();
     set_tracing(true);
     LED_A_ON();
 
@@ -2205,7 +2238,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
             num_to_bytes(nonce, 4, dynamic_response_info.response);
             dynamic_response_info.response_n = 4;
 
-            prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
+            prepare_tag_modulation(&dynamic_response_info, dynamic_modulation_buffer_size);
             p_response = &dynamic_response_info;
             order = ORDER_AUTH;
         } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {    // Received a RATS request
@@ -2243,7 +2276,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
 
             // prepare to send
             dynamic_response_info.response_n = 1 + 8 + 2;
-            prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
+            prepare_tag_modulation(&dynamic_response_info, dynamic_modulation_buffer_size);
             p_response = &dynamic_response_info;
             order = ORDER_AUTH;
 
@@ -2294,7 +2327,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
 
             dynamic_response_info.response_n = 1 + 8 + 2;
 
-            prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
+            prepare_tag_modulation(&dynamic_response_info, dynamic_modulation_buffer_size);
             p_response = &dynamic_response_info;
             order = ORDER_NONE;
 
@@ -2325,7 +2358,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
 
             // prepare to send
             dynamic_response_info.response_n = 1 + 16 + 2;
-            prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
+            prepare_tag_modulation(&dynamic_response_info, dynamic_modulation_buffer_size);
             p_response = &dynamic_response_info;
             order = ORDER_AUTH;
 
@@ -2379,7 +2412,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
 
             dynamic_response_info.response_n = 1 + 16 + 2;
 
-            prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
+            prepare_tag_modulation(&dynamic_response_info, dynamic_modulation_buffer_size);
             p_response = &dynamic_response_info;
             order = ORDER_NONE;
 
@@ -2409,7 +2442,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
                 dynamic_response_info.response[1] = pack_live[1];
                 AddCrc14A(dynamic_response_info.response, 2);
                 dynamic_response_info.response_n = 4; // 2 PACK + 2 CRC
-                prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
+                prepare_tag_modulation(&dynamic_response_info, dynamic_modulation_buffer_size);
                 p_response = &dynamic_response_info;
             } else {
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("Password did not match, NACK_IV.");
@@ -2706,6 +2739,7 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
     // If further research is needed, an oscilloscope needs to be used to observe the specific DOUT modulation status.
     // ---
     // Clear TXRDY:
+    while (!FPGA_SSC_TX_Ready()) {}
     FPGA_SSC_TX_Value(SEC_Y);
 
     uint16_t c = 0;
@@ -2939,6 +2973,7 @@ int EmSendCmd14443aRaw(const uint8_t *resp, uint16_t respLen) {
     while ((ThisTransferTime = GetCountSspClk()) & 0x00000007);
 
     // Clear TXRDY:
+    while (!FPGA_SSC_TX_Ready()) {}
     FPGA_SSC_TX_Value(SEC_F);
 
     // send cycle
@@ -2961,6 +2996,7 @@ int EmSendCmd14443aRaw(const uint8_t *resp, uint16_t respLen) {
         }
     }
     LastTimeProxToAirStart = ThisTransferTime + (correction_needed ? 8 : 0);
+
     return PM3_SUCCESS;
 }
 
@@ -3089,7 +3125,7 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t rec_
 
         if (FPGA_SSC_RX_Ready()) {
             b = (uint8_t)FPGA_SSC_RX_Value();
-            if (ManchesterDecoding_Thinfilm(b)) {
+            if (ManchesterDecoding_Thinfilm(b, 0)) {
                 *received_len = Demod.len;
                 LogTrace(receivedResponse, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, NULL, false);
                 return true;
@@ -3189,6 +3225,18 @@ static uint16_t ReaderReceiveOffset(uint8_t *receivedAnswer, uint16_t answer_len
     return Demod.len;
 }
 
+// End of the last frame we transmitted, and start of the last frame we
+// received, both in SSP clock ticks. Callers that need the tag's frame delay
+// time take the difference; LogTrace scales the same values by 16 to get
+// carrier periods.
+uint32_t iso14a_last_tx_end(void) {
+    return LastTimeProxToAirStart + LastProxToAirDuration;
+}
+
+uint32_t iso14a_last_rx_start(void) {
+    return Demod.startTime;
+}
+
 static uint16_t ReaderReceiveEx(uint8_t *receivedAnswer, uint16_t answer_maxlen, uint8_t *par, bool no_parity) {
     if (GetIso14443aAnswerFromTag(receivedAnswer, answer_maxlen, par, 0, no_parity) == false) {
         return 0;
@@ -3202,10 +3250,255 @@ uint16_t ReaderReceive(uint8_t *receivedAnswer, uint16_t answer_maxlen, uint8_t 
     return ReaderReceiveEx(receivedAnswer, answer_maxlen, par, false);
 }
 
+// Number of symbols in a bit oriented ANTICOLLISION answer that starts `known`
+// bits into the 40 bit UID+BCC of one cascade level.  The byte the reader split
+// is completed without a parity bit, every whole byte after it carries one.
+static uint16_t anticoll_answer_symbols(uint8_t known) {
+
+    uint16_t bits = 40 - known;
+    uint16_t split = known & 7;
+    uint16_t symbols = 0;
+
+    if (split) {
+        uint16_t first = 8 - split;     // completes the split byte, no parity
+        symbols += first;
+        bits -= first;
+    }
+
+    // whole bytes from here on, one parity bit each
+    symbols += bits + (bits / 8);
+    return symbols;
+}
+
+// Encode the tail of a bit oriented ANTICOLLISION answer: the `40 - known` bits
+// of UID+BCC that the reader has not resolved yet.  The byte the reader split is
+// completed without a parity bit, every whole byte after it carries one, so
+// CodeIso14443aAsTagPar() cannot build this - it only speaks whole bytes.
+// known == 0 is the ordinary "send me the whole UID" answer.
+//
+// Every bit from `coll_from` on is sent as a collision instead of as data, and a
+// byte holding one cannot carry a real parity bit either.  coll_from == 40 is a
+// clean answer, 0 collides the whole frame.
+static void CodeIso14443aAsTagAnticollTail(const uint8_t *uid, uint8_t known, uint8_t coll_from) {
+
+    tosend_reset();
+
+    tosend_t *ts = get_tosend();
+
+    // 1 correction byte + 1 start bit + 1 stop bit on top of the payload
+    if (3 + (int)anticoll_answer_symbols(known) > TOSEND_BUFFER_SIZE) {
+        Dbprintf("CodeIso14443aAsTagAnticollTail: frame too large (%u known)", known);
+        return;
+    }
+
+    // Correction bit, might be removed when not needed
+    tosend_stuffbit(0);
+    tosend_stuffbit(0);
+    tosend_stuffbit(0);
+    tosend_stuffbit(0);
+    tosend_stuffbit(1);  // <-----
+    tosend_stuffbit(0);
+    tosend_stuffbit(0);
+    tosend_stuffbit(0);
+
+    // Send startbit
+    ts->buf[++ts->max] = SEC_D;
+    LastProxToAirDuration = 8 * ts->max - 4;
+
+    uint8_t first = known >> 3;         // byte the reader stopped in
+    uint8_t split = known & 7;          // bits of it the reader already has
+
+    for (uint8_t i = first; i < 5; i++) {
+
+        uint8_t skip = (i == first) ? split : 0;
+        bool collided = false;
+
+        for (uint8_t j = skip; j < 8; j++) {
+
+            if (((i * 8) + j) >= coll_from) {
+                ts->buf[++ts->max] = SEC_COLL;
+                LastProxToAirDuration = 8 * ts->max;
+                collided = true;
+            } else if (uid[i] & (1 << j)) {
+                ts->buf[++ts->max] = SEC_D;
+                LastProxToAirDuration = 8 * ts->max - 4;
+            } else {
+                ts->buf[++ts->max] = SEC_E;
+                LastProxToAirDuration = 8 * ts->max;
+            }
+        }
+
+        // no parity bit for the byte the reader split
+        if (skip) {
+            continue;
+        }
+
+        if (collided) {
+            ts->buf[++ts->max] = SEC_COLL;
+            LastProxToAirDuration = 8 * ts->max;
+        } else if (oddparity8(uid[i])) {
+            ts->buf[++ts->max] = SEC_D;
+            LastProxToAirDuration = 8 * ts->max - 4;
+        } else {
+            ts->buf[++ts->max] = SEC_E;
+            LastProxToAirDuration = 8 * ts->max;
+        }
+    }
+
+    // Send stopbit
+    ts->buf[++ts->max] = SEC_F;
+
+    // Convert from last byte pos to length
+    ts->max++;
+}
+
+// Store whatever CodeIso14443aAsTag*() just built into `buffer` and describe it
+// in `response_info`, the way prepare_allocated_tag_modulation() does for the
+// frames it can encode itself.
+static bool antifuzz_store_modulation(tag_response_info_t *response_info,
+                                      uint8_t **buffer, size_t *max_buffer_size) {
+
+    const tosend_t *ts = get_tosend();
+    if (ts->max <= 0 || (size_t)ts->max > *max_buffer_size) {
+        return false;
+    }
+
+    response_info->modulation = *buffer;
+    memcpy(response_info->modulation, ts->buf, ts->max);
+    response_info->modulation_n = ts->max;
+    response_info->ProxToAirDuration = LastProxToAirDuration;
+
+    *buffer += ts->max;
+    *max_buffer_size -= ts->max;
+    return true;
+}
+
+// Modulate an all-collision answer into `buffer` and describe it in
+// `response_info`, the way prepare_allocated_tag_modulation() does for ordinary
+// frames.  CodeIso14443aAsTag() cannot build these: a bit oriented answer is not
+// a whole number of bytes and every symbol in it is a collision.
+// One place to notice a reader getting deeper than it has been in this
+// anticollision attempt.  `depth` counts 41 steps per cascade level - the 40 bit
+// counts a reader can claim, plus the SELECT that follows them - so a reader
+// climbing levels keeps making progress rather than restarting the count.
+static void antifuzz_track_depth(uint8_t level, uint8_t known, uint16_t *depth,
+                                 uint8_t *max_level, uint8_t *max_known) {
+
+    uint16_t step = ((uint16_t)(level - 1) * 41) + known + 1;
+    if (step > *depth) {
+        *depth = step;
+        LED_C_INV();
+    }
+
+    if (level > *max_level) {
+        *max_level = level;
+        *max_known = known;
+    } else if (level == *max_level && known > *max_known) {
+        *max_known = known;
+    }
+}
+
+// Precomputed answers.  Modulating a frame takes long enough that the reader's
+// frame delay window is gone before the answer is ready - the same reason
+// `hf 14a sim` builds its answers up front - so everything this loop can send is
+// modulated before the field is even up.
+#define ANTIFUZZ_MAX_LEVEL   7      // SEL 0x93..0x9F
+#define ANTIFUZZ_NVB_COUNT   40     // 0..39 UID bits already known to the reader
+// Collision mode keeps the UID clean up to here and collides everything from it
+// on.  Byte 0 is what a reader sanity checks a UID by, so leaving exactly that
+// much alone is what lets the other 24 bits collide without the reader deciding
+// the card is junk and dropping it - every branch of the tree still resolves to
+// a UID starting with a real manufacturer byte.  One collided bit costs the
+// reader one round trip, so this is also what sets how hard it has to work.
+#define ANTIFUZZ_COLL_FROM   8
+#define ANTIFUZZ_MAX_ANNOUNCED 3    // cascade levels ISO 14443-3 actually defines
+#define ANTIFUZZ_RESP_ATQA   0
+#define ANTIFUZZ_RESP_SAK    1
+// One block of ANTIFUZZ_NVB_COUNT answers per UID the mode can hand out.  Cascade
+// mode has one UID per cascade level; collision mode only needs two, one with a
+// cascade tag and one without, and puts its BCC answers above them.  The two
+// layouts overlap - only ever one of them is prepared.
+#define ANTIFUZZ_RESP_BASE   2
+// Collision mode needs a block per announced cascade level plus one of filler,
+// and above them one clean BCC answer per value it could owe a reader.  Cascade
+// mode uses a block per level and none of the BCC answers, so the two layouts
+// overlap - only ever one of them is prepared.
+#define ANTIFUZZ_MAX_BLOCKS  (ANTIFUZZ_MAX_ANNOUNCED + 1)
+#define ANTIFUZZ_RESP_BCC    (ANTIFUZZ_RESP_BASE + (ANTIFUZZ_MAX_BLOCKS * ANTIFUZZ_NVB_COUNT))
+#define ANTIFUZZ_RESP_COUNT  (ANTIFUZZ_RESP_BCC + 256 > ANTIFUZZ_RESP_BASE + (ANTIFUZZ_MAX_LEVEL * ANTIFUZZ_NVB_COUNT) \
+                              ? ANTIFUZZ_RESP_BCC + 256                                                                \
+                              : ANTIFUZZ_RESP_BASE + (ANTIFUZZ_MAX_LEVEL * ANTIFUZZ_NVB_COUNT))
+// worst case is cascade mode: 1025 bytes of modulation per cascade level, plus
+// the two fixed answers
+#define ANTIFUZZ_MOD_SIZE    ((ANTIFUZZ_MAX_LEVEL * 1025) + 128)
+
+// The UIDs `hf 14a antifuzz` hands out, one per ATQA size.  A reader collects
+// them three bytes at a time behind a cascade tag, until the last cascade level
+// its ATQA announced, which carries four.
+static const uint8_t antifuzz_uid_4b[4]   = { 0x9B, 0x49, 0x03, 0x51 };
+static const uint8_t antifuzz_uid_7b[7]   = { 0x04, 0x49, 0x03, 0x52, 0x92, 0x9C, 0x80 };
+static const uint8_t antifuzz_uid_10b[10] = { 0x04, 0x49, 0x03, 0x53, 0x92, 0x9C, 0xAB, 0xD1, 0x4F, 0x80 };
+
+// Block b answers for cascade level b + 1, and the last block also answers for
+// every level past it.
+static uint8_t antifuzz_block_of(uint8_t count, uint8_t level) {
+    return (level <= count) ? (level - 1) : (count - 1);
+}
+
+// The four UID bytes a cascade level hands out, with its BCC appended.  Levels
+// below the last announced one carry a cascade tag and three UID bytes, the last
+// announced level carries four, and anything past it is off the end of the UID
+// altogether - it is only ever reached because the SAK keeps claiming the UID is
+// incomplete, so it gets filler that is obviously not part of the card.
+static void antifuzz_level_uid(uint8_t *uid, uint8_t level, uint8_t announced_levels, const uint8_t *src) {
+
+    if (level > announced_levels) {
+        // 0x88 would read as one more cascade tag and 0x08 as a random ID
+        uid[0] = 0x11;
+        uid[1] = level;
+        uid[2] = 0x01;
+        uid[3] = 0x00;
+    } else if (level < announced_levels) {
+        uid[0] = MIFARE_SELECT_CT;
+        memcpy(uid + 1, src + (3 * (level - 1)), 3);
+    } else {
+        memcpy(uid, src + (3 * (level - 1)), 4);
+    }
+
+    uid[4] = uid[0] ^ uid[1] ^ uid[2] ^ uid[3];
+}
+
 // This function misstreats the ISO 14443a anticollision procedure.
-// by fooling the reader there is a collision and forceing the reader to
-// increase the uid bytes.   The might be an overflow, DoS will occur.
-void iso14443a_antifuzz(uint32_t flags) {
+//
+// ANTIFUZZ_MODE_CASCADE
+//   Every SAK keeps the cascade bit set, i.e. "the UID is not complete yet", so
+//   a reader that believes the card asks for one more cascade level and keeps
+//   growing its UID buffer past the three levels ISO 14443-3 defines.  We answer
+//   SEL bytes 0x93 up to 0x9F, so a reader that simply increments is followed
+//   all the way up.
+//
+//   The UID matters only in that the reader has to accept it: a conforming
+//   reader counts the cascade levels the ATQA promised and throws the card away
+//   if it meets a cascade tag in the last of them, so the cascade tag is sent
+//   only below that level.
+//
+// ANTIFUZZ_MODE_COLLISION
+//   Byte 0 of the UID goes out clean and every bit after it collides, so the
+//   reader has to resolve 24 bits one round trip at a time.  Whatever it picks
+//   along the way it tells us, which means that once it has all 32 bits the BCC
+//   it is owed is computable - so it gets a real one, its SELECT succeeds, and
+//   the SAK sends it round the same 26 frame exercise one cascade level up.
+//
+//   Colliding byte 0 as well only ever produced a UID of all ones, which readers
+//   recognise as junk and drop before they even ask for the BCC.  Leaving that
+//   one byte alone is what buys the other 24 bits: every branch of the tree
+//   still resolves to a UID starting with a real manufacturer byte, so there is
+//   never a reason to bail out early.
+//
+//   Between them that is 183 answers per poll against the 3 a real card needs,
+//   and it leans on the bit tree walker, the NVB parser, the partial byte
+//   reassembler and the cascade handler all at once.
+void iso14443a_antifuzz(uint32_t flags, uint8_t mode) {
 
     // We need to listen to the high-frequency, peak-detected path.
     iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
@@ -3219,8 +3512,14 @@ void iso14443a_antifuzz(uint32_t flags) {
     // allocate buffers:
     uint8_t *received = BigBuf_calloc(MAX_FRAME_SIZE);
     uint8_t *receivedPar = BigBuf_calloc(MAX_PARITY_SIZE);
-    uint8_t *resp = BigBuf_calloc(20);
-    if (received == NULL || receivedPar == NULL || resp == NULL) {
+    tag_response_info_t *responses = (tag_response_info_t *)BigBuf_calloc(ANTIFUZZ_RESP_COUNT * sizeof(tag_response_info_t));
+    uint8_t *respdata = BigBuf_calloc(64);
+    uint8_t *modulation = BigBuf_calloc(ANTIFUZZ_MOD_SIZE);
+    // one byte per possible BCC, so each precomputed answer has something stable
+    // to point its trace payload at
+    uint8_t *bcc_bytes = (mode == ANTIFUZZ_MODE_COLLISION) ? BigBuf_calloc(256) : respdata;
+    if (received == NULL || receivedPar == NULL || responses == NULL || respdata == NULL ||
+            modulation == NULL || bcc_bytes == NULL) {
         if (g_dbglevel >= DBG_ERROR) DbpString("Anti-fuzz: failed to allocate buffers");
         reply_ng(CMD_HF_ISO14443A_ANTIFUZZ, PM3_EMALLOC, NULL, 0);
         switch_off();
@@ -3228,56 +3527,190 @@ void iso14443a_antifuzz(uint32_t flags) {
         return;
     }
 
-    // BigBuf_calloc() already zeroed the receive buffers
-    memset(resp, 0xFF, 20);
+    // ATQA, bit 7..6 of the first byte announce the UID size, and that size is
+    // also how many cascade levels the reader expects to walk before the UID is
+    // complete: 1 for a 4 byte UID, 2 for 7 bytes, 3 for 10 bytes.
+    uint8_t atqa0 = 0x04;
+    uint8_t announced_levels = 1;
+    const uint8_t *uid_src = antifuzz_uid_4b;
+    if (IS_FLAG_UID_IN_DATA(flags, 7)) {
+        atqa0 = 0x44;
+        announced_levels = 2;
+        uid_src = antifuzz_uid_7b;
+    } else if (IS_FLAG_UID_IN_DATA(flags, 10)) {
+        atqa0 = 0x84;
+        announced_levels = 3;
+        uid_src = antifuzz_uid_10b;
+    }
 
+    uint8_t *free_buffer = modulation;
+    size_t free_size = ANTIFUZZ_MOD_SIZE;
+    uint8_t *d = respdata;
+    bool ok = true;
+
+    responses[ANTIFUZZ_RESP_ATQA].response = d;
+    responses[ANTIFUZZ_RESP_ATQA].response_n = 2;
+    d[0] = atqa0;
+    d[1] = 0x00;
+    d += 2;
+
+    // SAK with the cascade bit set - this, not the UID, is what keeps the reader
+    // asking for one more level
+    responses[ANTIFUZZ_RESP_SAK].response = d;
+    responses[ANTIFUZZ_RESP_SAK].response_n = 3;
+    d[0] = 0x04;
+    AddCrc14A(d, 1);
+    d += 3;
+
+    ok = prepare_allocated_tag_modulation(&responses[ANTIFUZZ_RESP_ATQA], &free_buffer, &free_size) &&
+         prepare_allocated_tag_modulation(&responses[ANTIFUZZ_RESP_SAK], &free_buffer, &free_size);
+
+    // Cascade mode walks a reader past every level ISO 14443-3 defines, so it
+    // needs an answer for each.  Collision mode makes the reader earn each level,
+    // and only needs the announced ones plus a block of filler beyond them.
+    uint8_t nblocks = (mode == ANTIFUZZ_MODE_COLLISION) ? (announced_levels + 1) : ANTIFUZZ_MAX_LEVEL;
+    uint8_t coll_from = (mode == ANTIFUZZ_MODE_COLLISION) ? ANTIFUZZ_COLL_FROM : ANTIFUZZ_NVB_COUNT;
+
+    for (uint8_t b = 0; ok && b < nblocks; b++) {
+
+        uint8_t *uid = d;
+        d += 5;
+        antifuzz_level_uid(uid, b + 1, announced_levels, uid_src);
+
+        // One answer per NVB the reader can ask with.  Cascade mode never
+        // collides, so a conforming reader only ever asks with NVB 0x20 there,
+        // but answering a bit oriented request with the whole UID hands it a
+        // frame of the wrong length and it drops the card.
+        for (uint8_t known = 0; ok && known < ANTIFUZZ_NVB_COUNT; known++) {
+            tag_response_info_t *ri = &responses[ANTIFUZZ_RESP_BASE + (b * ANTIFUZZ_NVB_COUNT) + known];
+            ri->response = uid + (known >> 3);
+            ri->response_n = 5 - (known >> 3);
+            CodeIso14443aAsTagAnticollTail(uid, known, coll_from);
+            ok = antifuzz_store_modulation(ri, &free_buffer, &free_size);
+        }
+    }
+
+    if (mode == ANTIFUZZ_MODE_COLLISION) {
+
+        // The one answer in this mode that does not collide.  By the time the
+        // reader asks with all 32 UID bits it has told us every one it settled
+        // on, so the BCC it is owed is just those four bytes XORed - whichever
+        // way it came down the tree.  All 256 are ready, and none of them cares
+        // which cascade level or which UID it is answering for.
+        for (uint16_t b = 0; ok && b < 256; b++) {
+            tag_response_info_t *ri = &responses[ANTIFUZZ_RESP_BCC + b];
+            bcc_bytes[b] = (uint8_t)b;
+            ri->response = &bcc_bytes[b];
+            ri->response_n = 1;
+            ok = prepare_allocated_tag_modulation(ri, &free_buffer, &free_size);
+        }
+    }
+
+    if (ok == false) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("Anti-fuzz: failed to prepare tag answers");
+        reply_ng(CMD_HF_ISO14443A_ANTIFUZZ, PM3_EMALLOC, NULL, 0);
+        switch_off();
+        BigBuf_free_keep_EM();
+        return;
+    }
+
+    uint8_t max_level = 0;      // deepest cascade level a reader was driven to
+    uint8_t max_known = 0;      // and the most UID bits it claimed at that level
+    uint16_t rounds = 0;        // anticollision attempts it started
+    uint16_t depth = 0;         // how far into the current attempt it has got
+
+    // LED A  lit for the whole run
+    // LED B  lit while an anticollision attempt is in progress, dark once the
+    //        reader has given up on it and gone back to polling
+    // LED C  flips every time the reader gets one step deeper than it has been
+    //        in this attempt, so a fast flicker is a reader walking the UID tree
+    // LED D  flips on every frame we answer
     LED_A_ON();
+    LED_B_OFF();
+    LED_C_OFF();
+
     for (;;) {
         WDT_HIT();
 
         // Clean receive command buffer
         if (GetIso14443aCommandFromReader(received, MAX_FRAME_SIZE, receivedPar, &len) == false) {
-            Dbprintf("Anti-fuzz stopped. Trace length: %d ", BigBuf_get_traceLen());
+            Dbprintf("Anti-fuzz stopped. " _YELLOW_("%u") " anticollision rounds, deepest was cascade level "
+                     _YELLOW_("%u") " at " _YELLOW_("%u") " UID bits, trace length " _YELLOW_("%d"),
+                     rounds, max_level, max_known, BigBuf_get_traceLen());
             break;
         }
-        if (received[0] == ISO14443A_CMD_WUPA || received[0] == ISO14443A_CMD_REQA) {
-            resp[0] = 0x04;
-            resp[1] = 0x00;
 
-            if (IS_FLAG_UID_IN_DATA(flags, 7)) {
-                resp[0] = 0x44;
-            }
-
-            EmSendCmd(resp, 2);
-            continue;
-        }
-
-        // Received request for UID (cascade 1)
-        //if (received[1] >= 0x20 && received[1] <= 0x57 && received[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT) {
-        if (received[1] >= 0x20 && received[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT) {
-            resp[0] = 0xFF;
-            resp[1] = 0xFF;
-            resp[2] = 0xFF;
-            resp[3] = 0xFF;
-            resp[4] =  resp[0] ^ resp[1] ^ resp[2] ^ resp[3];
-
-            if (IS_FLAG_UID_IN_DATA(flags, 7)) {
-                resp[0] = MIFARE_SELECT_CT;
-            }
-
-            // trigger a faulty/collision response
-            EmSendCmdEx(resp, 5, true);
-            if (g_dbglevel >= DBG_EXTENDED) Dbprintf("ANTICOLL or SELECT %x", received[1]);
+        if (len == 1 && (received[0] == ISO14443A_CMD_WUPA || received[0] == ISO14443A_CMD_REQA)) {
+            // polling from scratch, so whatever the reader had collected is gone
+            LED_B_OFF();
+            depth = 0;
+            EmSendPrecompiledCmd(&responses[ANTIFUZZ_RESP_ATQA]);
             LED_D_INV();
-
             continue;
-        } else if (received[1] == 0x20 && received[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2) {  // Received request for UID (cascade 2)
-            if (g_dbglevel >= DBG_EXTENDED) Dbprintf("ANTICOLL or SELECT_2");
-        } else if (received[1] == 0x70 && received[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT) {    // Received a SELECT (cascade 1)
-        } else if (received[1] == 0x70 && received[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2) {  // Received a SELECT (cascade 2)
-        } else {
-            Dbprintf("unknown command %x", received[0]);
         }
+
+        // Everything below is a SEL frame.  ISO 14443-3 only defines cascade
+        // levels 1..3 (0x93 / 0x95 / 0x97), the levels above them are the whole
+        // point of the exercise.
+        if (len < 2 || received[0] < ISO14443A_CMD_ANTICOLL_OR_SELECT ||
+                received[0] > 0x9F || (received[0] & 1) == 0) {
+            // a frame we do not answer is never traced by EmLogTrace, and a
+            // reader that walked off somewhere unexpected is exactly what this
+            // command is looking for, so log it here
+            LogTrace(received, len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG,
+                     Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
+            if (g_dbglevel >= DBG_EXTENDED) Dbprintf("unknown command %02x (len %d)", received[0], len);
+            continue;
+        }
+
+        uint8_t level = ((received[0] - ISO14443A_CMD_ANTICOLL_OR_SELECT) >> 1) + 1;
+        if (level > max_level && g_dbglevel >= DBG_INFO) {
+            Dbprintf("cascade level " _YELLOW_("%u") " (SEL %02x)", level, received[0]);
+        }
+
+        if (depth == 0) {
+            rounds++;
+            LED_B_ON();
+        }
+
+        // worked out once, before the frame delay this has to answer inside
+        uint16_t block = ANTIFUZZ_RESP_BASE + (antifuzz_block_of(nblocks, level) * ANTIFUZZ_NVB_COUNT);
+
+        uint8_t nvb = received[1];
+
+        // SELECT: SEL 70 uid0 uid1 uid2 uid3 bcc crc crc.  The reader claims all
+        // 40 bits here, which is as deep as a cascade level goes.
+        if (nvb == 0x70) {
+            antifuzz_track_depth(level, 40, &depth, &max_level, &max_known);
+            EmSendPrecompiledCmd(&responses[ANTIFUZZ_RESP_SAK]);
+            LED_D_INV();
+            continue;
+        }
+
+        // ANTICOLLISION.  NVB counts SEL and NVB themselves, so 0x20 means "no
+        // UID bits known" and 0x67 means "39 bits known".
+        if (nvb < 0x20 || nvb > 0x67 || (nvb & 0x0F) > 7) {
+            LogTrace(received, len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG,
+                     Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
+            if (g_dbglevel >= DBG_EXTENDED) Dbprintf("bad NVB %02x (SEL %02x)", nvb, received[0]);
+            continue;
+        }
+
+        uint8_t known = (uint8_t)((((nvb >> 4) - 2) * 8) + (nvb & 0x0F));
+        antifuzz_track_depth(level, known, &depth, &max_level, &max_known);
+
+        // SEL 60 u0 u1 u2 u3 - the reader has resolved the whole UID and wants the
+        // BCC for it.  Give it the real one: its SELECT then succeeds, and the
+        // SAK cascades it into the same exercise one level deeper.
+        if (mode == ANTIFUZZ_MODE_COLLISION && known == 32 && len >= 6) {
+            uint8_t bcc = received[2] ^ received[3] ^ received[4] ^ received[5];
+            EmSendPrecompiledCmd(&responses[ANTIFUZZ_RESP_BCC + bcc]);
+            LED_D_INV();
+            continue;
+        }
+
+        EmSendPrecompiledCmd(&responses[block + known]);
+        LED_D_INV();
     }
 
     reply_ng(CMD_HF_ISO14443A_ANTIFUZZ, PM3_SUCCESS, NULL, 0);
@@ -3643,6 +4076,15 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
             return 0;
         }
 
+        // An ATS is TL, the bytes TL counts, and two CRC bytes on top.
+        // Anything shorter, like a 4 bit NAK is not ATS
+        if (len < 3 || resp[0] != len - 2) {
+            if (g_dbglevel >= DBG_INFO) {
+                Dbprintf("Card answered RATS with %i byte(s), not an ATS. Staying at ISO14443-3", len);
+            }
+            return 2;
+        }
+
         if (p_card) {
             memcpy(p_card->ats, resp, sizeof(p_card->ats));
             p_card->ats_len = len;
@@ -3703,7 +4145,14 @@ int iso14443a_fast_select_card(const uint8_t *uid_ptr, uint8_t num_cascades) {
 
 void iso14443a_setup(uint8_t fpga_minor_mode) {
     set_session_channel(false);
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+
+    // keep_EM: a bitstream download frees and clears BigBuf to get scratch space
+    // for the decompressor, and the plain FpgaDownloadAndGo() takes the emulator
+    // memory with it. Every 14a command comes through here, so a card image that
+    // `eload` had just put in place was destroyed by the next `hf 14a` command
+    // whenever the HF bitstream was not already resident. The decompressor still
+    // has BigBuf below the emulator memory to work in.
+    FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF);
     // Set up the synchronous serial port
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_ISO14443A);
     // connect Demodulated Signal to ADC:
@@ -4780,8 +5229,20 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
         return;
     }
 
+    //-----------------------------------------------------------------------------
+    // Note: we call FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF) here although the
+    // FPGA isn't needed yet. iso14443a_setup() below does it otherwise, and a
+    // bitstream download frees and clears BigBuf - which by then holds the
+    // Emulator Memory and the precompiled anticollision responses.
+    //-----------------------------------------------------------------------------
+    FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF);
+
     // free eventually allocated BigBuf memory but keep Emulator Memory
     BigBuf_free_keep_EM();
+
+    // clear trace before allocating. The response buffers come out of the same
+    // pool and BigBuf_malloc() won't hand out memory the trace still occupies.
+    clear_trace();
 
     // Response payloads must fit within the dynamic response buffer,
     // accounting for 1-byte IBlock header + 1-byte optional CID (offset 0 or 1)
@@ -4828,7 +5289,6 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
     int sentCount = 0;
     bool odd_reply = true;
 
-    clear_trace();
     set_tracing(true);
     LED_A_ON();
 

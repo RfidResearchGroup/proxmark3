@@ -78,6 +78,7 @@ typedef struct {
     bool listen_for_incoming;
     char serial_port_name[FILE_PATH_SIZE];
     uint16_t max_cmd_data_size;
+    uint16_t em_size;           // device side CARD_MEMORY_SIZE
 } communication_arg_t;
 
 extern communication_arg_t g_conn;

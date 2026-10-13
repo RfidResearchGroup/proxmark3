@@ -33,7 +33,6 @@
 #include "protocols.h"   // T55x7 defines
 #include "cmdlft55xx.h"  // verifywrite
 #include "generator.h"
-#include "wiegand_formats.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -104,12 +103,13 @@ int demodIdteck(uint8_t *raw, bool verbose) {
         raw2 = bytes_to_num(raw + 4, 4);
     }
 
-    // got a good demod
-    uint32_t id = 0;
-
     if (raw1 != 0x4944544B) {
         PrintAndLogEx(FAILED, "No genuine IDTECK found");
+        return PM3_ESOFT;
     }
+
+    // got a good demod
+    uint32_t id = 0;
 
     // parity check (TBD)
 
@@ -135,13 +135,6 @@ int demodIdteck(uint8_t *raw, bool verbose) {
                   (chksum == calc) ? _GREEN_("ok") : _RED_("fail")
                  );
 
-    wiegand_message_t packed = {
-        .Bot = id,
-        .Mid = 0,
-        .Top = 0,
-        .Length = 26
-    };
-    HIDUnpack(0, &packed);
     return PM3_SUCCESS;
 }
 
@@ -163,7 +156,8 @@ static int CmdIdteckDemod(const char *Cmd) {
     uint8_t raw[8] = {0};
     CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
     CLIParserFree(ctx);
-    return demodIdteck(raw, true);
+    // no --raw given, demod the graphbuffer instead
+    return demodIdteck((raw_len == 0) ? NULL : raw, true);
 }
 
 static int CmdIdteckClone(const char *Cmd) {

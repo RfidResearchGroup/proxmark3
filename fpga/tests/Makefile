@@ -8,6 +8,10 @@
 MKDIR = mkdir -p
 TEST_OUTDIR = tb_tmp
 
+# iverilog ships with oss-cad-suite; point at it when it is not on PATH, e.g.
+#   make IVERILOG=$(HOME)/Desktop/oss-cad-suite/bin/iverilog
+IVERILOG ?= iverilog
+
 TB_SOURCES = \
 	tb_lp20khz_1MSa_iir_filter.v \
 	tb_min_max_tracker.v \
@@ -22,7 +26,7 @@ TB_DATA = \
 all: $(TBS) tests
 
 %.vvp: %.v
-	iverilog -I .. -o $@ $<
+	$(IVERILOG) -I ../common -o $@ $<
 
 clean:
 	rm -rf *.vvp $(TEST_OUTDIR)

@@ -982,7 +982,9 @@ finish:
     return ret;
 }
 
-static int flash_pm3(char *serial_port_name, uint8_t num_files, const char *filenames[FLASH_MAX_FILES], bool can_write_bl, bool force) {
+#endif //LIBPM3
+
+int flash_pm3(char *serial_port_name, uint8_t num_files, const char *filenames[], bool can_write_bl, bool force) {
 
     int ret = PM3_EUNDEF;
     flash_file_t files[FLASH_MAX_FILES] = {0};
@@ -994,14 +996,19 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, const char *file
     }
 
     for (int i = 0 ; i < num_files; ++i) {
-        char *path;
-        ret = searchFile(&path, FIRMWARES_SUBDIR, filenames[i], ".elf", true);
-        if (ret != PM3_SUCCESS) {
-            ret = searchFile(&path, BOOTROM_SUBDIR, filenames[i], ".elf", true);
-        }
-        if (ret != PM3_SUCCESS) {
-            // Last try, let the error msg be displayed if not found
-            ret = searchFile(&path, FULLIMAGE_SUBDIR, filenames[i], ".elf", false);
+        char *path = NULL;
+        // Don't let searchFile append ".elf" onto an already-copied path.
+        if (path_is_regular_file(filenames[i])) {
+            path = str_dup(filenames[i]);
+            ret = (path == NULL) ? PM3_EMALLOC : PM3_SUCCESS;
+        } else {
+            ret = searchFile(&path, FIRMWARES_SUBDIR, filenames[i], ".elf", true);
+            if (ret != PM3_SUCCESS) {
+                ret = searchFile(&path, BOOTROM_SUBDIR, filenames[i], ".elf", true);
+            }
+            if (ret != PM3_SUCCESS) {
+                ret = searchFile(&path, FULLIMAGE_SUBDIR, filenames[i], ".elf", false);
+            }
         }
         if (ret != PM3_SUCCESS) {
             goto finish2;
@@ -1083,6 +1090,7 @@ finish2:
     return ret;
 }
 
+#ifndef LIBPM3
 static int reboot_bootloader_pm3(char *serial_port_name) {
     if (serial_port_name == NULL) {
         PrintAndLogEx(ERR, "You must specify a port.\n");

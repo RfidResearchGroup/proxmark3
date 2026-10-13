@@ -103,14 +103,18 @@ static uint8_t calc_pos(const uint8_t *d) {
     return pos;
 }
 
+// Discard the client side trace buffer
+void ClearTraceBuffer(void) {
+    free(gs_trace);
+    gs_trace = NULL;
+    gs_traceLen = 0;
+}
+
 // Copy an existing buffer into client trace buffer
 // I think this is cleaner than further globalizing gs_trace, and may lend itself to more modularity later?
 bool ImportTraceBuffer(const uint8_t *trace_src, uint16_t trace_len) {
     if (trace_len == 0 || trace_src == NULL) return (false);
-    if (gs_trace) {
-        free(gs_trace);
-        gs_traceLen = 0;
-    }
+    ClearTraceBuffer();
     gs_trace = calloc(trace_len, sizeof(uint8_t));
     if (gs_trace == NULL) {
         return (false);
@@ -518,7 +522,10 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
     uint32_t end_of_transmission_timestamp = 0;
     uint8_t topaz_reader_command[MAX_TOPAZ_READER_CMD_LEN];
-    char explanation[60] = {0};
+    // Shared by every annotate* function below.
+    // annotateHitagU() and annotateHitagS() accumulate into it without clamping.
+    // annotateHitagU(): 76 chars for flags PEXT|INV|RFU|NOS|CRCT on a WRITE SINGLE BLOCK
+    char explanation[80] = {0};
     tracelog_hdr_t *first_hdr = (tracelog_hdr_t *)(trace);
     tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + tracepos);
 
@@ -1189,22 +1196,17 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     return tracepos;
 }
 
-static int download_trace(void) {
+// Download the device side trace into a buffer owned by the caller,  who must
+// free it.  The client side trace buffer ( gs_trace ) is left untouched
+static int download_trace_ex(uint8_t **ptrace, uint16_t *ptrace_len) {
 
     if (IfPm3Present() == false) {
         PrintAndLogEx(FAILED, "You requested a trace upload in offline mode, consider using parameter `" _YELLOW_("-1") "` for working from Tracebuffer");
         return PM3_EINVARG;
     }
 
-    // reserve some space.
-    if (gs_trace) {
-        free(gs_trace);
-    }
-
-    gs_traceLen = 0;
-
-    gs_trace = calloc(g_conn.max_cmd_data_size, sizeof(uint8_t));
-    if (gs_trace == NULL) {
+    uint8_t *trace = calloc(g_conn.max_cmd_data_size, sizeof(uint8_t));
+    if (trace == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
@@ -1213,39 +1215,57 @@ static int download_trace(void) {
 
     // Query for the size of the trace,  downloading PM3_CMD_DATA_SIZE
     PacketResponseNG resp;
-    if (!GetFromDevice(BIG_BUF, gs_trace, g_conn.max_cmd_data_size, 0, NULL, 0, &resp, 4000, true)) {
+    if (!GetFromDevice(BIG_BUF, trace, g_conn.max_cmd_data_size, 0, NULL, 0, &resp, 4000, true)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
-        free(gs_trace);
-        gs_trace = NULL;
+        free(trace);
         return PM3_ETIMEOUT;
     }
 
     // the download terminator carries the trace length in download_done_t.extra
     if (resp.length < sizeof(download_done_t)) {
         PrintAndLogEx(WARNING, "short download reply from device");
-        free(gs_trace);
-        gs_trace = NULL;
+        free(trace);
         return PM3_ESOFT;
     }
-    gs_traceLen = ((const download_done_t *)resp.data.asBytes)->extra;
+
+    uint16_t traceLen = ((const download_done_t *)resp.data.asBytes)->extra;
 
     // if tracelog buffer was larger and we need to download more.
-    if (gs_traceLen > g_conn.max_cmd_data_size) {
+    if (traceLen > g_conn.max_cmd_data_size) {
 
-        free(gs_trace);
-        gs_trace = calloc(gs_traceLen, sizeof(uint8_t));
-        if (gs_trace == NULL) {
+        free(trace);
+        trace = calloc(traceLen, sizeof(uint8_t));
+        if (trace == NULL) {
             PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
 
-        if (!GetFromDevice(BIG_BUF, gs_trace, gs_traceLen, 0, NULL, 0, NULL, 2500, false)) {
+        if (!GetFromDevice(BIG_BUF, trace, traceLen, 0, NULL, 0, NULL, 2500, false)) {
             PrintAndLogEx(WARNING, "command execution time out");
-            free(gs_trace);
-            gs_trace = NULL;
+            free(trace);
             return PM3_ETIMEOUT;
         }
     }
+
+    *ptrace = trace;
+    *ptrace_len = traceLen;
+    return PM3_SUCCESS;
+}
+
+// Download the device side trace and make it the client side trace buffer.
+// On failure the existing buffer is kept,  ie a timeout no longer throws away
+// a trace the user loaded with `trace load`
+static int download_trace(void) {
+    uint8_t *trace = NULL;
+    uint16_t trace_len = 0;
+    int res = download_trace_ex(&trace, &trace_len);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    free(gs_trace);
+    gs_trace = trace;
+    gs_traceLen = trace_len;
     return PM3_SUCCESS;
 }
 
@@ -1304,6 +1324,33 @@ static int CmdTraceExtract(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdTraceClear(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "trace clear",
+                  "Clear the client side trace buffer.\n"
+                  "That is the buffer `trace load` fills and the `-1` param reads from.\n"
+                  "It is not the device side trace, see `data clear` for that one",
+                  "trace clear"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    if (gs_traceLen == 0) {
+        PrintAndLogEx(INFO, "Trace buffer is already empty");
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(SUCCESS, "Trace buffer cleared ( " _YELLOW_("%u") " bytes )", gs_traceLen);
+    ClearTraceBuffer();
+    return PM3_SUCCESS;
+}
+
 static int CmdTraceLoad(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -1325,11 +1372,7 @@ static int CmdTraceLoad(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
-    if (gs_trace) {
-        free(gs_trace); // maybe better to not clobber this until we have successful load?
-        gs_trace = NULL;
-        gs_traceLen = 0;
-    }
+    ClearTraceBuffer(); // maybe better to not clobber this until we have successful load?
 
     size_t len = 0;
     if (loadFile_safe(filename, ".trace", (void **)&gs_trace, &len) != PM3_SUCCESS) {
@@ -1348,32 +1391,60 @@ static int CmdTraceSave(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "trace save",
-                  "Save protocol data from trace buffer to binary file\n"
+                  "Save protocol data to binary file\n"
+                  "By default the trace is downloaded from device.\n"
+                  "Use `-1` to save the client side trace buffer instead, ie a trace\n"
+                  "loaded with `trace load` or downloaded by an earlier `trace list`\n"
                   "File extension is <.trace>",
-                  "trace save -f mytracefile    -> w/o file extension"
+                  "trace save -f mytracefile       -> download from device, w/o file extension\n"
+                  "trace save -1 -f mytracefile    -> use trace buffer"
                  );
 
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0("1", "buffer", "use data from trace buffer"),
         arg_str1("f", "file", "<fn>", "Specify trace file to save"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
+    bool use_buffer = arg_get_lit(ctx, 1);
+
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
-    if (gs_traceLen == 0) {
-        download_trace();
-        if (gs_traceLen == 0) {
-            PrintAndLogEx(WARNING, "trace is empty, nothing to save");
+    // default to a fresh download,  so a stale client side trace buffer never
+    // gets saved as if it was the trace you just captured.
+    // when offline we fall back to the buffer,  ie `trace load` -> `trace save`
+    uint8_t *trace = gs_trace;
+    uint16_t trace_len = gs_traceLen;
+    bool is_owner = false;
+
+    if ((use_buffer == false) && IfPm3Present()) {
+        // saving is not supposed to alter the client side trace buffer,  so
+        // download to a buffer of our own and leave gs_trace alone
+        if (download_trace_ex(&trace, &trace_len) != PM3_SUCCESS) {
             return PM3_SUCCESS;
         }
+        is_owner = true;
     }
 
-    saveFile(filename, ".trace", gs_trace, gs_traceLen);
+    if (trace_len == 0) {
+        PrintAndLogEx(WARNING, "trace is empty, nothing to save");
+        if (use_buffer) {
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("trace load") "` or removing parameter `" _YELLOW_("-1") "`");
+        } else if (IfPm3Present() == false) {
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("trace load") "` to load a trace from file");
+        }
+    } else {
+        saveFile(filename, ".trace", trace, trace_len);
+    }
+
+    if (is_owner) {
+        free(trace);
+    }
     return PM3_SUCCESS;
 }
 
@@ -1402,7 +1473,7 @@ int CmdTraceListAlias(const char *Cmd, const char *alias, const char *protocol) 
         arg_lit0("r", NULL, "show frame delay times relative to the previous transfer"),
         arg_lit0("u", NULL, "display times in microseconds instead of clock cycles"),
         arg_lit0("x", NULL, "show hexdump to convert to pcap(ng)\n"
-        "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
+                 "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
         arg_str0("f", "file", "<fn>", "filename of dictionary"),
         arg_param_end
     };
@@ -1457,7 +1528,7 @@ int CmdTraceList(const char *Cmd) {
         arg_lit0("r", NULL, "show frame delay times relative to the previous transfer"),
         arg_lit0("u", NULL, "display times in microseconds instead of clock cycles"),
         arg_lit0("x", NULL, "show hexdump to convert to pcap(ng)\n"
-        "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
+                 "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
         arg_str0("t", "type", "<str>", "protocol to annotate the trace"),
         arg_str0("f", "file", "<fn>", "filename of dictionary"),
         arg_param_end
@@ -1587,7 +1658,7 @@ int CmdTraceList(const char *Cmd) {
 
         if (protocol == LEGIC)
             PrintAndLogEx(INFO, _YELLOW_("LEGIC") " - Reader Mode: Timings are in ticks (1us == 1.5ticks)\n"
-                                         "        Tag Mode: Timings are in sub carrier periods (1/212 kHz == 4.7us)");
+                          "        Tag Mode: Timings are in sub carrier periods (1/212 kHz == 4.7us)");
 
         if (protocol == ISO_14443B || protocol == PROTO_CRYPTORF) {
             if (use_us)
@@ -1744,6 +1815,7 @@ int CmdTraceList(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",    CmdHelp,          AlwaysAvailable, "This help"},
+    {"clear",   CmdTraceClear,    AlwaysAvailable, "Clear the client side trace buffer"},
     {"extract", CmdTraceExtract,  AlwaysAvailable, "Extract authentication challenges found in trace"},
     {"list",    CmdTraceList,     AlwaysAvailable, "List protocol data in trace buffer"},
     {"load",    CmdTraceLoad,     AlwaysAvailable, "Load trace from file"},

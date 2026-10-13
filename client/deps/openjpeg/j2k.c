@@ -6404,10 +6404,10 @@ static OPJ_BOOL opj_j2k_add_mct(opj_tcp_t *p_tcp, opj_image_t *p_image,
                                 OPJ_UINT32 p_index) {
     OPJ_UINT32 i;
     opj_simple_mcc_decorrelation_data_t *l_mcc_record;
-    opj_mct_data_t *l_deco_array, * l_offset_array;
+    opj_mct_data_t *l_deco_array, *l_offset_array;
     OPJ_UINT32 l_data_size, l_mct_size, l_offset_size;
     OPJ_UINT32 l_nb_elem;
-    OPJ_UINT32 *l_offset_data, * l_current_offset_data;
+    OPJ_UINT32 *l_offset_data, *l_current_offset_data;
     opj_tccp_t *l_tccp;
 
     /* preconditions */
@@ -8518,10 +8518,10 @@ static OPJ_BOOL opj_j2k_mct_validation(opj_j2k_t *p_j2k,
 OPJ_BOOL opj_j2k_setup_mct_encoding(opj_tcp_t *p_tcp, opj_image_t *p_image) {
     OPJ_UINT32 i;
     OPJ_UINT32 l_indix = 1;
-    opj_mct_data_t *l_mct_deco_data = 00, * l_mct_offset_data = 00;
+    opj_mct_data_t *l_mct_deco_data = 00, *l_mct_offset_data = 00;
     opj_simple_mcc_decorrelation_data_t *l_mcc_data;
     OPJ_UINT32 l_mct_size, l_nb_elem;
-    OPJ_FLOAT32 *l_data, * l_current_data;
+    OPJ_FLOAT32 *l_data, *l_current_data;
     opj_tccp_t *l_tccp;
 
     /* preconditions */

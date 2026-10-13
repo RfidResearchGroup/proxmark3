@@ -193,6 +193,12 @@ static bool RAMFUNC sniff_wait_for_rnda_reply(tag_t type) {
     uint8_t *receivedResp = BigBuf_calloc(MAX_FRAME_SIZE);
     uint8_t *receivedRespPar = BigBuf_calloc(MAX_PARITY_SIZE);
 
+    if (receivedCmd == NULL || receivedCmdPar == NULL ||
+            receivedResp == NULL || receivedRespPar == NULL) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("hf doegox auth0: failed to allocate buffers");
+        goto out;
+    }
+
     uint8_t previous_data = 0;
     int maxDataLen = 0, dataLen;
     bool TagIsActive = false;

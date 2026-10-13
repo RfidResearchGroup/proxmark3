@@ -756,6 +756,17 @@ void em4x50_chk(const char *filename, bool ledcontrol) {
     uint32_t size = size_in_spiffs(filename);
     pwd_count = size / 4;
     uint8_t *pwds = BigBuf_calloc(size);
+    if (pwds == NULL) {
+        if (changed) {
+            rdv40_spiffs_lazy_unmount();
+        }
+        BigBuf_free();
+        if (ledcontrol) LEDsoff();
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        StopTicks();
+        reply_ng(CMD_LF_EM4X50_CHK, PM3_EMALLOC, (uint8_t *)&pwd, sizeof(pwd));
+        return;
+    }
 
     rdv40_spiffs_read_as_filetype(filename, pwds, size, RDV40_SPIFFS_SAFETY_SAFE);
 

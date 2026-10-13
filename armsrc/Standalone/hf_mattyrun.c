@@ -269,6 +269,11 @@ void RunMod(void) {
                                   sizeof(uint64_t) * (ARRAYLEN(MATTYRUN_MFC_ESSENTIAL_KEYS) +
                                                       ARRAYLEN(MATTYRUN_MFC_DEFAULT_KEYS) +
                                                       MIFARE_4K_MAXSECTOR * 2));
+    if (mfcKeys == NULL) {
+        DbpString("Failed to allocate memory");
+        return;
+    }
+
     uint16_t mfcKeyCount = 0;
 
     // Load essential keys to dictionary buffer

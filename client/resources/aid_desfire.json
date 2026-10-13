@@ -291,8 +291,8 @@
         "AID": "F48EF1",
         "Vendor": "Salto Systems",
         "Country": "ES",
-        "Name": "Salto Systems",
-        "Description": "Access Control",
+        "Name": "Salto Systems / Uni Delft",
+        "Description": "Access Control. Also issued as the TU Delft (NL) student card",
         "Type": "pacs"
     },
     {
@@ -451,8 +451,8 @@
         "AID": "F532F0",
         "Vendor": "Schlage via Allegion PLC",
         "Country": "US",
-        "Name": "Schlage Access Credential",
-        "Description": "FKA aptiQ Access Credential",
+        "Name": "Schlage Access Credential / LEAF",
+        "Description": "FKA aptiQ Access Credential. LEAF reuses this AID for backwards compatibility",
         "Type": "pacs"
     },
     {
@@ -512,14 +512,6 @@
         "Type": "pacs"
     },
     {
-        "AID": "F532F0",
-        "Vendor": "LEAF",
-        "Country": "US",
-        "Name": "LEAF Backwards Compat",
-        "Description": "LEAF Backwards Compat",
-        "Type": "pacs"
-    },
-    {
         "AID": "F51CDC",
         "Vendor": "LEAF",
         "Country": "US",
@@ -556,6 +548,14 @@
         "Vendor": "Fermax Electronica SAU",
         "Country": "ES",
         "Name": "Fermax AC-MAX",
+        "Description": "Fermax Proximity Card/Keyring DESFire EV2/EV3 2k Credential",
+        "Type": "pacs"
+    },
+    {
+        "AID": "FE69AE",
+        "Vendor": "Fermax Electronica SAU",
+        "Country": "ES",
+        "Name": "Fermax DESFire entry card",
         "Description": "Fermax Proximity Card/Keyring DESFire EV2/EV3 2k Credential",
         "Type": "pacs"
     },
@@ -853,14 +853,6 @@
         "Country": "DE",
         "Name": "Visitor's Pass",
         "Description": "Besucherausweis",
-        "Type": "student"
-    },
-    {
-        "AID": "F48EF1",
-        "Vendor": "TU Delft",
-        "Country": "NL",
-        "Name": "Uni Delft",
-        "Description": "",
         "Type": "student"
     },
     {
@@ -1637,6 +1629,30 @@
         "Country": "FI",
         "Name": "HSL Card (HEL/TLL/TAY)",
         "Description": "HEL/TLL/TAY HSL Card (New blue card after 2016)",
+        "Type": "transport"
+    },
+    {
+        "AID": "EF2101",
+        "Vendor": "Tampereen seudun joukkoliikenne (Nysse)",
+        "Country": "FI",
+        "Name": "Nysse Card (TMP)",
+        "Description": "Tampere region travel card",
+        "Type": "transport"
+    },
+    {
+        "AID": "AB1000",
+        "Vendor": "Waltti Solutions Oy",
+        "Country": "FI",
+        "Name": "Waltti Card",
+        "Description": "Finnish regional travel card used outside the HSL area",
+        "Type": "transport"
+    },
+    {
+        "AID": "4B5443",
+        "Vendor": "Transports publics fribourgeois (TPF)",
+        "Country": "CH",
+        "Name": "TPF Card (FRI)",
+        "Description": "Fribourg public transport card, AID is ASCII \"KTC\"",
         "Type": "transport"
     },
     {

@@ -311,8 +311,10 @@ static int32_t init_card(uint8_t cardtype, legic_card_select_t *p_card) {
 }
 
 static void init_tag(void) {
-    // configure FPGA
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+    // configure FPGA.  _keep_EM because legic_mem below is emulator memory, which
+    // is where `hf legic eload` put the tag content -- the plain variant frees and
+    // clears the whole of BigBuf to decompress into and would wipe it
+    FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_212K);
     SetAdcMuxFor(ADC_MUXSEL_HIPKD);
 

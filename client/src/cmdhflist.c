@@ -49,7 +49,12 @@ enum MifareAuthSeq {
 static enum MifareAuthSeq MifareAuthState;
 static AuthData_t AuthData;
 
+// Set while the previous reader frame was a bit oriented ANTICOLLISION, whose
+// answer completes a split byte and so carries no CRC either.
+static bool gs_14a_anticoll_answer = false;
+
 void ClearAuthData(void) {
+    gs_14a_anticoll_answer = false;
     AuthData.uid = 0;
     AuthData.nt = 0;
     AuthData.first_auth = true;
@@ -74,6 +79,29 @@ static uint8_t *gs_mfuc_key = NULL;
  */
 
 uint8_t iso14443A_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
+
+    // Neither half of a bit oriented ANTICOLLISION exchange carries a CRC: the
+    // request stops mid byte and the answer completes it.  NVB counts SEL and
+    // NVB themselves, so 0x20..0x67 is the anticollision range and only a
+    // SELECT, NVB 0x70, ends in a CRC.  `hf 14a antifuzz` pushes a reader past
+    // cascade level 3, hence the whole odd 0x93..0x9F range.
+    //
+    // The answer carries nothing that identifies it, so it is recognised by the
+    // request it follows - frames reach us in order.
+    if (isResponse == false) {
+        gs_14a_anticoll_answer = (n >= 2 &&
+                                  (d[0] & 1) &&
+                                  d[0] >= ISO14443A_CMD_ANTICOLL_OR_SELECT &&
+                                  d[0] <= 0x9F &&
+                                  d[1] >= 0x20 && d[1] <= 0x67);
+        if (gs_14a_anticoll_answer) {
+            return 2;
+        }
+    } else if (gs_14a_anticoll_answer) {
+        gs_14a_anticoll_answer = false;
+        return 2;
+    }
+
     if (n < 3) {
         return 2;
     }
@@ -82,11 +110,6 @@ uint8_t iso14443A_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
         return 2;
     }
 
-    if (d[1] == 0x50 &&
-            d[0] >= ISO14443A_CMD_ANTICOLL_OR_SELECT &&
-            d[0] <= ISO14443A_CMD_ANTICOLL_OR_SELECT_3) {
-        return 2;
-    }
     return check_crc(CRC_14443_A, d, n);
 }
 
@@ -266,40 +289,45 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
             case ISO14443A_CMD_WUPA:
                 snprintf(exp, size, "WUPA");
                 break;
-            case ISO14443A_CMD_ANTICOLL_OR_SELECT: {
-                // 93 20 = Anticollision (usage: 9320 - answer: 4bytes UID+1byte UID-bytes-xor)
-                // 93 50 = Bit oriented anti-collision (usage: 9350+ up to 5bytes, 9350 answer - up to 5bytes UID+BCC)
-                // 93 70 = Select (usage: 9370+5bytes 9370 answer - answer: 1byte SAK)
-                if (cmd[1] == 0x70)
-                    snprintf(exp, size, "SELECT_UID");
-                else if (cmd[1] == 0x20 || cmd[1] == 0x50)
-                    snprintf(exp, size, "ANTICOLL");
-                else
-                    snprintf(exp, size, "SELECT_XXX");
-                break;
-            }
-            case ISO14443A_CMD_ANTICOLL_OR_SELECT_2: {
-                //95 20 = Anticollision of cascade level2
-                //95 50 = Bit oriented anti-collision level2
-                //95 70 = Select of cascade level2
-                if (cmd[1] == 0x70)
-                    snprintf(exp, size, "SELECT_UID-2");
-                else if (cmd[1] == 0x20 || cmd[1] == 0x50)
-                    snprintf(exp, size, "ANTICOLL-2");
-                else
-                    snprintf(exp, size, "SELECT_XXX-2");
-                break;
-            }
-            case ISO14443A_CMD_ANTICOLL_OR_SELECT_3: {
-                //97 20 = Anticollision of cascade level3
-                //97 50 = Bit oriented anti-collision level3
-                //97 70 = Select of cascade level3
-                if (cmd[1] == 0x70)
-                    snprintf(exp, size, "SELECT_UID-3");
-                else if (cmd[1] == 0x20 || cmd[1] == 0x50)
-                    snprintf(exp, size, "ANTICOLL-3");
-                else
-                    snprintf(exp, size, "SELECT_XXX-3");
+            // 93 20 = Anticollision (usage: 9320 - answer: 4bytes UID+1byte UID-bytes-xor)
+            // 93 50 = Bit oriented anti-collision (usage: 9350+ up to 5bytes, 9350 answer - up to 5bytes UID+BCC)
+            // 93 70 = Select (usage: 9370+5bytes 9370 answer - answer: 1byte SAK)
+            // 95 xx / 97 xx are the same for cascade level 2 and 3.  ISO 14443-3
+            // defines no level above 3, but `hf 14a antifuzz` walks a reader up
+            // the whole odd 0x93..0x9F range, so decode that range too.
+            case ISO14443A_CMD_ANTICOLL_OR_SELECT:
+            case ISO14443A_CMD_ANTICOLL_OR_SELECT_2:
+            case ISO14443A_CMD_ANTICOLL_OR_SELECT_3:
+            case 0x99:
+            case 0x9B:
+            case 0x9D:
+            case 0x9F: {
+                // one suffix for every level past the first, so an ordinary
+                // trace keeps reading "ANTICOLL" / "SELECT_UID"
+                char lvl[8] = {0};
+                uint8_t level = ((cmd[0] - ISO14443A_CMD_ANTICOLL_OR_SELECT) >> 1) + 1;
+                if (level > 1) {
+                    snprintf(lvl, sizeof(lvl), "-%u", level);
+                }
+
+                if (cmdsize < 2) {
+                    snprintf(exp, size, "SELECT_XXX%s", lvl);
+                } else if (cmd[1] == 0x70) {
+                    snprintf(exp, size, "SELECT_UID%s", lvl);
+                } else if (cmd[1] >= 0x20 && cmd[1] <= 0x67 && (cmd[1] & 0x0F) < 8) {
+                    // NVB counts SEL and NVB themselves, so 0x20 is "no UID bits
+                    // known" and 0x67 is "39 known".  Anything in between is a
+                    // bit oriented request, and how far the reader has got is
+                    // the whole story of a collision storm.
+                    uint8_t known = (uint8_t)((((cmd[1] >> 4) - 2) * 8) + (cmd[1] & 0x0F));
+                    if (known) {
+                        snprintf(exp, size, "ANTICOLL%s(" _MAGENTA_("%u") " bit%s)", lvl, known, (known == 1) ? "" : "s");
+                    } else {
+                        snprintf(exp, size, "ANTICOLL%s", lvl);
+                    }
+                } else {
+                    snprintf(exp, size, "SELECT_XXX%s", lvl);
+                }
                 break;
             }
             case ISO14443A_CMD_REQA:

@@ -445,6 +445,10 @@ int sam_get_version(bool info) {
 
     uint8_t *response = BigBuf_calloc(ISO7816_MAX_FRAME);
     uint16_t response_len = ISO7816_MAX_FRAME;
+    if (response == NULL) {
+        res = PM3_EMALLOC;
+        goto out;
+    }
 
     uint8_t payload[] = {
         0xa0, // <- SAM command
@@ -543,6 +547,10 @@ int sam_get_serial_number(void) {
 
     uint8_t *response = BigBuf_calloc(ISO7816_MAX_FRAME);
     uint16_t response_len = ISO7816_MAX_FRAME;
+    if (response == NULL) {
+        res = PM3_EMALLOC;
+        goto out;
+    }
 
     uint8_t payload[] = {
         0xa0, // <- SAM command
@@ -658,6 +666,11 @@ void sam_append_asn1_node(const uint8_t *root, const uint8_t *node, uint8_t type
 void sam_send_ack(void) {
     uint8_t *response = BigBuf_calloc(ISO7816_MAX_FRAME);
     uint16_t response_len = ISO7816_MAX_FRAME;
+    if (response == NULL) {
+        if (g_dbglevel >= DBG_ERROR) DbpString(_RED_("SAM: failed to allocate buffer"));
+        BigBuf_free();
+        return;
+    }
 
     uint8_t payload[] = { 0xa0, 0 };
     uint16_t payload_len = sizeof(payload);

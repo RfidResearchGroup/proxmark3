@@ -31,8 +31,8 @@
 #include "dbprint.h"
 #include "ticks_apis.h"
 #include "lfops.h"
+#include "commonutil.h"    // ARRAYLEN
 
-#define ARRAYLEN(x) (sizeof(x) / sizeof((x)[0]))
 #define MAX_IND 4
 
 void LED_Slot(int i);

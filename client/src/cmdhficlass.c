@@ -1338,7 +1338,7 @@ static int CmdHFiClassTagSim(const char *Cmd) {
     wiegand_card_t card;
     memset(&card, 0, sizeof(wiegand_card_t));
     card.FacilityCode = arg_get_u32_def(ctx, 2, 0);
-    card.CardNumber    = arg_get_u32_def(ctx, 3, 0);
+    card.CardNumber    = arg_get_u64_def(ctx, 3, 0);
     card.IssueLevel    = arg_get_u32_def(ctx, 4, 0);
 
     // --- binary string
@@ -2017,9 +2017,9 @@ static int CmdHFiClassESave(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     uint16_t bytes = arg_get_int_def(ctx, 2, 256);
 
-    if (bytes > 4096) {
-        PrintAndLogEx(WARNING, "Emulator memory is max 4096bytes. Truncating %u to 4096", bytes);
-        bytes = 4096;
+    if (bytes > g_conn.em_size) {
+        PrintAndLogEx(WARNING, "Emulator memory is max %u bytes. Truncating %u to %u", g_conn.em_size, bytes, g_conn.em_size);
+        bytes = g_conn.em_size;
     }
 
     CLIParserFree(ctx);
@@ -2077,9 +2077,9 @@ static int CmdHFiClassEView(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    if (bytes > 4096) {
-        PrintAndLogEx(WARNING, "Emulator memory is max 4096bytes. Truncating %u to 4096", bytes);
-        bytes = 4096;
+    if (bytes > g_conn.em_size) {
+        PrintAndLogEx(WARNING, "Emulator memory is max %u bytes. Truncating %u to %u", g_conn.em_size, bytes, g_conn.em_size);
+        bytes = g_conn.em_size;
     }
 
     if (bytes % 8 != 0) {
@@ -4315,9 +4315,9 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             }
 
             if (tearoff_loop > 1) {
-                PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us - "_YELLOW_("%3u")" iter", params.delay_us, (tearoff_end & 0xFFFF), loop_count + 1);
+                PrintAndLogEx(INPLACE, "Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us - "_YELLOW_("%3u")" iter", params.delay_us, (tearoff_end & 0xFFFF), loop_count + 1);
             } else {
-                PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us", params.delay_us, (tearoff_end & 0xFFFF));
+                PrintAndLogEx(INPLACE, "Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us", params.delay_us, (tearoff_end & 0xFFFF));
             }
 
             // write block - don't check the return value. As a tear-off occurred, the write failed.
@@ -4814,9 +4814,9 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
         }
 
         if (tearoff_loop > 1) {
-            PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us - "_YELLOW_("%3u")" iter", params.delay_us, (tearoff_end & 0xFFFF), loop_count + 1);
+            PrintAndLogEx(INPLACE, "Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us - "_YELLOW_("%3u")" iter", params.delay_us, (tearoff_end & 0xFFFF), loop_count + 1);
         } else {
-            PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us", params.delay_us, (tearoff_end & 0xFFFF));
+            PrintAndLogEx(INPLACE, "Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us", params.delay_us, (tearoff_end & 0xFFFF));
         }
 
         // write block - don't check the return value. As a tear-off occurred, the write failed.
@@ -5293,6 +5293,10 @@ static void print_iclass_sio_decoded(uint8_t *sio, size_t sio_len) {
                 break;
             }
             default:
+                // Surface tags we don't decode yet instead of dropping them silently.
+                // Real credentials (e.g. SR) carry context tags such as [5]/[9] that
+                // would otherwise be invisible here; `--verbose` shows the full ASN1 TLV.
+                PrintAndLogEx(INFO, "  Unknown tag 0x%02X   : " _YELLOW_("%s"), tag, sprint_hex_inrow(val, len));
                 break;
         }
     }
@@ -7675,7 +7679,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
     memset(&card, 0, sizeof(wiegand_card_t));
 
     card.FacilityCode = arg_get_u32_def(ctx, 8, 0);
-    card.CardNumber = arg_get_u32_def(ctx, 9, 0);
+    card.CardNumber = arg_get_u64_def(ctx, 9, 0);
     card.IssueLevel = arg_get_u32_def(ctx, 10, 0);
 
     char format[16] = {0};

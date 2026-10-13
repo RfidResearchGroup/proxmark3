@@ -80,7 +80,7 @@ def bruteforce_key(p, key_segment, idx, segment, retries=5, bitflips=2):
     sys.stdout.flush()
     key = construct_key(key_segment, segment)
     console_debug(p,
-                  f'hf mfu aeschk -i {idx} '
+                  f'hf mfu chk -i {idx} '
                   f'-f mfulaes_segment_hw{bitflips}.dic '
                   f'--segment {segment} '
                   f'--key {key} '

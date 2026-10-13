@@ -303,7 +303,7 @@ void ExecuteEMVSim(uint8_t *receivedCmd, uint16_t receivedCmd_len, uint8_t *rece
 */
 void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t atqa, uint8_t sak) {
 
-    tag_response_info_t *responses;
+    tag_response_info_t *responses = NULL;
     uint8_t cardSTATE = MFEMUL_NOFIELD;
     uint8_t uid_len = 0; // 7
     uint32_t cuid = 0;
@@ -362,7 +362,7 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t atqa
 
         if (counter == 3000) {
             if (data_available()) {
-                Dbprintf("----------- " _GREEN_("BREAKING") " ----------");
+                Dbprintf("---- " _GREEN_("breaking"));
                 break;
             }
             counter = 0;
@@ -385,8 +385,9 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t atqa
         } else if (res == 1) { // button pressed
             FpgaDisableTracing();
             button_pushed = true;
-            if (g_dbglevel >= DBG_EXTENDED)
+            if (g_dbglevel >= DBG_EXTENDED) {
                 Dbprintf("Button pressed");
+            }
             break;
         }
 

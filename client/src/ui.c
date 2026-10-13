@@ -288,7 +288,7 @@ void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
     char *token = NULL;
     char *tmp_ptr = NULL;
     FILE *stream = stdout;
-    const char *spinner[] = {_YELLOW_("[\\]"), _YELLOW_("[|]"), _YELLOW_("[/]"), _YELLOW_("[-]")};
+    const char *spinner[] = {_YELLOW_("[\\]") " ", _YELLOW_("[|]") " ", _YELLOW_("[/]") " ", _YELLOW_("[-]") " "};
     const char *spinner_emoji[] = {" :clock1: ", " :clock2: ", " :clock3: ", " :clock4: ", " :clock5: ", " :clock6: ",
                                    " :clock7: ", " :clock8: ", " :clock9: ", " :clock10: ", " :clock11: ", " :clock12: "
                                   };

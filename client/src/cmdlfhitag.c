@@ -1495,12 +1495,12 @@ static int CmdLFHitag2Restore(const char *Cmd) {
     CLIParserFree(ctx);
 
     if ((ukeylen != 0) && (ukeylen != HITAG_PASSWORD_SIZE) && (ukeylen != HITAG_CRYPTOKEY_SIZE)) {
-        
+
         PrintAndLogEx(ERR, "Key must be %u bytes (password) or %u bytes (crypto), got %i",
-                    HITAG_PASSWORD_SIZE,
-                    HITAG_CRYPTOKEY_SIZE,
-                    ukeylen
-        );
+                      HITAG_PASSWORD_SIZE,
+                      HITAG_CRYPTOKEY_SIZE,
+                      ukeylen
+                     );
         return PM3_EINVARG;
     }
 
@@ -1940,7 +1940,7 @@ static int CmdLFHitagEload(const char *Cmd) {
         arg_lit0("1", "ht1", "Card type Hitag 1"),
         arg_lit0("2", "ht2", "Card type Hitag 2"),
         arg_lit0("s", "hts", "Card type Hitag S"),
-        arg_lit0("m", "htm", "Card type Hitag \xce\xbc"), // μ
+        arg_lit0("m", "htm", "Card type Hitag µ"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1966,7 +1966,7 @@ static int CmdLFHitagEload(const char *Cmd) {
 
     // A Hitag u image is the 6 byte UID followed by its pages, and is the largest
     // of the four.  Everything still fits one NG frame.
-    #define HITAGU_EIMAGE_SIZE  (HITAGU_UID_SIZE + (HITAGU_MAX_PAGE_ADVANCED_PLUS * HITAGU_BLOCK_SIZE))
+#define HITAGU_EIMAGE_SIZE  (HITAGU_UID_SIZE + (HITAGU_MAX_PAGE_ADVANCED_PLUS * HITAGU_BLOCK_SIZE))
 
     // read dump file
     uint8_t *dump = NULL;
@@ -1990,7 +1990,7 @@ static int CmdLFHitagEload(const char *Cmd) {
     } else if (use_htm) {
         // a u dump is sized by the tag's ICR, so accept anything that fits
         expected = 0;
-        tname = "Hitag \xce\xbc";
+        tname = "Hitag µ";
     }
 
     if (use_htm) {
@@ -2053,7 +2053,7 @@ static int CmdLFHitagEview(const char *Cmd) {
         arg_lit0("1", "ht1", "Card type Hitag 1"),
         arg_lit0("2", "ht2", "Card type Hitag 2 (default)"),
         arg_lit0("s", "hts", "Card type Hitag S"),
-        arg_lit0("m", "htm", "Card type Hitag \xce\xbc"),
+        arg_lit0("m", "htm", "Card type Hitag µ"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -2932,5 +2932,4 @@ int CmdLFHitag(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
-
 
