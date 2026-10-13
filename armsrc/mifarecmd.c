@@ -46,6 +46,18 @@
 #ifndef HARDNESTED_PRE_AUTHENTICATION_LEADTIME
 # define HARDNESTED_PRE_AUTHENTICATION_LEADTIME 400 // some (non standard) cards need a pause after select before they are ready for first authentication
 #endif
+// PM5/AT32: the 288 MHz AT32 issues the nested auth so soon after the first auth completes
+// that the encrypted-nonce reception is intermittently corrupted, which defeats hardnested.
+// A short settle delay before the nested read prevents it. Not applied on the slower RDV4.
+#ifndef HARDNESTED_NESTED_TURNAROUND_DELAY_US
+# define HARDNESTED_NESTED_TURNAROUND_DELAY_US 500
+#endif
+// PM5's command buffer (PM3_CMD_DATA_SIZE 4064) holds ~450 nonce pairs per round vs ~68 on
+// other platforms; a full ~450-pair round can outrun the client's 3 s reply wait and drop
+// the link. Cap the round so the reply stays timely (no-op where the natural max is <= 68).
+#ifndef MFC_ACQ_ROUND_MAX_PAIRS
+# define MFC_ACQ_ROUND_MAX_PAIRS 68
+#endif
 
 // send an incomplete dummy response in order to trigger the card's authentication failure timeout
 #ifndef CHK_TIMEOUT
@@ -1143,7 +1155,9 @@ void MifareAcquireEncryptedNonces(const mf_acquire_nonces_t *payload) {
     uint8_t prev_enc_nt[] = {0, 0, 0, 0};
     uint8_t prev_counter = 0;
 
-    while (num_pairs < MFC_MAX_NONCE_PAIRS) {
+    const uint16_t max_pairs = MIN(MFC_MAX_NONCE_PAIRS, MFC_ACQ_ROUND_MAX_PAIRS);
+
+    while (num_pairs < max_pairs) {
 
         // Test if the action was cancelled
         if (BUTTON_PRESS() || data_available()) {
@@ -1189,6 +1203,13 @@ void MifareAcquireEncryptedNonces(const mf_acquire_nonces_t *payload) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireEncryptedNonces: Auth1 error");
             continue;
         }
+
+#if defined(PM5)
+        // Let the card settle after the first auth before grabbing the nested nonce; the
+        // AT32's fast turnaround otherwise corrupts the encrypted read. Field stays on and
+        // the crypto1 state (pcs) is unchanged by the wait.
+        SpinDelayUs(HARDNESTED_NESTED_TURNAROUND_DELAY_US);
+#endif
 
         // nested authentication
         uint16_t len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + (targetKeyType & 0xF), targetBlockNo, receivedAnswer, sizeof(receivedAnswer), par_enc, NULL);
