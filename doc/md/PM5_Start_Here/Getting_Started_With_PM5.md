@@ -61,6 +61,11 @@ For more options, look [here](#Build-Extras)
 * If you see 2 lights (B & D) go on and then OFF, you're in *DFU mode*.  Unplug, and try the previous step again.
 * Run `./pm3-flash-bootrom`
   * If you see "🚨 The elf file is not applicable to the currently connected device.", you probably forgot to add `PLATFORM=PM5` in your `Makefile.platform`
+  * `./pm3-flash-bootrom` uses the repo version.
+  * `pm3-flash-bootrom` uses the system installed version.
+  * Using the wrong version can throw unexpected errors for the Proxmark5 like these:
+  * `[=] Permitted flash range: 0x08000000-0x08100000`
+  * `[!!]  The elf file is not applicable to the currently connected device.`
 * If the above hangs or thows and error, try this: [DFU Install](#DFU-Install)
 * Unplug.
 
@@ -202,3 +207,4 @@ Do not use them unless you fully understand what you're doing.
 - [PM5 Button Controller](./PM5_Controllers/PM5_Button_Controller_RM.md)
 - [PM5 RGB Controller](./PM5_Controllers/PM5_RGB_Controller_RM.md)
 - [PM5 BWM Install](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/master/INSTALL.md)
+- [PM5 <--> Flipper Usage](./PM5-FLIPPER-USAGE.md)

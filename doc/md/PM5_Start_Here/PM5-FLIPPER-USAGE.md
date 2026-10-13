@@ -36,15 +36,19 @@ Build as usual, CEP is available by default. (`SKIP_CEP=1` to remove CEP support
 ## What works today
 
 - The FAP handshake completing (app leaves "connecting").
-- Standard commands that don't touch the antenna frontend — `hw
-  version`, `hw status`, memory/flash operations, etc.
+- Standard commands — `hw version`, `hw status`, memory/flash operations,
+  `CMD_CEP_STATUS` (compact binary snapshot: CEP link state, BWM battery,
+  firmware version — feeds the FAP's Hardware Status dashboard).
+- `hf`/`lf` reads in general, same as over USB, once the device's one-time
+  FPGA bitstream step is done (see `Getting_Started_With_PM5.md`) — CEP
+  itself doesn't block RF.
 
 ## What doesn't (yet)
 
-- Any RF operation over this link — `hf`/`lf` reads, the FAP's "Read Hitag2"
-  menu item. These need the real PM5 FPGA/RF configuration, which isn't
-  shipped in this repo. Tracked separately, out of scope for the CEP
-  transport itself.
+- The FAP's "Read Hitag2" menu item specifically. Every attempt over CEP
+  replies `PM3_EFAILED` with stale cached UID data, even though the same
+  reader succeeds moments later over plain USB against the same tag.
+  Firmware-side, root cause open, out of scope for the CEP transport itself.
 
 ---
 
@@ -64,7 +68,5 @@ Build as usual, CEP is available by default. (`SKIP_CEP=1` to remove CEP support
 ## Notes
 
 - CEP uses its own reply-routing flag (`g_reply_via_cep`).
-- The SPI bit-order/clock-phase settings are a best-effort port from prior
-  bring-up code, pending confirmation against real Flipper traffic (logic
-  analyzer). If the handshake never completes, this is the first thing to
-  check.
+- SPI bit-order/clock-phase settings are confirmed correct against real
+  Flipper traffic (logic analyzer): MSB-first, mode 0, CS active-low.
