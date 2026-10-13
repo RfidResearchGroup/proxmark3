@@ -99,6 +99,10 @@
 `define FPGA_CMD_SET_DIVISOR                        2
 `define FPGA_CMD_SET_EDGE_DETECT_THRESHOLD          3
 `define FPGA_CMD_TRACE_ENABLE                       2
+// Definitions for the FPGA commands that are only available on PM5
+`ifdef PM5
+`define FPGA_CMD_SET_PWR_PWM_LOW_COUNT              4
+`endif
 
 // Major modes
 `define FPGA_MAJOR_MODE_LF_READER                   0
