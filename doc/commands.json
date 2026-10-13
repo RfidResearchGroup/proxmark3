@@ -6393,7 +6393,7 @@
         },
         "hf mf gdmwipe": {
             "command": "hf mf gdmwipe",
-            "description": "Wipe a GDM card to factory defaults. With no wakeup flag it auto-detects a backdoor (gen1a or gdm alt); a WUPA-only card is rejected.",
+            "description": "Reset a GDM card to a known clean 4-byte template. Sets UID to 11223344, clears real and hidden data blocks, and sets sector trailers to default values. With no wakeup flag it auto-detects a backdoor; a WUPA-only card is rejected.",
             "notes": [
                 "hf mf gdmwipe --gdm"
             ],
@@ -16787,6 +16787,6 @@
     "metadata": {
         "commands_extracted": 935,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-09-27T19:09:12+00:00"
+        "extracted_on": "2026-10-13T21:05:00+00:00"
     }
 }

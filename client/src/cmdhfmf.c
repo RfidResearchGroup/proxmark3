@@ -10730,8 +10730,8 @@ static int CmdHF14AGen4_GDM_Wipe(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf gdmwipe",
                   "Reset a GDM card to a known clean 4-byte template.\n"
-                  "Sets UID 11223344, clears real and hidden data blocks, and restores transport sector trailers.\n"
-                  "With no wakeup flag it auto-detects a backdoor (gen1a or gdm alt); a WUPA-only card is rejected.",
+                  "Sets UID to 11223344, clears real and hidden data blocks, and sets sector trailers to default values.\n"
+                  "With no wakeup flag it auto-detects a backdoor; a WUPA-only card is rejected.",
                   "hf mf gdmwipe --gdm"
                  );
     void *argtable[] = {
