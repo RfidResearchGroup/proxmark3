@@ -118,6 +118,9 @@
 | HF_EMVPNG       | Read and emulate EMV Visa cards        |
 |                 | - Davi Mikael (Penegui)                |
 +----------------------------------------------------------+
+| GDB_GATEWAY     | Read-only GDB server over USB CDC      |
+|                 | (PM5)                                  |
++----------------------------------------------------------+
 ]]
 
 # Default standalone if no standalone specified
@@ -137,7 +140,7 @@ set(STANDALONE_MODES
     HF_14ASNIFF HF_14BSNIFF HF_15SNIFF HF_15SIM
     HF_AVEFUL HF_BOG HF_CARDHOPPER HF_COLIN HF_CRAFTBYTE HF_ICECLASS
     HF_LEGIC HF_LEGIC_RDV4 HF_LEGICSIM HF_MATTYRUN HF_MFCSIM HF_MSDSAL HF_REBLAY
-    HF_ST25_TEAROFF HF_TCPRST HF_TMUDFORD HF_UNISNIFF HF_YOUNG HF_EMVPNG DANKARMULTI)
+    HF_ST25_TEAROFF HF_TCPRST HF_TMUDFORD HF_UNISNIFF HF_YOUNG HF_EMVPNG DANKARMULTI GDB_GATEWAY)
 # List of modes that require bluetooth
 set(STANDALONE_MODES_REQ_BT HF_CARDHOPPER HF_REBLAY)
 # List of modes that require smartcard
