@@ -10729,7 +10729,7 @@ static int gdm_wipe_verify_uid(const uint8_t *expected_uid) {
 static int CmdHF14AGen4_GDM_Wipe(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf gdmwipe",
-                  "Reset a GDM card to a known clean 4-byte template.\n"
+                  "Wipe a GDM card to a known clean 4-byte template.\n"
                   "Sets UID to 11223344, clears real and hidden data blocks, and sets sector trailers to default values.\n"
                   "With no wakeup flag it auto-detects a backdoor; a WUPA-only card is rejected.",
                   "hf mf gdmwipe --gdm"
@@ -12422,7 +12422,7 @@ static command_t CommandTable[] = {
     {"gdmgethidblk", CmdHF14AGen4_GDM_GetHidBlk, IfPm3Iso14443a, "Read hidden block from GDM card"},
     {"gdmsethidblk", CmdHF14AGen4_GDM_SetHidBlk, IfPm3Iso14443a, "Write hidden block to GDM card"},
     {"gdmsetuid", CmdHF14AGen4_GDM_SetUid, IfPm3Iso14443a, "Set UID on GDM card"},
-    {"gdmwipe", CmdHF14AGen4_GDM_Wipe, IfPm3Iso14443a, "Reset GDM card to a clean template"},
+    {"gdmwipe", CmdHF14AGen4_GDM_Wipe, IfPm3Iso14443a, "Wipe GDM card to a clean template"},
     {"gdmsetsig", CmdHF14AGen4_GDM_SetSig, IfPm3Iso14443a, "Set MFC EV1 signature on GDM card"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("ndef") " -----------------------"},
     {"ndefformat",  CmdHFMFNDEFFormat,      IfPm3Iso14443a,  "Format MIFARE Classic Tag as NFC Tag"},
