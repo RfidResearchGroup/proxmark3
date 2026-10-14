@@ -14,8 +14,8 @@
 
 # Usage:
 
-# python3 niimtag.py --help
-# python3 niimtag.py analyze -i tag-dump.json -f pm3-json
+# python3 niimbot_tag_patcher.py --help
+# python3 niimbot_tag_patcher.py analyze -i tag-dump.json -f pm3-json
 
 # Patch the print counter, set it back to 0 and write the file to patched.json
 # (format of the pached file is always the same as input file)
