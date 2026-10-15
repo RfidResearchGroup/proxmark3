@@ -698,7 +698,7 @@ Check column "offline" for their availability.
 |`hf mf gdmgethidblk     `|N       |`Read hidden block from GDM card`
 |`hf mf gdmsethidblk     `|N       |`Write hidden block to GDM card`
 |`hf mf gdmsetuid        `|N       |`Set UID on GDM card`
-|`hf mf gdmwipe          `|N       |`Wipe GDM card to factory defaults`
+|`hf mf gdmwipe          `|N       |`Wipe GDM card to a clean template`
 |`hf mf gdmsetsig        `|N       |`Set MFC EV1 signature on GDM card`
 |`hf mf ndefformat       `|N       |`Format MIFARE Classic Tag as NFC Tag`
 |`hf mf ndefread         `|N       |`Read and print NDEF records from card`
