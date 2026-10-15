@@ -380,6 +380,20 @@ typedef struct {
     uint8_t data[];
 } PACKED lf_hitag_t;
 
+#define LF_COTAG_DIVISOR    90
+#define LF_COTAG_TX_DIVISOR 181
+
+// For CMD_LF_COTAG_SIMULATE
+#define LF_COTAG_SIM_DATA_LEN 16   // 128 bits, the longest repeating COTAG frame
+typedef struct {
+    uint16_t thr_floor;     // minimum rise threshold
+    uint16_t hb_delay_us;   // optional custom half bit delay [us]
+    uint8_t repeats;        // repeat data frame this many times per answer
+    bool verbose;
+    uint8_t nbits;         // number of data bits
+    uint8_t data[LF_COTAG_SIM_DATA_LEN];
+} PACKED lf_cotagsim_t;
+
 // For CMD_LF_SNIFF_RAW_ADC and CMD_LF_ACQ_RAW_ADC
 #define LF_SAMPLES_BITS 30
 #define MAX_LF_SAMPLES ((((uint32_t)1u) << LF_SAMPLES_BITS) - 1)
@@ -1092,6 +1106,7 @@ typedef struct {
 #define CMD_LF_VIKING_CLONE 0x0222
 #define CMD_LF_T55XX_WAKEUP 0x0224
 #define CMD_LF_COTAG_READ 0x0225
+#define CMD_LF_COTAG_SIMULATE 0x022B
 #define CMD_LF_T55XX_SET_CONFIG 0x0226
 #define CMD_LF_SAMPLING_PRINT_CONFIG 0x0227
 #define CMD_LF_SAMPLING_GET_CONFIG 0x0228

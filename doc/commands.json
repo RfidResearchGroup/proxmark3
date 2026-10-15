@@ -11760,6 +11760,27 @@
             ],
             "usage": "lf cotag reader [-hv@] [-s <dec>] [--divisor <19-255>]"
         },
+        "lf cotag sim": {
+            "command": "lf cotag sim",
+            "description": "Enables simulation of a COTAG tag. Simulation runs until the button is pressed or another USB command is issued. Without `-r` it only reports detected reader activation sequence. Note: COTAG tag full repeating sequence is 128 bits, but readers seem to care about LSB 64 bits only.",
+            "notes": [
+                "lf cotag sim -> only detect the reader",
+                "lf cotag sim -r A37E0D37000C1337 -> send 64 bits",
+                "lf cotag sim -r 0000000000000002A37E0D37000C1337",
+                "lf cotag sim --floor 32 -> more sensitive, for a reader further away",
+                "lf cotag sim -r A37E0D37000C1337 --hb_delay_us 2909 -> time the half bit instead of counting cycles"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-r, --raw <hex> raw data to answer with, 8 to 16 bytes (64-128 bits)",
+                "-n, --repeat <1-16> repeat data frame this many times per answer (def 1)",
+                "--floor <16-65535> minimum rise threshold (def 128)",
+                "--hb_delay_us <2900-2918> custom half bit delay [us] (should be around 2909)",
+                "-v, --verbose report detected reader activation sequence while answering"
+            ],
+            "usage": "lf cotag sim [-hv] [-r <hex>] [-n <1-16>] [--floor <16-65535>] [--hb_delay_us <2900-2918>]"
+        },
         "lf destron clone": {
             "command": "lf destron clone",
             "description": "clone a Destron tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
@@ -16785,7 +16806,7 @@
         }
     },
     "metadata": {
-        "commands_extracted": 935,
+        "commands_extracted": 936,
         "extracted_by": "PM3Help2JSON v1.00",
         "extracted_on": "2026-10-14T15:56:50+00:00"
     }

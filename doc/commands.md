@@ -1119,6 +1119,7 @@ Check column "offline" for their availability.
 |`lf cotag help          `|Y       |`This help`
 |`lf cotag demod         `|Y       |`demodulate a COTAG tag`
 |`lf cotag reader        `|N       |`attempt to read and extract tag data`
+|`lf cotag sim           `|N       |`simulate a COTAG tag`
 
 
 ### lf destron

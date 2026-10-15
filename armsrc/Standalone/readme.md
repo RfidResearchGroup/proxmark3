@@ -81,6 +81,7 @@ As such the information inside may be false or hallucinated.
 | Mode ID | Document | Description |
 |---------|----------|-------------|
 | DANKARMULTI | [Dankarmulti Loader](../../doc/standalone/dankarmulti.md) | Combine multiple standalone modes into one firmware image |
+| GDB_GATEWAY | [GDB Gateway](../../doc/standalone/gdb_gateway.md) | Read-only GDB server over USB CDC | PM5 |
 
 # Developing Standalone Modes
 This contains functionality for different StandAlone modes. The fullimage will be built given the correct compiler flags used. Build targets for these files are contained in `Makefile.inc` and `Makefile.hal`
