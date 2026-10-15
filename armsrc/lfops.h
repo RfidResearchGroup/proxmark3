@@ -79,6 +79,7 @@ void EM4xProtectWord(uint32_t data, uint32_t pwd, uint8_t usepwd, bool ledcontro
 
 void cotag_start_pulse(void);
 void Cotag(uint32_t arg0, bool ledcontrol);
+void SimulateCotag(const lf_cotagsim_t *params, bool ledcontrol);
 void setT55xxConfig(uint8_t persist, const t55xx_configurations_t *c);
 t55xx_configurations_t *getT55xxConfig(void);
 void printT55xxConfig(void);
