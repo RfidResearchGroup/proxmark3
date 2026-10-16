@@ -42,6 +42,9 @@ Build as usual, CEP is available by default. (`SKIP_CEP=1` to remove CEP support
 - `hf`/`lf` reads in general, same as over USB, once the device's one-time
   FPGA bitstream step is done (see `Getting_Started_With_PM5.md`) — CEP
   itself doesn't block RF.
+- The link survives idle periods cleanly — the FAP's idle dummy-poll bytes
+  (`0xFFFF` length header, no data pending) no longer trigger a false SPI
+  resync.
 
 ## What doesn't (yet)
 
@@ -49,6 +52,10 @@ Build as usual, CEP is available by default. (`SKIP_CEP=1` to remove CEP support
   replies `PM3_EFAILED` with stale cached UID data, even though the same
   reader succeeds moments later over plain USB against the same tag.
   Firmware-side, root cause open, out of scope for the CEP transport itself.
+- `CMD_MAIN_CHIP_UNIQUEID` intermittently times out on its first attempt
+  (Hardware Status page, occasionally slow/incomplete on first load),
+  always recovers on the FAP's retry. PM5 handler and FAP cache both
+  confirmed clean — likely a transport/timing-layer race, root cause open.
 
 ---
 
@@ -70,3 +77,6 @@ Build as usual, CEP is available by default. (`SKIP_CEP=1` to remove CEP support
 - CEP uses its own reply-routing flag (`g_reply_via_cep`).
 - SPI bit-order/clock-phase settings are confirmed correct against real
   Flipper traffic (logic analyzer): MSB-first, mode 0, CS active-low.
+- FAP-side: a short fast-poll window after sending a command, and blocking
+  deep-sleep for the life of the RX thread (fixes unreliable reads on
+  battery), both merged in the FAP's own repo.
