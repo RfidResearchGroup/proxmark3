@@ -1606,6 +1606,9 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
     // statistics on nonce distance
     int16_t isOK = PM3_SUCCESS;
 #define NESTED_MAX_TRIES 12
+#if defined(PM5)
+#define MFNESTED_PM5_DIST_SLACK 8   // PM5: HF jitter widens the nonce distance (PM3/RDV4 use +/-2)
+#endif
     if (calibrate) { // calibrate: for first call only. Otherwise reuse previous calibration
         LED_B_ON();
         WDT_HIT();
@@ -1702,8 +1705,13 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
 
         if (g_dbglevel >= DBG_DEBUG) Dbprintf("rtr=%d isOK=%d min=%d max=%d avg=%d, delta_time=%d", rtr, isOK, dmin, dmax, davg, delta_time);
 
+#if defined(PM5)
+        dmin = davg - MFNESTED_PM5_DIST_SLACK;
+        dmax = davg + MFNESTED_PM5_DIST_SLACK;
+#else
         dmin = davg - 2;
         dmax = davg + 2;
+#endif
 
         LED_B_OFF();
     }

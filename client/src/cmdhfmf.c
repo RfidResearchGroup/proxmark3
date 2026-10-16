@@ -3751,6 +3751,12 @@ skipReadBKey:
 
                     if (prng_type && (nested_failed == false)) {
                         uint8_t retries = 0;
+                        uint8_t sector_retry_max = g_pm3_capabilities.is_pm5 ? MFNESTED_PM5_SECTOR_RETRY : MIFARE_SECTOR_RETRY;
+
+                        if (g_pm3_capabilities.is_pm5) {
+                            // PM5: recalibrate every try
+                            calibrate = true;
+                        }
 
                         if (skipped_last == false) {
                             PrintAndLogEx(NORMAL, "");
@@ -3783,6 +3789,13 @@ tryNested:
                                 return isOK;
                             }
                             case PM3_EWRONGANSWER: {
+                                if (g_pm3_capabilities.is_pm5) {
+                                    calibrate = true;
+                                    if (retries++ < sector_retry_max) {
+                                        PrintAndLogEx(FAILED, "Tag refused the nested auth, retrying (%i/%i)", retries, sector_retry_max);
+                                        goto tryNested;
+                                    }
+                                }
                                 // the tag NAKed the nested auth for this block.  it is a
                                 // refusal, so move on rather than grind the same sector
                                 PrintAndLogEx(FAILED, "Tag refused the nested authentication, skipping sector " _YELLOW_("%3d") " key type " _YELLOW_("%c"),
@@ -3799,18 +3812,40 @@ tryNested:
                                 return isOK;
                             }
                             case PM3_EFAILED: {
+                                if (g_pm3_capabilities.is_pm5) {
+                                    calibrate = true;
+                                    if (retries++ < sector_retry_max) {
+                                        PrintAndLogEx(FAILED, "Nested acquire miss (not predictable), retrying (%i/%i)", retries, sector_retry_max);
+                                        goto tryNested;
+                                    }
+                                    // PM5: skip this sector, no hardnested fallback
+                                    PrintAndLogEx(FAILED, "Nested exhausted on PM5, skipping sector " _YELLOW_("%3d") " key type " _YELLOW_("%c"),
+                                                  current_sector_i,
+                                                  (current_key_type_i == MF_KEY_B) ? 'B' : 'A'
+                                                 );
+                                    skipped_last = true;
+                                    continue;
+                                }
                                 PrintAndLogEx(FAILED, "Tag isn't vulnerable to Nested Attack (PRNG is probably not predictable).");
                                 PrintAndLogEx(FAILED, "Nested attack failed --> try hardnested");
                                 goto tryHardnested;
                             }
                             case PM3_ESOFT: {
                                 // key not found
-                                calibrate = false;
+                                calibrate = g_pm3_capabilities.is_pm5 ? true : false;
                                 // this can happen on some old cards, it's worth trying some more before switching to slower hardnested
-                                if (retries++ < MIFARE_SECTOR_RETRY) {
-                                    PrintAndLogEx(FAILED, "Nested attack failed, trying again (%i/%i)", retries, MIFARE_SECTOR_RETRY);
+                                if (retries++ < sector_retry_max) {
+                                    PrintAndLogEx(FAILED, "Nested attack failed, trying again (%i/%i)", retries, sector_retry_max);
                                     goto tryNested;
                                 } else {
+                                    if (g_pm3_capabilities.is_pm5) {
+                                        PrintAndLogEx(FAILED, "Nested exhausted on PM5, skipping sector " _YELLOW_("%3d") " key type " _YELLOW_("%c"),
+                                                      current_sector_i,
+                                                      (current_key_type_i == MF_KEY_B) ? 'B' : 'A'
+                                                     );
+                                        skipped_last = true;
+                                        continue;
+                                    }
                                     PrintAndLogEx(FAILED, "Nested attack failed, moving to hardnested");
                                     nested_failed = true;
                                     goto tryHardnested;
