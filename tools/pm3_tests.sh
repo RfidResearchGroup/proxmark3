@@ -298,6 +298,7 @@ while true; do
       if ! CheckExecute "findbits test"                    "$PYTHON tools/findbits.py 73 0110010101110011" "Match at bit 9: 011001010"; then break; fi
       if ! CheckExecute "findbits_test test"               "$PYTHON tools/findbits_test.py 2>&1" "OK"; then break; fi
       if ! CheckExecute "dfc_converter test"               "$PYTHON tools/dfc_converter_test.py 2>&1" "OK"; then break; fi
+      if ! CheckExecute "PM5 RTC tick test"                "$PYTHON tools/pm5_rtc_tick_test.py 2>&1" "RTC tick snapshot test: OK"; then break; fi
       if ! CheckExecute "pm3_eml_mfd test"                 "$PYTHON tools/mfc/pm3_eml_mfd_test.py 2>&1" "OK"; then break; fi
       if ! CheckExecute "recover_pk test"                  "$PYTHON tools/recover_pk.py selftests 2>&1" "Tests:.*\(.*ok.*"; then break; fi
       if ! CheckExecute "mkversion create test"            "tools/mkversion.sh --short" 'Iceman/'; then break; fi

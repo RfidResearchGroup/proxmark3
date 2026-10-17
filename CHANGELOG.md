@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Fixed `hf mf nested` / `hf mf autopwn` on PM5 - reliably recovers weak-PRNG MIFARE Classic keys again; widened the nonce-distance window and recalibrates per retry to absorb the PM5 HF receive-path timing jitter (PM5-gated, other platforms byte-identical) (@fmuk)
+- Fixed PM5 tick-count reads across RTC second rollovers to prevent false receive timeouts
 - Added `lf cotag sim` - simulate COTAG tag (@towelbyte)
 - Added standalone mode `GDB_GATEWAY` (PM5): GDB Remote Serial Protocol server on the USB CDC link, flash and SRAM access, no probe needed (@nieldk)
 - Fixed `lf t55xx detect -p` - the password is no longer sent to a tag whose PWD bit could not be confirmed, which could set it and destroy the tag's data; pass `-o` to override (@mfcarroll)
