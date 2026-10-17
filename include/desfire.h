@@ -35,6 +35,54 @@ typedef enum {
 #define DESFIRE_MAX_APP_COUNT   64      // applications we keep track of per PICC
 #define DESFIRE_MAX_FILE_COUNT  32      // file numbers 0x00 ... 0x1F
 
+// Optional CMD_HF_DESFIRE_SIMULATE payload. An empty payload keeps normal
+// simulation unchanged. A probe stops before the final authentication answer.
+#define DESFIRE_SIM_PROBE_VERSION 2
+#define DESFIRE_SIM_PROBE_KEY_ANY 0xFF
+typedef enum {
+    DESFIRE_SIM_PROBE_DISCOVERY_FAILED = 0,
+    DESFIRE_SIM_PROBE_NO_RESPONSE = 1,
+    DESFIRE_SIM_PROBE_NO_MATCH = 2,
+    DESFIRE_SIM_PROBE_MATCH = 3,
+    DESFIRE_SIM_PROBE_UNSUPPORTED = 4,
+} desfire_sim_probe_outcome_t;
+
+typedef struct {
+    uint8_t version;
+    uint8_t aid[3];             // target AID in wire order
+    uint8_t keyno;              // 0xFF: use the reader-requested key in the image
+    uint8_t algorithm;          // DesfireCryptoAlgorithm
+    uint32_t candidate_id;      // opaque host identifier, never key material
+    uint8_t rndb[16];           // fresh host nonce; deterministic only in tests
+    uint8_t discovery_aid[3];   // optional pre-auth application, zero disables
+    uint8_t discovery_file;     // file number to observe on that application
+} PACKED desfire_sim_probe_cmd_t;
+
+#define DESFIRE_SIM_PROBE_SELECTED       (1 << 0)
+#define DESFIRE_SIM_PROBE_AUTH_REQUEST   (1 << 1)
+#define DESFIRE_SIM_PROBE_CHALLENGE      (1 << 2)
+#define DESFIRE_SIM_PROBE_CONTINUATION   (1 << 3)
+#define DESFIRE_SIM_PROBE_DECRYPTED      (1 << 4)
+#define DESFIRE_SIM_PROBE_RNDB_MATCH     (1 << 5)
+#define DESFIRE_SIM_PROBE_DISCOVERY_SELECTED (1 << 6)
+#define DESFIRE_SIM_PROBE_DISCOVERY_READ (1 << 7)
+
+typedef struct {
+    uint8_t version;
+    uint8_t outcome;            // desfire_sim_probe_outcome_t
+    uint8_t flags;
+    uint8_t aid[3];
+    uint8_t keyno;
+    uint8_t algorithm;
+    uint32_t candidate_id;
+    uint32_t challenge_ms;      // GetTickCount at challenge
+    uint32_t continuation_ms;   // GetTickCount at continuation
+    uint8_t rndb[16];
+    uint8_t continuation[32];
+    uint8_t continuation_len;
+    uint8_t last_command;
+} PACKED desfire_sim_probe_result_t;
+
 // Keys recovered for one application.
 // keys[algo][keyno][0] is the found flag,  keys[algo][keyno][1..] the key itself.
 // `algo` is a DesfireCryptoAlgorithm,  `keyno` the DESFire key number.
@@ -52,6 +100,8 @@ typedef enum {
     DESFIRE_SIM_TEST_RANDOM,    // data: bytes the next RndB / random id draws use
     DESFIRE_SIM_TEST_FIELDOFF,  // RF reset: session dropped, image re-read      -> no data
     DESFIRE_SIM_TEST_STATE,     //                                               -> desfire_sim_test_state_t
+    DESFIRE_SIM_TEST_PROBE_CONFIG, // data: desfire_sim_probe_cmd_t             -> no data
+    DESFIRE_SIM_TEST_PROBE_RESULT, //                                          -> desfire_sim_probe_result_t
 } desfire_sim_test_op_t;
 
 // bytes the random queue holds, RANDOM answers PM3_EOVFLOW past this

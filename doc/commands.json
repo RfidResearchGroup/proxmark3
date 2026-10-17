@@ -7921,6 +7921,8 @@
                 "hf mfdes etest --scan",
                 "hf mfdes etest --random 0102030405060708",
                 "hf mfdes etest --apdu 900A0000010000 -j",
+                "hf mfdes etest --probe 02F48120FF03010000000102030405060708090A0B0C0D0E0F10F4812F00",
+                "hf mfdes etest --probe-result -j",
                 "hf mfdes etest --state -j",
                 "hf mfdes etest --end"
             ],
@@ -7934,9 +7936,11 @@
                 "--random <hex> Queue bytes for the next RndB / random UID draws",
                 "--fieldoff RF reset, session dropped",
                 "--state Show session and random queue state",
+                "--probe <hex> Configure a 30-byte v2 candidate-key probe payload",
+                "--probe-result Read probe evidence and outcome",
                 "-j, --json One line of JSON instead of text"
             ],
-            "usage": "hf mfdes etest [-hj] [--begin] [--end] [--scan] [--apdu <hex>] [--random <hex>] [--fieldoff] [--state]"
+            "usage": "hf mfdes etest [-hj] [--begin] [--end] [--scan] [--apdu <hex>] [--random <hex>] [--fieldoff] [--state] [--probe <hex>] [--probe-result]"
         },
         "hf mfdes eview": {
             "command": "hf mfdes eview",
