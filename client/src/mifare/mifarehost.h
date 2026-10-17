@@ -27,6 +27,7 @@
 #include "protocol_vigik.h"
 
 #define MIFARE_SECTOR_RETRY     6
+#define MFNESTED_PM5_SECTOR_RETRY   20  // PM5 nested retry budget (probabilistic acquire)
 
 // mifare tracer flags
 #define TRACE_IDLE              0x00

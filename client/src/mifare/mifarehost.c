@@ -46,6 +46,8 @@
 #include "pmflash.h"
 #include "preferences.h"        // setDeviceDebugLevel
 
+#define MFNESTED_REPLY_TIMEOUT_MS 20000  // PM5 on-device nested calibration runs ~2.1s
+
 int mf_dark_side(uint8_t blockno, uint8_t key_type, uint64_t *key) {
     uint32_t uid = 0;
     uint32_t nt = 0, nr = 0, ar = 0;
@@ -582,7 +584,7 @@ int mf_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_NESTED, (uint8_t *)&payload, sizeof(payload));
 
-    if (WaitForResponseTimeout(CMD_HF_MIFARE_NESTED, &resp, 2000) == false) {
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_NESTED, &resp, g_pm3_capabilities.is_pm5 ? MFNESTED_REPLY_TIMEOUT_MS : 2000) == false) {
         SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
         return PM3_ETIMEOUT;
     }
