@@ -1865,6 +1865,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             Cotag(payload->mode, true);
             break;
         }
+        case CMD_LF_COTAG_SIMULATE: {
+            SimulateCotag((const lf_cotagsim_t *)packet->data.asBytes, true);
+            reply_ng(CMD_LF_COTAG_SIMULATE, PM3_EOPABORTED, NULL, 0);
+            break;
+        }
 #endif
 
 #ifdef WITH_HITAG

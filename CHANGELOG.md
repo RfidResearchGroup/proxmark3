@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed PM5 tick-count reads across RTC second rollovers to prevent false receive timeouts
+- Added `lf cotag sim` - simulate COTAG tag (@towelbyte)
+- Added standalone mode `GDB_GATEWAY` (PM5): GDB Remote Serial Protocol server on the USB CDC link, flash and SRAM access, no probe needed (@nieldk)
 - Fixed weak fc/2 PSK tags (Indala, NexWatch, IDTECK, ...) misreading or failing: when the wave tracker has errors, the PSK demod falls back to `pm3_psk_demod` (@mfcarroll)
 - Fixed `lf t55xx detect -p` - the password is no longer sent to a tag whose PWD bit could not be confirmed, which could set it and destroy the tag's data; pass `-o` to override (@mfcarroll)
 - Fixed `hf mf hardnested`/`hf mf autopwn` on PM5 with hardened MIFARE Classic EV1 (#3595, #3664)  (@ByteOrderMarc)
@@ -293,7 +296,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Add support for parsing Finnish Helsinki Regional Transport (HRT) travel cards (@sanduuz)
 - Added standalone mode `HF_DOEGOX_COMMIT` - DESFire suspended commit without relay (@doegox)
 - Changed `hf 14b info`- now support Innovatron protocol detection (@kormax)
-- Improved `lf cotag reader` and `lf cotag demod` - Reimplementation and enhancement of proxmark3 COTAG support
+- Improved `lf cotag reader` and `lf cotag demod` - Reimplementation and enhancement of proxmark3 COTAG support (@towelbyte)
 - Added `hf felica sim` command (@kormax)
 - Added `mad read`, `mad write`, `mad verify`, `mad decode`, `mad encode` commands with typed struct MAD API (@AlxCzl)
 - Added `hf mfdes getversion` command (@kormax)

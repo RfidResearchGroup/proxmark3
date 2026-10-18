@@ -1171,7 +1171,7 @@ Sectors 2-15
 | `gdmgethidblk` | Read hidden block |
 | `gdmsethidblk` | Write a hidden block |
 | `gdmsetuid` | Set 4-byte / 7-byte UID, or F3 perso (`--f3d`) |
-| `gdmwipe` | Restore card to factory defaults (`-a` for 4K) |
+| `gdmwipe` | Wipe to a known clean 4-byte template (`-a` for 4K) |
 | `gdmsetsig` | Write EV1 signature (hidden blocks 5/6), enable sigsec, write default signature key sector |
 
 ### libnfc commands

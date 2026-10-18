@@ -387,6 +387,12 @@ bool cep_spi_data_available(void) {
     }
     s_last_spi_activity_tick = GetTickCount(); // FAP is still polling, valid frame or not
     uint16_t data_len = (len_header[1] << 8) | len_header[0];
+    if (data_len == 0xFFFF) {
+        // FAP's reply-poll drives 0xFF dummy bytes when it has nothing to
+        // send (furi_hal_spi_bus_trx with a NULL tx buffer) - not a desync,
+        // same treatment as a CEP_SYNC_BYTE run, no resync needed.
+        return false;
+    }
     if (data_len > PM3_CMD_DATA_SIZE * 2) {
         // Same reasoning: an implausible length is itself evidence of a
         // desynced read, not just "no frame yet."

@@ -148,6 +148,8 @@ void StartTickCount(void) {
 // Get the current count.
 uint32_t RAMFUNC GetTickCount(void) {
     ertc_time_type time;
+    // Read SBS first to latch TIME/DATE until the calendar getter reads DATE.
+    uint32_t subsecond = ERTC->sbs;
     ertc_calendar_get(&time);
     return mktime_utc_fast(
                // time.year is short length, not full, so 2025 is 25.
@@ -156,7 +158,7 @@ uint32_t RAMFUNC GetTickCount(void) {
                time.month, time.day, time.hour, time.min, time.sec,
                // this ms is from 0 -> 1000 of second, not timestamp value
                // ms = ((divb + 1) - subsecond * 1000) / (divb + 1)
-               (3125 - ertc_sub_second_get()) * 1000 / 3125) - tick_start_val; // current - start = tick
+               (3125 - subsecond) * 1000 / 3125) - tick_start_val; // current - start = tick
 }
 
 //  -------------------------------------------------------------------------
