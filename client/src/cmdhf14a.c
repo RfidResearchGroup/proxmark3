@@ -15,6 +15,9 @@
 //-----------------------------------------------------------------------------
 // High frequency ISO14443A commands
 //-----------------------------------------------------------------------------
+#ifndef _WIN32
+#define _POSIX_C_SOURCE 200112L
+#endif
 #include "cmdhf14a.h"
 #include <ctype.h>
 #include <string.h>
@@ -3399,10 +3402,11 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                         int atrLen = 0;
                         atsToEmulatedAtr(card.ats, atr, &atrLen);
                         char *copy = str_dup(getAtrInfo(sprint_hex_inrow(atr, atrLen)));
-                        char *token = strtok(copy, "\n");
+                        char *saveptr = NULL;
+                        char *token = strtok_r(copy, "\n", &saveptr);
                         while (token != NULL) {
                             PrintAndLogEx(SUCCESS, "    %s", token);
-                            token = strtok(NULL, "\n");
+                            token = strtok_r(NULL, "\n", &saveptr);
                         }
                         free(copy);
                     }
