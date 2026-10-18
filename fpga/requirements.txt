@@ -1,0 +1,13 @@
+# Python packages the fpga/ scripts import.
+#
+# fs2bin.py is the only one the build needs, and it normally runs under the
+# python bundled in oss-cad-suite, which already ships apycula - so this file
+# matters when building with an external interpreter instead. apycula owns the
+# .fs bitstream format and its CRC; gowin_devid.py re-derives one of those CRCs
+# and fails loudly if the format ever changes, so bump deliberately.
+apycula>=0.34
+
+# tests/plot_edgedetect.py, the offline plot helper for the edge detect
+# testbenches. Not needed to build an image.
+numpy
+matplotlib

@@ -1,11 +1,18 @@
-//Copyright (C)2014-2023 Gowin Semiconductor Corporation.
-//All rights reserved.
-//File Title: IP file
-//Tool Version: V1.9.9 (64-bit)
-//Part Number: GW1N-UV4QN48C6/I5
-//Device: GW1N-4
-//Device Version: D
-//Created Time: Mon Jul  6 18:07:08 2026
+//-----------------------------------------------------------------------------
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
 
 module Gowin_rPLL (clkout, clkin);
 
