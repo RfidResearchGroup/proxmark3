@@ -61,6 +61,13 @@ typedef struct {
     uint8_t  *output;
     uint8_t  *parity;
 } tDemod14a;
+
+static inline bool iso14a_is_complete_frame(const tDemod14a *demod, uint16_t expected_len) {
+    return expected_len > 0 && demod->len == expected_len
+           && demod->bitCount == 0 && demod->collisionPos == 0
+           && demod->parityLen == (expected_len + 7u) / 8u;
+}
+
 /*
 typedef enum {
     MOD_NOMOD = 0,
