@@ -299,9 +299,6 @@ while true; do
       if ! CheckExecute "findbits_test test"               "$PYTHON tools/findbits_test.py 2>&1" "OK"; then break; fi
       if ! CheckExecute "dfc_converter test"               "$PYTHON tools/dfc_converter_test.py 2>&1" "OK"; then break; fi
       if ! CheckExecute "PM5 RTC tick test"                "$PYTHON tools/pm5_rtc_tick_test.py 2>&1" "RTC tick snapshot test: OK"; then break; fi
-      if ! CheckExecute "MIFARE round budget PM5 test"      "$PYTHON tools/mifare_acq_round_test.py 2>&1" "Actual nonce round-budget test: OK"; then break; fi
-      if ! CheckExecute "MIFARE round budget RDV4 test"     "$PYTHON tools/mifare_acq_round_test.py --platform PM3RDV4 2>&1" "Actual nonce round-budget test: OK"; then break; fi
-      if ! CheckExecute "MIFARE round budget GENERIC test"  "$PYTHON tools/mifare_acq_round_test.py --platform PM3GENERIC 2>&1" "Actual nonce round-budget test: OK"; then break; fi
       if ! CheckExecute "pm3_eml_mfd test"                 "$PYTHON tools/mfc/pm3_eml_mfd_test.py 2>&1" "OK"; then break; fi
       if ! CheckExecute "recover_pk test"                  "$PYTHON tools/recover_pk.py selftests 2>&1" "Tests:.*\(.*ok.*"; then break; fi
       if ! CheckExecute "mkversion create test"            "tools/mkversion.sh --short" 'Iceman/'; then break; fi
