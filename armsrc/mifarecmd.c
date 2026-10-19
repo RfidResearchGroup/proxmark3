@@ -43,14 +43,20 @@
 #ifndef HARDNESTED_AUTHENTICATION_TIMEOUT
 # define HARDNESTED_AUTHENTICATION_TIMEOUT  848     // card times out 1ms after wrong authentication (according to NXP documentation)
 #endif
+
 #ifndef HARDNESTED_PRE_AUTHENTICATION_LEADTIME
 # define HARDNESTED_PRE_AUTHENTICATION_LEADTIME 400 // some (non standard) cards need a pause after select before they are ready for first authentication
 #endif
-// PM5's command buffer (PM3_CMD_DATA_SIZE 4064) holds ~450 nonce pairs per round vs ~68 on
-// other platforms; a full ~450-pair round can outrun the client's 3 s reply wait and drop
-// the link. Cap the round so the reply stays timely (no-op where the natural max is <= 68).
-#ifndef MFC_ACQ_ROUND_MAX_PAIRS
-# define MFC_ACQ_ROUND_MAX_PAIRS 68
+
+// PM5/AT32: the 288 MHz AT32 issues the nested auth so soon after the first auth completes
+// that the encrypted-nonce reception is intermittently corrupted, which defeats hardnested.
+// A short settle delay before the nested read prevents it. Not applied on the slower RDV4.
+#ifndef HARDNESTED_NESTED_TURNAROUND_DELAY_US
+# define HARDNESTED_NESTED_TURNAROUND_DELAY_US 500
+#endif
+
+#ifndef MFC_ACQ_ROUND_BUDGET_MS
+# define MFC_ACQ_ROUND_BUDGET_MS 2900 // target budget; a blocking attempt may overshoot
 #endif
 
 // send an incomplete dummy response in order to trigger the card's authentication failure timeout
@@ -1103,6 +1109,7 @@ void MifareAcquireNonces(const mf_acquire_nonces_t *payload) {
 //-----------------------------------------------------------------------------
 void MifareAcquireEncryptedNonces(const mf_acquire_nonces_t *payload) {
     uint32_t flags = payload->flags;
+    uint32_t round_start = GetTickCount();
 
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs;
@@ -1149,14 +1156,17 @@ void MifareAcquireEncryptedNonces(const mf_acquire_nonces_t *payload) {
     uint8_t prev_enc_nt[] = {0, 0, 0, 0};
     uint8_t prev_counter = 0;
 
-    const uint16_t max_pairs = MIN(MFC_MAX_NONCE_PAIRS, MFC_ACQ_ROUND_MAX_PAIRS);
-
-    while (num_pairs < max_pairs) {
+    while (num_pairs < MFC_MAX_NONCE_PAIRS) {
 
         // Test if the action was cancelled
         if (BUTTON_PRESS() || data_available()) {
             isOK = PM3_EOPABORTED;
             field_off = true;
+            break;
+        }
+
+        // Check between attempts; the existing reply path drops an unpaired nonce.
+        if (GetTickCountDelta(round_start) >= MFC_ACQ_ROUND_BUDGET_MS) {
             break;
         }
 
