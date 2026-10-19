@@ -5,6 +5,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 - Improved PM5 nonce-acquisition throughput for mfc by replacing the fixed 68-pair cap with a 2900 ms target budget (@nip-was-here)
 - Fixed PM5 tick-count reads across RTC second rollovers to prevent false receive timeouts
+- Fixed iso14443a - reject incomplete encrypted nonce frames instead of delaying nested authentication on PM5 (@nip-was-here)
+- Fixed PM5 tick-count reads across RTC second rollovers to prevent false receive timeouts (@nip-was-here)
 - Added `lf cotag sim` - simulate COTAG tag (@towelbyte)
 - Added standalone mode `GDB_GATEWAY` (PM5): GDB Remote Serial Protocol server on the USB CDC link, flash and SRAM access, no probe needed (@nieldk)
 - Fixed `lf t55xx detect -p` - the password is no longer sent to a tag whose PWD bit could not be confirmed, which could set it and destroy the tag's data; pass `-o` to override (@mfcarroll)
