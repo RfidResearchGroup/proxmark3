@@ -1359,6 +1359,26 @@ static int cmp_double(const void *a, const void *b) {
     return (x > y) - (x < y);
 }
 
+// fc/2 PSK fallback thresholds; score = mean symbol magnitude on the unit-RMS trace
+// a level step inside a symbol leaks into the fc/2 sum by at most its height (~2 for NRZ), whatever the clock
+#define PSK_FC2_MIN_SCORE          3.0
+// per sample; weak tags score ~0.6, noise ~0.8/sqrt(clock) (passes up to clock 64, caught by the weak-symbol check)
+#define PSK_FC2_MIN_SCORE_PER_CLK  0.1
+// noise symbol magnitudes are half-normal: ~18% fall under median/3
+#define PSK_FC2_WEAK_DIV           3.0
+// a multiple of the true clock straddles reversals and keeps ~half its per-sample score; divisors keep all of it
+#define PSK_FC2_NEAR_BEST          0.85
+// pairs of equal bits: a half-rate clock, or no reversals at all (PSK1 can't tell all-0 from all-1)
+#define PSK_FC2_DOUBLED_PCT        98
+// chosen minimum: fewer pairs match by chance too often
+#define PSK_FC2_MIN_PAIRS          16
+// chosen minimum: 32 symbols at clock 32
+#define PSK_FC2_MIN_SAMPLES        1024
+
+static const int psk_fc2_clocks[] = { 16, 32, 40, 50, 64, 100, 128 };
+// DetectPSKClock's valid clocks
+static const int psk_fc2_fixed[] = { 16, 32, 40, 50, 64, 100, 128, 256, 272, 384 };
+
 // a symbol under a third of the median magnitude sits in a null or in noise
 static bool psk_has_weak_symbol(const double *mag, size_t n) {
     double *sorted = calloc(n, sizeof(double));
@@ -1368,7 +1388,7 @@ static bool psk_has_weak_symbol(const double *mag, size_t n) {
     const double median = sorted[n / 2];
     free(sorted);
     for (size_t k = 0; k < n; k++) {
-        if (mag[k] * 3.0 < median) return true;
+        if (mag[k] * PSK_FC2_WEAK_DIV < median) return true;
     }
     return false;
 }
@@ -1380,7 +1400,7 @@ static bool psk_bits_doubled(const uint8_t *bits, size_t n) {
         for (size_t k = a; k + 1 < n; k += 2, pairs++) {
             if (bits[k] == bits[k + 1]) same++;
         }
-        if (pairs >= 16 && same * 100 >= pairs * 98) return true;
+        if (pairs >= PSK_FC2_MIN_PAIRS && same * 100 >= pairs * PSK_FC2_DOUBLED_PCT) return true;
     }
     return false;
 }
@@ -1405,70 +1425,125 @@ static void psk_vote_polarity(uint8_t *bits, size_t n, double clk, int phase, in
     }
 }
 
+// pm3_psk_demod result for one clock
+typedef struct {
+    bool done;
+    bool ok;
+    bool weak;
+    size_t n;
+    double clk;
+    double score;
+    int phase;
+    uint8_t *bits;
+} psk_fc2_slot_t;
+
+// per-clock results, reused while the graph buffer is unchanged (lf search runs PSKDemod once per decoder)
+static struct {
+    uint64_t hash;
+    size_t len;
+    int carrier;
+    psk_fc2_slot_t slot[ARRAYLEN(psk_fc2_fixed)];
+} s_psk_fc2_cache = { .carrier = -1 };
+
+static uint64_t psk_fc2_graph_hash(void) {
+    uint64_t h = 0xcbf29ce484222325ULL; // FNV-1a
+    for (size_t i = 0; i < g_GraphTraceLen; i++) {
+        h = (h ^ (uint32_t)g_GraphBuffer[i]) * 0x100000001b3ULL;
+    }
+    return h;
+}
+
+static void psk_fc2_cache_sync(void) {
+    const uint64_t h = psk_fc2_graph_hash();
+    if (s_psk_fc2_cache.carrier >= 0 && h == s_psk_fc2_cache.hash && g_GraphTraceLen == s_psk_fc2_cache.len) {
+        return;
+    }
+    for (size_t i = 0; i < ARRAYLEN(psk_fc2_fixed); i++) {
+        free(s_psk_fc2_cache.slot[i].bits);
+    }
+    memset(&s_psk_fc2_cache, 0, sizeof(s_psk_fc2_cache));
+    s_psk_fc2_cache.hash = h;
+    s_psk_fc2_cache.len = g_GraphTraceLen;
+    s_psk_fc2_cache.carrier = GetPskCarrier(false);
+}
+
+// runs pm3_psk_demod for one clock unless cached; *sig is extracted on first use
+static const psk_fc2_slot_t *psk_fc2_slot(size_t idx, double **sig) {
+    psk_fc2_slot_t *sl = &s_psk_fc2_cache.slot[idx];
+    if (sl->done) return sl;
+
+    const size_t cap = (g_GraphTraceLen / 4) + 1;
+    if (*sig == NULL) *sig = pm3_extract(g_GraphBuffer, g_GraphTraceLen, 0, g_GraphTraceLen);
+    double *mag = calloc(cap, sizeof(double));
+    sl->bits = calloc(cap, sizeof(uint8_t));
+    if (*sig == NULL || mag == NULL || sl->bits == NULL) {
+        // not marked done: retried next call
+        free(mag);
+        free(sl->bits);
+        sl->bits = NULL;
+        return sl;
+    }
+
+    sl->n = cap;
+    sl->ok = pm3_psk_demod(*sig, g_GraphTraceLen, 2, (double)psk_fc2_fixed[idx], sl->bits, &sl->n, &sl->clk, &sl->phase, &sl->score, NULL, mag) == PM3_SUCCESS;
+    sl->weak = sl->ok && psk_has_weak_symbol(mag, sl->n);
+    sl->done = true;
+    free(mag);
+    return sl;
+}
+
 // Fallback for weak fc/2 PSK, where the wave tracker loses tops to sample noise: pm3_psk_demod's
 // coherent receiver. Candidate clocks (the caller's, or every standard one) are tried largest first;
 // the first that scores near the best and passes every check is kept. Writes out only on success.
 static bool psk_fc2_coherent(int clk_in, int invert, uint8_t *out, size_t *nout, int *clk_out, int *start_out) {
-    static const int clocks[] = { 16, 32, 40, 50, 64, 100, 128 };
-    static const int fixed[] = { 16, 32, 40, 50, 64, 100, 128, 256, 272, 384 };
+    if (g_GraphTraceLen < PSK_FC2_MIN_SAMPLES) {
+        return false;
+    }
 
-    if (g_GraphTraceLen < 1024 || GetPskCarrier(false) != 2) {
+    psk_fc2_cache_sync();
+    if (s_psk_fc2_cache.carrier != 2) {
         return false;
     }
 
     // like DetectPSKClock, a caller's clock outside the valid set means autodetect
-    bool use_clk = false;
-    for (size_t i = 0; i < ARRAYLEN(fixed); i++) {
-        if (clk_in == fixed[i]) use_clk = true;
+    size_t cand[ARRAYLEN(psk_fc2_fixed)];
+    size_t ncand = 0;
+    for (size_t i = 0; i < ARRAYLEN(psk_fc2_fixed); i++) {
+        if (clk_in == psk_fc2_fixed[i]) cand[ncand++] = i;
     }
-    const size_t ncand = use_clk ? 1 : ARRAYLEN(clocks);
+    const bool use_clk = (ncand > 0);
+    if (use_clk == false) {
+        for (size_t i = 0; i < ARRAYLEN(psk_fc2_fixed); i++) {
+            for (size_t j = 0; j < ARRAYLEN(psk_fc2_clocks); j++) {
+                if (psk_fc2_fixed[i] == psk_fc2_clocks[j]) cand[ncand++] = i;
+            }
+        }
+    }
 
-    const size_t cap = (g_GraphTraceLen / 4) + 1;
-    double *sig = pm3_extract(g_GraphBuffer, g_GraphTraceLen, 0, g_GraphTraceLen);
-    uint8_t *bits = calloc(ncand * cap, sizeof(uint8_t));
-    double *mag = calloc(cap, sizeof(double));
-    size_t n[ARRAYLEN(clocks)] = {0};
-    double got_clk[ARRAYLEN(clocks)] = {0}, score[ARRAYLEN(clocks)] = {0};
-    int phase[ARRAYLEN(clocks)] = {0};
-    bool weak[ARRAYLEN(clocks)] = {false};
-    bool found = false;
-    if (sig == NULL || bits == NULL || mag == NULL) goto out;
-
+    double *sig = NULL;
+    const psk_fc2_slot_t *sl[ARRAYLEN(psk_fc2_fixed)];
     double best = 0.0;
     for (size_t c = 0; c < ncand; c++) {
-        const int clk = use_clk ? clk_in : clocks[c];
-        n[c] = cap;
-        if (pm3_psk_demod(sig, g_GraphTraceLen, 2, (double)clk, bits + (c * cap), &n[c], &got_clk[c], &phase[c], &score[c], NULL, mag) != PM3_SUCCESS) {
-            n[c] = 0;
-            continue;
-        }
-        weak[c] = psk_has_weak_symbol(mag, n[c]);
-        if (score[c] / got_clk[c] > best) best = score[c] / got_clk[c];
+        sl[c] = psk_fc2_slot(cand[c], &sig);
+        if (sl[c]->ok && sl[c]->score / sl[c]->clk > best) best = sl[c]->score / sl[c]->clk;
     }
+    free(sig);
 
     for (size_t c = ncand; c-- > 0;) {
-        if (n[c] == 0 || (use_clk == false && score[c] / got_clk[c] < best * 0.85)) continue;
-        // score is the mean symbol magnitude on the unit-RMS trace. A level step inside a symbol leaks
-        // into the fc/2 sum by at most its height (~2 for NRZ), whatever the clock; weak real PSK
-        // scores about 0.6 per sample. Noise passes this and is caught by the weak-symbol check.
-        if (score[c] < 3.0 || score[c] < 0.1 * got_clk[c]) continue;
+        const psk_fc2_slot_t *s = sl[c];
+        if (s->ok == false || s->n == 0 || (use_clk == false && s->score / s->clk < best * PSK_FC2_NEAR_BEST)) continue;
+        if (s->score < PSK_FC2_MIN_SCORE || s->score < PSK_FC2_MIN_SCORE_PER_CLK * s->clk) continue;
         // differential output: one wrong decision would flip every later bit, so any weak symbol vetoes
-        if (weak[c] || psk_bits_doubled(bits + (c * cap), n[c])) continue;
+        if (s->weak || psk_bits_doubled(s->bits, s->n)) continue;
 
-        memcpy(out, bits + (c * cap), n[c]);
-        psk_vote_polarity(out, n[c], got_clk[c], phase[c], invert);
-        *nout = n[c];
-        *clk_out = (int)(got_clk[c] + 0.5);
-        *start_out = phase[c];
-        found = true;
-        break;
+        memcpy(out, s->bits, s->n);
+        psk_vote_polarity(out, s->n, s->clk, s->phase, invert);
+        *nout = s->n;
+        *clk_out = (int)(s->clk + 0.5);
+        *start_out = s->phase;
+        return true;
     }
-
-out:
-    free(sig);
-    free(bits);
-    free(mag);
-    return found;
+    return false;
 }
 
 // attempt to psk1 demod graph buffer
