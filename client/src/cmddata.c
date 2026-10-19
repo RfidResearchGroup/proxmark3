@@ -1368,6 +1368,9 @@ static int cmp_double(const void *a, const void *b) {
 #define PSK_FC2_WEAK_DIV           3.0
 // a multiple of the true clock straddles reversals and keeps ~half its per-sample score; divisors keep all of it
 #define PSK_FC2_NEAR_BEST          0.85
+// one 0.1-sample timing step: a tag or crystal-clocked emulator lands on nominal;
+// a wrong clock fitted to a stream with few reversals stretches further
+#define PSK_FC2_MAX_CLK_DRIFT      0.15
 // pairs of equal bits: a half-rate clock, or no reversals at all (PSK1 can't tell all-0 from all-1)
 #define PSK_FC2_DOUBLED_PCT        98
 // chosen minimum: fewer pairs match by chance too often
@@ -1533,6 +1536,7 @@ static bool psk_fc2_coherent(int clk_in, int invert, uint8_t *out, size_t *nout,
         const psk_fc2_slot_t *s = sl[c];
         if (s->ok == false || s->n == 0 || (use_clk == false && s->score / s->clk < best * PSK_FC2_NEAR_BEST)) continue;
         if (s->score < PSK_FC2_MIN_SCORE || s->score < PSK_FC2_MIN_SCORE_PER_CLK * s->clk) continue;
+        if (fabs(s->clk - psk_fc2_fixed[cand[c]]) > PSK_FC2_MAX_CLK_DRIFT) continue;
         // differential output: one wrong decision would flip every later bit, so any weak symbol vetoes
         if (s->weak || psk_bits_doubled(s->bits, s->n)) continue;
 
