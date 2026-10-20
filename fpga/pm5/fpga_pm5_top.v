@@ -25,7 +25,7 @@ module fpga_top (
     input cross_lo,
     input spi_mosi,
     input ssp_dout,
-    input module_sel,         // 选择模块，1=HF，0=LF
+    input module_sel,         // module select: 1 = HF, 0 = LF
     
     output ssp_din,
     output ssp_frame,
@@ -41,45 +41,60 @@ module fpga_top (
     output dbg2,
     output dbgled,
 
-    output clk_gate,         //门控输出，控制切断外部13.56m
-    output pwr_pwm,          //升压器输出，pwm控制升压电压
-    output pan_en,           //模拟供电使能
-    output pdp_en            //升压器使能
+    output clk_gate,         // gates the external 13.56 MHz clock
+    output pwr_pwm,          // boost converter PWM, sets the driver supply voltage
+    output pan_en,           // analog supply enable
+    output pdp_en            // boost converter enable
 );
     
-    wire ce_lf = ~module_sel; //高启用，低重置
-    wire ce_hf = module_sel; //高启用，低重置
+    wire ce_lf = ~module_sel; // enable, active high; a low level holds the module in reset
+    wire ce_hf = module_sel;  // enable, active high; a low level holds the module in reset
     //-----------------------------------------GATE-------------------------
-    //门控使能信号同步到输入时钟域，避免亚稳态
+    // Synchronise the gate enable into the input clock domain against metastability
     reg gate_en_sync1, gate_en_sync2;
     always @(posedge ck_1356meg) begin
         gate_en_sync1 <= gate_en;
         gate_en_sync2 <= gate_en_sync1;
     end
     
-    assign clk_gate = ~gate_en_sync2;//这里取反是因为外部门控是低有效的
+    assign clk_gate = ~gate_en_sync2; // inverted, the external gate is active low
     //-----------------------------------------PWM--------------------------
     
+    // CLKOUT is 200 MHz: 4096 steps at 5 ns keep the resolution, at a 20.48 us
+    // period. 400 MHz does not close the 12 bit carry chain at 2.5 ns.
     Gowin_rPLL pwr_pwm_pll(
         .clkout(pwr_pwm_pll_clko), //output clkout
         .clkin(ck_1356meg) //input clkin
     );
 
-    wire [11:0] pwm_duty_lf;   // LF 模块的 PWM 占空比输出
-    wire [11:0] pwm_duty_hf;   // HF 模块的 PWM 占空比输出
+    wire [11:0] pwm_duty_lf;   // PWM duty from the LF module
+    wire [11:0] pwm_duty_hf;   // PWM duty from the HF module
 
-    wire [11:0] pwm_duty;      // PWM占空比，实际上是高电平长度，和4096做比例
+    wire [11:0] pwm_duty;      // low-level count of the 4096-step PWM period
     reg [11:0] pwm_cnt= 12'h0;
 
-    always @(posedge pwr_pwm_pll_clko) pwm_cnt <= pwm_cnt + 1'b1;  //计数器
-    assign pwr_pwm = (pwm_cnt > pwm_duty);  //pwm输出
+    // pwm_duty is from the SPI clock domain; resample it into the PWM domain
+    // so a duty update is never sampled mid transition.
+    reg [11:0] pwm_duty_meta, pwm_duty_sync;
+    always @(posedge pwr_pwm_pll_clko) begin
+        pwm_duty_meta <= pwm_duty;
+        pwm_duty_sync <= pwm_duty_meta;
+    end
+
+    // Register the output; the bare comparator glitches on every count edge.
+    reg pwr_pwm_r;
+    always @(posedge pwr_pwm_pll_clko) begin
+        pwm_cnt   <= pwm_cnt + 1'b1;  // counter
+        pwr_pwm_r <= (pwm_cnt > pwm_duty_sync);  // PWM output
+    end
+    assign pwr_pwm = pwr_pwm_r;
 
     assign pan_en = 1'b1;
     assign pdp_en = 1'b1;
 
-    assign pwr_hi = 1'bZ;   //使用外部门控时禁用PWRHI,由于是并联的，需要高阻
+    assign pwr_hi = 1'bZ;  // PWRHI is replaced by the external gate; the two are wired in parallel, so float it
     assign dbgled = 1'b1;
-    assign dbg2   = 1'bZ;  // 未使用
+    assign dbg2   = 1'bZ;  // not used
 
     fpga_lf uut_lf (
         .pck0(pck0),
