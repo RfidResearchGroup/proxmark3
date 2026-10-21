@@ -247,6 +247,7 @@ static const hintAIDList_t hintAIDList[] = {
     { "\x4F\x53\x45\x2E\x56\x41\x53\x2E\x30\x31", 10, "ApplePay", 8, "OSE.VAS (Apple Wallet)", "hf vas" },
     { "\x4F\x53\x45\x2E\x56\x41\x53\x2E\x30\x31", 10, "AndroidPay", 10, "OSE.VAS (Google Wallet)", "hf gst" },
     { "\xA0\x00\x00\x04\x76\xD0\x00\x01\x11", 9, "", 0, "Google Smart Tap v2", "hf gst" },
+    { "\xA0\x00\x00\x04\x40\x00\x01\x01\x00\x01", 10, "", 0, "SEOS", "hf seos" },
 };
 
 // iso14a apdu input frame length
