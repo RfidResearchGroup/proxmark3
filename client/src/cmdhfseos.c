@@ -1738,7 +1738,7 @@ static int seos_print_card(const uint8_t *custom_aid, int custom_aid_len) {
     }
     DropField();
 
-    hf14a_aid_search(false);
+    hf14a_aid_search(false, NULL);
     return PM3_SUCCESS;
 }
 
