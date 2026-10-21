@@ -2933,6 +2933,107 @@ static void get_compact_tlv(uint8_t *d, uint8_t n) {
     }
 }
 
+// selects every AID in aidlist.json, returns how many were found
+int hf14a_aid_search(bool verbose) {
+
+    PrintAndLogEx(INFO, "-------------------- " _CYAN_("AID Search") " --------------------");
+
+    json_t *root = AIDSearchInit(verbose);
+    if (root == NULL) {
+        return 0;
+    }
+
+    int found = 0;
+    bool ActivateField = true;
+    for (size_t elmindx = 0; elmindx < json_array_size(root); elmindx++) {
+
+        if (kbd_enter_pressed()) {
+            break;
+        }
+
+        json_t *data = AIDSearchGetElm(root, elmindx);
+        uint8_t vaid[200] = {0};
+        int vaidlen = 0;
+        if ((AIDGetFromElm(data, vaid, sizeof(vaid), &vaidlen) == false) || (vaidlen == 0)) {
+            continue;
+        }
+        if (AIDSeenBefore(root, vaid, (size_t)vaidlen, elmindx)) {
+            continue;
+        }
+
+        uint16_t sw = 0;
+        uint8_t result[1024] = {0};
+        size_t resultlen = 0;
+        int res = Iso7816Select(CC_CONTACTLESS, ActivateField, true, vaid, vaidlen, result, sizeof(result), &resultlen, &sw);
+        ActivateField = false;
+        if (res) {
+            continue;
+        }
+
+        uint8_t dfname[200] = {0};
+        size_t dfnamelen = 0;
+        if (resultlen > 3) {
+            struct tlvdb *tlv = tlvdb_parse_multi(result, resultlen);
+            if (tlv) {
+                // 0x84 Dedicated File (DF) Name
+                const struct tlv *dfnametlv = tlvdb_get_tlv(tlvdb_find_full(tlv, 0x84));
+                if (dfnametlv) {
+                    dfnamelen = dfnametlv->len;
+                    memcpy(dfname, dfnametlv->value, dfnamelen);
+                }
+                tlvdb_free(tlv);
+            }
+        }
+
+        if (sw == ISO7816_OK || sw == ISO7816_INVALID_DF || sw == ISO7816_FILE_TERMINATED) {
+            if (sw == ISO7816_OK) {
+                if (verbose) PrintAndLogEx(SUCCESS, "Application ( " _GREEN_("ok") " )");
+            } else {
+                if (verbose) PrintAndLogEx(WARNING, "Application ( " _RED_("blocked") " )");
+            }
+
+            uint8_t response_for_match[1026] = {0};
+            size_t response_for_match_len = resultlen;
+            memcpy(response_for_match, result, MIN(resultlen, sizeof(response_for_match)));
+            if ((response_for_match_len + 2) <= sizeof(response_for_match)) {
+                response_for_match[response_for_match_len] = sw >> 8;
+                response_for_match[response_for_match_len + 1] = sw & 0xff;
+                response_for_match_len += 2;
+            }
+            PrintAIDDescriptionEx(root, sprint_hex_inrow(vaid, vaidlen), response_for_match, response_for_match_len, verbose);
+
+            if (dfnamelen) {
+                if (dfnamelen == vaidlen) {
+
+                    if (memcmp(dfname, vaid, vaidlen) == 0) {
+                        if (verbose) PrintAndLogEx(INFO, "(DF) Name found and equal to AID");
+                    } else {
+                        PrintAndLogEx(INFO, "(DF) Name not equal to AID: " _YELLOW_("%s"), sprint_hex_inrow(dfname, dfnamelen));
+                        PrintAIDDescriptionBuf(root, dfname, dfnamelen, verbose);
+                    }
+
+                } else {
+                    PrintAndLogEx(INFO, "(DF) Name not equal to AID: " _YELLOW_("%s"), sprint_hex_inrow(dfname, dfnamelen));
+                    PrintAIDDescriptionBuf(root, dfname, dfnamelen, verbose);
+                }
+
+            } else {
+                if (verbose) PrintAndLogEx(INFO, "(DF) Name not found");
+            }
+
+            if (verbose) PrintAndLogEx(SUCCESS, "----------------------------------------------------");
+            found++;
+        }
+
+    }
+    DropField();
+    if (verbose == false && found) {
+        PrintAndLogEx(INFO, "----------------------------------------------------");
+    }
+    AIDSearchFree(root);
+    return found;
+}
+
 int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     uint8_t dbg_curr = DBG_NONE;
@@ -3415,99 +3516,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         }
 
         if (do_aid_search) {
-
-            PrintAndLogEx(INFO, "-------------------- " _CYAN_("AID Search") " --------------------");
-
-            json_t *root = AIDSearchInit(verbose);
-            if (root != NULL) {
-                bool found = false;
-                bool ActivateField = true;
-                for (size_t elmindx = 0; elmindx < json_array_size(root); elmindx++) {
-
-                    if (kbd_enter_pressed()) {
-                        break;
-                    }
-
-                    json_t *data = AIDSearchGetElm(root, elmindx);
-                    uint8_t vaid[200] = {0};
-                    int vaidlen = 0;
-                    if ((AIDGetFromElm(data, vaid, sizeof(vaid), &vaidlen) == false) || (vaidlen == 0)) {
-                        continue;
-                    }
-                    if (AIDSeenBefore(root, vaid, (size_t)vaidlen, elmindx)) {
-                        continue;
-                    }
-
-                    uint16_t sw = 0;
-                    uint8_t result[1024] = {0};
-                    size_t resultlen = 0;
-                    res = Iso7816Select(CC_CONTACTLESS, ActivateField, true, vaid, vaidlen, result, sizeof(result), &resultlen, &sw);
-                    ActivateField = false;
-                    if (res) {
-                        continue;
-                    }
-
-                    uint8_t dfname[200] = {0};
-                    size_t dfnamelen = 0;
-                    if (resultlen > 3) {
-                        struct tlvdb *tlv = tlvdb_parse_multi(result, resultlen);
-                        if (tlv) {
-                            // 0x84 Dedicated File (DF) Name
-                            const struct tlv *dfnametlv = tlvdb_get_tlv(tlvdb_find_full(tlv, 0x84));
-                            if (dfnametlv) {
-                                dfnamelen = dfnametlv->len;
-                                memcpy(dfname, dfnametlv->value, dfnamelen);
-                            }
-                            tlvdb_free(tlv);
-                        }
-                    }
-
-                    if (sw == ISO7816_OK || sw == ISO7816_INVALID_DF || sw == ISO7816_FILE_TERMINATED) {
-                        if (sw == ISO7816_OK) {
-                            if (verbose) PrintAndLogEx(SUCCESS, "Application ( " _GREEN_("ok") " )");
-                        } else {
-                            if (verbose) PrintAndLogEx(WARNING, "Application ( " _RED_("blocked") " )");
-                        }
-
-                        uint8_t response_for_match[1026] = {0};
-                        size_t response_for_match_len = resultlen;
-                        memcpy(response_for_match, result, MIN(resultlen, sizeof(response_for_match)));
-                        if ((response_for_match_len + 2) <= sizeof(response_for_match)) {
-                            response_for_match[response_for_match_len] = sw >> 8;
-                            response_for_match[response_for_match_len + 1] = sw & 0xff;
-                            response_for_match_len += 2;
-                        }
-                        PrintAIDDescriptionEx(root, sprint_hex_inrow(vaid, vaidlen), response_for_match, response_for_match_len, verbose);
-
-                        if (dfnamelen) {
-                            if (dfnamelen == vaidlen) {
-
-                                if (memcmp(dfname, vaid, vaidlen) == 0) {
-                                    if (verbose) PrintAndLogEx(INFO, "(DF) Name found and equal to AID");
-                                } else {
-                                    PrintAndLogEx(INFO, "(DF) Name not equal to AID: " _YELLOW_("%s"), sprint_hex_inrow(dfname, dfnamelen));
-                                    PrintAIDDescriptionBuf(root, dfname, dfnamelen, verbose);
-                                }
-
-                            } else {
-                                PrintAndLogEx(INFO, "(DF) Name not equal to AID: " _YELLOW_("%s"), sprint_hex_inrow(dfname, dfnamelen));
-                                PrintAIDDescriptionBuf(root, dfname, dfnamelen, verbose);
-                            }
-
-                        } else {
-                            if (verbose) PrintAndLogEx(INFO, "(DF) Name not found");
-                        }
-
-                        if (verbose) PrintAndLogEx(SUCCESS, "----------------------------------------------------");
-                        found = true;
-                        isEMV = true;
-                    }
-
-                }
-                DropField();
-                if (verbose == false && found) {
-                    PrintAndLogEx(INFO, "----------------------------------------------------");
-                }
+            if (hf14a_aid_search(verbose) > 0) {
+                isEMV = true;
             }
         }
 

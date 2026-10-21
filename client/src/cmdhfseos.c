@@ -36,6 +36,7 @@
 #include "wiegand_formats.h"
 #include "wiegand_formatutils.h"
 #include "iso7816/apduinfo.h"   // GetAPDUCodeDescription
+#include "iso7816/iso7816core.h" // Iso7816Select
 #include "crypto/asn1utils.h"   // ASN1 decode / print
 #include "crypto/libpcrypto.h"  // AES decrypt
 #include "commonutil.h"         // get_sw
@@ -1674,10 +1675,69 @@ static int seos_load_keys(char *filename) {
     return PM3_SUCCESS;
 }
 
+static void seos_print_aid_status(const uint8_t *aid, int aid_len) {
+    uint8_t response[PM3_CMD_DATA_SIZE] = {0};
+    size_t resplen = 0;
+    uint16_t sw = 0;
+    // fresh activation, an already selected applet may answer the SELECT itself
+    Iso7816Select(CC_CONTACTLESS, true, true, (uint8_t *)aid, aid_len, response, sizeof(response), &resplen, &sw);
+
+    // sw stays 0 when the card did not answer
+    if (sw == ISO7816_OK) {
+        PrintAndLogEx(SUCCESS, "%s ( " _GREEN_("ok") " )", sprint_hex_inrow(aid, aid_len));
+    } else if (sw != 0) {
+        PrintAndLogEx(INFO, "%s ( %04X - %s )", sprint_hex_inrow(aid, aid_len), sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+    } else {
+        PrintAndLogEx(FAILED, "%s ( " _RED_("no answer") " )", sprint_hex_inrow(aid, aid_len));
+    }
+}
+
+static int seos_print_card(const uint8_t *custom_aid, int custom_aid_len) {
+    iso14a_card_select_t card;
+    int res = SelectCard14443A_4(false, true, &card);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    PrintAndLogEx(INFO, "--- " _CYAN_("Card") " ---------------------------");
+    PrintAndLogEx(SUCCESS, "UID.............................. " _YELLOW_("%s"), sprint_hex(card.uid, card.uidlen));
+    PrintAndLogEx(SUCCESS, "ATQA............................. " _YELLOW_("%02X %02X"), card.atqa[1], card.atqa[0]);
+    PrintAndLogEx(SUCCESS, "SAK.............................. " _YELLOW_("%02X"), card.sak);
+    // ats_len includes CRC
+    if (card.ats_len > 2) {
+        PrintAndLogEx(SUCCESS, "ATS.............................. " _YELLOW_("%s"), sprint_hex(card.ats, card.ats_len - 2));
+    }
+    // SAK b4: MIFARE Classic, b5: 4K
+    if ((card.sak & 0x08) == 0x08) {
+        PrintAndLogEx(SUCCESS, "MIFARE Classic emulation......... " _YELLOW_("%s"), ((card.sak & 0x10) == 0x10) ? "4K" : "1K");
+    } else {
+        PrintAndLogEx(SUCCESS, "MIFARE Classic emulation......... " _YELLOW_("none"));
+    }
+
+    PrintAndLogEx(INFO, "--- " _CYAN_("SEOS AIDs") " ---------------------------");
+    if (custom_aid_len > 0) {
+        seos_print_aid_status(custom_aid, custom_aid_len);
+    } else {
+        for (size_t i = 0; i < ARRAYLEN(known_seos_aids); i++) {
+            uint8_t aid[MAX_SEOS_AID_LEN] = {0};
+            int aid_len = 0;
+            param_gethex_to_eol(known_seos_aids[i], 0, aid, sizeof(aid), &aid_len);
+            seos_print_aid_status(aid, aid_len);
+        }
+    }
+    DropField();
+
+    hf14a_aid_search(false);
+    return PM3_SUCCESS;
+}
+
 static int CmdHfSeosInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf seos info",
-                  "Requests the unauthenticated information from the default ADF of a SEOS card\n"
+                  "Prints the card's UID, ATQA, SAK, ATS and MIFARE Classic emulation, which SEOS AIDs it answers\n"
+                  "and which aidlist.json AIDs it has, then\n"
+                  "requests the unauthenticated information from the default ADF of a SEOS card\n"
                   "- If the card is a SEOS card\n"
                   "- Are static RND.ICC keys used (can detect SEOS default keyset)\n"
                   "- What encryption and hashing algorithm is use\n\n"
@@ -1722,6 +1782,11 @@ static int CmdHfSeosInfo(const char *Cmd) {
     int res = seos_get_custom_aid(ctx, 3, aid, &aid_len);
 
     CLIParserFree(ctx);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    res = seos_print_card(aid, aid_len);
     if (res != PM3_SUCCESS) {
         return res;
     }
