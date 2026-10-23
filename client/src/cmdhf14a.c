@@ -2935,7 +2935,8 @@ static void get_compact_tlv(uint8_t *d, uint8_t n) {
 }
 
 // selects every AID in aidlist.json, returns how many were found
-int hf14a_aid_search(bool verbose) {
+// emv_found (optional) is set when an EMV application answers
+int hf14a_aid_search(bool verbose, bool *emv_found) {
 
     PrintAndLogEx(INFO, "-------------------- " _CYAN_("AID Search") " --------------------");
 
@@ -3024,6 +3025,11 @@ int hf14a_aid_search(bool verbose) {
 
             if (verbose) PrintAndLogEx(SUCCESS, "----------------------------------------------------");
             found++;
+
+            const char *type = AIDGetTypeFromElm(data);
+            if (emv_found && type && strcmp(type, "EMV") == 0) {
+                *emv_found = true;
+            }
         }
 
     }
@@ -3517,7 +3523,9 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         }
 
         if (do_aid_search) {
-            if (hf14a_aid_search(verbose) > 0) {
+            bool emv_found = false;
+            hf14a_aid_search(verbose, &emv_found);
+            if (emv_found) {
                 isEMV = true;
             }
         }

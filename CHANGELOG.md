@@ -7,6 +7,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed `hf seos managekeys -p` - key table columns stay aligned for slots 10 and up (@antoniovazquezblanco)
 - Fixed `aidlist.json` - uppercased the SEOS, TeslaDAP and LA Tap AIDs (@antoniovazquezblanco)
 - Changed `hf seos` - a failed MAC check with an empty privacy key slot now says so (@antoniovazquezblanco)
+- Fixed `hf 14a info -s` - only hints `emv reader` when an EMV application is found, not for any AID (@antoniovazquezblanco)
 - Improved PM5 nonce-acquisition throughput for mfc by replacing the fixed 68-pair cap with a 2900 ms target budget (@nip-was-here)
 - Fixed PM5 tick-count reads across RTC second rollovers to prevent false receive timeouts
 - Fixed iso14443a - reject incomplete encrypted nonce frames instead of delaying nested authentication on PM5 (@nip-was-here)

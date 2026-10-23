@@ -88,7 +88,7 @@ int hf14a_getconfig(hf14a_config_t *config);
 int hf14a_setconfig(hf14a_config_t *config, bool verbose);
 int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search);
 int infoHF14A4Applications(bool verbose);
-int hf14a_aid_search(bool verbose);
+int hf14a_aid_search(bool verbose, bool *emv_found);
 const char *getTagInfo(uint8_t uid);
 int Hf14443_4aGetCardData(iso14a_card_select_t *card);
 int ExchangeAPDU14a(const uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);

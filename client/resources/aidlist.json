@@ -17,7 +17,7 @@
         "Country": "United States",
         "Name": "EMV Payment System Environment - PSE (1PAY.SYS.DDF01)",
         "Description": "",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "325041592E5359532E4444463031",
@@ -25,7 +25,7 @@
         "Country": "United States",
         "Name": "EMV Proximity Payment System Environment - PPSE (2PAY.SYS.DDF01)",
         "Description": "Visa payWave for Mobile",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "44464D46412E44466172653234313031",
