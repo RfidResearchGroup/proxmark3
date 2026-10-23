@@ -190,7 +190,7 @@ int pm3_signal_stats(const double *sig, size_t len, pm3_sigstat_t *out);
 double pm3_autocorr_period(const double *sig, size_t len, double *strength);
 int pm3_psk_demod(const double *sig, size_t len, int fc, double clk,
                   uint8_t *bits, size_t *nbits, double *clk_out, int *phase_out,
-                  double *score_out, uint8_t *abs_bits);
+                  double *score_out, uint8_t *abs_bits, double *mag_out);
 
 int pm3_ask_chips(const double *sig, size_t len, double chip, uint8_t *chips, size_t *nchips, double *chip_out, int *phase_out);
 double *pm3_resample(const double *in, size_t len, double ratio, size_t *out_len);
