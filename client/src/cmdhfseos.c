@@ -1642,7 +1642,7 @@ static int seos_print_keys(bool verbose) {
         for (uint8_t i = 0; i < ARRAYLEN(keys); i++) {
             bool has_privacy = (seos_privacy_key_empty(i) == false);
             bool has_auth = (memcmp(keys[i].authKey, zeros, sizeof(zeros)) != 0);
-            PrintAndLogEx(INFO, " %u |    %c    |  %c", i, has_privacy ? 'Y' : ' ', has_auth ? 'Y' : ' ');
+            PrintAndLogEx(INFO, "%2u |    %c    |  %c", i, has_privacy ? 'Y' : ' ', has_auth ? 'Y' : ' ');
         }
         PrintAndLogEx(INFO, "---+---------+-----");
     };
