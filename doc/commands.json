@@ -10245,7 +10245,7 @@
         },
         "hf seos info": {
             "command": "hf seos info",
-            "description": "Requests the unauthenticated information from the default ADF of a SEOS card - If the card is a SEOS card - Are static RND.ICC keys used (can detect SEOS default keyset) - What encryption and hashing algorithm is use By default: - Privacy Key: 0 The selected privacy slot provides both encryption and MAC subkeys for ADF handling. - Auth Key : 0 The selected auth slot is sent to the card for challenge/authentication.",
+            "description": "Prints the card's UID, ATQA, SAK, ATS and MIFARE Classic emulation, which SEOS AIDs it answers and which aidlist.json AIDs it has, then requests the unauthenticated information from the default ADF of a SEOS card - If the card is a SEOS card - Are static RND.ICC keys used (can detect SEOS default keyset) - What encryption and hashing algorithm is use By default: - Privacy Key: 0 The selected privacy slot provides both encryption and MAC subkeys for ADF handling. - Auth Key : 0 The selected auth slot is sent to the card for challenge/authentication.",
             "notes": [
                 "hf seos info",
                 "hf seos info --privacy-key 8 --auth-key 9",
