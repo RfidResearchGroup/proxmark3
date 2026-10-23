@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf seos` - a failed MAC check with an empty privacy key slot now says so and how to load one, instead of "Likely wrong Priv Mac Key" (@antoniovazquezblanco)
 - Improved PM5 nonce-acquisition throughput for mfc by replacing the fixed 68-pair cap with a 2900 ms target budget (@nip-was-here)
 - Fixed PM5 tick-count reads across RTC second rollovers to prevent false receive timeouts
 - Fixed iso14443a - reject incomplete encrypted nonce frames instead of delaying nested authentication on PM5 (@nip-was-here)
