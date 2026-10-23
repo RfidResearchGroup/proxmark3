@@ -49,6 +49,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed `hf 14a info`  now correctly handles NAK when receiving RATS (@iceman1001)
 - Fixed `hf mfu restore` to support Ultralight AES (@iceman1001)
 - Fixed `hf mfu info` to print UL-AES config pages again (@iceman1001)
+- Changed `hf search` - checks and provides hints about SEOS tags (@antoniovazquezblanco)
 
 
 ## [Frosty Lemon.4.23346][2026-09-18]
