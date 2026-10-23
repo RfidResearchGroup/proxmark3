@@ -120,6 +120,11 @@ static bool seos_parse_key_index(const char *input, int *value) {
     return true;
 }
 
+static bool seos_privacy_key_empty(int key_index) {
+    return (memcmp(keys[key_index].privEncKey, zeros, sizeof(zeros)) == 0) &&
+           (memcmp(keys[key_index].privMacKey, zeros, sizeof(zeros)) == 0);
+}
+
 static int create_cmac(uint8_t *key, uint8_t *input, uint8_t *out, int input_len, int output_len, int encryption_algorithm) {
     uint8_t iv[16] = {0x00};
     uint8_t mac[16] = {0x00};
@@ -750,7 +755,12 @@ static int select_DF_verify(uint8_t *response, uint8_t response_length, uint8_t 
 out:
     PrintAndLogEx(INFO, "--- " _CYAN_("MAC") " ---------------------------");
     PrintAndLogEx(ERR, _RED_("MAC Verification Failed"));
-    PrintAndLogEx(ERR, _YELLOW_("Likely wrong Priv Mac Key"));
+    if (seos_privacy_key_empty(key_index)) {
+        PrintAndLogEx(ERR, _YELLOW_("Privacy key slot %d is empty"), key_index);
+        PrintAndLogEx(HINT, "Hint: Load one with `" _YELLOW_("hf seos managekeys --ki %d --privacy <hex>") "`", key_index);
+    } else {
+        PrintAndLogEx(ERR, _YELLOW_("Likely wrong Priv Mac Key"));
+    }
     return PM3_ESOFT;
 }
 
@@ -1630,7 +1640,7 @@ static int seos_print_keys(bool verbose) {
         PrintAndLogEx(INFO, "idx| privacy | auth");
         PrintAndLogEx(INFO, "---+---------+-----");
         for (uint8_t i = 0; i < ARRAYLEN(keys); i++) {
-            bool has_privacy = (memcmp(keys[i].privEncKey, zeros, sizeof(zeros)) != 0) || (memcmp(keys[i].privMacKey, zeros, sizeof(zeros)) != 0);
+            bool has_privacy = (seos_privacy_key_empty(i) == false);
             bool has_auth = (memcmp(keys[i].authKey, zeros, sizeof(zeros)) != 0);
             PrintAndLogEx(INFO, " %u |    %c    |  %c", i, has_privacy ? 'Y' : ' ', has_auth ? 'Y' : ' ');
         }
