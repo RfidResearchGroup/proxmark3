@@ -207,9 +207,14 @@ static void aidlist_rule(char *dst, size_t dstlen, size_t w_aid, size_t w_prio, 
 
     dst[pos++] = '+';
     for (size_t c = 0; c < 3; c++) {
-        for (size_t i = 0; (i < widths[c] + 2) && (pos + 2 < dstlen); i++) {
-            dst[pos++] = '-';
+        // memset, not a byte loop: gcc's AVX2 vectorized loop trips -Wstringop-overflow
+        size_t n = widths[c] + 2;
+        size_t room = (pos + 2 < dstlen) ? dstlen - pos - 2 : 0;
+        if (n > room) {
+            n = room;
         }
+        memset(dst + pos, '-', n);
+        pos += n;
         if (pos + 1 < dstlen) {
             dst[pos++] = '+';
         }
