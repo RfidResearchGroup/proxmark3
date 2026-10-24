@@ -230,6 +230,7 @@ typedef struct {
 } calypso_dump_candidate_list_t;
 
 typedef struct {
+    const struct calypso_dump_profile *profile;
     uint16_t path[CALYPSO_DUMP_NODE_PATH_MAX];
     size_t path_len;
     size_t depth;
@@ -257,7 +258,7 @@ typedef struct {
     uint8_t sources;
 } calypso_dump_node_t;
 
-typedef struct {
+typedef struct calypso_dump_profile {
     uint8_t serial[CALYPSO_SERIAL_LEN];
     calypso_dump_node_t *nodes;
     size_t node_count;
@@ -297,6 +298,7 @@ static bool calypso_lid_is_valid(uint16_t lid);
 static bool calypso_tlv_read_len(const uint8_t *data, size_t data_len, size_t *pos, size_t *len);
 static bool calypso_fcp_lid(const uint8_t *fcp, size_t fcp_len, uint16_t *lid);
 static bool calypso_fcp_lid_with_hint(const uint8_t *fcp, size_t fcp_len, bool have_hint, uint16_t hint, uint16_t *lid);
+static bool calypso_fcp_matches_lid(const uint8_t *data, size_t data_len, uint16_t target_lid);
 static void calypso_dump_node_copy_raw(uint8_t *dst, size_t *dst_len, const uint8_t *src, size_t src_len, size_t dst_size);
 static void calypso_dump_node_set_select_response(calypso_dump_node_t *node, const uint8_t *data, size_t data_len, uint16_t sw);
 static void calypso_apdu_response_set(calypso_apdu_response_t *dst, const uint8_t *src, size_t src_len, uint16_t sw);
@@ -306,6 +308,7 @@ static bool calypso_dump_node_known_lid(const calypso_dump_node_t *node, uint16_
 static void calypso_dump_node_init_from_selected(calypso_dump_node_t *node, const calypso_select_result_t *selected);
 static void calypso_dump_apply_fci_identity(calypso_dump_node_t *node);
 static void calypso_dump_apply_profile_node(calypso_dump_node_t *node, const calypso_dump_profile_t *profile);
+static const calypso_dump_node_t *calypso_dump_profile_unique_lid_node(const calypso_dump_profile_t *profile, const calypso_dump_node_t *node);
 
 static int CmdHelp(const char *Cmd);
 
@@ -1829,14 +1832,15 @@ static int calypso_read_sfi_record(uint8_t sfi, uint8_t record, uint16_t le, uin
     return PM3_SUCCESS;
 }
 
-static int calypso_select_file_id_with_p1_fallback(uint16_t file_id, calypso_apdu_response_t *response) {
+static int calypso_select_file_id_with_p1_fallback(uint16_t file_id, bool check_lid, calypso_apdu_response_t *response) {
     uint8_t file_id_data[] = {
         (uint8_t)(file_id >> 8),
         (uint8_t)(file_id & 0xFF),
     };
     sAPDU_t apdu = {0x00, ISO7816_SELECT_FILE, CALYPSO_SELECT_CURRENT_DF_P1, CALYPSO_SELECT_CURRENT_DF_P2, sizeof(file_id_data), file_id_data};
     int res = calypso_exchange_select(apdu, response);
-    if (res != PM3_SUCCESS || calypso_select_sw_has_file(response->sw)) {
+    if (res != PM3_SUCCESS || (calypso_select_sw_has_file(response->sw) &&
+            (check_lid == false || calypso_fcp_matches_lid(response->data, response->len, file_id)))) {
         return res;
     }
 
@@ -1872,10 +1876,14 @@ static int calypso_select_file_path(const uint16_t *path, size_t path_len, calyp
     return calypso_exchange_select(apdu, response);
 }
 
-static int calypso_select_file_path_then_id_fallback(const uint16_t *path, size_t path_len, uint16_t file_id, calypso_apdu_response_t *response) {
+static int calypso_select_file_path_then_id_fallback(const uint16_t *path, size_t path_len, uint16_t file_id, const calypso_dump_profile_t *profile, calypso_apdu_response_t *response) {
+    const calypso_dump_node_t *node = calypso_dump_profile_unique_lid_node(profile,
+                                        &(calypso_dump_node_t) {.has_select_lid = true, .select_lid = file_id});
+    bool check_lid = node != NULL && node->select_aid_len > 0;
     if (path != NULL && path_len > 0) {
         int res = calypso_select_file_path(path, path_len, response);
-        if (res != PM3_SUCCESS || calypso_select_sw_has_file(response->sw)) {
+        if (res != PM3_SUCCESS || (calypso_select_sw_has_file(response->sw) &&
+                (check_lid == false || calypso_fcp_matches_lid(response->data, response->len, file_id)))) {
             return res;
         }
 
@@ -1884,18 +1892,32 @@ static int calypso_select_file_path_then_id_fallback(const uint16_t *path, size_
             // Some legacy Calypso root DFs use a duplicated path component.
             const uint16_t legacy_path[] = {file_id, file_id};
             res = calypso_select_file_path(legacy_path, ARRAYLEN(legacy_path), response);
-            if (res != PM3_SUCCESS || calypso_select_sw_has_file(response->sw)) {
+            if (res != PM3_SUCCESS || (calypso_select_sw_has_file(response->sw) &&
+                    (check_lid == false || calypso_fcp_matches_lid(response->data, response->len, file_id)))) {
                 return res;
             }
         }
     }
 
-    return calypso_select_file_id_with_p1_fallback(file_id, response);
+    int res = calypso_select_file_id_with_p1_fallback(file_id, check_lid, response);
+    if (res != PM3_SUCCESS || check_lid == false ||
+            (calypso_select_sw_has_file(response->sw) && calypso_fcp_matches_lid(response->data, response->len, file_id)) ||
+            (response->len == 0 && response->sw == 0)) {
+        return res;
+    }
+
+    // AID selection is global; callers must restore the walk context before siblings.
+    calypso_select_result_t selected = {0};
+    res = calypso_restore_selection(&node->selected, false, &selected);
+    if (res == PM3_SUCCESS) {
+        *response = selected.response;
+    }
+    return res;
 }
 
 static int calypso_select_file_by_id(uint16_t file_id, uint16_t *sw) {
     calypso_apdu_response_t response = {0};
-    int res = calypso_select_file_id_with_p1_fallback(file_id, &response);
+    int res = calypso_select_file_id_with_p1_fallback(file_id, false, &response);
     *sw = response.sw;
     return res;
 }
@@ -2587,7 +2609,7 @@ static int calypso_dump_select_lid(const calypso_dump_walk_context_t *ctx, uint1
     uint16_t path[CALYPSO_DUMP_NODE_PATH_MAX + 1] = {0};
     size_t path_len = calypso_dump_walk_lid_path(ctx, lid, path, ARRAYLEN(path));
     calypso_apdu_response_t select_response = {0};
-    int res = calypso_select_file_path_then_id_fallback(path, path_len, lid, &select_response);
+    int res = calypso_select_file_path_then_id_fallback(path, path_len, lid, ctx->profile, &select_response);
     *response_len = MIN(select_response.len, response_max);
     if (response != NULL && *response_len > 0) {
         memcpy(response, select_response.data, *response_len);
@@ -2984,7 +3006,7 @@ static int calypso_dump_reselect_base(const calypso_select_result_t *selected, c
     if (ctx->from_root) {
         calypso_apdu_response_t response = {0};
         const uint16_t mf_path[] = {0x3F00};
-        res = calypso_select_file_path_then_id_fallback(mf_path, ARRAYLEN(mf_path), 0x3F00, &response);
+        res = calypso_select_file_path_then_id_fallback(mf_path, ARRAYLEN(mf_path), 0x3F00, ctx->profile, &response);
         if (res == PM3_SUCCESS && calypso_empty_response_lost(response.len, response.sw)) {
             return PM3_ETIMEOUT;
         }
@@ -2998,7 +3020,7 @@ static int calypso_dump_reselect_base(const calypso_select_result_t *selected, c
 
     for (size_t i = 0; i < ctx->path_len; i++) {
         calypso_apdu_response_t response = {0};
-        res = calypso_select_file_path_then_id_fallback(ctx->path, i + 1, ctx->path[i], &response);
+        res = calypso_select_file_path_then_id_fallback(ctx->path, i + 1, ctx->path[i], ctx->profile, &response);
         if (res == PM3_SUCCESS && calypso_empty_response_lost(response.len, response.sw)) {
             return PM3_ETIMEOUT;
         }
@@ -3043,8 +3065,11 @@ static bool calypso_fcp_is_type(const uint8_t *fcp, size_t fcp_len, calypso_file
     return calypso_parse_fcp(fcp, fcp_len, &parsed) && parsed.file_type == file_type;
 }
 
-static bool calypso_fcp_matches_lid(const calypso_fcp_t *fcp, uint16_t target_lid) {
-    if (fcp == NULL || fcp->lid_count == 0) {
+static bool calypso_fcp_matches_lid(const uint8_t *data, size_t data_len, uint16_t target_lid) {
+    calypso_fcp_t parsed = {0};
+    const calypso_fcp_t *fcp = &parsed;
+    if (calypso_parse_fcp(data, data_len, &parsed) == false ||
+            fcp->file_type == CALYPSO_FILE_EF || fcp->lid_count == 0) {
         return true;
     }
     for (size_t i = 0; i < fcp->lid_count; i++) {
@@ -3582,6 +3607,15 @@ static int calypso_dump_process_context(const calypso_select_result_t *selected,
     if (calypso_dump_add_known_candidates(&candidates, &ctx, have_inferred_parent, inferred_parent) == false) {
         return PM3_EMALLOC;
     }
+    if (ctx.depth == 0 && (ctx.from_root || ctx.is_mf) && ctx.profile != NULL) {
+        for (size_t i = 0; i < ctx.profile->node_count; i++) {
+            uint16_t lid = 0;
+            if (calypso_dump_node_known_lid(&ctx.profile->nodes[i], &lid) &&
+                    calypso_dump_candidate_add(&candidates, lid, CALYPSO_DUMP_SOURCE_SELECTED) == false) {
+                return PM3_EMALLOC;
+            }
+        }
+    }
     if (ctx.has_seed_lid && (ctx.has_lid == false || ctx.seed_lid != ctx.lid) &&
             calypso_dump_candidate_add(&candidates, ctx.seed_lid, CALYPSO_DUMP_SOURCE_SELECTED) == false) {
         return PM3_EMALLOC;
@@ -3665,7 +3699,7 @@ static int calypso_dump_process_context(const calypso_select_result_t *selected,
         bool is_ef = select_is_fcp && select_fcp.file_type == CALYPSO_FILE_EF;
         // Some HCE Calypso cards default unknown LID selection to another file.
         // Guard DF recursion against endlessly walking that fallback response.
-        if (select_is_fcp && is_df && calypso_fcp_matches_lid(&select_fcp, lid) == false) {
+        if (select_is_fcp && is_df && calypso_fcp_matches_lid(select_response, select_len, lid) == false) {
             continue;
         }
 
@@ -3873,7 +3907,7 @@ static int calypso_dump_selected_df(const calypso_select_result_t *selected, uin
             // Some cards return broken FCP LID fields; if selecting 3F00 returns the same FCP we already saw, treat it as MF.
             calypso_apdu_response_t mf_response = {0};
             const uint16_t mf_path[] = {0x3F00};
-            res = calypso_select_file_path_then_id_fallback(mf_path, ARRAYLEN(mf_path), 0x3F00, &mf_response);
+            res = calypso_select_file_path_then_id_fallback(mf_path, ARRAYLEN(mf_path), 0x3F00, NULL, &mf_response);
             if (res != PM3_SUCCESS) {
                 return res;
             }
@@ -3898,6 +3932,7 @@ static int calypso_dump_selected_df(const calypso_select_result_t *selected, uin
     }
 
     calypso_dump_walk_context_t root = {0};
+    root.profile = dump != NULL ? dump->profile : NULL;
     root.from_root = from_root;
     root.is_mf = from_root || (have_selected_lid && selected_lid == 0x3F00);
     root.has_lid = have_selected_lid;
