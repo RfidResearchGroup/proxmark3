@@ -9310,23 +9310,21 @@
         },
         "hf mfu countertear": {
             "command": "hf mfu countertear",
-            "description": "Tear-off test against a Ev1 counter",
+            "description": "Reset a MIFARE Ultralight EV1 monotonic counter with the tear-off technique Port of the pyscript mfuev1_counter_reset.py, based on Quarkslab research",
             "notes": [
-                "hf mfu countertear -c 0 -> target counter 0",
-                "hf mfu countertear -c 0 -s 200 -> target counter 0, start delay 200",
-                "hf mfu countertear -c 0 -x 020000 -> target counter 0, increasing the counter by 2 bytes"
+                "hf mfu countertear -c 0",
+                "hf mfu countertear -c 0 -f",
+                "hf mfu countertear -c 0 --DelayBD 2720 --Delay00 2705"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-c, --cnt <0,1,2> Target this EV1 counter (0,1,2)",
-                "-i, --inc <dec> time interval to increase in each iteration - default 10 us",
-                "-l, --limit <dec> test upper limit time - default 3000 us",
-                "-s, --start <dec> test start time - default 500 us",
-                "--fix <dec> test fixed loop delay",
-                "-x, --hex <string> 3 byte hex to increase counter with - default 010000"
+                "-c, --cnt <0-2> Target this EV1 counter (0,1,2)",
+                "-f, --force Skip pre-flight checks",
+                "--DelayBD <dec> Manual BD delay (us, disables auto-calibration)",
+                "--Delay00 <dec> Manual 00 delay (us)"
             ],
-            "usage": "hf mfu countertear [-h] [-c <0,1,2>] [-i <dec>] [-l <dec>] [-s <dec>] [--fix <dec>] [-x <string>]"
+            "usage": "hf mfu countertear [-hf] [-c <0-2>] [--DelayBD <dec>] [--Delay00 <dec>]"
         },
         "hf mfu desbrute": {
             "command": "hf mfu desbrute",
@@ -16814,6 +16812,6 @@
     "metadata": {
         "commands_extracted": 936,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-10-14T15:56:50+00:00"
+        "extracted_on": "2026-10-23T22:15:17+00:00"
     }
 }
