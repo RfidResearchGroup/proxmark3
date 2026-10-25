@@ -207,6 +207,19 @@ else ()
     set(SRC_RGB_INDICATOR)
 endif ()
 
+# PM5 14a sniffer: decoders, and its FPGA image, embedded and loaded into FPGA SRAM by `hf 14a sniff` (pm5_sniffimg.c).
+# Build without the image with -DPM5_SNIFF_IMAGE= (empty): the sniffer then stays at 106 kbit/s.
+if (PM5)
+    set(PM5_SNIFF_IMAGE ${CMAKE_CURRENT_LIST_DIR}/../fpga/fpga_pm5_sniff14a.bin CACHE STRING "PM5 14a sniffer FPGA image")
+    set(SRC_PM5_SNIFF pm5_sniff_hbr.c pm5_edges.c)
+    if (NOT "${PM5_SNIFF_IMAGE}" STREQUAL "")
+        list(APPEND SRC_PM5_SNIFF pm5_sniffimg.c)
+        list(APPEND APP_CFLAGS -DPM5_SNIFF_EMBED)
+    endif ()
+else ()
+    set(SRC_PM5_SNIFF)
+endif ()
+
 if ("${APP_CFLAGS}" MATCHES "WITH_HITAG")
     set(SRC_HITAG
             ../common/hitag2/hitag2_crypto.c
@@ -295,6 +308,7 @@ set(THUMBSRC
         ${SRC_ZX}
         ${SRC_BWM_CHARGER}
         ${SRC_RGB_INDICATOR}
+        ${SRC_PM5_SNIFF}
         appmain.c
         printf.c
         dbprint.c
@@ -473,6 +487,24 @@ add_custom_command(
         VERBATIM
 )
 
+# ---------------- 3b. Create pm5_sniff_bit.o ----------------
+#  The PM5 14a sniffer image as _binary_obj_pm5_sniff_bin_start / _end, in flash, linked as an object
+if (PM5 AND NOT "${PM5_SNIFF_IMAGE}" STREQUAL "")
+    get_filename_component(PM5_SNIFF_O ${OBJDIR}/pm5_sniff_bit.o ABSOLUTE)
+    add_custom_command(
+            OUTPUT ${PM5_SNIFF_O}
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+            COMMAND ${CMAKE_COMMAND} -E copy ${PM5_SNIFF_IMAGE} ${OBJDIR_NAME}/pm5_sniff.bin
+            COMMAND ${CMAKE_OBJCOPY} -O elf32-littlearm -I binary -B arm --rename-section .data=.rodata.pm5_sniff,alloc,load,readonly,data,contents ${OBJDIR_NAME}/pm5_sniff.bin ${PM5_SNIFF_O}
+            DEPENDS ${PM5_SNIFF_IMAGE}
+            COMMENT "Call the objcopy to convert the PM5 14a sniffer image to elf file."
+            VERBATIM
+    )
+    set_source_files_properties(${PM5_SNIFF_O} PROPERTIES EXTERNAL_OBJECT TRUE GENERATED TRUE)
+else ()
+    set(PM5_SNIFF_O)
+endif ()
+
 # ---------------- 4. Create version_pm3.c ----------------
 if (SKIP_FPGA_EMBED)  # If pack fpga bit files to arm, we need from step1,2,3 start build, otherwise skip step2,3.
     set(FPGA_ALL_O_MKVERSION_DEP)  # <-- Important, unset it will let this step(4) no DEPENDS with 'FPGA_ALL_O'.
@@ -490,7 +522,7 @@ add_custom_command(
 )
 
 # ---------------- 5. Build fulliamge elf but stage1, not '.data' section compressed ----------------
-set(ALL_SRCS ${THUMBSRC} ${ARMSRC} ${ASMSRC} ${VERSIONSRC})
+set(ALL_SRCS ${THUMBSRC} ${ARMSRC} ${ASMSRC} ${VERSIONSRC} ${PM5_SNIFF_O})
 
 add_executable(fullimage.stage1.elf ${ALL_SRCS})
 set_target_properties(fullimage.stage1.elf PROPERTIES # The 'fullimage.stage1.elf' output to ${OBJDIR}

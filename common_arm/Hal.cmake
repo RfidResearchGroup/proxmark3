@@ -68,6 +68,9 @@ elseif (PLATFORM STREQUAL "PM5")
     set(PLATFORM_DEFS -DWITH_FLASH -DPM5 -DCHIP_AT32F435_37) # TODO DXL 暂时不要编译i2c -DWITH_SMARTCARD
     set(PLTNAME "Proxmark5")
     set(PLATFORM_FPGA "GW1NR-LV2MG49GC6/i5")
+    if (NOT PLATFORM_SIZE)
+        set(PLATFORM_SIZE 1024) # 1 MB of flash: room for the embedded 14a sniffer FPGA image
+    endif ()
     set(PM5 TRUE)
 else ()
     message(FATAL_ERROR "Invalid or empty PLATFORM: ${PLATFORM}. Known platforms: PM3RDV4, PM3GENERIC, PM3ICOPYX (PM3OTHER is deprecated)")

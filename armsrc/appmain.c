@@ -93,6 +93,7 @@
 #include "buzzer.h"        // PM5 mainboard buzzer API
 #include "rgb_indicator.h" // PM5 antenna-RGB power/battery indicator (WITH_PM5_PWR_LED)
 #include "pm5_power.h"     // PM5 power-save idle (clock scaling + WFI)
+#include "pm5_sniffimg.h"  // PM5 14a sniffer FPGA image in SRAM
 
 
 #ifdef WITH_PM5_AUTOOFF
@@ -2478,8 +2479,17 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t legic_threshold;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
+            uint16_t thr = (payload->threshold & 0x3f) | ((payload->threshold_high & 0x3f) << 6);
+#ifdef PM5_SNIFF_EMBED
+            // applies to the image loaded now and is sent again after each image switch
+            Pm5SniffImgSetThresholds(thr);
+            Pm5SniffImgKeep(true);
+#endif
             FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-            FpgaSendCommand(FPGA_CMD_SET_EDGE_DETECT_THRESHOLD, (payload->threshold & 0x3f) | ((payload->threshold_high & 0x3f) << 6));
+#ifdef PM5_SNIFF_EMBED
+            Pm5SniffImgKeep(false);
+#endif
+            FpgaSendCommand(FPGA_CMD_SET_EDGE_DETECT_THRESHOLD, thr);
 #ifdef WITH_LEGICRF
             LegicRfSetThreshold((uint32_t)payload->legic_threshold);
 #endif
@@ -2487,6 +2497,10 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_ISO14443A_SNIFF: {
             reply_ng(CMD_HF_ISO14443A_SNIFF, SniffIso14443a(packet->data.asBytes[0]), NULL, 0);
+#ifdef PM5_SNIFF_EMBED
+            // the image from the FPGA's flash back once the client has the reply
+            Pm5SniffImgRestore();
+#endif
             break;
         }
         case CMD_HF_HIDCONFIG_SNIFF: {
@@ -4176,6 +4190,11 @@ static void PacketReceived(PacketCommandNG *packet) {
                 } PACKED;
                 struct p *payload = (struct p *) packet->data.asBytes;
                 res = FpgaStartConfig(payload->sram_mode, payload->file_length);
+#ifdef PM5_SNIFF_EMBED
+                if (res == PM3_SUCCESS) {
+                    Pm5SniffImgUserConfig(payload->sram_mode);
+                }
+#endif
             } else if (packet->cmd == CMD_FPGA_BITSTREAM_CONFIG_WRITE) {
                 res = FpgaConfigWrite(packet->data.asBytes, packet->length);
             } else {

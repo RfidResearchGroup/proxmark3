@@ -33,7 +33,10 @@ module fpga_hf(
     input mosi,
     input ssp_dout,
     input ce,  // 复位输入，常态高
-  
+`ifdef PM5_SNIFF14A
+    input [9:0] adc_d10,  // all 10 ADC bits, for the 14a sniffer
+`endif
+
     output ssp_din,
     output ssp_frame,
     output ssp_clk,
@@ -82,6 +85,26 @@ reg [5:0] hf_edge_detect_threshold_high = 6'd20;
 
 reg [8:0] conf_word;
 
+`ifdef PM5_SNIFF14A
+// 14a sniffer image: bit rates after a PPS and 16-bit words, set by the ARM (FPGA_CMD_PM5_SNIFF_RATE)
+reg [1:0] sc_rate_tag = 2'd0;
+reg [1:0] sc_rate_rdr = 2'd0;
+reg       sc_link16 = 1'b0;
+// the command lands at any instant of the sniffer's clock: re-timed, and taken once two samples agree, so all its flops
+// switch on one edge
+reg [3:0] sc_rate_s1 = 4'd0, sc_rate_s2 = 4'd0, sc_rate_q = 4'd0;
+always @(posedge ck_1356meg)
+begin
+    sc_rate_s1 <= {sc_rate_rdr, sc_rate_tag};
+    sc_rate_s2 <= sc_rate_s1;
+    if (sc_rate_s2 == sc_rate_s1)
+        sc_rate_q <= sc_rate_s2;
+end
+reg [1:0] sc_link16_s = 2'd0;
+always @(posedge ck_1356meg)
+    sc_link16_s <= {sc_link16_s[0], sc_link16};
+`endif
+
 initial
 begin
     hf_edge_detect_threshold <= 7;
@@ -104,6 +127,14 @@ begin
                 hf_edge_detect_threshold_high <= shift_reg[11:6];
             end
             `FPGA_CMD_SET_PWR_PWM_LOW_COUNT:pwm_duty <= shift_reg[11:0];
+`ifdef PM5_SNIFF14A
+            `FPGA_CMD_PM5_SNIFF_RATE:
+            begin
+                sc_rate_tag <= shift_reg[1:0];
+                sc_rate_rdr <= shift_reg[3:2];
+                sc_link16 <= shift_reg[4];
+            end
+`endif
         endcase
     end
 end
@@ -113,6 +144,16 @@ end
 // the output pins.
 //-----------------------------------------------------------------------------
 
+`ifdef PM5_SNIFF14A
+// 14a sniffer image, for hf 14a sniff only (the image in the FPGA's flash runs every other mode): the other major modes
+// are not built, their mux inputs are tied off
+wire mux0_ssp_din = 1'b0, mux0_ssp_frame = 1'b0, mux0_ssp_clk = 1'b0, mux0_adc_clk = 1'b0,
+     mux0_pwr_lo = 1'b0, mux0_pwr_hi = 1'b0, mux0_pwr_oe1 = 1'b0, mux0_pwr_oe2 = 1'b0, mux0_pwr_oe3 = 1'b0,
+     mux0_pwr_oe4 = 1'b0, mux0_debug = 1'b0;
+wire mux1_ssp_din = 1'b0, mux1_ssp_frame = 1'b0, mux1_ssp_clk = 1'b0, mux1_adc_clk = 1'b0,
+     mux1_pwr_lo = 1'b0, mux1_pwr_hi = 1'b0, mux1_pwr_oe1 = 1'b0, mux1_pwr_oe2 = 1'b0, mux1_pwr_oe3 = 1'b0,
+     mux1_pwr_oe4 = 1'b0, mux1_debug = 1'b0;
+`else
 //   HF reader
 hi_reader hr(
     .ck_1356meg (ck_1356meg),
@@ -153,8 +194,29 @@ hi_simulate hs(
     .pwr_oe4    (mux1_pwr_oe4),
     .debug      (mux1_debug)
 );
+`endif
 
 //   HF ISO14443-A
+`ifdef PM5_SNIFF14A
+pm5_hi_iso14443a hisn(
+    .ck_1356meg (ck_1356meg),
+    .adc_d10    (adc_d10),
+    .rate_tag   (sc_rate_q[1:0]),
+    .rate_rdr   (sc_rate_q[3:2]),
+    .link16     (sc_link16_s[1]),
+    .mod_type   (conf_word[3:0]),
+    .hf14a_sel  (major_mode == `FPGA_MAJOR_MODE_HF_ISO14443A),
+
+    .ssp_din    (mux2_ssp_din),
+    .ssp_frame  (mux2_ssp_frame),
+    .ssp_clk    (mux2_ssp_clk),
+    .adc_clk    (mux2_adc_clk),
+    .debug      (mux2_debug),
+    .edge_detect_threshold ({5'b00000, hf_edge_detect_threshold}),
+    .edge_detect_threshold_high ({5'b00000, hf_edge_detect_threshold_high})
+);
+wire mux2_pwr_lo = 1'b0, mux2_pwr_hi = 1'b0, mux2_pwr_oe1 = 1'b0, mux2_pwr_oe2 = 1'b0, mux2_pwr_oe3 = 1'b0, mux2_pwr_oe4 = 1'b0;
+`else
 hi_iso14443a hisn(
     .ck_1356meg (ck_1356meg),
     .adc_d      (adc_d),
@@ -175,7 +237,17 @@ hi_iso14443a hisn(
     .edge_detect_threshold ({5'b00000, hf_edge_detect_threshold}),
     .edge_detect_threshold_high ({5'b00000, hf_edge_detect_threshold_high})
 );
+`endif
 
+`ifdef PM5_SNIFF14A
+wire mux3_ssp_din = 1'b0, mux3_ssp_frame = 1'b0, mux3_ssp_clk = 1'b0, mux3_adc_clk = 1'b0,
+     mux3_pwr_lo = 1'b0, mux3_pwr_hi = 1'b0, mux3_pwr_oe1 = 1'b0, mux3_pwr_oe2 = 1'b0, mux3_pwr_oe3 = 1'b0,
+     mux3_pwr_oe4 = 1'b0;
+wire mux4_ssp_din = 1'b0, mux4_ssp_frame = 1'b0, mux4_ssp_clk = 1'b0, mux4_adc_clk = 1'b0,
+     mux4_pwr_lo = 1'b0, mux4_pwr_hi = 1'b0, mux4_pwr_oe1 = 1'b0, mux4_pwr_oe2 = 1'b0, mux4_pwr_oe3 = 1'b0,
+     mux4_pwr_oe4 = 1'b0, mux4_debug = 1'b0;
+wire mux5_ssp_din = 1'b0, mux5_ssp_frame = 1'b0, mux5_ssp_clk = 1'b0;
+`else
 //   HF sniff
 hi_sniffer he(
     .ck_1356meg  (ck_1356meg),
@@ -224,6 +296,7 @@ hi_get_trace gt(
     .ssp_frame    (mux5_ssp_frame),
     .ssp_clk      (mux5_ssp_clk)
 );
+`endif
 
 // These assignments must agree with the defines in fpgaloader.h
 

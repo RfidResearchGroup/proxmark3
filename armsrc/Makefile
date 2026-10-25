@@ -151,6 +151,21 @@ else
     SRC_PM5_POWER =
 endif
 
+# PM5 14a sniffer: decoders, and its FPGA image, embedded and loaded into FPGA SRAM by `hf 14a sniff` (pm5_sniffimg.c).
+# Build without the image with PM5_SNIFF_IMAGE= (empty): the sniffer then stays at 106 kbit/s.
+ifeq ($(PLATFORM),PM5)
+    SRC_PM5_SNIFF = pm5_sniff_hbr.c pm5_edges.c
+else
+    SRC_PM5_SNIFF =
+    PM5_SNIFF_IMAGE =
+endif
+ifneq ($(strip $(PM5_SNIFF_IMAGE)),)
+    SRC_PM5_SNIFF += pm5_sniffimg.c
+    PM5_SNIFF_O = $(OBJDIR)/pm5_sniff_bit.o
+else
+    PM5_SNIFF_O =
+endif
+
 # PM5 antenna-RGB power/battery indicator
 ifneq (,$(findstring WITH_PM5_PWR_LED,$(APP_CFLAGS)))
     SRC_RGB_INDICATOR = rgb_indicator.c
@@ -219,6 +234,7 @@ THUMBSRC = start.c \
     $(SRC_BWM_CHARGER) \
     $(SRC_BUZZER) \
     $(SRC_PM5_POWER) \
+    $(SRC_PM5_SNIFF) \
     $(SRC_RGB_INDICATOR) \
     $(SRC_HITAG) \
     $(SRC_EM4x50) \
@@ -316,6 +332,15 @@ else
 	$(FPGA_COMPRESSOR) $(filter %.bit,$^) $@
 endif
 
+$(OBJDIR)/pm5_sniff.bin: $(PM5_SNIFF_IMAGE)
+	$(info [-] GEN $@)
+	$(Q)$(CP) $< $@
+
+# symbols _binary_obj_pm5_sniff_bin_start / _end, in flash
+$(OBJDIR)/pm5_sniff_bit.o: $(OBJDIR)/pm5_sniff.bin
+	$(info [-] GEN $@)
+	$(Q)$(CROSS_OBJCOPY) -O elf32-littlearm -I binary -B arm --rename-section .data=.rodata.pm5_sniff,alloc,load,readonly,data,contents $< $@
+
 $(FPGA_COMPRESSOR):
 	$(error [!] MISSING $@ => To build it, go the root of the repo and do "make $(notdir $@)")
 	$(error [!] MISSING $@)
@@ -326,7 +351,7 @@ $(ARMLIB_OBJ):
 	@$(MAKE) --no-print-directory -f ../armlib/Makefile
 endif
 
-$(OBJDIR)/fullimage.stage1.elf: $(VERSIONOBJ) $(FPGA_ALL_O_DEP) $(THUMBOBJ) $(ARMOBJ) $(ASMOBJ) $(ARMLIB_OBJ)
+$(OBJDIR)/fullimage.stage1.elf: $(VERSIONOBJ) $(FPGA_ALL_O_DEP) $(PM5_SNIFF_O) $(THUMBOBJ) $(ARMOBJ) $(ASMOBJ) $(ARMLIB_OBJ)
 	$(info [=] LD $@)
 # Using -T instead of -Wl,-T is needed to prevent the linker from using the default ldscript when using picolibc instead of newlib
 	$(Q)$(CROSS_LD) $(CROSS_LDFLAGS) -T $(LD_SCRIPT) -Wl,-Map,$(patsubst %.elf,%.map,$@) -o $@ $^ $(LIBS)

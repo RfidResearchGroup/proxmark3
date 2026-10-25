@@ -259,9 +259,28 @@ static void spi_cmd_setup(void) {
     spi_enable(SPI_CMD, TRUE);
 }
 
-void FpgaSendCommand(uint16_t cmd, uint16_t v) {
+// the end of the next frame pulse, false if none came (4.7 us frames of 16-bit words; gives up after ~100 us each)
+static bool fpga_frame_pulse_end(void) {
+    uint32_t i = 0;
+    while (i < 4000 && Gpio_SSC_FRAME_Read() == false) {
+        i++;
+    }
+    while (i < 8000 && Gpio_SSC_FRAME_Read()) {
+        i++;
+    }
+    return (i < 8000);
+}
+
+static uint8_t fpga_send_cmd(uint16_t cmd, uint16_t v, bool frame_sync) {
     // Init spi
     spi_cmd_setup();
+
+    // started right after a frame pulse, so the frames until the SSC is back on count the words it misses
+    uint32_t c0 = 0;
+    if (frame_sync) {
+        fpga_frame_pulse_end();
+        c0 = DWT->CYCCNT;
+    }
 
     // Before switching modes, disable SPI_SSC to prevent signal changes from triggering a CSPAS event,
     // which would cause the SPI to hang.
@@ -274,8 +293,33 @@ void FpgaSendCommand(uint16_t cmd, uint16_t v) {
     while (spi_i2s_flag_get(SPI_CMD, SPI_I2S_BF_FLAG) != RESET) {} // Waiting for SPI transmit finish.
     gpio_bits_set(AT32_GPIO_SPI_CS, AT32_GPIO_SPI_CS_PIN); // CS HIGH
 
+    // a frame pulse's end, then ~1 us: the next pulse is ~3.5 us away. Turned back on at a random point, 16-bit words
+    // could stay out of step
+    bool seen = false;
+    uint32_t c1 = 0;
+    if (frame_sync) {
+        seen = fpga_frame_pulse_end();
+        c1 = DWT->CYCCNT;
+        for (volatile uint32_t k = 0; k < 64; k++) {}
+    }
+
     // Re-enable SPI_SSC after sending the command
     SPI_SSC->ctrl1_bit.spien = TRUE;
+    if (seen == false) {
+        return 0;
+    }
+    // the words missed: one per 64 fc frame (13.56 MHz / 64) from pulse end to pulse end, and two more (found with the
+    // 14a sniffer's word sequence numbers)
+    uint32_t frame = system_core_clock / 211875;
+    return 2 + (c1 - c0 + frame / 2) / frame;
+}
+
+void FpgaSendCommand(uint16_t cmd, uint16_t v) {
+    fpga_send_cmd(cmd, v, false);
+}
+
+uint8_t FpgaSendCommandFrameSync(uint16_t cmd, uint16_t v) {
+    return fpga_send_cmd(cmd, v, true);
 }
 
 void Fpga_print_status(void) {

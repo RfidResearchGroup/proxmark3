@@ -433,6 +433,23 @@ gowin_jtag_status_t gowin_jtag_sram_config_finish(void) {
     return GOWIN_JTAG_OK;
 }
 
+gowin_jtag_status_t gowin_jtag_sram_config_finish_poll(uint32_t timeout_ms, uint32_t settle_ms) {
+    jtag_shift_ir_safe(INST_CONFIG_DISABLE);
+    jtag_shift_ir_safe(INST_NOOP);
+
+    bool done = false;
+    uint32_t t0 = GetTickCount();
+    do {
+        gowin_status_reg_t st;
+        st.raw = gowin_jtag_read_status_u32();
+        done = ((st.raw >> 18) == 0) && st.bits.done_final;     // bits 18 - 31 are 0 in a good read
+    } while (done == false && GetTickCountDelta(t0) < timeout_ms);
+
+    delay_ms_gowin(settle_ms);
+    gowin_jtag_reset();
+    return done ? GOWIN_JTAG_OK : GOWIN_JTAG_ERROR_DONE_TIMEOUT;
+}
+
 gowin_jtag_status_t gowin_jtag_sram_erase(void) {
     const device_map_t *dm = get_device_map_by_idcode();
 
