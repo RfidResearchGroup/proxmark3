@@ -1,11 +1,18 @@
-//Copyright (C)2014-2023 Gowin Semiconductor Corporation.
-//All rights reserved.
-//File Title: IP file
-//Tool Version: V1.9.9 (64-bit)
-//Part Number: GW1N-UV4QN48C6/I5
-//Device: GW1N-4
-//Device Version: D
-//Created Time: Mon Jul  6 18:07:08 2026
+//-----------------------------------------------------------------------------
+// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// See LICENSE.txt for the text of the license.
+//-----------------------------------------------------------------------------
 
 module Gowin_rPLL (clkout, clkin);
 
@@ -40,11 +47,11 @@ rPLL rpll_inst (
 
 defparam rpll_inst.FCLKIN = "13.56";
 defparam rpll_inst.DYN_IDIV_SEL = "false";
-defparam rpll_inst.IDIV_SEL = 1;
+defparam rpll_inst.IDIV_SEL = 3;
 defparam rpll_inst.DYN_FBDIV_SEL = "false";
 defparam rpll_inst.FBDIV_SEL = 58;
 defparam rpll_inst.DYN_ODIV_SEL = "false";
-defparam rpll_inst.ODIV_SEL = 2;
+defparam rpll_inst.ODIV_SEL = 4;
 defparam rpll_inst.PSDA_SEL = "0000";
 defparam rpll_inst.DYN_DA_EN = "false";
 defparam rpll_inst.DUTYDA_SEL = "1000";

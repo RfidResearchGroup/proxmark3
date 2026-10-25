@@ -15,6 +15,9 @@
 //-----------------------------------------------------------------------------
 // High frequency ISO14443A commands
 //-----------------------------------------------------------------------------
+#ifndef _WIN32
+#define _POSIX_C_SOURCE 200112L
+#endif
 #include "cmdhf14a.h"
 #include <ctype.h>
 #include <string.h>
@@ -244,6 +247,7 @@ static const hintAIDList_t hintAIDList[] = {
     { "\x4F\x53\x45\x2E\x56\x41\x53\x2E\x30\x31", 10, "ApplePay", 8, "OSE.VAS (Apple Wallet)", "hf vas" },
     { "\x4F\x53\x45\x2E\x56\x41\x53\x2E\x30\x31", 10, "AndroidPay", 10, "OSE.VAS (Google Wallet)", "hf gst" },
     { "\xA0\x00\x00\x04\x76\xD0\x00\x01\x11", 9, "", 0, "Google Smart Tap v2", "hf gst" },
+    { "\xA0\x00\x00\x04\x40\x00\x01\x01\x00\x01", 10, "", 0, "SEOS", "hf seos" },
 };
 
 // iso14a apdu input frame length
@@ -2930,6 +2934,113 @@ static void get_compact_tlv(uint8_t *d, uint8_t n) {
     }
 }
 
+// selects every AID in aidlist.json, returns how many were found
+// emv_found (optional) is set when an EMV application answers
+int hf14a_aid_search(bool verbose, bool *emv_found) {
+
+    PrintAndLogEx(INFO, "-------------------- " _CYAN_("AID Search") " --------------------");
+
+    json_t *root = AIDSearchInit(verbose);
+    if (root == NULL) {
+        return 0;
+    }
+
+    int found = 0;
+    bool ActivateField = true;
+    for (size_t elmindx = 0; elmindx < json_array_size(root); elmindx++) {
+
+        if (kbd_enter_pressed()) {
+            break;
+        }
+
+        json_t *data = AIDSearchGetElm(root, elmindx);
+        uint8_t vaid[200] = {0};
+        int vaidlen = 0;
+        if ((AIDGetFromElm(data, vaid, sizeof(vaid), &vaidlen) == false) || (vaidlen == 0)) {
+            continue;
+        }
+        if (AIDSeenBefore(root, vaid, (size_t)vaidlen, elmindx)) {
+            continue;
+        }
+
+        uint16_t sw = 0;
+        uint8_t result[1024] = {0};
+        size_t resultlen = 0;
+        int res = Iso7816Select(CC_CONTACTLESS, ActivateField, true, vaid, vaidlen, result, sizeof(result), &resultlen, &sw);
+        ActivateField = false;
+        if (res) {
+            continue;
+        }
+
+        uint8_t dfname[200] = {0};
+        size_t dfnamelen = 0;
+        if (resultlen > 3) {
+            struct tlvdb *tlv = tlvdb_parse_multi(result, resultlen);
+            if (tlv) {
+                // 0x84 Dedicated File (DF) Name
+                const struct tlv *dfnametlv = tlvdb_get_tlv(tlvdb_find_full(tlv, 0x84));
+                if (dfnametlv) {
+                    dfnamelen = dfnametlv->len;
+                    memcpy(dfname, dfnametlv->value, dfnamelen);
+                }
+                tlvdb_free(tlv);
+            }
+        }
+
+        if (sw == ISO7816_OK || sw == ISO7816_INVALID_DF || sw == ISO7816_FILE_TERMINATED) {
+            if (sw == ISO7816_OK) {
+                if (verbose) PrintAndLogEx(SUCCESS, "Application ( " _GREEN_("ok") " )");
+            } else {
+                if (verbose) PrintAndLogEx(WARNING, "Application ( " _RED_("blocked") " )");
+            }
+
+            uint8_t response_for_match[1026] = {0};
+            size_t response_for_match_len = resultlen;
+            memcpy(response_for_match, result, MIN(resultlen, sizeof(response_for_match)));
+            if ((response_for_match_len + 2) <= sizeof(response_for_match)) {
+                response_for_match[response_for_match_len] = sw >> 8;
+                response_for_match[response_for_match_len + 1] = sw & 0xff;
+                response_for_match_len += 2;
+            }
+            PrintAIDDescriptionEx(root, sprint_hex_inrow(vaid, vaidlen), response_for_match, response_for_match_len, verbose);
+
+            if (dfnamelen) {
+                if (dfnamelen == vaidlen) {
+
+                    if (memcmp(dfname, vaid, vaidlen) == 0) {
+                        if (verbose) PrintAndLogEx(INFO, "(DF) Name found and equal to AID");
+                    } else {
+                        PrintAndLogEx(INFO, "(DF) Name not equal to AID: " _YELLOW_("%s"), sprint_hex_inrow(dfname, dfnamelen));
+                        PrintAIDDescriptionBuf(root, dfname, dfnamelen, verbose);
+                    }
+
+                } else {
+                    PrintAndLogEx(INFO, "(DF) Name not equal to AID: " _YELLOW_("%s"), sprint_hex_inrow(dfname, dfnamelen));
+                    PrintAIDDescriptionBuf(root, dfname, dfnamelen, verbose);
+                }
+
+            } else {
+                if (verbose) PrintAndLogEx(INFO, "(DF) Name not found");
+            }
+
+            if (verbose) PrintAndLogEx(SUCCESS, "----------------------------------------------------");
+            found++;
+
+            const char *type = AIDGetTypeFromElm(data);
+            if (emv_found && type && strcmp(type, "EMV") == 0) {
+                *emv_found = true;
+            }
+        }
+
+    }
+    DropField();
+    if (verbose == false && found) {
+        PrintAndLogEx(INFO, "----------------------------------------------------");
+    }
+    AIDSearchFree(root);
+    return found;
+}
+
 int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     uint8_t dbg_curr = DBG_NONE;
@@ -3399,10 +3510,11 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                         int atrLen = 0;
                         atsToEmulatedAtr(card.ats, atr, &atrLen);
                         char *copy = str_dup(getAtrInfo(sprint_hex_inrow(atr, atrLen)));
-                        char *token = strtok(copy, "\n");
+                        char *saveptr = NULL;
+                        char *token = strtok_r(copy, "\n", &saveptr);
                         while (token != NULL) {
                             PrintAndLogEx(SUCCESS, "    %s", token);
-                            token = strtok(NULL, "\n");
+                            token = strtok_r(NULL, "\n", &saveptr);
                         }
                         free(copy);
                     }
@@ -3411,99 +3523,10 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         }
 
         if (do_aid_search) {
-
-            PrintAndLogEx(INFO, "-------------------- " _CYAN_("AID Search") " --------------------");
-
-            json_t *root = AIDSearchInit(verbose);
-            if (root != NULL) {
-                bool found = false;
-                bool ActivateField = true;
-                for (size_t elmindx = 0; elmindx < json_array_size(root); elmindx++) {
-
-                    if (kbd_enter_pressed()) {
-                        break;
-                    }
-
-                    json_t *data = AIDSearchGetElm(root, elmindx);
-                    uint8_t vaid[200] = {0};
-                    int vaidlen = 0;
-                    if ((AIDGetFromElm(data, vaid, sizeof(vaid), &vaidlen) == false) || (vaidlen == 0)) {
-                        continue;
-                    }
-                    if (AIDSeenBefore(root, vaid, (size_t)vaidlen, elmindx)) {
-                        continue;
-                    }
-
-                    uint16_t sw = 0;
-                    uint8_t result[1024] = {0};
-                    size_t resultlen = 0;
-                    res = Iso7816Select(CC_CONTACTLESS, ActivateField, true, vaid, vaidlen, result, sizeof(result), &resultlen, &sw);
-                    ActivateField = false;
-                    if (res) {
-                        continue;
-                    }
-
-                    uint8_t dfname[200] = {0};
-                    size_t dfnamelen = 0;
-                    if (resultlen > 3) {
-                        struct tlvdb *tlv = tlvdb_parse_multi(result, resultlen);
-                        if (tlv) {
-                            // 0x84 Dedicated File (DF) Name
-                            const struct tlv *dfnametlv = tlvdb_get_tlv(tlvdb_find_full(tlv, 0x84));
-                            if (dfnametlv) {
-                                dfnamelen = dfnametlv->len;
-                                memcpy(dfname, dfnametlv->value, dfnamelen);
-                            }
-                            tlvdb_free(tlv);
-                        }
-                    }
-
-                    if (sw == ISO7816_OK || sw == ISO7816_INVALID_DF || sw == ISO7816_FILE_TERMINATED) {
-                        if (sw == ISO7816_OK) {
-                            if (verbose) PrintAndLogEx(SUCCESS, "Application ( " _GREEN_("ok") " )");
-                        } else {
-                            if (verbose) PrintAndLogEx(WARNING, "Application ( " _RED_("blocked") " )");
-                        }
-
-                        uint8_t response_for_match[1026] = {0};
-                        size_t response_for_match_len = resultlen;
-                        memcpy(response_for_match, result, MIN(resultlen, sizeof(response_for_match)));
-                        if ((response_for_match_len + 2) <= sizeof(response_for_match)) {
-                            response_for_match[response_for_match_len] = sw >> 8;
-                            response_for_match[response_for_match_len + 1] = sw & 0xff;
-                            response_for_match_len += 2;
-                        }
-                        PrintAIDDescriptionEx(root, sprint_hex_inrow(vaid, vaidlen), response_for_match, response_for_match_len, verbose);
-
-                        if (dfnamelen) {
-                            if (dfnamelen == vaidlen) {
-
-                                if (memcmp(dfname, vaid, vaidlen) == 0) {
-                                    if (verbose) PrintAndLogEx(INFO, "(DF) Name found and equal to AID");
-                                } else {
-                                    PrintAndLogEx(INFO, "(DF) Name not equal to AID: " _YELLOW_("%s"), sprint_hex_inrow(dfname, dfnamelen));
-                                    PrintAIDDescriptionBuf(root, dfname, dfnamelen, verbose);
-                                }
-
-                            } else {
-                                PrintAndLogEx(INFO, "(DF) Name not equal to AID: " _YELLOW_("%s"), sprint_hex_inrow(dfname, dfnamelen));
-                                PrintAIDDescriptionBuf(root, dfname, dfnamelen, verbose);
-                            }
-
-                        } else {
-                            if (verbose) PrintAndLogEx(INFO, "(DF) Name not found");
-                        }
-
-                        if (verbose) PrintAndLogEx(SUCCESS, "----------------------------------------------------");
-                        found = true;
-                        isEMV = true;
-                    }
-
-                }
-                DropField();
-                if (verbose == false && found) {
-                    PrintAndLogEx(INFO, "----------------------------------------------------");
-                }
+            bool emv_found = false;
+            hf14a_aid_search(verbose, &emv_found);
+            if (emv_found) {
+                isEMV = true;
             }
         }
 

@@ -27,6 +27,7 @@
     - [How to work with transaction mac](#how-to-work-with-transaction-mac)
     - [How to switch DESFire Light to LRP mode](#how-to-switch-desfire-light-to-lrp-mode)
     - [How to drive the simulation from the host](#how-to-drive-the-simulation-from-the-host)
+    - [How to test a reader with a candidate AES key](#how-to-test-a-reader-with-a-candidate-aes-key)
 
 
 ## Documentation
@@ -609,3 +610,20 @@ The simulation normally uses a fixed RndB and a tick-derived random UID. Queued 
 ```
 {"command":"apdu","ok":true,"data":"DF6AB29AAE46BA2791AF"}
 ```
+
+### How to test a reader with a candidate AES key
+^[Top](#top)
+
+The optional DESFire simulator probe tests whether a **reader** can continue an AES authentication using a candidate key already loaded in a synthetic card image. It does not derive a key, extract one from the reader, or test a physical access card. The caller supplies the image, target AID, key choice, candidate identifier, and a fresh 16-byte RndB. Key preparation, any discovery data, and interpretation of the observation belong to the calling workflow.
+
+An empty `CMD_HF_DESFIRE_SIMULATE` payload retains normal simulation. A probe payload enables the bounded probe; its packed request and result layouts, flags, and numeric outcomes are defined in `include/desfire.h`. Key number `FF` accepts the number requested by the reader, provided that key exists in the image. The optional discovery AID and file number record whether the reader selected and read a routing file before selecting the target application. The payload also sets an overall timeout (1–60 seconds) and a post-challenge timeout (100 ms up to the overall timeout). Both limits apply while the reader field stays on but sends no frames. With no reader field, a host stop request is checked on each field-off pass rather than waiting for the overall timeout.
+
+When the reader sends `AuthenticateAES`, the simulator encrypts the supplied RndB with the image key and transmits that challenge. It then records and decrypts the reader's 32-byte continuation and checks the returned one-byte rotation of RndB. `MATCH=3` means that continuation matched for this AID, key number, candidate image, and exchange. Results also distinguish discovery failure (`0`), no response (`1`), no match (`2`), and unsupported authentication (`4`). The probe ends after one target challenge or a timeout, so a host nonce is not reused for another target attempt.
+
+The probe does not complete authentication outside the target application. If a reader starts authentication with a key present in the image at PICC level or in another application, the result is `UNSUPPORTED=4`; this does not establish whether the reader would later use the target key. A request for an unavailable key may instead receive a key error and leave the probe running (the synthetic fixture's CAD key-2 request returns `40`). A reader that never reaches the target application before the overall timeout produces `DISCOVERY_FAILED=0`.
+
+The probe stops after the reader's response in the three-way AES authentication handshake: the simulator sends its challenge and checks the reader's continuation, then withholds the final card response. That is enough to test whether the reader used the candidate key, without completing mutual authentication or testing an access decision. It is not a speed optimization or a firmware key-search loop. The structured result stores RndB and the raw reader continuation, but not the encrypted challenge. The challenge can be checked in the RF trace or reconstructed from the image key and RndB. The terminal reader frame is logged explicitly because no final card answer triggers the simulator's usual request-and-answer trace logging.
+
+For a live reader check, load a synthetic image with `hf mfdes eload`, then run `hf mfdes sim --probe <33-byte-hex>`. This command prints the structured outcome and evidence when the probe ends. The 33 bytes are target AID in wire order (3), key number (1), AES algorithm (1), candidate ID in little-endian order (4), fresh RndB (16), optional discovery AID in wire order (3), discovery file (1), overall timeout in milliseconds in little-endian order (2), and post-challenge timeout in milliseconds in little-endian order (2). For example, `30758813` at the end sets 30 seconds overall and 5 seconds after the challenge. Preserve the RF trace separately and verify that it contains the challenge and reader continuation, with no final card response.
+
+For an offline USB bench test, use `hf mfdes etest --begin`, `--probe <33-byte-hex>`, `--scan`, the desired `--apdu` sequence, `--probe-result -j`, and `--end`. The offline request uses the same packed layout. A fixed nonce is suitable only for a deterministic bench replay; generate a fresh nonce for every live reader run. The result includes the observed key number, flags, RndB, and raw reader continuation. The offline test checks the simulator path, not a physical reader.

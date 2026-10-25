@@ -17,7 +17,7 @@
         "Country": "United States",
         "Name": "EMV Payment System Environment - PSE (1PAY.SYS.DDF01)",
         "Description": "",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "325041592E5359532E4444463031",
@@ -25,7 +25,7 @@
         "Country": "United States",
         "Name": "EMV Proximity Payment System Environment - PPSE (2PAY.SYS.DDF01)",
         "Description": "Visa payWave for Mobile",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "44464D46412E44466172653234313031",
@@ -2376,7 +2376,7 @@
         "Type": "Tesla"
     },
     {
-        "AID": "5465736c61444150",
+        "AID": "5465736C61444150",
         "Vendor": "Tesla",
         "Country": "",
         "Name": "TeslaDAP",
@@ -2827,7 +2827,7 @@
         ]
     },
     {
-        "AID": "637001ff4c41",
+        "AID": "637001FF4C41",
         "Vendor": "Cubic",
         "Country": "United States",
         "Name": "LA Tap",
@@ -2930,7 +2930,7 @@
         "Type": ""
     },
     {
-        "AID": "a0000004400001010001",
+        "AID": "A0000004400001010001",
         "Vendor": "HID Global",
         "Country": "",
         "Name": "SEOS",

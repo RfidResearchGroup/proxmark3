@@ -16,6 +16,9 @@
 // High frequency ISO14443B commands
 //-----------------------------------------------------------------------------
 
+#ifndef _WIN32
+#define _POSIX_C_SOURCE 200112L
+#endif
 #include "cmdhf14b.h"
 #include <ctype.h>
 #include "iso14b.h"
@@ -494,10 +497,11 @@ static int print_atqb_resp(uint8_t *data, uint8_t cid) {
         int atrLen = 0;
         atqbToEmulatedAtr(data, cid, atr, &atrLen);
         char *copy = str_dup(getAtrInfo(sprint_hex_inrow(atr, atrLen)));
-        char *token = strtok(copy, "\n");
+        char *saveptr = NULL;
+        char *token = strtok_r(copy, "\n", &saveptr);
         while (token != NULL) {
             PrintAndLogEx(SUCCESS, "    %s", token);
-            token = strtok(NULL, "\n");
+            token = strtok_r(NULL, "\n", &saveptr);
         }
         free(copy);
     }

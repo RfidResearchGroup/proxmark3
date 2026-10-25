@@ -9216,6 +9216,9 @@ static void DesfireViewPrintApp(const desfire_dump_app_t *app) {
     }
 }
 
+static int desfire_etest_probe_result(const PacketResponseNG *resp, bool json,
+                                     char *fields, size_t fields_len);
+
 static int CmdHF14ADesSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes sim",
@@ -9223,45 +9226,73 @@ static int CmdHF14ADesSim(const char *Cmd) {
                   "Load one first with `hf mfdes eload`, and read back what a reader\n"
                   "changed with `hf mfdes esave`.\n"
                   "\n"
-                  "UID, ATQA, SAK and ATS all come out of the loaded image",
-                  "hf mfdes sim");
+                  "UID, ATQA, SAK and ATS all come out of the loaded image.\n"
+                  "--probe tests a reader with a candidate AES key in the loaded image;\n"
+                  "supply a fresh nonce for each live run.",
+                  "hf mfdes sim\n"
+                  "hf mfdes sim --probe <33-byte-payload>");
 
     void *argtable[] = {
         arg_param_begin,
+        arg_str0(NULL, "probe", "<hex>", "Candidate-key probe payload (33 bytes)"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    bool has_probe = arg_get_str(ctx, 1)->count > 0;
+    uint8_t probe[sizeof(desfire_sim_probe_cmd_t)] = {0};
+    int probe_len = 0;
+    if (CLIParamHexToBuf(arg_get_str(ctx, 1), probe, sizeof(probe), &probe_len)) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
     CLIParserFree(ctx);
 
+    if (has_probe && probe_len != sizeof(probe)) {
+        PrintAndLogEx(WARNING, "Probe payload must be %zu bytes", sizeof(probe));
+        return PM3_EINVARG;
+    }
+
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_DESFIRE_SIMULATE, NULL, 0);
+    SendCommandNG(CMD_HF_DESFIRE_SIMULATE, has_probe ? probe : NULL, has_probe ? probe_len : 0);
 
     PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
 
     PacketResponseNG resp;
-    bool keypress = kbd_enter_pressed();
-    while (keypress == false) {
-
-        keypress = kbd_enter_pressed();
-
-        if (WaitForResponseTimeout(CMD_HF_DESFIRE_SIMULATE, &resp, 1500) == false) {
+    bool stop_requested = false;
+    for (;;) {
+        if (stop_requested == false && kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            stop_requested = true;
+        }
+        if (WaitForResponseTimeout(CMD_HF_DESFIRE_SIMULATE, &resp, stop_requested ? 3000 : 1500) == false) {
+            if (stop_requested) {
+                PrintAndLogEx(WARNING, "No simulation stop response");
+                return PM3_ETIMEOUT;
+            }
             continue;
         }
 
         if (resp.status != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "Simulation stopped, no card image in emulator memory?");
-            PrintAndLogEx(HINT, "Hint: load one with " _YELLOW_("`hf mfdes eload -f <fn>`"));
+            PrintAndLogEx(WARNING, "Simulation stopped (status %d)", resp.status);
+            if (resp.status == PM3_EINVARG) {
+                PrintAndLogEx(HINT, "Hint: check the card image and probe payload");
+            }
             return resp.status;
+        }
+        if (has_probe) {
+            int res = desfire_etest_probe_result(&resp, false, NULL, 0);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(FAILED, "Probe result missing or invalid");
+                return res;
+            }
         }
         break;
     }
 
-    if (keypress) {
-        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-    }
-
     PrintAndLogEx(INFO, "Done!");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfdes esave`") " to see what a reader changed");
+    if (has_probe == false) {
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfdes esave`") " to see what a reader changed");
+    }
     return PM3_SUCCESS;
 }
 
@@ -9300,6 +9331,50 @@ static void desfire_etest_hex(char *dst, size_t dstlen, const uint8_t *src, size
     dst[2 * i] = 0;
 }
 
+static int desfire_etest_probe_result(const PacketResponseNG *resp, bool json,
+                                     char *fields, size_t fields_len) {
+    if (resp->length != sizeof(desfire_sim_probe_result_t)) {
+        return PM3_EFAILED;
+    }
+
+    desfire_sim_probe_result_t result;
+    memcpy(&result, resp->data.asBytes, sizeof(result));
+    if (result.outcome > DESFIRE_SIM_PROBE_UNSUPPORTED
+            || result.continuation_len > sizeof(result.continuation)) {
+        return PM3_EFAILED;
+    }
+    static const char *outcome_names[] = {
+        "discovery failed", "no response", "no match", "match", "unsupported authentication"
+    };
+    char rndb[33] = {0};
+    char continuation[65] = {0};
+    desfire_etest_hex(rndb, sizeof(rndb), result.rndb, sizeof(result.rndb));
+    desfire_etest_hex(continuation, sizeof(continuation), result.continuation,
+                      MIN(result.continuation_len, sizeof(result.continuation)));
+    if (json) {
+        snprintf(fields, fields_len,
+                 ",\"outcome\":%u,\"flags\":%u,\"aid\":\"%02X%02X%02X\",\"keyno\":%u,"
+                 "\"candidate_id\":%" PRIu32 ",\"rndb\":\"%s\",\"continuation\":\"%s\"",
+                 result.outcome, result.flags, result.aid[2], result.aid[1], result.aid[0],
+                 result.keyno, result.candidate_id, rndb, continuation);
+    } else {
+        PrintAndLogEx(SUCCESS, "Probe outcome..... %s (%u)", outcome_names[result.outcome], result.outcome);
+        PrintAndLogEx(SUCCESS, "Evidence flags..... 0x%02X", result.flags);
+        PrintAndLogEx(SUCCESS, "AID/key............ %02X%02X%02X / %u",
+                      result.aid[2], result.aid[1], result.aid[0], result.keyno);
+        PrintAndLogEx(SUCCESS, "Candidate ID....... %" PRIu32, result.candidate_id);
+        PrintAndLogEx(SUCCESS, "CAD selected/read.. %s / %s",
+                      result.flags & DESFIRE_SIM_PROBE_DISCOVERY_SELECTED ? "yes" : "no",
+                      result.flags & DESFIRE_SIM_PROBE_DISCOVERY_READ ? "yes" : "no");
+        PrintAndLogEx(SUCCESS, "RndB............... %s", rndb);
+        PrintAndLogEx(SUCCESS, "Reader continuation %s", continuation);
+        PrintAndLogEx(SUCCESS, "Challenge/reader ms %" PRIu32 " / %" PRIu32,
+                      result.challenge_ms, result.continuation_ms);
+        PrintAndLogEx(SUCCESS, "Last command....... 0x%02X", result.last_command);
+    }
+    return PM3_SUCCESS;
+}
+
 static int CmdHF14ADesETest(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes etest",
@@ -9314,6 +9389,8 @@ static int CmdHF14ADesETest(const char *Cmd) {
                   "hf mfdes etest --scan\n"
                   "hf mfdes etest --random 0102030405060708\n"
                   "hf mfdes etest --apdu 900A0000010000 -j\n"
+                  "hf mfdes etest --probe F48120FF03010000000102030405060708090A0B0C0D0E0F10F4812F0030758813\n"
+                  "hf mfdes etest --probe-result -j\n"
                   "hf mfdes etest --state -j\n"
                   "hf mfdes etest --end");
 
@@ -9326,6 +9403,8 @@ static int CmdHF14ADesETest(const char *Cmd) {
         arg_str0(NULL, "random",   "<hex>", "Queue bytes for the next RndB / random UID draws"),
         arg_lit0(NULL, "fieldoff", "RF reset, session dropped"),
         arg_lit0(NULL, "state",    "Show session and random queue state"),
+        arg_str0(NULL, "probe",    "<hex>", "Configure a 33-byte candidate-key probe payload"),
+        arg_lit0(NULL, "probe-result", "Read probe evidence and outcome"),
         arg_lit0("j",  "json",     "One line of JSON instead of text"),
         arg_param_end
     };
@@ -9338,7 +9417,9 @@ static int CmdHF14ADesETest(const char *Cmd) {
     bool has_random = (arg_get_str(ctx, 5)->count > 0);
     bool fieldoff = arg_get_lit(ctx, 6);
     bool state = arg_get_lit(ctx, 7);
-    bool json = arg_get_lit(ctx, 8);
+    bool has_probe = (arg_get_str(ctx, 8)->count > 0);
+    bool probe_result = arg_get_lit(ctx, 9);
+    bool json = arg_get_lit(ctx, 10);
 
     int apdulen = 0;
     uint8_t apdu[PM3_CMD_DATA_SIZE - sizeof(desfire_sim_test_cmd_t)] = {0};
@@ -9353,15 +9434,25 @@ static int CmdHF14ADesETest(const char *Cmd) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
+    int probe_len = 0;
+    uint8_t probe[sizeof(desfire_sim_probe_cmd_t)] = {0};
+    if (CLIParamHexToBuf(arg_get_str(ctx, 8), probe, sizeof(probe), &probe_len)) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
     CLIParserFree(ctx);
 
-    if (begin + end + scan + has_apdu + has_random + fieldoff + state != 1) {
+    if (begin + end + scan + has_apdu + has_random + fieldoff + state + has_probe + probe_result != 1) {
         PrintAndLogEx(WARNING, "Give exactly one action");
         return PM3_EINVARG;
     }
 
     if ((has_apdu && apdulen == 0) || (has_random && rndlen == 0)) {
         PrintAndLogEx(WARNING, "Need at least one byte");
+        return PM3_EINVARG;
+    }
+    if (has_probe && probe_len != sizeof(desfire_sim_probe_cmd_t)) {
+        PrintAndLogEx(WARNING, "Probe configuration must be %zu bytes", sizeof(desfire_sim_probe_cmd_t));
         return PM3_EINVARG;
     }
 
@@ -9392,6 +9483,14 @@ static int CmdHF14ADesETest(const char *Cmd) {
     } else if (fieldoff) {
         op = DESFIRE_SIM_TEST_FIELDOFF;
         name = "fieldoff";
+    } else if (has_probe) {
+        op = DESFIRE_SIM_TEST_PROBE_CONFIG;
+        name = "probe";
+        data = probe;
+        len = probe_len;
+    } else if (probe_result) {
+        op = DESFIRE_SIM_TEST_PROBE_RESULT;
+        name = "probe-result";
     } else {
         op = DESFIRE_SIM_TEST_STATE;
         name = "state";
@@ -9466,6 +9565,10 @@ static int CmdHF14ADesETest(const char *Cmd) {
         }
     }
 
+    if (res == PM3_SUCCESS && op == DESFIRE_SIM_TEST_PROBE_RESULT) {
+        res = desfire_etest_probe_result(&resp, json, fields, sizeof(fields));
+    }
+
     if (res != PM3_SUCCESS) {
         const char *why;
         switch (res) {
@@ -9497,8 +9600,11 @@ static int CmdHF14ADesETest(const char *Cmd) {
         return res;
     }
 
-    bool plain_ack = (op == DESFIRE_SIM_TEST_BEGIN || op == DESFIRE_SIM_TEST_END ||
-                      op == DESFIRE_SIM_TEST_RANDOM || op == DESFIRE_SIM_TEST_FIELDOFF);
+    bool plain_ack = (op == DESFIRE_SIM_TEST_BEGIN
+                      || op == DESFIRE_SIM_TEST_END
+                      || op == DESFIRE_SIM_TEST_RANDOM
+                      || op == DESFIRE_SIM_TEST_FIELDOFF
+                      || op == DESFIRE_SIM_TEST_PROBE_CONFIG);
     if (json) {
         PrintAndLogEx(NORMAL, "{\"command\":\"%s\",\"ok\":true%s}", name, fields);
     } else if (plain_ack) {

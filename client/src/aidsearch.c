@@ -125,6 +125,10 @@ bool AIDGetFromElm(json_t *data, uint8_t *aid, size_t aidmaxlen, int *aidlen) {
     return true;
 }
 
+const char *AIDGetTypeFromElm(json_t *data) {
+    return jsonStrGet(data, "Type");
+}
+
 bool AIDSeenBefore(json_t *root, const uint8_t *aid, size_t aidlen, size_t before_index) {
     if (root == NULL || aid == NULL || aidlen == 0) {
         return false;

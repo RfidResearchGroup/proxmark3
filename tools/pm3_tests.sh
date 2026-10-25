@@ -298,6 +298,7 @@ while true; do
       if ! CheckExecute "findbits test"                    "$PYTHON tools/findbits.py 73 0110010101110011" "Match at bit 9: 011001010"; then break; fi
       if ! CheckExecute "findbits_test test"               "$PYTHON tools/findbits_test.py 2>&1" "OK"; then break; fi
       if ! CheckExecute "dfc_converter test"               "$PYTHON tools/dfc_converter_test.py 2>&1" "OK"; then break; fi
+      if ! CheckExecute "PM5 RTC tick test"                "$PYTHON tools/pm5_rtc_tick_test.py 2>&1" "RTC tick snapshot test: OK"; then break; fi
       if ! CheckExecute "pm3_eml_mfd test"                 "$PYTHON tools/mfc/pm3_eml_mfd_test.py 2>&1" "OK"; then break; fi
       if ! CheckExecute "GDM UID/ATQA regression"           "$PYTHON tools/mfc/test_gdm_setuid.py 2>&1" "GDM UID/ATQA regression tests passed"; then break; fi
       if ! CheckExecute "recover_pk test"                  "$PYTHON tools/recover_pk.py selftests 2>&1" "Tests:.*\(.*ok.*"; then break; fi
@@ -549,6 +550,10 @@ while true; do
       if ! CheckExecute "lf IDTECK reject test"      "if ! $CLIENTBIN -c 'lf idteck demod --raw DEADBEEFDEADBEEF' 2>&1 | grep -q 'IDTECK Tag Found'; then echo OK; fi" "OK"; then break; fi
       if ! CheckExecute "lf IDTECK no wiegand test"  "if ! $CLIENTBIN -c 'lf idteck demod --raw 4944544B351FBE4B' 2>&1 | grep -q 'H10301'; then echo OK; fi" "OK"; then break; fi
       if ! CheckExecute "lf INDALA test"             "$CLIENTBIN -c 'data load -f traces/lf_Indala-504278295.pm3;lf search -1'" "Indala ID found"; then break; fi
+      if ! CheckExecute "lf INDALA weak test"        "$CLIENTBIN -c 'data load -f traces/lf_Indala-a0000000e6bd0e92-weak.pm3;lf search -1'" "Raw: a0000000e6bd0e92"; then break; fi
+      if ! CheckExecute "lf INDALA weak test 2"      "$CLIENTBIN -c 'data load -f traces/lf_Indala-a0000000e6bd0e92-weak.pm3; lf indala demod'" \
+                                                              "Indala \(len 64\)  Raw: a0000000e6bd0e92"; then break; fi
+      if ! CheckExecute "lf PSK reject test"         "$CLIENTBIN -c 'data load -f traces/lf_NRZ_RF64_fc2-ripple_synthetic.pm3;lf search -1'" "No known 125/134 kHz tags found"; then break; fi
       if ! CheckExecute "lf KERI test"               "$CLIENTBIN -c 'data load -f traces/lf_Keri.pm3;lf search -1'" "Pyramid ID found"; then break; fi
       if ! CheckExecute "lf NEXWATCH test"           "$CLIENTBIN -c 'data load -f traces/lf_NEXWATCH_Quadrakey-521512301.pm3;lf search -1 '" "NexWatch ID found"; then break; fi
       if ! CheckExecute "lf SECURAKEY test"          "$CLIENTBIN -c 'data load -f traces/lf_NEXWATCH_Securakey-64169.pm3;lf search -1 '" "Securakey ID found"; then break; fi

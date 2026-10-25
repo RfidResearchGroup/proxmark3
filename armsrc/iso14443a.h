@@ -61,6 +61,13 @@ typedef struct {
     uint8_t  *output;
     uint8_t  *parity;
 } tDemod14a;
+
+static inline bool iso14a_is_complete_frame(const tDemod14a *demod, uint16_t expected_len) {
+    return expected_len > 0 && demod->len == expected_len
+           && demod->bitCount == 0 && demod->collisionPos == 0
+           && demod->parityLen == (expected_len + 7u) / 8u;
+}
+
 /*
 typedef enum {
     MOD_NOMOD = 0,
@@ -193,6 +200,7 @@ int EmSend4bit(uint8_t resp);
 int EmSendCmd(uint8_t *resp, uint16_t respLen);
 int EmSendCmdEx(uint8_t *resp, uint16_t respLen, bool collision);
 int EmGetCmd(uint8_t *received, uint16_t received_max_len, uint16_t *len, uint8_t *par);
+int EmGetCmdTimeout(uint8_t *received, uint16_t received_max_len, uint16_t *len, uint8_t *par, uint32_t timeout_ms);
 int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par);
 int EmSendCmdParEx(uint8_t *resp, uint16_t respLen, uint8_t *par, bool collision);
 int EmSendPrecompiledCmd(tag_response_info_t *p_response);

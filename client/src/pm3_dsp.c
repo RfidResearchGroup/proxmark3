@@ -1559,7 +1559,7 @@ double *pm3_resample(const double *in, size_t len, double ratio, size_t *out_len
 // Coherent PSK receiver.
 int pm3_psk_demod(const double *sig, size_t len, int fc, double clk,
                   uint8_t *bits, size_t *nbits, double *clk_out, int *phase_out,
-                  double *score_out, uint8_t *abs_bits) {
+                  double *score_out, uint8_t *abs_bits, double *mag_out) {
 
     if (sig == NULL || bits == NULL || nbits == NULL) {
         return PM3_EINVARG;
@@ -1695,6 +1695,10 @@ int pm3_psk_demod(const double *sig, size_t len, int fc, double clk,
         if (abs_bits != NULL) {
             // Re( z * conj(ref) ) - which side of the axis this symbol sits on
             abs_bits[n] = (((zr[k] * ref_r) + (zi[k] * ref_i)) < 0.0) ? 1 : 0;
+        }
+
+        if (mag_out != NULL) {
+            mag_out[n] = sqrt((zr[k] * zr[k]) + (zi[k] * zi[k]));
         }
 
         bits[n++] = phase;

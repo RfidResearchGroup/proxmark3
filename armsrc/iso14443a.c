@@ -2840,12 +2840,14 @@ static void CodeIso14443aAsReaderPar(const uint8_t *cmd, uint16_t len, const uin
 */
 //-----------------------------------------------------------------------------
 // Wait for commands from reader
-// Stop when button is pressed (return 1) or field was gone (return 2)
+// Stop when button is pressed (return 1), field was gone (return 2),
+// or an optional timeout expires (return 3)
 // Or return 0 when command is captured
 //-----------------------------------------------------------------------------
-int EmGetCmd(uint8_t *received, uint16_t received_max_len, uint16_t *len, uint8_t *par) {
+int EmGetCmdTimeout(uint8_t *received, uint16_t received_max_len, uint16_t *len, uint8_t *par, uint32_t timeout_ms) {
     *len = 0;
 
+    uint32_t started = timeout_ms ? GetTickCount() : 0;
     uint32_t timer = 0;
     int analogCnt = 0;
     int analogAVG = 0;
@@ -2891,6 +2893,9 @@ int EmGetCmd(uint8_t *received, uint16_t received_max_len, uint16_t *len, uint8_
             if (Uart.state == STATE_14A_UNSYNCD) {
                 usb_check();
             }
+            if (timeout_ms && GetTickCountDelta(started) >= timeout_ms) {
+                return 3;
+            }
 
             flip++;
             checker = 4000;
@@ -2935,6 +2940,10 @@ int EmGetCmd(uint8_t *received, uint16_t received_max_len, uint16_t *len, uint8_
             }
         }
     }
+}
+
+int EmGetCmd(uint8_t *received, uint16_t received_max_len, uint16_t *len, uint8_t *par) {
+    return EmGetCmdTimeout(received, received_max_len, len, par, 0);
 }
 
 int EmSendCmd14443aRaw(const uint8_t *resp, uint16_t respLen) {

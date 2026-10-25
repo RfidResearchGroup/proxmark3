@@ -32,6 +32,7 @@
 |lf_Indala-00002-12345678-1A.pm3          |Indala credit-card style card|
 |lf_indala_4041x_234_21801.pm3            |Indala 4041X 26-bit|
 |lf_Indala-504278295.pm3                  |PSK 26 bit indala|
+|lf_Indala-a0000000e6bd0e92-weak.pm3      |T5577 as Indala PSK1 RF/32, 24 mm off a Proxmark3 Easy antenna. very weak read (Raw: a0000000e6bd0e92)|
 |lf_IOProx-XSF-01-3B-44725.pm3            |IO Prox FSK RF/64 ID in name|
 |lf_IOProx-XSF-01-BE-03011.pm3            |IO Prox FSK RF/64 ID in name|
 |lf_Keri.pm3                              |Keri PSK-3 Key Ring tag (back of tag: 1460 3411)|
@@ -53,6 +54,7 @@
 |lf_Q5_mod-*                              |Q5 configured to emit `00 01 02 03 04 05 06 07 08 09 0A 0B` under various modulation schemes|
 |lf_ATA5577_*                             |ATA5577 configured to emulate various techs as suggested in the Proxmark3 clone commands|
 |lf_ATA5577.txt                           |Description on how lf_ATA5577_* were generated|
+|lf_NRZ_RF64_fc2-ripple_synthetic.pm3     |synthetic, no tag: random NRZ RF/64 at +-40 with first-order settling, a +-1.5 fc/2 alternation and 0.3 rms noise. must not decode as PSK|
 
 ## LF sniffed traces
 
