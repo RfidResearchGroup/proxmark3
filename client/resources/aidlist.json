@@ -104,7 +104,7 @@
         "Vendor": "Visa International",
         "Country": "United States",
         "Name": "(VISA) Card Manager",
-        "Description": "Used by most GP2.1.1 cards / Oberthur OP201 cards. Visa Proprietary Card Manager AID for OpenPlatform cards (visa.openplatform).",
+        "Description": "Used by most GP2.1.1 cards / Oberthur OP201 cards. Visa Proprietary Card Manager AID for OpenPlatform cards (visa.openplatform)",
         "Type": "GP"
     },
     {
@@ -1324,7 +1324,7 @@
         "Vendor": "PS/SC Workgroup",
         "Country": "United States",
         "Name": "PC/SC Initial access data AID",
-        "Description": "Possibly not an application...",
+        "Description": "Possibly not an application",
         "Type": ""
     },
     {
@@ -1548,7 +1548,7 @@
         "Vendor": "Microsoft Corporation",
         "Country": "United States",
         "Name": "Microsoft IDMP AID",
-        "Description": "Identity Device With Microsoft Generic Profile application. 2 bytes can be added at the end. This byte must be set to the IDMP specification revision number which is currently 0x01. The second byte (yy) is reserved for use by the card application.",
+        "Description": "Identity Device With Microsoft Generic Profile application. 2 bytes can be added at the end. This byte must be set to the IDMP specification revision number which is currently 0x01. The second byte (yy) is reserved for use by the card application",
         "Type": ""
     },
     {
@@ -1917,7 +1917,7 @@
         "Vendor": "Macau Pass",
         "Country": "Macau",
         "Name": "Macau mCard",
-        "Description": "GB2312/GBK bytes decode to \u6fb3\u95e8\u901a\u94b1\u5305 (Macau Pass Wallet)",
+        "Description": "GB2312/GBK bytes decode to 澳门通钱包 (Macau Pass Wallet)",
         "Type": "transport",
         "Protocol": "fm_cos"
     },
@@ -1926,7 +1926,7 @@
         "Vendor": "Macau Pass",
         "Country": "Macau",
         "Name": "Macau Pass Points",
-        "Description": "GB2312/GBK bytes decode to \u6fb3\u95e8\u901a\u79ef\u5206 (Macau Pass Points)",
+        "Description": "GB2312/GBK bytes decode to 澳门通积分 (Macau Pass Points)",
         "Type": "transport",
         "Protocol": "fm_cos"
     },
@@ -2274,14 +2274,17 @@
         "Name": "T MONEY (KS X 6924)",
         "Description": "KS X 6924-based T MONEY transit card",
         "Type": "transport",
-        "Protocol": "ks_x_6924"
+        "Protocol": "ks_x_6924",
+        "Sources": [
+            "ios://com.tmoney.tmpay"
+        ]
     },
     {
         "AID": "D41000003453504159",
         "Vendor": "Samsung",
         "Country": "",
         "Name": "Samsung Pay",
-        "Description": "Returns language preferences and other device information.",
+        "Description": "Returns language preferences and other device information",
         "Type": "",
         "Sources": [
             "android://com.samsung.android.spay"
@@ -2500,7 +2503,7 @@
         "Vendor": "ISO/IEC JTC1/SC17",
         "Country": "",
         "Name": "Personal identification (mDL) data transfer",
-        "Description": "ISO/IEC 18013-5:2021 compliant Mobile driving licence (mDL) application data transfer.",
+        "Description": "ISO/IEC 18013-5:2021 compliant Mobile driving licence (mDL) application data transfer",
         "Type": "identity"
     },
     {
@@ -2573,7 +2576,7 @@
         "Vendor": "VDE",
         "Country": "Germany",
         "Name": "VDE EV charging",
-        "Description": "Found on a DESFire card.",
+        "Description": "Found on a DESFire card",
         "Type": ""
     },
     {
@@ -3061,7 +3064,8 @@
             "android://com.zaplox.premium.*",
             "android://de.mada.idmobile.production",
             "android://io.swiftconnect.mobile",
-            "android://it.flexipass.app"
+            "android://it.flexipass.app",
+            "ios://com.bootiq2.gtsisic"
         ]
     },
     {
@@ -3231,7 +3235,7 @@
         "Vendor": "OPUS",
         "Country": "Canada",
         "Name": "OPUS",
-        "Description": "CALYPSO-based OPUS transit card application.",
+        "Description": "CALYPSO-based OPUS transit card application",
         "Type": "transport",
         "Protocol": "cna_calypso"
     },
@@ -3249,13 +3253,16 @@
         "Vendor": "Calypso Networks Association (CNA)",
         "Country": "France",
         "Name": "1TIC.ICA",
-        "Description": "Default legacy header, used by legacy ticketing applications. As defined in Calypso Revision 2. \"1TIC.ICA\" in ISO/IEC 8859-1 coding.",
+        "Description": "Default legacy header, used by legacy ticketing applications. As defined in Calypso Revision 2. \"1TIC.ICA\" in ISO/IEC 8859-1 coding",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Sources": [
             "android://pt.card4b.navegante",
             "android://pt.opt.anda",
-            "android://com.spirtech.emiliaromagna"
+            "android://com.spirtech.emiliaromagna",
+            "ios://net.mobeepass.Ligne-Azur-Ticket",
+            "ios://pt.card4b.navegante",
+            "ios://pt.card4b.navegante.empresas"
         ]
     },
     {
@@ -3263,7 +3270,7 @@
         "Vendor": "Calypso Networks Association (CNA)",
         "Country": "France",
         "Name": "1TIC.ICA2",
-        "Description": "Compatibility AID. \"1TIC.ICA2\" in ISO/IEC 8859-1 coding.",
+        "Description": "Compatibility AID. \"1TIC.ICA2\" in ISO/IEC 8859-1 coding",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Extras": {
@@ -3275,7 +3282,7 @@
         "Vendor": "Calypso Networks Association (CNA)",
         "Country": "France",
         "Name": "0ETP.ICA",
-        "Description": "Legacy header for the Store Value application. \"0ETP.ICA\" in ISO/IEC 8859-1 coding.",
+        "Description": "Legacy header for the Store Value application. \"0ETP.ICA\" in ISO/IEC 8859-1 coding",
         "Type": "",
         "Protocol": "cna_calypso"
     },
@@ -3284,7 +3291,7 @@
         "Vendor": "Calypso Networks Association (CNA)",
         "Country": "France",
         "Name": "2MPP.ICA",
-        "Description": "Legacy header for card applications not dedicated to public transport. \"2MPP.ICA\" in ISO/IEC 8859-1 coding.",
+        "Description": "Legacy header for card applications not dedicated to public transport. \"2MPP.ICA\" in ISO/IEC 8859-1 coding",
         "Type": "",
         "Protocol": "cna_calypso"
     },
@@ -3293,7 +3300,7 @@
         "Vendor": "Calypso Networks Association (CNA)",
         "Country": "France",
         "Name": "3MTR.ICA",
-        "Description": "Legacy header dedicated to the Master File. \"3MTR.ICA\" in ISO/IEC 8859-1 coding.",
+        "Description": "Legacy header dedicated to the Master File. \"3MTR.ICA\" in ISO/IEC 8859-1 coding",
         "Type": "",
         "Protocol": "cna_calypso",
         "Extras": {
@@ -3305,7 +3312,7 @@
         "Vendor": "Secretaria de Movilidad (SEMOVI)",
         "Country": "Mexico",
         "Name": "Tarjeta de Movilidad Integrada",
-        "Description": "Master File AID observed on a Mexico City Tarjeta de Movilidad Integrada. \"3MTR.ICA\" in ISO/IEC 8859-1 coding.",
+        "Description": "Master File AID observed on a Mexico City Tarjeta de Movilidad Integrada. \"3MTR.ICA\" in ISO/IEC 8859-1 coding",
         "Type": "",
         "Protocol": "cna_calypso",
         "Extras": {
@@ -3317,7 +3324,7 @@
         "Vendor": "Lignes D'Azur",
         "Country": "France",
         "Name": "La Carte",
-        "Description": "Master File AID observed on La Carte. \"3MTR.ICA\" in ISO/IEC 8859-1 coding with a zero-padded suffix.",
+        "Description": "Master File AID observed on La Carte. \"3MTR.ICA\" in ISO/IEC 8859-1 coding with a zero-padded suffix",
         "Type": "",
         "Protocol": "cna_calypso",
         "Extras": {
@@ -3329,7 +3336,7 @@
         "Vendor": "Secretaria de Movilidad (SEMOVI)",
         "Country": "Mexico",
         "Name": "Tarjeta de Movilidad Integrada",
-        "Description": "AID prefix observed for Calypso applications on Mexico City Tarjeta de Movilidad Integrada.",
+        "Description": "AID prefix observed for Calypso applications on Mexico City Tarjeta de Movilidad Integrada",
         "Type": "transport",
         "Protocol": "cna_calypso"
     },
@@ -3338,7 +3345,7 @@
         "Vendor": "Secretaria de Movilidad (SEMOVI); Spirtech",
         "Country": "N/A",
         "Name": "Tarjeta de Movilidad Integrada | Mover Emilia Romagna",
-        "Description": "Calypso-based ticket for public transport in Mexico City or Emilia-Romagna.",
+        "Description": "Calypso-based ticket for public transport in Mexico City or Emilia-Romagna",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Extras": {
@@ -3354,7 +3361,7 @@
         "Vendor": "Secretaria de Movilidad (SEMOVI)",
         "Country": "Mexico",
         "Name": "Tarjeta de Movilidad Integrada",
-        "Description": "Calypso-based public transport application.",
+        "Description": "Calypso-based public transport application",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Extras": {
@@ -3366,7 +3373,7 @@
         "Vendor": "MOBIB",
         "Country": "Belgium",
         "Name": "MOBIB",
-        "Description": "Calypso-based transit card used by Brussels public transport.",
+        "Description": "Calypso-based transit card used by Brussels public transport",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Extras": {
@@ -3378,7 +3385,7 @@
         "Vendor": "Transportes Metropolitanos do Porto",
         "Country": "Portugal",
         "Name": "Andante",
-        "Description": "Calypso-based ticket for public transport in the Porto Metropolitan Area, used by the Anda app.",
+        "Description": "Calypso-based ticket for public transport in the Porto Metropolitan Area, used by the Anda app",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Sources": [
@@ -3390,7 +3397,7 @@
         "Vendor": "Secretaria de Movilidad (SEMOVI)",
         "Country": "Mexico",
         "Name": "Tarjeta Virtual de Movilidad Integrada",
-        "Description": "Store value application for the virtual Tarjeta MI used on Mexico City public transport, distributed through App CDMX.",
+        "Description": "Store value application for the virtual Tarjeta MI used on Mexico City public transport, distributed through App CDMX",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Sources": [
@@ -3402,7 +3409,7 @@
         "Vendor": "Secretaria de Movilidad (SEMOVI)",
         "Country": "Mexico",
         "Name": "Tarjeta de Movilidad Integrada",
-        "Description": "Store value application observed on a Mexico City Tarjeta de Movilidad Integrada.",
+        "Description": "Store value application observed on a Mexico City Tarjeta de Movilidad Integrada",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Extras": {
@@ -3427,19 +3434,22 @@
         "Vendor": "Ile-de-France Mobilites",
         "Country": "France",
         "Name": "Navigo",
-        "Description": "CALYPSO-based Navigo paper ticket application.",
+        "Description": "CALYPSO-based Navigo paper ticket application",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Extras": {
             "LID": "2000"
-        }
+        },
+        "Sources": [
+            "ios://com.vianavigo.iphone"
+        ]
     },
     {
         "AID": "A0000004040125090101000000000000",
         "Vendor": "Ile-de-France Mobilites",
         "Country": "France",
         "Name": "Navigo",
-        "Description": "CALYPSO-based older Navigo plastic card application.",
+        "Description": "CALYPSO-based older Navigo plastic card application",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Extras": {
@@ -3464,16 +3474,31 @@
         "Vendor": "Lignes D'Azur",
         "Country": "France",
         "Name": "Lignes D'Azur",
-        "Description": "CALYPSO-based Lignes D'Azur transit card.",
+        "Description": "CALYPSO-based Lignes D'Azur transit card",
         "Type": "transport",
-        "Protocol": "cna_calypso"
+        "Protocol": "cna_calypso",
+        "Sources": [
+            "ios://net.mobeepass.Ligne-Azur-Ticket"
+        ]
+    },
+    {
+        "AID": "A0000004040125006901000000000000",
+        "Vendor": "Lignes D'Azur",
+        "Country": "France",
+        "Name": "Lignes D'Azur",
+        "Description": "Padded transit AID declared for NFC reader selection by Lignes d'Azur Tickets on iOS",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Sources": [
+            "ios://net.mobeepass.Ligne-Azur-Ticket"
+        ]
     },
     {
         "AID": "A0000004040125009101",
         "Vendor": "CTS",
         "Country": "France",
         "Name": "Strasbourg",
-        "Description": "CALYPSO-based transit card used by Strasbourg CTS.",
+        "Description": "CALYPSO-based transit card used by Strasbourg CTS",
         "Type": "transport",
         "Protocol": "cna_calypso"
     },
@@ -3482,7 +3507,7 @@
         "Vendor": "Lignes D'Azur / ZOU",
         "Country": "France",
         "Name": "La Carte / ZOU",
-        "Description": "CALYPSO-based transit card application observed on La Carte and ZOU cards.",
+        "Description": "CALYPSO-based transit card application observed on La Carte and ZOU cards",
         "Type": "transport",
         "Protocol": "cna_calypso"
     },
@@ -3491,31 +3516,37 @@
         "Vendor": "Lignes D'Azur / ZOU",
         "Country": "France",
         "Name": "La Carte / ZOU",
-        "Description": "CALYPSO-based transit card application observed on La Carte and ZOU cards.",
+        "Description": "CALYPSO-based transit card application observed on La Carte and ZOU cards",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Extras": {
             "LID": "2000"
-        }
+        },
+        "Sources": [
+            "ios://net.mobeepass.Ligne-Azur-Ticket"
+        ]
     },
     {
         "AID": "A0000004040125092001000000000000",
         "Vendor": "Lignes D'Azur",
         "Country": "France",
         "Name": "La Carte",
-        "Description": "CALYPSO-based La Carte transit card application.",
+        "Description": "CALYPSO-based La Carte transit card application",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Extras": {
             "LID": "2000"
-        }
+        },
+        "Sources": [
+            "ios://net.mobeepass.Ligne-Azur-Ticket"
+        ]
     },
     {
         "AID": "A000000291D25008009301",
         "Vendor": "Lignes D'Azur / ZOU",
         "Country": "France",
         "Name": "La Carte / ZOU",
-        "Description": "CALYPSO-based transit card application observed on La Carte and ZOU cards.",
+        "Description": "CALYPSO-based transit card application observed on La Carte and ZOU cards",
         "Type": "transport",
         "Protocol": "cna_calypso"
     },
@@ -3524,7 +3555,7 @@
         "Vendor": "ZOU",
         "Country": "France",
         "Name": "ZOU",
-        "Description": "CALYPSO-based transit card application observed on ZOU cards.",
+        "Description": "CALYPSO-based transit card application observed on ZOU cards",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Extras": {
@@ -3536,7 +3567,7 @@
         "Vendor": "ZOU",
         "Country": "France",
         "Name": "ZOU",
-        "Description": "CALYPSO-based transit card application observed on ZOU cards.",
+        "Description": "CALYPSO-based transit card application observed on ZOU cards",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Extras": {
@@ -3557,11 +3588,23 @@
         ]
     },
     {
+        "AID": "54494C414D4F320000000000",
+        "Vendor": "Lignes D'Azur",
+        "Country": "France",
+        "Name": "La Carte",
+        "Description": "Transit AID declared for NFC reader selection by Lignes d'Azur Tickets on iOS (ASCII TILAMO2 with zero padding)",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Sources": [
+            "ios://net.mobeepass.Ligne-Azur-Ticket"
+        ]
+    },
+    {
         "AID": "A000000291D05600",
         "Vendor": "MOBIB",
         "Country": "Belgium",
         "Name": "MOBIB",
-        "Description": "AID prefix observed across MOBIB Calypso applications.",
+        "Description": "AID prefix observed across MOBIB Calypso applications",
         "Type": "transport",
         "Protocol": "cna_calypso"
     },
@@ -3570,7 +3613,7 @@
         "Vendor": "MOBIB",
         "Country": "Belgium",
         "Name": "MOBIB",
-        "Description": "Calypso-based transit card used by Brussels public transport.",
+        "Description": "Calypso-based transit card used by Brussels public transport",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Extras": {
@@ -3582,7 +3625,7 @@
         "Vendor": "MOBIB",
         "Country": "Belgium",
         "Name": "MOBIB",
-        "Description": "Calypso-based transit card used by Brussels public transport.",
+        "Description": "Calypso-based transit card used by Brussels public transport",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Extras": {
@@ -3594,7 +3637,7 @@
         "Vendor": "MOBIB / ZOU",
         "Country": "Belgium / France",
         "Name": "MOBIB / ZOU",
-        "Description": "Calypso-based transit card application observed on MOBIB and ZOU cards.",
+        "Description": "Calypso-based transit card application observed on MOBIB and ZOU cards",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Extras": {
@@ -3606,7 +3649,7 @@
         "Vendor": "MOBIB",
         "Country": "Belgium",
         "Name": "MOBIB",
-        "Description": "Calypso-based transit card used by Brussels public transport.",
+        "Description": "Calypso-based transit card used by Brussels public transport",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Extras": {
@@ -3618,7 +3661,7 @@
         "Vendor": "MOBIB",
         "Country": "Belgium",
         "Name": "MOBIB",
-        "Description": "Calypso-based transit card used by Brussels public transport.",
+        "Description": "Calypso-based transit card used by Brussels public transport",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Extras": {
@@ -3630,7 +3673,7 @@
         "Vendor": "MOBIB",
         "Country": "Belgium",
         "Name": "MOBIB",
-        "Description": "Calypso-based transit card used by Brussels public transport.",
+        "Description": "Calypso-based transit card used by Brussels public transport",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Extras": {
@@ -3642,7 +3685,7 @@
         "Vendor": "MOBIB",
         "Country": "Belgium",
         "Name": "MOBIB",
-        "Description": "Calypso-based transit card used by Brussels public transport.",
+        "Description": "Calypso-based transit card used by Brussels public transport",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Extras": {
@@ -3654,7 +3697,7 @@
         "Vendor": "MOBIB",
         "Country": "Belgium",
         "Name": "MOBIB",
-        "Description": "Calypso-based transit card used by Brussels public transport.",
+        "Description": "Calypso-based transit card used by Brussels public transport",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Extras": {
@@ -3666,11 +3709,38 @@
         "Vendor": "Transportes Metropolitanos de Lisboa",
         "Country": "Portugal",
         "Name": "navegante mobile",
-        "Description": "Digital navegante card for phone-based validation in the Lisbon Metropolitan Area.",
+        "Description": "Digital navegante card for phone-based validation in the Lisbon Metropolitan Area",
         "Type": "transport",
         "Protocol": "cna_calypso",
         "Sources": [
-            "android://pt.card4b.navegante"
+            "android://pt.card4b.navegante",
+            "ios://pt.card4b.navegante",
+            "ios://pt.card4b.navegante.empresas"
+        ]
+    },
+    {
+        "AID": "315449432E494341D620000291",
+        "Vendor": "Transportes Metropolitanos de Lisboa",
+        "Country": "Portugal",
+        "Name": "navegante",
+        "Description": "Legacy transit AID declared for NFC reader selection by navegante and navegante empresas on iOS",
+        "Type": "transport",
+        "Protocol": "cna_calypso",
+        "Sources": [
+            "ios://pt.card4b.navegante",
+            "ios://pt.card4b.navegante.empresas"
+        ]
+    },
+    {
+        "AID": "F057555341544D30303035",
+        "Vendor": "T-mobilitat",
+        "Country": "Spain",
+        "Name": "Cartera T-mobilitat",
+        "Description": "Mobile transit credential",
+        "Type": "transport",
+        "Sources": [
+            "android://cat.atm.cartera",
+            "ios://cat.atm.cartera"
         ]
     },
     {
@@ -3712,7 +3782,20 @@
             "android://com.saltosystems.justin",
             "android://eu.sharry.swp.gallagherhub",
             "android://eu.sharry.swp.sharrypartner",
-            "android://eu.sharry.swp.sharryworkplace"
+            "android://eu.sharry.swp.sharryworkplace",
+            "ios://com.saltosystems.justin"
+        ]
+    },
+    {
+        "AID": "A0000006060101",
+        "Vendor": "Tapkey",
+        "Country": "",
+        "Name": "Tapkey",
+        "Description": "Mobile access credential; also used for NFC reader selection",
+        "Type": "access",
+        "Sources": [
+            "android://net.tpky.mc",
+            "ios://net.tpky.mc"
         ]
     },
     {
@@ -3759,6 +3842,72 @@
         "Type": "access"
     },
     {
+        "AID": "608626FF010401",
+        "Vendor": "DOM Security",
+        "Country": "Germany",
+        "Name": "DOM Keys",
+        "Description": "ENiQ mobile access credential",
+        "Type": "access",
+        "Sources": [
+            "ios://de.dom.ios.key"
+        ]
+    },
+    {
+        "AID": "F37ABDC6A70D72C1",
+        "Vendor": "Akiles",
+        "Country": "Spain",
+        "Name": "Akiles",
+        "Description": "Mobile access credential",
+        "Type": "access",
+        "Sources": [
+            "ios://app.akiles.web"
+        ]
+    },
+    {
+        "AID": "F053656E736F72",
+        "Vendor": "Sensor Access Technology",
+        "Country": "United Kingdom",
+        "Name": "MobileSensorKey / MobileKey",
+        "Description": "Mobile access credential",
+        "Type": "access",
+        "Sources": [
+            "ios://uk.co.sensoraccess.phone.mobilekey.MobileKey"
+        ]
+    },
+    {
+        "AID": "F494E56454F0047521",
+        "Vendor": "Inveo",
+        "Country": "Poland",
+        "Name": "Inveo NFC iTAG",
+        "Description": "Mobile identifier",
+        "Type": "access",
+        "Sources": [
+            "ios://com.inveo.inveo-NFC-iTAG"
+        ]
+    },
+    {
+        "AID": "F494E56454F0047522",
+        "Vendor": "Inveo",
+        "Country": "Poland",
+        "Name": "Inveo NFC iTAG",
+        "Description": "Mobile identifier",
+        "Type": "access",
+        "Sources": [
+            "ios://com.inveo.inveo-NFC-iTAG"
+        ]
+    },
+    {
+        "AID": "D276000195F561720101",
+        "Vendor": "LEHMANN",
+        "Country": "Germany",
+        "Name": "LEHMANN Transponder",
+        "Description": "Furniture and locker credential",
+        "Type": "access",
+        "Sources": [
+            "ios://com.lehmann-locks.transponderapp"
+        ]
+    },
+    {
         "AID": "F0006B7369000001",
         "Vendor": "Kastle Systems",
         "Country": "",
@@ -3798,7 +3947,19 @@
         "Protocol": "stid_mobile_id",
         "Sources": [
             "android://com.stid.stidmobileid",
-            "android://com.swiftlane.employee"
+            "android://com.swiftlane.employee",
+            "ios://com.stid.STidmobileID"
+        ]
+    },
+    {
+        "AID": "D20310020380",
+        "Vendor": "IMA",
+        "Country": "",
+        "Name": "IMAporter MobileAccess Key",
+        "Description": "Mobile access credential",
+        "Type": "access",
+        "Sources": [
+            "ios://cz.ima.PorterKey"
         ]
     },
     {
@@ -3836,7 +3997,8 @@
         "Type": "access",
         "Protocol": "stid_mobile_id",
         "Sources": [
-            "android://com.stid.stidmobileid"
+            "android://com.stid.stidmobileid",
+            "ios://com.stid.STidmobileID"
         ]
     },
     {
@@ -3873,5 +4035,273 @@
         "Description": "Bangkok transit application",
         "Type": "transport",
         "Protocol": "fm_cos"
+    },
+    {
+        "AID": "637001FF484345204C41",
+        "Vendor": "TAP",
+        "Country": "",
+        "Name": "TAP app HCE",
+        "Description": "Los Angeles TAP mobile transit card",
+        "Type": "transport",
+        "Sources": [
+            "android://net.metro.taprider"
+        ]
+    },
+    {
+        "AID": "A00000003052010000000001",
+        "Vendor": "Riocard Mais",
+        "Country": "",
+        "Name": "Riocard Mais HCE",
+        "Description": "Riocard Mais mobile transit credential",
+        "Type": "transport",
+        "Sources": [
+            "android://com.riocardmais.autoatendimento"
+        ]
+    },
+    {
+        "AID": "A00000064201",
+        "Vendor": "Gantner",
+        "Country": "",
+        "Name": "Gantner MoLA",
+        "Description": "Gantner mobile access credential",
+        "Type": "access",
+        "Sources": [
+            "android://com.gantner.mola"
+        ]
+    },
+    {
+        "AID": "ADEDE7BC6D81C8938523ED7142EA1FA4",
+        "Vendor": "Kisi",
+        "Country": "",
+        "Name": "Kisi Secure Unlock",
+        "Description": "Kisi mobile access credential",
+        "Type": "access",
+        "Sources": [
+            "android://de.kisi.android"
+        ]
+    },
+    {
+        "AID": "F02BC5139A8467",
+        "Vendor": "Spintly",
+        "Country": "",
+        "Name": "Spintly SmartAccess",
+        "Description": "Spintly mobile access credential",
+        "Type": "access",
+        "Sources": [
+            "android://com.mrinq.smartaccess",
+            "android://com.smartaccess.tcpl"
+        ]
+    },
+    {
+        "AID": "F06869702E326E",
+        "Vendor": "2N",
+        "Country": "",
+        "Name": "My2N door opening",
+        "Description": "My2N mobile door access",
+        "Type": "access",
+        "Sources": [
+            "android://com.nn.my2ncommunicator"
+        ]
+    },
+    {
+        "AID": "416E64726F69644E4643",
+        "Vendor": "Latch",
+        "Country": "",
+        "Name": "Latch HCE",
+        "Description": "Latch mobile access credential",
+        "Type": "access",
+        "Sources": [
+            "android://com.latch.android.latchapp"
+        ]
+    },
+    {
+        "AID": "48554E44555245",
+        "Vendor": "Hundure",
+        "Country": "",
+        "Name": "Hundure mCard Access",
+        "Description": "Hundure mobile access credential",
+        "Type": "access",
+        "Sources": [
+            "android://com.hundure.bluetoothgattdoor"
+        ]
+    },
+    {
+        "AID": "A000000382002F000101",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "HID Reader Manager",
+        "Description": "HID Reader Manager NFC interface",
+        "Type": "access",
+        "Sources": [
+            "android://com.hidglobal.pacs.readermanager"
+        ]
+    },
+    {
+        "AID": "A0000004400006010001000003",
+        "Vendor": "ASSA ABLOY / HID",
+        "Country": "",
+        "Name": "AADC HCE variant 03",
+        "Description": "SEOS mobile credential variant",
+        "Type": "access",
+        "Sources": [
+            "android://com.assaabloy.stg.msf.config.android"
+        ]
+    },
+    {
+        "AID": "A0000004400006010001000004",
+        "Vendor": "ASSA ABLOY / HID",
+        "Country": "",
+        "Name": "AADC HCE variant 04",
+        "Description": "SEOS mobile credential variant",
+        "Type": "access",
+        "Sources": [
+            "android://com.assaabloy.stg.msf.config.android"
+        ]
+    },
+    {
+        "AID": "A0000007550501",
+        "Vendor": "Elatec",
+        "Country": "",
+        "Name": "Elatec Mobile Badge",
+        "Description": "Elatec mobile badge interface",
+        "Type": "access",
+        "Sources": [
+            "android://com.elatec.mobilebadge.ble"
+        ]
+    },
+    {
+        "AID": "F020446F726C6574",
+        "Vendor": "Dorlet",
+        "Country": "",
+        "Name": "Dorlet Mobile Access",
+        "Description": "Dorlet mobile access credential",
+        "Type": "access",
+        "Sources": [
+            "android://com.dorlet.mobileaccess.app"
+        ]
+    },
+    {
+        "AID": "F062F33F5B0618",
+        "Vendor": "Accessia",
+        "Country": "",
+        "Name": "Accessia HCE",
+        "Description": "Accessia mobile access credential",
+        "Type": "access",
+        "Sources": [
+            "android://com.accessia.accessia"
+        ]
+    },
+    {
+        "AID": "F06869702E326E00",
+        "Vendor": "2N",
+        "Country": "",
+        "Name": "My2N door opening (trailing zero)",
+        "Description": "My2N mobile door access",
+        "Type": "access",
+        "Sources": [
+            "android://com.nn.my2ncommunicator"
+        ]
+    },
+    {
+        "AID": "F0736674727374",
+        "Vendor": "Safetrust",
+        "Country": "",
+        "Name": "Safetrust HCE",
+        "Description": "Safetrust mobile access credential",
+        "Type": "access",
+        "Sources": [
+            "android://com.lane.lane",
+            "android://com.safetrust.access"
+        ]
+    },
+    {
+        "AID": "F0AB5601BAF113523EFF0084EA40AE21",
+        "Vendor": "TECH FASS",
+        "Country": "",
+        "Name": "TF Mobile ID",
+        "Description": "TECH FASS mobile access credential",
+        "Type": "access",
+        "Sources": [
+            "android://com.techfass.mobileid"
+        ]
+    },
+    {
+        "AID": "F0ABCDEF000000",
+        "Vendor": "Openpath",
+        "Country": "",
+        "Name": "Openpath HCE",
+        "Description": "Openpath mobile access credential",
+        "Type": "access",
+        "Sources": [
+            "android://com.hqo",
+            "android://com.openpath.mobile"
+        ]
+    },
+    {
+        "AID": "F122334455",
+        "Vendor": "RBH Access",
+        "Country": "",
+        "Name": "RBH Mobile NFC",
+        "Description": "Default RBH mobile credential AID",
+        "Type": "access",
+        "Sources": [
+            "android://com.RBHAccess.RBHMobileNFC"
+        ]
+    },
+    {
+        "AID": "F123422221",
+        "Vendor": "UTEC",
+        "Country": "",
+        "Name": "Xthings home HCE",
+        "Description": "UTEC mobile access credential",
+        "Type": "access",
+        "Sources": [
+            "android://com.utec.utec"
+        ]
+    },
+    {
+        "AID": "F222222222",
+        "Vendor": "Feenics",
+        "Country": "",
+        "Name": "Feenics Keep / acre One",
+        "Description": "Default Feenics mobile credential AID",
+        "Type": "access",
+        "Sources": [
+            "android://com.feenics.keepcards"
+        ]
+    },
+    {
+        "AID": "D392F000260100000001",
+        "Vendor": "My Number Card",
+        "Country": "",
+        "Name": "JPKI",
+        "Description": "Japanese identity authentication and signatures",
+        "Type": "identity",
+        "Sources": [
+            "android://jp.go.cas.mpa",
+            "android://jp.wellnet.kouzakanri.secretary"
+        ]
+    },
+    {
+        "AID": "D3921000310001010408",
+        "Vendor": "My Number Card",
+        "Country": "Japan",
+        "Name": "My Number card input assistance",
+        "Description": "My Number card basic attributes.",
+        "Type": "identity",
+        "Sources": [
+            "android://jp.wellnet.kouzakanri.secretary"
+        ]
+    },
+    {
+        "AID": "D3921000310001010402",
+        "Vendor": "My Number Card",
+        "Country": "Japan",
+        "Name": "My Number card photo verification",
+        "Description": "My Number card photo application.",
+        "Type": "identity",
+        "Sources": [
+            "android://jp.wellnet.kouzakanri.secretary"
+        ]
     }
 ]
