@@ -193,6 +193,10 @@ else ifeq ($(PLATFORM),PM5)
     PLATFORM_DEFS = -DPM5 -DCHIP_AT32F435_37 -DWITH_FLASH # TODO 暂时不要编译i2c -DWITH_SMARTCARD
     PLTNAME = Proxmark5
     PLATFORM_FPGA = GW1NR-LV2MG49GC6/i5
+    # 1 MB of flash: room for the embedded 14a sniffer FPGA image
+    ifeq ($(PLATFORM_SIZE),)
+        PLATFORM_SIZE = 1024
+    endif
 else
     $(error Invalid or empty PLATFORM: $(PLATFORM). $(KNOWN_DEFINITIONS))
 endif
@@ -259,6 +263,15 @@ ifeq ($(SKIP_CEP),1)
 else
     ifeq ($(PLATFORM),PM5)
         PLATFORM_DEFS += -DWITH_CEP
+    endif
+endif
+
+# PM5 14a sniffer FPGA image embedded in the ARM image (armsrc/Makefile): PM5_SNIFF_IMAGE= (empty) leaves it out. Its
+# define goes in PLATFORM_DEFS, so switching it cleans the firmware build.
+ifeq ($(PLATFORM),PM5)
+    PM5_SNIFF_IMAGE ?= ../fpga/fpga_pm5_sniff14a.bin
+    ifneq ($(strip $(PM5_SNIFF_IMAGE)),)
+        PLATFORM_DEFS += -DPM5_SNIFF_EMBED
     endif
 endif
 
@@ -389,6 +402,7 @@ export PLATFORM_DEFS_INFO
 export PLATFORM_DEFS_INFO_STANDALONE
 export PLATFORM_CHANGED
 export FPGA_BITSTREAMS
+export PM5_SNIFF_IMAGE
 
 $(info ===================================================================)
 $(info Version info:      $(shell tools/mkversion.sh --short 2>/dev/null || ../tools/mkversion.sh --short 2>/dev/null))

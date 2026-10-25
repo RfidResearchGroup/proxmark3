@@ -96,6 +96,12 @@ module fpga_top (
     assign dbgled = 1'b1;
     assign dbg2   = 1'bZ;  // not used
 
+`ifdef PM5_SNIFF14A
+    // 14a sniffer image: no LF side; the boost PWM follows the HF module's duty whichever side is selected
+    wire ssp_din_lf = 1'b0, ssp_frame_lf = 1'b0, ssp_clk_lf = 1'b0, adc_clk_lf = 1'b0, miso_lf = 1'b0;
+    wire pwr_lo_lf = 1'b0, pwr_oe1_lf = 1'b0, pwr_oe2_lf = 1'b0, pwr_oe4_lf = 1'b0, dbg_lf = 1'b0;
+    assign pwm_duty_lf = pwm_duty_hf;
+`else
     fpga_lf uut_lf (
         .pck0(pck0),
 
@@ -121,6 +127,7 @@ module fpga_top (
 
         .pwm_duty(pwm_duty_lf)
     );
+`endif
 
     fpga_hf uut_hf (
         .ck_1356meg(ck_1356meg),
@@ -128,6 +135,9 @@ module fpga_top (
         .spck(spi_sck),
         .ncs(spi_ncs),
 
+`ifdef PM5_SNIFF14A
+        .adc_d10(adc_d),
+`endif
         .adc_d(adc_d[9:2]),
         .mosi(spi_mosi),
         .ssp_dout(ssp_dout),

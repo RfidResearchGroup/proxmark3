@@ -54,6 +54,7 @@ COMMON_HDL += $(COMMON_DIR)/lo_read.v
 # halves; the board selects LF or HF with the module_sel pin.
 PM5_HDL  = $(COMMON_HDL)
 PM5_HDL += $(PM5_DIR)/gowin_rpll.v
+PM5_HDL += $(PM5_DIR)/pm5_hi_iso14443a.v
 PM5_HDL += $(PM5_DIR)/fpga_pm5_hf.v
 PM5_HDL += $(PM5_DIR)/fpga_pm5_lf.v
 PM5_HDL += $(PM5_DIR)/fpga_pm5_top.v

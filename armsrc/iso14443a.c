@@ -41,6 +41,66 @@
 #include "mifare.h"  // for iso14a_polling_frame_t structure
 #include "cmac_calc.h"
 #include "usb_cdc_apis.h"
+#include "pm5_sniffimg.h"
+#ifdef PM5
+#include "pm5_sniff_hbr.h"
+#include "pm5_edges.h"
+
+// PM5 14a sniffer image (pm5_sniffimg.c): 16-bit words, the byte and an edge side byte (pm5_edges.c), and after a PPS
+// both directions at its bit rates (FPGA_CMD_PM5_SNIFF_RATE). At 848 kbit/s a word is two bytes.
+#define PM5_SNIFF_LINK16        0x10
+#define PM5_SNIFF_RING          4096    // DMA ring items
+static pm5_edges_t s_ed;
+static tMillerHbr s_mhbr;
+static tBpskHbr s_bhbr;
+
+// A card's noise just before its answer can pass for a start bit, and the answer reads one bit early. A 106 card frame
+// failing parity is taken one bit later when every byte's parity holds there, and its CRC_A (or a UID's BCC).
+// last_bits: the bits of a partial last byte (Demod.bitCount), 0 for a whole one
+static bool pm5_tag_one_bit_late(uint8_t *data, uint16_t *len, uint8_t *par, uint16_t last_bits) {
+    uint16_t n = *len;
+    if (n < 2 || n > 64) {
+        return false;
+    }
+    bool ok = (last_bits == 0);
+    for (uint16_t i = 0; i < n - (last_bits ? 1 : 0) && ok; i++) {
+        ok = (((par[i >> 3] >> (7 - (i & 7))) & 1) == oddparity8(data[i]));
+    }
+    uint16_t nbits = 9 * (n - 1) + (last_bits ? last_bits : 9);
+    if (ok || (nbits - 1) % 9 != 0 || (nbits - 1) / 9 < 3) {
+        return false;
+    }
+    uint16_t m = (nbits - 1) / 9;
+    uint8_t d[64], p[8] = {0};
+    for (uint16_t k = 0; k < m; k++) {
+        uint16_t v = 0;
+        for (uint16_t j = 0; j < 9; j++) {
+            uint16_t b = 1 + 9 * k + j, i = b / 9, q = b % 9;
+            uint16_t bit = (q < 8) ? ((data[i] >> q) & 1) : ((par[i >> 3] >> (7 - (i & 7))) & 1);
+            v |= bit << j;
+        }
+        d[k] = v & 0xFF;
+        if (((v >> 8) & 1) != oddparity8(d[k])) {
+            return false;
+        }
+        p[k >> 3] |= ((v >> 8) & 1) << (7 - (k & 7));
+    }
+    if (check_crc(CRC_14443_A, d, m) == false && !(m == 5 && (d[0] ^ d[1] ^ d[2] ^ d[3]) == d[4])) {
+        return false;
+    }
+    memcpy(data, d, m);
+    memcpy(par, p, (m + 7) / 8);
+    *len = m;
+    return true;
+}
+
+// the DMA ring's items from rd on. Right after a rate command: those came at the old rate (the SSC was off while it
+// went), all after them at the new
+static int pm5_ring_items(int rd, uint16_t ring_n) {
+    int w = ring_n - FPGA_SSC_DMA_RX_Remaining_Count();
+    return (rd <= w) ? w - rd : ring_n - rd + w;
+}
+#endif
 
 // Forward declaration: HID Config Card jam support (implemented in secc.c).
 // Called from SniffIso14443a when param bit 0x04 is set.
@@ -833,7 +893,22 @@ int RAMFUNC SniffIso14443a(uint8_t param) {
     // param:
     // bit 0 - trigger from first card answer
     // bit 1 - trigger from first reader 7-bit request
+    // bit 3 - PM5: sniff with the 14a sniffer image (hf 14a sniff only)
+#ifdef PM5
+    // the 14a sniffer image: PPS rates and edge words
+    bool iq = false;
+#ifdef PM5_SNIFF_EMBED
+    iq = (param & 0x08) && Pm5SniffImgLoad();
+    Pm5SniffImgKeep(iq);
+    if (iq) {
+        param &= ~0x04;                 // the sniffer image cannot modulate: no HID config card jam
+    }
+#endif
+#endif
     iso14443a_setup(FPGA_HF_ISO14443A_SNIFFER);
+#ifdef PM5_SNIFF_EMBED
+    Pm5SniffImgKeep(false);
+#endif
 
     // Allocate memory from BigBuf for some buffers
     // free all previous allocations first
@@ -855,7 +930,34 @@ int RAMFUNC SniffIso14443a(uint8_t param) {
         return PM3_EMALLOC;
     }
 
+#ifdef PM5
+    // bit rates after a PPS (0 = 106, 1 = 212, 2 = 424, 3 = 848 kbit/s). The 106 reader decoder keeps running for a REQA /
+    // WUPA (the reader starts over at 106), so the reader decoder at the PPS rates has its own buffers; the tag decoders
+    // share theirs.
+    uint8_t rate_tag = 0, rate_rdr = 0;
+    int16_t pps1 = -1;
+    uint8_t ppss = 0;
+    uint8_t *cmdhbr = NULL, *cmdhbrpar = NULL;
+    uint16_t *buf16 = NULL;
+    if (iq) {
+        cmdhbr = BigBuf_calloc(MAX_FRAME_SIZE);
+        cmdhbrpar = BigBuf_calloc(MAX_PARITY_SIZE);
+        // a DMA ring of 16-bit words, 64 fc each at every rate
+        buf16 = (uint16_t *)BigBuf_malloc(PM5_SNIFF_RING * sizeof(uint16_t));
+        if (cmdhbr == NULL || cmdhbrpar == NULL || buf16 == NULL) {
+            if (g_dbglevel >= DBG_ERROR) DbpString("Sniff 14a: failed to allocate buffers");
+            BigBuf_free();
+            return PM3_EMALLOC;
+        }
+        MillerHbrInit(&s_mhbr, cmdhbr, cmdhbrpar, MAX_FRAME_SIZE);
+        BpskHbrInit(&s_bhbr, receivedResp, receivedRespPar, MAX_FRAME_SIZE);
+        pm5_edges_init(&s_ed);
+        FpgaSendCommand(FPGA_CMD_PM5_SNIFF_RATE, PM5_SNIFF_LINK16);     // every sniff starts at 106
+        FpgaUpdateFrameMode(16, true, true);
+    }
+#else
     uint8_t previous_data = 0;
+#endif
     int dataLen;
     bool TagIsActive = false;
     bool ReaderIsActive = false;
@@ -873,9 +975,17 @@ int RAMFUNC SniffIso14443a(uint8_t param) {
     // The DMA buffer, used to stream samples from the FPGA
     dmabuf8_t *dma = get_dma8();
     uint8_t *data = dma->buf;
+#ifdef PM5
+    uint16_t ring_n = iq ? PM5_SNIFF_RING : DMA_BUFFER_SIZE;
+    void *dma_buf = iq ? (void *)buf16 : (void *)dma->buf;
+    uint16_t *data16 = buf16;
+#else
+    uint16_t ring_n = DMA_BUFFER_SIZE;
+    void *dma_buf = dma->buf;
+#endif
 
     // Setup and start DMA.
-    if (FpgaSetupSscRxDmaRepeat((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
+    if (FpgaSetupSscRxDmaRepeat(dma_buf, ring_n) == false) {
         if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscRxDmaRepeat failed. Exiting");
         return PM3_EIO;
     }
@@ -890,6 +1000,18 @@ int RAMFUNC SniffIso14443a(uint8_t param) {
     uint32_t overrun_skips = 0;
     uint32_t dma_stalls = 0;
     uint16_t checker = 12000;
+#ifdef PM5
+    // rx_samples counts the 106 decoders' bytes, 64 fc each (with the sniffer image one per word: at 848 a word holds two
+    // bytes of 32 fc); t16 the time in units of 16 fc
+    uint32_t t16 = 0;
+    uint8_t prev106 = 0, pend848 = 0;
+    bool half848 = false;
+    // after a switch to or from 848 the words already in the DMA ring still came at the old rate
+    int sw_left = 0;
+    bool sw848 = false;
+    // words lost at a switch to 848, whose words have no sequence number to count them: added at its first word
+    uint8_t lost848 = 0;
+#endif
 
     // loop and listen
     while (BUTTON_PRESS() == false) {
@@ -903,20 +1025,38 @@ int RAMFUNC SniffIso14443a(uint8_t param) {
             checker = 12000;
         }
 
+#ifdef PM5
+        register int readBufDataP = iq ? (data16 - buf16) : (data - dma->buf);
+#else
         register int readBufDataP = data - dma->buf;
-        register int dmaBufDataP = DMA_BUFFER_SIZE - FPGA_SSC_DMA_RX_Remaining_Count();
+#endif
+        register int dmaBufDataP = ring_n - FPGA_SSC_DMA_RX_Remaining_Count();
         if (readBufDataP <= dmaBufDataP) {
             dataLen = dmaBufDataP - readBufDataP;
         } else {
-            dataLen = DMA_BUFFER_SIZE - readBufDataP + dmaBufDataP;
+            dataLen = ring_n - readBufDataP + dmaBufDataP;
         }
 
         // DMA fully stalled: both buffers exhausted. Re-arm primary + secondary,
         // resync the read pointer, and drop the in-flight frame.
         if (FPGA_SSC_DMA_RX_Primary_Done()) {
-            FPGA_SSC_DMA_RX_Refresh_Both(dma->buf, DMA_BUFFER_SIZE);
+            FPGA_SSC_DMA_RX_Refresh_Both(dma_buf, ring_n);
             data = dma->buf;
-            rx_samples += DMA_BUFFER_SIZE;
+            rx_samples += ring_n;
+#ifdef PM5
+            data16 = buf16;
+            t16 += 4 * ring_n;
+            if (iq) {
+                if (half848) {
+                    t16 -= 2;                   // the word's first half was counted already
+                }
+                half848 = false;
+                sw_left = 0;
+                pm5_edges_skip(&s_ed, ring_n);
+                MillerHbrReset(&s_mhbr);
+                BpskHbrReset(&s_bhbr);
+            }
+#endif
             Uart14aReset();
             Demod14aReset();
             dma_stalls++;
@@ -924,12 +1064,34 @@ int RAMFUNC SniffIso14443a(uint8_t param) {
         }
 
         // Fell behind the DMA write pointer; skip to catch up rather than abort.
-        if (dataLen > (9 * DMA_BUFFER_SIZE / 10)) {
-            data = dma->buf + dmaBufDataP;
-            if (data == dma->buf + DMA_BUFFER_SIZE) {
-                data = dma->buf;
+        if (dataLen > (9 * ring_n / 10)) {
+#ifdef PM5
+            if (iq) {
+                data16 = buf16 + ((dmaBufDataP == ring_n) ? 0 : dmaBufDataP);
+                if (half848) {
+                    t16 -= 2;                   // the word's first half was counted already
+                }
+                half848 = false;
+                sw_left = 0;
+                pm5_edges_skip(&s_ed, dataLen);
+                MillerHbrReset(&s_mhbr);
+                BpskHbrReset(&s_bhbr);
+            } else
+#endif
+            {
+                data = dma->buf + dmaBufDataP;
+                if (data == dma->buf + ring_n) {
+                    data = dma->buf;
+                }
             }
             rx_samples += dataLen;
+#ifdef PM5
+            t16 += 4 * dataLen;
+            // AT32: a full ring stops the DMA until it is re-armed below, and from here it never was
+            if (FPGA_SSC_DMA_RX_Secondary_Done()) {
+                FPGA_SSC_DMA_RX_Refresh_Secondary(dma_buf, ring_n);
+            }
+#endif
             Uart14aReset();
             Demod14aReset();
             overrun_skips++;
@@ -943,11 +1105,67 @@ int RAMFUNC SniffIso14443a(uint8_t param) {
 
         // secondary buffer exhausted, primary still running — refill secondary
         if (FPGA_SSC_DMA_RX_Secondary_Done()) {
-            FPGA_SSC_DMA_RX_Refresh_Secondary(dma->buf, DMA_BUFFER_SIZE);
+            FPGA_SSC_DMA_RX_Refresh_Secondary(dma_buf, ring_n);
         }
 
         LED_A_OFF();
 
+#ifdef PM5
+        // at 848 two bytes make one 64 fc byte for the 106 decoders (they still have to see a REQA / WUPA to switch back):
+        // a 16 sample slot is a pause where either 8 sample half was
+        bool rate848 = (sw_left > 0) ? sw848 : (rate_rdr == 3 || rate_tag == 3);
+        // this step's byte: the word's high byte after its side byte has gone in; at 848 the high byte, then the low one
+        uint8_t cur;
+        if (iq) {
+            uint16_t w = *data16;
+            cur = (rate848 && half848) ? (uint8_t)w : (uint8_t)(w >> 8);
+            if (rate848 == false) {
+                // words lost (the SSC is off while a command goes to the FPGA): the time base moves on by them
+                uint8_t k = pm5_edges_word_f(&s_ed, w & 0xFF, 64 * rx_samples + 63, TagIsActive);
+                rx_samples += k;
+                t16 += 4 * k;
+                if (s_ed.bad >= PM5_EDGES_BAD) {
+                    // the link slipped anyway: the same rates again, the SSC back on at a frame's start
+                    FpgaSendCommandFrameSync(FPGA_CMD_PM5_SNIFF_RATE, rate_tag | (rate_rdr << 2) | PM5_SNIFF_LINK16);
+                    s_ed.bad = 0;
+                }
+            } else if (half848 == false) {
+                if (lost848) {
+                    rx_samples += lost848;
+                    t16 += 4 * lost848;
+                    pm5_edges_skip(&s_ed, lost848);
+                    lost848 = 0;
+                }
+                pm5_edges_word(&s_ed, 0, 0, true);      // the sequence goes on
+            }
+        } else {
+            cur = *data;
+        }
+        uint8_t cur106 = cur;
+        bool run106 = true;
+        if (rate848) {
+            if (half848 == false) {
+                pend848 = cur;
+                half848 = true;
+                run106 = false;
+            } else {
+                uint8_t a = pend848, b = cur;
+                cur106 = (uint8_t)((((a >> 7) & (a >> 6) & 1) << 7) | (((a >> 5) & (a >> 4) & 1) << 6)
+                                   | (((b >> 7) & (b >> 6) & 1) << 5) | (((b >> 5) & (b >> 4) & 1) << 4));
+                half848 = false;
+            }
+        } else {
+            half848 = false;
+        }
+#define S106_CUR  cur106
+#define S106_PREV prev106
+        if (run106 == false) {
+            goto sniff14a_hbr;          // the first half of an 848 word: only the high-rate decoders take it
+        }
+#else
+#define S106_CUR  (*data)
+#define S106_PREV previous_data
+#endif
         // Need two samples to feed Miller and Manchester-Decoder
         if (rx_samples & 0x01) {
 
@@ -955,10 +1173,45 @@ int RAMFUNC SniffIso14443a(uint8_t param) {
             // no need to try decoding reader data if the tag is sending
             if (TagIsActive == false) {
 
-                uint8_t readerdata = (previous_data & 0xF0) | (*data >> 4);
+                uint8_t readerdata = (S106_PREV & 0xF0) | (S106_CUR >> 4);
 
+#ifdef PM5
+                // idle and not synced: only the history moves on (a start needs a pause in its two newest bytes); at 848
+                // the loop has 680 cycles a byte
+                bool rdr_idle = iq && Uart.state == STATE_14A_UNSYNCD && readerdata == 0xFF && (Uart.fourBits & 0xFF) == 0xFF && Uart.len == 0;
+                if (rdr_idle) {
+                    Uart.fourBits = (Uart.fourBits << 8) | 0xFF;
+                    Uart.syncBit = 9999;
+                }
+                if (rdr_idle == false && MillerDecoding(readerdata, (rx_samples - 1) * 4)) {
+#else
                 if (MillerDecoding(readerdata, (rx_samples - 1) * 4)) {
+#endif
                     LED_C_ON();
+#ifdef PM5
+                    bool req = (Uart.len == 1 && Uart.bitCount == 7 && (receivedCmd[0] == ISO14443A_CMD_REQA || receivedCmd[0] == ISO14443A_CMD_WUPA));
+                    if (rate_rdr && req == false) {
+                        // at the PPS rates the 106 decoder only looks for the reader starting over
+                        Uart14aReset();
+                        ReaderIsActive = false;
+                        goto sniff14a_tag106;
+                    }
+                    if ((rate_rdr || rate_tag) && req) {
+                        rate_rdr = rate_tag = 0;
+                        FpgaSendCommandFrameSync(FPGA_CMD_PM5_SNIFF_RATE, PM5_SNIFF_LINK16);
+                        sw_left = pm5_ring_items((int)(data16 - buf16), ring_n);
+                        sw848 = rate848;
+                        lost848 = 0;
+                        MillerHbrReset(&s_mhbr);
+                        BpskHbrReset(&s_bhbr);
+                    }
+                    pps1 = -1;
+                    if (iq && Uart.len == 5 && (receivedCmd[0] & 0xF0) == ISO14443A_CMD_PPS && receivedCmd[1] == 0x11
+                            && check_crc(CRC_14443_A, receivedCmd, 5)) {
+                        ppss = receivedCmd[0];
+                        pps1 = receivedCmd[2];
+                    }
+#endif
 
                     // check - if there is a short 7bit request from reader
                     if ((!triggered) && (param & 0x02) && (Uart.len == 1) && (Uart.bitCount == 7)) {
@@ -966,6 +1219,16 @@ int RAMFUNC SniffIso14443a(uint8_t param) {
                     }
 
                     if (triggered) {
+#ifdef PM5
+                        uint32_t ls = Uart.startTime * 16 - DELAY_READER_AIR2ARM_AS_SNIFFER;
+                        uint32_t le = Uart.endTime * 16 - DELAY_READER_AIR2ARM_AS_SNIFFER;
+                        if (iq) {
+                            pm5_edges_reader(&s_ed, Uart.startTime * 16, Uart.endTime * 16, &ls, &le);
+                        }
+                        if (!LogTrace(receivedCmd, Uart.len, ls, le, Uart.parity, true)) {
+                            break;
+                        }
+#else
                         if (!LogTrace(receivedCmd,
                                       Uart.len,
                                       Uart.startTime * 16 - DELAY_READER_AIR2ARM_AS_SNIFFER,
@@ -974,6 +1237,7 @@ int RAMFUNC SniffIso14443a(uint8_t param) {
                                       true)) {
                             break;
                         }
+#endif
                     }
                     // HID Config Card jam: respond to A0 D4 00 00 00 in-band
                     if ((param & 0x04) && Uart.len >= 8) {
@@ -989,27 +1253,87 @@ int RAMFUNC SniffIso14443a(uint8_t param) {
                 }
                 ReaderIsActive = (Uart.state != STATE_14A_UNSYNCD);
             }
+#ifdef PM5
+sniff14a_tag106:
+#endif
 
             // Tag -> Reader
             // no need to try decoding tag data if the reader is sending - and we cannot afford the time
+#ifdef PM5
+            if (ReaderIsActive == false && rate_tag == 0) {
+#else
             if (ReaderIsActive == false) {
+#endif
 
-                uint8_t tagdata = (previous_data << 4) | (*data & 0x0F);
+                uint8_t tagdata = (S106_PREV << 4) | (S106_CUR & 0x0F);
 
+#ifdef PM5
+                // the same for the tag: no start in two unmodulated bytes, the decoder only counts them
+                bool tag_idle = iq && Demod.state == DEMOD_14A_UNSYNCD && tagdata == 0 && (Demod.twoBits & 0xFF) == 0 && Demod.len == 0;
+                if (tag_idle) {
+                    Demod.twoBits = 0;
+                    if (Demod.highCnt < 2) {
+                        Demod.highCnt++;
+                    } else {
+                        Demod.syncBit = 0xFFFF;
+                    }
+                }
+                if (tag_idle == false && ManchesterDecoding(tagdata, 0, (rx_samples - 1) * 4)) {
+#else
                 if (ManchesterDecoding(tagdata, 0, (rx_samples - 1) * 4)) {
+#endif
 
                     LED_B_ON();
 
+#ifdef PM5
+                    // 1 - 3 bits is noise (no card frame is shorter than the 4 bit ACK / NAK): not logged, no edge or PPS
+                    // step on it
+                    bool scrap = iq && (Demod.len == 1 && Demod.bitCount > 0 && Demod.bitCount < 4);
+                    if (iq && scrap == false && pm5_tag_one_bit_late(receivedResp, &Demod.len, Demod.parity, Demod.bitCount)) {
+                        Demod.startTime += 8;           // one bit (128 fc) later
+                    }
+                    uint32_t ls = Demod.startTime * 16 - DELAY_TAG_AIR2ARM_AS_SNIFFER;
+                    uint32_t le = Demod.endTime * 16 - DELAY_TAG_AIR2ARM_AS_SNIFFER;
+                    if (scrap == false) {
+                        if (iq) {
+                            pm5_edges_tag(&s_ed, Demod.startTime * 16, Demod.endTime * 16, &ls, &le);
+                        }
+                        if (!LogTrace(receivedResp, Demod.len, ls, le, Demod.parity, false)) break;
+                    }
+#else
                     if (!LogTrace(receivedResp,
                                   Demod.len,
                                   Demod.startTime * 16 - DELAY_TAG_AIR2ARM_AS_SNIFFER,
                                   Demod.endTime * 16 - DELAY_TAG_AIR2ARM_AS_SNIFFER,
                                   Demod.parity,
                                   false)) break;
+#endif
 
+#ifdef PM5
+                    if ((!triggered) && (param & 0x01) && (scrap == false)) {
+#else
                     if ((!triggered) && (param & 0x01)) {
+#endif
                         triggered = true;
                     }
+#ifdef PM5
+                    // the card's PPS response: both sides switch to the PPS's bit rates
+                    if (pps1 >= 0 && Demod.len == 3 && receivedResp[0] == ppss && check_crc(CRC_14443_A, receivedResp, 3)) {
+                        rate_rdr = pps1 & 0x03;
+                        rate_tag = (pps1 >> 2) & 0x03;
+                        uint8_t cmd_lost = FpgaSendCommandFrameSync(FPGA_CMD_PM5_SNIFF_RATE, rate_tag | (rate_rdr << 2) | PM5_SNIFF_LINK16);
+                        sw_left = pm5_ring_items((int)(data16 - buf16), ring_n);
+                        sw848 = rate848;
+                        lost848 = (rate_rdr == 3 || rate_tag == 3) ? cmd_lost : 0;
+                        // 424 and 848: the reader decoder takes 2 slots per bit, the tag's bits come as at 212
+                        MillerHbrSetRate(&s_mhbr, rate_rdr);
+                        MillerHbrReset(&s_mhbr);
+                        BpskHbrReset(&s_bhbr);
+                    }
+                    if (scrap == false) {
+                        pps1 = -1;
+                    }
+#endif
 
                     // ready to receive another response.
                     Demod14aReset();
@@ -1022,15 +1346,81 @@ int RAMFUNC SniffIso14443a(uint8_t param) {
             }
         }
 
+#ifdef PM5
+        prev106 = cur106;
+        rx_samples++;
+sniff14a_hbr:
+#endif
+#undef S106_CUR
+#undef S106_PREV
+
+#ifdef PM5
+        // 212 / 424 / 848 kbit/s: up to 2 bits per byte, every byte (each direction waits while the other one is receiving)
+        if (rate_rdr || rate_tag) {
+            uint32_t t = t16 * 16;
+            uint8_t slot = rate848 ? 8 : 16;    // fc a reader slot: 4 a byte
+            // idle (no pause, no frame): the decoder only keeps the last level
+            if (rate_rdr && s_bhbr.state == 0 && s_mhbr.state == 0 && (cur >> 4) == 0xF) {
+                s_mhbr.last = 1;
+            } else if (rate_rdr && s_bhbr.state == 0 && MillerHbrDecode(&s_mhbr, cur >> 4, t, slot)) {
+                if (triggered) {
+                    uint32_t ls, le;
+                    MillerHbrAirTimes(&s_mhbr, rate_rdr, &ls, &le);
+                    if (!LogTrace(cmdhbr, s_mhbr.len, ls, le, cmdhbrpar, true)) {
+                        break;
+                    }
+                }
+                MillerHbrReset(&s_mhbr);
+                BpskHbrReset(&s_bhbr);
+            }
+            // no bit (valid flags 3, 1 clear) and no frame: nothing to do
+            if (rate_tag && s_mhbr.state == 0 && (s_bhbr.state != 0 || (cur & 0x0A) != 0)
+                    && BpskHbrDecode(&s_bhbr, cur & 0x0F, t, slot)) {
+                uint32_t ls, le;
+                BpskHbrAirTimes(&s_bhbr, rate_tag, &ls, &le);
+                if (!LogTrace(receivedResp, s_bhbr.len, ls, le, receivedRespPar, false)) {
+                    break;
+                }
+                if ((!triggered) && (param & 0x01)) {
+                    triggered = true;
+                }
+                BpskHbrReset(&s_bhbr);
+                MillerHbrReset(&s_mhbr);
+            }
+        }
+#else
         previous_data = *data;
         rx_samples++;
+#endif
+#ifdef PM5
+        t16 += rate848 ? 2 : 4;
+        if (iq) {
+            // a word at 848 holds two steps: the next word (and sw_left counts words) after the second
+            if (rate848 == false || half848 == false) {
+                if (sw_left > 0) {
+                    sw_left--;
+                }
+                data16++;
+                if (data16 == buf16 + ring_n) {
+                    data16 = buf16;
+                }
+            }
+            continue;
+        }
+#endif
         data++;
-        if (data == dma->buf + DMA_BUFFER_SIZE) {
+        if (data == dma->buf + ring_n) {
             data = dma->buf;
         }
     } // end main loop
 
     FpgaDisableTracing();
+#ifdef PM5
+    if (iq) {
+        FpgaUpdateFrameMode(8, true, true);
+        FpgaSendCommand(FPGA_CMD_PM5_SNIFF_RATE, 0);
+    }
+#endif
 
     if (g_dbglevel >= DBG_ERROR) {
         Dbprintf("trace len = " _YELLOW_("%d"), BigBuf_get_traceLen());

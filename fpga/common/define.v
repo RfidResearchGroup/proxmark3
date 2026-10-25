@@ -102,6 +102,7 @@
 // Definitions for the FPGA commands that are only available on PM5
 `ifdef PM5
 `define FPGA_CMD_SET_PWR_PWM_LOW_COUNT              4
+`define FPGA_CMD_PM5_SNIFF_RATE                     10  // 14a sniffer image only
 `endif
 
 // Major modes
