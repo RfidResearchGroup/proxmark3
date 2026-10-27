@@ -1388,7 +1388,17 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
 /*
  *  Demodulate the samples we received from the tag, also log to tracebuffer
  */
+#ifdef PM5
+static bool s_14b_tx_ok = true;
+#endif
+
 static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t timeout, uint32_t *eof_time, uint16_t *retlen) {
+#ifdef PM5
+    if (!s_14b_tx_ok) {
+        *retlen = 0;
+        return PM3_ERFTRANS;
+    }
+#endif
 
     // Set up the demodulator for tag -> reader responses.
     Demod14bInit(response, max_len);
@@ -1512,6 +1522,95 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
 // Transmit the command (to the tag) that was placed in ToSend[].
 //-----------------------------------------------------------------------------
 // param start_time in SSP_CLK
+#ifdef PM5
+#define ISO14B_TX_DMA_WORDS 2048
+
+static void fill_14b_tx_dma(uint16_t *dst, unsigned count, const uint8_t *bits,
+                           uint32_t bit_count, uint32_t offset) {
+    for (unsigned i = 0; i < count; i++) {
+        uint32_t bit = (offset + i) / 2;
+        dst[i] = (bit < bit_count && !(bits[bit / 8] & (0x80 >> (bit % 8)))) ? 0xffff : 0;
+    }
+}
+
+static bool transmit_14b_dma(const tosend_t *ts) {
+    // Channel 1 is SSC RX; channel 2 is BWM UART.
+    static uint16_t samples[ISO14B_TX_DMA_WORDS];
+    uint32_t bits = ts->max * 8 + ts->bit;
+    uint32_t words = bits * 2 + 1; // Include the final idle word.
+    uint16_t count = MIN(words, ISO14B_TX_DMA_WORDS);
+    // The CPU counter keeps running if the FPGA clock stops.
+    uint32_t start = DWT->CYCCNT;
+    bool ok = false;
+    dma_init_type config;
+
+    fill_14b_tx_dma(samples, count, ts->buf, bits, 0);
+    crm_periph_clock_enable(DMA_CRM_CLOCK_SSC, TRUE);
+    dmamux_enable(DMA_SSC, TRUE);
+    dma_reset(DMA1_CHANNEL3);
+    dma_default_para_init(&config);
+    config.buffer_size = count;
+    config.memory_inc_enable = TRUE;
+    config.memory_data_width = DMA_MEMORY_DATA_WIDTH_HALFWORD;
+    config.peripheral_data_width = DMA_PERIPHERAL_DATA_WIDTH_HALFWORD;
+    config.priority = DMA_PRIORITY_HIGH;
+    config.loop_mode_enable = words > count;
+    config.memory_base_addr = (uint32_t)samples;
+    config.peripheral_base_addr = (uint32_t)&SPI_SSC->dt;
+    config.direction = DMA_DIR_MEMORY_TO_PERIPHERAL;
+    dma_init(DMA1_CHANNEL3, &config);
+    dmamux_init(DMA1MUX_CHANNEL3, DMAMUX_DMAREQ_ID_SPI4_TX);
+
+    uint32_t consumed = 0;
+    uint32_t next = count;
+    uint16_t previous = count;
+    while (!FPGA_SSC_TX_Ready()) {
+        if ((uint32_t)(DWT->CYCCNT - start) > system_core_clock) goto out;
+        WDT_HIT();
+    }
+    spi_i2s_dma_transmitter_enable(SPI_SSC, TRUE);
+    dma_channel_enable(DMA1_CHANNEL3, TRUE);
+
+    while (consumed < words) {
+        // Keep the existing TI-mode CS-pulse workaround active.
+        (void)FPGA_SSC_TX_Ready();
+        uint16_t remaining = dma_data_number_get(DMA1_CHANNEL3);
+        consumed += (previous >= remaining) ? previous - remaining : previous + count - remaining;
+        previous = remaining;
+        if (DMA1->sts & DMA1_DTERR3_FLAG) goto out;
+        if ((uint32_t)(DWT->CYCCNT - start) > system_core_clock) goto out;
+        if (words > count) {
+            uint32_t flags = DMA1->sts & (DMA1_HDT3_FLAG | DMA1_FDT3_FLAG);
+            // Both halves consumed before refill: stop instead of repeating stale data.
+            if (flags == (DMA1_HDT3_FLAG | DMA1_FDT3_FLAG)) goto out;
+            if (flags) {
+                unsigned half = (flags & DMA1_HDT3_FLAG) ? 0 : count / 2;
+                dma_flag_clear(flags);
+                fill_14b_tx_dma(samples + half, count / 2, ts->buf, bits, next);
+                next += count / 2;
+            }
+        }
+        WDT_HIT();
+    }
+    ok = true;
+out:
+    spi_i2s_dma_transmitter_enable(SPI_SSC, FALSE);
+    dma_channel_enable(DMA1_CHANNEL3, FALSE);
+    dma_flag_clear(DMA1_GL3_FLAG);
+    // DMA completion does not mean the SPI data register has drained.
+    while (ok && !FPGA_SSC_TX_Ready()) {
+        if ((uint32_t)(DWT->CYCCNT - start) > system_core_clock) ok = false;
+        WDT_HIT();
+    }
+    while (ok && !FPGA_SSC_TX_Done()) {
+        if ((uint32_t)(DWT->CYCCNT - start) > system_core_clock) ok = false;
+        WDT_HIT();
+    }
+    return ok;
+}
+
+#endif
+
 static void TransmitFor14443b_AsReader(uint32_t *start_time) {
 
     tosend_t *ts = get_tosend();
@@ -1544,6 +1643,10 @@ static void TransmitFor14443b_AsReader(uint32_t *start_time) {
 #endif
 
     LED_B_ON();
+#ifdef PM5
+    s_14b_tx_ok = transmit_14b_dma(ts);
+    LED_B_OFF();
+#else
     for (int c = 0; c < ts->max; c++) {
         volatile uint8_t data = ts->buf[c];
 
@@ -1587,6 +1690,7 @@ static void TransmitFor14443b_AsReader(uint32_t *start_time) {
 
     // wait for last transfer to complete
     while (!FPGA_SSC_TX_Done()) {};
+#endif
 }
 
 static uint32_t ToSendBitCount(const tosend_t *ts) {
