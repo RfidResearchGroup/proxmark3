@@ -964,7 +964,8 @@ finish2:
     clearCommandBuffer();
     if (in_bootloader) {
         g_session.current_device->g_conn->run = false;
-        SendCommandBL(CMD_PING, 0, 0, 0, NULL, 0);
+        // Wake the comm thread with a command supported by the bootrom.
+        SendCommandBL(CMD_DEVICE_INFO, 0, 0, 0, NULL, 0);
     } else {
         SendCommandNG(CMD_QUIT_SESSION, NULL, 0);
         msleep(100);
