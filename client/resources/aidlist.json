@@ -314,7 +314,7 @@
         "Country": "United States",
         "Name": "[UNKNOWN]",
         "Description": "Some co-branded card",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "A0000000042010",
@@ -330,7 +330,7 @@
         "Country": "United States",
         "Name": "MasterCard Specific",
         "Description": "MasterCard U.S. Maestro",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "A0000000043010",
@@ -434,7 +434,7 @@
         "Country": "Belgium",
         "Name": "Maestro-CH",
         "Description": "",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "A00000001800",
@@ -517,7 +517,7 @@
         "Country": "United Kingdom",
         "Name": "American Express",
         "Description": "",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "A000000025010402",
@@ -653,7 +653,7 @@
         "Country": "Germany",
         "Name": "Girocard Electronic Cash",
         "Description": "",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "A000000063504B43532D3135",
@@ -869,7 +869,7 @@
         "Country": "United States",
         "Name": "Visa Common Debit",
         "Description": "",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "A0000000980848",
@@ -1293,7 +1293,7 @@
         "Country": "Kingdom of Saudi Arabia",
         "Name": "SPAN",
         "Description": "SPAN2 (Saudi Payments Network) - Saudi Arabia domestic credit/debit card (Saudi Arabia Monetary Agency)",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "A0000002471001",
@@ -1381,7 +1381,7 @@
         "Country": "United States",
         "Name": "Discover Expresspay (ZIP)",
         "Description": "",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "A000000333010101",
@@ -1389,7 +1389,7 @@
         "Country": "China",
         "Name": "UnionPay Debit",
         "Description": "",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "A000000333010102",
@@ -1397,7 +1397,7 @@
         "Country": "China",
         "Name": "UnionPay Credit",
         "Description": "",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "A000000333010103",
@@ -1405,7 +1405,7 @@
         "Country": "China",
         "Name": "UnionPay Quasi Credit",
         "Description": "",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "A000000333010106",
@@ -1413,7 +1413,7 @@
         "Country": "China",
         "Name": "UnionPay Electronic Cash",
         "Description": "",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "A000000333010108",
@@ -1421,7 +1421,7 @@
         "Country": "China",
         "Name": "U.S. UnionPay Common Debit AID",
         "Description": "",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "A000000337301000",
@@ -1493,7 +1493,7 @@
         "Country": "Belgium",
         "Name": "",
         "Description": "PagoBANCOMAT",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "A0000003660001",
@@ -1525,7 +1525,7 @@
         "Country": "Australia",
         "Name": "Savings (debit card)",
         "Description": "",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "A00000038420",
@@ -1533,7 +1533,7 @@
         "Country": "Australia",
         "Name": "Cheque (debit card)",
         "Description": "",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "A0000003964D66344D0002",
@@ -1565,7 +1565,7 @@
         "Country": "Brazil",
         "Name": "Hiperchip",
         "Description": "",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "A0000004320001",
@@ -1810,7 +1810,7 @@
         "Country": "United States",
         "Name": "Debit Network Alliance (DNA)",
         "Description": "Common U.S. Debit",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "A0000006581010",
@@ -1818,7 +1818,7 @@
         "Country": "Russia",
         "Name": "MIR Credit",
         "Description": "",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "A0000006581011",
@@ -1826,7 +1826,7 @@
         "Country": "Russia",
         "Name": "MIR Credit",
         "Description": "",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "A0000006582010",
@@ -1834,7 +1834,7 @@
         "Country": "Russia",
         "Name": "MIR Debit",
         "Description": "",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "A0000006723010",
@@ -2024,7 +2024,7 @@
         "Country": "Austria",
         "Name": "EMV ATM Maestro",
         "Description": "Domestic EMV Application (Version 2.1)",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "D0400000190002",
@@ -2032,7 +2032,7 @@
         "Country": "Austria",
         "Name": "EMV POS Maestro",
         "Description": "Domestic EMV Application (Version 2.1)",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "D0400000190003",
@@ -2040,7 +2040,7 @@
         "Country": "Austria",
         "Name": "EMV ATM MasterCard",
         "Description": "Domestic EMV Application (Version 2.1)",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "D0400000190004",
@@ -2048,7 +2048,7 @@
         "Country": "Austria",
         "Name": "EMV POS MasterCard",
         "Description": "Domestic EMV Application (Version 2.1)",
-        "Type": ""
+        "Type": "EMV"
     },
     {
         "AID": "D0400000190010",
