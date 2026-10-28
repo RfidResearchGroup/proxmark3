@@ -134,12 +134,20 @@ static int create_cmac(uint8_t *key, uint8_t *input, uint8_t *out, int input_len
         // Working as expected
         aes_cmac(iv, key, input, mac, input_len);
     } else if (encryption_algorithm == 0x02) {
-        // CMAC Requires a 24 byte key, but the 2k3DES uses the 1st part for the 3rd part of the key
-        memcpy(&key[16], &key[0], 8);
+        // CMAC needs 24 bytes; 2K3DES repeats the first 8 as K3
+        uint8_t key24[24] = {0};
+        memcpy(key24, key, 16);
+        memcpy(key24 + 16, key, 8);
 
-        const mbedtls_cipher_info_t *ctx;
-        ctx = mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_DES_EDE3_ECB);
-        mbedtls_cipher_cmac(ctx, key, 192, input, input_len, mac);
+        const mbedtls_cipher_info_t *cipher_info = mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_DES_EDE3_ECB);
+        if (cipher_info == NULL) {
+            PrintAndLogEx(ERR, "2K3DES CMAC is unavailable");
+            return PM3_ESOFT;
+        }
+        if (mbedtls_cipher_cmac(cipher_info, key24, 192, input, input_len, mac) != 0) {
+            PrintAndLogEx(ERR, "Failed to create 2K3DES CMAC");
+            return PM3_ESOFT;
+        }
     } else {
         PrintAndLogEx(ERR, _RED_("Unknown Encryption Algorithm"));
         return PM3_ESOFT;
@@ -231,19 +239,32 @@ static void generate_command_wrapping(uint8_t *command_Header, int command_heade
     uint8_t padded_encrypted_Command[padded_unencrypted_Command_len];
     create_cryptogram(diversified_enc_key, padded_unencrypted_Command, padded_encrypted_Command, padded_unencrypted_Command_len, encryption_algorithm);
 
-    uint8_t asn1_tag_cryptograph[3] = {0x85, 0x81, ARRAYLEN(padded_encrypted_Command)};
+    uint8_t enc_len = (uint8_t)padded_unencrypted_Command_len;
+    uint8_t asn1_tag_cryptograph[3];
+    int cryptogram_tag_len;
+    if (enc_len < 128) {
+        asn1_tag_cryptograph[0] = 0x85;
+        asn1_tag_cryptograph[1] = enc_len;
+        cryptogram_tag_len = 2;
+    } else {
+        asn1_tag_cryptograph[0] = 0x85;
+        asn1_tag_cryptograph[1] = 0x81;
+        asn1_tag_cryptograph[2] = enc_len;
+        cryptogram_tag_len = 3;
+    }
     uint8_t asn1_tag_mac[2] = {0x8e, 0x08};
     uint8_t command_trailer[2] = {0x97, 0x00};
 
-    uint8_t toEncrypt[ARRAYLEN(rndCounter) + padded_Command_Header_len + ARRAYLEN(asn1_tag_cryptograph) + ARRAYLEN(padded_encrypted_Command) + ARRAYLEN(command_trailer)];
+    int toEncrypt_len = ARRAYLEN(rndCounter) + padded_Command_Header_len + cryptogram_tag_len + enc_len + ARRAYLEN(command_trailer);
+    uint8_t toEncrypt[toEncrypt_len];
 
     memcpy(toEncrypt, rndCounter, ARRAYLEN(rndCounter));
     memcpy(toEncrypt + ARRAYLEN(rndCounter), padded_Command_Header, padded_Command_Header_len);
-    memcpy(toEncrypt + ARRAYLEN(rndCounter) + padded_Command_Header_len, asn1_tag_cryptograph, ARRAYLEN(asn1_tag_cryptograph));
-    memcpy(toEncrypt + ARRAYLEN(rndCounter) + padded_Command_Header_len + ARRAYLEN(asn1_tag_cryptograph), padded_encrypted_Command, ARRAYLEN(padded_encrypted_Command));
-    memcpy(toEncrypt + ARRAYLEN(rndCounter) + padded_Command_Header_len + ARRAYLEN(asn1_tag_cryptograph) + ARRAYLEN(padded_encrypted_Command), command_trailer, ARRAYLEN(command_trailer));
+    memcpy(toEncrypt + ARRAYLEN(rndCounter) + padded_Command_Header_len, asn1_tag_cryptograph, cryptogram_tag_len);
+    memcpy(toEncrypt + ARRAYLEN(rndCounter) + padded_Command_Header_len + cryptogram_tag_len, padded_encrypted_Command, enc_len);
+    memcpy(toEncrypt + ARRAYLEN(rndCounter) + padded_Command_Header_len + cryptogram_tag_len + enc_len, command_trailer, ARRAYLEN(command_trailer));
 
-    int padded_toEncrypt_len = ARRAYLEN(toEncrypt);
+    int padded_toEncrypt_len = toEncrypt_len;
     uint8_t padded_toEncrypt[padded_toEncrypt_len + block_size];
     padToBlockSize(toEncrypt, &padded_toEncrypt_len, block_size, padded_toEncrypt);
 
@@ -263,26 +284,27 @@ static void generate_command_wrapping(uint8_t *command_Header, int command_heade
     // PrintAndLogEx(SUCCESS, "padded_toEncrypt................. " _YELLOW_("%s"), sprint_hex_inrow(padded_toEncrypt,padded_toEncrypt_len));
     // PrintAndLogEx(SUCCESS, "MAC.............................. " _YELLOW_("%s"), sprint_hex_inrow(mac,sizeof(mac)));
 
-    uint8_t sizeofcommand[1] = {ARRAYLEN(asn1_tag_cryptograph) + ARRAYLEN(padded_encrypted_Command) + ARRAYLEN(command_trailer) + ARRAYLEN(asn1_tag_mac) + ARRAYLEN(mac)};
+    uint8_t sizeofcommand[1] = {cryptogram_tag_len + enc_len + ARRAYLEN(command_trailer) + ARRAYLEN(asn1_tag_mac) + ARRAYLEN(mac)};
     uint8_t respondTo[1] = {0x00};
 
-    uint8_t completedCommand[command_header_len + 1 + ARRAYLEN(asn1_tag_cryptograph) + ARRAYLEN(padded_encrypted_Command) + ARRAYLEN(command_trailer) + ARRAYLEN(asn1_tag_mac) + ARRAYLEN(mac) + 1];
+    int completed_len = command_header_len + 1 + cryptogram_tag_len + enc_len + ARRAYLEN(command_trailer) + ARRAYLEN(asn1_tag_mac) + ARRAYLEN(mac) + 1;
+    uint8_t completedCommand[completed_len];
     memcpy(completedCommand, command_Header, command_header_len);
     memcpy(completedCommand + command_header_len, sizeofcommand, ARRAYLEN(sizeofcommand));
-    memcpy(completedCommand + command_header_len + ARRAYLEN(sizeofcommand), asn1_tag_cryptograph, ARRAYLEN(asn1_tag_cryptograph));
-    memcpy(completedCommand + command_header_len + ARRAYLEN(sizeofcommand) + ARRAYLEN(asn1_tag_cryptograph), padded_encrypted_Command, ARRAYLEN(padded_encrypted_Command));
-    memcpy(completedCommand + command_header_len + ARRAYLEN(sizeofcommand) + ARRAYLEN(asn1_tag_cryptograph) + ARRAYLEN(padded_encrypted_Command), command_trailer, ARRAYLEN(command_trailer));
-    memcpy(completedCommand + command_header_len + ARRAYLEN(sizeofcommand) + ARRAYLEN(asn1_tag_cryptograph) + ARRAYLEN(padded_encrypted_Command) + ARRAYLEN(command_trailer), asn1_tag_mac, ARRAYLEN(asn1_tag_mac));
-    memcpy(completedCommand + command_header_len + ARRAYLEN(sizeofcommand) + ARRAYLEN(asn1_tag_cryptograph) + ARRAYLEN(padded_encrypted_Command) + ARRAYLEN(command_trailer) + ARRAYLEN(asn1_tag_mac), mac, ARRAYLEN(mac));
-    memcpy(completedCommand + command_header_len + ARRAYLEN(sizeofcommand) + ARRAYLEN(asn1_tag_cryptograph) + ARRAYLEN(padded_encrypted_Command) + ARRAYLEN(command_trailer) + ARRAYLEN(asn1_tag_mac) + ARRAYLEN(mac), respondTo, 1);
+    memcpy(completedCommand + command_header_len + ARRAYLEN(sizeofcommand), asn1_tag_cryptograph, cryptogram_tag_len);
+    memcpy(completedCommand + command_header_len + ARRAYLEN(sizeofcommand) + cryptogram_tag_len, padded_encrypted_Command, enc_len);
+    memcpy(completedCommand + command_header_len + ARRAYLEN(sizeofcommand) + cryptogram_tag_len + enc_len, command_trailer, ARRAYLEN(command_trailer));
+    memcpy(completedCommand + command_header_len + ARRAYLEN(sizeofcommand) + cryptogram_tag_len + enc_len + ARRAYLEN(command_trailer), asn1_tag_mac, ARRAYLEN(asn1_tag_mac));
+    memcpy(completedCommand + command_header_len + ARRAYLEN(sizeofcommand) + cryptogram_tag_len + enc_len + ARRAYLEN(command_trailer) + ARRAYLEN(asn1_tag_mac), mac, ARRAYLEN(mac));
+    memcpy(completedCommand + command_header_len + ARRAYLEN(sizeofcommand) + cryptogram_tag_len + enc_len + ARRAYLEN(command_trailer) + ARRAYLEN(asn1_tag_mac) + ARRAYLEN(mac), respondTo, 1);
 
     // PrintAndLogEx(INFO, "--- " _CYAN_("Command Generation") " ---------------------------");
     // PrintAndLogEx(SUCCESS, "Command Header................... " _YELLOW_("%s"), sprint_hex_inrow(command_Header,sizeof(command_Header)));
     // PrintAndLogEx(SUCCESS, "Payload.......................... " _YELLOW_("%s"), sprint_hex_inrow(unencrypted_Command,sizeof(unencrypted_Command)));
     // PrintAndLogEx(SUCCESS, "completedCommand................. " _YELLOW_("%s"), sprint_hex_inrow(completedCommand,sizeof(completedCommand)));
 
-    memcpy(command, completedCommand, ARRAYLEN(completedCommand));
-    *command_len = ARRAYLEN(completedCommand);
+    memcpy(command, completedCommand, completed_len);
+    *command_len = completed_len;
     //return;
 }
 
@@ -348,6 +370,11 @@ static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_
     param_gethex_to_eol(completedCommandChar, 0, aGET_CHALLENGE, sizeof(aGET_CHALLENGE), &aGET_CHALLENGE_n);
     int res = ExchangeAPDU14a(aGET_CHALLENGE, aGET_CHALLENGE_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res != PM3_SUCCESS) {
+        if (res == PM3_EAPDU_FAIL) {
+            PrintAndLogEx(ERR, "Get Data exchange failed (APDU timeout or no reply)");
+        } else {
+            PrintAndLogEx(ERR, "Get Data exchange failed (%d)", res);
+        }
         DropField();
         return res;
     }
@@ -501,6 +528,11 @@ static int seos_write_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversifie
     param_gethex_to_eol(completedCommandChar, 0, aUPDATE_CHALLENGE, sizeof(aUPDATE_CHALLENGE), &aUPDATE_CHALLENGE_n);
     int res = ExchangeAPDU14a(aUPDATE_CHALLENGE, aUPDATE_CHALLENGE_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res != PM3_SUCCESS) {
+        if (res == PM3_EAPDU_FAIL) {
+            PrintAndLogEx(ERR, "Update Data exchange failed (APDU timeout or no reply)");
+        } else {
+            PrintAndLogEx(ERR, "Update Data exchange failed (%d)", res);
+        }
         DropField();
         return res;
     }
@@ -739,7 +771,9 @@ static int select_DF_verify(uint8_t *response, uint8_t response_length, uint8_t 
     uint8_t cmac[16];
     uint8_t MAC_key[24] = {0x00};
     memcpy(MAC_key, keys[key_index].privMacKey, 16);
-    create_cmac(MAC_key, input, cmac, input_len, sizeof(cmac), encryption_algorithm);
+    if (create_cmac(MAC_key, input, cmac, input_len, sizeof(cmac), encryption_algorithm) != PM3_SUCCESS) {
+        goto out;
+    }
 
     // PrintAndLogEx(INFO, "--- " _CYAN_("MAC") " ---------------------------");
     // PrintAndLogEx(SUCCESS, "MAC Key: "_YELLOW_("%s"), sprint_hex_inrow(MAC_key,sizeof(MAC_key)));
@@ -765,7 +799,7 @@ out:
     return PM3_ESOFT;
 }
 
-static int select_df_decode(uint8_t *response, uint8_t response_length, int *ALGORITHM_INFO_value1, int *ALGORITHM_INFO_value2, uint8_t *CRYPTOGRAM_encrypted_data, uint8_t *MAC_value) {
+static int select_df_decode(uint8_t *response, uint8_t response_length, int *ALGORITHM_INFO_value1, int *ALGORITHM_INFO_value2, uint8_t *CRYPTOGRAM_encrypted_data, int *cryptogram_len, uint8_t *MAC_value) {
     // Response is an ASN.1 encoded structure
     // ASN.1 Information
     // CF = Diversifier
@@ -793,10 +827,12 @@ static int select_df_decode(uint8_t *response, uint8_t response_length, int *ALG
     [=]  -- 8E [08] 'elem'
     [=]     00: 81 49 C8 6A 53 5E F8 6A                         | .I.jS^.j
     */
-    if (response == NULL || ALGORITHM_INFO_value1 == NULL || ALGORITHM_INFO_value2 == NULL || CRYPTOGRAM_encrypted_data == NULL || MAC_value == NULL) {
+    if (response == NULL || ALGORITHM_INFO_value1 == NULL || ALGORITHM_INFO_value2 == NULL || CRYPTOGRAM_encrypted_data == NULL || cryptogram_len == NULL || MAC_value == NULL) {
         PrintAndLogEx(ERR, "Invalid input to ADF response decoder");
         return PM3_ESOFT;
     }
+
+    *cryptogram_len = 0;
 
     bool has_algorithm_info = false;
     bool has_cryptogram = false;
@@ -822,10 +858,11 @@ static int select_df_decode(uint8_t *response, uint8_t response_length, int *ALG
             has_algorithm_info = true;
         } else if (tag == 0x85) {
             if (tag_len == 0 || tag_len > 64) {
-                PrintAndLogEx(ERR, "Malformed ADF response: CRYPTOGRAM (85) length %u, expected 64", tag_len);
+                PrintAndLogEx(ERR, "Malformed ADF response: CRYPTOGRAM (85) length %u, expected 1..64", tag_len);
                 return PM3_ESOFT;
             }
             memcpy(CRYPTOGRAM_encrypted_data, &response[i + 2], tag_len);
+            *cryptogram_len = tag_len;
             has_cryptogram = true;
         } else if (tag == 0x8E) {
             if (tag_len != 8) {
@@ -887,7 +924,7 @@ static int select_df_decode(uint8_t *response, uint8_t response_length, int *ALG
 
     if (plaintext_adf == false) {
         if (plaintext_adf == false) {
-            PrintAndLogEx(SUCCESS, "CRYPTOGRAM Encrypted Data........ " _YELLOW_("%s"), sprint_hex_inrow(CRYPTOGRAM_encrypted_data, 64));
+            PrintAndLogEx(SUCCESS, "CRYPTOGRAM Encrypted Data........ " _YELLOW_("%s"), sprint_hex_inrow(CRYPTOGRAM_encrypted_data, *cryptogram_len));
         }
     }
     // PrintAndLogEx(SUCCESS, "MAC.............................. " _YELLOW_("%s"), sprint_hex_inrow(MAC_value, 8));
@@ -918,7 +955,7 @@ static int select_df_extract_plaintext_diversifier(const uint8_t *response, uint
     return PM3_SUCCESS;
 }
 
-static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encrypted_data_raw, uint8_t *CRYPTOGRAM_Diversifier, int *diversifier_length_out, int encryption_algorithm, int privacy_key_index) {
+static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encrypted_data_raw, int cryptogram_len, uint8_t *CRYPTOGRAM_Diversifier, int *diversifier_length_out, int encryption_algorithm, int privacy_key_index) {
     // --------------- Decrypt ----------------
 
     // 1. MAC Verify - AES/CBC-decrypt (IV || cryptogram || 16 bytes after 8e 08) with the MAC key & keep the last block
@@ -946,18 +983,26 @@ static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encr
     uint8_t mac[iv_size];
     uint8_t MAC_key[24] = {0x00};
     memcpy(MAC_key, keys[privacy_key_index].privMacKey, 16);
-    create_cmac(MAC_key, CRYPTOGRAM_encrypted_data_raw, mac, iv_size, sizeof(mac), encryption_algorithm);
+    if (create_cmac(MAC_key, CRYPTOGRAM_encrypted_data_raw, mac, iv_size, sizeof(mac), encryption_algorithm) != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
     if (memcmp(CRYPTOGRAM_encrypted_data_raw + iv_size, mac, iv_size) != 0) {
         PrintAndLogEx(ERR, "Synthesized IV Verification Failed");
         PrintAndLogEx(ERR, _YELLOW_("Likely wrong Priv Mac Key"));
         return PM3_ESOFT;
     }
 
+    int block_size = (encryption_algorithm == 0x02) ? 8 : 16;
+    if (cryptogram_len <= 0 || cryptogram_len > 64 || (cryptogram_len % block_size) != 0) {
+        PrintAndLogEx(ERR, "Invalid CRYPTOGRAM length %d", cryptogram_len);
+        return PM3_ESOFT;
+    }
+
     uint8_t privEncKey[16] = {};
     memcpy(privEncKey, keys[privacy_key_index].privEncKey, 16);
-    uint8_t CRYPTOGRAM_decrypted_data[64];
+    uint8_t CRYPTOGRAM_decrypted_data[64] = {0};
 
-    decrypt_cryptogram(privEncKey, CRYPTOGRAM_encrypted_data_raw, CRYPTOGRAM_decrypted_data, ARRAYLEN(CRYPTOGRAM_decrypted_data), encryption_algorithm);
+    decrypt_cryptogram(privEncKey, CRYPTOGRAM_encrypted_data_raw, CRYPTOGRAM_decrypted_data, cryptogram_len, encryption_algorithm);
 
     // PrintAndLogEx(SUCCESS, "CRYPTOGRAM_encrypted_data_raw: " _YELLOW_("%s"), sprint_hex_inrow(CRYPTOGRAM_encrypted_data_raw, 64));
     // PrintAndLogEx(SUCCESS, "Raw Decrypted Data............... "_YELLOW_("%s"), sprint_hex_inrow(CRYPTOGRAM_decrypted_data,sizeof(CRYPTOGRAM_decrypted_data)));
@@ -970,7 +1015,7 @@ static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encr
     int diversifier_length = 0;
     int adf_length = 0;
 
-    int CRYPTOGRAM_decrypted_data_length = sizeof(CRYPTOGRAM_decrypted_data);
+    int CRYPTOGRAM_decrypted_data_length = cryptogram_len;
 
     // Skip synthesized IV
     for (int i = iv_size * 2; i < CRYPTOGRAM_decrypted_data_length; i++) {
@@ -1069,7 +1114,9 @@ static int seos_mutual_auth(uint8_t *adfOID, size_t adfoid_len, uint8_t *randomI
     uint8_t mac[8] = { 0x00 };
     uint8_t mutual_auth_enc[32];
     create_cryptogram(AES_key, mutual_auth_plain, mutual_auth_enc, sizeof(mutual_auth_plain), encryption_algorithm);
-    create_cmac(MAC_key, mutual_auth_enc, mac, sizeof(mutual_auth_enc), sizeof(mac), encryption_algorithm);
+    if (create_cmac(MAC_key, mutual_auth_enc, mac, sizeof(mutual_auth_enc), sizeof(mac), encryption_algorithm) != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
 
     uint8_t message_authenticated[40];
     memcpy(message_authenticated, mutual_auth_enc, sizeof(mutual_auth_enc));
@@ -1322,7 +1369,8 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int d
     // Information returned from the GetChallenge command
     int ALGORITHM_INFO_value1 = 0;              // Encryption Algorithm
     int ALGORITHM_INFO_value2 = 0;              // Hash Algorithm
-    uint8_t CRYPTOGRAM_encrypted_data[64];      // Encrypted Data
+    uint8_t CRYPTOGRAM_encrypted_data[64] = {0}; // Encrypted Data
+    int cryptogram_len = 0;
     uint8_t MAC_value[8] = {0};                 // MAC Value
 
     uint8_t diversifier[MAX_DIVERSIFIER_LEN] = {0};
@@ -1345,7 +1393,7 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int d
     if (res != PM3_SUCCESS) {
         return res;
     }
-    res = select_df_decode(response, resplen, &ALGORITHM_INFO_value1, &ALGORITHM_INFO_value2, CRYPTOGRAM_encrypted_data, MAC_value);
+    res = select_df_decode(response, resplen, &ALGORITHM_INFO_value1, &ALGORITHM_INFO_value2, CRYPTOGRAM_encrypted_data, &cryptogram_len, MAC_value);
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -1374,7 +1422,7 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int d
             PrintAndLogEx(INFO, "--- " _CYAN_("Plaintext ADF") " ---------------------------");
             PrintAndLogEx(SUCCESS, "Diversifier...................... " _YELLOW_("%s"), sprint_hex_inrow(diversifier, diversifier_length));
         } else {
-            res = select_ADF_decrypt(selectedADF, CRYPTOGRAM_encrypted_data, diversifier, &diversifier_length, ALGORITHM_INFO_value1, privacy_key_index);
+            res = select_ADF_decrypt(selectedADF, CRYPTOGRAM_encrypted_data, cryptogram_len, diversifier, &diversifier_length, ALGORITHM_INFO_value1, privacy_key_index);
             if (res != PM3_SUCCESS) {
                 return res;
             }
@@ -1479,6 +1527,7 @@ static int seos_adf_select(char *oid, int oid_len, int privacy_key_index, int au
     int ALGORITHM_INFO_value1 = 0;               // Encryption Algorithm
     int ALGORITHM_INFO_value2 = 0;               // Hash Algorithm
     uint8_t CRYPTOGRAM_encrypted_data[64] = {0}; // Encrypted Data
+    int cryptogram_len = 0;
     uint8_t MAC_value[8] = {0};                  // MAC Value
     uint8_t RNDICC[8] = {0};
 
@@ -1493,7 +1542,7 @@ static int seos_adf_select(char *oid, int oid_len, int privacy_key_index, int au
         return res;
     }
 
-    res = select_df_decode(response, resplen, &ALGORITHM_INFO_value1, &ALGORITHM_INFO_value2, CRYPTOGRAM_encrypted_data, MAC_value);
+    res = select_df_decode(response, resplen, &ALGORITHM_INFO_value1, &ALGORITHM_INFO_value2, CRYPTOGRAM_encrypted_data, &cryptogram_len, MAC_value);
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -1549,6 +1598,7 @@ static int seos_gdf_select(int key_index) {
     int ALGORITHM_INFO_value1 = 0;               // Encryption Algorithm
     int ALGORITHM_INFO_value2 = 0;               // Hash Algorithm
     uint8_t CRYPTOGRAM_encrypted_data[64] = {0}; // Encrypted Data
+    int cryptogram_len = 0;
     uint8_t MAC_value[8] = {0};                  // MAC Value
     uint8_t RNDICC[8] = {0};
 
@@ -1563,7 +1613,7 @@ static int seos_gdf_select(int key_index) {
         return res;
     }
 
-    res = select_df_decode(response, resplen, &ALGORITHM_INFO_value1, &ALGORITHM_INFO_value2, CRYPTOGRAM_encrypted_data, MAC_value);
+    res = select_df_decode(response, resplen, &ALGORITHM_INFO_value1, &ALGORITHM_INFO_value2, CRYPTOGRAM_encrypted_data, &cryptogram_len, MAC_value);
     if (res != PM3_SUCCESS) {
         return res;
     }

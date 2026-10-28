@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf seos pacs`/`write` - 2K3DES GET/UPDATE DATA no longer fails silently with exit 236; print APDU exchange errors, check DES-CMAC, decode SELECT `85` at its real length, and use short-form `85` when the cryptogram is under 128 bytes
 - Fixed client build with `-march=x86-64-v3` (CentOS/RHEL 10 default) - false `-Wstringop-overflow` in the EMV AID list table (@r3wretrhy)
 - Changed `hf seos info` - now prints UID, ATQA, SAK, ATS, MIFARE Classic emulation, which SEOS AIDs answer and the known AIDs found (@antoniovazquezblanco)
 - Fixed `hf seos managekeys -p` - key table columns stay aligned for slots 10 and up (@antoniovazquezblanco)
