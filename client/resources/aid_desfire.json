@@ -1520,6 +1520,14 @@
         "Type": "transport"
     },
     {
+        "AID": "808020",
+        "Vendor": "Rejsekort & Rejseplan A/S",
+        "Country": "DK",
+        "Name": "Basiskort (CPH)",
+        "Description": "(CPH) Basiskort",
+        "Type": "transport"
+    },
+    {
         "AID": "8013F2",
         "Vendor": "The Port Authority of New York & New Jersey via Cubic Transportation Systems",
         "Country": "US",
