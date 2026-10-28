@@ -308,6 +308,60 @@ static void generate_command_wrapping(uint8_t *command_Header, int command_heade
     //return;
 }
 
+#define SEOS_GET_DATA_MAX  512
+
+// Append ISO7816 leftover (61 xx / 6C xx) via GET RESPONSE. 00 C0 is clear, not SM.
+static int seos_follow_get_response(uint8_t *assembled, size_t *assembled_len, size_t assembled_max,
+                                    uint8_t *response, int resplen, uint16_t *sw) {
+    if (resplen < 2) {
+        return PM3_ESOFT;
+    }
+
+    size_t body = (size_t)(resplen - 2);
+    if (body > assembled_max) {
+        PrintAndLogEx(ERR, "Get Data leftover too large");
+        return PM3_ESOFT;
+    }
+    memcpy(assembled, response, body);
+    *assembled_len = body;
+
+    for (int round = 0; round < 8; round++) {
+        uint16_t cls = *sw & 0xFF00;
+        if (cls != ISO7816_BYTES_REMAINING_00 && cls != ISO7816_CORRECT_LENGTH_00) {
+            return PM3_SUCCESS;
+        }
+
+        uint8_t le = (uint8_t)(*sw & 0xFF);
+        uint8_t get_resp[5] = {0x00, ISO7816_GET_RESPONSE, 0x00, 0x00, le};
+        int chunk_len = 0;
+        int res = ExchangeAPDU14a(get_resp, sizeof(get_resp), false, true, response, PM3_CMD_DATA_SIZE, &chunk_len);
+        if (res != PM3_SUCCESS) {
+            if (res == PM3_EAPDU_FAIL) {
+                PrintAndLogEx(ERR, "Get Response exchange failed (APDU timeout or no reply)");
+            } else {
+                PrintAndLogEx(ERR, "Get Response exchange failed (%d)", res);
+            }
+            return res;
+        }
+        if (chunk_len < 2) {
+            return PM3_ESOFT;
+        }
+        *sw = get_sw(response, chunk_len);
+        if ((*sw & 0xFF00) == ISO7816_CORRECT_LENGTH_00) {
+            continue;
+        }
+
+        body = (size_t)(chunk_len - 2);
+        if (*assembled_len + body > assembled_max) {
+            PrintAndLogEx(ERR, "Get Data leftover too large");
+            return PM3_ESOFT;
+        }
+        memcpy(assembled + *assembled_len, response, body);
+        *assembled_len += body;
+    }
+    return PM3_ESOFT;
+}
+
 static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_enc_key, uint8_t *diversified_mac_key, uint8_t *sioOutput,  int *sio_size, int encryption_algorithm, uint8_t *data_tag, int data_tag_len) {
     // Intergrating our command generation with the GetData request to make my life easier in the future
 
@@ -379,6 +433,13 @@ static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_
         return res;
     }
     uint16_t sw = get_sw(response, resplen);
+    uint8_t assembled[SEOS_GET_DATA_MAX];
+    size_t assembled_len = 0;
+    int leftover_res = seos_follow_get_response(assembled, &assembled_len, sizeof(assembled), response, resplen, &sw);
+    if (leftover_res != PM3_SUCCESS) {
+        DropField();
+        return leftover_res;
+    }
     if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "Get Data Failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         DropField();
@@ -390,32 +451,38 @@ static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_
     // 85 is our cryptogram response (64 bytes)
     // 99 is our status word response (2 bytes)
     // 8E is our MAC response (8 bytes)
-    // PrintAndLogEx(SUCCESS, "Raw Response..................... " _YELLOW_("%s"), sprint_hex_inrow(response, (resplen - 2)));
-    uint8_t cryptogram[256] = {0};
+    // PrintAndLogEx(SUCCESS, "Raw Response..................... " _YELLOW_("%s"), sprint_hex_inrow(assembled, assembled_len));
+    uint8_t cryptogram[SEOS_GET_DATA_MAX] = {0};
     uint8_t responseCode[2] = {0};
     uint8_t mac[8] = {0};
     size_t cryptogram_length = 0;
 
     // Parse the response to extract the three tags
-    for (int i = 0; i < resplen - 2;) {
-        if (response[i] == 0x85) {
+    for (int i = 0; i < (int)assembled_len;) {
+        if (assembled[i] == 0x85) {
             // Cryptogram tag
             size_t offset = i + 1;
-            asn1_get_tag_length(response, &cryptogram_length, &offset, resplen);
-            memcpy(cryptogram, response + offset, cryptogram_length);
-            i += offset + cryptogram_length;
-        } else if (response[i] == 0x99) {
+            if (asn1_get_tag_length(assembled, &cryptogram_length, &offset, assembled_len) != 0 ||
+                    offset + cryptogram_length > assembled_len ||
+                    cryptogram_length > sizeof(cryptogram)) {
+                PrintAndLogEx(ERR, "Get Data cryptogram too large");
+                DropField();
+                return PM3_ESOFT;
+            }
+            memcpy(cryptogram, assembled + offset, cryptogram_length);
+            i = (int)(offset + cryptogram_length);
+        } else if (assembled[i] == 0x99) {
             // Response code tag
-            size_t len = response[i + 1];
-            memcpy(responseCode, response + i + 2, len);
+            size_t len = assembled[i + 1];
+            memcpy(responseCode, assembled + i + 2, len);
             i += 2 + len;
-        } else if (response[i] == 0x8E) {
+        } else if (assembled[i] == 0x8E) {
             // MAC tag
-            size_t len = response[i + 1];
-            memcpy(mac, response + i + 2, len);
+            size_t len = assembled[i + 1];
+            memcpy(mac, assembled + i + 2, len);
             i += 2 + len;
         } else {
-            i += 2 + response[i + 1];
+            i += 2 + assembled[i + 1];
         }
     }
 
