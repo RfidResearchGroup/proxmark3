@@ -97,7 +97,7 @@ ifeq ($(NOERROR),1)
 endif
 
 CROSS_CFLAGS ?= $(DEFCFLAGS)
-CROSS_CFLAGS += -c -std=c99 -mthumb-interwork -fno-builtin -ffunction-sections -fdata-sections
+CROSS_CFLAGS += -c -std=c99 -mthumb-interwork -fno-builtin -fno-common -ffunction-sections -fdata-sections
 # stack-protect, no-pie reduces size on Gentoo Hardened 8.2 gcc
 CROSS_CFLAGS += -fno-stack-protector -fno-pie
 CROSS_CFLAGS += -DON_DEVICE $(INCLUDE) $(APP_CFLAGS)

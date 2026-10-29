@@ -137,6 +137,7 @@ $(OBJDIR)/bootrom.elf: $(VERSIONOBJ) $(ASMOBJ) $(ARMOBJ) $(THUMBOBJ) $(ARMLIB_OB
 
 clean:
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.o
+	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.a
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.elf
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.s19
 	$(Q)$(RM) $(OBJDIR)$(PATHSEP)*.map
