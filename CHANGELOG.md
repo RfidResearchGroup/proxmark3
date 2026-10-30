@@ -58,6 +58,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed `hf mfu restore` to support Ultralight AES (@iceman1001)
 - Fixed `hf mfu info` to print UL-AES config pages again (@iceman1001)
 - Changed `hf search` - checks and provides hints about SEOS tags (@antoniovazquezblanco)
+- Added PM5 - the HF/LF antenna LEDs now follow the armed RF band (HF LED for an HF bitstream, LF LED for LF) and blink while the device is busy, holding solid once armed but idle (@BenjaminLettner)
 
 
 ## [Frosty Lemon.4.23346][2026-09-18]
