@@ -31,6 +31,10 @@ int tearoff_hook(void);
 #if defined(PM5)
 // Mirror the armed RF bitstream on the PM5 antenna LEDs (HF LED / LF LED).
 void pm5_ant_led_track_bitstream(int bitstream_target);
+// Record host-command activity (drives the "busy" blink); call from the main loop.
+void pm5_ant_led_note_activity(void);
+// Animate the antenna LEDs (blink while busy, solid while idle); call each main-loop pass.
+void pm5_ant_led_tick(void);
 #endif
 
 // Default connection speed test timeout, used in hw status
