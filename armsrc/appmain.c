@@ -346,6 +346,57 @@ void hf_field_off(void) {
     g_hf_field_timeout_active = false;
 }
 
+#if defined(PM5)
+// PM5 antenna controller (IO expander on I2C addr 0x51). The MAP register (0x02)
+// holds, MSB..LSB: 125 134 250 375 500 HFLED LFLED Q - i.e. the LF frequency/Q
+// tuning bits alongside the two antenna-LED bits.
+#define PM5_ANT_I2C_ADDR   0x51
+#define PM5_ANT_MAP_REG    0x02
+#define PM5_ANT_MAP_HFLED  (1 << 2)
+#define PM5_ANT_MAP_LFLED  (1 << 1)
+
+// Light the HF LED while an HF bitstream is armed, the LF LED while the LF
+// bitstream is armed, and clear both once the bitstream is reset. Called only
+// from the FPGA bitstream loader, which is a cold path - never the timing
+// critical modulation loops (those toggle the field via FpgaWriteConfWord,
+// which must stay a single-cycle write). The ~300us I2C round-trip is therefore
+// harmless here. We touch only the LED bits via read-modify-write so the LF
+// frequency/Q tuning bits in the same register are preserved, and we skip the
+// bus entirely while the LED state is unchanged.
+void pm5_ant_led_track_bitstream(int bitstream_target) {
+
+    bool hf = (bitstream_target >= FPGA_BITSTREAM_HF && bitstream_target <= FPGA_BITSTREAM_HF_15);
+    bool lf = (bitstream_target == FPGA_BITSTREAM_LF);
+
+    static int8_t last_hf = -1;
+    static int8_t last_lf = -1;
+    if (hf == last_hf && lf == last_lf) {
+        return;
+    }
+
+    StartTicks();
+    I2C_init(true);
+
+    uint8_t map = 0;
+    if (I2C_BufferReadRaw(&map, 1, PM5_ANT_MAP_REG, PM5_ANT_I2C_ADDR << 1) != 1) {
+        return; // leave the shadow untouched so the next switch retries
+    }
+
+    map &= ~(PM5_ANT_MAP_HFLED | PM5_ANT_MAP_LFLED);
+    if (hf) {
+        map |= PM5_ANT_MAP_HFLED;
+    }
+    if (lf) {
+        map |= PM5_ANT_MAP_LFLED;
+    }
+
+    if (I2C_BufferWrite(&map, 1, PM5_ANT_MAP_REG, PM5_ANT_I2C_ADDR << 1)) {
+        last_hf = hf;
+        last_lf = lf;
+    }
+}
+#endif
+
 void send_wtx(uint16_t wtx) {
     if (allow_send_wtx) {
         reply_ng(CMD_WTX, PM3_SUCCESS, (uint8_t *)&wtx, sizeof(wtx));

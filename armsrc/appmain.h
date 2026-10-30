@@ -28,6 +28,11 @@ extern bool g_hf_field_timeout_active;
 void hf_field_off(void);
 int tearoff_hook(void);
 
+#if defined(PM5)
+// Mirror the armed RF bitstream on the PM5 antenna LEDs (HF LED / LF LED).
+void pm5_ant_led_track_bitstream(int bitstream_target);
+#endif
+
 // Default connection speed test timeout, used in hw status
 #define CONN_SPEED_TEST_MIN_TIME_DEFAULT 500 // in milliseconds
 
