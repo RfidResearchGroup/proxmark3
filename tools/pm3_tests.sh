@@ -772,6 +772,12 @@ while true; do
       if ! CheckExecute "lf t55xx cfg watchnet"             "$CLIENTBIN -c 'lf t55xx info -c 00107060'" "WatchNET"; then break; fi
       if ! CheckExecute "lf t55xx cfg keri nxt"             "$CLIENTBIN -c 'lf t55xx info -c 00107080'" "Keri NXT"; then break; fi
       if ! CheckExecute "lf t55xx cfg ict"                  "$CLIENTBIN -c 'lf t55xx info -c 001070E0'" "Config block match\\.\\.\\. ICT"; then break; fi
+      # block 0 reads saved after 'lf t55xx detect --r0'. info -1 decodes block 0 with the config detect found
+      if ! CheckExecute "lf T55 detect ask rf32"            "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_ask_rf32.pm3; lf t55xx detect -1; lf t55xx info -1'" "000880E0 - "; then break; fi
+      if ! CheckExecute "lf T55 detect ask rf32 st"         "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_ask_rf32_st.pm3; lf t55xx detect -1; lf t55xx info -1'" "000880E8 - "; then break; fi
+      if ! CheckExecute "lf T55 detect fsk2a rf50"          "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_fsk2a_rf50.pm3; lf t55xx detect -1; lf t55xx info -1'" "001070E0 - "; then break; fi
+      if ! CheckExecute "lf T55 detect fsk2a rf50 st"       "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_fsk2a_rf50_st.pm3; lf t55xx detect -1; lf t55xx info -1'" "001070E8 - "; then break; fi
+      if ! CheckExecute "lf T55 detect noralsy clone st"    "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_noralsy_st.pm3; lf t55xx detect -1; lf t55xx info -1'" "00088068 - "; then break; fi
 
       echo -e "\n${C_BLUE}Testing HF:${C_NC}"
       if ! CheckExecute "hf mf offline text"               "$CLIENTBIN -c 'hf mf'" "content from tag dump file"; then break; fi
