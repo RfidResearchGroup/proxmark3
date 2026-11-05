@@ -37,5 +37,6 @@ void em4x50_login(const uint32_t *password, bool ledcontrol);
 void em4x50_sim(const uint32_t *password, bool ledcontrol);
 void em4x50_reader(bool ledcontrol);
 void em4x50_chk(const char *filename, bool ledcontrol);
+void em4x50_config(const em4x50_config_t *cfg);
 
 #endif /* EM4X50_H */

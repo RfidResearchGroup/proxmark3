@@ -48,7 +48,6 @@
 #define EM4X50_T_TAG_WAITING_FOR_SIGNAL     75
 #define EM4X50_T_WAITING_FOR_DBLLIW         1550
 #define EM4X50_T_WAITING_FOR_ACK            4
-#define EM4X50_T_TOLERANCE                  8
 #define EM4X50_T_ZERO_DETECTION             3
 
 // timeout values (empirical) for simulation mode (may vary with regard to reader)
@@ -64,8 +63,25 @@
 #define EM4X50_TAG_MAX_NO_BYTES             136
 #define EM4X50_TIMEOUT_PULSE_EVAL           (4 * EM4X50_T_TAG_FULL_PERIOD * CYCLES2TICKS) // 4bit data periods
 
+// read retries, no new attempt after the window (ms) to stay below the client timeout
+#define EM4X50_COMMAND_RETRIES              5
+#define EM4X50_T_RETRY_WINDOW               1000
+
 uint8_t g_High = 190;
 uint8_t g_Low = 60;
+
+// reader timings, changed at runtime by `lf em 4x50 config`
+// centres of the working ranges found by lf_em4x50_tune.lua on a PM3 Easy
+// (500 uH antenna): tol 5-15, gap end 28-50, rm 104-164
+#define EM4X50_CONFIG_DEFAULT { \
+    .mode = EM4X50_CONFIG_GET, \
+    .threshold = 75, \
+    .tolerance = 10, \
+    .gap_start = 7, \
+    .gap_end = 38, \
+    .rm_delay = 132, \
+}
+static em4x50_config_t s_cfg = EM4X50_CONFIG_DEFAULT;
 
 // indication whether a previous login has been successful, so operations
 // that require authentication can be handled
@@ -76,6 +92,51 @@ bool g_Login = false;
 bool g_WritePasswordProcess = false;
 // if reader sends a different password than "expected" -> save it
 uint32_t g_Password = 0;
+
+// raw ADC capture of a reader exchange into BigBuf (debug level extended),
+// fetch with `data samples`
+static uint8_t *s_cap = NULL;
+static uint32_t s_cap_len = 0;
+static uint32_t s_cap_max = 0;
+
+static void capture_start(void) {
+    s_cap_len = 0;
+    s_cap_max = 0;
+    s_cap = NULL;
+    if (g_dbglevel >= DBG_EXTENDED) {
+        BigBuf_free_keep_EM();
+        s_cap = BigBuf_get_addr();
+        s_cap_max = BigBuf_max_traceLen();
+    }
+}
+
+static void capture_report(void) {
+    if (s_cap != NULL) {
+        Dbprintf("em4x50 capture: %u samples, high %u low %u", s_cap_len, g_High, g_Low);
+    }
+}
+
+static inline uint8_t read_sample(void) {
+    uint8_t s = (uint8_t)FPGA_SSC_RX_Value();
+    if (s_cap_len < s_cap_max) {
+        s_cap[s_cap_len++] = s;
+    }
+    return s;
+}
+
+static inline void poll_sample(void) {
+    if (FPGA_SSC_RX_Ready()) {
+        read_sample();
+    }
+}
+
+// busy wait, keeps sampling so the capture stays continuous
+static void reader_wait_cycles(uint32_t cycles) {
+    uint32_t tval = GetTicks();
+    while (GetTicks() - tval < cycles * CYCLES2TICKS) {
+        poll_sample();
+    }
+}
 
 // extract and check parities
 // return result of parity check and extracted plain data
@@ -174,7 +235,7 @@ void em4x50_setup_sim(void) {
 static bool get_signalproperties(void) {
 
     bool signal_found = false;
-    int no_periods = 32, pct = 75, noise = 140;
+    int no_periods = 32, pct = s_cfg.threshold, noise = 140;
     uint8_t sample_ref = 127;
     uint8_t sample_max_mean = 0;
     uint8_t sample_max[no_periods];
@@ -238,14 +299,14 @@ static bool get_signalproperties(void) {
 static bool invalid_bit(void) {
 
     // get sample at 3/4 of bit period
-    WaitUS(EM4X50_T_TAG_THREE_QUARTER_PERIOD * CYCLES2MUSEC);
+    reader_wait_cycles(EM4X50_T_TAG_THREE_QUARTER_PERIOD);
 
     FPGA_SSC_RX_READY_WAIT();
 
-    uint8_t sample = (uint8_t)FPGA_SSC_RX_Value();
+    uint8_t sample = read_sample();
 
     // wait until end of bit period
-    WaitUS(EM4X50_T_TAG_QUARTER_PERIOD * CYCLES2MUSEC);
+    reader_wait_cycles(EM4X50_T_TAG_QUARTER_PERIOD);
 
     // bit in "undefined" state?
     if (sample <= g_High && sample >= g_Low)
@@ -261,11 +322,11 @@ static uint32_t get_pulse_length(void) {
     // iterates pulse lengths (low -> high -> low)
 
     FPGA_SSC_RX_READY_WAIT(); // Wait for valid data received.
-    volatile uint8_t sample = (uint8_t)FPGA_SSC_RX_Value();
+    volatile uint8_t sample = read_sample();
 
     while (sample > g_Low && (GetTicks() < timeout)) {
         if (FPGA_SSC_RX_Ready()) {
-            sample = (uint8_t)FPGA_SSC_RX_Value();
+            sample = read_sample();
         }
     }
 
@@ -277,7 +338,7 @@ static uint32_t get_pulse_length(void) {
 
     while (sample < g_High && (GetTicks() < timeout)) {
         if (FPGA_SSC_RX_Ready()) {
-            sample = (uint8_t)FPGA_SSC_RX_Value();
+            sample = read_sample();
         }
     }
 
@@ -287,7 +348,7 @@ static uint32_t get_pulse_length(void) {
 
     while (sample > g_Low && (GetTicks() < timeout)) {
         if (FPGA_SSC_RX_Ready()) {
-            sample = (uint8_t)FPGA_SSC_RX_Value();
+            sample = read_sample();
         }
     }
 
@@ -298,10 +359,21 @@ static uint32_t get_pulse_length(void) {
     return GetTicks() - start_ticks;
 }
 
+// true if the signal stays below g_High for <cycles>
+static bool no_rising_edge(uint32_t cycles) {
+    uint32_t tval = GetTicks();
+    while (GetTicks() - tval < cycles * CYCLES2TICKS) {
+        if (FPGA_SSC_RX_Ready() && (read_sample() >= g_High)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 // check if pulse length <pl> corresponds to given length <length>
 static bool check_pulse_length(uint32_t pl, int length) {
-    return ((pl >= (length - EM4X50_T_TOLERANCE) * CYCLES2TICKS) &&
-            (pl <= (length + EM4X50_T_TOLERANCE) * CYCLES2TICKS));
+    return ((pl >= (length - s_cfg.tolerance) * CYCLES2TICKS) &&
+            (pl <= (length + s_cfg.tolerance) * CYCLES2TICKS));
 }
 
 // send single bit according to EM4x50 application note and datasheet
@@ -313,24 +385,24 @@ static void em4x50_reader_send_bit(int bit) {
     if (bit == 0) {
 
         // disable modulation (activate the field) for 7 cycles of carrier
-        // period (Opt64)
+        // period (Opt64), set by gap_start
         Gpio_SSC_DOUT_Low();
-        while (GetTicks() - tval < 7 * CYCLES2TICKS);
+        while (GetTicks() - tval < s_cfg.gap_start * CYCLES2TICKS) poll_sample();
 
         // enable modulation (drop the field) for remaining first
         // half of bit period
         Gpio_SSC_DOUT_High();
-        while (GetTicks() - tval < EM4X50_T_TAG_HALF_PERIOD * CYCLES2TICKS);
+        while (GetTicks() - tval < s_cfg.gap_end * CYCLES2TICKS) poll_sample();
 
         // disable modulation for second half of bit period
         Gpio_SSC_DOUT_Low();
-        while (GetTicks() - tval < EM4X50_T_TAG_FULL_PERIOD * CYCLES2TICKS);
+        while (GetTicks() - tval < EM4X50_T_TAG_FULL_PERIOD * CYCLES2TICKS) poll_sample();
 
     } else {
 
         // bit = "1" means disable modulation for full bit period
         Gpio_SSC_DOUT_Low();
-        while (GetTicks() - tval < EM4X50_T_TAG_FULL_PERIOD * CYCLES2TICKS);
+        while (GetTicks() - tval < EM4X50_T_TAG_FULL_PERIOD * CYCLES2TICKS) poll_sample();
     }
 }
 
@@ -424,13 +496,12 @@ static int find_double_listen_window(bool bcommand) {
                     // command request has to be sent) has gone, so if a
                     // second window follows - sync on this to issue a command
 
-                    // skip the next bit...
-                    WaitUS(EM4X50_T_TAG_FULL_PERIOD * CYCLES2MUSEC);
+                    // no rising edge for the next two bits means this is
+                    // the second listen window (data has one per bit)
+                    uint32_t window = MIN(s_cfg.rm_delay, 2 * EM4X50_T_TAG_FULL_PERIOD - s_cfg.tolerance);
+                    if (no_rising_edge(window)) {
 
-                    // ...and check if the following bit does make sense
-                    // (if not it is the correct position within the second
-                    // listen window)
-                    if (invalid_bit()) {
+                        reader_wait_cycles(s_cfg.rm_delay - window);
 
                         // send RM for request mode
                         em4x50_reader_send_bit(0);
@@ -459,6 +530,7 @@ static int find_double_listen_window(bool bcommand) {
 // function is used to check whether a tag on the proxmark is an
 // EM4x50 tag or not -> speed up "lf search" process
 static bool find_em4x50_tag(void) {
+    capture_start();
     return find_single_listen_window();
 }
 
@@ -498,7 +570,7 @@ static bool check_ack(bool bliw) {
 
                     // wait for 2 bits (remaining "bit" of ACK signal + first
                     // "bit" of listen window)
-                    WaitUS(2 * EM4X50_T_TAG_FULL_PERIOD * CYCLES2MUSEC);
+                    reader_wait_cycles(2 * EM4X50_T_TAG_FULL_PERIOD);
 
                     // check for listen window (if first bit cannot be interpreted
                     // as a valid bit it must belong to a listen window)
@@ -623,7 +695,7 @@ static int login(uint32_t password) {
         // send password
         em4x50_reader_send_word(password);
 
-        WaitUS(EM4X50_T_TAG_TPP * CYCLES2MUSEC);
+        reader_wait_cycles(EM4X50_T_TAG_TPP);
 
         // check if ACK is returned
         if (check_ack(false))
@@ -718,6 +790,7 @@ void em4x50_login(const uint32_t *password, bool ledcontrol) {
     if (ledcontrol) LEDsoff();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     StopTicks();
+    capture_report();
     reply_ng(CMD_LF_EM4X50_LOGIN, status, NULL, 0);
 }
 
@@ -894,6 +967,35 @@ static int selective_read(uint32_t addresses, uint32_t *words) {
     return status;
 }
 
+// optional login followed by a selective read, retried within
+// EM4X50_T_RETRY_WINDOW since a missed listen window is not fatal
+static int login_and_read(const em4x50_data_t *etd, uint32_t addresses, uint32_t *words) {
+    int status = PM3_EFAILED;
+    uint32_t tstart = GetTicks();
+
+    for (int i = 0; i < EM4X50_COMMAND_RETRIES; i++) {
+
+        if (BUTTON_PRESS()) {
+            return PM3_EOPABORTED;
+        }
+
+        status = PM3_SUCCESS;
+
+        // try to login with given password
+        if (etd->pwd_given)
+            status = login(etd->password1);
+
+        if (status == PM3_SUCCESS)
+            status = selective_read(addresses, words);
+
+        if ((status == PM3_SUCCESS) || (GetTicks() - tstart > EM4X50_T_RETRY_WINDOW * 1500)) {
+            break;
+        }
+    }
+
+    return status;
+}
+
 // reads by using "selective read mode" -> bidirectional communication
 void em4x50_read(const em4x50_data_t *etd, bool ledcontrol) {
     int status = PM3_EFAILED;
@@ -910,21 +1012,15 @@ void em4x50_read(const em4x50_data_t *etd, bool ledcontrol) {
             LED_D_ON();
         }
 
-        bool blogin = true;
-
-        // try to login with given password
-        if (etd->pwd_given)
-            blogin = (login(etd->password1) == PM3_SUCCESS);
-
         // only one word has to be read -> first word read = last word read
-        if (blogin)
-            status = selective_read(etd->addresses, words);
+        status = login_and_read(etd, etd->addresses, words);
     }
 
     if (ledcontrol) LEDsoff();
     Gpio_SSC_DOUT_Low();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     StopTicks();
+    capture_report();
     reply_ng(CMD_LF_EM4X50_READ, status, (uint8_t *)words, EM4X50_TAG_MAX_NO_BYTES);
 }
 
@@ -942,20 +1038,15 @@ void em4x50_info(const em4x50_data_t *etd, bool ledcontrol) {
             LED_D_ON();
         }
 
-        bool blogin = true;
-        // login with given password
-        if (etd->pwd_given)
-            blogin = (login(etd->password1) == PM3_SUCCESS);
-
-        if (blogin) {
-            // read addresses from fwr = 0 to lwr = 33 (0x21)
-            status = selective_read(0x00002100, words);
-        }
+        // login with given password, then
+        // read addresses from fwr = 0 to lwr = 33 (0x21)
+        status = login_and_read(etd, 0x00002100, words);
     }
 
     if (ledcontrol) LEDsoff();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     StopTicks();
+    capture_report();
     reply_ng(CMD_LF_EM4X50_INFO, status, (uint8_t *)words, EM4X50_TAG_MAX_NO_BYTES);
 }
 
@@ -980,7 +1071,30 @@ void em4x50_reader(bool ledcontrol) {
     Gpio_SSC_DOUT_Low();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     StopTicks();
+    capture_report();
     reply_ng(CMD_LF_EM4X50_READER, now, (uint8_t *)words, 4 * now);
+}
+
+// get, set or reset reader timings, replies with the active settings
+void em4x50_config(const em4x50_config_t *cfg) {
+    int status = PM3_SUCCESS;
+
+    if (cfg->mode == EM4X50_CONFIG_RESET) {
+        s_cfg = (em4x50_config_t)EM4X50_CONFIG_DEFAULT;
+    } else if (cfg->mode == EM4X50_CONFIG_SET) {
+        // gap must fit in one bit period, RM within the second listen window
+        if ((cfg->threshold < 1) || (cfg->threshold > 100) ||
+                (cfg->tolerance < 1) || (cfg->tolerance >= EM4X50_T_TAG_QUARTER_PERIOD) ||
+                (cfg->gap_start >= cfg->gap_end) || (cfg->gap_end >= EM4X50_T_TAG_FULL_PERIOD) ||
+                (cfg->rm_delay < 1) || (cfg->rm_delay > 5 * EM4X50_T_TAG_FULL_PERIOD)) {
+            status = PM3_EINVARG;
+        } else {
+            s_cfg = *cfg;
+            s_cfg.mode = EM4X50_CONFIG_GET;
+        }
+    }
+
+    reply_ng(CMD_LF_EM4X50_CONFIG, status, (uint8_t *)&s_cfg, sizeof(s_cfg));
 }
 
 // writes <word> to specified <addresses>
@@ -1003,7 +1117,7 @@ static int write(uint32_t word, uint32_t addresses) {
         } else {
 
             // wait for T0 * EM4X50_T_TAG_TWA (write access time)
-            WaitUS(EM4X50_T_TAG_TWA * CYCLES2MUSEC);
+            reader_wait_cycles(EM4X50_T_TAG_TWA);
 
             // look for ACK sequence
             if (check_ack(false)) {
@@ -1011,7 +1125,7 @@ static int write(uint32_t word, uint32_t addresses) {
                 // now EM4x50 needs T0 * EM4X50_T_TAG_TWEE (EEPROM write time = 3.2ms = 50 * 64 periods)
                 // for saving data and should return with ACK
                 for (int i = 0; i < 50; i++) {
-                    WaitUS(EM4X50_T_TAG_FULL_PERIOD * CYCLES2MUSEC);
+                    reader_wait_cycles(EM4X50_T_TAG_FULL_PERIOD);
                 }
 
                 if (check_ack(false))
@@ -1042,7 +1156,7 @@ static int write_password(uint32_t password, uint32_t new_password) {
         } else {
 
             // wait for T0 * EM4x50_T_TAG_TPP (processing pause time)
-            WaitUS(EM4X50_T_TAG_TPP * CYCLES2MUSEC);
+            reader_wait_cycles(EM4X50_T_TAG_TPP);
 
             // look for ACK sequence and send rm request
             // during following listen window
@@ -1052,14 +1166,14 @@ static int write_password(uint32_t password, uint32_t new_password) {
                 em4x50_reader_send_word(new_password);
 
                 // wait for T0 * EM4X50_T_TAG_TWA (write access time)
-                WaitUS(EM4X50_T_TAG_TWA * CYCLES2MUSEC);
+                reader_wait_cycles(EM4X50_T_TAG_TWA);
 
                 if (check_ack(false)) {
 
                     // now EM4x50 needs T0 * EM4X50_T_TAG_TWEE (EEPROM write time = 3.2ms = 50 * 64 periods)
                     // for saving data and should return with ACK
                     for (int i = 0; i < 50; i++) {
-                        WaitUS(EM4X50_T_TAG_FULL_PERIOD * CYCLES2MUSEC);
+                        reader_wait_cycles(EM4X50_T_TAG_FULL_PERIOD);
                     }
 
                     if (check_ack(false))
@@ -1137,6 +1251,7 @@ void em4x50_write(const em4x50_data_t *etd, bool ledcontrol) {
     if (ledcontrol) LEDsoff();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     StopTicks();
+    capture_report();
     reply_ng(CMD_LF_EM4X50_WRITE, status, (uint8_t *)words, EM4X50_TAG_MAX_NO_BYTES);
 }
 

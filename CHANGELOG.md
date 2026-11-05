@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `lf em 4x50 rdbl/info/dump`, `lf search` - RM was sent into the tag data instead of the second listen window on strong, AC-coupled signals, so every command failed; reads now retry within 1 s (@abou28)
+- Added `lf em 4x50 config` - runtime EM4x50 reader timings, and `lf_em4x50_tune.lua` to sweep them; extended debug level captures the raw exchange for `data samples` (@abou28)
 - Updated `/Getting_Started_With_PM5.md` (@innocentbystanderproxmark)
 - Fixed `hf seos pacs`/`write` - 2K3DES GET/UPDATE DATA no longer fails silently with exit 236; print APDU exchange errors, check DES-CMAC, decode SELECT `85` at its real length, and use short-form `85` when the cryptogram is under 128 bytes
 - Fixed client build with `-march=x86-64-v3` (CentOS/RHEL 10 default) - false `-Wstringop-overflow` in the EMV AID list table (@r3wretrhy)

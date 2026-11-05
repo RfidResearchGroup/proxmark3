@@ -2065,6 +2065,14 @@ static void PacketReceived(PacketCommandNG *packet) {
             em4x50_chk((const char *)packet->data.asBytes, true);
             break;
         }
+        case CMD_LF_EM4X50_CONFIG: {
+            if (packet->length < sizeof(em4x50_config_t)) {
+                reply_ng(CMD_LF_EM4X50_CONFIG, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            em4x50_config((const em4x50_config_t *)packet->data.asBytes);
+            break;
+        }
 #endif
 
 #ifdef WITH_EM4x70
