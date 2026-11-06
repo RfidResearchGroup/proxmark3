@@ -179,9 +179,17 @@ int CmdHfThinFilmSim(const char *Cmd) {
         data[data_len++] = b1;
     }
 
+    // end a simulation still running from an earlier call and drop its reply
+    PacketResponseNG resp;
+    clearCommandBuffer();
+    SendCommandNG(CMD_PING, NULL, 0);
+    if (WaitForResponseTimeout(CMD_PING, &resp, 3000) == false) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        return PM3_ETIMEOUT;
+    }
+
     clearCommandBuffer();
     SendCommandNG(CMD_HF_THINFILM_SIMULATE, (uint8_t *)&data, data_len);
-    PacketResponseNG resp;
     PrintAndLogEx(SUCCESS, "press " _GREEN_("pm3 button") " to abort simulation");
 
     int ret;

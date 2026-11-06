@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf thinfilm sim` - a second simulation in the same client no longer ends at once with `Done!` (@matrix)
 - Fixed flashing with redirected output - the progress animation is drawn only when stdout is a terminal (@matrix)
 - Fixed `proxmark3 --flash`, `--dumpmem` and `--reboot-to-bootloader` exit status - a failure exits 1, a failed flash no longer ends with `All done` (@matrix)
 - Fixed `data rawdemod` - `--max`, `--samples` and the `--p2` clock no longer wrap above 255, `--fs` refuses values above 255 (@matrix)
