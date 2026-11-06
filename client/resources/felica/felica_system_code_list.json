@@ -147,6 +147,13 @@
     "description": "nanaco e-money system"
   },
   {
+    "code": "0801",
+    "name": "DoCARD",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by legacy DoCARD transit card (Dohoku Bus, Hokkaido)"
+  },
+  {
     "code": "12FC",
     "name": "NDEF Type 3 Tag",
     "region": "Global",
@@ -182,6 +189,20 @@
     "description": "Used by legacy Nagasaki Smart Card transit system (Nagasaki operators)"
   },
   {
+    "code": "8019",
+    "name": "Sony Finance",
+    "region": "Japan",
+    "type": "payment",
+    "description": "Sony Finance e-money system; used by K-Touch cards"
+  },
+  {
+    "code": "801D",
+    "name": "Sony Finance",
+    "region": "Japan",
+    "type": "payment",
+    "description": "Marker system found on Edy cards issued by Sony Finance"
+  },
+  {
     "code": "801E",
     "name": "AMPM",
     "region": "Japan",
@@ -208,6 +229,27 @@
     "region": "Japan",
     "type": "transit",
     "description": "Used by Hokkaido Kitami Bus transit card"
+  },
+  {
+    "code": "8054",
+    "name": "PRONTO",
+    "region": "Japan",
+    "type": "payment",
+    "description": "Marker system found on Edy cards issued by PRONTO"
+  },
+  {
+    "code": "8082",
+    "name": "ANA",
+    "region": "Japan",
+    "type": "loyalty",
+    "description": "Marker system found on ANA Mileage Club cards"
+  },
+  {
+    "code": "80BB",
+    "name": "CLUB DAM",
+    "region": "Japan",
+    "type": "loyalty",
+    "description": "Used by Edy Club DAM Members Cards"
   },
   {
     "code": "80DE",
@@ -285,6 +327,13 @@
     "region": "Japan",
     "type": "payment",
     "description": "Used by ANA QuicPay + Nanaco fob"
+  },
+  {
+    "code": "8188",
+    "name": "PokePark",
+    "region": "Japan",
+    "type": "payment",
+    "description": "Marker system found on Edy cards issued by PokePark"
   },
   {
     "code": "8194",
@@ -571,6 +620,13 @@
     "description": "Used by Ryuto transit card (Niigata Kotsu)"
   },
   {
+    "code": "8B61",
+    "name": "Kuroneko Members",
+    "region": "Japan",
+    "type": "loyalty",
+    "description": "Used by Kuroneko Members nanaco card (Yamato Transport)"
+  },
+  {
     "code": "8B98",
     "name": "RANDEN",
     "region": "Japan",
@@ -590,6 +646,13 @@
     "region": "Japan",
     "type": "payment",
     "description": "Marker system found on Edy cards issued by San in Shinpan"
+  },
+  {
+    "code": "8C37",
+    "name": "ICOUSA",
+    "region": "Japan",
+    "type": "transit",
+    "description": "Used by ICOUSA transit card (Kochi-area operators)"
   },
   {
     "code": "8CC1",
@@ -753,6 +816,13 @@
     "description": "Used by FeliCa Secure ID credentials"
   },
   {
+    "code": "966F",
+    "name": "Oshiharai",
+    "region": "Japan",
+    "type": "payment",
+    "description": "Marker system found on some Edy keychains"
+  },
+  {
     "code": "FE00",
     "name": "FeliCa Networks Common Area",
     "region": "Japan",
@@ -776,6 +846,16 @@
         "nodes": [
           {
             "code": "0B11"
+          }
+        ]
+      },
+      {
+        "name": "ELIO",
+        "type": "payment",
+        "description": "ELIO e-money service found on K-Touch cards (Sony Finance)",
+        "nodes": [
+          {
+            "code": "00233F26"
           }
         ]
       },
@@ -814,6 +894,9 @@
         "type": "loyalty",
         "description": "Karuwaza Club points and membership service",
         "nodes": [
+          {
+            "code": "8026D726"
+          },
           {
             "code": "8026FF26"
           }
