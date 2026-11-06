@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `wiegand` formats - HPP32, H10320 and S12906b encode as laid out, HGen37 decode checks the right parity bit, the limits of nine formats match their fields, `wiegand list -h` shows its own usage (@matrix)
 - Fixed flashing with redirected output - the progress animation is drawn only when stdout is a terminal (@matrix)
 - Fixed `proxmark3 --flash`, `--dumpmem` and `--reboot-to-bootloader` exit status - a failure exits 1, a failed flash no longer ends with `All done` (@matrix)
 - Fixed `data rawdemod` - `--max`, `--samples` and the `--p2` clock no longer wrap above 255, `--fs` refuses values above 255 (@matrix)

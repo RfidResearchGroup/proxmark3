@@ -494,6 +494,7 @@ while true; do
       if ! CheckExecute "nfc decode test signature"       "$CLIENTBIN -c 'nfc decode -d 03FF010194113870696C65742E65653A656B616172743A3266195F26063132303832325904202020205F28033233335F2701316E1B5A13333038363439303039303030323636343030355304EBF2CE704103000000AC536967010200803A2448FCA7D354A654A81BD021150D1A152D1DF4D7A55D2B771F12F094EAB6E5E10F2617A2F8DAD4FD38AFF8EA39B71C19BD42618CDA86EE7E144636C8E0E7CFC4096E19C3680E09C78A0CDBC05DA2D698E551D5D709717655E56FE3676880B897D2C70DF5F06ECE07C71435255144F8EE41AF110E7B180DA0E6C22FB8FDEF61800025687474703A2F2F70696C65742E65652F6372742F33303836343930302D303030312E637274FE'" "30864900-0001.crt"; then break; fi
       if ! CheckExecute "nfc decode test openprinter tag" "$CLIENTBIN -c 'nfc decode -d 03FF012F91013A55046E756D616B6572732E636F6D2F70726F64756374732F6162732D66696C616D656E743F76617269616E743D3436393434323937333836323932521CD26170706C69636174696F6E2F766E642E6F70656E7072696E74746167A10218AFBF041B000007D0FCAB45F9080009020A70414253204C656D6F6E2059656C6C6F770B684E756D616B6572730E1A69094200101903E81119041A1218F01343F9A800181DF93C29182218F01823190104182418AA1825185A18261864FF00'" "application/vnd.openprinttag"; then break; fi
 
+      if ! CheckExecute "wiegand list usage"              "$CLIENTBIN -c 'wiegand list -h'" "wiegand list \[-h\]"; then break; fi
       if ! CheckExecute "wiegand encode new"              "$CLIENTBIN -c 'wiegand encode -w H10301 --fc 123 --cn 4567 --new'" "New PACS\\.{9} 0x 06BD88EB80"; then break; fi
       if ! CheckExecute "wiegand encode bin"              "$CLIENTBIN -c 'wiegand encode --bin 1'" "Wiegand raw\\.{4} 03"; then break; fi
       if ! CheckExecute "wiegand encode new bin"          "$CLIENTBIN -c 'wiegand encode --bin 1 --new'" "New PACS\\.{9} 0x 0780"; then break; fi
@@ -507,6 +508,38 @@ while true; do
       if ! CheckExecute "wiegand encode new bin 96-bit raw" "PAT=\$(printf '01%.0s' {1..48}); $CLIENTBIN -c \"wiegand encode --bin \$PAT --new --verbose\"" "Wiegand --raw\\.{4} 0x 01555555555555555555555555"; then break; fi
       if ! CheckExecute "wiegand encode new 48-bit"       "$CLIENTBIN -c 'wiegand encode -w C1k48s --fc 42069 --cn 42069 --new'" "New PACS\\.{9} 0x 0000A4550148AB"; then break; fi
       if ! CheckExecute "wiegand decode raw over 96-bit"  "$CLIENTBIN -c 'wiegand decode --raw 01555555555555555555555555' 2>&1" "Raw hex decode supports up to 96 Wiegand bits"; then break; fi
+      if ! CheckExecute "wiegand encode HCP32 max"               "$CLIENTBIN -c 'wiegand encode -w HCP32 --cn 16777215 --new'" "New PACS\\.{9} 0x 007FFFFF80"; then break; fi
+      if ! CheckExecute "wiegand decode HCP32 max"               "$CLIENTBIN -c 'wiegand decode --new 007FFFFF80'" "\[HCP32 +\] HID Check Point 32-bit +CN: 16777215"; then break; fi
+      if ! CheckExecute "wiegand encode HPP32 max"               "$CLIENTBIN -c 'wiegand encode -w HPP32 --fc 4095 --cn 262143 --new'" "New PACS\\.{9} 0x 007FFFFFFE"; then break; fi
+      if ! CheckExecute "wiegand decode HPP32 max"               "$CLIENTBIN -c 'wiegand decode --new 007FFFFFFE'" "\[HPP32 +\] HID Hewlett-Packard 32-bit +FC: 4095  CN: 262143"; then break; fi
+      if ! CheckExecute "wiegand encode HPP32 over max"          "$CLIENTBIN -c 'wiegand encode -w HPP32 --fc 1 --cn 262144' 2>&1" "could not be encoded in the selected format"; then break; fi
+      if ! CheckExecute "wiegand encode Optus34 max"             "$CLIENTBIN -c 'wiegand encode -w Optus34 --fc 2047 --cn 65535 --new'" "New PACS\\.{9} 0x 067FFF83FF80"; then break; fi
+      if ! CheckExecute "wiegand decode Optus34 max"             "$CLIENTBIN -c 'wiegand decode --new 067FFF83FF80'" "\[Optus34 +\] Indala Optus 34-bit +FC: 2047  CN: 65535"; then break; fi
+      if ! CheckExecute "wiegand encode SMP34 max"               "$CLIENTBIN -c 'wiegand encode -w SMP34 --fc 8191 --cn 65535 --issue 7 --new'" "New PACS\\.{9} 0x 067FFFFFFF80"; then break; fi
+      if ! CheckExecute "wiegand decode SMP34 max"               "$CLIENTBIN -c 'wiegand decode --new 067FFFFFFF80'" "\[SMP34 +\] Cardkey Smartpass 34-bit +FC: 8191  CN: 65535  Issue: 7"; then break; fi
+      if ! CheckExecute "wiegand encode S12906b max"             "$CLIENTBIN -c 'wiegand encode -w S12906b --fc 217 --cn 16777215 --new'" "New PACS\\.{9} 0x 046CDFFFFFE0"; then break; fi
+      if ! CheckExecute "wiegand decode S12906b max"             "$CLIENTBIN -c 'wiegand decode --new 046CDFFFFFE0'" "\[S12906b +\] HID Simplex Grinnell 36-bit +FC: 217  CN: 16777215  parity \( ok \)"; then break; fi
+      if ! CheckExecute "wiegand encode H10320 max"              "$CLIENTBIN -c 'wiegand encode -w H10320 --cn 99999999 --new'" "New PACS\\.{9} 0x 03CCCCCCCCA0"; then break; fi
+      if ! CheckExecute "wiegand decode H10320 max"              "$CLIENTBIN -c 'wiegand decode --new 03CCCCCCCCA0'" "\[H10320 +\] HID H10320 37-bit BCD +CN: 99999999  parity \( ok \)"; then break; fi
+      if ! CheckExecute "wiegand encode H10320 12345678"         "$CLIENTBIN -c 'wiegand encode -w H10320 --cn 12345678 --new'" "New PACS\\.{9} 0x 03891A2B3C60"; then break; fi
+      if ! CheckExecute "wiegand decode H10320 12345678"         "$CLIENTBIN -c 'wiegand decode --new 03891A2B3C60'" "\[H10320 +\] HID H10320 37-bit BCD +CN: 12345678  parity \( ok \)"; then break; fi
+      if ! CheckExecute "wiegand encode HGen37 max"              "$CLIENTBIN -c 'wiegand encode -w HGen37 --cn 4294967295 --new'" "New PACS\\.{9} 0x 032FFFFFFFF8"; then break; fi
+      if ! CheckExecute "wiegand decode HGen37 max"              "$CLIENTBIN -c 'wiegand decode --new 032FFFFFFFF8'" "\[HGen37 +\] HID Generic 37-bit +CN: 4294967295  parity \( ok \)"; then break; fi
+      if ! CheckExecute "wiegand encode HGen37 parity"           "$CLIENTBIN -c 'wiegand encode -w HGen37 --cn 512 --new'" "New PACS\\.{9} 0x 030000002008"; then break; fi
+      if ! CheckExecute "wiegand decode HGen37 parity"           "$CLIENTBIN -c 'wiegand decode --new 030000002008'" "\[HGen37 +\] HID Generic 37-bit +CN: 512  parity \( ok \)"; then break; fi
+      if ! CheckExecute "wiegand encode BQT38 max"               "$CLIENTBIN -c 'wiegand encode -w BQT38 --fc 8191 --cn 524287 --issue 15 --new'" "New PACS\\.{9} 0x 027FFFFFFFFC"; then break; fi
+      if ! CheckExecute "wiegand decode BQT38 max"               "$CLIENTBIN -c 'wiegand decode --new 027FFFFFFFFC'" "\[BQT38 +\] BQT 38-bit +FC: 8191  CN: 524287  Issue: 15  parity \( ok \)"; then break; fi
+      if ! CheckExecute "wiegand encode ISCS max"                "$CLIENTBIN -c 'wiegand encode -w ISCS --fc 1023 --cn 4194303 --oem 15 --new'" "New PACS\\.{9} 0x 027FFFFFFFFC"; then break; fi
+      if ! CheckExecute "wiegand decode ISCS max"                "$CLIENTBIN -c 'wiegand decode --new 027FFFFFFFFC'" "\[ISCS +\] ISCS 38-bit +FC: 1023  CN: 4194303  OEM: 15  parity \( ok \)"; then break; fi
+      if ! CheckExecute "wiegand encode ISCS over max"           "$CLIENTBIN -c 'wiegand encode -w ISCS --fc 1 --cn 4194304' 2>&1" "could not be encoded in the selected format"; then break; fi
+      if ! CheckExecute "wiegand encode PW39 max"                "$CLIENTBIN -c 'wiegand encode -w PW39 --fc 131071 --cn 1048575 --new'" "New PACS\\.{9} 0x 017FFFFFFFFC"; then break; fi
+      if ! CheckExecute "wiegand decode PW39 max"                "$CLIENTBIN -c 'wiegand decode --new 017FFFFFFFFC'" "\[PW39 +\] Pyramid 39-bit wiegand format +FC: 131071  CN: 1048575  parity \( ok \)"; then break; fi
+      if ! CheckExecute "wiegand encode Casi40 max"              "$CLIENTBIN -c 'wiegand encode -w Casi40 --cn 274877906943 --new'" "New PACS\\.{9} 0x 007FFFFFFFFE"; then break; fi
+      if ! CheckExecute "wiegand decode Casi40 max"              "$CLIENTBIN -c 'wiegand decode --new 007FFFFFFFFE'" "\[Casi40 +\] Casi-Rusco 40-bit +CN: 274877906943"; then break; fi
+      if ! CheckExecute "wiegand encode Casi40 over max"         "$CLIENTBIN -c 'wiegand encode -w Casi40 --cn 274877906944' 2>&1" "could not be encoded in the selected format"; then break; fi
+      if ! CheckExecute "wiegand encode BC40 max"                "$CLIENTBIN -c 'wiegand encode -w BC40 --fc 4095 --cn 524287 --oem 127 --new'" "New PACS\\.{9} 0x 00FFFFFFFFFC"; then break; fi
+      if ! CheckExecute "wiegand decode BC40 max"                "$CLIENTBIN -c 'wiegand decode --new 00FFFFFFFFFC'" "\[BC40 +\] Bundy TimeClock 40-bit +FC: 4095  CN: 524287  OEM: 127  parity \( ok \)"; then break; fi
+      if ! CheckExecute "wiegand encode BC40 over max"           "$CLIENTBIN -c 'wiegand encode -w BC40 --fc 1 --cn 524288' 2>&1" "could not be encoded in the selected format"; then break; fi
       if ! CheckExecute "wiegand decode raw"              "$CLIENTBIN -c 'wiegand decode --raw 2006F623AE'" "FC: 123  CN: 4567  parity \( ok \)"; then break; fi
       if ! CheckExecute "wiegand decode bin over 96-bit"    "PAT=\$(printf '01%.0s' {1..49}); $CLIENTBIN -c \"wiegand decode --bin \$PAT\" 2>&1" "Binary decode supports up to 96 Wiegand bits"; then break; fi
       if ! CheckExecute "wiegand decode new"              "$CLIENTBIN -c 'wiegand decode --new 06BD88EB80'" "FC: 123  CN: 4567  parity \( ok \)"; then break; fi
