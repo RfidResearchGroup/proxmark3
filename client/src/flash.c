@@ -1027,7 +1027,9 @@ int flash_write(flash_file_t *ctx, flash_dev_t *flash_dev) {
         void (*old_sigint)(int) = SIG_ERR;
         void (*old_sigwinch)(int) = SIG_ERR;
 
-        if (blocks > 50) {
+        // escape sequences only where they work, not in a redirected stdout
+        bool animate = (blocks > 50) && g_session.stdoutOnTTY;
+        if (animate) {
 
             old_sigint = signal(SIGINT, hadouken_on_sigint);
 #ifndef _WIN32
@@ -1045,7 +1047,7 @@ int flash_write(flash_file_t *ctx, flash_dev_t *flash_dev) {
             }
 
             if (write_block(baddr, ctx->ver_info->magic, data, block_size, flash_dev) < 0) {
-                if (blocks > 50) {
+                if (animate) {
                     hadouken_stop();
                     restore_progress_signals(old_sigint, old_sigwinch);
                 }
@@ -1058,13 +1060,13 @@ int flash_write(flash_file_t *ctx, flash_dev_t *flash_dev) {
             length -= block_size;
             block++;
 
-            if (blocks > 50) {
+            if (animate) {
                 pct = (int)(block * 100) / blocks;
                 hadouken_set_progress(pct);
             }
         }
 
-        if (blocks > 50) {
+        if (animate) {
             hadouken_stop();
             restore_progress_signals(old_sigint, old_sigwinch);
         }

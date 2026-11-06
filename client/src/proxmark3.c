@@ -978,7 +978,7 @@ finish:
     } else if (ret == PM3_EOPABORTED) {
         PrintAndLogEx(FAILED, "Aborted by user");
     } else {
-        PrintAndLogEx(ERR, "Aborted on error %u", ret);
+        PrintAndLogEx(ERR, "Aborted on error %d", ret);
     }
     return ret;
 }
@@ -1071,7 +1071,11 @@ finish:
         PrintAndLogEx(WARNING, "The flashing procedure failed, follow the suggested steps!");
     }
 
-    ret = flash_stop_flashing();
+    // the reset must not hide the error that ended the flashing
+    int stop_ret = flash_stop_flashing();
+    if (ret == PM3_SUCCESS) {
+        ret = stop_ret;
+    }
     CloseProxmark(g_session.current_device);
 
 finish2:
@@ -1500,18 +1504,18 @@ int main(int argc, char *argv[]) {
     }
 
     if (dumpmem_mode) {
-        dumpmem_pm3(port, dumpmem_filename, dumpmem_addr, dumpmem_len, dumpmem_raw);
-        exit(EXIT_SUCCESS);
+        int ret = dumpmem_pm3(port, dumpmem_filename, dumpmem_addr, dumpmem_len, dumpmem_raw);
+        exit((ret == PM3_SUCCESS) ? EXIT_SUCCESS : EXIT_FAILURE);
     }
 
     if (flash_mode) {
-        flash_pm3(port, flash_num_files, flash_filenames, flash_can_write_bl, flash_force);
-        exit(EXIT_SUCCESS);
+        int ret = flash_pm3(port, flash_num_files, flash_filenames, flash_can_write_bl, flash_force);
+        exit((ret == PM3_SUCCESS) ? EXIT_SUCCESS : EXIT_FAILURE);
     }
 
     if (reboot_bootloader_mode) {
-        reboot_bootloader_pm3(port);
-        exit(EXIT_SUCCESS);
+        int ret = reboot_bootloader_pm3(port);
+        exit((ret == PM3_SUCCESS) ? EXIT_SUCCESS : EXIT_FAILURE);
     }
 
     if (script_cmd) {
