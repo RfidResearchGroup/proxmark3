@@ -471,6 +471,9 @@ while true; do
       if ! CheckExecute "data qrcode odd hex"     "$CLIENTBIN -c 'data qrcode -d a' 2>&1" "QR data must contain an even number of hex digits"; then break; fi
       if ! CheckExecute "data qrcode spaced hex"  "$CLIENTBIN -c 'data qrcode -d \"aa bb\"' 2>&1" "Spaces are not supported; encode a space byte as 20"; then break; fi
       if ! CheckExecute "data modulation keeps trace" "$CLIENTBIN -c 'data load -f traces/lf_Q5_mod-psk1-32-4.pm3; data modulation; data autocorr -w 99999'" "smaller than trace \\( 20000 samples \\)"; then break; fi
+      if ! CheckExecute "data rawdemod fs clock range"           "$CLIENTBIN -c 'data rawdemod --fs -c 300' 2>&1" "Clock and field clocks must be 0 - 255"; then break; fi
+      if ! CheckExecute "data rawdemod ar samples"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_keri.pm3; data setdebugmode -1; data rawdemod --ar --samples 1000' 2>&1" "maxLen 1000"; then break; fi
+      if ! CheckExecute "data rawdemod am max errors"            "$CLIENTBIN -c 'data load -f traces/lf_EM4102-1.pm3; data setdebugmode -1; data rawdemod --am --max 300' 2>&1" "maxErr 300"; then break; fi
       if ! CheckExecute "mfu pwdgen test"         "$CLIENTBIN -c 'hf mfu pwdgen --test'" "Selftest ok"; then break; fi
       if ! CheckExecute "mfu keygen test"         "$CLIENTBIN -c 'hf mfu keygen --uid 11223344556677'" "80 B1 C2 71 D8 A0"; then break; fi
       if ! CheckExecute "jooki encode test"       "$CLIENTBIN -c 'hf jooki encode --test'" "04 28 F4 DA F0 4A 81  \( ok \)"; then break; fi
