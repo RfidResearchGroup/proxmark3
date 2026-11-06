@@ -7,7 +7,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed `proxmark3 --flash`, `--dumpmem` and `--reboot-to-bootloader` exit status - a failure exits 1, a failed flash no longer ends with `All done` (@matrix)
 - Fixed `data rawdemod` - `--max`, `--samples` and the `--p2` clock no longer wrap above 255, `--fs` refuses values above 255 (@matrix)
 - Fixed `mfulc_des_brute` build on macOS without `openssl@3.6` - OpenSSL is found with `brew --prefix openssl` as in `mfd_aes_brute` (@matrix)
-- Fixed CI - ProxSpace installs its packages again, WSL builds in its own file system, Ubuntu skips the slow Azure apt mirror (@matrix)
+- Fixed CI - ProxSpace installs its packages again, WSL builds in its own file system, Ubuntu and CodeQL skip the slow Azure apt mirror (@matrix)
 - Fixed `recovery.bin` on the AT91 platforms - the bootrom is padded to 0x102000 again, so the OS image is at its load address (@matrix)
 - Updated `/Getting_Started_With_PM5.md` (@innocentbystanderproxmark)
 - Fixed `hf seos pacs`/`write` - 2K3DES GET/UPDATE DATA no longer fails silently with exit 236; print APDU exchange errors, check DES-CMAC, decode SELECT `85` at its real length, and use short-form `85` when the cryptogram is under 128 bytes
