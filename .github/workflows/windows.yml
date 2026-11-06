@@ -56,7 +56,6 @@ jobs:
           ##############################
           mingw-w64-ucrt-x86_64-gcc
           mingw-w64-ucrt-x86_64-arm-none-eabi-gcc
-          mingw-w64-ucrt-x86_64-arm-none-eabi-gdb
           mingw-w64-ucrt-x86_64-arm-none-eabi-binutils
           mingw-w64-ucrt-x86_64-arm-none-eabi-newlib
           mingw-w64-ucrt-x86_64-readline
@@ -109,7 +108,10 @@ jobs:
             }
             exit 1
 
+      # no credentials to clean up after the job, when MSYS2's git is first on PATH
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       # Prepend MSYS2 tools to PATH only for steps after checkout, so actions/checkout
       # keeps using the runner's native git (MSYS2's git.exe mangles refs like
