@@ -605,6 +605,8 @@ if ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND OR Qt6_FOUND))
 
     add_definitions("-DHAVE_GUI")
     if (Qt6_FOUND)
+        # Fix copy relocation issues with Qt6 protected visibility symbols on GCC 15 toolchains
+        set(CMAKE_POSITION_INDEPENDENT_CODE ON)
         set(ADDITIONAL_DIRS ${Qt6_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
         set(ADDITIONAL_LNK ${Qt6_LIBRARIES} ${ADDITIONAL_LNK})
     else (Qt6_FOUND)

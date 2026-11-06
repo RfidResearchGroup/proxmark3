@@ -548,6 +548,9 @@ ifeq ($(QT_FOUND),1)
         # On OSX Qt6 is claiming for a C++11 compiler (gnu++14 works too, but if nothing it fails)
         PM3CXXFLAGS += -std=c++11
     endif
+    # Fix GCC 15 + Qt6 linker error
+    PM3CFLAGS += -fPIC
+    PM3CXXFLAGS += -fPIC
 endif
 
 PM3CXXFLAGS += -DHAVE_SNPRINTF
