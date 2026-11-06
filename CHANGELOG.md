@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `data rawdemod` - `--max`, `--samples` and the `--p2` clock no longer wrap above 255, `--fs` refuses values above 255 (@matrix)
 - Fixed `mfulc_des_brute` build on macOS without `openssl@3.6` - OpenSSL is found with `brew --prefix openssl` as in `mfd_aes_brute` (@matrix)
 - Fixed CI - ProxSpace installs its packages again, WSL builds in its own file system, Ubuntu skips the slow Azure apt mirror (@matrix)
 - Fixed `recovery.bin` on the AT91 platforms - the bootrom is padded to 0x102000 again, so the OS image is at its load address (@matrix)
