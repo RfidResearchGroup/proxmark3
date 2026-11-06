@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install oss-cad-suite
         run: |
@@ -80,7 +80,7 @@ jobs:
           md5sum -c "$RUNNER_TEMP/bitstream.md5"
 
       - name: Upload the bitstream
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: fpga-pm5-bitstream
           path: |
