@@ -108,10 +108,7 @@ jobs:
             }
             exit 1
 
-      # no credentials to clean up after the job, when MSYS2's git is first on PATH
-      - uses: actions/checkout@v6
-        with:
-          persist-credentials: false
+      - uses: actions/checkout@v7
 
       # Prepend MSYS2 tools to PATH only for steps after checkout, so actions/checkout
       # keeps using the runner's native git (MSYS2's git.exe mangles refs like
@@ -209,7 +206,7 @@ jobs:
           git config --global core.autocrlf false
           git config --global core.eol lf
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       # builds on the Windows drive (/mnt/d) are slow from WSL 2
       - name: Copy the sources into the WSL file system
