@@ -99,7 +99,12 @@ jobs:
             for ($i = 1; $i -le $maxAttempts; $i++) {
                 Write-Host "Attempt $i..."
                 ./runme64.bat -c "exit"
-                if ($LASTEXITCODE -eq 0) { exit 0 }
+                # MSYS2 runs post-install scripts on its first start only since filesystem 2026.10.18,
+                # so ProxSpace's package setup (it writes setup\installed) is sourced here
+                if ($LASTEXITCODE -eq 0 -and -not (Test-Path setup\installed)) {
+                    ./runme64.bat -c ". /etc/post-install/09-proxspace_setup.post"
+                }
+                if ($LASTEXITCODE -eq 0 -and (Test-Path setup\installed)) { exit 0 }
                 if ($i -lt $maxAttempts) { Start-Sleep -Seconds $delay }
             }
             exit 1
@@ -204,29 +209,34 @@ jobs:
 
       - uses: actions/checkout@v6
 
+      # builds on the Windows drive (/mnt/d) are slow from WSL 2
+      - name: Copy the sources into the WSL file system
+        run: cp -a . ~/proxmark3
+
       - name: make clean
-        run: make clean
+        run: cd ~/proxmark3 && make clean
 
       - name: Build
-        run: make -j$((`nproc` + 1)) V=1
+        run: cd ~/proxmark3 && make -j$((`nproc` + 1)) V=1
 
       - name: Test
-        run: make check
+        run: cd ~/proxmark3 && make check
 
       - name: make clean
-        run: make clean
+        run: cd ~/proxmark3 && make clean
 
       - name: Build btaddon
-        run: make -j$((`nproc` + 1)) V=1 PLATFORM_EXTRAS=BTADDON
+        run: cd ~/proxmark3 && make -j$((`nproc` + 1)) V=1 PLATFORM_EXTRAS=BTADDON
 
       - name: Test btaddon
-        run: make check
+        run: cd ~/proxmark3 && make check
 
       - name: make clean
-        run: make clean
+        run: cd ~/proxmark3 && make clean
 
       - name: Prepare cmake build folders
         run: |
+          cd ~/proxmark3
           mkdir -p client/build
           ln -s ../cmdscripts client/build/
           ln -s ../luascripts client/build/
@@ -234,12 +244,10 @@ jobs:
           ln -s ../lualibs client/build/
 
       - name: Initiate cmake environment
-        run: cmake ..
-        working-directory: client/build/
+        run: cd ~/proxmark3/client/build && cmake ..
 
       - name: Build cmake
-        run: make -j$((`nproc` + 1)) VERBOSE=1
-        working-directory: client/build/
+        run: cd ~/proxmark3/client/build && make -j$((`nproc` + 1)) VERBOSE=1
 
       - name: Test cmake
-        run: make client/check CHECKARGS="--clientbin ./client/build/proxmark3"
+        run: cd ~/proxmark3 && make client/check CHECKARGS="--clientbin ./client/build/proxmark3"
