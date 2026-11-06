@@ -614,6 +614,7 @@ while true; do
       if ! CheckExecute "lf T55 keri_msid test"             "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_keri_msid.pm3; lf search -1'" "KERI ID found"; then break; fi
       if ! CheckExecute "lf T55 keri_msid test 2"           "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_keri_msid.pm3; lf keri demod'" \
                                                                      "Descrambled MS - FC: 6 Card: 12345"; then break; fi
+      if ! CheckExecute "lf keri sim help example"          "$CLIENTBIN -c 'lf keri sim -h'" "lf keri sim --id 112233"; then break; fi
 #      if ! CheckExecute "lf T55 motorola test"              "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_motorola.pm3; lf search -1'" "Indala ID found"; then break; fi
       if ! CheckExecute "lf T55 motorola test 2"             "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_motorola.pm3; lf motorola demod'" \
                                                                      "Motorola - fmt: 26 FC: 258 Card: 2, Raw: A0000000A0002021"; then break; fi
