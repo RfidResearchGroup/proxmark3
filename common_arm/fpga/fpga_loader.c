@@ -29,6 +29,7 @@
 #include "string.h"
 
 #include "lz4.h"       // uncompress
+#include "pm5_sniffimg.h"
 
 typedef struct {
     LZ4_streamDecode_t *lz4StreamDecode;
@@ -317,6 +318,11 @@ static bool FpgaConfCurrentMode(int bitstream_target) {
 // decompress and load the correct (HF or LF) image to the FPGA
 //----------------------------------------------------------------------------
 static void FpgaDownloadAndGoEx(int bitstream_target, bool keep_em) {
+
+#ifdef PM5_SNIFF_EMBED
+    // the 14a sniffer's SRAM image is only for the sniffer: everything else gets the image from the FPGA's flash
+    Pm5SniffImgRestore();
+#endif
 
     // check whether or not the bitstream is already loaded
     if (downloaded_bitstream == bitstream_target) {

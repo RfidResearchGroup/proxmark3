@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf 14a sniff` - PM5: decodes 212 / 424 / 848 kbit/s after a PPS, with a sniffer FPGA image loaded into SRAM (@cmac-chris)
+- Fixed `hf 14a sniff` - PM5: a sniff that fell behind once no longer stays deaf, the AT32's DMA is re-armed (@cmac-chris)
+- Changed `trace list` - trace lengths are 32-bit, so the client reads the PM5's whole trace (about 420 KB); on a PM5, frames at 212 / 424 / 848 kbit/s no longer get a partial byte mark (@cmac-chris)
 - Updated `/Getting_Started_With_PM5.md` (@innocentbystanderproxmark)
 - Fixed `hf seos pacs`/`write` - 2K3DES GET/UPDATE DATA no longer fails silently with exit 236; print APDU exchange errors, check DES-CMAC, decode SELECT `85` at its real length, and use short-form `85` when the cryptogram is under 128 bytes
 - Fixed client build with `-march=x86-64-v3` (CentOS/RHEL 10 default) - false `-Wstringop-overflow` in the EMV AID list table (@r3wretrhy)

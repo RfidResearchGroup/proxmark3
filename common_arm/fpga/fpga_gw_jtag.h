@@ -91,6 +91,7 @@ typedef enum {
     GOWIN_JTAG_ERROR_VLD_STATUS,
     GOWIN_JTAG_ERROR_ERASE_FAIL,
     GOWIN_JTAG_ERROR_ENABLE_CFG,
+    GOWIN_JTAG_ERROR_DONE_TIMEOUT,
 } gowin_jtag_status_t;
 
 typedef enum {
@@ -213,6 +214,9 @@ gowin_jtag_status_t gowin_jtag_sram_config_write(
     uint32_t *tx_bytes_pos,
     uint32_t tx_bytes_total);
 gowin_jtag_status_t gowin_jtag_sram_config_finish(void);
+// as gowin_jtag_sram_config_finish, its fixed 60 ms replaced: done polled (at most timeout_ms), then settle_ms with the
+// JTAG pins idle before the TAP reset
+gowin_jtag_status_t gowin_jtag_sram_config_finish_poll(uint32_t timeout_ms, uint32_t settle_ms);
 
 gowin_jtag_status_t gowin_jtag_flash_erase(void);
 gowin_jtag_status_t gowin_jtag_flash_config_start(

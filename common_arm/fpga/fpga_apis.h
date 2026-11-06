@@ -85,6 +85,7 @@
 #define FPGA_CMD_SET_EDGE_DETECT_THRESHOLD          (3<<12)
 #define FPGA_CMD_TRACE_ENABLE                       (2<<12)
 #define FPGA_CMD_SET_PWR_PWM_LOW_COUNT              (4<<12) // For PM5
+#define FPGA_CMD_PM5_SNIFF_RATE                     (10<<12) // For PM5, 14a sniffer image: [1:0] tag, [3:2] reader bit rate, [4] 16-bit words
 
 // Major modes
 #define FPGA_MAJOR_MODE_LF_READER                   (0<<6)
@@ -319,6 +320,15 @@ bool FpgaSetupSscRxDmaSingle(void *buf, uint16_t len);
 // @params cmd and v  gets OR:ED over each other.  Take careful note of overlapping bits.
 //-----------------------------------------------------------------------------
 void FpgaSendCommand(uint16_t cmd, uint16_t v);
+
+#ifdef PM5
+//-----------------------------------------------------------------------------
+// FpgaSendCommand for a mode streaming words to the ARM: sent right after a frame pulse, and the SSC comes back on right
+// after a later one (turned back on within one, a 16-bit TI receiver could come back a bit late and stay so). Returns
+// the words the SSC missed, 0 if no pulse was seen.
+//-----------------------------------------------------------------------------
+uint8_t FpgaSendCommandFrameSync(uint16_t cmd, uint16_t v);
+#endif
 
 //-----------------------------------------------------------------------------
 // Write the FPGA setup word (that determines what mode the logic is in, read
