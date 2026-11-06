@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `recovery.bin` on the AT91 platforms - the bootrom is padded to 0x102000 again, so the OS image is at its load address (@matrix)
 - Updated `/Getting_Started_With_PM5.md` (@innocentbystanderproxmark)
 - Fixed `hf seos pacs`/`write` - 2K3DES GET/UPDATE DATA no longer fails silently with exit 236; print APDU exchange errors, check DES-CMAC, decode SELECT `85` at its real length, and use short-form `85` when the cryptogram is under 128 bytes
 - Fixed client build with `-march=x86-64-v3` (CentOS/RHEL 10 default) - false `-Wstringop-overflow` in the EMV AID list table (@r3wretrhy)
