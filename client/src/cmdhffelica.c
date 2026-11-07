@@ -141,6 +141,11 @@ static bool felica_is_lite_ic_type(uint8_t ic_type) {
     return (ic_type == 0xF0 || ic_type == 0xF1);
 }
 
+static bool felica_pmm_is_sd2_or_newer(const uint8_t *pmm) {
+    // SD2+ officially starts with 0x44, but 0x38/0x3B also express those features
+    return (pmm != NULL && (pmm[1] == 0x38 || pmm[1] == 0x3B || (pmm[1] >= 0x44 && pmm[1] <= 0x7F)));
+}
+
 static bool felica_pmm_is_lite(const uint8_t *pmm) {
     return (pmm != NULL && pmm[0] == 0x00 && felica_is_lite_ic_type(pmm[1]));
 }
@@ -2383,20 +2388,38 @@ static int discover_systems(uint8_t flags, const uint8_t *primary_idm,
                                             primary_system_code, primary_idm_polled, primary_pmm_polled);
     }
 
-    if (got_system_code_list == false) {
-        for (size_t i = 0; i < ARRAYLEN(FELICA_MANUAL_SYSTEM_PROBE_TARGETS); i++) {
-            uint8_t probed_idm[8] = {0};
-            uint8_t probed_pmm[8] = {0};
-            const uint16_t system_code = FELICA_MANUAL_SYSTEM_PROBE_TARGETS[i].system_code;
-            if (send_polling(flags, system_code, FELICA_POLLING_REQUEST_NO_DATA,
-                             FELICA_POLLING_TIMEOUT_MS, polling_retries, false,
-                             probed_idm, probed_pmm, NULL) != PM3_SUCCESS) {
-                continue;
+    // Probe systems manually, for the following reasons:
+    // * FeliCa Lite cards do not support RequestSystemCode
+    // * FeliCa Standard SD2 cards may host independent Lite/Secure ID environments
+    //   not discoverable through RequestSystemCode
+    bool probe_selected = false;
+    const bool probe_allowed = got_system_code_list == false ||
+                               felica_pmm_is_lite(primary_pmm_polled) ||
+                               felica_pmm_is_sd2_or_newer(primary_pmm_polled);
+    for (size_t i = 0; probe_allowed && i < ARRAYLEN(FELICA_MANUAL_SYSTEM_PROBE_TARGETS); i++) {
+        const uint16_t system_code = FELICA_MANUAL_SYSTEM_PROBE_TARGETS[i].system_code;
+        bool known = false;
+        for (size_t j = 0; j < discovered_systems->count; j++) {
+            if (discovered_systems->systems[j].system_code == system_code) {
+                known = true;
+                break;
             }
-
-            felica_add_unique_discovered_system(discovered_systems->systems, &discovered_systems->count,
-                                                system_code, probed_idm, probed_pmm);
         }
+        if (known) {
+            continue;
+        }
+
+        uint8_t probed_idm[8] = {0};
+        uint8_t probed_pmm[8] = {0};
+        if (send_polling(flags, system_code, FELICA_POLLING_REQUEST_NO_DATA,
+                         FELICA_POLLING_TIMEOUT_MS, polling_retries, false,
+                         probed_idm, probed_pmm, NULL) != PM3_SUCCESS) {
+            continue;
+        }
+
+        felica_add_unique_discovered_system(discovered_systems->systems, &discovered_systems->count,
+                                            system_code, probed_idm, probed_pmm);
+        probe_selected = true;
     }
 
     if (discovered_systems->count == 0) {
@@ -2434,6 +2457,15 @@ static int discover_systems(uint8_t flags, const uint8_t *primary_idm,
         write_index++;
     }
     discovered_systems->count = write_index;
+
+    // For SD2 cards, dedicated environments may have a more limited command set
+    // so we reselect the main Standard system
+    if (probe_selected && felica_pmm_is_sd2_or_newer(primary_pmm_polled)) {
+        uint8_t reselect_idm[8] = {0};
+        send_polling(flags, FELICA_SYSTEM_CODE_WILDCARD, FELICA_POLLING_REQUEST_NO_DATA,
+                     FELICA_POLLING_TIMEOUT_MS, polling_retries, false,
+                     reselect_idm, NULL, NULL);
+    }
 
     if (discovered_systems->count == 0) {
         return PM3_ERFTRANS;

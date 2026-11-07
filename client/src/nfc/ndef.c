@@ -1440,12 +1440,17 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
 
         switch (ndef[indx]) {
             case 0x00: {
-                indx++;
-                uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
-                PrintAndLogEx(SUCCESS, "--- " _CYAN_("NDEF NULL block") " ---");
-                if (len)
-                    PrintAndLogEx(WARNING, "NDEF NULL block size must be 0, got %d bytes", len);
-                indx += len;
+                // a NULL TLV is the T byte alone, without length
+                size_t run = 0;
+                while ((indx < ndefLen) && (ndef[indx] == 0x00)) {
+                    indx++;
+                    run++;
+                }
+                if (run == 1) {
+                    PrintAndLogEx(SUCCESS, "--- " _CYAN_("NDEF NULL block") " ---");
+                } else {
+                    PrintAndLogEx(SUCCESS, "--- " _CYAN_("NDEF NULL block") " --- x %zu", run);
+                }
                 break;
             }
             case 0x01: {
@@ -1458,15 +1463,16 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                 } else {
                     uint8_t pages_addr = (ndef[indx] >> 4) & 0x0f;
                     uint8_t byte_offset = ndef[indx] & 0x0f;
-                    uint8_t Size = ndef[indx + 1];
-                    uint8_t BytesLockedPerLockBit = (ndef[indx + 2] >> 4) & 0x0f;
-                    uint8_t bytes_per_page = ndef[indx + 2] & 0x0f;
+                    // Type 2 Tag spec: Size 0 is 256 lock bits, both nibbles are powers of two
+                    uint16_t Size = (ndef[indx + 1]) ? ndef[indx + 1] : 256;
+                    uint16_t BytesLockedPerLockBit = 1 << ((ndef[indx + 2] >> 4) & 0x0f);
+                    uint16_t bytes_per_page = 1 << (ndef[indx + 2] & 0x0f);
                     PrintAndLogEx(SUCCESS, " Pages addr (number of pages).... %d", pages_addr);
                     PrintAndLogEx(SUCCESS, " Byte offset (number of bytes)... %d", byte_offset);
-                    PrintAndLogEx(SUCCESS, " Lock Area size in bits.......... %d ( %d bytes )", Size, Size / 8);
-                    PrintAndLogEx(SUCCESS, "        Number of bytes / page... %d", bytes_per_page);
+                    PrintAndLogEx(SUCCESS, " Lock Area size in bits.......... %u ( %u bytes )", Size, (Size + 7) / 8);
+                    PrintAndLogEx(SUCCESS, "        Number of bytes / page... %u", bytes_per_page);
                     PrintAndLogEx(SUCCESS, " Bytes Locked Per LockBit");
-                    PrintAndLogEx(SUCCESS, "  number of bytes that each dynamic lock bit locks... %d", BytesLockedPerLockBit);
+                    PrintAndLogEx(SUCCESS, "  number of bytes that each dynamic lock bit locks... %u", BytesLockedPerLockBit);
                 }
                 indx += len;
                 break;
@@ -1481,11 +1487,12 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                 } else {
                     uint8_t pages_addr = (ndef[indx] >> 4) & 0x0f;
                     uint8_t byte_offset = ndef[indx] & 0x0f;
-                    uint8_t Size = ndef[indx + 1];
-                    uint8_t bytes_per_page = ndef[indx + 2] & 0x0f;
+                    // Type 2 Tag spec: Size is in bytes, 0 is 256, the page size is a power of two
+                    uint16_t Size = (ndef[indx + 1]) ? ndef[indx + 1] : 256;
+                    uint16_t bytes_per_page = 1 << (ndef[indx + 2] & 0x0f);
                     PrintAndLogEx(SUCCESS, "Pages addr (number of pages).... %u", pages_addr);
                     PrintAndLogEx(SUCCESS, "Byte offset (number of bytes)... %u", byte_offset);
-                    PrintAndLogEx(SUCCESS, "Reserved area size in bits...... %u ( %u bytes )", Size, Size / 8);
+                    PrintAndLogEx(SUCCESS, "Reserved area size in bytes..... %u", Size);
                     PrintAndLogEx(SUCCESS, "       Number of bytes / page... %u", bytes_per_page);
                 }
                 indx += len;
@@ -1541,8 +1548,13 @@ int NDEFGetTotalLength(uint8_t *ndef, size_t ndeflen, size_t *outlen) {
     size_t idx = 0;
     while (idx < ndeflen) {
 
-        if (ndef[idx] == 0x00 ||
-                ndef[idx] == 0x01 ||
+        // a NULL TLV is the T byte alone, no length
+        if (ndef[idx] == 0x00) {
+            idx++;
+            continue;
+        }
+
+        if (ndef[idx] == 0x01 ||
                 ndef[idx] == 0x02 ||
                 ndef[idx] == 0x03 ||
                 ndef[idx] == 0xFD) {
