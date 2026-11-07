@@ -4,6 +4,10 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Fixed `wiegand` formats - HPP32, H10320 and S12906b encode as laid out, HGen37 decode checks the right parity bit, the limits of nine formats match their fields, `wiegand list -h` shows its own usage (@matrix)
+- Fixed `hf secc sim` - the ATQA codes the UID size, so readers that check it select a 7 or 10 byte UID, and a zero UID prints as taken from emulator memory (@matrix)
+- Fixed `lf keri clone` and `sim` - values the frame can't carry are refused instead of cut, `sim` prints the id and its raw, the help example and the clone hint name `--id` and `lf keri reader` (@matrix)
+- Fixed `lf paradox clone` and `sim` - FC above 255 and CN above 65535 are refused instead of cut, the clone hint names `lf paradox reader` (@matrix)
+- Fixed NDEF TLV decoding - a NULL TLV has no length, Lock and Memory Control sizes of 0 mean 256 and their page fields are powers of two (@matrix)
 - Fixed flashing with redirected output - the progress animation is drawn only when stdout is a terminal (@matrix)
 - Fixed `proxmark3 --flash`, `--dumpmem` and `--reboot-to-bootloader` exit status - a failure exits 1, a failed flash no longer ends with `All done` (@matrix)
 - Fixed `data rawdemod` - `--max`, `--samples` and the `--p2` clock no longer wrap above 255, `--fs` refuses values above 255 (@matrix)

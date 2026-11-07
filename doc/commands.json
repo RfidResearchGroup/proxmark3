@@ -13773,7 +13773,7 @@
             "command": "lf keri sim",
             "description": "Enables simulation of KERI card with internal ID. You supply a KERI card id and it will converted to a KERI internal ID.",
             "notes": [
-                "lf keri sim --cn 112233"
+                "lf keri sim --id 112233"
             ],
             "offline": false,
             "options": [
