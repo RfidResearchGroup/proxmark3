@@ -2028,18 +2028,9 @@ int mfu_get_version_uid(uint8_t *version, uint8_t *uid) {
     return PM3_SUCCESS;
 }
 
-// Statistical PRNG check (generic weak-RNG backstop).
-// Genuine NXP ULC draws RndB from a hardware TRNG (2^64 space), so it never
-// repeats across a realistic batch. The common counterfeits (Giantec
-// GT23SC4489, USCUID-UL) use a 16-bit LFSR whose wakeup-timing seed
-// concentrates the observed RndB pool to ~2^6.5, so a duplicate appears within
-// ~12 authentications. A single collision is therefore proof of a weak PRNG.
-// This runs only on the genuine-looking fallthrough below (the known
-// counterfeit profiles return earlier), so it is the catch-all for weak-RNG
-// clones that match none of those profiles, including future variants.
-// Ref: "BREAKMEIFYOUCAN!", eprint.iacr.org/2026/100, Section 11.
+// Weak-PRNG backstop: RndB collision => counterfeit LFSR
 #define MFULC_PRNG_SAMPLES 40
-#define MFULC_PRNG_CLEAR   39   // no collision by here => an LFSR pool would have, >99.99%
+#define MFULC_PRNG_CLEAR   39
 
 static int mfulc_prng_test(uint32_t samples) {
     if (samples < 2) {
@@ -2088,15 +2079,14 @@ static int mfulc_prng_test(uint32_t samples) {
     }
 
     if (dups > 0) {
-        PrintAndLogEx(SUCCESS, "PRNG......... " _RED_("weak") ": repeated RndB (%u dup in %u, first at draw %u)", dups, got, first_dup);
-        PrintAndLogEx(INFO, "              genuine NXP uses a TRNG and never repeats: counterfeit (LFSR) tell");
+        PrintAndLogEx(SUCCESS, "PRNG......... " _RED_("Weak") " (RndB collision at %u)", first_dup);
         return PM3_SUCCESS;
     }
 
     if (got >= MFULC_PRNG_CLEAR) {
-        PrintAndLogEx(INFO, "PRNG......... no RndB collision in %u nonces, consistent with a genuine TRNG", got);
+        PrintAndLogEx(SUCCESS, "PRNG......... " _GREEN_("Genuine"));
     } else {
-        PrintAndLogEx(INFO, "PRNG......... no RndB collision in %u nonces (need >= %u for high confidence)", got, (uint32_t)MFULC_PRNG_CLEAR);
+        PrintAndLogEx(INFO, "PRNG......... inconclusive (%u/%u nonces)", got, (uint32_t)MFULC_PRNG_CLEAR);
     }
     return PM3_SUCCESS;
 }
@@ -2212,8 +2202,7 @@ static int mfulc_fingerprint(void) {
             }
         }
     }
-    // No known counterfeit profile matched; run the generic weak-PRNG
-    // backstop before concluding the card is genuine.
+    // weak-PRNG backstop
     mfulc_prng_test(MFULC_PRNG_SAMPLES);
     PrintAndLogEx(INFO, "likely MF0ICU2");
     DropField();
