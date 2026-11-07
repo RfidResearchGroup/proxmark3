@@ -12162,6 +12162,27 @@
             ],
             "usage": "lf em 4x50 chk [-h] [-f <fn>]"
         },
+        "lf em 4x50 config": {
+            "command": "lf em 4x50 config",
+            "description": "Get or set the reader timings used by EM4x50 commands, in carrier cycles. Settings are lost when the device restarts.",
+            "notes": [
+                "lf em 4x50 config -> show current settings",
+                "lf em 4x50 config --rm 136 -> send RM 136 cycles after the listen window",
+                "lf em 4x50 config --gs 4 --ge 28 -> field gap of a \"0\" bit from cycle 4 to 28",
+                "lf em 4x50 config -d -> restore defaults"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-d, --default restore default settings",
+                "--thr <1-100> envelope threshold, percent of amplitude (def 75)",
+                "--tol <1-15> pulse length tolerance (def 10)",
+                "--gs <0-62> field gap start in a \"0\" bit (def 7)",
+                "--ge <1-63> field gap end in a \"0\" bit (def 38)",
+                "--rm <1-320> RM start after the first listen window (def 132)"
+            ],
+            "usage": "lf em 4x50 config [-hd] [--thr <1-100>] [--tol <1-15>] [--gs <0-62>] [--ge <1-63>] [--rm <1-320>]"
+        },
         "lf em 4x50 dump": {
             "command": "lf em 4x50 dump",
             "description": "Reads all blocks/words from EM4x50 tag and saves dump in (bin/json) format",
@@ -16810,7 +16831,7 @@
         }
     },
     "metadata": {
-        "commands_extracted": 936,
+        "commands_extracted": 937,
         "extracted_by": "PM3Help2JSON v1.00",
         "extracted_on": "2026-11-06T22:34:07+00:00"
     }

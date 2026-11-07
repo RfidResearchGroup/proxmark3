@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `lf em 4x50 rdbl/info/dump`, `lf search` - RM was sent into the tag data instead of the second listen window on strong, AC-coupled signals, so every command failed; reads now retry within 1 s (@abou28)
+- Added `lf em 4x50 config` - runtime EM4x50 reader timings, and `lf_em4x50_tune.lua` to sweep them; extended debug level captures the raw exchange for `data samples` (@abou28)
 - Fixed `hf thinfilm sim` - a second simulation in the same client no longer ends at once with `Done!` (@matrix)
 - Added `hf mf supercard -u` - UID change on super card generation 2 (@mishamyte)
 - Changed `hf mf supercard` - a refused `-r`/`-u` now exits non-zero instead of reporting success (@mishamyte)

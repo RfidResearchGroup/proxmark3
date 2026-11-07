@@ -1348,11 +1348,83 @@ static int CmdEM4x50View(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int em4x50_send_config(em4x50_config_t *cfg) {
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X50_CONFIG, (uint8_t *)cfg, sizeof(em4x50_config_t));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_LF_EM4X50_CONFIG, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        return PM3_ETIMEOUT;
+    }
+    if (resp.length >= sizeof(em4x50_config_t)) {
+        memcpy(cfg, resp.data.asBytes, sizeof(em4x50_config_t));
+    }
+    return resp.status;
+}
+
+static int CmdEM4x50Config(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf em 4x50 config",
+                  "Get or set the reader timings used by EM4x50 commands, in carrier cycles.\n"
+                  "Settings are lost when the device restarts.",
+                  "lf em 4x50 config                 -> show current settings\n"
+                  "lf em 4x50 config --rm 136        -> send RM 136 cycles after the listen window\n"
+                  "lf em 4x50 config --gs 4 --ge 28  -> field gap of a \"0\" bit from cycle 4 to 28\n"
+                  "lf em 4x50 config -d              -> restore defaults\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("d", "default", "restore default settings"),
+        arg_int0(NULL, "thr", "<1-100>", "envelope threshold, percent of amplitude (def 75)"),
+        arg_int0(NULL, "tol", "<1-15>", "pulse length tolerance (def 10)"),
+        arg_int0(NULL, "gs", "<0-62>", "field gap start in a \"0\" bit (def 7)"),
+        arg_int0(NULL, "ge", "<1-63>", "field gap end in a \"0\" bit (def 38)"),
+        arg_int0(NULL, "rm", "<1-320>", "RM start after the first listen window (def 132)"),
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool use_default = arg_get_lit(ctx, 1);
+    int thr = arg_get_int_def(ctx, 2, -1);
+    int tol = arg_get_int_def(ctx, 3, -1);
+    int gs = arg_get_int_def(ctx, 4, -1);
+    int ge = arg_get_int_def(ctx, 5, -1);
+    int rm = arg_get_int_def(ctx, 6, -1);
+    CLIParserFree(ctx);
+
+    em4x50_config_t cfg = { .mode = use_default ? EM4X50_CONFIG_RESET : EM4X50_CONFIG_GET };
+    int res = em4x50_send_config(&cfg);
+
+    if ((res == PM3_SUCCESS) && ((thr >= 0) || (tol >= 0) || (gs >= 0) || (ge >= 0) || (rm >= 0))) {
+        if (thr >= 0) cfg.threshold = thr & 0xFF;
+        if (tol >= 0) cfg.tolerance = tol & 0xFF;
+        if (gs >= 0) cfg.gap_start = gs & 0xFF;
+        if (ge >= 0) cfg.gap_end = ge & 0xFF;
+        if (rm >= 0) cfg.rm_delay = rm & 0xFFFF;
+        cfg.mode = EM4X50_CONFIG_SET;
+        res = em4x50_send_config(&cfg);
+        if (res == PM3_EINVARG) {
+            PrintAndLogEx(FAILED, "invalid settings, nothing changed");
+        }
+    }
+
+    if (res == PM3_SUCCESS || res == PM3_EINVARG) {
+        PrintAndLogEx(INFO, "threshold.... " _YELLOW_("%u") " %%", cfg.threshold);
+        PrintAndLogEx(INFO, "tolerance.... " _YELLOW_("%u"), cfg.tolerance);
+        PrintAndLogEx(INFO, "gap start.... " _YELLOW_("%u"), cfg.gap_start);
+        PrintAndLogEx(INFO, "gap end...... " _YELLOW_("%u"), cfg.gap_end);
+        PrintAndLogEx(INFO, "rm delay..... " _YELLOW_("%u"), cfg.rm_delay);
+    }
+    return res;
+}
+
 static command_t CommandTable[] = {
     {"help",   CmdHelp,              AlwaysAvailable, "This help"},
     {"-----------", CmdHelp,         AlwaysAvailable, "--------------------- " _CYAN_("operations") " ---------------------"},
     {"brute",   CmdEM4x50Brute,      IfPm3EM4x50,     "Bruteforce attack to find password"},
     {"chk",     CmdEM4x50Chk,        IfPm3EM4x50,     "Check passwords"},
+    {"config",  CmdEM4x50Config,     IfPm3EM4x50,     "Get/set reader timings"},
     {"dump",    CmdEM4x50Dump,       IfPm3EM4x50,     "Dump EM4x50 tag"},
     {"info",    CmdEM4x50Info,       IfPm3EM4x50,     "Tag information"},
     {"login",   CmdEM4x50Login,      IfPm3EM4x50,     "Login into EM4x50 tag"},

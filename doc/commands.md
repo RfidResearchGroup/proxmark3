@@ -1191,6 +1191,7 @@ Check column "offline" for their availability.
 |`lf em 4x50 help        `|Y       |`This help`
 |`lf em 4x50 brute       `|N       |`Bruteforce attack to find password`
 |`lf em 4x50 chk         `|N       |`Check passwords`
+|`lf em 4x50 config      `|N       |`Get/set reader timings`
 |`lf em 4x50 dump        `|N       |`Dump EM4x50 tag`
 |`lf em 4x50 info        `|N       |`Tag information`
 |`lf em 4x50 login       `|N       |`Login into EM4x50 tag`
