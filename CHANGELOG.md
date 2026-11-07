@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `lf indala clone`, `sim` and `brute` with `--fc`/`--cn` - parity and checksum bits as on genuine cards (@matrix)
 - Fixed `wiegand` formats - HPP32, H10320 and S12906b encode as laid out, HGen37 decode checks the right parity bit, the limits of nine formats match their fields, `wiegand list -h` shows its own usage (@matrix)
 - Fixed `hf secc sim` - the ATQA codes the UID size, so readers that check it select a 7 or 10 byte UID, and a zero UID prints as taken from emulator memory (@matrix)
 - Fixed `lf keri clone` and `sim` - values the frame can't carry are refused instead of cut, `sim` prints the id and its raw, the help example and the clone hint name `--id` and `lf keri reader` (@matrix)
