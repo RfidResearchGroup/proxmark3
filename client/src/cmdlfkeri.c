@@ -248,8 +248,8 @@ static int CmdKeriClone(const char *Cmd) {
     int typeLen = sizeof(keritype) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 1, keritype, &typeLen);
 
-    uint32_t fc = arg_get_int_def(ctx, 2, 0);
-    uint32_t cid = arg_get_int_def(ctx, 3, 0);
+    int fc_arg = arg_get_int_def(ctx, 2, 0);
+    int cn_arg = arg_get_int_def(ctx, 3, 0);
     bool q5 = arg_get_lit(ctx, 4);
     bool em = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
@@ -258,6 +258,20 @@ static int CmdKeriClone(const char *Cmd) {
         PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
         return PM3_EINVARG;
     }
+
+    if (fc_arg < 0 || cn_arg < 0) {
+        PrintAndLogEx(FAILED, "FC and CN can't be negative");
+        return PM3_EINVARG;
+    }
+
+    // the MS scramble carries 5 bits of fc and 22 of cn
+    if (keritype[0] == 'm' && (fc_arg > 31 || cn_arg > 0x3FFFFF)) {
+        PrintAndLogEx(FAILED, "MS FC has a max value of 31 and CN has a max value of 4194303");
+        return PM3_EINVARG;
+    }
+
+    uint32_t fc = (uint32_t)fc_arg;
+    uint32_t cid = (uint32_t)cn_arg;
 
     // Setup card data/build internal id
     uint32_t internalid = 0;
@@ -310,7 +324,7 @@ static int CmdKeriClone(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "Done!");
-    PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`lf keri read`") " to verify");
+    PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`lf keri reader`") " to verify");
     return res;
 }
 
@@ -320,7 +334,7 @@ static int CmdKeriSim(const char *Cmd) {
     CLIParserInit(&ctx, "lf keri sim",
                   "Enables simulation of KERI card with internal ID.\n"
                   "You supply a KERI card id and it will converted to a KERI internal ID.",
-                  "lf keri sim --cn 112233"
+                  "lf keri sim --id 112233"
                  );
 
     void *argtable[] = {
@@ -332,6 +346,14 @@ static int CmdKeriSim(const char *Cmd) {
     uint64_t internalid = arg_get_u64_def(ctx, 1, 0);
     CLIParserFree(ctx);
 
+    // the frame carries 31 bits of internal id
+    if (internalid > 0x7FFFFFFF) {
+        PrintAndLogEx(FAILED, "Internal Id has a max value of 2147483647");
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(SUCCESS, "Simulating KERI - Internal Id " _YELLOW_("%" PRIu64) ", Raw: E0000000%08" PRIX64, internalid, internalid | 0x80000000);
+
     internalid |= 0x80000000;
     internalid <<= 3;
     internalid += 7;
@@ -342,8 +364,6 @@ static int CmdKeriSim(const char *Cmd) {
     for (int8_t i = 63; i >= 0; --i) {
         bs[j++] = ((internalid >> i) & 1);
     }
-
-    PrintAndLogEx(SUCCESS, "Simulating KERI - Internal Id " _YELLOW_("%" PRIu64), internalid);
 
     lf_psksim_t *payload = calloc(1, sizeof(lf_psksim_t) + sizeof(bs));
     if (payload == NULL) {
