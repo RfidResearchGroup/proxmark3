@@ -346,6 +346,120 @@ void hf_field_off(void) {
     g_hf_field_timeout_active = false;
 }
 
+#if defined(PM5)
+// PM5 antenna controller (IO expander on I2C addr 0x51). The MAP register (0x02)
+// holds, MSB..LSB: 125 134 250 375 500 HFLED LFLED Q - i.e. the LF frequency/Q
+// tuning bits alongside the two antenna-LED bits.
+#define PM5_ANT_I2C_ADDR       0x51
+#define PM5_ANT_MAP_REG        0x02
+#define PM5_ANT_MAP_HFLED      (1 << 2)
+#define PM5_ANT_MAP_LFLED      (1 << 1)
+#define PM5_ANT_LED_BLINK_MS   120   // half-period of the "busy" blink (~4 Hz)
+#define PM5_ANT_LED_ACTIVE_MS  500   // keep blinking this long after the last host command
+
+// Which band's antenna LED should be lit.
+typedef enum { PM5_ANT_BAND_NONE = 0, PM5_ANT_BAND_LF, PM5_ANT_BAND_HF } pm5_ant_band_t;
+
+static pm5_ant_band_t s_ant_band = PM5_ANT_BAND_NONE; // band whose LED is active
+static uint32_t s_ant_cmd_tick = 0;      // GetTickCount() of the last host command
+static uint32_t s_ant_toggle_tick = 0;   // GetTickCount() of the last blink edge
+static bool s_ant_blink_on = true;       // current blink phase
+
+// Set exactly these two LED bits in the MAP register, preserving the frequency/Q
+// tuning bits (read-modify-write), and skip the bus entirely while unchanged. The
+// MAP register is bit-banged over I2C (~300us), so this is only ever called from
+// cold paths: the FPGA bitstream loader and the AppMain main loop - never the
+// timing-critical modulation loops, which toggle the field via the single-cycle
+// FpgaWriteConfWord.
+static void pm5_ant_led_write(bool hf, bool lf) {
+
+    static int8_t last_hf = -1;
+    static int8_t last_lf = -1;
+    if (hf == last_hf && lf == last_lf) {
+        return;
+    }
+
+    StartTicks();        // configures the SpinDelay timer only; GetTickCount() is the
+    I2C_init(true);      // independent free-running ERTC, so pacing is undisturbed
+
+    uint8_t map = 0;
+    if (I2C_BufferReadRaw(&map, 1, PM5_ANT_MAP_REG, PM5_ANT_I2C_ADDR << 1) != 1) {
+        return; // leave the shadow untouched so the next tick retries
+    }
+
+    map &= ~(PM5_ANT_MAP_HFLED | PM5_ANT_MAP_LFLED);
+    if (hf) {
+        map |= PM5_ANT_MAP_HFLED;
+    }
+    if (lf) {
+        map |= PM5_ANT_MAP_LFLED;
+    }
+
+    if (I2C_BufferWrite(&map, 1, PM5_ANT_MAP_REG, PM5_ANT_I2C_ADDR << 1)) {
+        last_hf = hf;
+        last_lf = lf;
+    }
+}
+
+// Pick which band's LED is active, from the armed FPGA bitstream. Called from the
+// bitstream loader; switches the LED immediately (lit) so a band change is never
+// missed even if the next main-loop tick is a while off.
+void pm5_ant_led_track_bitstream(int bitstream_target) {
+
+    pm5_ant_band_t band;
+    if (bitstream_target == FPGA_BITSTREAM_LF) {
+        band = PM5_ANT_BAND_LF;
+    } else if (bitstream_target >= FPGA_BITSTREAM_HF && bitstream_target <= FPGA_BITSTREAM_HF_15) {
+        band = PM5_ANT_BAND_HF;
+    } else {
+        band = PM5_ANT_BAND_NONE;
+    }
+
+    if (band == s_ant_band) {
+        return;
+    }
+    s_ant_band = band;
+    s_ant_blink_on = true;
+    s_ant_toggle_tick = GetTickCount();
+    pm5_ant_led_write(band == PM5_ANT_BAND_HF, band == PM5_ANT_BAND_LF);
+}
+
+// Record host-command activity so the tick knows when the device is "busy".
+void pm5_ant_led_note_activity(void) {
+    s_ant_cmd_tick = GetTickCount();
+}
+
+// Drive the antenna LEDs from the AppMain main loop: blink the armed band's LED
+// while the host is actively sending commands (a "searching" feel), hold it solid
+// once armed but idle, and clear both when no bitstream is armed. Main-loop only -
+// never a hot path - so the periodic I2C writes here are safe.
+void pm5_ant_led_tick(void) {
+
+    if (s_ant_band == PM5_ANT_BAND_NONE) {
+        pm5_ant_led_write(false, false);
+        return;
+    }
+
+    bool hf = (s_ant_band == PM5_ANT_BAND_HF);
+    bool lf = (s_ant_band == PM5_ANT_BAND_LF);
+
+    bool busy = (s_ant_cmd_tick != 0) && (GetTickCountDelta(s_ant_cmd_tick) < PM5_ANT_LED_ACTIVE_MS);
+    if (busy == false) {
+        // armed but idle -> hold the band LED solid on
+        s_ant_blink_on = true;
+        pm5_ant_led_write(hf, lf);
+        return;
+    }
+
+    // busy -> blink
+    if (GetTickCountDelta(s_ant_toggle_tick) >= PM5_ANT_LED_BLINK_MS) {
+        s_ant_toggle_tick = GetTickCount();
+        s_ant_blink_on = !s_ant_blink_on;
+    }
+    pm5_ant_led_write(hf && s_ant_blink_on, lf && s_ant_blink_on);
+}
+#endif
+
 void send_wtx(uint16_t wtx) {
     if (allow_send_wtx) {
         reply_ng(CMD_WTX, PM3_SUCCESS, (uint8_t *)&wtx, sizeof(wtx));
@@ -4755,6 +4869,9 @@ void __attribute__((noreturn)) AppMain(void) {
 #ifdef WITH_PM5_PWR_LED
         rgb_indicator_update();
 #endif
+#ifdef PM5
+        pm5_ant_led_tick();
+#endif
 #ifdef WITH_PM5_AUTOOFF
         bwm_autooff_check();
 #endif
@@ -4791,6 +4908,9 @@ void __attribute__((noreturn)) AppMain(void) {
 #endif
             last_activity_label = GetTickCountLabel();
             last_activity_tick = GetTickCount();
+#ifdef PM5
+            pm5_ant_led_note_activity();   // a host command -> blink the antenna LED
+#endif
         } else if (ret != PM3_ENODATA) {
             Dbprintf("Error in frame reception: %d %s", ret, (ret == PM3_EIO) ? "PM3_EIO" : "");
             // TODO if error, shall we resync ?
