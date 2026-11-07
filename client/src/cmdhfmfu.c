@@ -2028,6 +2028,69 @@ int mfu_get_version_uid(uint8_t *version, uint8_t *uid) {
     return PM3_SUCCESS;
 }
 
+// Weak-PRNG backstop: RndB collision => counterfeit LFSR
+#define MFULC_PRNG_SAMPLES 40
+#define MFULC_PRNG_CLEAR   39
+
+static int mfulc_prng_test(uint32_t samples) {
+    if (samples < 2) {
+        samples = 2;
+    }
+    if (samples > 64) {
+        samples = 64;
+    }
+
+    uint8_t rndb[64][8];
+    uint32_t got = 0;
+
+    for (uint32_t i = 0; i < samples; i++) {
+        iso14a_card_select_t card;
+        if (ul_select(&card) == false) {
+            continue;
+        }
+        uint8_t nonce[11] = {0x00};
+        int rl = ulc_requestAuthentication(nonce, sizeof(nonce));
+        DropField();
+        // response is AF || ek(RndB)[8] || CRC[2]; compare the 8-byte ek(RndB)
+        if (rl < 9 || nonce[0] != 0xAF) {
+            continue;
+        }
+        memcpy(rndb[got], &nonce[1], 8);
+        got++;
+    }
+
+    if (got < 2) {
+        PrintAndLogEx(INFO, "PRNG......... could not collect nonces (got %u)", got);
+        return PM3_ESOFT;
+    }
+
+    uint32_t first_dup = 0;
+    uint32_t dups = 0;
+    for (uint32_t i = 0; i < got; i++) {
+        for (uint32_t j = 0; j < i; j++) {
+            if (memcmp(rndb[i], rndb[j], 8) == 0) {
+                if (first_dup == 0) {
+                    first_dup = i + 1; // 1-based draw index
+                }
+                dups++;
+                break;
+            }
+        }
+    }
+
+    if (dups > 0) {
+        PrintAndLogEx(SUCCESS, "PRNG......... " _RED_("Weak") " (RndB collision at %u)", first_dup);
+        return PM3_SUCCESS;
+    }
+
+    if (got >= MFULC_PRNG_CLEAR) {
+        PrintAndLogEx(SUCCESS, "PRNG......... " _GREEN_("Genuine"));
+    } else {
+        PrintAndLogEx(INFO, "PRNG......... inconclusive (%u/%u nonces)", got, (uint32_t)MFULC_PRNG_CLEAR);
+    }
+    return PM3_SUCCESS;
+}
+
 static int mfulc_fingerprint(void) {
     iso14a_card_select_t card;
     PacketResponseNG resp;
@@ -2139,6 +2202,8 @@ static int mfulc_fingerprint(void) {
             }
         }
     }
+    // weak-PRNG backstop
+    mfulc_prng_test(MFULC_PRNG_SAMPLES);
     PrintAndLogEx(INFO, "likely MF0ICU2");
     DropField();
     return PM3_SUCCESS;

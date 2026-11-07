@@ -7102,7 +7102,7 @@
             "options": [
                 "-h, --help This help",
                 "-r, --reset Reset card",
-                "-u, --uid <hex> New UID (4 hex bytes)",
+                "-u, --uid <hex> New UID (4 hex bytes, or 7 on generation 2)",
                 "--furui Furui detection card"
             ],
             "usage": "hf mf supercard [-hr] [-u <hex>] [--furui]"
@@ -13773,7 +13773,7 @@
             "command": "lf keri sim",
             "description": "Enables simulation of KERI card with internal ID. You supply a KERI card id and it will converted to a KERI internal ID.",
             "notes": [
-                "lf keri sim --cn 112233"
+                "lf keri sim --id 112233"
             ],
             "offline": false,
             "options": [
@@ -16806,12 +16806,12 @@
             "options": [
                 "-h, --help This help"
             ],
-            "usage": "wiegand info [-h]"
+            "usage": "wiegand list [-h]"
         }
     },
     "metadata": {
         "commands_extracted": 936,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-10-23T22:15:17+00:00"
+        "extracted_on": "2026-11-06T22:34:07+00:00"
     }
 }

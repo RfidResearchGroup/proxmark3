@@ -8105,6 +8105,177 @@ static int mfc_supercard_gen2_recovery(uint8_t items, uint8_t tracedata[FURUI_MA
     return PM3_SUCCESS;
 }
 
+// super card generation 2, UID write
+#define SUPER_GEN2_UID_LEN      7       // UID bytes sent, zero padded
+#define SUPER_GEN2_ACK          0x11    // command accepted
+#define SUPER_GEN2_COMMITTED    0x22    // halt answer
+
+// select a super card. Clears the trace when the field is kept, so a later `hf 14a list` holds only the write
+static int mfc_supercard_select(bool keep_field_on, iso14a_card_select_t *card) {
+
+    uint32_t flags = ISO14A_CONNECT | ISO14A_NO_RATS;
+    if (keep_field_on) {
+        flags |= ISO14A_NO_DISCONNECT | ISO14A_CLEARTRACE;
+    }
+
+    clearCommandBuffer();
+    SendIso14aReader(flags, NULL, 0);
+
+    PacketResponseNG resp;
+    uint16_t len = 0;
+    uint8_t sel = 0;
+    if (WaitForIso14aReply(&resp, 1500, &len, &sel) == false) {
+        return PM3_ETIMEOUT;
+    }
+
+    if (sel == 0) {
+        return PM3_ECARDEXCHANGE;
+    }
+
+    if (len < sizeof(iso14a_card_select_t)) {
+        PrintAndLogEx(FAILED, "Short select answer, %u bytes. Client and firmware out of sync?", len);
+        return PM3_ELENGTH;
+    }
+
+    memcpy(card, resp.data.asBytes, sizeof(iso14a_card_select_t));
+
+    if (card->uidlen == 0) {
+        return PM3_ECARDEXCHANGE;
+    }
+    return PM3_SUCCESS;
+}
+
+// one frame of the gen2 UID write. PM3_ECARDEXCHANGE when the card stayed silent,
+// PM3_EWRONGANSWER when it answered and refused
+static int mfc_supercard_gen2_frame(uint8_t cmd, uint8_t arg, uint8_t status) {
+
+    uint8_t data[2] = {cmd, arg};
+    uint32_t flags = ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT;
+
+    clearCommandBuffer();
+    SendIso14aReader(flags, data, sizeof(data));
+
+    PacketResponseNG resp;
+    uint16_t len = 0;
+    if (WaitForIso14aReply(&resp, 1500, &len, NULL) == false) {
+        return PM3_ETIMEOUT;
+    }
+
+    PrintAndLogEx(DEBUG, "%02X %02X >>> %s", cmd, arg, sprint_hex_inrow(resp.data.asBytes, len));
+
+    // the device reports a silent card as a zero length answer, not as a timeout
+    if (len == 0) {
+        return PM3_ECARDEXCHANGE;
+    }
+
+    // 18 byte answer on the wire, 16 byte payload plus CRC. Only the payload is required
+    if (len < 16) {
+        PrintAndLogEx(FAILED, "Short answer... %s", sprint_hex_inrow(resp.data.asBytes, len));
+        return PM3_ELENGTH;
+    }
+
+    if (resp.data.asBytes[0] != status || resp.data.asBytes[1] != arg) {
+        PrintAndLogEx(FAILED, "Card answered... %s, expected status %02X arg %02X",
+                      sprint_hex_inrow(resp.data.asBytes, len), status, arg);
+        return PM3_EWRONGANSWER;
+    }
+    return PM3_SUCCESS;
+}
+
+// change UID on a super card generation 2. Knock, UID one byte per command,
+// then HLTA, which commits - without it the card discards the write on field drop
+static int mfc_supercard_gen2_set_uid(const uint8_t *uid, uint8_t uidlen) {
+
+    static const uint8_t knock[] = {0xF3, 0x2A, 0xBD, 0xEF, 0x01};
+
+    iso14a_card_select_t old_card = {0};
+
+    int res = mfc_supercard_select(true, &old_card);
+    if (res != PM3_SUCCESS) {
+        if (res == PM3_ETIMEOUT) {
+            PrintAndLogEx(FAILED, "Device did not answer the select command");
+        } else {
+            PrintAndLogEx(FAILED, "Failed to select card, is it on the antenna?");
+        }
+        DropField();
+        return res;
+    }
+
+    // these parts are physically 4 or 7 byte, the length is not changeable
+    if (old_card.uidlen != uidlen) {
+        PrintAndLogEx(FAILED, "Card UID is " _YELLOW_("%u") " bytes, new UID is " _YELLOW_("%u") " bytes", old_card.uidlen, uidlen);
+        DropField();
+        return PM3_EINVARG;
+    }
+
+    for (uint8_t i = 0; i < ARRAYLEN(knock); i++) {
+        res = mfc_supercard_gen2_frame(0x30, knock[i], SUPER_GEN2_ACK);
+        if (res != PM3_SUCCESS) {
+            if (res == PM3_ECARDEXCHANGE) {
+                PrintAndLogEx(FAILED, "Card stopped answering at knock command " _YELLOW_("%u") " of %zu", i + 1, ARRAYLEN(knock));
+            } else {
+                PrintAndLogEx(FAILED, "Card rejected knock command " _YELLOW_("%u") " of %zu", i + 1, ARRAYLEN(knock));
+                PrintAndLogEx(HINT, "Hint: Are you sure your card is a super card generation 2?");
+            }
+            DropField();
+            return res;
+        }
+    }
+
+    uint8_t new_uid[SUPER_GEN2_UID_LEN] = {0};
+    memcpy(new_uid, uid, uidlen);
+
+    for (uint8_t i = 0; i < SUPER_GEN2_UID_LEN; i++) {
+        res = mfc_supercard_gen2_frame(0x30, new_uid[i], SUPER_GEN2_ACK);
+        if (res != PM3_SUCCESS) {
+            if (res == PM3_ECARDEXCHANGE) {
+                PrintAndLogEx(FAILED, "Card stopped answering at UID byte " _YELLOW_("%u") " of %u, the write is incomplete", i + 1, SUPER_GEN2_UID_LEN);
+                PrintAndLogEx(HINT, "Hint: hold the card still on the antenna and run the command again");
+            } else {
+                PrintAndLogEx(FAILED, "Card rejected UID byte " _YELLOW_("%u") " of %u", i + 1, SUPER_GEN2_UID_LEN);
+            }
+            DropField();
+            return res;
+        }
+    }
+
+    // not fatal, the UID read back below decides the outcome
+    int res_halt = mfc_supercard_gen2_frame(0x50, 0x00, SUPER_GEN2_COMMITTED);
+    if (res_halt != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Card did not acknowledge the commit (%d), verifying anyway", res_halt);
+    }
+
+    DropField();
+
+    iso14a_card_select_t new_card = {0};
+    res = PM3_ETIMEOUT;
+
+    // card is writing, it ignores the first activation attempts
+    for (uint8_t i = 0; i < 4 && res != PM3_SUCCESS; i++) {
+        msleep(150);
+        res = mfc_supercard_select(false, &new_card);
+        PrintAndLogEx(DEBUG, "verify activation %u... %d", i + 1, res);
+    }
+
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Card did not answer after the commit, can't verify the new UID");
+        PrintAndLogEx(WARNING, "The write may still have succeeded, the card ignores activation while writing");
+        PrintAndLogEx(HINT, "Hint: keep the card on the antenna and run `hf 14a info`");
+        return PM3_EPARTIAL;
+    }
+
+    if (new_card.uidlen != uidlen || memcmp(new_card.uid, uid, uidlen) != 0) {
+        PrintAndLogEx(FAILED, "Super card UID change [ " _RED_("fail") " ]");
+        PrintAndLogEx(INFO, "Card UID... %s", sprint_hex(new_card.uid, new_card.uidlen));
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(SUCCESS, "Old UID... %s", sprint_hex(old_card.uid, old_card.uidlen));
+    PrintAndLogEx(SUCCESS, "New UID... %s", sprint_hex(new_card.uid, new_card.uidlen));
+    PrintAndLogEx(SUCCESS, "Super card UID change ( " _GREEN_("ok") " )");
+    return PM3_SUCCESS;
+}
+
 static int CmdHf14AMfSuperCard(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf supercard",
@@ -8116,13 +8287,13 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("r", "reset", "Reset card"),
-        arg_str0("u", "uid", "<hex>", "New UID (4 hex bytes)"),
+        arg_str0("u", "uid", "<hex>", "New UID (4 hex bytes, or 7 on generation 2)"),
         arg_lit0(NULL, "furui", "Furui detection card"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool reset_card = arg_get_lit(ctx, 1);
-    uint8_t uid[4];
+    uint8_t uid[7] = {0};
     int uidlen = 0;
     int res = CLIParamHexToBuf(arg_get_str(ctx, 2), uid, sizeof(uid), &uidlen);
     bool is_furui = arg_get_lit(ctx, 3);
@@ -8130,8 +8301,13 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
     CLIParserFree(ctx);
 
     // sanity checks
-    if (res || (!res && uidlen && uidlen != sizeof(uid))) {
-        PrintAndLogEx(ERR, "UID must include 4 hex bytes");
+    if (res) {
+        PrintAndLogEx(ERR, "UID must be 4 or 7 hex bytes");
+        return PM3_EINVARG;
+    }
+
+    if (uidlen && uidlen != 4 && uidlen != 7) {
+        PrintAndLogEx(ERR, "UID must be 4 or 7 hex bytes. Got %d", uidlen);
         return PM3_EINVARG;
     }
 
@@ -8143,7 +8319,7 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
         // no reset on super card FURUI
         if (uidlen || reset_card) {
             PrintAndLogEx(FAILED, "Not supported on this card");
-            return PM3_SUCCESS;
+            return PM3_ENOTIMPL;
         }
 
         // read 8 traces
@@ -8211,9 +8387,14 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
     if (i == SUPER_MAX_TRACES) {
 
         // no reset on super card generation 2.
-        if (uidlen || reset_card) {
+        if (reset_card) {
             PrintAndLogEx(FAILED, "Not supported on this card");
-            return PM3_SUCCESS;
+            return PM3_ENOTIMPL;
+        }
+
+        // change UID on a super card generation 2
+        if (uidlen) {
+            return mfc_supercard_gen2_set_uid(uid, uidlen);
         }
 
         // recover key from collected traces
@@ -8231,6 +8412,13 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
 
     // change UID on a super card generation 1
     if (uidlen) {
+
+        // generation 1 is 4 byte UID only
+        if (uidlen != 4) {
+            PrintAndLogEx(FAILED, "Super card generation 1 UID must be 4 hex bytes");
+            return PM3_EINVARG;
+        }
+
         keep_field_on = false;
         uint8_t response[6];
         int resplen = 0;
