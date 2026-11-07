@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `lf destron sim` - simulates the FDX-A frame that `lf destron clone` writes (@matrix)
+- Fixed `lf destron clone` - a uid that is not 5 bytes of 00-7F is refused instead of written as another id or with bad parity (@matrix)
 - Fixed `hf thinfilm sim` - a second simulation in the same client no longer ends at once with `Done!` (@matrix)
 - Added `hf mf supercard -u` - UID change on super card generation 2 (@mishamyte)
 - Changed `hf mf supercard` - a refused `-r`/`-u` now exits non-zero instead of reporting success (@mishamyte)

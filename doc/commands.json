@@ -11796,7 +11796,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-u, --uid <hex> 5 bytes max",
+                "-u, --uid <hex> 5 hex bytes, 00-7F each",
                 "--q5 optional - specify writing to Q5/T5555 tag",
                 "--em optional - specify writing to EM4305/4469 tag"
             ],
@@ -11829,15 +11829,16 @@
         },
         "lf destron sim": {
             "command": "lf destron sim",
-            "description": "Try to find Destron preamble, if found decode / descramble data",
+            "description": "Enables simulation of Destron card with specified uid. Simulation runs until the button is pressed or another USB command is issued.",
             "notes": [
-                "lf destron sim"
+                "lf destron sim --uid 1A2B3C4D5E"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-u, --uid <hex> 5 hex bytes, 00-7F each"
             ],
-            "usage": "lf destron sim [-h]"
+            "usage": "lf destron sim [-h] -u <hex>"
         },
         "lf em 410x brute": {
             "command": "lf em 410x brute",
@@ -16812,6 +16813,6 @@
     "metadata": {
         "commands_extracted": 936,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-11-06T22:34:07+00:00"
+        "extracted_on": "2026-11-07T18:51:39+00:00"
     }
 }
