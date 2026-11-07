@@ -7102,7 +7102,7 @@
             "options": [
                 "-h, --help This help",
                 "-r, --reset Reset card",
-                "-u, --uid <hex> New UID (4 hex bytes)",
+                "-u, --uid <hex> New UID (4 hex bytes, or 7 on generation 2)",
                 "--furui Furui detection card"
             ],
             "usage": "hf mf supercard [-hr] [-u <hex>] [--furui]"

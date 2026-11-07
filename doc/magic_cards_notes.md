@@ -1698,6 +1698,39 @@ CF <passwd> CE <1b block number>                 // Backdoor read 16b block
 CF <passwd> FE <4b new_password>                 // Change password
 ```
 
+UID write without the Gen4 backdoor, all frames raw ISO14443-A with CRC, in one field session
+after a normal anticollision + select:
+
+```
+30 F3          // knock, 5 commands
+30 2A
+30 BD
+30 EF
+30 01
+30 <uid[0]>    // new UID, one byte per command
+30 <uid[1]>    // always 7 commands, zero padded for a 4b UID
+...
+50 00          // HLTA, commits the write
+```
+
+Every command is answered with 16 bytes plus CRC: status byte, the echoed argument, the CRC of
+the command frame the reader sent, then 12 bytes constant for the session. Status is `11` while
+accepting commands and `22` on the halt.
+
+```
+Rdr |30 5D 62 21|
+Tag |11 5D 62 21 6000720F 8CB1A65B E3553815|+crc
+Rdr |50 00 57 CD|
+Tag |22 00 57 CD 6000720F 8CB1A65B E3553815|+crc
+```
+
+The halt is the commit. A compliant tag stays silent on HLTA, this one answers, and without it
+the card discards everything above when the field drops. Afterwards the card is busy writing:
+the next WUPA gets no answer and the one after that returns the new UID, so allow ~150ms and
+more than one activation attempt.
+
+The UID length can't be changed, the parts are physically 4b or 7b.
+
 ### MIFARE Classic Super Furui
 
 ^[Top](#top)
@@ -1763,6 +1796,9 @@ hf mf info
 ...
 
 [usb] pm3 --> hf mf supercard --furui
+...
+
+[usb] pm3 --> hf mf supercard -u 11223344
 ...
 ```
 
