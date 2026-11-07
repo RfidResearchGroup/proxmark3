@@ -16806,12 +16806,12 @@
             "options": [
                 "-h, --help This help"
             ],
-            "usage": "wiegand info [-h]"
+            "usage": "wiegand list [-h]"
         }
     },
     "metadata": {
         "commands_extracted": 936,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-11-06T23:18:49+00:00"
+        "extracted_on": "2026-11-06T22:34:07+00:00"
     }
 }
