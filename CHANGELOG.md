@@ -5,6 +5,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 - Fixed `lf em 4x50 rdbl/info/dump`, `lf search` - RM was sent into the tag data instead of the second listen window on strong, AC-coupled signals, so every command failed; reads now retry within 1 s (@abou28)
 - Added `lf em 4x50 config` - runtime EM4x50 reader timings, and `lf_em4x50_tune.lua` to sweep them; extended debug level captures the raw exchange for `data samples` (@abou28)
+- Fixed `hf thinfilm sim` - a second simulation in the same client no longer ends at once with `Done!` (@matrix)
 - Added `hf mf supercard -u` - UID change on super card generation 2 (@mishamyte)
 - Changed `hf mf supercard` - a refused `-r`/`-u` now exits non-zero instead of reporting success (@mishamyte)
 - Fixed `wiegand` formats - HPP32, H10320 and S12906b encode as laid out, HGen37 decode checks the right parity bit, the limits of nine formats match their fields, `wiegand list -h` shows its own usage (@matrix)
@@ -18,6 +19,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed `mfulc_des_brute` build on macOS without `openssl@3.6` - OpenSSL is found with `brew --prefix openssl` as in `mfd_aes_brute` (@matrix)
 - Fixed CI - ProxSpace installs its packages again, WSL builds in its own file system, Ubuntu and CodeQL skip the slow Azure apt mirror (@matrix)
 - Fixed `recovery.bin` on the AT91 platforms - the bootrom is padded to 0x102000 again, so the OS image is at its load address (@matrix)
+- Added `hf mfu info` weak-PRNG backstop - detects counterfeit ULC via RndB collision (@Ryan4n6)
 - Updated `/Getting_Started_With_PM5.md` (@innocentbystanderproxmark)
 - Fixed `hf seos pacs`/`write` - 2K3DES GET/UPDATE DATA no longer fails silently with exit 236; print APDU exchange errors, check DES-CMAC, decode SELECT `85` at its real length, and use short-form `85` when the cryptogram is under 128 bytes
 - Fixed client build with `-march=x86-64-v3` (CentOS/RHEL 10 default) - false `-Wstringop-overflow` in the EMV AID list table (@r3wretrhy)
