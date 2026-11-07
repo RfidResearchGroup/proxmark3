@@ -2989,14 +2989,27 @@ typedef struct {
 } cotag_detect_val_t;
 
 // Block until the reader's activation sequence is detected. Return false on button press or USB data.
-static bool cotag_activation_sequence_detect(const lf_cotagsim_t *params, cotag_detect_val_t *out) {
+//     - *peak is to carry the adaptive threshold across calls
+static bool cotag_activation_sequence_detect(const lf_cotagsim_t *params, int32_t *peak, cotag_detect_val_t *out) {
 
-    // Reader's tag activation sequence:
+    // Known COTAG reader's tag activation sequence variants:
+    // a)
     //   - ON 800 us, OFF 2200 us
     //   - ON ~5800 us      (the tag is expected to respond in this window)
     //   - OFF ~16500 us    (reader's pause if no tag detected, then repeat)
-    //
-    // Another reader activation sequence identified as: ON(1500),OFF(1900),ON(Z)
+    // b)
+    //   - ON(850),OFF(2200),  // 1st activation
+    //   - ON(3600),           // tags can (will) respond, but the reader will not listen
+    //   - OFF(2200),
+    //   - ON(850),OFF(2200),  // 2nd activation
+    //   - ON(3600),           // tags expected to respond, the reader will listen (extend the field)
+    //   - OFF PAUSE ~16300
+    // c)
+    //   - ON(1500),OFF(1900),
+    //   - ON(Z)
+    //   - if a tag responds, then field dropped early, OFF(20000), and additional:
+    //   - ON(1500),OFF(1900),
+    //   - ON(Z)
     //
     // We detect 2 rising edges delta between ON(X),OFF(Y),ON(Z).
     // Plus minus some tolerance, thus win_lo and win_hi.
@@ -3010,7 +3023,7 @@ static bool cotag_activation_sequence_detect(const lf_cotagsim_t *params, cotag_
     uint8_t idx = 0;                        // points to the oldest sample
     int32_t sum_new = 0, sum_old = 0;       // sum of the newest (oldest) COTAG_STEP_K samples
 
-    int32_t peak_recent_step = 0;     // peak of step, scaled by 65536 so the decay below cannot truncate to zero
+    int32_t peak_recent_step = *peak; // peak of step, scaled by 65536 so the decay below cannot truncate to zero
     uint32_t sample_cnt = 0;
     uint32_t last_rise = 0;           // sample_cnt at the previous detected rising edge
     bool armed = true;
@@ -3067,6 +3080,7 @@ static bool cotag_activation_sequence_detect(const lf_cotagsim_t *params, cotag_
                 // Activation sequence detected
                 out->dt = dt;
                 out->thr = thr;
+                *peak = peak_recent_step;
                 return true;
             }
             last_rise = sample_cnt;
@@ -3259,6 +3273,28 @@ out:
     return ok;
 }
 
+// Debug print of a detected activation and its answer
+static void cotag_sim_report(const lf_cotagsim_t *params, uint8_t nbits, uint16_t nhb, const cotag_detect_val_t *val, const cotag_tx_val_t *tx_val) {
+    if (params->verbose == false && nbits) {
+        return;
+    }
+
+    Dbprintf("COTAG reader activation sequence detected");
+    if (g_dbglevel >= DBG_DEBUG) {
+        Dbprintf("  rise-to-rise " _YELLOW_("%u") " us, threshold %d", val->dt * (LF_COTAG_DIVISOR + 1) / 12, val->thr);
+    }
+
+    if (params->active == false && nbits) {
+        uint16_t total = nhb + (params->repeats - 1) * (nhb - COTAG_TX_SYNC_HALFBITS);
+        if (tx_val->field_lost) {
+            Dbprintf("  Answer stopped after " _YELLOW_("%u") " of %u half bits, reader field gone", tx_val->nhb_sent, total);
+        } else {
+            Dbprintf("  Sent " _YELLOW_("%u") " of %u half bits", tx_val->nhb_sent, total);
+            if (g_dbglevel >= DBG_DEBUG) Dbprintf("  missed carrier edges %u", tx_val->missed_edges);
+        }
+    }
+}
+
 void SimulateCotag(const lf_cotagsim_t *params, bool ledcontrol) {
 
     LFSetupFPGAForADC(LF_COTAG_DIVISOR, false);
@@ -3288,8 +3324,14 @@ void SimulateCotag(const lf_cotagsim_t *params, bool ledcontrol) {
     }
 
     cotag_detect_val_t val;
+    int32_t peak = 0;
 
-    while (cotag_activation_sequence_detect(params, &val)) {
+    // Report of a field-lost answer, printed after the next answer
+    cotag_detect_val_t prev_val;
+    cotag_tx_val_t prev_tx;
+    bool deferred = false;
+
+    while (cotag_activation_sequence_detect(params, &peak, &val)) {
         cotag_tx_val_t tx_val = {0};
 
         if (nbits) {
@@ -3309,26 +3351,31 @@ void SimulateCotag(const lf_cotagsim_t *params, bool ledcontrol) {
             // Done transmitting. Back to our RX sampling divisor:
             FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_COTAG_DIVISOR);
 
-            cotag_skip_samples(settle);
+            if (tx_val.field_lost) {
+                // With some readers, we may have reacted to the first activation, but the reader
+                // will honor our answer only in the second activation that follows shortly
+                // afterwards. Thus, no settle, and no blocking USB print before listening again.
+                if (deferred == false) {
+                    prev_val = val;
+                    prev_tx = tx_val;
+                    deferred = true;
+                    continue;
+                }
+            } else if (params->active) {
+                cotag_skip_samples(settle);
+            }
         }
 
         // Debug print only after done TXing frame
-        if (params->verbose || nbits == 0) {
-            Dbprintf("COTAG reader activation sequence detected");
-            if (g_dbglevel >= DBG_DEBUG) {
-                Dbprintf("  rise-to-rise " _YELLOW_("%u") " us, threshold %d", val.dt * (LF_COTAG_DIVISOR + 1) / 12, val.thr);
-            }
-
-            if (params->active == false && nbits) {
-                uint16_t total = nhb + (params->repeats - 1) * (nhb - COTAG_TX_SYNC_HALFBITS);
-                if (tx_val.field_lost) {
-                    Dbprintf("  Answer stopped after " _YELLOW_("%u") " of %u half bits, reader field gone", tx_val.nhb_sent, total);
-                } else {
-                    Dbprintf("  Sent " _YELLOW_("%u") " of %u half bits", tx_val.nhb_sent, total);
-                    if (g_dbglevel >= DBG_DEBUG) Dbprintf("  missed carrier edges %u", tx_val.missed_edges);
-                }
-            }
+        if (deferred) {
+            cotag_sim_report(params, nbits, nhb, &prev_val, &prev_tx);
+            deferred = false;
         }
+        cotag_sim_report(params, nbits, nhb, &val, &tx_val);
+    }
+
+    if (deferred) {
+        cotag_sim_report(params, nbits, nhb, &prev_val, &prev_tx);
     }
 
     if (params->active == false) {
