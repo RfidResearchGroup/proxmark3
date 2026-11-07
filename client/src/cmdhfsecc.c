@@ -475,6 +475,11 @@ static int CmdHFHIDConfigSim(const char *Cmd) {
     char uid_str[2 * sizeof(uid) + 1];
     strncpy(uid_str, sprint_hex_inrow(uid, uidlen), sizeof(uid_str) - 1);
     uid_str[sizeof(uid_str) - 1] = '\0';
+    // an all-zero UID makes the device take a 4-byte UID from emulator memory
+    bool uid_from_emul = (memcmp(uid, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", sizeof(uid)) == 0);
+    if (uid_from_emul) {
+        snprintf(uid_str, sizeof(uid_str), "from emulator memory");
+    }
     PrintAndLogEx(INFO, "HID Config Card sim:"
                   " UID " _YELLOW_("%s")
                   " AID " _YELLOW_("%s")
@@ -490,7 +495,8 @@ static int CmdHFHIDConfigSim(const char *Cmd) {
     payload.tagtype    = 4;        // ISO14443-4 base type; ATQA/SAK/ATS overridden by ARM
     payload.flags      = flags;
     payload.exitAfter  = exitAfterNReads;
-    payload.atqa[0]    = 0x02;    // HID Config Card ATQA high byte
+    // HID Config Card ATQA high byte, b8 b7 code the UID size (ISO/IEC 14443-3)
+    payload.atqa[0]    = 0x02 | ((uid_from_emul || uidlen == 4) ? 0x00 : ((uidlen == 7) ? 0x40 : 0x80));
     payload.atqa[1]    = 0x00;    // HID Config Card ATQA low byte
     payload.sak        = 0x38;    // HID Config Card SAK
     payload.ats_len    = (uint8_t)ats_len;
