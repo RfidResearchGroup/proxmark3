@@ -1162,9 +1162,9 @@ int getIndalaBits(uint8_t fc, uint16_t cn, uint8_t *bits) {
     chk += ((cn >> 5) & 1); //y11 == 67 - 30 = 37
     chk += ((cn >> 2) & 1); //y14 == 89 - 30 = 59
     chk += (cn & 1); //y16 == 71 - 30 = 41
-    chk += ((fc >> 6) & 1); // fc b7 == 49, the five genuine cards on record need it
+    chk += evenparity8(fc & 0xEE); // x1 x2 x3 x5 x6 x7
 
-    // as on the five genuine cards on record
+    // fitted to the genuine Indala and Keri W cards on record
     if ((chk & 1) == 0) { // If the sum is even, checksum is '01' (binary) = 1.
         bits[62] = 0;
         bits[63] = 1;
