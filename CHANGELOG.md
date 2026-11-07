@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf thinfilm sim` - a second simulation in the same client no longer ends at once with `Done!` (@matrix)
 - Added `hf mf supercard -u` - UID change on super card generation 2 (@mishamyte)
 - Changed `hf mf supercard` - a refused `-r`/`-u` now exits non-zero instead of reporting success (@mishamyte)
 - Fixed `wiegand` formats - HPP32, H10320 and S12906b encode as laid out, HGen37 decode checks the right parity bit, the limits of nine formats match their fields, `wiegand list -h` shows its own usage (@matrix)
