@@ -5,6 +5,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 - Fixed `lf em 4x50 rdbl/info/dump`, `lf search` - RM was sent into the tag data instead of the second listen window on strong, AC-coupled signals, so every command failed; reads now retry within 1 s (@abou28)
 - Added `lf em 4x50 config` - runtime EM4x50 reader timings, and `lf_em4x50_tune.lua` to sweep them; extended debug level captures the raw exchange for `data samples` (@abou28)
+- Fixed `hf secc sim` - the ATQA codes the UID size, so readers that check it select a 7 or 10 byte UID, and a zero UID prints as taken from emulator memory (@matrix)
+- Fixed `lf keri clone` and `sim` - values the frame can't carry are refused instead of cut, `sim` prints the id and its raw, the help example and the clone hint name `--id` and `lf keri reader` (@matrix)
 - Fixed `lf paradox clone` and `sim` - FC above 255 and CN above 65535 are refused instead of cut, the clone hint names `lf paradox reader` (@matrix)
 - Fixed NDEF TLV decoding - a NULL TLV has no length, Lock and Memory Control sizes of 0 mean 256 and their page fields are powers of two (@matrix)
 - Fixed flashing with redirected output - the progress animation is drawn only when stdout is a terminal (@matrix)
