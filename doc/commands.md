@@ -747,7 +747,7 @@ Check column "offline" for their availability.
 |`hf mfu keygen          `|Y       |`Generate DES/3DES/AES MIFARE diversified keys`
 |`hf mfu pwdgen          `|Y       |`Generate pwd from known algos`
 |`hf mfu otptear         `|N       |`Tear-off test on OTP bits`
-|`hf mfu countertear     `|N       |`Tear-off test on Ev1/NTAG Counter bits`
+|`hf mfu countertear     `|N       |`Reset a Mifare UL EV1 counter with tear-off`
 |`hf mfu chk             `|N       |`Ultralight C/AES - Authentication dictionary check`
 |`hf mfu cauth           `|N       |`Ultralight-C - Authentication`
 |`hf mfu desbrute        `|Y       |`Ultralight-C - 3DES key segment brute force`

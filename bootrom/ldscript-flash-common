@@ -63,9 +63,12 @@ SECTIONS
         __bss_start__ = .;
         *(.bss)
         *(.bss.*)
+        *(COMMON)
         . = ALIGN(4);
         __bss_end__ = .;
     } >ram AT>ram :bss
+
+    ASSERT(__bss_end__ == ADDR(.bss) + SIZEOF(.bss), "BSS boundary excludes globals")
 
     .commonarea (NOLOAD) : {
         *(.commonarea)

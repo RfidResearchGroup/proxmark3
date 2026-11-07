@@ -117,6 +117,18 @@
     "format": "packed"
   },
   {
+    "system": "80DE",
+    "prefix": "05D2",
+    "code": "KD",
+    "name": "IruCa",
+    "format": "packed",
+    "serial_group": 5
+  },
+  {
+    "system": "80DE",
+    "format": "packed"
+  },
+  {
     "system": "80E0",
     "prefix": "05D3",
     "code": "IY",
@@ -240,6 +252,14 @@
   {
     "system": "8B5D",
     "format": "epoch"
+  },
+  {
+    "system": "8C37",
+    "prefix": "0FDC",
+    "code": "FU",
+    "name": "ICOUSA",
+    "format": "epoch",
+    "serial_group": 4
   },
   {
     "system": "FE00",

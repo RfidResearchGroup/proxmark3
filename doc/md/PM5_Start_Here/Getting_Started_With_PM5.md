@@ -8,8 +8,8 @@
 - [Flashing](#Flashing)
 - [Flash the Bootrom](#Flash-The-Bootrom)
 - [Flash the Fullimage](#Flash-The-Fullimage)
-- [Flash FPGA](#Flash-The-FPGA)
-- [I Have A BWM Now What?](#I-Have-A-BWM-Now-What)
+- [Flash FPGA - No BWM](#Flash-The-FPGA)
+- [Flash the FPGA and the BWM Together](#I-Have-A-BWM-Now-What)
 - [DFU Install](#DFU-Install)
 - [Build Extras](#Build-Extras)
 - [Standalone Modes](#Standalone-Modes)
@@ -82,50 +82,28 @@ For more options, look [here](#Build-Extras)
 
 ## Flash the FPGA
 
-* If you followed the steps above...
-* You don't need to enter manually the boot mode by pressing the button anymore and future flashing will be as smooth as on the Proxmark3.
-* Get the latest FPGA image, it's not yet in the repo.
-
-```
-wget https://github.com/user-attachments/files/31105593/PM5_FPGA_fix_loedge_bug.zip
-unzip PM5_FPGA_fix_loedge_bug.zip
-```
-
-* Plug in the Proxmark5
-* Update the FPGA, and then make sure the radio is off.
-
 ```
 ./pm3
-hw fpga config -f PM5_FPGA_fix_loedge_bug.bin
-hf 14a read --drop
+script run update_fpga
 ```
 
 ## I Have A BWM Now What
 
 ### Install the BWM
-* You acknowledge that the BWM is not yet fully supported, it's better not to plug it for now. (If you insist... continue.)
+* You acknowledge that the BWM is not yet fully supported.  It won't brick your Proxmark5, but bugs may still exist, and things may break.  If you need stability, it's currently recommended that you use your Proxmark3.  (If you insist... continue.)
 * [Physically install the BWM and (if applicable) Battery](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/master/INSTALL.md)
 
-## Do this exactly once.
-* The very first time for a new battery:
-```hw bwm setcap --cap 500```
-* Your PM5 will learn about the battery through usage.
-
-## Flash the BWM
+## Flash the BWM and the FPGA Together
 * Make sure your BWM has enough charge in the battery `hw status` 50%+ should work.
-* Get the latest firmware:
-  * Go [here](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/actions/workflows/esp-idf-build.yml):
-  * Click on the latest workflow run (As of this writing that's "Merge pull request #3 from nieldk/master")
-  * Scroll all the way to the bottom, you'll see **Artifacts**
-  * Click on "proxmark5_bwm_master" which will start a download for `proxmark5_bwm_master.zip`
-  * Unzip this file somehwere, remember that location
-  * The upgrade command is: `hw bwm upgrade -f  </path/to/unzipped/contents/>proxmark5_ble_wifi_module.bin`
-  * This will take some time, you'll see the Progress in % displayed on the screen until the process is done.
-  * Once you see "BWM Rebooting into the new image" you know the upgrade finished.
-  * Wait a few seconds (under 10) and unplug and replug the Proxmark5 back into the usb port.
-  * Once reconnected, you can run `hw status` and you'll see:
-    * `BWM fw version...... 1` where 1 is the current fw version. As of 2026-09-10, the most current version is 1.
-  * You have finished flashing the BWM.
+```
+./pm3
+script run update_fpga_and_bwm
+```
+* Run `hw status` and verify that `BWM fw version` matches this:
+```
+[#]   BWM fw version...... V1-12-g23bfa7b
+```
+  * You have finished flashing the FPGA and BWM.
 
 
 ### Operation

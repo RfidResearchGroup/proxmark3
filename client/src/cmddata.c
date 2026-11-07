@@ -474,8 +474,8 @@ static int Cmdaskmandemod(const char *Cmd) {
     uint16_t clk = (uint16_t)arg_get_int_def(ctx, 2, 0);
     bool invert = arg_get_lit(ctx, 3);
     bool st = arg_get_lit(ctx, 4);
-    uint8_t max_err = (uint8_t)arg_get_int_def(ctx, 5, 100) & 0xFF;
-    size_t max_len = (size_t)arg_get_int_def(ctx, 6, 0) & 0xFF;
+    int max_err = arg_get_int_def(ctx, 5, 100);
+    size_t max_len = (size_t)arg_get_int_def(ctx, 6, 0);
     CLIParserFree(ctx);
 
     return ASKDemod_ext(clk, invert, max_err, max_len, amplify, true, true, 1, &st);
@@ -718,7 +718,7 @@ static int Cmdaskbiphdemod(const char *Cmd) {
     uint16_t clk = (uint16_t)arg_get_int_def(ctx, 1, 0);
     bool invert = arg_get_lit(ctx, 2);
     int offset = arg_get_int_def(ctx, 3, 0);
-    uint8_t max_err = (uint8_t)arg_get_int_def(ctx, 4, 50) & 0xFF;
+    int max_err = arg_get_int_def(ctx, 4, 50);
     CLIParserFree(ctx);
 
     return ASKbiphaseDemod(offset, clk, invert, max_err, true);
@@ -751,8 +751,8 @@ static int Cmdaskrawdemod(const char *Cmd) {
     uint16_t clk = (uint16_t)arg_get_int_def(ctx, 2, 0);
     bool invert = arg_get_lit(ctx, 3);
     bool st = arg_get_lit(ctx, 4);
-    uint8_t max_err = (uint8_t)arg_get_int_def(ctx, 5, 100) & 0xFF;
-    size_t max_len = (size_t)arg_get_int_def(ctx, 6, 0) & 0xFF;
+    int max_err = arg_get_int_def(ctx, 5, 100);
+    size_t max_len = (size_t)arg_get_int_def(ctx, 6, 0);
     CLIParserFree(ctx);
 
     return ASKDemod_ext(clk, invert, max_err, max_len, amplify, true, false, 0, &st);
@@ -1348,11 +1348,17 @@ static int CmdFSKrawdemod(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    uint8_t clk = (uint8_t)arg_get_int_def(ctx, 1, 0) & 0xFF;
+    int clk = arg_get_int_def(ctx, 1, 0);
     bool invert = arg_get_lit(ctx, 2);
-    uint8_t fchigh = (uint8_t)arg_get_int_def(ctx, 3, 0) & 0xFF;
-    uint8_t fclow = (uint8_t)arg_get_int_def(ctx, 4, 0) & 0xFF;
+    int fchigh = arg_get_int_def(ctx, 3, 0);
+    int fclow = arg_get_int_def(ctx, 4, 0);
     CLIParserFree(ctx);
+
+    // the fsk demod holds them in a byte
+    if (clk < 0 || clk > 0xFF || fchigh < 0 || fchigh > 0xFF || fclow < 0 || fclow > 0xFF) {
+        PrintAndLogEx(FAILED, "Clock and field clocks must be 0 - 255");
+        return PM3_EINVARG;
+    }
 
     return FSKrawDemod(clk, invert, fchigh, fclow, true);
 }
@@ -1694,7 +1700,7 @@ static int CmdNRZrawDemod(const char *Cmd) {
 
     uint16_t clk = (uint16_t)arg_get_int_def(ctx, 1, 0);
     bool invert = arg_get_lit(ctx, 2);
-    uint8_t max_err = (uint8_t)arg_get_int_def(ctx, 3, 100) & 0xFF;
+    int max_err = arg_get_int_def(ctx, 3, 100);
     CLIParserFree(ctx);
 
     return NRZrawDemod(clk, invert, max_err, true);
@@ -1724,7 +1730,7 @@ int CmdPSK1rawDemod(const char *Cmd) {
 
     uint16_t clk = (uint16_t)arg_get_int_def(ctx, 1, 0);
     bool invert = arg_get_lit(ctx, 2);
-    uint8_t max_err = (uint8_t)arg_get_int_def(ctx, 3, 100) & 0xFF;
+    int max_err = arg_get_int_def(ctx, 3, 100);
     CLIParserFree(ctx);
 
     int ans = PSKDemod(clk, invert, max_err, true);
@@ -1760,9 +1766,9 @@ static int CmdPSK2rawDemod(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    uint8_t clk = (uint8_t)arg_get_int_def(ctx, 1, 0) & 0xFF;
+    uint16_t clk = (uint16_t)arg_get_int_def(ctx, 1, 0);
     bool invert = arg_get_lit(ctx, 2);
-    uint8_t max_err = (uint8_t)arg_get_int_def(ctx, 3, 100) & 0xFF;
+    int max_err = arg_get_int_def(ctx, 3, 100);
     CLIParserFree(ctx);
 
     int ans = PSKDemod(clk, invert, max_err, true);

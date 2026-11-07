@@ -106,6 +106,7 @@ set(CROSS_CFLAGS ${CROSS_CFLAGS}
     ${INCLUDE}
     # -std=c99  TODO 暂时切换为c11标准，因为新的平台需要c11标准，AT32的官方库一堆c11写法，不这么做的话改起来很麻烦
     -std=c11
+    -fno-common
     -DON_DEVICE
     ${APP_CFLAGS})
 set(CROSS_LDFLAGS ${CROSS_LDFLAGS}

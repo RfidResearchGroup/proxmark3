@@ -41,7 +41,7 @@ ifeq ($(PLATFORM),PM5)
 	$(Q)$(CROSS_OBJCOPY) --gap-fill=0xff --pad-to 0x08004000 -O binary $^ $@
 else
 	$(info [=] GENB $@)
-	$(Q)$(CROSS_OBJCOPY) --gap-fill=0xff --pad-to 0x00104000 -O binary $^ $@
+	$(Q)$(CROSS_OBJCOPY) --gap-fill=0xff --pad-to 0x00102000 -O binary $^ $@
 endif
 
 fullimage.bin: ../armsrc/obj/fullimage.elf

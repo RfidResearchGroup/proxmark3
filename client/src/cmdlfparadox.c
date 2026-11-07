@@ -333,8 +333,9 @@ static int CmdParadoxClone(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (fc > 999 || cn > 99999) {
-        PrintAndLogEx(FAILED, "FC has a max value of 999 and CN has a max value of 99999");
+    // the frame carries 8 bits of fc and 16 of cn
+    if (fc > 0xFF || cn > 0xFFFF) {
+        PrintAndLogEx(FAILED, "FC has a max value of 255 and CN has a max value of 65535");
         return PM3_EINVARG;
     }
 
@@ -384,7 +385,7 @@ static int CmdParadoxClone(const char *Cmd) {
         res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
     }
     PrintAndLogEx(SUCCESS, "Done!");
-    PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`lf paradox read`") " to verify");
+    PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`lf paradox reader`") " to verify");
     return res;
 }
 
@@ -421,8 +422,9 @@ static int CmdParadoxSim(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (fc > 999 || cn > 99999) {
-        PrintAndLogEx(FAILED, "FC has a max value of 999 and CN has a max value of 99999");
+    // the frame carries 8 bits of fc and 16 of cn
+    if (fc > 0xFF || cn > 0xFFFF) {
+        PrintAndLogEx(FAILED, "FC has a max value of 255 and CN has a max value of 65535");
         return PM3_EINVARG;
     }
     if (raw_len != 0) {

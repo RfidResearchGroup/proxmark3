@@ -3,12 +3,30 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf thinfilm sim` - a second simulation in the same client no longer ends at once with `Done!` (@matrix)
+- Added `hf mf supercard -u` - UID change on super card generation 2 (@mishamyte)
+- Changed `hf mf supercard` - a refused `-r`/`-u` now exits non-zero instead of reporting success (@mishamyte)
+- Fixed `wiegand` formats - HPP32, H10320 and S12906b encode as laid out, HGen37 decode checks the right parity bit, the limits of nine formats match their fields, `wiegand list -h` shows its own usage (@matrix)
+- Fixed `hf secc sim` - the ATQA codes the UID size, so readers that check it select a 7 or 10 byte UID, and a zero UID prints as taken from emulator memory (@matrix)
+- Fixed `lf keri clone` and `sim` - values the frame can't carry are refused instead of cut, `sim` prints the id and its raw, the help example and the clone hint name `--id` and `lf keri reader` (@matrix)
+- Fixed `lf paradox clone` and `sim` - FC above 255 and CN above 65535 are refused instead of cut, the clone hint names `lf paradox reader` (@matrix)
+- Fixed NDEF TLV decoding - a NULL TLV has no length, Lock and Memory Control sizes of 0 mean 256 and their page fields are powers of two (@matrix)
+- Fixed flashing with redirected output - the progress animation is drawn only when stdout is a terminal (@matrix)
+- Fixed `proxmark3 --flash`, `--dumpmem` and `--reboot-to-bootloader` exit status - a failure exits 1, a failed flash no longer ends with `All done` (@matrix)
+- Fixed `data rawdemod` - `--max`, `--samples` and the `--p2` clock no longer wrap above 255, `--fs` refuses values above 255 (@matrix)
+- Fixed `mfulc_des_brute` build on macOS without `openssl@3.6` - OpenSSL is found with `brew --prefix openssl` as in `mfd_aes_brute` (@matrix)
+- Fixed CI - ProxSpace installs its packages again, WSL builds in its own file system, Ubuntu and CodeQL skip the slow Azure apt mirror (@matrix)
+- Fixed `recovery.bin` on the AT91 platforms - the bootrom is padded to 0x102000 again, so the OS image is at its load address (@matrix)
+- Added `hf mfu info` weak-PRNG backstop - detects counterfeit ULC via RndB collision (@Ryan4n6)
+- Updated `/Getting_Started_With_PM5.md` (@innocentbystanderproxmark)
+- Fixed `hf seos pacs`/`write` - 2K3DES GET/UPDATE DATA no longer fails silently with exit 236; print APDU exchange errors, check DES-CMAC, decode SELECT `85` at its real length, and use short-form `85` when the cryptogram is under 128 bytes
 - Fixed client build with `-march=x86-64-v3` (CentOS/RHEL 10 default) - false `-Wstringop-overflow` in the EMV AID list table (@r3wretrhy)
 - Changed `hf seos info` - now prints UID, ATQA, SAK, ATS, MIFARE Classic emulation, which SEOS AIDs answer and the known AIDs found (@antoniovazquezblanco)
 - Fixed `hf seos managekeys -p` - key table columns stay aligned for slots 10 and up (@antoniovazquezblanco)
 - Fixed `aidlist.json` - uppercased the SEOS, TeslaDAP and LA Tap AIDs (@antoniovazquezblanco)
 - Changed `hf seos` - a failed MAC check with an empty privacy key slot now says so (@antoniovazquezblanco)
 - Fixed `hf 14a info -s` - only hints `emv reader` when an EMV application is found, not for any AID (@antoniovazquezblanco)
+- Fixed `aidlist.json` - tagged 25 more payment AIDs (UnionPay, MIR, eftpos, girocard, US common debit, ...) as type `EMV` (@antoniovazquezblanco)
 - Improved PM5 nonce-acquisition throughput for mfc by replacing the fixed 68-pair cap with a 2900 ms target budget (@nip-was-here)
 - Fixed PM5 tick-count reads across RTC second rollovers to prevent false receive timeouts
 - Fixed iso14443a - reject incomplete encrypted nonce frames instead of delaying nested authentication on PM5 (@nip-was-here)

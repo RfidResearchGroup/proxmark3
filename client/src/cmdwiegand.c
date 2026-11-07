@@ -135,7 +135,7 @@ static int wiegand_encode_new_pacs_from_bin(const uint8_t *binarr, int blen, boo
 int CmdWiegandList(const char *Cmd) {
 
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "wiegand info",
+    CLIParserInit(&ctx, "wiegand list",
                   "List available wiegand formats",
                   "wiegand list"
                  );

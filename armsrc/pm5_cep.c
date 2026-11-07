@@ -363,6 +363,12 @@ bool cep_spi_rx_pending(void) {
 }
 
 bool cep_spi_data_available(void) {
+    // SPI1 is full-duplex, no RX FIFO: a byte can freeze in SPI_DT during
+    // any main-loop gap (write, I2C poll, WDT_HIT) until read (RM ch
+    // 13.2.9). Clear it before it's misread as part of a length header.
+    if (spi_i2s_flag_get(SPI1, SPI_I2S_ROERR_FLAG) != RESET) {
+        spi_i2s_flag_clear(SPI1, SPI_I2S_ROERR_FLAG);
+    }
     uint8_t len_header[2] = {0x00};
     size_t discarded = 0;
     while (1) {
@@ -432,41 +438,58 @@ static bool cep_spi_wait_tdbe(uint64_t timeout_limit) {
 }
 
 int cep_spi_write_sync(uint8_t *data, size_t len) {
+    int ret = PM3_SUCCESS;
+
     // These two length-header bytes are the ones racing against the
     // master's next poll - see CEP_SPI_HEADER_BYTE_TIMEOUT's comment.
     if (!cep_spi_wait_tdbe(CEP_SPI_HEADER_BYTE_TIMEOUT)) {
-        return PM3_EIO;
+        ret = PM3_EIO;
+        goto cleanup;
     }
     spi_i2s_data_transmit(SPI1, len & 0xFF);
 
     if (!cep_spi_wait_tdbe(CEP_SPI_HEADER_BYTE_TIMEOUT)) {
-        return PM3_EIO;
+        ret = PM3_EIO;
+        goto cleanup;
     }
     spi_i2s_data_transmit(SPI1, (len >> 8) & 0xFF);
 
     for (size_t i = 0; i < len; ++i) {
         if (!cep_spi_wait_tdbe(CEP_SPI_BYTE_TIMEOUT)) {
-            return PM3_EIO;
+            ret = PM3_EIO;
+            goto cleanup;
         }
         spi_i2s_data_transmit(SPI1, data[i]);
     }
 
     // Two trailing zero bytes: the agreed "no more data" idle marker.
     if (!cep_spi_wait_tdbe(CEP_SPI_BYTE_TIMEOUT)) {
-        return PM3_EIO;
+        ret = PM3_EIO;
+        goto cleanup;
     }
     spi_i2s_data_transmit(SPI1, 0x00);
     if (!cep_spi_wait_tdbe(CEP_SPI_BYTE_TIMEOUT)) {
-        return PM3_EIO;
+        ret = PM3_EIO;
+        goto cleanup;
     }
     spi_i2s_data_transmit(SPI1, 0x00);
 
-    uint64_t timeout = 0;
-    while (spi_i2s_flag_get(SPI1, SPI_I2S_BF_FLAG) == SET) {
-        if (timeout++ > CEP_SPI_BYTE_TIMEOUT) {
-            return PM3_EIO;
+    {
+        uint64_t timeout = 0;
+        while (spi_i2s_flag_get(SPI1, SPI_I2S_BF_FLAG) == SET) {
+            if (timeout++ > CEP_SPI_BYTE_TIMEOUT) {
+                ret = PM3_EIO;
+                goto cleanup;
+            }
         }
     }
 
-    return PM3_SUCCESS;
+cleanup:
+    // Same full-duplex freeze as cep_spi_data_available() - SPI1 shifted a
+    // byte in on MOSI for every byte clocked out above. Clear it here, once,
+    // outside the timed write, so the read path never inherits it.
+    if (spi_i2s_flag_get(SPI1, SPI_I2S_ROERR_FLAG) != RESET) {
+        spi_i2s_flag_clear(SPI1, SPI_I2S_ROERR_FLAG);
+    }
+    return ret;
 }
