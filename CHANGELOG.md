@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `lf fdxb` decoding - ISO 11784:2024 and ISO 24631-6 fields and names, starting digit apart from the reserved bits, the animal code as `CCC NNNNNNNNNNNN`, values in decimal with their hex, the trailer on its own line, Bio-Thermo only for the chips' exact trailer, the temperature with two decimals, all 249 ISO 3166-1 countries (@matrix)
+- Fixed `lf fdxb clone` and `sim` - a country above 1023 or a national code above 274877906943 is refused instead of cut, `sim` sends the data block flag for `--extended 000000`, prints the whole trailer and stops with Enter (@matrix)
+- Added `lf fdxb clone` and `sim` `--biothermo` and `--no-datablock` - a Bio-Thermo temperature, or any `--extended` trailer, sent with the data block flag clear as Bio-Thermo chips do (@matrix)
+- Changed `lf fdxb reader` - each read tries 134 kHz, then 125 kHz for emulators tuned there (@matrix)
 - Fixed `hf thinfilm sim` - a second simulation in the same client no longer ends at once with `Done!` (@matrix)
 - Added `hf mf supercard -u` - UID change on super card generation 2 (@mishamyte)
 - Changed `hf mf supercard` - a refused `-r`/`-u` now exits non-zero instead of reporting success (@mishamyte)
