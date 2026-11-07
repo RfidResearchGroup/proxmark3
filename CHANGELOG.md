@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `lf keri clone` and `sim` - values the frame can't carry are refused instead of cut, `sim` prints the id and its raw, the help example and the clone hint name `--id` and `lf keri reader` (@matrix)
 - Fixed `lf paradox clone` and `sim` - FC above 255 and CN above 65535 are refused instead of cut, the clone hint names `lf paradox reader` (@matrix)
 - Fixed NDEF TLV decoding - a NULL TLV has no length, Lock and Memory Control sizes of 0 mean 256 and their page fields are powers of two (@matrix)
 - Fixed flashing with redirected output - the progress animation is drawn only when stdout is a terminal (@matrix)
