@@ -5,6 +5,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 - Fixed `lf em 4x50 rdbl/info/dump`, `lf search` - RM was sent into the tag data instead of the second listen window on strong, AC-coupled signals, so every command failed; reads now retry within 1 s (@abou28)
 - Added `lf em 4x50 config` - runtime EM4x50 reader timings, and `lf_em4x50_tune.lua` to sweep them; extended debug level captures the raw exchange for `data samples` (@abou28)
+- Added `lf destron sim` - simulates the FDX-A frame that `lf destron clone` writes (@matrix)
+- Fixed `lf destron clone` - a uid that is not 5 bytes of 00-7F is refused instead of written as another id or with bad parity (@matrix)
 - Fixed `lf fdxb` decoding - ISO 11784:2024 and ISO 24631-6 fields and names, and many more fixes. See commit message (@matrix)
 - Fixed `lf fdxb clone` and `sim` - a country above 1023 or a national code above 274877906943 is refused instead of cut, `sim` sends the data block flag for `--extended 000000` (@matrix)
 - Added `lf fdxb clone` and `sim` `--biothermo` and `--no-datablock` - a Bio-Thermo temperature, or any `--extended` trailer, sent with the data block flag clear as Bio-Thermo chips do (@matrix)
