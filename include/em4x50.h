@@ -84,20 +84,6 @@ typedef struct {
     uint32_t *words;
 } PACKED em4x50_read_data_response_t;
 
-// CMD_LF_EM4X50_CONFIG payload and reply, reader timings in carrier cycles
-#define EM4X50_CONFIG_GET           0
-#define EM4X50_CONFIG_SET           1
-#define EM4X50_CONFIG_RESET         2
-
-typedef struct {
-    uint8_t mode;           // EM4X50_CONFIG_*
-    uint8_t threshold;      // envelope thresholds, percent of amplitude
-    uint8_t tolerance;      // pulse length tolerance
-    uint8_t gap_start;      // field gap start within a reader "0" bit
-    uint8_t gap_end;        // field gap end within a reader "0" bit
-    uint16_t rm_delay;      // RM start after the end of the first listen window
-} PACKED em4x50_config_t;
-
 // Global variables...
 extern bool g_Login;
 extern bool g_WritePasswordProcess;
