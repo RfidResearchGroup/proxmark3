@@ -29,12 +29,12 @@ int CmdLFHitag(const char *Cmd);
 
 int ht2_read_uid(void);
 int ht2_read_paxton(void);
-void annotateHitag1(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response);
-void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, uint8_t bits, bool is_response, const uint64_t *keys, uint32_t keycount, bool isdecrypted);
+void annotateHitag1(char *exp, size_t size, const uint8_t *cmd, uint16_t cmdsize, bool is_response);
+void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint16_t cmdsize, uint8_t bits, bool is_response, const uint64_t *keys, uint32_t keycount, bool isdecrypted);
 
 void annotateHitag2_init(void);
 bool hitag2_get_plain(uint8_t *plain,  uint8_t *plen);
-void hitag2_annotate_plain(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, uint8_t bits);
+void hitag2_annotate_plain(char *exp, size_t size, const uint8_t *cmd, uint16_t cmdsize, uint8_t bits);
 
 uint8_t hitag1_CRC_check(uint8_t *d, uint32_t nbit);
 #endif

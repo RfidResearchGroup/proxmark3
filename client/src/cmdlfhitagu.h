@@ -23,7 +23,7 @@
 #include "hitag.h"
 
 uint8_t hitagu_CRC_check(uint8_t *d, uint32_t nbit);
-void annotateHitagU(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response);
+void annotateHitagU(char *exp, size_t size, const uint8_t *cmd, uint16_t cmdsize, bool is_response);
 
 int CmdLFHitagU(const char *Cmd);
 
