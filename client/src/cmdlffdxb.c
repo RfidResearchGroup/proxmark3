@@ -114,20 +114,9 @@ static int getFDXBBits(uint64_t national_code, uint16_t country_code, uint8_t is
     return PM3_SUCCESS;
 }
 
-// clearing the topbit needed for the preambl detection.
-static void verify_values(uint64_t *animalid, uint32_t *countryid, uint32_t *extended) {
-    if ((*animalid & 0x3FFFFFFFFF) != *animalid) {
-        *animalid &= 0x3FFFFFFFFF;
-        PrintAndLogEx(INFO, "Animal ID truncated to 38bits: " _YELLOW_("%"PRIx64), *animalid);
-    }
-    if ((*countryid & 0x3FF) != *countryid) {
-        *countryid &= 0x3FF;
-        PrintAndLogEx(INFO, "Country ID truncated to 10bits:" _YELLOW_("%03d"), *countryid);
-    }
-    if ((*extended & 0xFFFFFF) != *extended) {
-        *extended &= 0xFFFFFF;
-        PrintAndLogEx(INFO, "Extended truncated to 24bits: " _YELLOW_("0x%03X"), *extended);
-    }
+// trailer of a Bio-Thermo chip: 00000000 0000000P TTTTTTTT, P the odd parity of T
+static uint32_t getFDXBBioThermo(uint8_t temperature) {
+    return ((bitcount32(temperature) & 0x1) ? 0 : 0x100) | temperature;
 }
 
 // FDX-B ISO11784/85 demod  (aka animal tag)  BIPHASE, inverted, rf/32,  with preamble of 00000000001 (128bits)
@@ -222,11 +211,11 @@ static int CmdFDXBdemodBI(const char *Cmd) {
 }
 */
 
-// For the country part:
-// wget -q -O - "https://en.wikipedia.org/w/index.php?title=List_of_ISO_3166_country_codes&action=raw" | awk '/id=/{match($0, /\[\[([^\]|]*)/, a); name=a[1];getline;getline;getline;getline;getline;match($0, /numeric#([0-9]*)/, a);num=a[1]; if (num != "") {printf "    { %3u, \"%s\" },\n", num, name}}'
+// For the country part: ISO 3166-1 numeric codes, names based on the ISO short names, long ones abbreviated to fit one Flipper Zero screen line
 // Beware the bottom of the list contains also Manufacturers list
 static const fdxbCountryMapping_t fdxbCountryMapping[] = {
     {   4, "Afghanistan" },
+    { 248, "Aland Isl." },
     {   8, "Albania" },
     {  12, "Algeria" },
     {  16, "American Samoa" },
@@ -234,13 +223,14 @@ static const fdxbCountryMapping_t fdxbCountryMapping[] = {
     {  24, "Angola" },
     { 660, "Anguilla" },
     {  10, "Antarctica" },
-    {  28, "Antigua and Barbuda" },
+    {  28, "Antigua & Barbuda" },
     {  32, "Argentina" },
     {  51, "Armenia" },
     { 533, "Aruba" },
+    {  36, "Australia" },
     {  40, "Austria" },
     {  31, "Azerbaijan" },
-    {  44, "The Bahamas" },
+    {  44, "Bahamas" },
     {  48, "Bahrain" },
     {  50, "Bangladesh" },
     {  52, "Barbados" },
@@ -249,91 +239,102 @@ static const fdxbCountryMapping_t fdxbCountryMapping[] = {
     {  84, "Belize" },
     { 204, "Benin" },
     {  60, "Bermuda" },
+    { 535, "BES Isl." },
     {  64, "Bhutan" },
     {  68, "Bolivia" },
-    { 535, "Bonaire" },
-    {  70, "Bosnia and Herzegovina" },
+    {  70, "Bosnia & Herzegovina" },
     {  72, "Botswana" },
-    {  74, "Bouvet Island" },
+    {  74, "Bouvet Isl." },
     {  76, "Brazil" },
-    {  86, "British Indian Ocean Territory" },
+    {  86, "British Indian Oc. Terr." },
+    {  92, "British Virgin Isl." },
+    {  96, "Brunei Darussalam" },
     { 100, "Bulgaria" },
     { 854, "Burkina Faso" },
-    { 132, "Cape Verde" },
+    { 108, "Burundi" },
+    { 132, "Cabo Verde" },
     { 116, "Cambodia" },
     { 120, "Cameroon" },
     { 124, "Canada" },
-    { 140, "Central African Republic" },
+    { 136, "Cayman Isl." },
+    { 140, "Central African Rep." },
     { 148, "Chad" },
     { 152, "Chile" },
     { 156, "China" },
+    { 162, "Christmas Isl." },
+    { 166, "Cocos (Keeling) Isl." },
     { 170, "Colombia" },
     { 174, "Comoros" },
-    { 180, "Democratic Republic of the Congo" },
-    { 178, "Republic of the Congo" },
-    { 184, "Cook Islands" },
-    { 384, "Ivory Coast" },
+    { 178, "Congo" },
+    { 184, "Cook Isl." },
+    { 188, "Costa Rica" },
+    { 384, "Cote d'Ivoire" },
     { 191, "Croatia" },
     { 192, "Cuba" },
-    { 531, "Curaçao" },
+    { 531, "Curacao" },
     { 196, "Cyprus" },
-    { 203, "Czech Republic" },
+    { 203, "Czechia" },
+    { 180, "Dem. Rep. of the Congo" },
+    { 208, "Denmark" },
     { 262, "Djibouti" },
     { 212, "Dominica" },
-    { 214, "Dominican Republic" },
+    { 214, "Dominican Rep." },
+    { 218, "Ecuador" },
     { 818, "Egypt" },
     { 222, "El Salvador" },
+    { 226, "Equatorial Guinea" },
     { 232, "Eritrea" },
     { 233, "Estonia" },
     { 748, "Eswatini" },
     { 231, "Ethiopia" },
-    { 238, "Falkland Islands" },
-    { 234, "Faroe Islands" },
+    { 238, "Falkland Isl. (Malvinas)" },
+    { 234, "Faroe Isl." },
     { 242, "Fiji" },
     { 246, "Finland" },
     { 250, "France" },
     { 254, "French Guiana" },
     { 258, "French Polynesia" },
-    { 260, "French Southern Territories" },
+    { 260, "French Southern Terr." },
     { 266, "Gabon" },
-    { 270, "The Gambia" },
-    { 268, "Georgia (country)" },
+    { 270, "Gambia" },
+    { 268, "Georgia" },
     { 276, "Germany" },
     { 288, "Ghana" },
     { 292, "Gibraltar" },
+    { 300, "Greece" },
     { 304, "Greenland" },
     { 308, "Grenada" },
     { 312, "Guadeloupe" },
     { 316, "Guam" },
     { 320, "Guatemala" },
-    { 831, "Bailiwick of Guernsey" },
+    { 831, "Guernsey" },
     { 324, "Guinea" },
     { 624, "Guinea-Bissau" },
     { 328, "Guyana" },
     { 332, "Haiti" },
-    { 336, "Holy See" },
+    { 334, "Heard & McDonald Isl." },
     { 340, "Honduras" },
     { 344, "Hong Kong" },
     { 348, "Hungary" },
     { 352, "Iceland" },
     { 356, "India" },
     { 360, "Indonesia" },
-    { 364, "Iran (Islamic Republic of)" },
+    { 364, "Iran" },
     { 368, "Iraq" },
-    { 372, "Republic of Ireland" },
+    { 372, "Ireland" },
     { 833, "Isle of Man" },
     { 376, "Israel" },
     { 380, "Italy" },
+    { 388, "Jamaica" },
+    { 392, "Japan" },
     { 832, "Jersey" },
     { 400, "Jordan" },
     { 398, "Kazakhstan" },
     { 404, "Kenya" },
     { 296, "Kiribati" },
-    { 408, "North Korea" },
-    { 410, "South Korea" },
     { 414, "Kuwait" },
     { 417, "Kyrgyzstan" },
-    { 418, "Laos" },
+    { 418, "Lao People's Dem. Rep." },
     { 428, "Latvia" },
     { 422, "Lebanon" },
     { 426, "Lesotho" },
@@ -342,21 +343,21 @@ static const fdxbCountryMapping_t fdxbCountryMapping[] = {
     { 438, "Liechtenstein" },
     { 440, "Lithuania" },
     { 442, "Luxembourg" },
-    { 446, "Macau" },
-    { 807, "North Macedonia" },
+    { 446, "Macao" },
     { 450, "Madagascar" },
     { 454, "Malawi" },
     { 458, "Malaysia" },
     { 462, "Maldives" },
     { 466, "Mali" },
     { 470, "Malta" },
-    { 584, "Marshall Islands" },
+    { 584, "Marshall Isl." },
     { 474, "Martinique" },
     { 478, "Mauritania" },
     { 480, "Mauritius" },
     { 175, "Mayotte" },
     { 484, "Mexico" },
-    { 583, "Federated States of Micronesia" },
+    { 583, "Micronesia" },
+    { 581, "Minor Outlying Isl. (US)" },
     { 498, "Moldova" },
     { 492, "Monaco" },
     { 496, "Mongolia" },
@@ -366,87 +367,98 @@ static const fdxbCountryMapping_t fdxbCountryMapping[] = {
     { 508, "Mozambique" },
     { 104, "Myanmar" },
     { 516, "Namibia" },
-    { 520, "Nauru" },
+    { 520, "Naoero" },
     { 524, "Nepal" },
-    { 528, "Kingdom of the Netherlands" },
+    { 528, "Netherlands" },
     { 540, "New Caledonia" },
     { 554, "New Zealand" },
     { 558, "Nicaragua" },
     { 562, "Niger" },
     { 566, "Nigeria" },
     { 570, "Niue" },
-    { 574, "Norfolk Island" },
+    { 574, "Norfolk Isl." },
+    { 408, "North Korea" },
+    { 807, "North Macedonia" },
+    { 580, "Northern Mariana Isl." },
     { 578, "Norway" },
     { 512, "Oman" },
     { 586, "Pakistan" },
     { 585, "Palau" },
-    { 275, "State of Palestine" },
+    { 275, "Palestine" },
     { 591, "Panama" },
     { 598, "Papua New Guinea" },
     { 600, "Paraguay" },
+    { 604, "Peru" },
     { 608, "Philippines" },
-    { 612, "Pitcairn Islands" },
+    { 612, "Pitcairn" },
     { 616, "Poland" },
     { 620, "Portugal" },
     { 630, "Puerto Rico" },
     { 634, "Qatar" },
-    { 638, "Réunion" },
+    { 638, "Reunion" },
     { 642, "Romania" },
-    { 643, "Russia" },
+    { 643, "Russian Federation" },
     { 646, "Rwanda" },
-    { 654, "Saint Helena" },
-    { 659, "Saint Kitts and Nevis" },
-    { 662, "Saint Lucia" },
-    { 663, "Collectivity of Saint Martin" },
-    { 666, "Saint Pierre and Miquelon" },
-    { 670, "Saint Vincent and the Grenadines" },
+    { 239, "S. Georgia & Sandw. Isl." },
     { 882, "Samoa" },
     { 674, "San Marino" },
-    { 678, "São Tomé and Príncipe" },
+    { 678, "Sao Tome & Principe" },
     { 682, "Saudi Arabia" },
+    { 686, "Senegal" },
     { 688, "Serbia" },
     { 690, "Seychelles" },
     { 694, "Sierra Leone" },
     { 702, "Singapore" },
+    { 534, "Sint Maarten (Dutch)" },
     { 703, "Slovakia" },
     { 705, "Slovenia" },
-    {  90, "Solomon Islands" },
+    {  90, "Solomon Isl." },
     { 706, "Somalia" },
     { 710, "South Africa" },
-    { 239, "South Georgia and the South Sandwich Islands" },
+    { 410, "South Korea" },
+    { 728, "South Sudan" },
     { 724, "Spain" },
     { 144, "Sri Lanka" },
+    { 652, "St. Barthelemy" },
+    { 654, "St. Helena" },
+    { 659, "St. Kitts & Nevis" },
+    { 662, "St. Lucia" },
+    { 663, "St. Martin (French)" },
+    { 666, "St. Pierre & Miquelon" },
+    { 670, "St. Vincent & Grenadin." },
     { 729, "Sudan" },
     { 740, "Suriname" },
-    { 744, "Svalbard" },
+    { 744, "Svalbard & Jan Mayen" },
     { 752, "Sweden" },
     { 756, "Switzerland" },
-    { 760, "Syria" },
+    { 760, "Syrian Arab Rep." },
     { 158, "Taiwan" },
     { 762, "Tajikistan" },
     { 834, "Tanzania" },
     { 764, "Thailand" },
-    { 626, "East Timor" },
+    { 626, "Timor-Leste" },
     { 768, "Togo" },
     { 772, "Tokelau" },
     { 776, "Tonga" },
-    { 780, "Trinidad and Tobago" },
+    { 780, "Trinidad & Tobago" },
     { 788, "Tunisia" },
-    { 792, "Turkey" },
+    { 792, "Turkiye" },
     { 795, "Turkmenistan" },
-    { 796, "Turks and Caicos Islands" },
+    { 796, "Turks & Caicos Isl." },
     { 798, "Tuvalu" },
     { 800, "Uganda" },
     { 804, "Ukraine" },
     { 784, "United Arab Emirates" },
     { 826, "United Kingdom" },
-    { 581, "United States Minor Outlying Islands" },
-    { 840, "United States" },
+    { 858, "Uruguay" },
+    { 840, "USA" },
     { 860, "Uzbekistan" },
     { 548, "Vanuatu" },
+    { 336, "Vatican City State" },
+    { 862, "Venezuela" },
     { 704, "Vietnam" },
-    {  92, "British Virgin Islands" },
-    { 850, "United States Virgin Islands" },
+    { 850, "Virgin Isl. (US)" },
+    { 876, "Wallis & Futuna" },
     { 732, "Western Sahara" },
     { 887, "Yemen" },
     { 894, "Zambia" },
@@ -542,10 +554,14 @@ int demodFDXB(bool verbose) {
     uint8_t rudiBit = g_DemodBuffer[offset];
 
     offset++;
-    // ISO: bits 10..14
-    uint32_t reservedCode = bytebits_to_byteLSBF(g_DemodBuffer + offset, 5);
+    // ISO: bits 12..14, starting digit of the visual number (ISO 11784:2024)
+    uint32_t visualStart = bytebits_to_byteLSBF(g_DemodBuffer + offset, 3);
 
-    offset += 5;
+    offset += 3;
+    // ISO: bits 10..11
+    uint32_t reservedCode = bytebits_to_byteLSBF(g_DemodBuffer + offset, 2);
+
+    offset += 2;
     // ISO: bits 5..9
     uint32_t userInfo = bytebits_to_byteLSBF(g_DemodBuffer + offset, 5);
 
@@ -569,28 +585,31 @@ int demodFDXB(bool verbose) {
 
     if (verbose == false) {
         PROMPT_CLEARLINE;
-        PrintAndLogEx(SUCCESS, "Animal ID........... " _GREEN_("%03u-%012"PRIu64), countryCode, NationalCode);
+        PrintAndLogEx(SUCCESS, "Animal code......... " _GREEN_("%03u %012"PRIu64), countryCode, NationalCode);
         return PM3_SUCCESS;
     }
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, _CYAN_("FDX-B / ISO 11784/5 Animal"));
-    PrintAndLogEx(SUCCESS, "Animal ID......... " _GREEN_("%03u-%012"PRIu64), countryCode, NationalCode);
-    PrintAndLogEx(SUCCESS, "National Code..... " _GREEN_("%012" PRIu64) " ( 0x%" PRIX64 " )", NationalCode, NationalCode);
-    PrintAndLogEx(SUCCESS, "Country Code...... " _GREEN_("%03u") " - %s", countryCode, mapFDBX(countryCode));
-    PrintAndLogEx(SUCCESS, "Reserved/RFU...... %u (0x%04X)", reservedCode,  reservedCode);
-    PrintAndLogEx(SUCCESS, "Animal bit set?... %s", animalBit ? _YELLOW_("True") : "False");
-    PrintAndLogEx(SUCCESS, "Data block?....... %s  ( 0x%X )", dataBlockBit ? _YELLOW_("True") : "False", extended);
-    PrintAndLogEx(SUCCESS, "RUDI bit?......... %s", rudiBit ? _YELLOW_("True") " ( advanced transponder )" : "False");
-    PrintAndLogEx(SUCCESS, "User Info?........ %u %s", userInfo, (userInfo == 0) ? "( RFU )" : "");
-    PrintAndLogEx(SUCCESS, "Replacement No?... %u %s", replacementNr, replacementNr == 0 ? "( RFU )" : "");
+    PrintAndLogEx(SUCCESS, "Animal code......... " _GREEN_("%03u %012"PRIu64), countryCode, NationalCode);
+    PrintAndLogEx(SUCCESS, "National ID code.... " _GREEN_("%012" PRIu64) " ( 0x%010" PRIX64 " )", NationalCode, NationalCode);
+    PrintAndLogEx(SUCCESS, "Country code........ " _GREEN_("%03u") " - %s", countryCode, mapFDBX(countryCode));
+    PrintAndLogEx(SUCCESS, "Starting digit...... %u ( 0x%02X )", visualStart, visualStart);
+    PrintAndLogEx(SUCCESS, "Reserved field...... %u ( 0x%02X )", reservedCode, reservedCode);
+    PrintAndLogEx(SUCCESS, "Animal bit.......... %s", animalBit ? _YELLOW_("True") : "False");
+    PrintAndLogEx(SUCCESS, "Data block flag..... %s", dataBlockBit ? _YELLOW_("True") : "False");
+    PrintAndLogEx(SUCCESS, "Trailer............. 0x%06X", extended);
+    PrintAndLogEx(SUCCESS, "RUDI-bit............ %s", rudiBit ? _YELLOW_("True") " ( advanced transponder )" : "False");
+    // ISO 24631-6: user information on two digits, retagging counter on one
+    PrintAndLogEx(SUCCESS, "User information.... %02u ( 0x%02X )", userInfo, userInfo);
+    PrintAndLogEx(SUCCESS, "Retagging counter... %u ( 0x%02X )", replacementNr, replacementNr);
 
     // crc only calculated over NORMAL data (8 bytes)
     uint8_t c[] = {0, 0};
     compute_crc(CRC_11784, raw, 8, &c[0], &c[1]);
-    PrintAndLogEx(SUCCESS, "CRC-16............ 0x%04X ( %s )", crc, (crc == (c[1] << 8 | c[0])) ? _GREEN_("ok") : _RED_("fail"));
+    PrintAndLogEx(SUCCESS, "CRC-16.............. 0x%04X ( %s )", crc, (crc == (c[1] << 8 | c[0])) ? _GREEN_("ok") : _RED_("fail"));
     // iceman: crc doesn't protect the extended data?
-    PrintAndLogEx(SUCCESS, "Raw............... " _GREEN_("%s"), sprint_hex(raw, sizeof(raw)));
+    PrintAndLogEx(SUCCESS, "Raw................. " _GREEN_("%s"), sprint_hex(raw, sizeof(raw)));
 
     if (g_debugMode) {
         PrintAndLogEx(DEBUG, "Start marker %d;   Size %zu", preambleIndex, size);
@@ -598,17 +617,16 @@ int demodFDXB(bool verbose) {
         PrintAndLogEx(DEBUG, "DEBUG bin stream:\n%s", bin);
     }
 
-    uint8_t bt_par = (extended & 0x100) >> 8;
     uint8_t bt_temperature = extended & 0xff;
-    uint8_t bt_calc_parity = (bitcount32(bt_temperature) & 0x1) ? 0 : 1;
-    uint8_t is_bt_temperature = (bt_calc_parity == bt_par) && !(extended & 0xe00) ;
+    // only the exact layout of the chips, every other bit clear
+    bool is_bt_temperature = (extended == getFDXBBioThermo(bt_temperature));
 
     if (is_bt_temperature) {
         float bt_F = 74 + bt_temperature * 0.2;
         float bt_C = (bt_F - 32) / 1.8;
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(SUCCESS, "Bio-Thermo detected");
-        PrintAndLogEx(INFO,    "  temperature... " _GREEN_("%.1f")" F / " _GREEN_("%.1f") " C", bt_F, bt_C);
+        PrintAndLogEx(INFO,    "  temperature... " _GREEN_("%.2f")" F / " _GREEN_("%.2f") " C", bt_F, bt_C);
     }
 
     // set block 0 for later
@@ -662,40 +680,37 @@ static int CmdFdxBReader(const char *Cmd) {
 
     config.verbose = false;
 
-    int16_t curr_div = config.divisor;
-    int16_t old_div = curr_div;
+    int16_t old_div = config.divisor;
 
     if (cm) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
 
+    // 134 kHz for animal tags, then 125 kHz for emulators tuned there
+    const int16_t divisors[] = {LF_DIVISOR_134, LF_DIVISOR_125};
+
     int ret = PM3_SUCCESS;
     do {
 
-        if (curr_div == LF_DIVISOR_125) {
-            config.divisor = LF_DIVISOR_134;
+        for (size_t i = 0; i < ARRAYLEN(divisors); i++) {
+            config.divisor = divisors[i];
             res = lf_setconfig(&config);
             if (res != PM3_SUCCESS) {
-                PrintAndLogEx(ERR, "failed to change to 134 KHz LF configuration");
+                PrintAndLogEx(ERR, "failed to change to %s KHz LF configuration", (divisors[i] == LF_DIVISOR_134) ? "134" : "125");
                 return res;
             }
-        } else {
-            config.divisor = LF_DIVISOR_125;
-            res = lf_setconfig(&config);
-            if (res != PM3_SUCCESS) {
-                PrintAndLogEx(ERR, "failed to change to 125 KHz LF configuration");
-                return res;
+
+            lf_read(false, 10000);
+            ret = demodFDXB(!cm); // be verbose only if not in continuous mode
+            if (ret == PM3_SUCCESS) {
+                break;
             }
         }
-        curr_div = config.divisor;
-
-        lf_read(false, 10000);
-        ret = demodFDXB(!cm); // be verbose only if not in continuous mode
 
     } while (cm && (kbd_enter_pressed() == false));
 
 
-    if (old_div != curr_div) {
+    if (old_div != config.divisor) {
         config.divisor = old_div;
         res = lf_setconfig(&config);
         if (res != PM3_SUCCESS) {
@@ -713,6 +728,7 @@ static int CmdFdxBClone(const char *Cmd) {
                   "clone a FDX-B tag to a T55x7, Q5/T5555 or EM4305/4469 tag.",
                   "lf fdxb clone --country 999 --national 1337 --animal        -> encode for T55x7 tag, with animal bit\n"
                   "lf fdxb clone --country 999 --national 1337 --extended 016A -> encode for T55x7 tag, with extended data\n"
+                  "lf fdxb clone --country 999 --national 1337 --biothermo 106 -> encode for T55x7 tag, Bio-Thermo 95.20 F\n"
                   "lf fdxb clone --country 999 --national 1337 --q5            -> encode for Q5/T5555 tag\n"
                   "lf fdxb clone --country 999 --national 1337 --em            -> encode for EM4305/4469"
                  );
@@ -725,11 +741,13 @@ static int CmdFdxBClone(const char *Cmd) {
         arg_lit0("a", "animal", "optional - set animal bit"),
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
         arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
+        arg_u64_0(NULL, "biothermo", "<dec>", "Bio-Thermo temperature value 0-255, 74 + 0.2 x value F"),
+        arg_lit0(NULL, "no-datablock", "optional - leave the data block flag clear, as Bio-Thermo chips do"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint32_t country_code = arg_get_u32_def(ctx, 1, 0);
+    uint64_t country_code = arg_get_u64_def(ctx, 1, 0);
     uint64_t national_code = arg_get_u64_def(ctx, 2, 0);
 
     int extended_len = 0;
@@ -739,6 +757,9 @@ static int CmdFdxBClone(const char *Cmd) {
     bool is_animal = arg_get_lit(ctx, 4);
     bool q5 = arg_get_lit(ctx, 5);
     bool em = arg_get_lit(ctx, 6);
+    bool has_biothermo = (arg_get_u64_count(ctx, 7) > 0);
+    uint64_t biothermo = arg_get_u64_def(ctx, 7, 0);
+    bool no_datablock = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
 
     if (q5 && em) {
@@ -753,14 +774,39 @@ static int CmdFdxBClone(const char *Cmd) {
         has_extended = true;
     }
 
-    verify_values(&national_code, &country_code, &extended);
+    // the frame carries 10 bits of country code and 38 of national code
+    if (country_code > 0x3FF || national_code > 0x3FFFFFFFFF) {
+        PrintAndLogEx(FAILED, "Country code has a max value of 1023 and national code has a max value of 274877906943");
+        return PM3_EINVARG;
+    }
 
-    PrintAndLogEx(INFO, "Country code........ %"PRIu32, country_code);
-    PrintAndLogEx(INFO, "National code....... %"PRIu64, national_code);
-    PrintAndLogEx(INFO, "Set animal bit...... %c", (is_animal) ? 'Y' : 'N');
-    PrintAndLogEx(INFO, "Set data block bit.. %c", (has_extended) ? 'Y' : 'N');
-    PrintAndLogEx(INFO, "Extended data....... 0x%"PRIX32, extended);
-    PrintAndLogEx(INFO, "RFU................. 0");
+    if (has_extended && has_biothermo) {
+        PrintAndLogEx(FAILED, "Can't specify both extended data and Bio-Thermo at the same time");
+        return PM3_EINVARG;
+    }
+
+    if (biothermo > 0xFF) {
+        PrintAndLogEx(FAILED, "Bio-Thermo has a max value of 255");
+        return PM3_EINVARG;
+    }
+
+    if (has_biothermo) {
+        extended = getFDXBBioThermo(biothermo);
+    }
+    // Bio-Thermo chips send their temperature with the data block flag clear
+    bool data_block = has_extended && (no_datablock == false);
+
+    PrintAndLogEx(INFO, "Country code........ %"PRIu64, country_code);
+    PrintAndLogEx(INFO, "National ID code.... %"PRIu64, national_code);
+    PrintAndLogEx(INFO, "Animal bit.......... %s", is_animal ? _YELLOW_("True") : "False");
+    PrintAndLogEx(INFO, "Data block flag..... %s", data_block ? _YELLOW_("True") : "False");
+    PrintAndLogEx(INFO, "Trailer............. 0x%06"PRIX32, extended);
+    if (has_biothermo) {
+        float bt_F = 74 + biothermo * 0.2;
+        PrintAndLogEx(INFO, "Bio-Thermo.......... %"PRIu64" ( %.2f F / %.2f C )", biothermo, bt_F, (bt_F - 32) / 1.8);
+    }
+    PrintAndLogEx(INFO, "Starting digit...... 0 ( 0x00 )");
+    PrintAndLogEx(INFO, "Reserved field...... 0 ( 0x00 )");
 
     uint8_t *bs = calloc(128, sizeof(uint8_t));
     if (bs == NULL) {
@@ -768,7 +814,7 @@ static int CmdFdxBClone(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
-    if (getFDXBBits(national_code, country_code, is_animal, has_extended, extended, bs) != PM3_SUCCESS) {
+    if (getFDXBBits(national_code, country_code, is_animal, data_block, extended, bs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         free(bs);
         return PM3_ESOFT;
@@ -797,7 +843,7 @@ static int CmdFdxBClone(const char *Cmd) {
 
     free(bs);
 
-    PrintAndLogEx(INFO, "Preparing to clone FDX-B to " _YELLOW_("%s") " with animal ID: " _GREEN_("%04u-%"PRIu64)
+    PrintAndLogEx(INFO, "Preparing to clone FDX-B to " _YELLOW_("%s") " with animal code: " _GREEN_("%03"PRIu64" %012"PRIu64)
                   , cardtype
                   , country_code
                   , national_code
@@ -823,6 +869,7 @@ static int CmdFdxBSim(const char *Cmd) {
                   "Simulation runs until the button is pressed or another USB command is issued.",
                   "lf fdxb sim --country 999 --national 1337 --animal\n"
                   "lf fdxb sim --country 999 --national 1337 --extended 016A\n"
+                  "lf fdxb sim --country 999 --national 1337 --biothermo 106\n"
                  );
 
     void *argtable[] = {
@@ -831,17 +878,22 @@ static int CmdFdxBSim(const char *Cmd) {
         arg_u64_1("n", "national", "<dec>", "national code"),
         arg_str0(NULL, "extended", "<hex>", "extended data"),
         arg_lit0("a", "animal", "optional - set animal bit"),
+        arg_u64_0(NULL, "biothermo", "<dec>", "Bio-Thermo temperature value 0-255, 74 + 0.2 x value F"),
+        arg_lit0(NULL, "no-datablock", "optional - leave the data block flag clear, as Bio-Thermo chips do"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint32_t country_code = arg_get_u32_def(ctx, 1, 0);
+    uint64_t country_code = arg_get_u64_def(ctx, 1, 0);
     uint64_t national_code = arg_get_u64_def(ctx, 2, 0);
     int extended_len = 0;
     uint8_t edata[3] = {0};
     CLIGetHexWithReturn(ctx, 3, edata, &extended_len);
 
     bool is_animal = arg_get_lit(ctx, 4);
+    bool has_biothermo = (arg_get_u64_count(ctx, 5) > 0);
+    uint64_t biothermo = arg_get_u64_def(ctx, 5, 0);
+    bool no_datablock = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
     uint32_t extended = 0;
@@ -851,23 +903,48 @@ static int CmdFdxBSim(const char *Cmd) {
         has_extended = true;
     }
 
-    verify_values(&national_code, &country_code, &extended);
+    // the frame carries 10 bits of country code and 38 of national code
+    if (country_code > 0x3FF || national_code > 0x3FFFFFFFFF) {
+        PrintAndLogEx(FAILED, "Country code has a max value of 1023 and national code has a max value of 274877906943");
+        return PM3_EINVARG;
+    }
 
-    PrintAndLogEx(INFO, "Country code........ %"PRIu32, country_code);
-    PrintAndLogEx(INFO, "National code....... %"PRIu64, national_code);
-    PrintAndLogEx(INFO, "Set animal bit...... %c", (is_animal) ? 'Y' : 'N');
-    PrintAndLogEx(INFO, "Set data block bit.. %c", (has_extended) ? 'Y' : 'N');
-    PrintAndLogEx(INFO, "Extended data....... 0x%"PRIX16, extended);
-    PrintAndLogEx(INFO, "RFU................. 0");
+    if (has_extended && has_biothermo) {
+        PrintAndLogEx(FAILED, "Can't specify both extended data and Bio-Thermo at the same time");
+        return PM3_EINVARG;
+    }
 
-    PrintAndLogEx(SUCCESS, "Simulating FDX-B animal ID: " _YELLOW_("%04u-%"PRIu64), country_code, national_code);
+    if (biothermo > 0xFF) {
+        PrintAndLogEx(FAILED, "Bio-Thermo has a max value of 255");
+        return PM3_EINVARG;
+    }
+
+    if (has_biothermo) {
+        extended = getFDXBBioThermo(biothermo);
+    }
+    // Bio-Thermo chips send their temperature with the data block flag clear
+    bool data_block = has_extended && (no_datablock == false);
+
+    PrintAndLogEx(INFO, "Country code........ %"PRIu64, country_code);
+    PrintAndLogEx(INFO, "National ID code.... %"PRIu64, national_code);
+    PrintAndLogEx(INFO, "Animal bit.......... %s", is_animal ? _YELLOW_("True") : "False");
+    PrintAndLogEx(INFO, "Data block flag..... %s", data_block ? _YELLOW_("True") : "False");
+    PrintAndLogEx(INFO, "Trailer............. 0x%06"PRIX32, extended);
+    if (has_biothermo) {
+        float bt_F = 74 + biothermo * 0.2;
+        PrintAndLogEx(INFO, "Bio-Thermo.......... %"PRIu64" ( %.2f F / %.2f C )", biothermo, bt_F, (bt_F - 32) / 1.8);
+    }
+    PrintAndLogEx(INFO, "Starting digit...... 0 ( 0x00 )");
+    PrintAndLogEx(INFO, "Reserved field...... 0 ( 0x00 )");
+
+    PrintAndLogEx(SUCCESS, "Simulating FDX-B animal code: " _YELLOW_("%03"PRIu64" %012"PRIu64), country_code, national_code);
 
     uint8_t *bs = calloc(128, sizeof(uint8_t));
     if (bs == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
-    if (getFDXBBits(national_code, country_code, is_animal, (extended > 0), extended, bs) != PM3_SUCCESS) {
+    if (getFDXBBits(national_code, country_code, is_animal, data_block, extended, bs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         free(bs);
         return PM3_ESOFT;
@@ -892,20 +969,13 @@ static int CmdFdxBSim(const char *Cmd) {
     free(bs);
     free(payload);
 
-    PacketResponseNG resp;
-    WaitForResponse(CMD_LF_ASK_SIMULATE, &resp);
-
-    PrintAndLogEx(INFO, "Done!");
-    if (resp.status != PM3_EOPABORTED) {
-        return resp.status;
-    }
-    return PM3_SUCCESS;
+    return lfsim_wait_check(CMD_LF_ASK_SIMULATE);
 }
 
 static command_t CommandTable[] = {
     {"help",    CmdHelp,      AlwaysAvailable, "this help"},
     {"demod",   CmdFdxBDemod,  AlwaysAvailable, "demodulate a FDX-B ISO11784/85 tag from the GraphBuffer"},
-    {"reader",  CmdFdxBReader, IfPm3Lf,         "attempt to read at 134kHz and extract tag data"},
+    {"reader",  CmdFdxBReader, IfPm3Lf,         "attempt to read at 134 kHz, then 125 kHz, and extract tag data"},
     {"clone",   CmdFdxBClone,  IfPm3Lf,         "clone animal ID tag to T55x7, Q5/T5555 or EM4305/4469"},
     {"sim",     CmdFdxBSim,    IfPm3Lf,         "simulate Animal ID tag"},
     {NULL, NULL, NULL, NULL}
