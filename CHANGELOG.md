@@ -5,6 +5,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 - Fixed `lf em 4x50 rdbl/info/dump`, `lf search` - RM was sent into the tag data instead of the second listen window on strong, AC-coupled signals, so every command failed; reads now retry within 1 s (@abou28)
 - Added `lf em 4x50 config` - runtime EM4x50 reader timings, and `lf_em4x50_tune.lua` to sweep them; extended debug level captures the raw exchange for `data samples` (@abou28)
+- Fixed `lf indala clone`, `sim` and `brute` with `--fc`/`--cn` - parity and checksum bits as on genuine cards (@matrix)
 - Fixed `lf hitag wrbl`, `hts wrbl` and `htu wrbl` - a page out of range or data shorter than 4 bytes is refused (@matrix)
 - Fixed `lf hitag eview -1/-s/-m` and `htu rdbl -c` - no read past the label table or the reply (@matrix)
 - Fixed `lf hitag` and `lf search` Paxton id - no garbage before the form factor (@matrix)
