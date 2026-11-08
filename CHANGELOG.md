@@ -5,6 +5,12 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 - Fixed `lf em 4x50 rdbl/info/dump`, `lf search` - RM was sent into the tag data instead of the second listen window on strong, AC-coupled signals, so every command failed; reads now retry within 1 s (@abou28)
 - Added `lf em 4x50 config` - runtime EM4x50 reader timings, and `lf_em4x50_tune.lua` to sweep them; extended debug level captures the raw exchange for `data samples` (@abou28)
+- Fixed `lf hitag wrbl`, `hts wrbl` and `htu wrbl` - a page out of range or data shorter than 4 bytes is refused (@matrix)
+- Fixed `lf hitag eview -1/-s/-m` and `htu rdbl -c` - no read past the label table or the reply (@matrix)
+- Fixed `lf hitag` and `lf search` Paxton id - no garbage before the form factor (@matrix)
+- Fixed `lf hitag hts rdbl`, `hts -m` and `ta -h` - page 32 under LCK1, mode above 3 refused, help shown (@matrix)
+- Fixed `lf noralsy demod` - one demod error outside the frame, like a cut first bit, no longer loses the read (@matrix)
+- Fixed `lf noralsy demod` - a card with the 0xBB0314FF first block no longer gets the unknown bits warning (@matrix)
 - Added `lf destron sim` - simulates the FDX-A frame that `lf destron clone` writes (@matrix)
 - Fixed `lf destron clone` - a uid that is not 5 bytes of 00-7F is refused instead of written as another id or with bad parity (@matrix)
 - Fixed `lf fdxb` decoding - ISO 11784:2024 and ISO 24631-6 fields and names, and many more fixes. See commit message (@matrix)

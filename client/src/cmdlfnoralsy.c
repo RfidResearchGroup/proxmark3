@@ -46,7 +46,7 @@ int demodNoralsy(bool verbose) {
     (void) verbose; // unused so far
     //ASK / Manchester
     bool st = true;
-    if (ASKDemod_ext(32, 0, 0, 0, false, false, false, 1, &st) != PM3_SUCCESS) {
+    if (ASKDemod_ext(32, 0, 100, 0, false, false, false, 1, &st) != PM3_SUCCESS) {
         if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: ASK/Manchester Demod failed");
         return PM3_ESOFT;
     }
@@ -104,8 +104,8 @@ int demodNoralsy(bool verbose) {
     }
 
     PrintAndLogEx(SUCCESS, "Noralsy - Card: " _GREEN_("%u")", Year: " _GREEN_("%u") ", Raw: %08X%08X%08X", cardid, year, raw1, raw2, raw3);
-    if (raw1 != 0xBB0214FF) {
-        PrintAndLogEx(WARNING, "Unknown bits set in first block! Expected 0xBB0214FF, Found: 0x%08X", raw1);
+    if ((raw1 != 0xBB0214FF) && (raw1 != 0xBB0314FF)) {
+        PrintAndLogEx(WARNING, "Unknown bits set in first block! Expected 0xBB0214FF or 0xBB0314FF, Found: 0x%08X", raw1);
         PrintAndLogEx(WARNING, "Please post this output in forum to further research on this format");
     }
     return PM3_SUCCESS;
@@ -346,7 +346,7 @@ int detectNoralsy(uint8_t *dest, size_t *size) {
 }
 /*
 *
-* 2520116 | BB0214FF2529900116360000 | 10111011 00000011 00010100 11111111 00100101 00101001 10010000 00000001 00010110 00110110 00000000 00000000
+* 2520116 | BB0314FF2529900116360000 | 10111011 00000011 00010100 11111111 00100101 00101001 10010000 00000001 00010110 00110110 00000000 00000000
 *           aaa*aaaaiiiYY*iiiicc----                ****                   iiiiiiii iiiiYYYY YYYY**** iiiiiiii iiiiiiii cccccccc
 *
 * a = fixed value BB0*14FF

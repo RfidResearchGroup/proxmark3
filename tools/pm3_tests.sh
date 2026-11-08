@@ -561,6 +561,7 @@ while true; do
 
       echo -e "\n${C_BLUE}Testing LF:${C_NC}"
       if ! CheckExecute "lf hitag2 test"             "$CLIENTBIN -c 'lf hitag test'" "Tests \( ok"; then break; fi
+      if ! CheckExecute "lf hitag ta help"           "$CLIENTBIN -c 'lf hitag ta -h'" "Test recorded authentications"; then break; fi
       if ! CheckExecute "lf cotag demod test 1/4"    "$CLIENTBIN -c 'data load -f traces/lf_cotag_220_8331.pm3; lf cotag demod -c 272 -v'" \
                                                                      "data hex:     0    0    0    0    0    0    0    0    0    0    0    0    0    1    0    5    8    2    4    E    0    0    0    0    8    0    2    3    D    F    7    7"; then break; fi
       if ! CheckExecute "lf cotag demod test 2/4"    "$CLIENTBIN -c 'data load -f traces/cotag/lf_cotag_passive_02402447_700000.pm3; lf cotag demod -v'" \
