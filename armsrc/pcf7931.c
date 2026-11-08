@@ -25,6 +25,7 @@
 #include "util.h"
 #include "lfsampling.h"
 #include "string.h"
+#include "commonutil.h"
 
 #define T0_PCF 8 //period for the pcf7931 in us
 
@@ -56,9 +57,8 @@
 // theshold for recognition of positive/negative slope
 #define THRESHOLD 80
 
-size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
+size_t DemodPCF7931(uint8_t *outBlocks, size_t max_blocks, bool ledcontrol) {
     uint8_t bits[256] = {0x00};
-    uint8_t blocks[8][16];
     uint8_t *dest = BigBuf_get_addr();
     uint32_t g_GraphTraceLen = BigBuf_max_traceLen();
     // limit g_GraphTraceLen to a little more than 2 data frames.
@@ -179,9 +179,9 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
                 // check if it is a complete block. If bitpos <128, it means that we did not receive
                 // a complete block. E.g. at the first start of a transmission.
                 // only save if a complete block is being received.
-                if (bitPos == 128) {
+                if (bitPos == 128 && num_blocks < max_blocks) {
                     for (j = 0; j < 16; ++j) {
-                        blocks[num_blocks][j] =
+                        outBlocks[num_blocks * 16 + j] =
                             128 * bits[j * 8 + 7] +
                             64 * bits[j * 8 + 6] +
                             32 * bits[j * 8 + 5] +
@@ -213,7 +213,6 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
 
     }
 
-    memcpy(outBlocks, blocks, 16 * num_blocks);
     return num_blocks;
 }
 
@@ -265,7 +264,7 @@ void ReadPCF7931(bool ledcontrol) {
     // TODO: Why 17 byte len? 16 should be good.
     uint8_t memory_blocks[maxBlocks][17]; // PCF content
     uint8_t single_blocks[maxBlocks][17]; // PFC blocks with unknown position
-    uint8_t tmp_blocks[4][16]; // temporary read buffer
+    uint8_t tmp_blocks[16][16]; // temporary read buffer
 
     int single_blocks_cnt = 0;
 
@@ -286,15 +285,15 @@ void ReadPCF7931(bool ledcontrol) {
         Dbprintf("ReadPCF7931() -- Reading Loop ==========");
         i = 0;
 
-        memset(tmp_blocks, 0, 4 * 16 * sizeof(uint8_t));
-        n = DemodPCF7931((uint8_t **)tmp_blocks, ledcontrol);
+        memset(tmp_blocks, 0, sizeof(tmp_blocks));
+        n = DemodPCF7931((uint8_t *)tmp_blocks, ARRAYLEN(tmp_blocks), ledcontrol);
         if (!n)
             ++errors;
 
         // exit if no block is received
         if (errors >= 10 && found_blocks == 0 && single_blocks_cnt == 0) {
             Dbprintf("[!!] Error, no tag or bad tag");
-            return;
+            goto end;
         }
         // exit if too many tries without finding the first block
         if (tries > 10) {
@@ -343,6 +342,8 @@ void ReadPCF7931(bool ledcontrol) {
         for (i = 0; i < n; ++i) {
             print_result("Block found: ", tmp_blocks[i], 16);
         }
+        // blocks are not sorted yet, one good capture is enough
+        found_blocks += n;
 
         // i = 0;
         // if (!found_0_1) {
@@ -433,6 +434,8 @@ end:
         }
     */
 
+    // field off, so a following write starts from a tag reset
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     reply_ng(CMD_LF_PCF7931_READ, PM3_SUCCESS, NULL, 0);
 }
 
@@ -538,6 +541,7 @@ void WritePCF7931(
     uint8_t password[7] = {pass1, pass2, pass3, pass4, pass5, pass6, pass7};
 
     RealWritePCF7931(password, init_delay, offsetPulseWidth, offsetPulsePosition, address, byte, data, ledcontrol);
+    reply_ng(CMD_LF_PCF7931_WRITE, PM3_SUCCESS, NULL, 0);
 }
 
 
@@ -545,14 +549,28 @@ void WritePCF7931(
  * @param tab : array of the data frame
  */
 
+// wait until `target` ticks since frame start; 32-bit accumulation survives 16-bit counter wraps
+static void WaitUntilPCF7931(uint32_t *elapsed, uint16_t *last, uint32_t target) {
+    while (*elapsed < target) {
+        uint16_t now = GetPrecisionCounterRaw();
+        *elapsed += (uint16_t)(now - *last);
+        *last = now;
+    }
+}
+
 void SendCmdPCF7931(uint32_t *tab, bool ledcontrol) {
-    uint16_t u = 0, tempo = 0;
+    uint16_t u = 0;
 
     if (g_dbglevel >= DBG_INFO) {
         Dbprintf("Sending data frame...");
     }
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+
+    // init_delay is counted from tag power-up, make sure it was reset
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    SpinDelay(50);
+
     FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125); //125kHz
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU);
 
@@ -565,39 +583,26 @@ void SendCmdPCF7931(uint32_t *tab, bool ledcontrol) {
         tab[u] = (tab[u] * 3) / 2;
     }
 
-    // compensation for the counter overflow
-    // only one overflow should be possible.
-    for (u = 0; tab[u] != 0; ++u)
-        if (tab[u] > 0xFFFF) {
-            tab[u] -= 0xFFFF;
-            break;
-        }
-
     // steal this pin from the SSP and use it to control the modulation
     gpio_fpga_mod_only_setup();
 
     //initialization of the timer (free-running 1.5 MHz precision counter on TC0)
     StartPrecisionCounter();
 
-    tempo = GetPrecisionCounter();
+    uint32_t elapsed = 0;
+    uint16_t last = GetPrecisionCounterRaw();
     for (u = 0; tab[u] != 0; u += 3) {
         // modulate antenna
         Gpio_SSC_DOUT_High();
-        while ((uint32_t)tempo < tab[u]) {
-            tempo = GetPrecisionCounter();
-        }
+        WaitUntilPCF7931(&elapsed, &last, tab[u]);
 
         // stop modulating antenna
         Gpio_SSC_DOUT_Low();
-        while ((uint32_t)tempo < tab[u + 1]) {
-            tempo = GetPrecisionCounter();
-        }
+        WaitUntilPCF7931(&elapsed, &last, tab[u + 1]);
 
         // modulate antenna
         Gpio_SSC_DOUT_High();
-        while ((uint32_t)tempo < tab[u + 2]) {
-            tempo = GetPrecisionCounter();
-        }
+        WaitUntilPCF7931(&elapsed, &last, tab[u + 2]);
     }
 
     if (ledcontrol) LED_A_OFF();

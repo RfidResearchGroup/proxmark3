@@ -25,7 +25,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-#define PCF7931_DEFAULT_INITDELAY 17500
+#define PCF7931_DEFAULT_INITDELAY 17450
 #define PCF7931_DEFAULT_OFFSET_WIDTH 0
 #define PCF7931_DEFAULT_OFFSET_POSITION 0
 
@@ -80,7 +80,7 @@ static int CmdLFPCF7931Reader(const char *Cmd) {
         PacketResponseNG resp;
         clearCommandBuffer();
         SendCommandNG(CMD_LF_PCF7931_READ, NULL, 0);
-        if (WaitForResponseTimeout(CMD_LF_PCF7931_READ, &resp, 2500) == false) {
+        if (WaitForResponseTimeout(CMD_LF_PCF7931_READ, &resp, 15000) == false) {
             PrintAndLogEx(WARNING, "command execution time out");
             return PM3_ETIMEOUT;
         }
@@ -128,6 +128,16 @@ static int CmdLFPCF7931Config(const char *Cmd) {
 
     if (pwd_len && pwd_len < sizeof(pwd)) {
         PrintAndLogEx(ERR, "Password must be 7 bytes");
+        return PM3_EINVARG;
+    }
+
+    if (delay != -1 && (delay == 0 || delay > 0xFFFF)) {
+        PrintAndLogEx(ERR, "Delay must be between 1-65535 us");
+        return PM3_EINVARG;
+    }
+
+    if ((ow != 0xFFFF && (ow < -128 || ow > 127)) || (op != 0xFFFF && (op < -128 || op > 127))) {
+        PrintAndLogEx(ERR, "Offsets must be between -128 and 127 us");
         return PM3_EINVARG;
     }
 
