@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `lf hitag wrbl`, `hts wrbl` and `htu wrbl` - a page out of range or data shorter than 4 bytes is refused (@matrix)
+- Fixed `lf hitag eview -1/-s/-m` and `htu rdbl -c` - no read past the label table or the reply (@matrix)
+- Fixed `lf hitag` and `lf search` Paxton id - no garbage before the form factor (@matrix)
+- Fixed `lf hitag hts rdbl`, `hts -m` and `ta -h` - page 32 under LCK1, mode above 3 refused, help shown (@matrix)
 - Added `lf destron sim` - simulates the FDX-A frame that `lf destron clone` writes (@matrix)
 - Fixed `lf destron clone` - a uid that is not 5 bytes of 00-7F is refused instead of written as another id or with bad parity (@matrix)
 - Fixed `lf fdxb` decoding - ISO 11784:2024 and ISO 24631-6 fields and names, and many more fixes. See commit message (@matrix)
