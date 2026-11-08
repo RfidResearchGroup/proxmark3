@@ -40,44 +40,44 @@ typedef struct {
 
 void ClearAuthData(void);
 
-uint8_t iso14443A_CRC_check(bool isResponse, uint8_t *d, uint8_t n);
-uint8_t iso14443B_CRC_check(uint8_t *d, uint8_t n);
-uint8_t felica_CRC_check(uint8_t *d, uint8_t n);
-uint8_t mifare_CRC_check(bool isResponse, uint8_t *data, uint8_t len);
-uint8_t iso15693_CRC_check(uint8_t *d, uint8_t n);
-uint8_t iclass_CRC_check(bool isResponse, uint8_t *d, uint8_t n);
-uint8_t seos_CRC_check(bool isResponse, uint8_t *d, uint8_t n);
+uint8_t iso14443A_CRC_check(bool isResponse, uint8_t *d, uint16_t n);
+uint8_t iso14443B_CRC_check(uint8_t *d, uint16_t n);
+uint8_t felica_CRC_check(uint8_t *d, uint16_t n);
+uint8_t mifare_CRC_check(bool isResponse, uint8_t *data, uint16_t len);
+uint8_t iso15693_CRC_check(uint8_t *d, uint16_t n);
+uint8_t iclass_CRC_check(bool isResponse, uint8_t *d, uint16_t n);
+uint8_t seos_CRC_check(bool isResponse, uint8_t *d, uint16_t n);
 
-int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response);
+int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool is_response);
 
-void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool isResponse);
-void annotateIso15693(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
-void annotateTopaz(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
-void annotateLegic(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
-void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response);
-void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response, bool contact);
-void annotateCalypso(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response);
-void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response);
-void annotateIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response);
-void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
+void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool isResponse);
+void annotateIso15693(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize);
+void annotateTopaz(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize);
+void annotateLegic(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize);
+void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool is_response);
+void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool is_response, bool contact);
+void annotateCalypso(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool is_response);
+void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool is_response);
+void annotateIso14443a(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool is_response);
+void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize);
 const char *mfpGetAnnotationForCode(uint8_t code);
 const char *mfpGetEncryptedForCode(uint8_t code);
 const char *mfpGetResponseMacedForCode(uint8_t code);
 const char *mfpGetCommandMacedForCode(uint8_t code);
-void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
-void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize,
-                    const uint8_t *parity, uint8_t paritysize, bool isResponse);
-void annotateLTO(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
-void annotateCryptoRF(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
+void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize);
+void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize,
+                    const uint8_t *parity, uint16_t paritysize, bool isResponse);
+void annotateLTO(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize);
+void annotateCryptoRF(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize);
 
-void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool isResponse);
+void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool isResponse);
 
-bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isResponse, uint8_t *mfData, size_t *mfDataLen, const uint64_t *dicKeys, uint32_t dicKeysCount);
+bool DecodeMifareData(uint8_t *cmd, uint16_t cmdsize, uint8_t *parity, bool isResponse, uint8_t *mfData, size_t *mfDataLen, const uint64_t *dicKeys, uint32_t dicKeysCount);
 bool NTParityChk(AuthData_t *ad, uint32_t ntx);
-bool NestedCheckKey(uint64_t key, AuthData_t *ad, uint8_t *cmd, uint8_t cmdsize, uint8_t *parity);
-bool CheckCrypto1Parity(const uint8_t *cmd_enc, uint8_t cmdsize, uint8_t *cmd, const uint8_t *parity_enc);
+bool NestedCheckKey(uint64_t key, AuthData_t *ad, uint8_t *cmd, uint16_t cmdsize, uint8_t *parity);
+bool CheckCrypto1Parity(const uint8_t *cmd_enc, uint16_t cmdsize, uint8_t *cmd, const uint8_t *parity_enc);
 uint64_t GetCrypto1ProbableKey(AuthData_t *ad);
 
-void annotateFMCOS20(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
+void annotateFMCOS20(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize);
 
 #endif // CMDHFLIST

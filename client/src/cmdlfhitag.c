@@ -420,7 +420,7 @@ static void print_hitag2_blocks(uint8_t *d, uint16_t n) {
 }
 
 // Annotate HITAG protocol
-void annotateHitag1(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+void annotateHitag1(char *exp, size_t size, const uint8_t *cmd, uint16_t cmdsize, bool is_response) {
 }
 
 static struct {
@@ -583,7 +583,7 @@ static uint8_t hitag2_get_page(const char *bs) {
     return 255;
 }
 
-void hitag2_annotate_plain(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, uint8_t bits) {
+void hitag2_annotate_plain(char *exp, size_t size, const uint8_t *cmd, uint16_t cmdsize, uint8_t bits) {
 
     if (cmdsize == 0) {
         return;
@@ -598,7 +598,7 @@ void hitag2_annotate_plain(char *exp, size_t size, const uint8_t *cmd, uint8_t c
     bytes_2_binstr(binstr, cmd, cmdsize);
 
     size_t bn = strlen(binstr);
-    if (bits) {
+    if ((bits > 0) && (bits <= 8)) {
         if (cmdsize == 1) {
             bn = bits;
         } else if (cmdsize > 1) {
@@ -651,7 +651,7 @@ void hitag2_annotate_plain(char *exp, size_t size, const uint8_t *cmd, uint8_t c
     free(binstr);
 }
 
-void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, uint8_t bits, bool is_response, const uint64_t *keys, uint32_t keycount, bool isdecrypted) {
+void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint16_t cmdsize, uint8_t bits, bool is_response, const uint64_t *keys, uint32_t keycount, bool isdecrypted) {
 
     if (cmdsize == 0) {
         return;
@@ -666,7 +666,7 @@ void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
     bytes_2_binstr(binstr, cmd, cmdsize);
 
     size_t bn = strlen(binstr);
-    if (bits) {
+    if ((bits > 0) && (bits <= 8)) {
         if (cmdsize == 1) {
             bn = bits;
         } else if (cmdsize > 1) {
@@ -674,12 +674,13 @@ void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
         }
     }
 
-    memcpy(_ht2state.plain, cmd, cmdsize);
-    _ht2state.plainlen = cmdsize;
+    // a frame longer than plain is no Hitag 2 frame, it is kept cut and not decrypted
+    _ht2state.plainlen = MIN(cmdsize, sizeof(_ht2state.plain));
+    memcpy(_ht2state.plain, cmd, _ht2state.plainlen);
 
     if (_ht2state.state == STATE_ENCRYPTED || _ht2state.state == STATE_START_ENCRYPTED) {
 
-        if (_ht2state.found_key && isdecrypted == false) {
+        if (_ht2state.found_key && isdecrypted == false && (bn <= (sizeof(_ht2state.plain) * 8))) {
             ht2_hitag2_cipher_transcrypt(&_ht2state.cipher_state, _ht2state.plain, bn / 8, bn % 8);
         }
     }
