@@ -229,9 +229,9 @@ static int process_hitags_common_args(CLIParserContext *ctx, lf_hitag_data_t *co
         return PM3_EINVARG;
     }
 
-    uint8_t mode = arg_get_int_def(ctx, 5, 3);
+    int mode = arg_get_int_def(ctx, 5, 3);
 
-    if (mode > 3) {
+    if ((mode < 0) || (mode > 3)) {
         PrintAndLogEx(WARNING, "Wrong response protocol mode, expected 0, 1, 2 or 3, got %d", mode);
         return PM3_EINVARG;
     }
@@ -416,6 +416,7 @@ static int CmdLFHitagSRead(const char *Cmd) {
 
     if (page > 255) {
         PrintAndLogEx(WARNING, "Page address Invalid.");
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -423,6 +424,7 @@ static int CmdLFHitagSRead(const char *Cmd) {
 
     if (count > HITAGS_MAX_PAGES) {
         PrintAndLogEx(WARNING, "No more than 64 pages can be read at once.");
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -480,7 +482,6 @@ static int CmdLFHitagSRead(const char *Cmd) {
             // access right
             if (page_addr == HITAGS_UID_PADR) {
                 PrintAndLogEx(NORMAL, _RED_("RO  ")NOLF);
-                \
             } else if (packet.cmd == HTSF_82xx && page_addr > 40) {  // using an 82xx (pages>40 are RO)
                 PrintAndLogEx(NORMAL, _RED_("RO  ")NOLF);
             } else if (page_addr == HITAGS_CONFIG_PADR) {
@@ -524,7 +525,7 @@ static int CmdLFHitagSRead(const char *Cmd) {
                     PrintAndLogEx(NORMAL, _RED_("RO  ")NOLF);
                 else
                     PrintAndLogEx(NORMAL, _GREEN_("RW  ")NOLF);
-            } else if (24 <= page_addr && page_addr <= 32) {
+            } else if (24 <= page_addr && page_addr <= 31) {
                 if (card->config_page.s.LCK2)
                     PrintAndLogEx(NORMAL, _RED_("RO  ")NOLF);
                 else
@@ -701,6 +702,7 @@ static int CmdLFHitagSRestore(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParserFree(ctx);
 
     if (fnlen == 0) {
         PrintAndLogEx(ERR, "Must specify a file");
@@ -929,6 +931,16 @@ static int CmdLFHitagSWrite(const char *Cmd) {
     }
 
     CLIParserFree(ctx);
+
+    if ((page < 0) || (page > 255)) {
+        PrintAndLogEx(WARNING, "Page address Invalid.");
+        return PM3_EINVARG;
+    }
+
+    if (data_len != sizeof(data)) {
+        PrintAndLogEx(WARNING, "Wrong DATA len expected 4, got %d", data_len);
+        return PM3_EINVARG;
+    }
 
     packet.page = page;
     memcpy(packet.data, data, sizeof(packet.data));

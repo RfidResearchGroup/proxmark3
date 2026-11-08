@@ -250,7 +250,7 @@ static void print_hitag2_paxton(bool show_header, const uint8_t *data) {
 // [=]  4/0x04 | 39 04 21 1C | 9.!.  | RW  | User
 // [=]  5/0x05 | AC 3F 00 06 | .?..  | RW  | User
 
-    char formfactor[16];
+    char formfactor[16] = {0};
     switch (data[23]) {
         case 0x06: {
             strcat(formfactor, "isocard");
@@ -332,7 +332,7 @@ static void print_hitag2_configuration(uint32_t uid, uint8_t config) {
     PrintAndLogEx(NORMAL, "");
 }
 
-const char *annotation[] = {
+static const char *annotation[] = {
     "UID", "Pwd", "Key/Pwd", "Config",
     "User", "User", "User", "User",
     "User", "User", "User", "User"
@@ -410,7 +410,7 @@ static void print_hitag2_blocks(uint8_t *d, uint16_t n) {
                       , sprint_hex(d + (i * HITAG_BLOCK_SIZE), HITAG_BLOCK_SIZE)
                       , sprint_ascii(d + (i * HITAG_BLOCK_SIZE), HITAG_BLOCK_SIZE)
                       , lckstr
-                      , annotation[i]
+                      , (i < ARRAYLEN(annotation)) ? annotation[i] : "User"
                      );
     }
     PrintAndLogEx(INFO, "--------+-------------+-------+-----+---------");
@@ -1226,6 +1226,11 @@ static int CmdLFHitag2CheckChallenges(const char *Cmd) {
                   "Test recorded authentications (replay?)",
                   "lf hitag ta"
                  );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
     lf_hitag_data_t packet;
@@ -1331,6 +1336,11 @@ static int CmdLFHitagWriter(const char *Cmd) {
 
     if (dlen != sizeof(data)) {
         PrintAndLogEx(WARNING, "Wrong DATA len expected 4, got %d", dlen);
+        return PM3_EINVARG;
+    }
+
+    if ((page < 0) || (page >= HITAG2_MAX_BLOCKS)) {
+        PrintAndLogEx(WARNING, "Page address out-of-range. Max is %d, got %d", HITAG2_MAX_BLOCKS - 1, page);
         return PM3_EINVARG;
     }
 

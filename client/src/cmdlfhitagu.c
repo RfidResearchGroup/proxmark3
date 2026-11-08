@@ -372,13 +372,16 @@ static int CmdLFHitagURead(const char *Cmd) {
 
     if (page >= HITAGU_MAX_BLOCKS) {
         PrintAndLogEx(WARNING, "Block address out-of-range. Max is 255, got %u", page);
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
     uint32_t count = arg_get_int_def(ctx, 4, 1);
 
-    if (count > HITAGU_MAX_BLOCKS) {
-        PrintAndLogEx(WARNING, "No more than %d blocks can be read at once", HITAGU_MAX_BLOCKS);
+    // the read response holds HITAGU_MAX_PAGE_ADVANCED_PLUS blocks
+    if (count > HITAGU_MAX_PAGE_ADVANCED_PLUS) {
+        PrintAndLogEx(WARNING, "No more than %d blocks can be read at once", HITAGU_MAX_PAGE_ADVANCED_PLUS);
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -445,7 +448,7 @@ static int CmdLFHitagURead(const char *Cmd) {
         count = (user_blocks > page) ? (user_blocks - page) : HITAGU_MAX_BLOCKS;
     }
 
-    for (int i = 0; i < count; ++i) {
+    for (int i = 0; (i < count) && (i < HITAGU_MAX_PAGE_ADVANCED_PLUS); ++i) {
 
         int page_addr = page + i;
         if (page_addr >= HITAGU_MAX_BLOCKS) {
@@ -667,6 +670,16 @@ static int CmdLFHitagUWrite(const char *Cmd) {
     }
 
     CLIParserFree(ctx);
+
+    if ((page < 0) || (page >= HITAGU_MAX_BLOCKS)) {
+        PrintAndLogEx(WARNING, "Block address out-of-range. Max is 255, got %d", page);
+        return PM3_EINVARG;
+    }
+
+    if (data_len != sizeof(data)) {
+        PrintAndLogEx(WARNING, "Wrong DATA len expected 4, got %d", data_len);
+        return PM3_EINVARG;
+    }
 
     packet.page = page;
     memcpy(packet.data, data, sizeof(packet.data));

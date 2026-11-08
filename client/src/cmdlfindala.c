@@ -1162,13 +1162,15 @@ int getIndalaBits(uint8_t fc, uint16_t cn, uint8_t *bits) {
     chk += ((cn >> 5) & 1); //y11 == 67 - 30 = 37
     chk += ((cn >> 2) & 1); //y14 == 89 - 30 = 59
     chk += (cn & 1); //y16 == 71 - 30 = 41
+    chk += evenparity8(fc & 0xEE); // x1 x2 x3 x5 x6 x7
 
-    if ((chk & 1) == 0) { // If the sum is even, checksum is '10' (binary) = 2.
-        bits[62] = 1;
-        bits[63] = 0;
-    } else {              // If the sum is odd, checksum is '01' (binary) = 1.
+    // fitted to the genuine Indala and Keri W cards on record
+    if ((chk & 1) == 0) { // If the sum is even, checksum is '01' (binary) = 1.
         bits[62] = 0;
         bits[63] = 1;
+    } else {              // If the sum is odd, checksum is '10' (binary) = 2.
+        bits[62] = 1;
+        bits[63] = 0;
     }
 
     // add parity
@@ -1178,20 +1180,9 @@ int getIndalaBits(uint8_t fc, uint16_t cn, uint8_t *bits) {
     // 92 = 62
     // 93 = 63
 
-    bits[34] = 0; // parity for odd bits
-    bits[38] = 0; // parity for even bits
-    uint8_t p1 = 1;
-    uint8_t p2 = 1;
-
-    for (int i = 33; i < 64; i++) {
-        if (i % 2)
-            p1 ^= bits[i];
-        else
-            p2 ^= bits[i];
-    }
-
-    bits[34] = p1; // parity for odd bits
-    bits[38] = p2; // parity for even bits
+    // 26-bit wiegand parity, as in getIndalaBits4041x
+    bits[34] = evenparity16((fc << 4) | (cn >> 12));
+    bits[38] = oddparity16(cn & 0x0fff);
 
     return PM3_SUCCESS;
 }
