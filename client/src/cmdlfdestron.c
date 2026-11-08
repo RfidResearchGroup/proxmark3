@@ -17,6 +17,7 @@
 //-----------------------------------------------------------------------------
 #include "cmdlfdestron.h"
 #include <ctype.h>        // tolower
+#include <stdlib.h>       // calloc
 #include <string.h>       // memcpy
 #include "commonutil.h"   // ARRAYLEN
 #include "common.h"
@@ -134,6 +135,37 @@ static int CmdDestronReader(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// a uid is five bytes of 7 bits, the top bit of each carries its parity
+static int checkDestronUid(const uint8_t *data, int datalen) {
+    if (datalen != 5) {
+        PrintAndLogEx(FAILED, "Uid must include 5 hex bytes (10 hex symbols), got " _YELLOW_("%d"), datalen);
+        return PM3_EINVARG;
+    }
+
+    for (int i = 0; i < datalen; i++) {
+        if (data[i] & 0x80) {
+            PrintAndLogEx(FAILED, "Uid byte %d is " _YELLOW_("%02X") ", each byte holds 7 bits (00-7F)", i + 1, data[i]);
+            return PM3_EINVARG;
+        }
+    }
+    return PM3_SUCCESS;
+}
+
+// the three data blocks of a frame, as cloned and simulated
+static void getDestronBlocks(const uint8_t *data, int datalen, uint32_t *blocks) {
+    uint8_t data_ex[12 + 24] = {0}; // ManchesterEncode need extra room
+    for (int i = 0; i < datalen; i++) {
+        data_ex[i + 1] = ~(data [i] | (oddparity8(data[i]) << 7));
+    }
+
+    // manchester encode it
+    for (int i = 0; i < 3; i++) {
+        blocks[i] = manchesterEncode2Bytes((data_ex[i * 2] << 8) + data_ex[i * 2 + 1]);
+    }
+    // inject preamble
+    blocks[0] = (blocks[0] & 0xFFFF) | 0xAAE20000;
+}
+
 static int CmdDestronClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf destron clone",
@@ -145,7 +177,7 @@ static int CmdDestronClone(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("u", "uid", "<hex>", "5 bytes max"),
+        arg_str1("u", "uid", "<hex>", "5 hex bytes, 00-7F each"),
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
         arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
         arg_param_end
@@ -166,8 +198,7 @@ static int CmdDestronClone(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (datalen > 5) {
-        PrintAndLogEx(FAILED, "Uid is max 5 bytes. (got %u)", datalen);
+    if (checkDestronUid(data, datalen) != PM3_SUCCESS) {
         return PM3_EINVARG;
     }
 
@@ -187,17 +218,7 @@ static int CmdDestronClone(const char *Cmd) {
         snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
     }
 
-    uint8_t data_ex[12 + 24] = {0}; // ManchesterEncode need extra room
-    for (int i = 0; i < datalen; i++) {
-        data_ex[i + 1] = ~(data [i] | (oddparity8(data[i]) << 7));
-    }
-
-    // manchester encode it
-    for (int i = 0; i < 3; i++) {
-        blocks[i + 1] = manchesterEncode2Bytes((data_ex[i * 2] << 8) + data_ex[i * 2 + 1]);
-    }
-    // inject preamble
-    blocks[1] = (blocks[1] & 0xFFFF) | 0xAAE20000;
+    getDestronBlocks(data, datalen, blocks + 1);
 
     PrintAndLogEx(INFO, "Preparing to clone Destron tag to " _YELLOW_("%s") " with ID: " _YELLOW_("%s")
                   , cardtype
@@ -220,18 +241,57 @@ static int CmdDestronClone(const char *Cmd) {
 static int CmdDestronSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf destron sim",
-                  "Try to find Destron preamble, if found decode / descramble data",
-                  "lf destron sim"
+                  "Enables simulation of Destron card with specified uid.\n"
+                  "Simulation runs until the button is pressed or another USB command is issued.",
+                  "lf destron sim --uid 1A2B3C4D5E"
                  );
 
     void *argtable[] = {
         arg_param_begin,
+        arg_str1("u", "uid", "<hex>", "5 hex bytes, 00-7F each"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    uint8_t data[8];
+    int datalen = 0;
+    CLIGetHexWithReturn(ctx, 1, data, &datalen);
     CLIParserFree(ctx);
-    PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
-    return PM3_ENOTIMPL;
+
+    if (checkDestronUid(data, datalen) != PM3_SUCCESS) {
+        return PM3_EINVARG;
+    }
+
+    uint32_t blocks[3] = {0};
+    getDestronBlocks(data, datalen, blocks);
+
+    PrintAndLogEx(SUCCESS, "Simulating Destron - ID: " _YELLOW_("%s") ", Raw: " _YELLOW_("%08X%08X%08X")
+                  , sprint_hex_inrow(data, datalen)
+                  , blocks[0], blocks[1], blocks[2]
+                 );
+
+    uint8_t bs[96];
+    for (size_t i = 0; i < ARRAYLEN(blocks); i++) {
+        num_to_bytebits(blocks[i], 32, bs + (i * 32));
+    }
+
+    // FSK2 as in clone: 1 is fc/8, 0 is fc/10
+    lf_fsksim_t *payload = calloc(1, sizeof(lf_fsksim_t) + sizeof(bs));
+    if (payload == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+    payload->fchigh = 8;
+    payload->fclow = 10;
+    payload->separator = 0;
+    payload->clock = 50;
+    memcpy(payload->data, bs, sizeof(bs));
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_FSK_SIMULATE, (uint8_t *)payload,  sizeof(lf_fsksim_t) + sizeof(bs));
+    free(payload);
+
+    return lfsim_wait_check(CMD_LF_FSK_SIMULATE);
 }
 
 static command_t CommandTable[] = {
