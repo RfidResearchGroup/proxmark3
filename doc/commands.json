@@ -14245,14 +14245,16 @@
             "command": "lf pcf7931 help",
             "description": "help This help config Configure the password, the tags initialization delay and time offsets (optional) --------------------------------------------------------------------------------------- lf pcf7931 reader available offline: no read a PCF7931 tag",
             "notes": [
-                "lf pcf7931 reader -@ -> continuous reader mode"
+                "lf pcf7931 reader -@ -> continuous reader mode",
+                "lf pcf7931 reader --rfb 2 -> number blocks starting at 2 when block 1 is missing or ambiguous"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-@ optional - continuous reader mode"
+                "-@ optional - continuous reader mode",
+                "--rfb <0-7> first transmitted block, used when block 1 is missing or ambiguous"
             ],
-            "usage": "lf pcf7931 reader [-h@]"
+            "usage": "lf pcf7931 reader [-h@] [--rfb <0-7>]"
         },
         "lf pcf7931 write": {
             "command": "lf pcf7931 write",

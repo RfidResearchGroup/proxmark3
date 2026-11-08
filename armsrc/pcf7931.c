@@ -37,6 +37,10 @@
 #define ALLOC 16
 // one full 8-block cycle plus repeats, so the client can check the cycle
 #define PCF7931_MIN_CAPTURE_BLOCKS 10
+// block + PMC (8576T0) in decimated samples
+#define PCF7931_BLOCK_SAMPLES ((8192 + 384) / DECIMATION)
+// capture starts inside the first block after reset (tRESET <= 20ms), its PMC lands after this sample
+#define PCF7931_FIRST_PMC_MIN 300
 
 // IIR filter consts
 #define IIR_CONST1 0.1f
@@ -59,7 +63,7 @@
 // theshold for recognition of positive/negative slope
 #define THRESHOLD 80
 
-size_t DemodPCF7931(uint8_t *outBlocks, size_t max_blocks, bool ledcontrol) {
+size_t DemodPCF7931(uint8_t *outBlocks, uint32_t *outStarts, size_t max_blocks, bool ledcontrol) {
     uint8_t bits[256] = {0x00};
     uint8_t *dest = BigBuf_get_addr();
     uint32_t g_GraphTraceLen = BigBuf_max_traceLen();
@@ -90,6 +94,8 @@ size_t DemodPCF7931(uint8_t *outBlocks, size_t max_blocks, bool ledcontrol) {
 
     uint8_t block_done;
     size_t num_blocks = 0;
+    uint32_t blockStart = UINT32_MAX; // first sample of the current block, known only after a PMC
+    uint32_t prevBlockStart = UINT32_MAX; // first sample of the block that just ended
     EdgeType expectedNextEdge = FALLING; // direction in which the next edge is expected should go.
 
     half_switch = 0;
@@ -129,6 +135,8 @@ size_t DemodPCF7931(uint8_t *outBlocks, size_t max_blocks, bool ledcontrol) {
                     expectedNextEdge = FALLING;
                     samplePosLastEdge = sample;
                     block_done = 1;
+                    prevBlockStart = blockStart;
+                    blockStart = sample;
                 }
 
                 // 32TO
@@ -144,6 +152,8 @@ size_t DemodPCF7931(uint8_t *outBlocks, size_t max_blocks, bool ledcontrol) {
                     expectedNextEdge = FALLING;
                     samplePosLastEdge = sample;
                     block_done = 1;
+                    prevBlockStart = blockStart;
+                    blockStart = sample;
 
                     // if no pmc, then its a normal bit.
                     // Check if its the second time, the edge changed if yes, then the bit is 0
@@ -175,6 +185,8 @@ size_t DemodPCF7931(uint8_t *outBlocks, size_t max_blocks, bool ledcontrol) {
 
                 // Toss this block.
                 block_done = 1;
+                prevBlockStart = blockStart;
+                blockStart = UINT32_MAX;
             }
 
             if (block_done == 1) {
@@ -184,6 +196,7 @@ size_t DemodPCF7931(uint8_t *outBlocks, size_t max_blocks, bool ledcontrol) {
                 // a complete block. E.g. at the first start of a transmission.
                 // only save if a complete block is being received.
                 if (bitPos == 128 && num_blocks < max_blocks) {
+                    outStarts[num_blocks] = prevBlockStart;
                     for (j = 0; j < 16; ++j) {
                         outBlocks[num_blocks * 16 + j] =
                             128 * bits[j * 8 + 7] +
@@ -270,9 +283,9 @@ void ReadPCF7931(bool ledcontrol) {
     // TODO: Why 17 byte len? 16 should be good.
     uint8_t memory_blocks[maxBlocks][17]; // PCF content
     uint8_t single_blocks[maxBlocks][17]; // PFC blocks with unknown position
-    uint8_t tmp_blocks[16][16]; // temporary read buffer
-    uint8_t best_blocks[16][16]; // longest capture, sent to the client in transmission order
-    size_t best_n = 0;
+    uint8_t tmp_blocks[PCF7931_READ_MAX_BLOCKS][16]; // temporary read buffer
+    uint32_t tmp_starts[PCF7931_READ_MAX_BLOCKS];
+    pcf7931_read_t best = {0}; // longest capture, sent to the client
 
     int single_blocks_cnt = 0;
 
@@ -294,8 +307,12 @@ void ReadPCF7931(bool ledcontrol) {
             Dbprintf("ReadPCF7931() -- Reading Loop ==========");
         i = 0;
 
+        // reset the tag so the capture is aligned to the start of its transmission
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        SpinDelay(50);
+
         memset(tmp_blocks, 0, sizeof(tmp_blocks));
-        n = DemodPCF7931((uint8_t *)tmp_blocks, ARRAYLEN(tmp_blocks), ledcontrol);
+        n = DemodPCF7931((uint8_t *)tmp_blocks, tmp_starts, ARRAYLEN(tmp_blocks), ledcontrol);
         if (!n)
             ++errors;
 
@@ -354,11 +371,20 @@ void ReadPCF7931(bool ledcontrol) {
             }
         }
         // the client sorts the blocks, keep the longest capture
-        if (n > best_n) {
-            memcpy(best_blocks, tmp_blocks, n * 16);
-            best_n = n;
+        if (n > best.count) {
+            best.count = n;
+            memcpy(best.blocks, tmp_blocks, sizeof(best.blocks));
+            for (i = 0; i < n; ++i) {
+                if (tmp_starts[i] == UINT32_MAX || tmp_starts[i] < PCF7931_FIRST_PMC_MIN) {
+                    best.pos[i] = 0xFF; // unknown
+                } else {
+                    best.pos[i] = 1 + (tmp_starts[i] - PCF7931_FIRST_PMC_MIN) / PCF7931_BLOCK_SAMPLES;
+                }
+                if (g_dbglevel >= DBG_EXTENDED)
+                    Dbprintf("block %d start sample %u pos %u", i, tmp_starts[i], best.pos[i]);
+            }
         }
-        found_blocks = best_n;
+        found_blocks = best.count;
 
         // i = 0;
         // if (!found_0_1) {
@@ -451,7 +477,7 @@ end:
 
     // field off, so a following write starts from a tag reset
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    reply_ng(CMD_LF_PCF7931_READ, PM3_SUCCESS, (uint8_t *)best_blocks, best_n * 16);
+    reply_ng(CMD_LF_PCF7931_READ, PM3_SUCCESS, (uint8_t *)&best, sizeof(best));
 }
 
 static void RealWritePCF7931(
