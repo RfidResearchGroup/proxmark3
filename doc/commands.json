@@ -12585,6 +12585,7 @@
             "notes": [
                 "lf fdxb clone --country 999 --national 1337 --animal -> encode for T55x7 tag, with animal bit",
                 "lf fdxb clone --country 999 --national 1337 --extended 016A -> encode for T55x7 tag, with extended data",
+                "lf fdxb clone --country 999 --national 1337 --biothermo 106 -> encode for T55x7 tag, Bio-Thermo 95.20 F",
                 "lf fdxb clone --country 999 --national 1337 --q5 -> encode for Q5/T5555 tag",
                 "lf fdxb clone --country 999 --national 1337 --em -> encode for EM4305/4469"
             ],
@@ -12596,9 +12597,11 @@
                 "--extended <hex> extended data",
                 "-a, --animal optional - set animal bit",
                 "--q5 optional - specify writing to Q5/T5555 tag",
-                "--em optional - specify writing to EM4305/4469 tag"
+                "--em optional - specify writing to EM4305/4469 tag",
+                "--biothermo <dec> Bio-Thermo temperature value 0-255, 74 + 0.2 x value F",
+                "--no-datablock optional - leave the data block flag clear, as Bio-Thermo chips do"
             ],
-            "usage": "lf fdxb clone [-ha] -c <dec> -n <dec> [--extended <hex>] [--q5] [--em]"
+            "usage": "lf fdxb clone [-ha] -c <dec> -n <dec> [--extended <hex>] [--q5] [--em] [--biothermo <dec>] [--no-datablock]"
         },
         "lf fdxb help": {
             "command": "lf fdxb help",
@@ -12630,7 +12633,8 @@
             "description": "Enables simulation of FDX-B animal tag. Simulation runs until the button is pressed or another USB command is issued.",
             "notes": [
                 "lf fdxb sim --country 999 --national 1337 --animal",
-                "lf fdxb sim --country 999 --national 1337 --extended 016A"
+                "lf fdxb sim --country 999 --national 1337 --extended 016A",
+                "lf fdxb sim --country 999 --national 1337 --biothermo 106"
             ],
             "offline": false,
             "options": [
@@ -12638,9 +12642,11 @@
                 "-c, --country <dec> country code",
                 "-n, --national <dec> national code",
                 "--extended <hex> extended data",
-                "-a, --animal optional - set animal bit"
+                "-a, --animal optional - set animal bit",
+                "--biothermo <dec> Bio-Thermo temperature value 0-255, 74 + 0.2 x value F",
+                "--no-datablock optional - leave the data block flag clear, as Bio-Thermo chips do"
             ],
-            "usage": "lf fdxb sim [-ha] -c <dec> -n <dec> [--extended <hex>]"
+            "usage": "lf fdxb sim [-ha] -c <dec> -n <dec> [--extended <hex>] [--biothermo <dec>] [--no-datablock]"
         },
         "lf gallagher clone": {
             "command": "lf gallagher clone",
@@ -16833,6 +16839,6 @@
     "metadata": {
         "commands_extracted": 937,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-11-06T22:34:07+00:00"
+        "extracted_on": "2026-11-07T21:01:26+00:00"
     }
 }

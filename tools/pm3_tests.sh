@@ -578,7 +578,7 @@ while true; do
       if ! CheckExecute "lf EM4x70 recover test 3/3" "$CLIENTBIN -c 'lf em 4x70 recover --key 022A028C02BE --rnd 7D5167003571F8 --frn 982DBCC0 --grn 36C0E0'" "022a028c02bef1e352c2718d"; then break; fi
       if ! CheckExecute "lf FDX-A FECAVA test"       "$CLIENTBIN -c 'data load -f traces/lf_EM4305_fdxa_destron.pm3;lf search -1'" "FDX-A FECAVA Destron ID found"; then break; fi
       if ! CheckExecute "lf FDX-B test"              "$CLIENTBIN -c 'data load -f traces/lf_HomeAgain1600.pm3;lf search -1'" "FDX-B ID found"; then break; fi
-      if ! CheckExecute "lf FDX/BioThermo test"      "$CLIENTBIN -c 'data load -f traces/lf_FDXB_Bio-Thermo.pm3; lf fdxb demod'" "95.2 F / 35.1 C"; then break; fi
+      if ! CheckExecute "lf FDX/BioThermo test"      "$CLIENTBIN -c 'data load -f traces/lf_FDXB_Bio-Thermo.pm3; lf fdxb demod'" "95.20 F / 35.11 C"; then break; fi
       if ! CheckExecute "lf GPROXII test"            "$CLIENTBIN -c 'data load -f traces/lf_GProx_36_30_14489.pm3; lf search -1'" "Guardall G-Prox II ID found"; then break; fi
       if ! CheckExecute "lf HID Prox test"           "$CLIENTBIN -c 'data load -f traces/lf_HID-proxCardII-05512-11432784-1.pm3;lf search -1'" "HID Prox ID found"; then break; fi
       if ! CheckExecute "lf IDTECK test"             "$CLIENTBIN -c 'data load -f traces/lf_IDTECK_4944544BAC40E069.pm3; lf search -1'" "Idteck ID found"; then break; fi
@@ -612,10 +612,10 @@ while true; do
                                                                      "EM 410x ID 0F0368568B"; then break; fi
       if ! CheckExecute "lf T55 fdxb_animal test"           "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_animal.pm3; lf search -1'" "FDX-B ID found"; then break; fi
       if ! CheckExecute "lf T55 fdxb_animal test 2"         "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_animal.pm3; lf fdxb demod'" \
-                                                                     "Animal ID......... 999-000000112233"; then break; fi
+                                                                     "Animal code......... 999 000000112233"; then break; fi
       if ! CheckExecute "lf T55 fdxb_extended test"         "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_extended.pm3; lf search -1'" "FDX-B ID found"; then break; fi
       if ! CheckExecute "lf T55 fdxb_extended test 2"       "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_extended.pm3; lf fdxb demod'" \
-                                                                     "temperature... 95.2 F / 35.1 C"; then break; fi
+                                                                     "temperature... 95.20 F / 35.11 C"; then break; fi
       if ! CheckExecute "lf T55 gallagher test"             "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_gallagher.pm3; lf search -1'" "GALLAGHER ID found"; then break; fi
       if ! CheckExecute "lf T55 gallagher test 2"           "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_gallagher.pm3; lf gallagher demod'" \
                                                                      "GALLAGHER - Region: 1 Facility: 16640 Card No.: 201 Issue Level: 1"; then break; fi

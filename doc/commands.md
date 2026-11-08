@@ -1235,7 +1235,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf fdxb help           `|Y       |`this help`
 |`lf fdxb demod          `|Y       |`demodulate a FDX-B ISO11784/85 tag from the GraphBuffer`
-|`lf fdxb reader         `|N       |`attempt to read at 134kHz and extract tag data`
+|`lf fdxb reader         `|N       |`attempt to read at 134 kHz, then 125 kHz, and extract tag data`
 |`lf fdxb clone          `|N       |`clone animal ID tag to T55x7, Q5/T5555 or EM4305/4469`
 |`lf fdxb sim            `|N       |`simulate Animal ID tag`
 
