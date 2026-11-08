@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `lf indala clone`, `sim` and `brute` with `--fc`/`--cn` - parity and checksum bits as on genuine cards (@matrix)
 - Fixed `lf hitag wrbl`, `hts wrbl` and `htu wrbl` - a page out of range or data shorter than 4 bytes is refused (@matrix)
 - Fixed `lf hitag eview -1/-s/-m` and `htu rdbl -c` - no read past the label table or the reply (@matrix)
 - Fixed `lf hitag` and `lf search` Paxton id - no garbage before the form factor (@matrix)
