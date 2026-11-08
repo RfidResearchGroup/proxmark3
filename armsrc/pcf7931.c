@@ -35,6 +35,8 @@
 // AddBitPCF7931, which cannot address past 255 anyway.
 #define PCF7931_FRAME_ENTRIES 256
 #define ALLOC 16
+// one full 8-block cycle plus repeats, so the client can check the cycle
+#define PCF7931_MIN_CAPTURE_BLOCKS 10
 
 // IIR filter consts
 #define IIR_CONST1 0.1f
@@ -120,7 +122,8 @@ size_t DemodPCF7931(uint8_t *outBlocks, size_t max_blocks, bool ledcontrol) {
                 // if the clock before also was 16T0, it is a PMC!
                 if (ABS(beforeLastClockDuration - _16T0) < TOLERANCE) {
                     // It's a PMC
-                    Dbprintf(_GREEN_("PMC 16T0 FOUND:") " bitPos: %d, sample: %d", bitPos, sample);
+                    if (g_dbglevel >= DBG_EXTENDED)
+                        Dbprintf(_GREEN_("PMC 16T0 FOUND:") " bitPos: %d, sample: %d", bitPos, sample);
                     sample += PMC_16T0_LEN;  // move to the sample after PMC
 
                     expectedNextEdge = FALLING;
@@ -133,7 +136,8 @@ size_t DemodPCF7931(uint8_t *outBlocks, size_t max_blocks, bool ledcontrol) {
                 // if the clock before also was 16T0, it is a PMC!
                 if (ABS(beforeLastClockDuration - _16T0) < TOLERANCE) {
                     // It's a PMC !
-                    Dbprintf(_GREEN_("PMC 32T0 FOUND:") " bitPos: %d, sample: %d", bitPos, sample);
+                    if (g_dbglevel >= DBG_EXTENDED)
+                        Dbprintf(_GREEN_("PMC 32T0 FOUND:") " bitPos: %d, sample: %d", bitPos, sample);
 
                     sample += PMC_32T0_LEN;    // move to the sample after PMC
 
@@ -198,6 +202,8 @@ size_t DemodPCF7931(uint8_t *outBlocks, size_t max_blocks, bool ledcontrol) {
                 bitPos = 0;
                 block_done = 0;
                 half_switch = 0;
+                // a stale 16T0 plus a leading 32T0 half bit would look like another PMC
+                lastClockDuration = 0;
             }
 
         } else {
@@ -265,6 +271,8 @@ void ReadPCF7931(bool ledcontrol) {
     uint8_t memory_blocks[maxBlocks][17]; // PCF content
     uint8_t single_blocks[maxBlocks][17]; // PFC blocks with unknown position
     uint8_t tmp_blocks[16][16]; // temporary read buffer
+    uint8_t best_blocks[16][16]; // longest capture, sent to the client in transmission order
+    size_t best_n = 0;
 
     int single_blocks_cnt = 0;
 
@@ -282,7 +290,8 @@ void ReadPCF7931(bool ledcontrol) {
     //j = 0;
 
     do {
-        Dbprintf("ReadPCF7931() -- Reading Loop ==========");
+        if (g_dbglevel >= DBG_EXTENDED)
+            Dbprintf("ReadPCF7931() -- Reading Loop ==========");
         i = 0;
 
         memset(tmp_blocks, 0, sizeof(tmp_blocks));
@@ -339,11 +348,17 @@ void ReadPCF7931(bool ledcontrol) {
         //     Dbprintf("(dbg) got %d blocks (%d/%d found) (%d tries, %d errors)", n, found_blocks, (maxBlocks == 0 ? found_blocks : maxBlocks), tries, errors);
 
         // print blocks that have been found
-        for (i = 0; i < n; ++i) {
-            print_result("Block found: ", tmp_blocks[i], 16);
+        if (g_dbglevel >= DBG_EXTENDED) {
+            for (i = 0; i < n; ++i) {
+                print_result("Block found: ", tmp_blocks[i], 16);
+            }
         }
-        // blocks are not sorted yet, one good capture is enough
-        found_blocks += n;
+        // the client sorts the blocks, keep the longest capture
+        if (n > best_n) {
+            memcpy(best_blocks, tmp_blocks, n * 16);
+            best_n = n;
+        }
+        found_blocks = best_n;
 
         // i = 0;
         // if (!found_0_1) {
@@ -407,7 +422,7 @@ void ReadPCF7931(bool ledcontrol) {
 
             goto end;
         }
-    } while (found_blocks < maxBlocks);
+    } while (found_blocks < PCF7931_MIN_CAPTURE_BLOCKS);
 
 
 end:
@@ -436,7 +451,7 @@ end:
 
     // field off, so a following write starts from a tag reset
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    reply_ng(CMD_LF_PCF7931_READ, PM3_SUCCESS, NULL, 0);
+    reply_ng(CMD_LF_PCF7931_READ, PM3_SUCCESS, (uint8_t *)best_blocks, best_n * 16);
 }
 
 static void RealWritePCF7931(

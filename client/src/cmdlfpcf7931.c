@@ -29,6 +29,10 @@ static int CmdHelp(const char *Cmd);
 #define PCF7931_DEFAULT_OFFSET_WIDTH 0
 #define PCF7931_DEFAULT_OFFSET_POSITION 0
 
+#define PCF7931_BLOCKS 8
+#define PCF7931_BLOCK_SIZE 16
+#define PCF7931_MAX_CAPTURE 16
+
 // Default values - Configuration
 static struct pcf7931_config configPcf = {
     {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
@@ -54,6 +58,140 @@ int pcf7931_printConfig(void) {
     PrintAndLogEx(INFO, "Offset low pulses width......... " _YELLOW_("%d") " us", configPcf.OffsetWidth);
     PrintAndLogEx(INFO, "Offset low pulses position...... " _YELLOW_("%d") " us", configPcf.OffsetPosition);
     return PM3_SUCCESS;
+}
+
+// smallest cycle length repeating over the whole capture, 0 if none
+static size_t pcf7931_find_cycle(const uint8_t *blocks, size_t n) {
+    for (size_t p = 1; p <= PCF7931_BLOCKS && p < n; p++) {
+        bool ok = true;
+        for (size_t i = 0; i + p < n; i++) {
+            if (memcmp(blocks + i * PCF7931_BLOCK_SIZE, blocks + (i + p) * PCF7931_BLOCK_SIZE, PCF7931_BLOCK_SIZE)) {
+                ok = false;
+                break;
+            }
+        }
+        if (ok) {
+            return p;
+        }
+    }
+    return 0;
+}
+
+// block numbers sent per cycle according to the selection in block 1 (datasheet fig 10)
+static size_t pcf7931_sequence(const uint8_t *blk1, uint8_t *seq) {
+    uint8_t rfb = blk1[14] & 0x07;
+    uint8_t rlb = blk1[15] & 0x07;
+    size_t len = 0;
+    if (blk1[14] & 0x80) {
+        seq[len++] = 1;
+    }
+    for (uint8_t b = rfb; ; b = (b + 1) & 0x07) {
+        seq[len++] = b;
+        if (b == rlb) {
+            break;
+        }
+    }
+    return len;
+}
+
+// number each block of the cycle by finding the one block 1 whose selection explains it.
+// returns false if no or more than one numbering fits
+static bool pcf7931_number_cycle(const uint8_t *cycle, size_t p, uint8_t *num) {
+    int found = 0;
+    for (size_t c = 0; c < p; c++) {
+        const uint8_t *blk1 = cycle + c * PCF7931_BLOCK_SIZE;
+        uint8_t seq[PCF7931_BLOCKS + 1];
+        if (pcf7931_sequence(blk1, seq) != p) {
+            continue;
+        }
+        for (size_t s = 0; s < p; s++) {
+            if (seq[s] != 1) {
+                continue;
+            }
+            uint8_t cand[PCF7931_BLOCKS + 1];
+            bool ok = true;
+            for (size_t t = 0; t < p; t++) {
+                size_t idx = (c + t) % p;
+                cand[idx] = seq[(s + t) % p];
+                // block 1 may be sent twice per cycle (RB1), both must match
+                if (cand[idx] == 1 && memcmp(cycle + idx * PCF7931_BLOCK_SIZE, blk1, PCF7931_BLOCK_SIZE)) {
+                    ok = false;
+                }
+                // with PAC set the password reads as zeros
+                if (cand[idx] == 0 && (cycle[idx * PCF7931_BLOCK_SIZE + 7] & 0x01)) {
+                    static const uint8_t zeros[7] = {0};
+                    if (memcmp(cycle + idx * PCF7931_BLOCK_SIZE, zeros, sizeof(zeros))) {
+                        ok = false;
+                    }
+                }
+            }
+            if (ok == false) {
+                continue;
+            }
+            if (found && memcmp(num, cand, p)) {
+                return false;
+            }
+            memcpy(num, cand, p);
+            found = 1;
+        }
+    }
+    return found;
+}
+
+static void pcf7931_print_blocks(const uint8_t *blocks, size_t n) {
+    size_t p = pcf7931_find_cycle(blocks, n);
+    uint8_t num[PCF7931_BLOCKS + 1] = {0};
+
+    if (p == 0 || pcf7931_number_cycle(blocks, p, num) == false) {
+        PrintAndLogEx(WARNING, "Could not identify block 0/1, blocks in received order:");
+        for (size_t i = 0; i < n; i++) {
+            PrintAndLogEx(INFO, "Block ? | %s", sprint_hex(blocks + i * PCF7931_BLOCK_SIZE, PCF7931_BLOCK_SIZE));
+        }
+        if (p == 1) {
+            PrintAndLogEx(HINT, "Hint: a single repeated block is likely block 0 with RFB = RLB = 0 (factory default)");
+        }
+        return;
+    }
+
+    const uint8_t *mem[PCF7931_BLOCKS] = {NULL};
+    for (size_t i = 0; i < p; i++) {
+        mem[num[i]] = blocks + i * PCF7931_BLOCK_SIZE;
+    }
+
+    uint8_t seq[PCF7931_BLOCKS + 1];
+    size_t len = pcf7931_sequence(mem[1], seq);
+    char order[3 * (PCF7931_BLOCKS + 1) + 1] = {0};
+    for (size_t i = 0; i < len; i++) {
+        snprintf(order + strlen(order), sizeof(order) - strlen(order), "%u ", seq[i]);
+    }
+
+    PrintAndLogEx(INFO, "Transmission cycle... %s", order);
+    PrintAndLogEx(INFO, "-----+-------------------------------------------------");
+    for (int b = 0; b < PCF7931_BLOCKS; b++) {
+        if (mem[b]) {
+            PrintAndLogEx(SUCCESS, " %2d  | %s", b, sprint_hex(mem[b], PCF7931_BLOCK_SIZE));
+        } else {
+            PrintAndLogEx(INFO, " %2d  | " _YELLOW_("not transmitted"), b);
+        }
+    }
+    PrintAndLogEx(INFO, "-----+-------------------------------------------------");
+
+    if (mem[0]) {
+        bool pac = mem[0][7] & 0x01;
+        PrintAndLogEx(INFO, "PAC (password check).... %s", pac ? _RED_("enabled") " (password reads as 00)" : _GREEN_("disabled"));
+        if (pac == false) {
+            PrintAndLogEx(INFO, "Password................ " _YELLOW_("%s"), sprint_hex(mem[0], 7));
+        }
+        char bwp[3 * PCF7931_BLOCKS + 1] = {0};
+        for (int b = 0; b < PCF7931_BLOCKS; b++) {
+            if (mem[0][8] & (1 << b)) {
+                snprintf(bwp + strlen(bwp), sizeof(bwp) - strlen(bwp), "%d ", b);
+            }
+        }
+        PrintAndLogEx(INFO, "Write protected blocks.. %s", strlen(bwp) ? bwp : "none");
+    }
+    PrintAndLogEx(INFO, "Selection............... RFB %u, RLB %u, RB1 %u",
+                  mem[1][14] & 0x07, mem[1][15] & 0x07, mem[1][14] >> 7);
 }
 
 static int CmdLFPCF7931Reader(const char *Cmd) {
@@ -83,6 +221,13 @@ static int CmdLFPCF7931Reader(const char *Cmd) {
         if (WaitForResponseTimeout(CMD_LF_PCF7931_READ, &resp, 15000) == false) {
             PrintAndLogEx(WARNING, "command execution time out");
             return PM3_ETIMEOUT;
+        }
+
+        size_t n = MIN(resp.length / PCF7931_BLOCK_SIZE, PCF7931_MAX_CAPTURE);
+        if (n == 0) {
+            PrintAndLogEx(WARNING, "No PCF7931 tag found");
+        } else {
+            pcf7931_print_blocks(resp.data.asBytes, n);
         }
     } while (cm && (kbd_enter_pressed() == false));
 
