@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `lf hitag wrbl`, `hts wrbl` and `htu wrbl` - a page out of range or data shorter than 4 bytes is refused (@matrix)
+- Fixed `lf hitag eview -1/-s/-m` and `htu rdbl -c` - no read past the label table or the reply (@matrix)
+- Fixed `lf hitag` and `lf search` Paxton id - no garbage before the form factor (@matrix)
+- Fixed `lf hitag hts rdbl`, `hts -m` and `ta -h` - page 32 under LCK1, mode above 3 refused, help shown (@matrix)
 - Fixed `lf noralsy demod` - one demod error outside the frame, like a cut first bit, no longer loses the read (@matrix)
 - Fixed `lf noralsy demod` - a card with the 0xBB0314FF first block no longer gets the unknown bits warning (@matrix)
 - Added `lf destron sim` - simulates the FDX-A frame that `lf destron clone` writes (@matrix)
