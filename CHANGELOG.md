@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `trace list` - Topaz commands end at the frames their code takes, ISO14443-A frames in Topaz traces and ISO15693 frames in iCLASS traces get their own CRC, five byte ISO14443-A answers and FeliCa frames get a real CRC check, frames of 256 bytes and more are checked and annotated whole (@matrix)
+- Fixed `trace list` annotations - none reads past its frame, SEOS answers are no longer shown as reader commands, contactless S-blocks, 14b slots, Xerox WUP2 and the Hitag µ field offsets are corrected (@matrix)
+- Fixed `trace list -t ht2` and `-c` - a frame over 30 bytes no longer overwrites the Hitag 2 state or stops the client, a frame longer than the rows shown no longer overflows the row buffer (@matrix)
+- Fixed `trace extract` - no write past the UID buffer or read past the trace, DESFire AES challenges are extracted again (@matrix)
 - Fixed `lf fdxb` decoding - ISO 11784:2024 and ISO 24631-6 fields and names, and many more fixes. See commit message (@matrix)
 - Fixed `lf fdxb clone` and `sim` - a country above 1023 or a national code above 274877906943 is refused instead of cut, `sim` sends the data block flag for `--extended 000000` (@matrix)
 - Added `lf fdxb clone` and `sim` `--biothermo` and `--no-datablock` - a Bio-Thermo temperature, or any `--extended` trailer, sent with the data block flag clear as Bio-Thermo chips do (@matrix)

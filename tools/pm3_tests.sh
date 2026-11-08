@@ -484,6 +484,12 @@ while true; do
       if ! CheckExecute "trace list 7816 T=0 apdu"  "$CLIENTBIN -c 'trace load -f traces/smart_7816.trace; trace list -1 -t 7816;'" "A0  A4  00  00  02  3F  00 .*SELECT FILE"; then break; fi
       if ! CheckExecute "trace list 7816 getresp"   "$CLIENTBIN -c 'trace load -f traces/smart_7816.trace; trace list -1 -t 7816;'" "A0  C0  00  00  22 .*GET RESPONSE"; then break; fi
       if ! CheckExecute "trace list 7816 T=1 block" "$CLIENTBIN -c 'trace load -f traces/smart_7816.trace; trace list -1 -t 7816;'" "I-block N\(S\)=0"; then break; fi
+      if ! CheckExecute "trace list 14a five byte answer" "$CLIENTBIN -c 'trace load -f traces/hf_visa_apple_ecp.trace; trace list -1 -t 14a;'" "Tag [|]03  69  86  03  19 +[|]  ok"; then break; fi
+      if ! CheckExecute "trace list 14b slots"         "$CLIENTBIN -c 'trace load -f traces/hf_14b_reader.trace; trace list -1 -t 14b;'" "05  00  08  39  73 +[|]  ok [|] 1 slot WUPB"; then break; fi
+      if ! CheckExecute "trace list 14b xerox wup2"    "$CLIENTBIN -c 'trace load -f traces/hf_14b_xerox_info.trace; trace list -1 -t 14b;'" "5D  37  21  71  71 +[|]  ok [|] XEROX WUP2"; then break; fi
+      if ! CheckExecute "trace list 14b slot nack"     "$CLIENTBIN -c 'trace load -f traces/hf_14b_xerox_info.trace; trace list -1 -t 14b;'" "Rdr [|]A7 +[|] +[|] Slot 3 NACK"; then break; fi
+      if ! CheckExecute "trace list seos pps crc"      "$CLIENTBIN -c 'trace load -f traces/hf_seos_sniff_fc54_cn64001.trace; trace list -1 -t seos;'" "D0  11  00  52  A6 +[|]  ok [|] PPS"; then break; fi
+      if ! CheckExecute "trace list ht2 long frames"   "$CLIENTBIN -c 'trace load -f traces/hf_visa_apple_normal.trace; trace list -1 -t ht2;'" "131146992 [|] +131147472 [|] Rdr [|] 07 +[|] +8 [|]"; then break; fi
       if ! CheckExecute "smart pps help"            "$CLIENTBIN -c 'smart pps -h'" "select protocol T=1"; then break; fi
       if ! CheckExecute "smart raw help t1"         "$CLIENTBIN -c 'smart raw -h'" "use protocol T=1"; then break; fi
       if ! CheckExecute "nfc decode test oob"             "$CLIENTBIN -c 'nfc decode -d DA2010016170706C69636174696F6E2F766E642E626C7565746F6F74682E65702E6F6F62301000649201B96DFB0709466C65782032'" "Flex 2"; then break; fi

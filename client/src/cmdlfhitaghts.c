@@ -37,7 +37,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-void annotateHitagS(char *exp, size_t size, const uint8_t *cmd, uint8_t nbits, bool is_response) {
+void annotateHitagS(char *exp, size_t size, const uint8_t *cmd, uint16_t nbits, bool is_response) {
     uint8_t command = 0;
 
     // the caller reuses this buffer across frames, and the appends below are
@@ -347,7 +347,7 @@ static void hitags_config_print(hitags_config_t config) {
     PrintAndLogEx(INFO, " Memory type...... " _GREEN_("%s"),
     (const char *[]) {"Hitag S 32", "Hitag S 256", "Hitag S 2048", "Unknown Hitag S/8211"}[config.MEMT]);
 
-    PrintAndLogEx(INFO, " Authenticaion.... %s", config.auth ? _YELLOW_("Yes") : "No");
+    PrintAndLogEx(INFO, " Authentication... %s", config.auth ? _YELLOW_("Yes") : "No");
 
     PrintAndLogEx(INFO, " TTF coding....... %s",
     config.RES3 ? "FSK  0=RF/10 1=RF/8" : (const char *[]) {"Manchester", "Biphase"}[config.TTFC]);
