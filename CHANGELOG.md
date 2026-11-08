@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `lf destron sim` - simulates the FDX-A frame that `lf destron clone` writes (@matrix)
+- Fixed `lf destron clone` - a uid that is not 5 bytes of 00-7F is refused instead of written as another id or with bad parity (@matrix)
 - Fixed `lf fdxb` decoding - ISO 11784:2024 and ISO 24631-6 fields and names, and many more fixes. See commit message (@matrix)
 - Fixed `lf fdxb clone` and `sim` - a country above 1023 or a national code above 274877906943 is refused instead of cut, `sim` sends the data block flag for `--extended 000000` (@matrix)
 - Added `lf fdxb clone` and `sim` `--biothermo` and `--no-datablock` - a Bio-Thermo temperature, or any `--extended` trailer, sent with the data block flag clear as Bio-Thermo chips do (@matrix)

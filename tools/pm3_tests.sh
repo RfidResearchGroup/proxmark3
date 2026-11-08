@@ -577,6 +577,7 @@ while true; do
       if ! CheckExecute "lf EM4x70 recover test 2/3" "$CLIENTBIN -c 'lf em 4x70 recover --key 022A028C02BE --rnd 7D5167003571F8 --frn 982DBCC0 --grn 36C0E0'" "022a028c02be366866191b60"; then break; fi
       if ! CheckExecute "lf EM4x70 recover test 3/3" "$CLIENTBIN -c 'lf em 4x70 recover --key 022A028C02BE --rnd 7D5167003571F8 --frn 982DBCC0 --grn 36C0E0'" "022a028c02bef1e352c2718d"; then break; fi
       if ! CheckExecute "lf FDX-A FECAVA test"       "$CLIENTBIN -c 'data load -f traces/lf_EM4305_fdxa_destron.pm3;lf search -1'" "FDX-A FECAVA Destron ID found"; then break; fi
+      if ! CheckExecute "lf destron sim help"        "$CLIENTBIN -c 'lf destron sim -h'" "lf destron sim --uid 1A2B3C4D5E"; then break; fi
       if ! CheckExecute "lf FDX-B test"              "$CLIENTBIN -c 'data load -f traces/lf_HomeAgain1600.pm3;lf search -1'" "FDX-B ID found"; then break; fi
       if ! CheckExecute "lf FDX/BioThermo test"      "$CLIENTBIN -c 'data load -f traces/lf_FDXB_Bio-Thermo.pm3; lf fdxb demod'" "95.20 F / 35.11 C"; then break; fi
       if ! CheckExecute "lf GPROXII test"            "$CLIENTBIN -c 'data load -f traces/lf_GProx_36_30_14489.pm3; lf search -1'" "Guardall G-Prox II ID found"; then break; fi
