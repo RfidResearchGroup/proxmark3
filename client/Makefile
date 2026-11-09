@@ -548,6 +548,13 @@ ifeq ($(QT_FOUND),1)
         # On OSX Qt6 is claiming for a C++11 compiler (gnu++14 works too, but if nothing it fails)
         PM3CXXFLAGS += -std=c++11
     endif
+    # Qt built with reduce-relocations needs -fPIC (not -fPIE), also when CFLAGS is overridden
+    ifndef IS_WINDOWS
+        ifndef IS_DARWIN
+            PM3CFLAGS += -fPIC
+            PM3CXXFLAGS += -fPIC
+        endif
+    endif
 endif
 
 PM3CXXFLAGS += -DHAVE_SNPRINTF
