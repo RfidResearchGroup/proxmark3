@@ -471,8 +471,10 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
                     break;
                 }
 
+                // wrapped replies end with SW 91 AF before the CRC
+                uint8_t sw_len = (long_jmp == 1) ? 0 : 2;
                 uint8_t tdea = 8;
-                if (next_hdr->data_len > 20) {
+                if (next_hdr->data_len >= cpos + 16 + sw_len + 2) {
                     tdea = 16;
                     PrintAndLogEx(INFO, "3TDEA 1499999999 %s " NOLF, sprint_hex_inrow(next_hdr->frame + cpos, tdea));
                 } else {
