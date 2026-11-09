@@ -475,11 +475,11 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
                 break;
             }
 
-            tracepos += TRACELOG_HDR_LEN + next_hdr->data_len + TRACELOG_PARITY_LEN(next_hdr);
             uint8_t cpos = mfdes_chall_pos(next_hdr->frame, long_jmp);
             if (next_hdr->data_len < cpos + 8 + 2) {
                 break;
             }
+            tracepos += TRACELOG_HDR_LEN + next_hdr->data_len + TRACELOG_PARITY_LEN(next_hdr);
 
             // wrapped replies end with SW 91 AF before the CRC
             uint8_t sw_len = (long_jmp == 1) ? 0 : 2;
@@ -511,11 +511,11 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
                 break;
             }
 
-            tracepos += TRACELOG_HDR_LEN + next_hdr->data_len + TRACELOG_PARITY_LEN(next_hdr);
             uint8_t cpos = mfdes_chall_pos(next_hdr->frame, long_jmp);
             if (next_hdr->data_len < cpos + 16 + 2) {
                 break;
             }
+            tracepos += TRACELOG_HDR_LEN + next_hdr->data_len + TRACELOG_PARITY_LEN(next_hdr);
 
             PrintAndLogEx(INFO, "AES 1499999999 %s " NOLF, sprint_hex_inrow(next_hdr->frame + cpos, 16));
 
