@@ -179,8 +179,13 @@ void ClearTraceBuffer(void) {
 
 // Copy an existing buffer into client trace buffer
 // I think this is cleaner than further globalizing gs_trace, and may lend itself to more modularity later?
-bool ImportTraceBuffer(const uint8_t *trace_src, uint16_t trace_len) {
+bool ImportTraceBuffer(const uint8_t *trace_src, uint32_t trace_len) {
     if (trace_len == 0 || trace_src == NULL) return (false);
+    // trace positions are 16 bit
+    if (trace_len > UINT16_MAX) {
+        PrintAndLogEx(FAILED, "Trace too large ( " _YELLOW_("%u") " bytes ), max %u bytes", trace_len, UINT16_MAX);
+        return (false);
+    }
     ClearTraceBuffer();
     gs_trace = calloc(trace_len, sizeof(uint8_t));
     if (gs_trace == NULL) {
@@ -1590,7 +1595,14 @@ static int CmdTraceLoad(const char *Cmd) {
         return PM3_EIO;
     }
 
-    gs_traceLen = (long)len;
+    // trace positions are 16 bit
+    if (len > UINT16_MAX) {
+        PrintAndLogEx(FAILED, "Trace file too large ( " _YELLOW_("%zu") " bytes ), max %u bytes", len, UINT16_MAX);
+        ClearTraceBuffer();
+        return PM3_EFILE;
+    }
+
+    gs_traceLen = (uint16_t)len;
 
     PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = " _YELLOW_("%u") " bytes)", gs_traceLen);
     PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("trace list -1 -t ...") "` to view trace.  Remember the " _YELLOW_("`-1`") " param");
