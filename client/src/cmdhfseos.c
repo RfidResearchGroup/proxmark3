@@ -1109,24 +1109,13 @@ static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encr
 
             const char *CRYPTOGRAM_ADF_CMP = (sprint_hex_inrow(CRYPTOGRAM_ADF, ARRAYLEN(CRYPTOGRAM_ADF)));
 
-            char *CRYPTOGRAM_ADF_UPPER = strdup(CRYPTOGRAM_ADF_CMP);
-            char *selectADFOID_UPPER = strdup(selectADFOID);
-
-            // Convert both strings to uppercase
-            for (int x = 0; CRYPTOGRAM_ADF_UPPER[x]; x++) {
-                CRYPTOGRAM_ADF_UPPER[x] = toupper(CRYPTOGRAM_ADF_UPPER[x]);
-            }
-            for (int x = 0; selectADFOID_UPPER[x]; x++) {
-                selectADFOID_UPPER[x] = toupper(selectADFOID_UPPER[x]);
-            }
-
             // Compare the 2 ADF responses, if they don't match then the decryption is wrong
             // We do the + 4 to remove the first 4 bytes of the ADF OID ASN.1 Tag (0611)
-            if (strcmp(CRYPTOGRAM_ADF_UPPER + 4, selectADFOID_UPPER + 4) != 0) {
+            if (strcasecmp(CRYPTOGRAM_ADF_CMP + 4, selectADFOID + 4) != 0) {
                 PrintAndLogEx(ERR, "ADF does not match decrypted ADF");
                 PrintAndLogEx(ERR, "Likely wrong Auth Key");
-                // PrintAndLogEx(SUCCESS, "Decoded ADF....................... "_YELLOW_("%s"), CRYPTOGRAM_ADF_UPPER);                              // ADF Selected
-                // PrintAndLogEx(SUCCESS, "Supplied ADF...................... "_YELLOW_("%s"), selectADFOID_UPPER);                                // ADF Selected
+                // PrintAndLogEx(SUCCESS, "Decoded ADF....................... "_YELLOW_("%s"), CRYPTOGRAM_ADF_CMP);                                // ADF Selected
+                // PrintAndLogEx(SUCCESS, "Supplied ADF...................... "_YELLOW_("%s"), selectADFOID);                                      // ADF Selected
                 return PM3_ESOFT;
             }
             *diversifier_length_out = diversifier_length;
