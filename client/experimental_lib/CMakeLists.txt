@@ -349,6 +349,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhffmcos.c
         ${PM3_ROOT}/client/src/cmdhffudan.c
         ${PM3_ROOT}/client/src/cmdhfgallagher.c
+        ${PM3_ROOT}/client/src/cmdhfgp.c
         ${PM3_ROOT}/client/src/cmdhfgst.c
         ${PM3_ROOT}/client/src/cmdhficlass.c
         ${PM3_ROOT}/client/src/cmdhfict.c

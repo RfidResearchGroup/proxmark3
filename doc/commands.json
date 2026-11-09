@@ -4314,6 +4314,60 @@
             ],
             "usage": "hf gallagher reader [-h@vc] [--aid <hex>] [--sitekey <hex>] [--apdu]"
         },
+        "hf gp crs": {
+            "command": "hf gp crs",
+            "description": "List contactless applets registered in the GlobalPlatform CRS (Contactless Registry Service). GET STATUS on the CRS needs no keys.",
+            "notes": [
+                "hf gp crs",
+                "hf gp crs --aid A000000809 -> only CCC digital key applets",
+                "hf gp crs -w -> use contact interface"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--aid <hex> AID or partial AID to search for (def: all)",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "-a, --apdu Show APDU requests and responses",
+                "-v, --verbose Verbose output"
+            ],
+            "usage": "hf gp crs [-hwav] [--aid <hex>]"
+        },
+        "hf gp help": {
+            "command": "hf gp help",
+            "description": "----------- ----------------------- General ----------------------- help This help --------------------------------------------------------------------------------------- hf gp aids available offline: no Find applet AIDs without keys. Selects by partial AID over all registered RIDs (A0 00 00 0x xx) and the prefixes in aidlist.json, then extends every hit one byte at a time to the full AID. Proprietary AIDs outside these prefixes are only found with --prefix.",
+            "notes": [
+                "hf gp aids",
+                "hf gp aids --quick -> only prefixes from aidlist.json",
+                "hf gp aids --prefix 5849414F4D -> only AIDs under this prefix",
+                "hf gp aids -w -> use contact interface"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "--prefix <hex> AID prefix to enumerate",
+                "--quick Skip the registered RID sweep",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "-a, --apdu Show APDU requests and responses",
+                "-v, --verbose Verbose output"
+            ],
+            "usage": "hf gp aids [-hwav] [--prefix <hex>] [--quick]"
+        },
+        "hf gp info": {
+            "command": "hf gp info",
+            "description": "Read GlobalPlatform card information without authentication. Selects the Issuer Security Domain and reads Card Recognition Data, CPLC, Key Information Template, IIN, CIN and the SCP sequence counter. Sends no INITIALIZE UPDATE / EXTERNAL AUTHENTICATE, so no retry counter is used.",
+            "notes": [
+                "hf gp info",
+                "hf gp info -w -> use contact interface"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "-a, --apdu Show APDU requests and responses",
+                "-v, --verbose Verbose output"
+            ],
+            "usage": "hf gp info [-hwav]"
+        },
         "hf gst help": {
             "command": "hf gst help",
             "description": "----------- ----------------------- General ----------------------- help This help list List ISO 14443A/7816 history test Perform self tests --------------------------------------------------------------------------------------- hf gst list available offline: yes Alias of `trace list -t 7816` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
@@ -4390,7 +4444,7 @@
         },
         "hf help": {
             "command": "hf help",
-            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } aliro { ALIRO digital access credentials... } calypso { Calypso transport cards... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fmcos { FMCOS CPU cards... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } gst { Google Smart Tap passes... } secc { iClass SE Config Card Emulator... } iclass { ICLASS RFIDs... } ict { ICT MFC/DESfire RFIDs... } jooki { Jooki RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } saflok { Saflok MFC RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } tesla { TESLA Cards... } texkom { Texkom RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } vas { Apple Value Added Service... } waveshare { Waveshare NFC ePaper... } xerox { Fuji/Xerox cartridge RFIDs... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags --------------------------------------------------------------------------------------- hf list available offline: yes Alias of `trace list -t raw` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } aliro { ALIRO digital access credentials... } calypso { Calypso transport cards... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fmcos { FMCOS CPU cards... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } gp { GlobalPlatform secure elements... } gst { Google Smart Tap passes... } secc { iClass SE Config Card Emulator... } iclass { ICLASS RFIDs... } ict { ICT MFC/DESfire RFIDs... } jooki { Jooki RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } saflok { Saflok MFC RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } tesla { TESLA Cards... } texkom { Texkom RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } vas { Apple Value Added Service... } waveshare { Waveshare NFC ePaper... } xerox { Fuji/Xerox cartridge RFIDs... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags --------------------------------------------------------------------------------------- hf list available offline: yes Alias of `trace list -t raw` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf list --frame -> show frame delay times",
                 "hf list -1 -> use trace buffer"
@@ -11770,20 +11824,20 @@
             "notes": [
                 "lf cotag sim -> only detect the reader",
                 "lf cotag sim -r A37E0D37000C1337 -> send 64 bits",
-                "lf cotag sim -r 0000000000000002A37E0D37000C1337",
-                "lf cotag sim --floor 32 -> more sensitive, for a reader further away",
-                "lf cotag sim -r A37E0D37000C1337 --hb_delay_us 2909 -> time the half bit instead of counting cycles"
+                "lf cotag sim -r 0000000000000002A37E0D37000C1337 -> send 128 bits",
+                "lf cotag sim -r A37E0D37000C1337 --active -> send 64 bits, active tx mode"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-r, --raw <hex> raw data to answer with, 8 to 16 bytes (64-128 bits)",
                 "-n, --repeat <1-16> repeat data frame this many times per answer (def 1)",
-                "--floor <16-65535> minimum rise threshold (def 128)",
-                "--hb_delay_us <2900-2918> custom half bit delay [us] (should be around 2909)",
-                "-v, --verbose report detected reader activation sequence while answering"
+                "--active simulate tag with active tx instead (may give better range but may not work with all readers)",
+                "--hb_delay_us <2900-2918> custom half bit delay [us] for active mode (should be around 2909)",
+                "--floor <16-65535> minimum rise threshold for activation detection (def 128)",
+                "-v, --verbose report detected reader activation while answering"
             ],
-            "usage": "lf cotag sim [-hv] [-r <hex>] [-n <1-16>] [--floor <16-65535>] [--hb_delay_us <2900-2918>]"
+            "usage": "lf cotag sim [-hv] [-r <hex>] [-n <1-16>] [--active] [--hb_delay_us <2900-2918>] [--floor <16-65535>]"
         },
         "lf destron clone": {
             "command": "lf destron clone",
@@ -13390,6 +13444,18 @@
                 "-t, --threshold <dec> edge detect threshold, 0 = default 32"
             ],
             "usage": "lf hitag sniff [-h] [-t <dec>]"
+        },
+        "lf hitag ta": {
+            "command": "lf hitag ta",
+            "description": "Test recorded authentications (replay?)",
+            "notes": [
+                "lf hitag ta"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "lf hitag ta [-h]"
         },
         "lf hitag test": {
             "command": "lf hitag test",
@@ -16817,8 +16883,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 936,
+        "commands_extracted": 940,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-11-07T21:01:26+00:00"
+        "extracted_on": "2026-11-09T03:44:51+00:00"
     }
 }

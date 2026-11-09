@@ -474,6 +474,18 @@ Check column "offline" for their availability.
 |`hf gallagher reader    `|N       |`Read & decode all Gallagher credentials on a DESFire or Classic card`
 
 
+### hf gp
+
+ { GlobalPlatform secure elements...   }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf gp help             `|Y       |`This help`
+|`hf gp aids             `|N       |`Find applet AIDs via partial SELECT walk`
+|`hf gp info             `|N       |`Read card info without authentication`
+|`hf gp crs              `|N       |`List contactless applets via the CRS registry`
+
+
 ### hf gst
 
  { Google Smart Tap passes...          }

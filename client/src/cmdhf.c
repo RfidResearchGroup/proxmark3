@@ -38,6 +38,7 @@
 #include "cmdhfsecc.h"      // iClass SE Config Card
 #include "cmdhffudan.h"     // Fudan cards
 #include "cmdhfgallagher.h" // Gallagher DESFire cards
+#include "cmdhfgp.h"        // GlobalPlatform
 #include "cmdhfgst.h"       // Google Smart Tap
 #include "cmdhficlass.h"    // ICLASS
 #include "cmdhfict.h"       // ICT MFC / DESfire cards
@@ -645,6 +646,7 @@ static command_t CommandTable[] = {
     {"fmcos",       CmdHFFmcos,       AlwaysAvailable, "{ FMCOS CPU cards...                  }"},
     {"fudan",       CmdHFFudan,       AlwaysAvailable, "{ Fudan RFIDs...                      }"},
     {"gallagher",   CmdHFGallagher,   AlwaysAvailable, "{ Gallagher DESFire RFIDs...          }"},
+    {"gp",          CmdHFGP,          AlwaysAvailable, "{ GlobalPlatform secure elements...   }"},
     {"gst",         CmdHFGST,         AlwaysAvailable, "{ Google Smart Tap passes...          }"},
     {"secc",        CmdHFHIDConfig,   AlwaysAvailable, "{ iClass SE Config Card Emulator...   }"},
     {"iclass",      CmdHFiClass,      AlwaysAvailable, "{ ICLASS RFIDs...                     }"},

@@ -480,6 +480,14 @@
         "Type": "GP"
     },
     {
+        "AID": "A000000018475041432D3135",
+        "Vendor": "GEMPLUS",
+        "Country": "France",
+        "Name": "GPAC-15",
+        "Description": "GP SE Access Control ARF container (Access Rule Files), used by Android SE when no ARA-M",
+        "Type": "GP"
+    },
+    {
         "AID": "A00000002401",
         "Vendor": "Midland Bank Plc",
         "Country": "United Kingdom",
@@ -816,12 +824,28 @@
         "Type": ""
     },
     {
+        "AID": "A0000000871002",
+        "Vendor": "Third Generation Partnership Project (3GPP)",
+        "Country": "France",
+        "Name": "USIM",
+        "Description": "3GPP USIM application",
+        "Type": "USIM"
+    },
+    {
         "AID": "A0000000871002FF49FF0589",
         "Vendor": "Third Generation Partnership Project (3GPP)",
         "Country": "France",
         "Name": "Telenor USIM",
         "Description": "",
         "Type": "USIM"
+    },
+    {
+        "AID": "A0000000871004",
+        "Vendor": "Third Generation Partnership Project (3GPP)",
+        "Country": "France",
+        "Name": "ISIM",
+        "Description": "3GPP IMS subscriber identity module",
+        "Type": ""
     },
     {
         "AID": "A00000008810200105C100",
@@ -1029,6 +1053,30 @@
         "Country": "United States",
         "Name": "Global Platform Security Domain AID",
         "Description": "GP Card Manager",
+        "Type": "GP"
+    },
+    {
+        "AID": "A000000151000000",
+        "Vendor": "GlobalPlatform, Inc.",
+        "Country": "United States",
+        "Name": "Global Platform Issuer Security Domain",
+        "Description": "GP default Issuer Security Domain (card manager)",
+        "Type": "GP"
+    },
+    {
+        "AID": "A00000015141434C00",
+        "Vendor": "GlobalPlatform, Inc.",
+        "Country": "United States",
+        "Name": "GP ARA-M",
+        "Description": "Access Rule Application Master (GP SE Access Control), used by Android SE / OMAPI",
+        "Type": "GP"
+    },
+    {
+        "AID": "A00000015143525300",
+        "Vendor": "GlobalPlatform, Inc.",
+        "Country": "United States",
+        "Name": "GP CRS Application",
+        "Description": "Contactless Registry Service (GPC Amd C). GET STATUS lists contactless applets, no authentication",
         "Type": "GP"
     },
     {
@@ -1384,6 +1432,22 @@
         "Type": "EMV"
     },
     {
+        "AID": "A000000333",
+        "Vendor": "China Unionpay Co. Ltd",
+        "Country": "China",
+        "Name": "UnionPay",
+        "Description": "UnionPay RID",
+        "Type": "EMV"
+    },
+    {
+        "AID": "A0000003330101",
+        "Vendor": "China Unionpay Co. Ltd",
+        "Country": "China",
+        "Name": "UnionPay",
+        "Description": "UnionPay base application",
+        "Type": "EMV"
+    },
+    {
         "AID": "A000000333010101",
         "Vendor": "China Unionpay Co. Ltd",
         "Country": "China",
@@ -1422,6 +1486,14 @@
         "Name": "U.S. UnionPay Common Debit AID",
         "Description": "",
         "Type": "EMV"
+    },
+    {
+        "AID": "A0000003334355502D4D4F42494C45",
+        "Vendor": "China Unionpay Co. Ltd",
+        "Country": "China",
+        "Name": "UnionPay CUP-MOBILE",
+        "Description": "UnionPay mobile payment application (\"CUP-MOBILE\")",
+        "Type": ""
     },
     {
         "AID": "A000000337301000",
@@ -2355,6 +2427,15 @@
         "Type": "EMV"
     },
     {
+        "AID": "F00000004943434F41444B412021",
+        "Vendor": "Intelligent Car Connectivity Open Alliance (ICCOA)",
+        "Country": "China",
+        "Name": "ICCOA Digital Key",
+        "Description": "ICCOA digital car key applet (\"ICCOADKA !\"), on the secure element",
+        "Type": "access",
+        "Protocol": "iccoa_digital_key"
+    },
+    {
         "AID": "7465736C6153746F7265",
         "Vendor": "Tesla",
         "Country": "",
@@ -2540,7 +2621,7 @@
         "Vendor": "Car Connectivity Consortium (CCC)",
         "Country": "",
         "Name": "Digital Car Key",
-        "Description": "",
+        "Description": "Digital Key applet (\"CCCDKAv1\"), on the secure element",
         "Type": "access",
         "Protocol": "ccc_digital_car_key"
     },
@@ -3196,6 +3277,14 @@
         "Name": "CEPAS",
         "Description": "Transit and e-money card used in Singapore",
         "Type": "transport"
+    },
+    {
+        "AID": "A0000003431002",
+        "Vendor": "Third Generation Partnership Project 2 (3GPP2)",
+        "Country": "United States",
+        "Name": "CSIM",
+        "Description": "3GPP2 CDMA subscriber identity module",
+        "Type": ""
     },
     {
         "AID": "A0000000014145502E4E4643412E5654",
