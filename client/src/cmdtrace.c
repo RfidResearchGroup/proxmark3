@@ -1180,8 +1180,9 @@ static uint32_t printTraceLine(uint32_t tracepos, uint32_t traceLen, uint8_t *tr
         if (j == 0) {
 
 
-            uint32_t time1 = hdr->timestamp - first_hdr->timestamp;
-            uint32_t time2 = end_of_transmission_timestamp - first_hdr->timestamp;
+            // signed, a frame can predate the first one or the timer restarted
+            int64_t time1 = (int64_t)hdr->timestamp - first_hdr->timestamp;
+            int64_t time2 = (int64_t)end_of_transmission_timestamp - first_hdr->timestamp;
 
             // ansi codes addes extra chars that needs to be taken in consideration.
             if (last_line && (memcmp(crc, "\x20\x20\x20\x20", 4) != 0) && g_session.supports_colors && markCRCBytes) {
@@ -1201,7 +1202,7 @@ static uint32_t printTraceLine(uint32_t tracepos, uint32_t traceLen, uint8_t *tr
                                   (last_line) ? explanation : ""
                                  );
                 } else {
-                    PrintAndLogEx(NORMAL, " %10u | %10u | Tag |%-*s | %s| %s",
+                    PrintAndLogEx(NORMAL, " %10" PRId64 " | %10" PRId64 " | Tag |%-*s | %s| %s",
                                   time1,
                                   time2,
                                   str_padder,
@@ -1224,7 +1225,7 @@ static uint32_t printTraceLine(uint32_t tracepos, uint32_t traceLen, uint8_t *tr
                                  );
                 } else {
                     PrintAndLogEx(NORMAL,
-                                  _YELLOW_(" %10u") " | " _YELLOW_("%10u") " | " _YELLOW_("Rdr") " |" _YELLOW_("%-*s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
+                                  _YELLOW_(" %10" PRId64) " | " _YELLOW_("%10" PRId64) " | " _YELLOW_("Rdr") " |" _YELLOW_("%-*s")" | " _YELLOW_("%s") "| " _YELLOW_("%s"),
                                   time1,
                                   time2,
                                   str_padder,
@@ -1367,11 +1368,11 @@ static uint32_t printTraceLine(uint32_t tracepos, uint32_t traceLen, uint8_t *tr
 
         const tracelog_hdr_t *next_hdr = (tracelog_hdr_t *)(trace + tracepos);
 
-        uint32_t time1 = end_of_transmission_timestamp - first_hdr->timestamp;
-        uint32_t time2 = next_hdr->timestamp - first_hdr->timestamp;
+        int64_t time1 = (int64_t)end_of_transmission_timestamp - first_hdr->timestamp;
+        int64_t time2 = (int64_t)next_hdr->timestamp - first_hdr->timestamp;
         if (prev_eot) {
             time1 = 0;
-            time2 = next_hdr->timestamp - end_of_transmission_timestamp;
+            time2 = (int64_t)next_hdr->timestamp - end_of_transmission_timestamp;
         }
 
         // Same column rules as a data row, so the table is not broken.  The pad
@@ -1395,7 +1396,7 @@ static uint32_t printTraceLine(uint32_t tracepos, uint32_t traceLen, uint8_t *tr
                           (float)time1 / 13.56, (float)time2 / 13.56, "   ",
                           fdt_pad, fdt_txt, "    ", "");
         } else {
-            PrintAndLogEx(NORMAL, " %10u | %10u | %s |%-*s | %s| %s",
+            PrintAndLogEx(NORMAL, " %10" PRId64 " | %10" PRId64 " | %s |%-*s | %s| %s",
                           time1, time2, "   ", fdt_pad, fdt_txt, "    ", "");
         }
     }
