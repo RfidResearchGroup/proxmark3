@@ -103,6 +103,10 @@
 
 // Proxmark3 stdout/stderr hooking
 #include "ui.h"
+// glibc defines these as macros under clang with _FORTIFY_SOURCE
+#undef fprintf
+#undef fputs
+#undef puts
 #define fprintf(stream, ...) PrintAndLogEx(INFO, __VA_ARGS__)
 #define fputs(s, stream) PrintAndLogEx(INFO, "%s", s)
 #define puts(s) PrintAndLogEx(SUCCESS, "%s", s)
