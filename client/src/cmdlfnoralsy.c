@@ -173,8 +173,8 @@ static int CmdNoralsyClone(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint32_t id = arg_get_u32_def(ctx, 1, 0);
-    uint16_t year = arg_get_u32_def(ctx, 2, 2000);
+    uint64_t cn_arg = arg_get_u64_def(ctx, 1, 0);
+    uint64_t year_arg = arg_get_u64_def(ctx, 2, 2000);
     bool q5 = arg_get_lit(ctx, 3);
     bool em = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
@@ -183,6 +183,14 @@ static int CmdNoralsyClone(const char *Cmd) {
         PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
         return PM3_EINVARG;
     }
+
+    // the frame carries 7 BCD digits of cn and the last 2 of the year, read back as 1961-2060
+    if (cn_arg > 9999999 || year_arg < 1961 || year_arg > 2060) {
+        PrintAndLogEx(FAILED, "CN has a max value of 9999999 and year must be 1961-2060");
+        return PM3_EINVARG;
+    }
+    uint32_t id = (uint32_t)cn_arg;
+    uint16_t year = (uint16_t)year_arg;
 
     uint32_t blocks[4] = {T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_32 | T55x7_ST_TERMINATOR | 3 << T55x7_MAXBLOCK_SHIFT, 0, 0};
     char cardtype[16] = {"T55x7"};
@@ -246,9 +254,17 @@ static int CmdNoralsySim(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    uint32_t id = arg_get_u32_def(ctx, 1, 0);
-    uint16_t year = arg_get_u32_def(ctx, 2, 2000);
+    uint64_t cn_arg = arg_get_u64_def(ctx, 1, 0);
+    uint64_t year_arg = arg_get_u64_def(ctx, 2, 2000);
     CLIParserFree(ctx);
+
+    // the frame carries 7 BCD digits of cn and the last 2 of the year, read back as 1961-2060
+    if (cn_arg > 9999999 || year_arg < 1961 || year_arg > 2060) {
+        PrintAndLogEx(FAILED, "CN has a max value of 9999999 and year must be 1961-2060");
+        return PM3_EINVARG;
+    }
+    uint32_t id = (uint32_t)cn_arg;
+    uint16_t year = (uint16_t)year_arg;
 
     uint8_t bs[96];
     memset(bs, 0, sizeof(bs));
