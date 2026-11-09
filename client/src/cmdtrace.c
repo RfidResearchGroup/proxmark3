@@ -406,8 +406,8 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
         }
     }
 
-    // extract DESFIRE
-    if ((frame[0] & 0xC0) != 0x00) {
+    // extract DESFIRE, from an ISO14443-4 I-block
+    if ((frame[0] & 0xE2) != 0x02) {
         return tracepos;
     }
 
@@ -415,129 +415,132 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
         return tracepos;
     }
 
-    // PCB [CID] [NAD] [INF] CRC CRC
+    // PCB [CID] [NAD] [CLA] INS ... CRC CRC
     uint8_t pos = calc_pos(frame);
-    uint8_t long_jmp = (data_len > 6) ? 4 : 1;
+    bool wrapped = (pos < data_len) && (frame[pos] == MFDES_NATIVE_ISO7816_WRAP_CLA);
+    if (wrapped) {
+        pos++;
+    }
 
-    for (uint8_t i = 0; i < 2; i++, pos++) {
+    // wrapped: INS P1 P2 Lc keyNo, native: CMD keyNo
+    uint8_t long_jmp = (wrapped) ? 4 : 1;
 
-        // the command and its key number
-        if (pos + long_jmp >= data_len) {
-            break;
+    // the command and its key number, before the CRC
+    if (pos + long_jmp + 2 >= data_len) {
+        return tracepos;
+    }
+
+    switch (frame[pos]) {
+
+        case MFDES_AUTHENTICATE: {
+
+            // Assume wrapped or unwrapped
+            PrintAndLogEx(INFO, "Found a MFDES Auth NATIVE (keyNo %d)", frame[pos + long_jmp]);
+            const tracelog_hdr_t *next_hdr = get_record(tracepos, traceLen, trace);
+            if ((next_hdr == NULL) || (next_hdr->isResponse == false)) {
+                break;
+            }
+
+            uint8_t cpos = mfdes_chall_pos(next_hdr->frame, long_jmp);
+            if (next_hdr->data_len < cpos + 8 + 2) {
+                break;
+            }
+            tracepos += TRACELOG_HDR_LEN + next_hdr->data_len + TRACELOG_PARITY_LEN(next_hdr);
+
+            PrintAndLogEx(INFO, "DES 1499999999 %s " NOLF, sprint_hex_inrow(next_hdr->frame + cpos, 8));
+
+            next_hdr = get_record(tracepos, traceLen, trace);
+            if (next_hdr != NULL) {
+                tracepos += TRACELOG_HDR_LEN + next_hdr->data_len + TRACELOG_PARITY_LEN(next_hdr);
+            }
+
+            if ((next_hdr != NULL) && (next_hdr->data_len >= pos + long_jmp + 16) && (next_hdr->frame[pos] == MFDES_ADDITIONAL_FRAME)) {
+                PrintAndLogEx(NORMAL, "%s", sprint_hex_inrow(next_hdr->frame + pos + long_jmp, 16));
+            } else {
+                PrintAndLogEx(NORMAL, "");
+            }
+            return tracepos;   // AUTHENTICATE_NATIVE
         }
+        case MFDES_AUTHENTICATE_ISO: {
+            // Assume wrapped or unwrapped
+            PrintAndLogEx(INFO, "Found a MFDES Auth ISO (keyNo %d)", frame[pos + long_jmp]);
+            const tracelog_hdr_t *next_hdr = get_record(tracepos, traceLen, trace);
+            if ((next_hdr == NULL) || (next_hdr->isResponse == false)) {
+                break;
+            }
 
-        switch (frame[pos]) {
+            tracepos += TRACELOG_HDR_LEN + next_hdr->data_len + TRACELOG_PARITY_LEN(next_hdr);
+            uint8_t cpos = mfdes_chall_pos(next_hdr->frame, long_jmp);
+            if (next_hdr->data_len < cpos + 8 + 2) {
+                break;
+            }
 
-            case MFDES_AUTHENTICATE: {
+            // wrapped replies end with SW 91 AF before the CRC
+            uint8_t sw_len = (long_jmp == 1) ? 0 : 2;
+            uint8_t tdea = 8;
+            if (next_hdr->data_len >= cpos + 16 + sw_len + 2) {
+                tdea = 16;
+                PrintAndLogEx(INFO, "3TDEA 1499999999 %s " NOLF, sprint_hex_inrow(next_hdr->frame + cpos, tdea));
+            } else {
+                PrintAndLogEx(INFO, "2TDEA 1499999999 %s " NOLF, sprint_hex_inrow(next_hdr->frame + cpos, tdea));
+            }
 
-                // Assume wrapped or unwrapped
-                PrintAndLogEx(INFO, "Found a MFDES Auth NATIVE (keyNo %d)", frame[pos + long_jmp]);
-                const tracelog_hdr_t *next_hdr = get_record(tracepos, traceLen, trace);
-                if ((next_hdr == NULL) || (next_hdr->isResponse == false)) {
-                    break;
-                }
-
-                uint8_t cpos = mfdes_chall_pos(next_hdr->frame, long_jmp);
-                if (next_hdr->data_len < cpos + 8 + 2) {
-                    break;
-                }
+            next_hdr = get_record(tracepos, traceLen, trace);
+            if (next_hdr != NULL) {
                 tracepos += TRACELOG_HDR_LEN + next_hdr->data_len + TRACELOG_PARITY_LEN(next_hdr);
-
-                PrintAndLogEx(INFO, "DES 1499999999 %s " NOLF, sprint_hex_inrow(next_hdr->frame + cpos, 8));
-
-                next_hdr = get_record(tracepos, traceLen, trace);
-                if (next_hdr != NULL) {
-                    tracepos += TRACELOG_HDR_LEN + next_hdr->data_len + TRACELOG_PARITY_LEN(next_hdr);
-                }
-
-                if ((next_hdr != NULL) && (next_hdr->data_len >= pos + long_jmp + 16) && (next_hdr->frame[pos] == MFDES_ADDITIONAL_FRAME)) {
-                    PrintAndLogEx(NORMAL, "%s", sprint_hex_inrow(next_hdr->frame + pos + long_jmp, 16));
-                } else {
-                    PrintAndLogEx(NORMAL, "");
-                }
-                return tracepos;   // AUTHENTICATE_NATIVE
             }
-            case MFDES_AUTHENTICATE_ISO: {
-                // Assume wrapped or unwrapped
-                PrintAndLogEx(INFO, "Found a MFDES Auth ISO (keyNo %d)", frame[pos + long_jmp]);
-                const tracelog_hdr_t *next_hdr = get_record(tracepos, traceLen, trace);
-                if ((next_hdr == NULL) || (next_hdr->isResponse == false)) {
-                    break;
-                }
 
+            if ((next_hdr != NULL) && (next_hdr->data_len >= pos + long_jmp + (tdea << 1)) && (next_hdr->frame[pos] == MFDES_ADDITIONAL_FRAME)) {
+                PrintAndLogEx(NORMAL, "%s", sprint_hex_inrow(next_hdr->frame + pos + long_jmp, (tdea << 1)));
+            } else {
+                PrintAndLogEx(NORMAL, "");
+            }
+            return tracepos;  // AUTHENTICATE_STANDARD
+        }
+        case MFDES_AUTHENTICATE_AES: {
+            // Assume wrapped or unwrapped
+            PrintAndLogEx(INFO, "Found a MFDES Auth AES (keyNo %d)", frame[pos + long_jmp]);
+            const tracelog_hdr_t *next_hdr = get_record(tracepos, traceLen, trace);
+            if ((next_hdr == NULL) || (next_hdr->isResponse == false)) {
+                break;
+            }
+
+            tracepos += TRACELOG_HDR_LEN + next_hdr->data_len + TRACELOG_PARITY_LEN(next_hdr);
+            uint8_t cpos = mfdes_chall_pos(next_hdr->frame, long_jmp);
+            if (next_hdr->data_len < cpos + 16 + 2) {
+                break;
+            }
+
+            PrintAndLogEx(INFO, "AES 1499999999 %s " NOLF, sprint_hex_inrow(next_hdr->frame + cpos, 16));
+
+            next_hdr = get_record(tracepos, traceLen, trace);
+            if (next_hdr != NULL) {
                 tracepos += TRACELOG_HDR_LEN + next_hdr->data_len + TRACELOG_PARITY_LEN(next_hdr);
-                uint8_t cpos = mfdes_chall_pos(next_hdr->frame, long_jmp);
-                if (next_hdr->data_len < cpos + 8 + 2) {
-                    break;
-                }
-
-                // wrapped replies end with SW 91 AF before the CRC
-                uint8_t sw_len = (long_jmp == 1) ? 0 : 2;
-                uint8_t tdea = 8;
-                if (next_hdr->data_len >= cpos + 16 + sw_len + 2) {
-                    tdea = 16;
-                    PrintAndLogEx(INFO, "3TDEA 1499999999 %s " NOLF, sprint_hex_inrow(next_hdr->frame + cpos, tdea));
-                } else {
-                    PrintAndLogEx(INFO, "2TDEA 1499999999 %s " NOLF, sprint_hex_inrow(next_hdr->frame + cpos, tdea));
-                }
-
-                next_hdr = get_record(tracepos, traceLen, trace);
-                if (next_hdr != NULL) {
-                    tracepos += TRACELOG_HDR_LEN + next_hdr->data_len + TRACELOG_PARITY_LEN(next_hdr);
-                }
-
-                if ((next_hdr != NULL) && (next_hdr->data_len >= pos + long_jmp + (tdea << 1)) && (next_hdr->frame[pos] == MFDES_ADDITIONAL_FRAME)) {
-                    PrintAndLogEx(NORMAL, "%s", sprint_hex_inrow(next_hdr->frame + pos + long_jmp, (tdea << 1)));
-                } else {
-                    PrintAndLogEx(NORMAL, "");
-                }
-                return tracepos;  // AUTHENTICATE_STANDARD
             }
-            case MFDES_AUTHENTICATE_AES: {
-                // Assume wrapped or unwrapped
-                PrintAndLogEx(INFO, "Found a MFDES Auth AES (keyNo %d)", frame[pos + long_jmp]);
-                const tracelog_hdr_t *next_hdr = get_record(tracepos, traceLen, trace);
-                if ((next_hdr == NULL) || (next_hdr->isResponse == false)) {
-                    break;
-                }
 
-                tracepos += TRACELOG_HDR_LEN + next_hdr->data_len + TRACELOG_PARITY_LEN(next_hdr);
-                uint8_t cpos = mfdes_chall_pos(next_hdr->frame, long_jmp);
-                if (next_hdr->data_len < cpos + 16 + 2) {
-                    break;
-                }
-
-                PrintAndLogEx(INFO, "AES 1499999999 %s " NOLF, sprint_hex_inrow(next_hdr->frame + cpos, 16));
-
-                next_hdr = get_record(tracepos, traceLen, trace);
-                if (next_hdr != NULL) {
-                    tracepos += TRACELOG_HDR_LEN + next_hdr->data_len + TRACELOG_PARITY_LEN(next_hdr);
-                }
-
-                if ((next_hdr != NULL) && (next_hdr->data_len >= pos + long_jmp + 32) && (next_hdr->frame[pos] == MFDES_ADDITIONAL_FRAME)) {
-                    PrintAndLogEx(NORMAL, "%s", sprint_hex_inrow(next_hdr->frame + pos + long_jmp, 32));
-                } else {
-                    PrintAndLogEx(NORMAL, "");
-                }
-                return tracepos;
+            if ((next_hdr != NULL) && (next_hdr->data_len >= pos + long_jmp + 32) && (next_hdr->frame[pos] == MFDES_ADDITIONAL_FRAME)) {
+                PrintAndLogEx(NORMAL, "%s", sprint_hex_inrow(next_hdr->frame + pos + long_jmp, 32));
+            } else {
+                PrintAndLogEx(NORMAL, "");
             }
-            case MFDES_AUTHENTICATE_EV2F: {
-                PrintAndLogEx(INFO, "Found a MFDES Auth EV2 First");
-                uint16_t tmp = extractChall_ev2(tracepos, traceLen, trace, pos, long_jmp);
-                if (tmp == 0)
-                    break;
-                else
-                    return tmp;
+            return tracepos;
+        }
+        case MFDES_AUTHENTICATE_EV2F: {
+            PrintAndLogEx(INFO, "Found a MFDES Auth EV2 First");
+            uint16_t tmp = extractChall_ev2(tracepos, traceLen, trace, pos, long_jmp);
+            if (tmp == 0)
+                break;
+            else
+                return tmp;
 
-            }
-            case MFDES_AUTHENTICATE_EV2NF: {
-                PrintAndLogEx(INFO, "Found a MFDES Auth EV2 Non First");
-                uint16_t tmp = extractChall_ev2(tracepos, traceLen, trace, pos, long_jmp);
-                if (tmp == 0)
-                    break;
-                else
-                    return tmp;
-            }
+        }
+        case MFDES_AUTHENTICATE_EV2NF: {
+            PrintAndLogEx(INFO, "Found a MFDES Auth EV2 Non First");
+            uint16_t tmp = extractChall_ev2(tracepos, traceLen, trace, pos, long_jmp);
+            if (tmp == 0)
+                break;
+            else
+                return tmp;
         }
     }
 
