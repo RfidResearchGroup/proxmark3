@@ -753,7 +753,7 @@ static int CmdEM4x50Info(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_INFO, (uint8_t *)&etd, sizeof(etd));
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_LF_EM4X50_INFO, &resp, EM4X50_TIMEOUT_CMD) == false) {
+    if (WaitForResponseTimeout(CMD_LF_EM4X50_INFO, &resp, EM4X50_TIMEOUT_INFO) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
@@ -876,7 +876,7 @@ static int CmdEM4x50Dump(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_INFO, (uint8_t *)&etd, sizeof(etd));
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_LF_EM4X50_INFO, &resp, EM4X50_TIMEOUT_CMD) == false) {
+    if (WaitForResponseTimeout(CMD_LF_EM4X50_INFO, &resp, EM4X50_TIMEOUT_INFO) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }

@@ -65,9 +65,10 @@
 #define EM4X50_TAG_MAX_NO_BYTES             136
 #define EM4X50_TIMEOUT_PULSE_EVAL           (4 * EM4X50_T_TAG_FULL_PERIOD * CYCLES2TICKS) // 4bit data periods
 
-// read retries, no new attempt after the window (ms) to stay below the client timeout
+// read retries, no new attempt that could end after the window (ms) to stay below the client timeout
 #define EM4X50_COMMAND_RETRIES              5
-#define EM4X50_T_RETRY_WINDOW               1000
+#define EM4X50_T_RETRY_WINDOW               2500
+#define EM4X50_MS2TICKS                     1500
 
 uint8_t g_High = 190;
 uint8_t g_Low = 60;
@@ -914,6 +915,7 @@ static int selective_read(uint32_t addresses, uint32_t *words) {
 static int login_and_read(const em4x50_data_t *etd, uint32_t addresses, uint32_t *words) {
     int status = PM3_EFAILED;
     uint32_t tstart = GetTicks();
+    uint32_t tlongest = 0;
 
     for (int i = 0; i < EM4X50_COMMAND_RETRIES; i++) {
 
@@ -921,6 +923,7 @@ static int login_and_read(const em4x50_data_t *etd, uint32_t addresses, uint32_t
             return PM3_EOPABORTED;
         }
 
+        uint32_t tattempt = GetTicks();
         status = PM3_SUCCESS;
 
         // try to login with given password
@@ -930,7 +933,14 @@ static int login_and_read(const em4x50_data_t *etd, uint32_t addresses, uint32_t
         if (status == PM3_SUCCESS)
             status = selective_read(addresses, words);
 
-        if ((status == PM3_SUCCESS) || (GetTicks() - tstart > EM4X50_T_RETRY_WINDOW * 1500)) {
+        if (status == PM3_SUCCESS) {
+            break;
+        }
+
+        // next attempt must fit, judged by the longest one so far
+        uint32_t now = GetTicks();
+        tlongest = MAX(tlongest, now - tattempt);
+        if ((now - tstart) + tlongest > EM4X50_T_RETRY_WINDOW * EM4X50_MS2TICKS) {
             break;
         }
     }

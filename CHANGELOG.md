@@ -6,7 +6,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added `hf gp info`, `hf gp crs` and `hf gp aids` - read GlobalPlatform card info, list CRS registered applets and find applet AIDs, all without keys (@iceman1001)
 - Added GlobalPlatform ISD, CRS, ARA-M, telecom, UnionPay and digital key AIDs to `aidlist.json` (@iceman1001)
 - Changed `trace list -t 14a` - APDUs inside an ISO14443-4 session are named, error status words explained and SW1 SW2 highlighted (@iceman1001)
-- Fixed `lf em 4x50 rdbl/info/dump`, `lf search` - RM was sent into the tag data instead of the second listen window on strong, AC-coupled signals, so every command failed; reads now retry within 1 s (@abou28)
+- Fixed `lf em 4x50 rdbl/info/dump`, `lf search` - RM was sent into the tag data instead of the second listen window on strong, AC-coupled signals, so every command failed; reads now retry while a new attempt still ends within 2.5 s (@abou28)
 - Fixed PM5 ssp_clk counter - uninitialised TMR2 input filter could drop edges, skewing ISO14443-A timing and `hf mf nested` (@adrian-stepien)
 - Changed `lf cotag sim` - add and default to passive mode, improve field drop and activation sequence detection (@towelbyte)
 - Fixed `lf noralsy clone` and `sim` - CN above 9999999 and years outside 1961-2060 are refused instead of cut (@matrix)
