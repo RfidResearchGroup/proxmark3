@@ -164,6 +164,11 @@ static uint8_t calc_pos(const uint8_t *d) {
     return pos;
 }
 
+// offset of the challenge in a DESFire auth reply, native puts the AF status before it
+static uint8_t mfdes_chall_pos(const uint8_t *d, uint8_t long_jmp) {
+    return calc_pos(d) + ((long_jmp == 1) ? 1 : 0);
+}
+
 // Discard the client side trace buffer
 void ClearTraceBuffer(void) {
     free(gs_trace);
@@ -432,12 +437,13 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
                     break;
                 }
 
-                if (next_hdr->data_len < 9) {
+                uint8_t cpos = mfdes_chall_pos(next_hdr->frame, long_jmp);
+                if (next_hdr->data_len < cpos + 8 + 2) {
                     break;
                 }
                 tracepos += TRACELOG_HDR_LEN + next_hdr->data_len + TRACELOG_PARITY_LEN(next_hdr);
 
-                PrintAndLogEx(INFO, "DES 1499999999 %s " NOLF, sprint_hex_inrow(next_hdr->frame + 1, 8));
+                PrintAndLogEx(INFO, "DES 1499999999 %s " NOLF, sprint_hex_inrow(next_hdr->frame + cpos, 8));
 
                 next_hdr = get_record(tracepos, traceLen, trace);
                 if (next_hdr != NULL) {
@@ -460,16 +466,17 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
                 }
 
                 tracepos += TRACELOG_HDR_LEN + next_hdr->data_len + TRACELOG_PARITY_LEN(next_hdr);
-                if (next_hdr->data_len < 9) {
+                uint8_t cpos = mfdes_chall_pos(next_hdr->frame, long_jmp);
+                if (next_hdr->data_len < cpos + 8 + 2) {
                     break;
                 }
 
                 uint8_t tdea = 8;
                 if (next_hdr->data_len > 20) {
                     tdea = 16;
-                    PrintAndLogEx(INFO, "3TDEA 1499999999 %s " NOLF, sprint_hex_inrow(next_hdr->frame + 1, tdea));
+                    PrintAndLogEx(INFO, "3TDEA 1499999999 %s " NOLF, sprint_hex_inrow(next_hdr->frame + cpos, tdea));
                 } else {
-                    PrintAndLogEx(INFO, "2TDEA 1499999999 %s " NOLF, sprint_hex_inrow(next_hdr->frame + 1, tdea));
+                    PrintAndLogEx(INFO, "2TDEA 1499999999 %s " NOLF, sprint_hex_inrow(next_hdr->frame + cpos, tdea));
                 }
 
                 next_hdr = get_record(tracepos, traceLen, trace);
@@ -493,12 +500,12 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
                 }
 
                 tracepos += TRACELOG_HDR_LEN + next_hdr->data_len + TRACELOG_PARITY_LEN(next_hdr);
-                // PCB + 16 byte RndB + CRC
-                if (next_hdr->data_len < 19) {
+                uint8_t cpos = mfdes_chall_pos(next_hdr->frame, long_jmp);
+                if (next_hdr->data_len < cpos + 16 + 2) {
                     break;
                 }
 
-                PrintAndLogEx(INFO, "AES 1499999999 %s " NOLF, sprint_hex_inrow(next_hdr->frame + 1, 16));
+                PrintAndLogEx(INFO, "AES 1499999999 %s " NOLF, sprint_hex_inrow(next_hdr->frame + cpos, 16));
 
                 next_hdr = get_record(tracepos, traceLen, trace);
                 if (next_hdr != NULL) {
