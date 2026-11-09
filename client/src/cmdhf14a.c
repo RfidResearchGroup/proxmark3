@@ -1282,6 +1282,11 @@ int CmdHF14ASniff(const char *Cmd) {
     bool interactive = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
+    // PM5: the 14a sniffer image (212 / 424 / 848 kbit/s after a PPS)
+    if (IfPm5()) {
+        param |= 0x08;
+    }
+
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443A_SNIFF, (uint8_t *)&param, sizeof(uint8_t));
 

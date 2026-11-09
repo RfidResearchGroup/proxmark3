@@ -32,6 +32,9 @@ PM5_CST       ?= $(PM5_DIR)/gowin.cst
 PM5_SDC       ?= $(PM5_DIR)/gowin.sdc
 PM5_FREQ      ?= 24
 PM5_DEFINES   ?= PM5 WITH_TIMODE WITH_HF_15 WITH_FELICA_PROBE
+# The 14a sniffer image (fpga_pm5_sniff14a): the ISO14443-A sniffer alone, no LF
+# side. The ARM image embeds it and `hf 14a sniff` loads it into the FPGA's SRAM.
+PM5_SNIFF14A_DEFINES ?= PM5 WITH_TIMODE PM5_SNIFF14A
 
 # The Gowin IDE generated SDC covers every clock, but nextpnr only takes a
 # subset of SDC; it is rewritten into the build directory, leaving the original
@@ -69,9 +72,16 @@ endif
 PM5_BUILD_HDL = $(addprefix ../,$(PM5_HDL))
 PM5_DEFS      = $(foreach d,$(PM5_DEFINES),-D $(d))
 
-.PHONY: all clean help check-tools smoke $(PM5_NAME)
+.PHONY: all clean help check-tools smoke $(PM5_NAME) fpga_pm5_sniff14a
 
 all: $(PM5_NAME)
+
+# The sniffer image is the same build with its own defines, name and build
+# directory.
+ifneq ($(PM5_NAME),fpga_pm5_sniff14a)
+fpga_pm5_sniff14a:
+	$(Q)$(MAKE) --no-print-directory -f $(firstword $(MAKEFILE_LIST)) PM5_NAME=$@ PM5_DEFINES="$(PM5_SNIFF14A_DEFINES)" all
+endif
 
 $(PM5_NAME): $(PM5_NAME).fs $(PM5_NAME).bin
 
@@ -155,6 +165,7 @@ smoke: | check-tools $(PM5_OUT)
 # ALWAYS have some hardcoded text after $(PREFIX) to avoid rm -rf * or rm -rf /* situations if PREFIX is incorrectly set to empty "" or just "/"
 clean:
 	$(Q)$(RMDIR) $(PREFIX)build_$(PM5_NAME)
+	$(Q)$(RMDIR) $(PREFIX)build_fpga_pm5_sniff14a
 	$(info [-] Build files deleted)
 
 help:
@@ -162,6 +173,7 @@ help:
 	@echo "#"
 	@echo "#   $(PM5_NAME) - Builds the PM5 bitstream into $(PM5_NAME).fs/.bin"
 	@echo "#   all  - same as $(PM5_NAME)"
+	@echo "#   fpga_pm5_sniff14a - the 14a sniffer image hf 14a sniff loads into SRAM"
 	@echo "#   clean - Keeps the bitstream but cleans intermediate build files"
 	@echo "#"
 	@echo "# Device: $(PM5_PART) (family $(PM5_FAMILY))"

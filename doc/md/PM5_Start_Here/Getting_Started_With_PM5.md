@@ -186,3 +186,4 @@ Do not use them unless you fully understand what you're doing.
 - [PM5 RGB Controller](./PM5_Controllers/PM5_RGB_Controller_RM.md)
 - [PM5 BWM Install](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/master/INSTALL.md)
 - [PM5 <--> Flipper Usage](./PM5-FLIPPER-USAGE.md)
+- [PM5 14a sniffing at 212 / 424 / 848 kbit/s](./PM5-14A-SNIFF.md)
