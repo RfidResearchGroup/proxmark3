@@ -2105,6 +2105,10 @@ static statelist_t *add_more_candidates(void) {
         }
         new_candidates = new_candidates->next = (statelist_t *)calloc(sizeof(statelist_t), sizeof(uint8_t));
     }
+    if (new_candidates == NULL) {
+        PrintAndLogEx(ERR, "Out of memory error in add_more_candidates()");
+        exit(4);
+    }
     new_candidates->next = NULL;
     new_candidates->len[ODD_STATE] = 0;
     new_candidates->len[EVEN_STATE] = 0;

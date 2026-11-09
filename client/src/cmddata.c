@@ -4047,6 +4047,10 @@ static int CmdTestSaveState8(const char *Cmd) {
     size_t length = (rand() % 256);
     PrintAndLogEx(DEBUG, "Testing with length = %zu", length);
     uint8_t *srcBuffer = (uint8_t *)calloc(length + 1, sizeof(uint8_t));
+    if (srcBuffer == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
 
     //Set up the source buffer with random data
     for (int i = 0; i < length; i++) {
@@ -4061,6 +4065,11 @@ static int CmdTestSaveState8(const char *Cmd) {
     PrintAndLogEx(DEBUG, "Save State clock = %u, offset = %u", test8.clock, test8.offset);
 
     uint8_t *destBuffer = (uint8_t *)calloc(length, sizeof(uint8_t));
+    if (destBuffer == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        free(srcBuffer);
+        return PM3_EMALLOC;
+    }
     size_t returnedLength = restore_buffer8(test8, destBuffer);
 
     if (returnedLength != length) {
@@ -4102,6 +4111,10 @@ static int CmdTestSaveState32(const char *Cmd) {
 
     size_t length = 64;
     uint32_t *srcBuffer = (uint32_t *)calloc(length, sizeof(uint32_t));
+    if (srcBuffer == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
 
     //Set up the source buffer with random data
     for (size_t i = 0; i < length; i++) {
@@ -4116,6 +4129,11 @@ static int CmdTestSaveState32(const char *Cmd) {
     PrintAndLogEx(DEBUG, "Save State clock=%u, offset=%u", test32.clock, test32.offset);
 
     uint32_t *destBuffer = (uint32_t *)calloc(length, sizeof(uint32_t));
+    if (destBuffer == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        free(srcBuffer);
+        return PM3_EMALLOC;
+    }
     size_t returnedLength = restore_buffer32(test32, destBuffer);
 
     if (returnedLength != length) {
@@ -4158,6 +4176,10 @@ static int CmdTestSaveState32S(const char *Cmd) {
 
     size_t length = 64;
     int32_t *srcBuffer = (int32_t *)calloc(length, sizeof(int32_t));
+    if (srcBuffer == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
 
     //Set up the source buffer with random data
     for (int i = 0; i < length; i++) {
@@ -4172,6 +4194,11 @@ static int CmdTestSaveState32S(const char *Cmd) {
     PrintAndLogEx(DEBUG, "Save State clock=%u, offset=%u", test32.clock, test32.offset);
 
     int32_t *destBuffer = (int32_t *)calloc(length, sizeof(int32_t));
+    if (destBuffer == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        free(srcBuffer);
+        return PM3_EMALLOC;
+    }
     size_t returnedLength = restore_bufferS32(test32, destBuffer);
 
     if (returnedLength != length) {
