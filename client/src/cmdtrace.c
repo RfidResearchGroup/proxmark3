@@ -1141,7 +1141,8 @@ static uint32_t printTraceLine(uint32_t tracepos, uint32_t traceLen, uint8_t *tr
     // wait-cycle annotation already puts it, between the frames it separates.
     if (prev_eot && (previous_end_of_transmission_timestamp != hdr->timestamp)) {
 
-        uint32_t fdt = hdr->timestamp - previous_end_of_transmission_timestamp;
+        // signed, a frame can start before the previous one ended or the timer restarted
+        int64_t fdt = (int64_t)hdr->timestamp - previous_end_of_transmission_timestamp;
 
         // Carry the column rules through, so the row does not break the table.
         //
@@ -1154,8 +1155,8 @@ static uint32_t printTraceLine(uint32_t tracepos, uint32_t traceLen, uint8_t *tr
             visible = snprintf(NULL, 0, " Frame Delay Time %.1f", (float)fdt / 13.56);
             snprintf(fdt_txt, sizeof(fdt_txt), " Frame Delay Time " _CYAN_("%.1f"), (float)fdt / 13.56);
         } else {
-            visible = snprintf(NULL, 0, " Frame Delay Time %u", fdt);
-            snprintf(fdt_txt, sizeof(fdt_txt), " Frame Delay Time " _CYAN_("%u"), fdt);
+            visible = snprintf(NULL, 0, " Frame Delay Time %" PRId64, fdt);
+            snprintf(fdt_txt, sizeof(fdt_txt), " Frame Delay Time " _CYAN_("%" PRId64), fdt);
         }
 
         int fdt_pad = str_padder + (int)strlen(fdt_txt) - visible;
@@ -1368,15 +1369,16 @@ static uint32_t printTraceLine(uint32_t tracepos, uint32_t traceLen, uint8_t *tr
         // Same column rules as a data row, so the table is not broken.  The pad
         // is corrected for the colour escapes, which %-*s counts but the terminal
         // does not draw.
-        uint32_t fdt = next_hdr->timestamp - end_of_transmission_timestamp;
+        // signed, a frame can start before the previous one ended or the timer restarted
+        int64_t fdt = (int64_t)next_hdr->timestamp - end_of_transmission_timestamp;
         char fdt_txt[160] = {0};
         int visible;
         if (use_us) {
             visible = snprintf(NULL, 0, " Frame Delay Time %.1f", (float)fdt / 13.56);
             snprintf(fdt_txt, sizeof(fdt_txt), " Frame Delay Time " _CYAN_("%.1f"), (float)fdt / 13.56);
         } else {
-            visible = snprintf(NULL, 0, " Frame Delay Time %u", fdt);
-            snprintf(fdt_txt, sizeof(fdt_txt), " Frame Delay Time " _CYAN_("%u"), fdt);
+            visible = snprintf(NULL, 0, " Frame Delay Time %" PRId64, fdt);
+            snprintf(fdt_txt, sizeof(fdt_txt), " Frame Delay Time " _CYAN_("%" PRId64), fdt);
         }
         int fdt_pad = 72 + (int)strlen(fdt_txt) - visible;
 
