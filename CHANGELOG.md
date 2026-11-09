@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `lf cotag sim` - add and default to passive mode, improve field drop and activation sequence detection (@towelbyte)
 - Fixed `lf noralsy clone` and `sim` - CN above 9999999 and years outside 1961-2060 are refused instead of cut (@matrix)
 - Fixed `trace list` - Topaz commands end at the frames their code takes, ISO14443-A frames in Topaz traces and ISO15693 frames in iCLASS traces get their own CRC, five byte ISO14443-A answers and FeliCa frames get a real CRC check, frames of 256 bytes and more are checked and annotated whole (@matrix)
 - Fixed `trace list` annotations - none reads past its frame, SEOS answers are no longer shown as reader commands, contactless S-blocks, 14b slots, Xerox WUP2 and the Hitag µ field offsets are corrected (@matrix)
