@@ -629,7 +629,7 @@ static int CmdHFGPAids(const char *Cmd) {
                   "Proprietary AIDs outside these prefixes are only found with --prefix.",
                   "hf gp aids\n"
                   "hf gp aids --quick                -> only prefixes from aidlist.json\n"
-                  "hf gp aids --prefix 5849414F4D    -> only AIDs under this prefix\n"
+                  "hf gp aids --prefix A000000151    -> only AIDs under this prefix\n"
                   "hf gp aids -w                     -> use contact interface");
 
     void *argtable[] = {
