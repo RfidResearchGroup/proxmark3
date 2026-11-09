@@ -199,13 +199,17 @@ static uint8_t extract_epurse[8] = {0};
 
 static uint32_t extractChall_ev2(uint32_t tracepos, uint32_t traceLen, uint8_t *trace, uint8_t cmdpos, uint8_t long_jmp) {
     const tracelog_hdr_t *next_hdr = get_record(tracepos, traceLen, trace);
-    if ((next_hdr == NULL) || (next_hdr->data_len != 21)) {
+    if ((next_hdr == NULL) || (next_hdr->isResponse == false)) {
         return 0;
     }
 
+    uint8_t cpos = mfdes_chall_pos(next_hdr->frame, long_jmp);
+    if (next_hdr->data_len < cpos + 16 + 2) {
+        return 0;
+    }
     tracepos += TRACELOG_HDR_LEN + next_hdr->data_len + TRACELOG_PARITY_LEN(next_hdr);
 
-    PrintAndLogEx(INFO, "1499999999 %s " NOLF, sprint_hex_inrow(next_hdr->frame + 1, 16));
+    PrintAndLogEx(INFO, "1499999999 %s " NOLF, sprint_hex_inrow(next_hdr->frame + cpos, 16));
 
     next_hdr = get_record(tracepos, traceLen, trace);
     if (next_hdr == NULL) {
