@@ -1973,6 +1973,7 @@ int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata,
     if (bytes_read != fsize) {
         PrintAndLogEx(FAILED, "error, bytes read mismatch file size");
         free(*pdata);
+        *pdata = NULL;
         return PM3_EFILE;
     }
 
@@ -2025,6 +2026,7 @@ int loadFile_TXTsafe(const char *preferredName, const char *suffix, void **pdata
     if (bytes_read != fsize) {
         PrintAndLogEx(FAILED, "error, bytes read mismatch file size");
         free(*pdata);
+        *pdata = NULL;
         return PM3_EFILE;
     }
 
@@ -2112,6 +2114,7 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
     if (newdump == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(*pdata);
+        *pdata = NULL;
         return PM3_EMALLOC;
     } else {
         *pdata = newdump;
@@ -2591,6 +2594,7 @@ int loadFileMCT_safe(const char *preferredName, void **pdata, size_t *datalen) {
     if (newdump == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(*pdata);
+        *pdata = NULL;
         return PM3_EMALLOC;
     } else {
         *pdata = newdump;
