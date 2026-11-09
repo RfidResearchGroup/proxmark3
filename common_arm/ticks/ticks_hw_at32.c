@@ -180,7 +180,7 @@ void StartCountSspClk(void) {
     gpio_pin_mux_config(CRM_GPIO_COUNT_SSP_CLK, CRM_GPIO_COUNT_SSP_CLK_SOURCE, CRM_GPIO_COUNT_SSP_CLK_MUX); // important !!! remap gpio to be timer EXT(CHx) function.
 
     // timer init
-    tmr_input_config_type tmr_input_config_struct;
+    tmr_input_config_type tmr_input_config_struct = {0};
     tmr_input_config_struct.input_channel_select = AT32_TMR_COUNT_SSP_CLK_IN_CH;
     tmr_input_config_struct.input_mapped_select = TMR_CC_CHANNEL_MAPPED_DIRECT;
     tmr_input_config_struct.input_polarity_select = TMR_INPUT_RISING_EDGE;

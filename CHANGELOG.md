@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Fixed `lf em 4x50 rdbl/info/dump`, `lf search` - RM was sent into the tag data instead of the second listen window on strong, AC-coupled signals, so every command failed; reads now retry within 1 s (@abou28)
+- Fixed PM5 ssp_clk counter - uninitialised TMR2 input filter could drop edges, skewing ISO14443-A timing and `hf mf nested` (@adrian-stepien)
 - Changed `lf cotag sim` - add and default to passive mode, improve field drop and activation sequence detection (@towelbyte)
 - Fixed `lf noralsy clone` and `sim` - CN above 9999999 and years outside 1961-2060 are refused instead of cut (@matrix)
 - Fixed `trace list` - Topaz commands end at the frames their code takes, ISO14443-A frames in Topaz traces and ISO15693 frames in iCLASS traces get their own CRC, five byte ISO14443-A answers and FeliCa frames get a real CRC check, frames of 256 bytes and more are checked and annotated whole (@matrix)
