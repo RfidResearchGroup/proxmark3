@@ -38,11 +38,11 @@ endef
 HOST_TARGETS := client mfc_card_only mfc_card_reader mfd_aes_brute mfulc_des_brute fpga_compress cryptorf
 TARGETS := bootrom armsrc recovery $(HOST_TARGETS)
 all clean install uninstall check: %:
-	$(foreach target,$(TARGETS),$(call submake,$(target),$*))
+	+$(foreach target,$(TARGETS),$(call submake,$(target),$*))
 
 host: host/all
 host/all host/clean host/install host/uninstall host/check: %:
-	$(foreach target,$(HOST_TARGETS),$(call submake,$(target),$(notdir $*)))
+	+$(foreach target,$(HOST_TARGETS),$(call submake,$(target),$(notdir $*)))
 
 INSTALLTOOLS=mfc/pm3_eml2lower.sh mfc/pm3_eml2upper.sh mfc/pm3_mfdread.py mfc/pm3_mfd2eml.py mfc/pm3_eml2mfd.py pm3_amii_bin2eml.pl pm3_reblay-emulating.py pm3_reblay-reading.py
 INSTALLSIMFW=sim011.bin sim011.sha512.txt sim013.bin sim013.sha512.txt sim020.bin sim020.sha512.txt
