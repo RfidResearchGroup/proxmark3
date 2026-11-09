@@ -4081,12 +4081,12 @@ static int CmdTestSaveState8(const char *Cmd) {
 
     for (size_t i = 0; i < returnedLength; i++) {
         if (srcBuffer[i] != destBuffer[i]) {
-            PrintAndLogEx(FAILED, "Buffers don't match at index %lu!, Expected %i, got %i", i, srcBuffer[i], destBuffer[i]);
+            PrintAndLogEx(FAILED, "Buffers don't match at index %zu!, Expected %i, got %i", i, srcBuffer[i], destBuffer[i]);
             free(srcBuffer);
             free(destBuffer);
             return PM3_EFAILED;
         }
-        PrintAndLogEx(DEBUG, "Index %lu matches: %u", i, destBuffer[i]);
+        PrintAndLogEx(DEBUG, "Index %zu matches: %u", i, destBuffer[i]);
     }
     PrintAndLogEx(SUCCESS, _GREEN_("Save State (8-bit) test success!") "\n");
 
@@ -4146,12 +4146,12 @@ static int CmdTestSaveState32(const char *Cmd) {
 
     for (size_t i = 0; i < length; i++) {
         if (srcBuffer[i] != destBuffer[i]) {
-            PrintAndLogEx(FAILED, "Buffers don't match at index %lu!, Expected %i, got %i", i, srcBuffer[i], destBuffer[i]);
+            PrintAndLogEx(FAILED, "Buffers don't match at index %zu!, Expected %i, got %i", i, srcBuffer[i], destBuffer[i]);
             free(srcBuffer);
             free(destBuffer);
             return PM3_EFAILED;
         }
-        PrintAndLogEx(DEBUG, "Index %lu matches: %i", i, destBuffer[i]);
+        PrintAndLogEx(DEBUG, "Index %zu matches: %i", i, destBuffer[i]);
     }
     PrintAndLogEx(SUCCESS, _GREEN_("Save State (32-bit) test success!") "\n");
 

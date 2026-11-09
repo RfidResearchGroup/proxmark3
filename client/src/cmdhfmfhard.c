@@ -453,7 +453,7 @@ static void init_bitflip_bitarrays(void) {
                     exit(5);
                 }
                 if (generated_output_size != expected_output_size) {
-                    PrintAndLogEx(ERR, "File read error with %s (3) got %lu instead of %lu bytes. Aborting...\n", state_file_name, generated_output_size, expected_output_size);
+                    PrintAndLogEx(ERR, "File read error with %s (3) got %zu instead of %zu bytes. Aborting...\n", state_file_name, generated_output_size, expected_output_size);
                     free(uncompressed_data);
                     exit(5);
                 }

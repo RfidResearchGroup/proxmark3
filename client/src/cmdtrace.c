@@ -241,7 +241,7 @@ static uint32_t extractChallenges(uint32_t tracepos, uint32_t traceLen, uint8_t 
 
     // sanity check tracking position is less than available trace size
     if (tracepos + TRACELOG_HDR_LEN + data_len + TRACELOG_PARITY_LEN(hdr) > traceLen) {
-        PrintAndLogEx(DEBUG, "trace pos offset %"PRIu64 " larger than reported tracelen %u",
+        PrintAndLogEx(DEBUG, "trace pos offset %zu larger than reported tracelen %u",
                       tracepos + TRACELOG_HDR_LEN + data_len + TRACELOG_PARITY_LEN(hdr),
                       traceLen
                      );
@@ -665,7 +665,7 @@ static uint32_t printTraceLine(uint32_t tracepos, uint32_t traceLen, uint8_t *tr
     uint16_t data_len = hdr->data_len;
 
     if (tracepos + TRACELOG_HDR_LEN + data_len + TRACELOG_PARITY_LEN(hdr) > traceLen) {
-        PrintAndLogEx(DEBUG, "trace pos offset %"PRIu64 " larger than reported tracelen %u",
+        PrintAndLogEx(DEBUG, "trace pos offset %zu larger than reported tracelen %u",
                       tracepos + TRACELOG_HDR_LEN + data_len + TRACELOG_PARITY_LEN(hdr),
                       traceLen
                      );

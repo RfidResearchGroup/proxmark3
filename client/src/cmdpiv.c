@@ -491,7 +491,7 @@ static bool piv_tag_dump(const struct tlv *tlv, int level) {
             PrintAndLogEx(NORMAL, " '" _YELLOW_("%s")"'", sprint_hex_inrow(tlv->value, tlv->len));
             break;
         case PIV_TAG_NUMERIC:
-            PrintAndLogEx(NORMAL, " " _YELLOW_("%" PRIu64), piv_value_numeric(tlv, 0, tlv->len * 2));
+            PrintAndLogEx(NORMAL, " " _YELLOW_("%lu"), piv_value_numeric(tlv, 0, tlv->len * 2));
             break;
         case PIV_TAG_YYYYMMDD:
             piv_tag_dump_yyyymmdd(tlv, tag, level);
@@ -710,7 +710,7 @@ static int PivAuthenticateSign(Iso7816CommandChannel channel, uint8_t alg_id, ui
     const size_t MAX_NONCE_LEN = 0x7a;
     if (nonce_len > MAX_NONCE_LEN) {
         if (verbose == true) {
-            PrintAndLogEx(WARNING, "Nonce cannot exceed %" PRIu64 " bytes. Got %" PRIu64 " bytes.", MAX_NONCE_LEN, nonce_len);
+            PrintAndLogEx(WARNING, "Nonce cannot exceed %zu bytes. Got %zu bytes.", MAX_NONCE_LEN, nonce_len);
         }
         return PM3_EINVARG;
     }

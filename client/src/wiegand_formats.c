@@ -1612,7 +1612,7 @@ void HIDListFormats(void) {
         ++i;
     }
     PrintAndLogEx(INFO, "------------------------------------------------------------");
-    PrintAndLogEx(INFO, "Available card formats: " _YELLOW_("%" PRIu64), ARRAYLEN(FormatTable) - 1);
+    PrintAndLogEx(INFO, "Available card formats: " _YELLOW_("%zu"), ARRAYLEN(FormatTable) - 1);
     PrintAndLogEx(NORMAL, "");
     return;
 }
