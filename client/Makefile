@@ -485,6 +485,8 @@ CFLAGS += $(MYDEFS) $(MYCFLAGS) $(MYINCLUDES)
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
 PM3CFLAGS = $(CFLAGS)
 PM3CFLAGS += -I./src -I./include -I../include -I../common -I../common_fpga $(PM3INCLUDES) $(INCLUDES)
+# PrintAndLogEx(x, "") prints an empty line on purpose
+PM3CFLAGS += -Wno-format-zero-length
 # WIP Testing
 #PM3CFLAGS += -std=c11 -pedantic
 

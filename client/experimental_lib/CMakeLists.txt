@@ -720,7 +720,7 @@ add_library(pm3rrg_rdv4_static STATIC
 set(PM3_LIBRARY_TARGETS pm3rrg_rdv4 pm3rrg_rdv4_static)
 foreach (target IN LISTS PM3_LIBRARY_TARGETS)
     target_compile_definitions(${target} PRIVATE LIBPM3)
-    target_compile_options(${target} PUBLIC -Wall -Werror -O3)
+    target_compile_options(${target} PUBLIC -Wall -Werror -Wno-format-zero-length -O3)
     target_include_directories(${target} PRIVATE
             ${PM3_ROOT}/common
             ${PM3_ROOT}/common_fpga

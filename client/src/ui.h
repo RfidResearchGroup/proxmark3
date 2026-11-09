@@ -30,6 +30,13 @@ extern "C" {
 
 #define _USE_MATH_DEFINES
 
+// mingw: match GNU printf enabled via _ISOC99_SOURCE, not ms_printf
+#ifdef __MINGW_PRINTF_FORMAT
+#define PM3_PRINTF_FORMAT __MINGW_PRINTF_FORMAT
+#else
+#define PM3_PRINTF_FORMAT printf
+#endif
+
 typedef enum {STYLE_BAR, STYLE_MIXED, STYLE_VALUE} barMode_t;
 typedef enum logLevel {NORMAL, SUCCESS, INFO, FAILED, WARNING, ERR, DEBUG, INPLACE, HINT} logLevel_t;
 typedef enum emojiMode {EMO_ALIAS, EMO_EMOJI, EMO_ALTTEXT, EMO_NONE} emojiMode_t;
@@ -78,7 +85,7 @@ extern session_arg_t g_session;
 
 #define PROMPT_CLEARLINE PrintAndLogEx(INPLACE, "                                          \r")
 void PrintAndLogOptions(const char *str[][2], size_t size, size_t space);
-void PrintAndLogEx(logLevel_t level, const char *fmt, ...);
+void PrintAndLogEx(logLevel_t level, const char *fmt, ...) __attribute__((format(PM3_PRINTF_FORMAT, 2, 3)));
 void PrintAndLogInfoHeaderWithWidth(const char *title, size_t width);
 void PrintAndLogInfoHeader(const char *title);
 void SetFlushAfterWrite(bool value);
