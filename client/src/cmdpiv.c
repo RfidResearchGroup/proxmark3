@@ -392,7 +392,7 @@ static void piv_tag_dump_int_array(const struct tlv *tlv, const struct piv_tag *
             for (int i = 0; i < sub_tlv.len; i++) {
                 v = (v << 8) + sub_tlv.value[i];
             }
-            PrintAndLogEx(NORMAL, _YELLOW_("%" PRIu64) " bytes (" _YELLOW_("%" PRIx64) ")", v, v);
+            PrintAndLogEx(NORMAL, _YELLOW_("%lu") " bytes (" _YELLOW_("%lx") ")", v, v);
         } else {
             // Number is to big. Just print hex value
             PrintAndLogEx(NORMAL, _YELLOW_("0x%s"), sprint_hex_inrow(sub_tlv.value, sub_tlv.len));
