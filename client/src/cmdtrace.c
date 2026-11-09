@@ -493,19 +493,20 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
                 }
 
                 tracepos += TRACELOG_HDR_LEN + next_hdr->data_len + TRACELOG_PARITY_LEN(next_hdr);
-                if (next_hdr->data_len < 9) {
+                // PCB + 16 byte RndB + CRC
+                if (next_hdr->data_len < 19) {
                     break;
                 }
 
-                PrintAndLogEx(INFO, "AES 1499999999 %s " NOLF, sprint_hex_inrow(next_hdr->frame + 1, 8));
+                PrintAndLogEx(INFO, "AES 1499999999 %s " NOLF, sprint_hex_inrow(next_hdr->frame + 1, 16));
 
                 next_hdr = get_record(tracepos, traceLen, trace);
                 if (next_hdr != NULL) {
                     tracepos += TRACELOG_HDR_LEN + next_hdr->data_len + TRACELOG_PARITY_LEN(next_hdr);
                 }
 
-                if ((next_hdr != NULL) && (next_hdr->data_len >= pos + long_jmp + 16) && (next_hdr->frame[pos] == MFDES_ADDITIONAL_FRAME)) {
-                    PrintAndLogEx(NORMAL, "%s", sprint_hex_inrow(next_hdr->frame + pos + long_jmp, 16));
+                if ((next_hdr != NULL) && (next_hdr->data_len >= pos + long_jmp + 32) && (next_hdr->frame[pos] == MFDES_ADDITIONAL_FRAME)) {
+                    PrintAndLogEx(NORMAL, "%s", sprint_hex_inrow(next_hdr->frame + pos + long_jmp, 32));
                 } else {
                     PrintAndLogEx(NORMAL, "");
                 }
