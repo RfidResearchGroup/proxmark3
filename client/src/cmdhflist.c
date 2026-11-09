@@ -53,10 +53,14 @@ static AuthData_t AuthData;
 // answer completes a split byte and so carries no CRC either.
 static bool gs_14a_anticoll_answer = false;
 
-// ISO 14443-4 session: set by RATS, cleared by WUPA / REQA / HLTA / DESELECT
+// ISO 14443-4 session: set after the ATS, cleared by WUPA / REQA / HLTA / DESELECT
 static bool gs_14a4_active = false;
+// RATS seen, the next tag frame is the ATS
+static bool gs_14a4_ats_pending = false;
 // [0] reader, [1] tag: last I-block had the chaining bit, so the next one is continuation data
 static bool gs_14a4_chained[2] = {false, false};
+// last reader I-block was decoded as APDU, so the tag answer ends in SW1 SW2
+static bool gs_14a4_apdu_open = false;
 // last annotateIso14443a() frame was a response APDU ending in SW1 SW2
 static bool gs_14a4_last_sw = false;
 
@@ -64,11 +68,17 @@ bool annotateIso14443aLastHasSW(void) {
     return gs_14a4_last_sw;
 }
 
-void ClearAuthData(void) {
-    gs_14a_anticoll_answer = false;
+static void iso14a4_reset(void) {
     gs_14a4_active = false;
+    gs_14a4_ats_pending = false;
     gs_14a4_chained[0] = false;
     gs_14a4_chained[1] = false;
+    gs_14a4_apdu_open = false;
+}
+
+void ClearAuthData(void) {
+    gs_14a_anticoll_answer = false;
+    iso14a4_reset();
     AuthData.uid = 0;
     AuthData.nt = 0;
     AuthData.first_auth = true;
@@ -305,7 +315,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool 
                 break;
             case ISO14443A_CMD_WUPA:
                 snprintf(exp, size, "WUPA");
-                gs_14a4_active = false;
+                iso14a4_reset();
                 break;
             // 93 20 = Anticollision (usage: 9320 - answer: 4bytes UID+1byte UID-bytes-xor)
             // 93 50 = Bit oriented anti-collision (usage: 9350+ up to 5bytes, 9350 answer - up to 5bytes UID+BCC)
@@ -350,7 +360,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool 
             }
             case ISO14443A_CMD_REQA:
                 snprintf(exp, size, "REQA");
-                gs_14a4_active = false;
+                iso14a4_reset();
                 break;
             case ISO14443A_CMD_READBLOCK:
                 annotateCmdOperand(exp, size, "READBLOCK", true, cmd, cmdsize);
@@ -361,7 +371,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool 
             case ISO14443A_CMD_HALT:
                 snprintf(exp, size, "HALT");
                 MifareAuthState = masNone;
-                gs_14a4_active = false;
+                iso14a4_reset();
                 break;
             case ISO14443A_CMD_RATS: {
                 if (cmdsize < 2) {
@@ -371,9 +381,8 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool 
                 uint16_t fsdi2fsd[] = {16, 24, 32, 40, 48, 64, 96, 128, 256, 512, 1024, 2048, 4096, 4096, 4096, 4096};
                 snprintf(exp, size, "RATS - FSDI=%x (FSD=%u), CID=%x", (cmd[1] & 0xF0) >> 4, fsdi2fsd[(cmd[1] & 0xF0) >> 4], (cmd[1] & 0x0F));
                 if (cmdsize == 4) {
-                    gs_14a4_active = true;
-                    gs_14a4_chained[0] = false;
-                    gs_14a4_chained[1] = false;
+                    iso14a4_reset();
+                    gs_14a4_ats_pending = true;
                 }
                 break;
             }
@@ -617,7 +626,29 @@ static const char *iso7816_ins_name(uint8_t ins) {
     }
 }
 
-// ISO 14443-4 I-block holding an APDU, only inside a session opened by RATS.
+// ISO 7816-4 cases 1-4, short and extended
+static bool iso7816_apdu_len_ok(const uint8_t *apdu, size_t n) {
+    if (n == 4 || n == 5) {
+        return true;
+    }
+    if (n < 6) {
+        return false;
+    }
+    size_t lc = apdu[4];
+    if (lc) {
+        return (n == 5 + lc || n == 6 + lc);
+    }
+    if (n < 7) {
+        return false;
+    }
+    if (n == 7) {
+        return true;
+    }
+    lc = (apdu[5] << 8) | apdu[6];
+    return (lc && (n == 7 + lc || n == 9 + lc));
+}
+
+// ISO 14443-4 I-block holding an APDU, only inside a session opened by RATS / ATS.
 // PCB 000xCN1b: chaining 0x10, CID 0x08, NAD 0x04. CRC_A must hold.
 // Returns the INF offset, 0 when the frame is not decoded as APDU.
 static size_t iso14a4_apdu_frame(uint8_t *cmd, uint16_t cmdsize, bool is_response, bool *chained_first) {
@@ -643,16 +674,21 @@ static size_t iso14a4_apdu_frame(uint8_t *cmd, uint16_t cmdsize, bool is_respons
 
     size_t hdr = 1 + ((pcb & 0x08) ? 1 : 0) + ((pcb & 0x04) ? 1 : 0);
 
-    // response: SW1 SW2 only in the last block of a chain
+    // response: SW1 SW2 only in the last block of a chain, and only to an APDU
     if (is_response) {
-        if (chaining || cmdsize < hdr + 2 + 2) {
+        if (chaining || gs_14a4_apdu_open == false || cmdsize < hdr + 2 + 2) {
             return 0;
         }
+        gs_14a4_apdu_open = false;
         return hdr;
     }
 
     // command: header only in the first block of a chain
-    if (continuation || cmdsize < hdr + 4 + 2) {
+    if (continuation) {
+        return 0;
+    }
+    gs_14a4_apdu_open = false;
+    if (cmdsize < hdr + 4 + 2) {
         return 0;
     }
 
@@ -663,6 +699,12 @@ static size_t iso14a4_apdu_frame(uint8_t *cmd, uint16_t cmdsize, bool is_respons
         return 0;
     }
 
+    // Lc / Le must account for the whole INF, a chained block holds only part of it
+    if (chaining == false && iso7816_apdu_len_ok(cmd + hdr, cmdsize - hdr - 2) == false) {
+        return 0;
+    }
+
+    gs_14a4_apdu_open = true;
     *chained_first = chaining;
     return hdr;
 }
@@ -671,9 +713,19 @@ void annotateIso14443a(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, b
 
     gs_14a4_last_sw = false;
 
+    // the ATS opens the session, a reader frame instead means the ATS was not captured
+    if (gs_14a4_ats_pending) {
+        gs_14a4_ats_pending = false;
+        gs_14a4_active = true;
+        if (is_response) {
+            applyIso14443a(exp, size, cmd, cmdsize, is_response);
+            return;
+        }
+    }
+
     if (gs_14a4_active && is_response == false && cmdsize >= 1 && (cmd[0] & 0xF7) == 0xC2) {
         snprintf(exp, size, "S-block DESELECT");
-        gs_14a4_active = false;
+        iso14a4_reset();
         return;
     }
 

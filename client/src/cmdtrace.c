@@ -1101,6 +1101,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     // colour SW1 SW2 of an ISO 14443-4 response APDU, right to left so offsets hold
     int sw_escapes[TRACE_MAX_LINES] = {0};
     if (g_session.supports_colors && hdr->isResponse && data_len >= 4 &&
+            data_len <= (TRACE_MAX_HEX_BYTES * TRACE_MAX_HEX_BYTES) &&
             (protocol == ISO_14443A || protocol == ISO_7816_4 || protocol == PROTO_FMCOS20) &&
             annotateIso14443aLastHasSW()) {
         for (int k = data_len - 3; k >= data_len - 4; k--) {
@@ -1956,7 +1957,8 @@ int CmdTraceList(const char *Cmd) {
         // clean authentication data used with the mifare classic decrypt fct,
         // and the anticollision state of the ISO14443-A checks
         if (protocol == ISO_14443A || protocol == PROTO_MIFARE || protocol == PROTO_MFPLUS ||
-                protocol == MFDES || protocol == LTO || protocol == SEOS || protocol == TOPAZ) {
+                protocol == MFDES || protocol == LTO || protocol == SEOS || protocol == TOPAZ ||
+                protocol == ISO_7816_4 || protocol == PROTO_FMCOS20) {
             ClearAuthData();
         }
         gs_topaz_14a_exchange = false;
