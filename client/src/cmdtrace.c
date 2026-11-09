@@ -38,7 +38,7 @@ static int CmdHelp(const char *Cmd);
 
 // trace pointer
 static uint8_t *gs_trace;
-static uint16_t gs_traceLen = 0;
+static uint32_t gs_traceLen = 0;
 
 typedef enum {
     TRACE_CRC_FAIL = 0,
@@ -48,17 +48,17 @@ typedef enum {
     TRACE_CRC_B_OK = 4,
 } trace_crc_status_t;
 
-static bool is_last_record(uint16_t tracepos, uint16_t traceLen) {
+static bool is_last_record(uint32_t tracepos, uint32_t traceLen) {
     return ((tracepos + TRACELOG_HDR_LEN) >= traceLen);
 }
 
-static bool next_record_is_response(uint16_t tracepos, uint8_t *trace) {
+static bool next_record_is_response(uint32_t tracepos, uint8_t *trace) {
     const tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + tracepos);
     return (hdr->isResponse);
 }
 
 // the record at tracepos, NULL when it does not fit in the trace
-static const tracelog_hdr_t *get_record(uint16_t tracepos, uint16_t traceLen, const uint8_t *trace) {
+static const tracelog_hdr_t *get_record(uint32_t tracepos, uint32_t traceLen, const uint8_t *trace) {
     if (is_last_record(tracepos, traceLen)) {
         return NULL;
     }
@@ -111,7 +111,7 @@ static uint8_t topaz_reader_cmd_len(uint8_t code) {
     }
 }
 
-static bool merge_topaz_reader_frames(uint32_t timestamp, uint32_t *duration, uint16_t *tracepos, uint16_t traceLen,
+static bool merge_topaz_reader_frames(uint32_t timestamp, uint32_t *duration, uint32_t *tracepos, uint32_t traceLen,
                                       uint8_t *trace, const uint8_t *frame, uint8_t *topaz_reader_command, uint16_t *data_len) {
 
     uint32_t last_timestamp = timestamp + *duration;
@@ -181,11 +181,6 @@ void ClearTraceBuffer(void) {
 // I think this is cleaner than further globalizing gs_trace, and may lend itself to more modularity later?
 bool ImportTraceBuffer(const uint8_t *trace_src, uint32_t trace_len) {
     if (trace_len == 0 || trace_src == NULL) return (false);
-    // trace positions are 16 bit
-    if (trace_len > UINT16_MAX) {
-        PrintAndLogEx(FAILED, "Trace too large ( " _YELLOW_("%u") " bytes ), max %u bytes", trace_len, UINT16_MAX);
-        return (false);
-    }
     ClearTraceBuffer();
     gs_trace = calloc(trace_len, sizeof(uint8_t));
     if (gs_trace == NULL) {
@@ -202,7 +197,7 @@ static uint8_t extract_epurse[8] = {0};
 
 #define SKIP_TO_NEXT(a)  (TRACELOG_HDR_LEN + (a)->data_len + TRACELOG_PARITY_LEN((a)))
 
-static uint16_t extractChall_ev2(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, uint8_t cmdpos, uint8_t long_jmp) {
+static uint32_t extractChall_ev2(uint32_t tracepos, uint32_t traceLen, uint8_t *trace, uint8_t cmdpos, uint8_t long_jmp) {
     const tracelog_hdr_t *next_hdr = get_record(tracepos, traceLen, trace);
     if ((next_hdr == NULL) || (next_hdr->data_len != 21)) {
         return 0;
@@ -227,7 +222,7 @@ static uint16_t extractChall_ev2(uint16_t tracepos, uint16_t traceLen, uint8_t *
     return tracepos;
 }
 
-static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t *trace) {
+static uint32_t extractChallenges(uint32_t tracepos, uint32_t traceLen, uint8_t *trace) {
 
     // sanity check
     if (is_last_record(tracepos, traceLen)) {
@@ -538,7 +533,7 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
         }
         case MFDES_AUTHENTICATE_EV2F: {
             PrintAndLogEx(INFO, "Found a MFDES Auth EV2 First");
-            uint16_t tmp = extractChall_ev2(tracepos, traceLen, trace, pos, long_jmp);
+            uint32_t tmp = extractChall_ev2(tracepos, traceLen, trace, pos, long_jmp);
             if (tmp == 0)
                 break;
             else
@@ -547,7 +542,7 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
         }
         case MFDES_AUTHENTICATE_EV2NF: {
             PrintAndLogEx(INFO, "Found a MFDES Auth EV2 Non First");
-            uint16_t tmp = extractChall_ev2(tracepos, traceLen, trace, pos, long_jmp);
+            uint32_t tmp = extractChall_ev2(tracepos, traceLen, trace, pos, long_jmp);
             if (tmp == 0)
                 break;
             else
@@ -558,7 +553,7 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
     return tracepos;
 }
 
-static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, uint8_t protocol) {
+static uint32_t printHexLine(uint32_t tracepos, uint32_t traceLen, uint8_t *trace, uint8_t protocol) {
     // sanity check
     if (is_last_record(tracepos, traceLen)) return traceLen;
 
@@ -576,7 +571,7 @@ static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trac
         return tracepos;
     }
 
-    uint16_t ret;
+    uint32_t ret;
 
     switch (protocol) {
         case ISO_14443A: {
@@ -641,7 +636,7 @@ static int trace_colour_hex(char *line, size_t line_size, size_t pos) {
     return (int)(pre + post);
 }
 
-static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, uint8_t protocol, bool showWaitCycles, bool markCRCBytes, uint32_t *prev_eot, bool use_us,
+static uint32_t printTraceLine(uint32_t tracepos, uint32_t traceLen, uint8_t *trace, uint8_t protocol, bool showWaitCycles, bool markCRCBytes, uint32_t *prev_eot, bool use_us,
                                const uint64_t *mfDicKeys, uint32_t mfDicKeysCount) {
     // sanity check
     if (is_last_record(tracepos, traceLen)) {
@@ -1400,7 +1395,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
 // Download the device side trace into a buffer owned by the caller,  who must
 // free it.  The client side trace buffer ( gs_trace ) is left untouched
-static int download_trace_ex(uint8_t **ptrace, uint16_t *ptrace_len) {
+static int download_trace_ex(uint8_t **ptrace, uint32_t *ptrace_len) {
 
     if (IfPm3Present() == false) {
         PrintAndLogEx(FAILED, "You requested a trace upload in offline mode, consider using parameter `" _YELLOW_("-1") "` for working from Tracebuffer");
@@ -1430,7 +1425,7 @@ static int download_trace_ex(uint8_t **ptrace, uint16_t *ptrace_len) {
         return PM3_ESOFT;
     }
 
-    uint16_t traceLen = ((const download_done_t *)resp.data.asBytes)->extra;
+    uint32_t traceLen = ((const download_done_t *)resp.data.asBytes)->extra;
 
     // if tracelog buffer was larger and we need to download more.
     if (traceLen > g_conn.max_cmd_data_size) {
@@ -1459,7 +1454,7 @@ static int download_trace_ex(uint8_t **ptrace, uint16_t *ptrace_len) {
 // a trace the user loaded with `trace load`
 static int download_trace(void) {
     uint8_t *trace = NULL;
-    uint16_t trace_len = 0;
+    uint32_t trace_len = 0;
     int res = download_trace_ex(&trace, &trace_len);
     if (res != PM3_SUCCESS) {
         return res;
@@ -1527,7 +1522,7 @@ static int CmdTraceExtract(const char *Cmd) {
     extract_uidlen = 0;
     memset(extract_epurse, 0, sizeof(extract_epurse));
 
-    uint16_t tracepos = 0;
+    uint32_t tracepos = 0;
 
     while (tracepos < gs_traceLen) {
         tracepos = extractChallenges(tracepos, gs_traceLen, gs_trace);
@@ -1595,14 +1590,7 @@ static int CmdTraceLoad(const char *Cmd) {
         return PM3_EIO;
     }
 
-    // trace positions are 16 bit
-    if (len > UINT16_MAX) {
-        PrintAndLogEx(FAILED, "Trace file too large ( " _YELLOW_("%zu") " bytes ), max %u bytes", len, UINT16_MAX);
-        ClearTraceBuffer();
-        return PM3_EFILE;
-    }
-
-    gs_traceLen = (uint16_t)len;
+    gs_traceLen = (uint32_t)len;
 
     PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = " _YELLOW_("%u") " bytes)", gs_traceLen);
     PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("trace list -1 -t ...") "` to view trace.  Remember the " _YELLOW_("`-1`") " param");
@@ -1641,7 +1629,7 @@ static int CmdTraceSave(const char *Cmd) {
     // gets saved as if it was the trace you just captured.
     // when offline we fall back to the buffer,  ie `trace load` -> `trace save`
     uint8_t *trace = gs_trace;
-    uint16_t trace_len = gs_traceLen;
+    uint32_t trace_len = gs_traceLen;
     bool is_owner = false;
 
     if ((use_buffer == false) && IfPm3Present()) {
@@ -1846,7 +1834,7 @@ int CmdTraceList(const char *Cmd) {
         return PM3_SUCCESS;
     }
 
-    uint16_t tracepos = 0;
+    uint32_t tracepos = 0;
 
     /*
     if (protocol == FELICA) {
