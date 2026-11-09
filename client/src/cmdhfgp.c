@@ -500,6 +500,7 @@ int gp_find_aids(Iso7816CommandChannel channel, const uint8_t *prefix, size_t pr
     if (hit) {
         PrintAndLogEx(FAILED, "Card answers any SELECT, cannot tell real AIDs apart");
         PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf 14a info -s") "` instead");
+        res = PM3_ESOFT;
         goto out;
     }
 
@@ -657,7 +658,9 @@ static int CmdHFGPAids(const char *Cmd) {
     return res;
 }
 
+// GP ISD, then the OpenPlatform / Visa card manager of older cards
 static const uint8_t gp_isd_aid[] = {0xA0, 0x00, 0x00, 0x01, 0x51, 0x00, 0x00, 0x00};
+static const uint8_t gp_op_isd_aid[] = {0xA0, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00};
 
 // first TLV with tag in buf[0..len), value returned in *val / *vlen
 static bool gp_tlv_find(const uint8_t *buf, size_t len, tlv_tag_t tag, const uint8_t **val, size_t *vlen) {
@@ -984,8 +987,19 @@ int gp_info(Iso7816CommandChannel channel, bool verbose) {
         return PM3_ECARDEXCHANGE;
     }
 
-    // ISD with a non-default AID, the default applet usually is the ISD
     if (sw != ISO7816_OK) {
+        sAPDU_t op = {0x00, 0xA4, 0x04, 0x00, sizeof(gp_op_isd_aid), (uint8_t *)gp_op_isd_aid};
+        res = Iso7816ExchangeEx(channel, false, true, op, true, 0, resp, sizeof(resp), &resp_len, &sw);
+        if (res != PM3_SUCCESS && sw == 0) {
+            PrintAndLogEx(FAILED, "Exchange failed");
+            DropFieldEx(channel);
+            return PM3_ECARDEXCHANGE;
+        }
+    }
+
+    // ISD with a non-default AID, the default applet may be the ISD, or not
+    bool isd = (sw == ISO7816_OK);
+    if (isd == false) {
         sAPDU_t def = {0x00, 0xA4, 0x04, 0x00, 0, NULL};
         res = Iso7816ExchangeEx(channel, false, true, def, true, 0, resp, sizeof(resp), &resp_len, &sw);
         if ((res != PM3_SUCCESS && sw == 0) || sw != ISO7816_OK) {
@@ -993,10 +1007,15 @@ int gp_info(Iso7816CommandChannel channel, bool verbose) {
             DropFieldEx(channel);
             return PM3_ESOFT;
         }
+        PrintAndLogEx(WARNING, "ISD not selectable by AID, data below is from the default applet");
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Security Domain") " ----------------------");
+    if (isd) {
+        PrintAndLogEx(INFO, "--- " _CYAN_("Security Domain") " ----------------------");
+    } else {
+        PrintAndLogEx(INFO, "--- " _CYAN_("Default applet") " -----------------------");
+    }
 
     const uint8_t *name = NULL;
     size_t name_len = 0;
