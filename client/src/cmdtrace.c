@@ -32,6 +32,7 @@
 #include "cmdlfhitagu.h"        // annotate hitagu
 #include "pm3_cmd.h"            // tracelog_hdr_t
 #include "cliparser.h"          // args..
+#include "crc16.h"              // check_crc
 
 static int CmdHelp(const char *Cmd);
 
@@ -314,14 +315,19 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
         switch (c) {
             case ICLASS_CMD_SELECT: {
 
+                // SELECT CSN[8], answered by CSN[8] CRC[2]
+                if (data_len != 9) {
+                    break;
+                }
+
                 const tracelog_hdr_t *next_hdr = get_record(tracepos, traceLen, trace);
                 if (next_hdr == NULL) {
                     break;
                 }
-                tracepos += SKIP_TO_NEXT(next_hdr);
-                if (next_hdr->data_len != 10) {
+                if ((next_hdr->data_len != 10) || (check_crc(CRC_ICLASS, next_hdr->frame, 10) == false)) {
                     break;
                 }
+                tracepos += SKIP_TO_NEXT(next_hdr);
                 memcpy(extract_uid, next_hdr->frame, 8);
                 extract_uidlen = 8;
                 break;
@@ -343,8 +349,8 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
                 break;
             }
             case ICLASS_CMD_CHECK: {
-                // get macs
-                if (data_len == 9) {
+                // get macs, CHECK has no CRC unlike a 14a CL2 SELECT 95 70 UID BCC CRC
+                if ((data_len == 9) && (check_crc(CRC_14443_A, frame, data_len) == false)) {
                     if (extract_uidlen == 8) {
                         PrintAndLogEx(INFO, "hf iclass lookup --csn %s " NOLF, sprint_hex_inrow(extract_uid, extract_uidlen));
                         PrintAndLogEx(NORMAL, "--epurse %s " NOLF, sprint_hex_inrow(extract_epurse, 8));
