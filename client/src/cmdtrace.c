@@ -600,6 +600,23 @@ static uint16_t printHexLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trac
     return ret;
 }
 
+// wrap the two hex chars at pos in cyan, returns the escape bytes added
+static int trace_colour_hex(char *line, size_t line_size, size_t pos) {
+    size_t len = strlen(line);
+    size_t pre = strlen(ANSI_CYAN);
+    size_t post = strlen(AEND);
+    if (pos + 2 > len || len + pre + post + 1 > line_size) {
+        return 0;
+    }
+
+    char hex[2] = {line[pos], line[pos + 1]};
+    memmove(line + pos + 2 + pre + post, line + pos + 2, len - pos - 2 + 1);
+    memcpy(line + pos, ANSI_CYAN, pre);
+    memcpy(line + pos + pre, hex, 2);
+    memcpy(line + pos + pre + 2, AEND, post);
+    return (int)(pre + post);
+}
+
 static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *trace, uint8_t protocol, bool showWaitCycles, bool markCRCBytes, uint32_t *prev_eot, bool use_us,
                                const uint64_t *mfDicKeys, uint32_t mfDicKeysCount) {
     // sanity check
@@ -1081,6 +1098,17 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         }
     }
 
+    // colour SW1 SW2 of an ISO 14443-4 response APDU, right to left so offsets hold
+    int sw_escapes[TRACE_MAX_LINES] = {0};
+    if (g_session.supports_colors && hdr->isResponse && data_len >= 4 &&
+            (protocol == ISO_14443A || protocol == ISO_7816_4 || protocol == PROTO_FMCOS20) &&
+            annotateIso14443aLastHasSW()) {
+        for (int k = data_len - 3; k >= data_len - 4; k--) {
+            int l = k / TRACE_MAX_HEX_BYTES;
+            sw_escapes[l] += trace_colour_hex(line[l], sizeof(line[l]), (k % TRACE_MAX_HEX_BYTES) * 4);
+        }
+    }
+
     int str_padder = 72;
     int num_lines = MIN((data_len - 1) / TRACE_MAX_HEX_BYTES + 1, TRACE_MAX_HEX_BYTES);
 
@@ -1130,6 +1158,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             if (last_line && (memcmp(crc, "\x20\x20\x20\x20", 4) != 0) && g_session.supports_colors && markCRCBytes) {
                 str_padder = 85;
             }
+            str_padder += sw_escapes[j];
 
             if (hdr->isResponse) {
                 // tag row
@@ -1187,6 +1216,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                     str_padder = 81;
                 }
             }
+            str_padder += sw_escapes[j];
 
             if (hdr->isResponse) {
                 PrintAndLogEx(NORMAL, "            |            |     |%-*s | %s| %s",

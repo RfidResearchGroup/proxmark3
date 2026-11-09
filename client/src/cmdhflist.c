@@ -53,8 +53,22 @@ static AuthData_t AuthData;
 // answer completes a split byte and so carries no CRC either.
 static bool gs_14a_anticoll_answer = false;
 
+// ISO 14443-4 session: set by RATS, cleared by WUPA / REQA / HLTA / DESELECT
+static bool gs_14a4_active = false;
+// [0] reader, [1] tag: last I-block had the chaining bit, so the next one is continuation data
+static bool gs_14a4_chained[2] = {false, false};
+// last annotateIso14443a() frame was a response APDU ending in SW1 SW2
+static bool gs_14a4_last_sw = false;
+
+bool annotateIso14443aLastHasSW(void) {
+    return gs_14a4_last_sw;
+}
+
 void ClearAuthData(void) {
     gs_14a_anticoll_answer = false;
+    gs_14a4_active = false;
+    gs_14a4_chained[0] = false;
+    gs_14a4_chained[1] = false;
     AuthData.uid = 0;
     AuthData.nt = 0;
     AuthData.first_auth = true;
@@ -291,6 +305,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool 
                 break;
             case ISO14443A_CMD_WUPA:
                 snprintf(exp, size, "WUPA");
+                gs_14a4_active = false;
                 break;
             // 93 20 = Anticollision (usage: 9320 - answer: 4bytes UID+1byte UID-bytes-xor)
             // 93 50 = Bit oriented anti-collision (usage: 9350+ up to 5bytes, 9350 answer - up to 5bytes UID+BCC)
@@ -335,6 +350,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool 
             }
             case ISO14443A_CMD_REQA:
                 snprintf(exp, size, "REQA");
+                gs_14a4_active = false;
                 break;
             case ISO14443A_CMD_READBLOCK:
                 annotateCmdOperand(exp, size, "READBLOCK", true, cmd, cmdsize);
@@ -345,6 +361,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool 
             case ISO14443A_CMD_HALT:
                 snprintf(exp, size, "HALT");
                 MifareAuthState = masNone;
+                gs_14a4_active = false;
                 break;
             case ISO14443A_CMD_RATS: {
                 if (cmdsize < 2) {
@@ -353,6 +370,11 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool 
                 }
                 uint16_t fsdi2fsd[] = {16, 24, 32, 40, 48, 64, 96, 128, 256, 512, 1024, 2048, 4096, 4096, 4096, 4096};
                 snprintf(exp, size, "RATS - FSDI=%x (FSD=%u), CID=%x", (cmd[1] & 0xF0) >> 4, fsdi2fsd[(cmd[1] & 0xF0) >> 4], (cmd[1] & 0x0F));
+                if (cmdsize == 4) {
+                    gs_14a4_active = true;
+                    gs_14a4_chained[0] = false;
+                    gs_14a4_chained[1] = false;
+                }
                 break;
             }
             /* Actually, PPSS is Dx
@@ -554,7 +576,130 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool 
     return PM3_SUCCESS;
 }
 
+static const char *iso7816_ins_name(uint8_t ins) {
+    switch (ins) {
+        case ISO7816_READ_BINARY:
+            return "READ BIN";
+        case ISO7816_WRITE_BINARY:
+            return "WRITE BIN";
+        case ISO7816_UPDATE_BINARY:
+            return "UPDATE BIN";
+        case ISO7816_ERASE_BINARY:
+            return "ERASE BIN";
+        case ISO7816_READ_RECORDS:
+            return "READ RECORDS";
+        case ISO7816_WRITE_RECORDS:
+            return "WRITE RECORDS";
+        case ISO7816_APPEND_RECORD:
+            return "APPEND RECORD";
+        case ISO7816_UPDATE_RECORD:
+            return "UPDATE RECORD";
+        case ISO7816_GET_DATA:
+            return "GET DATA";
+        case ISO7816_PUT_DATA:
+            return "PUT DATA";
+        case ISO7816_SELECT_FILE:
+            return "SELECT FILE";
+        case ISO7816_VERIFY:
+            return "VERIFY";
+        case ISO7816_INTERNAL_AUTHENTICATION:
+            return "INTERNAL AUTH";
+        case ISO7816_EXTERNAL_AUTHENTICATION:
+            return "EXTERNAL AUTH";
+        case ISO7816_GET_CHALLENGE:
+            return "GET CHALLENGE";
+        case ISO7816_MANAGE_CHANNEL:
+            return "MANAGE CHANNEL";
+        case ISO7816_GET_RESPONSE:
+            return "GET RESPONSE";
+        default:
+            return NULL;
+    }
+}
+
+// ISO 14443-4 I-block holding an APDU, only inside a session opened by RATS.
+// PCB 000xCN1b: chaining 0x10, CID 0x08, NAD 0x04. CRC_A must hold.
+// Returns the INF offset, 0 when the frame is not decoded as APDU.
+static size_t iso14a4_apdu_frame(uint8_t *cmd, uint16_t cmdsize, bool is_response, bool *chained_first) {
+
+    *chained_first = false;
+    if (gs_14a4_active == false || cmdsize < 1) {
+        return 0;
+    }
+
+    uint8_t pcb = cmd[0];
+    if ((pcb & 0xE2) != 0x02) {
+        return 0;
+    }
+
+    if (check_crc(CRC_14443_A, cmd, cmdsize) == false) {
+        return 0;
+    }
+
+    bool *chain = &gs_14a4_chained[is_response ? 1 : 0];
+    bool continuation = *chain;
+    bool chaining = (pcb & 0x10);
+    *chain = chaining;
+
+    size_t hdr = 1 + ((pcb & 0x08) ? 1 : 0) + ((pcb & 0x04) ? 1 : 0);
+
+    // response: SW1 SW2 only in the last block of a chain
+    if (is_response) {
+        if (chaining || cmdsize < hdr + 2 + 2) {
+            return 0;
+        }
+        return hdr;
+    }
+
+    // command: header only in the first block of a chain
+    if (continuation || cmdsize < hdr + 4 + 2) {
+        return 0;
+    }
+
+    // CLA FF and INS 6x / 9x are invalid
+    uint8_t cla = cmd[hdr];
+    uint8_t ins = cmd[hdr + 1];
+    if (cla == 0xFF || (ins & 0xF0) == 0x60 || (ins & 0xF0) == 0x90) {
+        return 0;
+    }
+
+    *chained_first = chaining;
+    return hdr;
+}
+
 void annotateIso14443a(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool is_response) {
+
+    gs_14a4_last_sw = false;
+
+    if (gs_14a4_active && is_response == false && cmdsize >= 1 && (cmd[0] & 0xF7) == 0xC2) {
+        snprintf(exp, size, "S-block DESELECT");
+        gs_14a4_active = false;
+        return;
+    }
+
+    bool chained_first = false;
+    size_t hdr = iso14a4_apdu_frame(cmd, cmdsize, is_response, &chained_first);
+    if (hdr) {
+        if (is_response) {
+            gs_14a4_last_sw = true;
+            uint8_t sw1 = cmd[cmdsize - 4];
+            uint8_t sw2 = cmd[cmdsize - 3];
+            // only negative status, 9000 and 61xx are success
+            if ((sw1 == 0x90 && sw2 == 0x00) == false && sw1 != 0x61) {
+                snprintf(exp, size, "%s", GetAPDUCodeDescription(sw1, sw2));
+            }
+            return;
+        }
+
+        const char *name = iso7816_ins_name(cmd[hdr + 1]);
+        if (name) {
+            snprintf(exp, size, "%s%s", name, chained_first ? " (chained)" : "");
+        } else {
+            snprintf(exp, size, "APDU CLA %02X INS %02X%s", cmd[hdr], cmd[hdr + 1], chained_first ? " (chained)" : "");
+        }
+        return;
+    }
+
     applyIso14443a(exp, size, cmd, cmdsize, is_response);
 }
 
@@ -995,61 +1140,9 @@ not_a_block:
             return;
         }
 
-        switch (cmd[pos]) {
-            case ISO7816_READ_BINARY:
-                snprintf(exp, size, "READ BIN");
-                break;
-            case ISO7816_WRITE_BINARY:
-                snprintf(exp, size, "WRITE BIN");
-                break;
-            case ISO7816_UPDATE_BINARY:
-                snprintf(exp, size, "UPDATE BIN");
-                break;
-            case ISO7816_ERASE_BINARY:
-                snprintf(exp, size, "ERASE BIN");
-                break;
-            case ISO7816_READ_RECORDS:
-                snprintf(exp, size, "READ RECORDS");
-                break;
-            case ISO7816_WRITE_RECORDS:
-                snprintf(exp, size, "WRITE RECORDS");
-                break;
-            case ISO7816_APPEND_RECORD:
-                snprintf(exp, size, "APPEND RECORD");
-                break;
-            case ISO7816_UPDATE_RECORD:
-                snprintf(exp, size, "UPDATE RECORD");
-                break;
-            case ISO7816_GET_DATA:
-                snprintf(exp, size, "GET DATA");
-                break;
-            case ISO7816_PUT_DATA:
-                snprintf(exp, size, "PUT DATA");
-                break;
-            case ISO7816_SELECT_FILE:
-                snprintf(exp, size, "SELECT FILE");
-                break;
-            case ISO7816_VERIFY:
-                snprintf(exp, size, "VERIFY");
-                break;
-            case ISO7816_INTERNAL_AUTHENTICATION:
-                snprintf(exp, size, "INTERNAL AUTH");
-                break;
-            case ISO7816_EXTERNAL_AUTHENTICATION:
-                snprintf(exp, size, "EXTERNAL AUTH");
-                break;
-            case ISO7816_GET_CHALLENGE:
-                snprintf(exp, size, "GET CHALLENGE");
-                break;
-            case ISO7816_MANAGE_CHANNEL:
-                snprintf(exp, size, "MANAGE CHANNEL");
-                break;
-            case ISO7816_GET_RESPONSE:
-                snprintf(exp, size, "GET RESPONSE");
-                break;
-            default:
-                //snprintf(exp, size, "?");
-                break;
+        const char *name = iso7816_ins_name(cmd[pos]);
+        if (name) {
+            snprintf(exp, size, "%s", name);
         }
     }
 }

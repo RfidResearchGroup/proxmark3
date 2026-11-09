@@ -59,6 +59,8 @@ void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, boo
 void annotateCalypso(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool is_response);
 void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool is_response);
 void annotateIso14443a(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool is_response);
+// true when the frame last given to annotateIso14443a() was a response APDU, SW1 SW2 before the CRC
+bool annotateIso14443aLastHasSW(void);
 void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize);
 const char *mfpGetAnnotationForCode(uint8_t code);
 const char *mfpGetEncryptedForCode(uint8_t code);
