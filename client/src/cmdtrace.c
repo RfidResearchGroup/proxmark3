@@ -1490,11 +1490,19 @@ static int CmdTraceExtract(const char *Cmd) {
 
     clearCommandBuffer();
 
-    if (use_buffer == false) {
-        download_trace();
+    // offline falls back to the trace buffer, like `trace save`
+    if ((use_buffer == false) && IfPm3Present()) {
+        int res = download_trace();
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
     } else if (gs_traceLen == 0) {
         PrintAndLogEx(FAILED, "You requested a trace list in offline mode but there is no trace.");
-        PrintAndLogEx(FAILED, "Consider using `" _YELLOW_("trace load") "` or removing parameter `" _YELLOW_("-1") "`");
+        if (use_buffer) {
+            PrintAndLogEx(FAILED, "Consider using `" _YELLOW_("trace load") "` or removing parameter `" _YELLOW_("-1") "`");
+        } else {
+            PrintAndLogEx(FAILED, "Consider using `" _YELLOW_("trace load") "`");
+        }
         return PM3_EINVARG;
     }
 
@@ -1788,8 +1796,12 @@ int CmdTraceList(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (use_buffer == false) {
-        download_trace();
+    // offline falls back to the trace buffer, like `trace save`
+    if ((use_buffer == false) && IfPm3Present()) {
+        int res = download_trace();
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
     } else if (gs_traceLen == 0 || gs_trace == NULL) {
 
         if (IfPm3Present() == false) {
@@ -1798,7 +1810,11 @@ int CmdTraceList(const char *Cmd) {
             PrintAndLogEx(FAILED, "You requested a trace list but there is no trace.");
         }
 
-        PrintAndLogEx(FAILED, "Consider using `" _YELLOW_("trace load") "` or removing parameter `" _YELLOW_("-1") "`");
+        if (use_buffer) {
+            PrintAndLogEx(FAILED, "Consider using `" _YELLOW_("trace load") "` or removing parameter `" _YELLOW_("-1") "`");
+        } else {
+            PrintAndLogEx(FAILED, "Consider using `" _YELLOW_("trace load") "`");
+        }
         return PM3_EINVARG;
     }
 
