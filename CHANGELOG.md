@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `lf pcf7931 write` - device froze on the 16-bit timer wrap, client always timed out, first write after a read failed; default init delay is now 17450 us (@GiacoBot)
+- Fixed `lf pcf7931 reader` - client timeout, buffer overflow with long captures, block lost after a 16T0 PMC (@GiacoBot)
+- Changed `lf pcf7931 reader` - prints blocks 0-7 in order and decodes PAC, password, write protection and selection; handles partial selections, new `--rfb` param (@GiacoBot)
+- Changed `lf pcf7931 write` - write is verified via the tag's read after write, retried up to 3 times, failures are reported (@GiacoBot)
 - Added `hf gp info`, `hf gp crs` and `hf gp aids` - read GlobalPlatform card info, list CRS registered applets and find applet AIDs, all without keys (@iceman1001)
 - Added GlobalPlatform ISD, CRS, ARA-M, telecom, UnionPay and digital key AIDs to `aidlist.json` (@iceman1001)
 - Changed `trace list -t 14a` - APDUs inside an ISO14443-4 session are named, error status words explained and SW1 SW2 highlighted (@iceman1001)

@@ -43,9 +43,9 @@
 #define PCF7931_FIRST_PMC_MIN 300
 // a PMC is recognised 32T0 into it, 8192T0 after the start of the block it closes
 #define PCF7931_PMC_TO_START ((8192 + 32) / DECIMATION)
+#define PCF7931_WRITE_ATTEMPTS 3
 // after a good write the read-after-write block follows EEPROM access (640T0) and a PMC (384T0),
 // later blocks keep that grid. +-256T0 margin
-#define PCF7931_WRITE_ATTEMPTS 3
 #define PCF7931_RAW_MIN_START ((640 + 384 - 16 - 256) / DECIMATION)
 #define PCF7931_RAW_MAX_START ((640 + 384 - 16 + 256) / DECIMATION)
 
