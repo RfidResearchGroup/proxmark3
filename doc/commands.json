@@ -4338,7 +4338,7 @@
             "notes": [
                 "hf gp aids",
                 "hf gp aids --quick -> only prefixes from aidlist.json",
-                "hf gp aids --prefix 5849414F4D -> only AIDs under this prefix",
+                "hf gp aids --prefix A000000151 -> only AIDs under this prefix",
                 "hf gp aids -w -> use contact interface"
             ],
             "offline": true,
@@ -16885,6 +16885,6 @@
     "metadata": {
         "commands_extracted": 940,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-11-09T03:44:51+00:00"
+        "extracted_on": "2026-11-09T05:12:17+00:00"
     }
 }

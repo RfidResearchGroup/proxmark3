@@ -9217,7 +9217,7 @@ static void DesfireViewPrintApp(const desfire_dump_app_t *app) {
 }
 
 static int desfire_etest_probe_result(const PacketResponseNG *resp, bool json,
-                                     char *fields, size_t fields_len);
+                                      char *fields, size_t fields_len);
 
 static int CmdHF14ADesSim(const char *Cmd) {
     CLIParserContext *ctx;
@@ -9332,7 +9332,7 @@ static void desfire_etest_hex(char *dst, size_t dstlen, const uint8_t *src, size
 }
 
 static int desfire_etest_probe_result(const PacketResponseNG *resp, bool json,
-                                     char *fields, size_t fields_len) {
+                                      char *fields, size_t fields_len) {
     if (resp->length != sizeof(desfire_sim_probe_result_t)) {
         return PM3_EFAILED;
     }

@@ -26,7 +26,7 @@ module fpga_top (
     input spi_mosi,
     input ssp_dout,
     input module_sel,         // module select: 1 = HF, 0 = LF
-    
+
     output ssp_din,
     output ssp_frame,
     output ssp_clk,
@@ -46,7 +46,7 @@ module fpga_top (
     output pan_en,           // analog supply enable
     output pdp_en            // boost converter enable
 );
-    
+
     wire ce_lf = ~module_sel; // enable, active high; a low level holds the module in reset
     wire ce_hf = module_sel;  // enable, active high; a low level holds the module in reset
     //-----------------------------------------GATE-------------------------
@@ -56,10 +56,10 @@ module fpga_top (
         gate_en_sync1 <= gate_en;
         gate_en_sync2 <= gate_en_sync1;
     end
-    
+
     assign clk_gate = ~gate_en_sync2; // inverted, the external gate is active low
     //-----------------------------------------PWM--------------------------
-    
+
     // CLKOUT is 200 MHz: 4096 steps at 5 ns keep the resolution, at a 20.48 us
     // period. 400 MHz does not close the 12 bit carry chain at 2.5 ns.
     Gowin_rPLL pwr_pwm_pll(
@@ -107,7 +107,7 @@ module fpga_top (
         .mosi(spi_mosi),
         .ssp_dout(ssp_dout),
         .ce(ce_lf),
-        
+
         .ssp_din(ssp_din_lf),
         .ssp_frame(ssp_frame_lf),
         .ssp_clk(ssp_clk_lf),
@@ -132,7 +132,7 @@ module fpga_top (
         .mosi(spi_mosi),
         .ssp_dout(ssp_dout),
         .ce(ce_hf),
-        
+
         .ssp_din(ssp_din_hf),
         .ssp_frame(ssp_frame_hf),
         .ssp_clk(ssp_clk_hf),

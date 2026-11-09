@@ -1840,7 +1840,7 @@ static int calypso_select_file_id_with_p1_fallback(uint16_t file_id, bool check_
     sAPDU_t apdu = {0x00, ISO7816_SELECT_FILE, CALYPSO_SELECT_CURRENT_DF_P1, CALYPSO_SELECT_CURRENT_DF_P2, sizeof(file_id_data), file_id_data};
     int res = calypso_exchange_select(apdu, response);
     if (res != PM3_SUCCESS || (calypso_select_sw_has_file(response->sw) &&
-            (check_lid == false || calypso_fcp_matches_lid(response->data, response->len, file_id)))) {
+                               (check_lid == false || calypso_fcp_matches_lid(response->data, response->len, file_id)))) {
         return res;
     }
 
@@ -1878,12 +1878,12 @@ static int calypso_select_file_path(const uint16_t *path, size_t path_len, calyp
 
 static int calypso_select_file_path_then_id_fallback(const uint16_t *path, size_t path_len, uint16_t file_id, const calypso_dump_profile_t *profile, calypso_apdu_response_t *response) {
     const calypso_dump_node_t *node = calypso_dump_profile_unique_lid_node(profile,
-                                        &(calypso_dump_node_t) {.has_select_lid = true, .select_lid = file_id});
+    &(calypso_dump_node_t) {.has_select_lid = true, .select_lid = file_id});
     bool check_lid = node != NULL && node->select_aid_len > 0;
     if (path != NULL && path_len > 0) {
         int res = calypso_select_file_path(path, path_len, response);
         if (res != PM3_SUCCESS || (calypso_select_sw_has_file(response->sw) &&
-                (check_lid == false || calypso_fcp_matches_lid(response->data, response->len, file_id)))) {
+                                   (check_lid == false || calypso_fcp_matches_lid(response->data, response->len, file_id)))) {
             return res;
         }
 
@@ -1893,7 +1893,7 @@ static int calypso_select_file_path_then_id_fallback(const uint16_t *path, size_
             const uint16_t legacy_path[] = {file_id, file_id};
             res = calypso_select_file_path(legacy_path, ARRAYLEN(legacy_path), response);
             if (res != PM3_SUCCESS || (calypso_select_sw_has_file(response->sw) &&
-                    (check_lid == false || calypso_fcp_matches_lid(response->data, response->len, file_id)))) {
+                                       (check_lid == false || calypso_fcp_matches_lid(response->data, response->len, file_id)))) {
                 return res;
             }
         }

@@ -5,7 +5,7 @@
 # Tag contents (NTAG) are encrypted are contain a security record computed from card UUID,
 # therefore cloning a card contents to another one will not work and such tag will be rejected by a printer.
 
-# You need a Proxmark3 card dump in PM3 bin or json file. Patching will modify this dump so you need to 
+# You need a Proxmark3 card dump in PM3 bin or json file. Patching will modify this dump so you need to
 # upload it again to a card.
 
 # Note that Niimbot mobile app keeps copy of those values on their servers so resetting the tag print counter
@@ -184,7 +184,7 @@ class LabelTag:
         field_value = pack("<B", value)
         self.vendor_data[offset : offset + 1] = field_value
 
-    def uint32_to_field(self, offset, value: int) -> None:    
+    def uint32_to_field(self, offset, value: int) -> None:
         field_value = pack("<I", value)
         self.vendor_data[offset : offset + 4] = field_value
 
@@ -279,7 +279,7 @@ class LabelTag:
     @print_counter_crc32.setter
     def print_counter_crc32(self, value:int):
         return self.uint32_to_field(self.PRINT_COUNTER_CRC32_OFFSET, value)
-        
+
 
     @property
     def print_limit(self) -> int:

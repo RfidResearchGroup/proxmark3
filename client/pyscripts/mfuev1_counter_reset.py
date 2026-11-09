@@ -258,13 +258,13 @@ def run_reset_step(counter_index: str, delay_bd: int, delay_00: int) -> None:
 
 def tune_delay(delay_bd: int, previous_counter: int, current_counter: int, locked: bool) -> int:
     """Tune BD delay based on counter changes.
-    
+
     Args:
         delay_bd: Current BD delay in microseconds
         previous_counter: Previous counter value for comparison
         current_counter: Current counter value
         locked: If True, delay is locked and not adjusted
-        
+
     Returns:
         Adjusted delay_bd value
     """
@@ -375,7 +375,7 @@ class StopListener:
 
 def calibrate_bd_delay(counter_index: str, stop: StopListener) -> Tuple[Optional[int], Optional[int]]:
     """Auto-calibrate BD delay for tear-off.
-    
+
     Returns:
         Tuple of (delay_bd, delay_00) where delay_00 is calculated as delay_bd - DELAY_00_OFFSET,
         or (None, None) if calibration failed.
