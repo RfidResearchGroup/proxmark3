@@ -1692,10 +1692,17 @@ int CmdTraceListAlias(const char *Cmd, const char *alias, const char *protocol) 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
-    char args[128] = {0};
-    snprintf(args, sizeof(args), "-t %s ", protocol);
-    strncat(args, Cmd, sizeof(args) - strlen(args) - 1);
-    return CmdTraceList(args);
+    // "-t " protocol " " Cmd NUL, sized to fit a long dictionary path
+    size_t args_len = strlen(protocol) + strlen(Cmd) + 5;
+    char *args = calloc(args_len, sizeof(char));
+    if (args == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+    snprintf(args, args_len, "-t %s %s", protocol, Cmd);
+    int res = CmdTraceList(args);
+    free(args);
+    return res;
 }
 
 int CmdTraceList(const char *Cmd) {
