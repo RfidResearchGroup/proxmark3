@@ -4068,9 +4068,11 @@ static int CmdTestSaveState8(const char *Cmd) {
     if (destBuffer == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(srcBuffer);
+        free_buffer_savestate(test8);
         return PM3_EMALLOC;
     }
     size_t returnedLength = restore_buffer8(test8, destBuffer);
+    free_buffer_savestate(test8);
 
     if (returnedLength != length) {
         PrintAndLogEx(DEBUG, _YELLOW_("Returned length != expected length!"));
@@ -4132,9 +4134,11 @@ static int CmdTestSaveState32(const char *Cmd) {
     if (destBuffer == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(srcBuffer);
+        free_buffer_savestate(test32);
         return PM3_EMALLOC;
     }
     size_t returnedLength = restore_buffer32(test32, destBuffer);
+    free_buffer_savestate(test32);
 
     if (returnedLength != length) {
         PrintAndLogEx(FAILED, "Return Length != Buffer Length! Expected '%zu', got '%zu", g_DemodBufferLen, returnedLength);
@@ -4197,9 +4201,11 @@ static int CmdTestSaveState32S(const char *Cmd) {
     if (destBuffer == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(srcBuffer);
+        free_buffer_savestate(test32);
         return PM3_EMALLOC;
     }
     size_t returnedLength = restore_bufferS32(test32, destBuffer);
+    free_buffer_savestate(test32);
 
     if (returnedLength != length) {
         PrintAndLogEx(FAILED, "Return Length != Buffer Length! Expected '%zu', got '%zu", g_DemodBufferLen, returnedLength);
