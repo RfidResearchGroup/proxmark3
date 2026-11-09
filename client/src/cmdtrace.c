@@ -1582,14 +1582,16 @@ static int CmdTraceLoad(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
-    ClearTraceBuffer(); // maybe better to not clobber this until we have successful load?
-
+    // keep the current trace until the new one has loaded
+    uint8_t *trace = NULL;
     size_t len = 0;
-    if (loadFile_safe(filename, ".trace", (void **)&gs_trace, &len) != PM3_SUCCESS) {
+    if (loadFile_safe(filename, ".trace", (void **)&trace, &len) != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "Could not open file " _YELLOW_("%s"), filename);
         return PM3_EIO;
     }
 
+    ClearTraceBuffer();
+    gs_trace = trace;
     gs_traceLen = (uint32_t)len;
 
     PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = " _YELLOW_("%u") " bytes)", gs_traceLen);
