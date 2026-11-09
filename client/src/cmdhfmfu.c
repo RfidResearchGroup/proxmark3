@@ -2391,12 +2391,25 @@ uint64_t GetHF14AMfU_Type(void) {
     uint64_t tagtype = MFU_TT_UNKNOWN;
     iso14a_card_select_t card;
 
-    if (ul_select(&card) == false)
+    bool selected = false;
+    for (int i = 0; i < 3; i++) {
+        if (ul_select(&card)) {
+            selected = true;
+            break;
+        }
+        if (i < 2) {
+            msleep(50);
+        }
+    }
+
+    if (selected == false) {
+        PrintAndLogEx(WARNING, "iso14443a card select failed");
         return MFU_TT_UL_ERROR;
+    }
 
     // Ultralight - ATQA / SAK
     if (card.atqa[1] != 0x00 || card.sak != 0x00) {
-        //PrintAndLogEx(NORMAL, "Tag is not Ultralight | NTAG | MY-D |ST25TN [ATQA: %02X %02X SAK: %02X]\n", card.atqa[1], card.atqa[0], card.sak);
+        PrintAndLogEx(WARNING, "Tag is not Ultralight | NTAG | MY-D | ST25TN  [ATQA: %02X %02X  SAK: %02X]", card.atqa[1], card.atqa[0], card.sak);
         DropField();
         return MFU_TT_UL_ERROR;
     }

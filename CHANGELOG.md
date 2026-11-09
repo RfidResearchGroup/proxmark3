@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mfu info` silent failure, retry select up to 3 times for weak coupling and report the reason when the tag is not found or not Ultralight (@Ryan4n6)
 - Added `hf gp info`, `hf gp crs` and `hf gp aids` - read GlobalPlatform card info, list CRS registered applets and find applet AIDs, all without keys (@iceman1001)
 - Added GlobalPlatform ISD, CRS, ARA-M, telecom, UnionPay and digital key AIDs to `aidlist.json` (@iceman1001)
 - Changed `trace list -t 14a` - APDUs inside an ISO14443-4 session are named, error status words explained and SW1 SW2 highlighted (@iceman1001)
