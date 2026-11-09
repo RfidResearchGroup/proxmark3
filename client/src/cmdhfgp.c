@@ -660,7 +660,6 @@ static int CmdHFGPAids(const char *Cmd) {
 
 // GP ISD, then the OpenPlatform / Visa card manager of older cards
 static const uint8_t gp_isd_aid[] = {0xA0, 0x00, 0x00, 0x01, 0x51, 0x00, 0x00, 0x00};
-static const uint8_t gp_op_isd_aid[] = {0xA0, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00};
 
 // first TLV with tag in buf[0..len), value returned in *val / *vlen
 static bool gp_tlv_find(const uint8_t *buf, size_t len, tlv_tag_t tag, const uint8_t **val, size_t *vlen) {
@@ -988,7 +987,9 @@ int gp_info(Iso7816CommandChannel channel, bool verbose) {
     }
 
     if (sw != ISO7816_OK) {
-        sAPDU_t op = {0x00, 0xA4, 0x04, 0x00, sizeof(gp_op_isd_aid), (uint8_t *)gp_op_isd_aid};
+        // on the stack, a static address in a PACKED sAPDU_t is an unaligned pointer macOS ld rejects
+        uint8_t op_aid[] = {0xA0, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00};
+        sAPDU_t op = {0x00, 0xA4, 0x04, 0x00, sizeof(op_aid), op_aid};
         res = Iso7816ExchangeEx(channel, false, true, op, true, 0, resp, sizeof(resp), &resp_len, &sw);
         if (res != PM3_SUCCESS && sw == 0) {
             PrintAndLogEx(FAILED, "Exchange failed");
