@@ -4045,7 +4045,7 @@ static int CmdTestSaveState8(const char *Cmd) {
     srand(time(NULL));
 
     size_t length = (rand() % 256);
-    PrintAndLogEx(DEBUG, "Testing with length = %llu", length);
+    PrintAndLogEx(DEBUG, "Testing with length = %zu", length);
     uint8_t *srcBuffer = (uint8_t *)calloc(length + 1, sizeof(uint8_t));
 
     //Set up the source buffer with random data
@@ -4054,7 +4054,7 @@ static int CmdTestSaveState8(const char *Cmd) {
     }
 
     buffer_savestate_t test8 = save_buffer8(srcBuffer, length);
-    PrintAndLogEx(DEBUG, "Save State created, length = %llu, padding = %i, type = %i", test8.bufferSize, test8.padding, test8.type);
+    PrintAndLogEx(DEBUG, "Save State created, length = %zu, padding = %i, type = %i", test8.bufferSize, test8.padding, test8.type);
 
     test8.clock = rand();
     test8.offset = rand();
@@ -4065,7 +4065,7 @@ static int CmdTestSaveState8(const char *Cmd) {
 
     if (returnedLength != length) {
         PrintAndLogEx(DEBUG, _YELLOW_("Returned length != expected length!"));
-        PrintAndLogEx(WARNING, "Returned Length = %llu Buffer Length = %llu Expected = %llu", returnedLength, test8.bufferSize, length);
+        PrintAndLogEx(WARNING, "Returned Length = %zu Buffer Length = %zu Expected = %zu", returnedLength, test8.bufferSize, length);
     } else {
         PrintAndLogEx(DEBUG, _GREEN_("Lengths match!") "\n");
     }
@@ -4109,7 +4109,7 @@ static int CmdTestSaveState32(const char *Cmd) {
     }
 
     buffer_savestate_t test32 = save_buffer32(srcBuffer, length);
-    PrintAndLogEx(DEBUG, "Save State created, length=%llu, type=%i", test32.bufferSize, test32.type);
+    PrintAndLogEx(DEBUG, "Save State created, length=%zu, type=%i", test32.bufferSize, test32.type);
 
     test32.clock = rand();
     test32.offset = rand();
@@ -4119,7 +4119,7 @@ static int CmdTestSaveState32(const char *Cmd) {
     size_t returnedLength = restore_buffer32(test32, destBuffer);
 
     if (returnedLength != length) {
-        PrintAndLogEx(FAILED, "Return Length != Buffer Length! Expected '%llu', got '%llu", g_DemodBufferLen, returnedLength);
+        PrintAndLogEx(FAILED, "Return Length != Buffer Length! Expected '%zu', got '%zu", g_DemodBufferLen, returnedLength);
         free(srcBuffer);
         free(destBuffer);
         return PM3_EFAILED;
@@ -4165,7 +4165,7 @@ static int CmdTestSaveState32S(const char *Cmd) {
     }
 
     buffer_savestate_t test32 = save_bufferS32(srcBuffer, length);
-    PrintAndLogEx(DEBUG, "Save State created, length=%llu, type=%i", test32.bufferSize, test32.type);
+    PrintAndLogEx(DEBUG, "Save State created, length=%zu, type=%i", test32.bufferSize, test32.type);
 
     test32.clock = rand();
     test32.offset = rand();
@@ -4175,7 +4175,7 @@ static int CmdTestSaveState32S(const char *Cmd) {
     size_t returnedLength = restore_bufferS32(test32, destBuffer);
 
     if (returnedLength != length) {
-        PrintAndLogEx(FAILED, "Return Length != Buffer Length! Expected '%llu', got '%llu", g_DemodBufferLen, returnedLength);
+        PrintAndLogEx(FAILED, "Return Length != Buffer Length! Expected '%zu', got '%zu", g_DemodBufferLen, returnedLength);
         free(srcBuffer);
         free(destBuffer);
         return PM3_EFAILED;
