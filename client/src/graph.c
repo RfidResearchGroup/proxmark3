@@ -582,12 +582,9 @@ buffer_savestate_t save_buffer8(uint8_t *src, size_t length) {
         buffer_savestate_t bst = {0};
         return bst;
     }
-    size_t index = 0;
-
-    // Pack the source array into the backing array
-    for (size_t i = 0; i < length; i += 4) {
-        savedBuffer[index] = MemLeToUint4byte(src + i);
-        index++;
+    // Pack the source array into the backing array, little endian, last word zero padded
+    for (size_t i = 0; i < length; i++) {
+        savedBuffer[i / 4] |= (uint32_t)src[i] << ((i % 4) * 8);
     }
 
     buffer_savestate_t bst = {
