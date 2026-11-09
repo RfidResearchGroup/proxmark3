@@ -31,8 +31,8 @@ extern "C" {
 #define _USE_MATH_DEFINES
 
 // mingw: match GNU printf enabled via _ISOC99_SOURCE, not ms_printf
-#ifdef __MINGW_PRINTF_FORMAT
-#define PM3_PRINTF_FORMAT __MINGW_PRINTF_FORMAT
+#ifdef __MINGW32__
+#define PM3_PRINTF_FORMAT gnu_printf
 #else
 #define PM3_PRINTF_FORMAT printf
 #endif
