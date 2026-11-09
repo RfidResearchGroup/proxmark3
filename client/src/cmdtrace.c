@@ -1511,6 +1511,11 @@ static int CmdTraceExtract(const char *Cmd) {
         return PM3_SUCCESS;
     }
 
+    // don't carry a UID or epurse over from the previous trace
+    memset(extract_uid, 0, sizeof(extract_uid));
+    extract_uidlen = 0;
+    memset(extract_epurse, 0, sizeof(extract_epurse));
+
     uint16_t tracepos = 0;
 
     while (tracepos < gs_traceLen) {
