@@ -1758,7 +1758,8 @@ int CmdTraceList(const char *Cmd) {
         arg_param_begin,
         arg_lit0("1", "buffer", "use data from trace buffer"),
         arg_lit0(NULL, "frame", "show frame delay times"),
-        arg_lit0("c", NULL, "mark CRC bytes"),
+        // twice when an alias that already adds -c gets one too
+        arg_litn("c", NULL, 0, 2, "mark CRC bytes"),
         arg_lit0("r", NULL, "show frame delay times relative to the previous transfer"),
         arg_lit0("u", NULL, "display times in microseconds instead of clock cycles"),
         arg_lit0("x", NULL, "show hexdump to convert to pcap(ng)\n"
