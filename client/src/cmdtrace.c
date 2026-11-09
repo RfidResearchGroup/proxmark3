@@ -194,6 +194,8 @@ bool ImportTraceBuffer(const uint8_t *trace_src, uint32_t trace_len) {
 static uint8_t extract_uid[10] = {0};
 static uint8_t extract_uidlen = 0;
 static uint8_t extract_epurse[8] = {0};
+static uint8_t extract_csn[8] = {0};
+static bool extract_csn_found = false;
 
 #define SKIP_TO_NEXT(a)  (TRACELOG_HDR_LEN + (a)->data_len + TRACELOG_PARITY_LEN((a)))
 
@@ -332,8 +334,8 @@ static uint32_t extractChallenges(uint32_t tracepos, uint32_t traceLen, uint8_t 
                     break;
                 }
                 tracepos += SKIP_TO_NEXT(next_hdr);
-                memcpy(extract_uid, next_hdr->frame, 8);
-                extract_uidlen = 8;
+                memcpy(extract_csn, next_hdr->frame, 8);
+                extract_csn_found = true;
                 break;
             }
             case ICLASS_CMD_READCHECK: {
@@ -355,8 +357,8 @@ static uint32_t extractChallenges(uint32_t tracepos, uint32_t traceLen, uint8_t 
             case ICLASS_CMD_CHECK: {
                 // get macs, CHECK has no CRC unlike a 14a CL2 SELECT 95 70 UID BCC CRC
                 if ((data_len == 9) && (check_crc(CRC_14443_A, frame, data_len) == false)) {
-                    if (extract_uidlen == 8) {
-                        PrintAndLogEx(INFO, "hf iclass lookup --csn %s " NOLF, sprint_hex_inrow(extract_uid, extract_uidlen));
+                    if (extract_csn_found) {
+                        PrintAndLogEx(INFO, "hf iclass lookup --csn %s " NOLF, sprint_hex_inrow(extract_csn, sizeof(extract_csn)));
                         PrintAndLogEx(NORMAL, "--epurse %s " NOLF, sprint_hex_inrow(extract_epurse, 8));
                         PrintAndLogEx(NORMAL, "--macs %s " NOLF, sprint_hex_inrow(frame + 1, 8));
                         PrintAndLogEx(NORMAL, "-f iclass_default_keys.dic");
@@ -390,7 +392,8 @@ static uint32_t extractChallenges(uint32_t tracepos, uint32_t traceLen, uint8_t 
             // 95 20 = Anticollision of cascade level2
             // 95 50 = Bit oriented anti-collision level2
             // 95 70 = Select of cascade level2
-            if ((data_len >= 6) && (frame[1] == 0x70)) {
+            // only after a CL1 with the cascade tag
+            if ((data_len >= 6) && (frame[1] == 0x70) && (extract_uidlen == 3)) {
                 // cascade level 2 starts at UID byte 3, level 3 at byte 6
                 if (frame[2] == 0x88) {
                     memcpy(extract_uid + 3, frame + 3, 3);
@@ -407,7 +410,8 @@ static uint32_t extractChallenges(uint32_t tracepos, uint32_t traceLen, uint8_t 
             // 97 20 = Anticollision of cascade level3
             // 97 50 = Bit oriented anti-collision level3
             // 97 70 = Select of cascade level3
-            if ((data_len >= 6) && (frame[1] == 0x70)) {
+            // only after a CL2 with the cascade tag
+            if ((data_len >= 6) && (frame[1] == 0x70) && (extract_uidlen == 6)) {
                 memcpy(extract_uid + 6, frame + 2, 4);
                 extract_uidlen = 10;
                 PrintAndLogEx(INFO, "UID... " _YELLOW_("%s"), sprint_hex_inrow(extract_uid, extract_uidlen));
@@ -1527,6 +1531,8 @@ static int CmdTraceExtract(const char *Cmd) {
     memset(extract_uid, 0, sizeof(extract_uid));
     extract_uidlen = 0;
     memset(extract_epurse, 0, sizeof(extract_epurse));
+    memset(extract_csn, 0, sizeof(extract_csn));
+    extract_csn_found = false;
 
     uint32_t tracepos = 0;
 
