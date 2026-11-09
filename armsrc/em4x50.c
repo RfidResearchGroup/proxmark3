@@ -50,6 +50,7 @@
 #define EM4X50_T_WAITING_FOR_ACK            4
 #define EM4X50_T_TOLERANCE                  8
 #define EM4X50_T_ZERO_DETECTION             3
+#define EM4X50_T_RM_DELAY                   132 // from double LIW detection, 104-164 work
 
 // timeout values (empirical) for simulation mode (may vary with regard to reader)
 #define EM4X50_T_SIMULATION_TIMEOUT_READ    318 // only for em4x50_sim_read_bit()
@@ -63,6 +64,10 @@
 #define EM4X50_TAG_WORD                     45
 #define EM4X50_TAG_MAX_NO_BYTES             136
 #define EM4X50_TIMEOUT_PULSE_EVAL           (4 * EM4X50_T_TAG_FULL_PERIOD * CYCLES2TICKS) // 4bit data periods
+
+// read retries, no new attempt after the window (ms) to stay below the client timeout
+#define EM4X50_COMMAND_RETRIES              5
+#define EM4X50_T_RETRY_WINDOW               1000
 
 uint8_t g_High = 190;
 uint8_t g_Low = 60;
@@ -298,6 +303,17 @@ static uint32_t get_pulse_length(void) {
     return GetTicks() - start_ticks;
 }
 
+// true if the signal stays below g_High for <cycles>
+static bool no_rising_edge(uint32_t cycles) {
+    uint32_t tval = GetTicks();
+    while (GetTicks() - tval < cycles * CYCLES2TICKS) {
+        if (FPGA_SSC_RX_Ready() && ((uint8_t)FPGA_SSC_RX_Value() >= g_High)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 // check if pulse length <pl> corresponds to given length <length>
 static bool check_pulse_length(uint32_t pl, int length) {
     return ((pl >= (length - EM4X50_T_TOLERANCE) * CYCLES2TICKS) &&
@@ -424,13 +440,12 @@ static int find_double_listen_window(bool bcommand) {
                     // command request has to be sent) has gone, so if a
                     // second window follows - sync on this to issue a command
 
-                    // skip the next bit...
-                    WaitUS(EM4X50_T_TAG_FULL_PERIOD * CYCLES2MUSEC);
+                    // no rising edge for the next two bits means this is
+                    // the second listen window (data has one per bit)
+                    uint32_t window = 2 * EM4X50_T_TAG_FULL_PERIOD - EM4X50_T_TOLERANCE;
+                    if (no_rising_edge(window)) {
 
-                    // ...and check if the following bit does make sense
-                    // (if not it is the correct position within the second
-                    // listen window)
-                    if (invalid_bit()) {
+                        WaitUS((EM4X50_T_RM_DELAY - window) * CYCLES2MUSEC);
 
                         // send RM for request mode
                         em4x50_reader_send_bit(0);
@@ -894,6 +909,35 @@ static int selective_read(uint32_t addresses, uint32_t *words) {
     return status;
 }
 
+// optional login followed by a selective read, retried within
+// EM4X50_T_RETRY_WINDOW since a missed listen window is not fatal
+static int login_and_read(const em4x50_data_t *etd, uint32_t addresses, uint32_t *words) {
+    int status = PM3_EFAILED;
+    uint32_t tstart = GetTicks();
+
+    for (int i = 0; i < EM4X50_COMMAND_RETRIES; i++) {
+
+        if (BUTTON_PRESS()) {
+            return PM3_EOPABORTED;
+        }
+
+        status = PM3_SUCCESS;
+
+        // try to login with given password
+        if (etd->pwd_given)
+            status = login(etd->password1);
+
+        if (status == PM3_SUCCESS)
+            status = selective_read(addresses, words);
+
+        if ((status == PM3_SUCCESS) || (GetTicks() - tstart > EM4X50_T_RETRY_WINDOW * 1500)) {
+            break;
+        }
+    }
+
+    return status;
+}
+
 // reads by using "selective read mode" -> bidirectional communication
 void em4x50_read(const em4x50_data_t *etd, bool ledcontrol) {
     int status = PM3_EFAILED;
@@ -910,15 +954,8 @@ void em4x50_read(const em4x50_data_t *etd, bool ledcontrol) {
             LED_D_ON();
         }
 
-        bool blogin = true;
-
-        // try to login with given password
-        if (etd->pwd_given)
-            blogin = (login(etd->password1) == PM3_SUCCESS);
-
         // only one word has to be read -> first word read = last word read
-        if (blogin)
-            status = selective_read(etd->addresses, words);
+        status = login_and_read(etd, etd->addresses, words);
     }
 
     if (ledcontrol) LEDsoff();
@@ -942,15 +979,9 @@ void em4x50_info(const em4x50_data_t *etd, bool ledcontrol) {
             LED_D_ON();
         }
 
-        bool blogin = true;
-        // login with given password
-        if (etd->pwd_given)
-            blogin = (login(etd->password1) == PM3_SUCCESS);
-
-        if (blogin) {
-            // read addresses from fwr = 0 to lwr = 33 (0x21)
-            status = selective_read(0x00002100, words);
-        }
+        // login with given password, then
+        // read addresses from fwr = 0 to lwr = 33 (0x21)
+        status = login_and_read(etd, 0x00002100, words);
     }
 
     if (ledcontrol) LEDsoff();
