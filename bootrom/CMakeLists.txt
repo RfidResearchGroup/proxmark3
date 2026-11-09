@@ -98,9 +98,6 @@ if (PM5)
     set(LIBS ${LIBS} pm5_at32_armlib)
 endif ()
 
-# Fix: warning: bootrom\bootrom.elf has a LOAD segment with RWX permissions
-set(CROSS_LDFLAGS ${CROSS_LDFLAGS} -Wl,--no-warn-rwx-segments)
-
 # Create version_pm3.c before bootrom build.
 add_custom_command(
         OUTPUT ${VERSION_PM3_C}
