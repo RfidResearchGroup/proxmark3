@@ -390,6 +390,7 @@ typedef struct {
     uint16_t hb_delay_us;   // optional custom half bit delay [us]
     uint8_t repeats;        // repeat data frame this many times per answer
     bool verbose;
+    bool active;            // transmit 66 kHz instead of load modulating at reader carrier / 2
     uint8_t nbits;         // number of data bits
     uint8_t data[LF_COTAG_SIM_DATA_LEN];
 } PACKED lf_cotagsim_t;
