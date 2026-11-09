@@ -1637,11 +1637,14 @@ static int CmdTraceSave(const char *Cmd) {
     if ((use_buffer == false) && IfPm3Present()) {
         // saving is not supposed to alter the client side trace buffer,  so
         // download to a buffer of our own and leave gs_trace alone
-        if (download_trace_ex(&trace, &trace_len) != PM3_SUCCESS) {
-            return PM3_SUCCESS;
+        int res = download_trace_ex(&trace, &trace_len);
+        if (res != PM3_SUCCESS) {
+            return res;
         }
         is_owner = true;
     }
+
+    int res = PM3_SUCCESS;
 
     if (trace_len == 0) {
         PrintAndLogEx(WARNING, "trace is empty, nothing to save");
@@ -1651,13 +1654,13 @@ static int CmdTraceSave(const char *Cmd) {
             PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("trace load") "` to load a trace from file");
         }
     } else {
-        saveFile(filename, ".trace", trace, trace_len);
+        res = saveFile(filename, ".trace", trace, trace_len);
     }
 
     if (is_owner) {
         free(trace);
     }
-    return PM3_SUCCESS;
+    return res;
 }
 
 int CmdTraceListAlias(const char *Cmd, const char *alias, const char *protocol) {
