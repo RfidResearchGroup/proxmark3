@@ -990,9 +990,7 @@ static int select_df_decode(uint8_t *response, uint8_t response_length, int *ALG
     }
 
     if (plaintext_adf == false) {
-        if (plaintext_adf == false) {
-            PrintAndLogEx(SUCCESS, "CRYPTOGRAM Encrypted Data........ " _YELLOW_("%s"), sprint_hex_inrow(CRYPTOGRAM_encrypted_data, *cryptogram_len));
-        }
+        PrintAndLogEx(SUCCESS, "CRYPTOGRAM Encrypted Data........ " _YELLOW_("%s"), sprint_hex_inrow(CRYPTOGRAM_encrypted_data, *cryptogram_len));
     }
     // PrintAndLogEx(SUCCESS, "MAC.............................. " _YELLOW_("%s"), sprint_hex_inrow(MAC_value, 8));
 
