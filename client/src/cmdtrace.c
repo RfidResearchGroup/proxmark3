@@ -1999,11 +1999,7 @@ int CmdTraceList(const char *Cmd) {
             col5 = "Bit";
         }
 
-        if (use_relative) {
-            PrintAndLogEx(NORMAL, "      Start |        End | Src | Data (! denotes parity error, ' denotes short bytes)                    | %s | Annotation", col5);
-        } else {
-            PrintAndLogEx(NORMAL, "      Start |        End | Src | Data (! denotes parity error)                                           | %s | Annotation", col5);
-        }
+        PrintAndLogEx(NORMAL, "      Start |        End | Src | Data (! denotes parity error)                                           | %s | Annotation", col5);
         PrintAndLogEx(NORMAL, "------------+------------+-----+-------------------------------------------------------------------------+-----+--------------------");
 
         // clean authentication data used with the mifare classic decrypt fct,
