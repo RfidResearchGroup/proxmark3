@@ -646,7 +646,7 @@ int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X50_READ, (uint8_t *)&edata, sizeof(edata));
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_LF_EM4X50_READ, &resp, EM4X50_TIMEOUT_CMD) == false) {
+    if (WaitForResponseTimeout(CMD_LF_EM4X50_READ, &resp, EM4X50_TIMEOUT_READ) == false) {
         PrintAndLogEx(WARNING, "(em4x50) timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }

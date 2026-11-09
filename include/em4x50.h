@@ -56,6 +56,7 @@
 // misc
 #define EM4X50_TIMEOUT_CMD                 3000
 #define EM4X50_TIMEOUT_INFO                5000 // 34 words, with read retries
+#define EM4X50_TIMEOUT_READ                5000 // read / info, device replies 1 s earlier
 #define EM4X50_DUMP_FILESIZE               136
 
 typedef struct {

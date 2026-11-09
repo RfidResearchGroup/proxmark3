@@ -65,10 +65,23 @@
 #define EM4X50_TAG_MAX_NO_BYTES             136
 #define EM4X50_TIMEOUT_PULSE_EVAL           (4 * EM4X50_T_TAG_FULL_PERIOD * CYCLES2TICKS) // 4bit data periods
 
-// read retries, no new attempt that could end after the window (ms) to stay below the client timeout
+// read retries, all within a reply deadline (ms) below the client timeout
 #define EM4X50_COMMAND_RETRIES              5
-#define EM4X50_T_RETRY_WINDOW               2500
+#define EM4X50_T_REPLY_DEADLINE             (EM4X50_TIMEOUT_READ - 1000) // FPGA load + settle come first
 #define EM4X50_MS2TICKS                     1500
+
+// tag waits give up at this tick count, only while set
+static bool g_deadline_set = false;
+static uint32_t g_deadline = 0;
+
+static void em4x50_set_deadline(uint32_t ms) {
+    g_deadline = GetTicks() + ms * EM4X50_MS2TICKS;
+    g_deadline_set = true;
+}
+
+static bool em4x50_expired(void) {
+    return g_deadline_set && ((int32_t)(GetTicks() - g_deadline) >= 0);
+}
 
 uint8_t g_High = 190;
 uint8_t g_Low = 60;
@@ -392,7 +405,7 @@ static void em4x50_reader_send_word(const uint32_t word) {
 static bool find_single_listen_window(void) {
     int cnt_pulses = 0;
 
-    while (cnt_pulses < EM4X50_T_WAITING_FOR_SNGLLIW) {
+    while (cnt_pulses < EM4X50_T_WAITING_FOR_SNGLLIW && em4x50_expired() == false) {
 
         // identification of listen window is done via evaluation of
         // pulse lengths
@@ -418,7 +431,7 @@ static bool find_single_listen_window(void) {
 static int find_double_listen_window(bool bcommand) {
     int cnt_pulses = 0;
 
-    while (cnt_pulses < EM4X50_T_WAITING_FOR_DBLLIW) {
+    while (cnt_pulses < EM4X50_T_WAITING_FOR_DBLLIW && em4x50_expired() == false) {
 
         if (BUTTON_PRESS()) {
             return PM3_EOPABORTED;
@@ -492,7 +505,7 @@ static int request_receive_mode(void) {
 // ack signal a RM request has to be sent.
 static bool check_ack(bool bliw) {
     int count_cycles = 0;
-    while (count_cycles < EM4X50_T_WAITING_FOR_ACK) {
+    while (count_cycles < EM4X50_T_WAITING_FOR_ACK && em4x50_expired() == false) {
         if (BUTTON_PRESS())
             return false;
 
@@ -571,7 +584,7 @@ static int get_word_from_bitstream(uint32_t *data) {
 
     // identify remaining bits based on pulse lengths
     // between two listen windows only pulse lengths of 1, 1.5 and 2 are possible
-    while (BUTTON_PRESS() == false) {
+    while (BUTTON_PRESS() == false && em4x50_expired() == false) {
 
         cnt++;
         word <<= 1;
@@ -910,20 +923,17 @@ static int selective_read(uint32_t addresses, uint32_t *words) {
     return status;
 }
 
-// optional login followed by a selective read, retried within
-// EM4X50_T_RETRY_WINDOW since a missed listen window is not fatal
+// optional login followed by a selective read, retried until the
+// reply deadline since a missed listen window is not fatal
 static int login_and_read(const em4x50_data_t *etd, uint32_t addresses, uint32_t *words) {
     int status = PM3_EFAILED;
-    uint32_t tstart = GetTicks();
-    uint32_t tlongest = 0;
 
-    for (int i = 0; i < EM4X50_COMMAND_RETRIES; i++) {
+    for (int i = 0; i < EM4X50_COMMAND_RETRIES && em4x50_expired() == false; i++) {
 
         if (BUTTON_PRESS()) {
             return PM3_EOPABORTED;
         }
 
-        uint32_t tattempt = GetTicks();
         status = PM3_SUCCESS;
 
         // try to login with given password
@@ -934,13 +944,6 @@ static int login_and_read(const em4x50_data_t *etd, uint32_t addresses, uint32_t
             status = selective_read(addresses, words);
 
         if (status == PM3_SUCCESS) {
-            break;
-        }
-
-        // next attempt must fit, judged by the longest one so far
-        uint32_t now = GetTicks();
-        tlongest = MAX(tlongest, now - tattempt);
-        if ((now - tstart) + tlongest > EM4X50_T_RETRY_WINDOW * EM4X50_MS2TICKS) {
             break;
         }
     }
@@ -954,6 +957,7 @@ void em4x50_read(const em4x50_data_t *etd, bool ledcontrol) {
     uint32_t words[EM4X50_NO_WORDS] = {0x0};
 
     em4x50_setup_read();
+    em4x50_set_deadline(EM4X50_T_REPLY_DEADLINE);
 
     // set g_High and g_Low
     if (ledcontrol) LED_C_ON();
@@ -971,6 +975,7 @@ void em4x50_read(const em4x50_data_t *etd, bool ledcontrol) {
     if (ledcontrol) LEDsoff();
     Gpio_SSC_DOUT_Low();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    g_deadline_set = false;
     StopTicks();
     reply_ng(CMD_LF_EM4X50_READ, status, (uint8_t *)words, EM4X50_TAG_MAX_NO_BYTES);
 }
@@ -981,6 +986,7 @@ void em4x50_info(const em4x50_data_t *etd, bool ledcontrol) {
     uint32_t words[EM4X50_NO_WORDS] = {0x0};
 
     em4x50_setup_read();
+    em4x50_set_deadline(EM4X50_T_REPLY_DEADLINE);
 
     if (ledcontrol) LED_C_ON();
     if (get_signalproperties() && find_em4x50_tag()) {
@@ -996,6 +1002,7 @@ void em4x50_info(const em4x50_data_t *etd, bool ledcontrol) {
 
     if (ledcontrol) LEDsoff();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    g_deadline_set = false;
     StopTicks();
     reply_ng(CMD_LF_EM4X50_INFO, status, (uint8_t *)words, EM4X50_TAG_MAX_NO_BYTES);
 }
