@@ -151,7 +151,7 @@ void printarr(const char *name, uint8_t *arr, int len) {
         snprintf(output + cx, outsize - cx, "};");
     }
 
-    PrintAndLogEx(INFO, output);
+    PrintAndLogEx(INFO, "%s", output);
     free(output);
 }
 
@@ -195,7 +195,7 @@ void printarr_human_readable(const char *title, uint8_t *arr, int len) {
             cx += snprintf(output + cx, outsize - cx, "%02x ", *(arr + i));
         }
     }
-    PrintAndLogEx(INFO, output);
+    PrintAndLogEx(INFO, "%s", output);
     free(output);
 }
 

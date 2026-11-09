@@ -1017,7 +1017,7 @@ static void T55xx_Print_DownlinkMode(uint8_t downlink_mode) {
             break;
     }
 
-    PrintAndLogEx(SUCCESS, msg);
+    PrintAndLogEx(SUCCESS, "%s", msg);
 }
 
 static int CmdT55xxWakeUp(const char *Cmd) {

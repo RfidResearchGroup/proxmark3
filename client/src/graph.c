@@ -568,11 +568,11 @@ buffer_savestate_t save_buffer8(uint8_t *src, size_t length) {
     // 1/4 of the size needed
     size_t buffSize = (length / 4);
 
-    PrintAndLogEx(DEBUG, "(save_buffer8) buffSize = %llu, length = %llu", buffSize, length);
+    PrintAndLogEx(DEBUG, "(save_buffer8) buffSize = %zu, length = %zu", buffSize, length);
 
     if (length % 4) {
         buffSize++;
-        PrintAndLogEx(DEBUG, "(save_buffer8) new buffSize = %llu", buffSize);
+        PrintAndLogEx(DEBUG, "(save_buffer8) new buffSize = %zu", buffSize);
     }
 
     // calloc the memory needed

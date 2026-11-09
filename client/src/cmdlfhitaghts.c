@@ -477,7 +477,7 @@ static int CmdLFHitagSRead(const char *Cmd) {
             break;
         }
         if (card->pages_reason[i] >= 0) {
-            PrintAndLogEx(SUCCESS, "% 3u | %s  | " NOLF, page_addr, sprint_hex_ascii(card->pages[i], HITAGS_PAGE_SIZE));
+            PrintAndLogEx(SUCCESS, "%3u | %s  | " NOLF, page_addr, sprint_hex_ascii(card->pages[i], HITAGS_PAGE_SIZE));
 
             // access right
             if (page_addr == HITAGS_UID_PADR) {
@@ -557,7 +557,7 @@ static int CmdLFHitagSRead(const char *Cmd) {
             } else
                 PrintAndLogEx(NORMAL, "Data");
         } else {
-            PrintAndLogEx(INFO, "% 3u | -- -- -- -- | ....  | N/A  | " NOLF, page_addr);
+            PrintAndLogEx(INFO, "%3u | -- -- -- -- | ....  | N/A  | " NOLF, page_addr);
             print_error(card->pages_reason[i]);
         }
     }

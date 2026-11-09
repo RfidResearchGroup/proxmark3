@@ -221,7 +221,7 @@ int read_htu_uid(void) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "UID....... " _GREEN_("%012llX"), uid);
+    PrintAndLogEx(SUCCESS, "UID....... " _GREEN_("%012" PRIX64), uid);
     // PrintAndLogEx(SUCCESS, "TYPE...... " _GREEN_("%s"), htu_get_type_str(uid));
     return PM3_SUCCESS;
 }
@@ -456,7 +456,7 @@ static int CmdLFHitagURead(const char *Cmd) {
         }
 
         if (card->pages_reason[i] > 0) {
-            PrintAndLogEx(SUCCESS, "% 3u | %s  | " NOLF, page_addr, sprint_hex_ascii(card->pages[i], HITAGU_BLOCK_SIZE));
+            PrintAndLogEx(SUCCESS, "%3u | %s  | " NOLF, page_addr, sprint_hex_ascii(card->pages[i], HITAGU_BLOCK_SIZE));
 
             // access right
             // 82xx
@@ -508,7 +508,7 @@ static int CmdLFHitagURead(const char *Cmd) {
                 PrintAndLogEx(NORMAL, "Data");
             }
         } else {
-            PrintAndLogEx(INFO, "% 3u | -- -- -- -- | ....  | N/A  | " NOLF, page_addr);
+            PrintAndLogEx(INFO, "%3u | -- -- -- -- | ....  | N/A  | " NOLF, page_addr);
             print_error(card->pages_reason[i]);
         }
     }

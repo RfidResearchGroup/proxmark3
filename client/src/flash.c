@@ -440,7 +440,7 @@ int flash_prepare(flash_file_t *ctx, int can_write_bl, flash_dev_t *flash_dev) {
 
     // Check elf file is build for currently connected device?
     if (!CheckInformationMagicAndChipType(ctx->ver_info, flash_dev->chiptype)) {
-        PrintAndLogEx(ERR, "The elf file is not applicable to the currently connected device.", flash_dev->chiptype);
+        PrintAndLogEx(ERR, "The elf file is not applicable to the currently connected device.");
         res = PM3_EFILE;
         goto fail;
     }

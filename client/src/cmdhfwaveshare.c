@@ -665,7 +665,7 @@ static int CmdHF14AWSLoad(const char *Cmd) {
             gdImageDestroy(pal_img);
             return PM3_SUCCESS;
         } else {
-            PrintAndLogEx(WARNING, "Could not save converted image", outfile);
+            PrintAndLogEx(WARNING, "Could not save converted image %s", outfile);
             gdImageDestroy(pal_img);
             return PM3_EFILE;
         }

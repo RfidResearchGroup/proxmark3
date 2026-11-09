@@ -2175,7 +2175,7 @@ static void fm11_print_key_hit_row(uint32_t nonce_count, uint8_t sec, uint8_t kt
                   " Key sec " _YELLOW_("%03u") " key " _YELLOW_("%c") " = " _GREEN_("%012" PRIX64) "                        |"
                   " " _YELLOW_("%25s") " | %13s ",
                   (float)elapsed_key / 1000.0, nonce_count,
-                  fm11_real_sector(sec), kt ? 'B' : 'A', key & 0xFFFFFFFFFFFFULL,
+                  fm11_real_sector(sec), kt ? 'B' : 'A', (uint64_t)(key & 0xFFFFFFFFFFFFULL),
                   kcount, "");
 }
 

@@ -7960,7 +7960,7 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
     if (ccidx > -1 && ccidx < ARRAYLEN(iclass_config_options)) {
         const iclass_config_card_item_t *item = get_config_card_item(ccidx);
         if (strlen(item->desc) == 0) {
-            PrintAndLogEx(ERR, "out of range, %u (got %u)",  ARRAYLEN(iclass_config_options), ccidx);
+            PrintAndLogEx(ERR, "out of range, %zu (got %u)",  ARRAYLEN(iclass_config_options), ccidx);
             return PM3_EINVARG;
         }
         if (strstr(item->desc, "ELITE") != NULL && got_kr == false) {

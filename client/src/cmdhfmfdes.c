@@ -314,7 +314,7 @@ static int CLIGetUint32Hex(CLIParserContext *ctx, uint8_t paramnum, uint32_t def
         *valuePresent = (res == 1);
 
     if (res == 2) {
-        PrintAndLogEx(ERR, lengthErrorStr);
+        PrintAndLogEx(ERR, "%s", lengthErrorStr);
         return PM3_EINVARG;
     }
     if (res == 0) {

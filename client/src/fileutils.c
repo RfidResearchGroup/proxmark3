@@ -2980,7 +2980,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
                         );
 
         if (*datalen > ISO15693_TAG_MAX_SIZE) {
-            PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   sptr=%zu (%04zx) -- exceeded maxdatalen"
+            PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen"
                           , ISO15693_TAG_MAX_SIZE
                           , ISO15693_TAG_MAX_SIZE
                           , *datalen
@@ -2991,7 +2991,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         }
         tag->pagesCount = *datalen / 4;
         if (tag->pagesCount > ISO15693_TAG_MAX_PAGES) {
-            PrintAndLogEx(ERR, "loadFileJSONex: maxpagecount=%zu (%04zx)   pagecount=%u (%04x) -- exceeded maxpagecount"
+            PrintAndLogEx(ERR, "loadFileJSONex: maxpagecount=%d (%04x)   pagecount=%u (%04x) -- exceeded maxpagecount"
                           , ISO15693_TAG_MAX_PAGES
                           , ISO15693_TAG_MAX_PAGES
                           , tag->pagesCount
@@ -3038,7 +3038,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
         tag->pagesCount = sptr / 4;
         if (tag->pagesCount > ISO15693_TAG_MAX_PAGES) {
-            PrintAndLogEx(ERR, "loadFileJSONex: maxpagecount=%zu (%04zx)   pagecount=%u (%04x) -- exceeded maxpagecount"
+            PrintAndLogEx(ERR, "loadFileJSONex: maxpagecount=%d (%04x)   pagecount=%u (%04x) -- exceeded maxpagecount"
                           , ISO15693_TAG_MAX_PAGES
                           , ISO15693_TAG_MAX_PAGES
                           , tag->pagesCount
@@ -3085,7 +3085,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
         tag->pagesCount = sptr / 8;
         if (tag->pagesCount > ISO15693_TAG_MAX_PAGES) {
-            PrintAndLogEx(ERR, "loadFileJSONex: maxpagecount=%zu (%04zx)   pagecount=%u (%04x) -- exceeded maxpagecount"
+            PrintAndLogEx(ERR, "loadFileJSONex: maxpagecount=%d (%04x)   pagecount=%u (%04x) -- exceeded maxpagecount"
                           , ISO15693_TAG_MAX_PAGES
                           , ISO15693_TAG_MAX_PAGES
                           , tag->pagesCount

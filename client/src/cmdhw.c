@@ -2365,8 +2365,8 @@ void pm3_version(bool verbose, bool oneliner) {
                             PrintAndLogEx(NORMAL, "  Device.................... " _GREEN_("RDV4"));
                             PrintAndLogEx(NORMAL, "  Firmware.................. " _GREEN_("RDV4"));
                         } else if (type == SIGN_GENERIC) {
-                            PrintAndLogEx(NORMAL, "  Device.................... ", _GREEN_("GENERIC"));
-                            PrintAndLogEx(NORMAL, "  Firmware.................. ", _GREEN_("GENERIC"));
+                            PrintAndLogEx(NORMAL, "  Device.................... " _GREEN_("GENERIC"));
+                            PrintAndLogEx(NORMAL, "  Firmware.................. " _GREEN_("GENERIC"));
                         } else {
                             PrintAndLogEx(NORMAL, "  Device.................... " _RED_("Bad signature detected!"));
                             PrintAndLogEx(NORMAL, "  Firmware.................. " _YELLOW_("N/A"));
@@ -2413,7 +2413,7 @@ void pm3_version(bool verbose, bool oneliner) {
                     }
                 }
             }
-            PrintAndLogEx(NORMAL, payload->versionstr);
+            PrintAndLogEx(NORMAL, "%s", payload->versionstr);
             // PM5 doesn't report a built-in FPGA version (Gowin bitstream is loaded
             // externally), so skip the Xilinx FPGA_TYPE match check for it.
             if (!IfPm5() && strstr(payload->versionstr, FPGA_TYPE) == NULL) {

@@ -1344,7 +1344,7 @@ static int CmdHFMFPChKey(const char *Cmd) {
     }
 
     if (verbose) {
-        PrintAndLogEx(INFO, "--key index:", sprint_hex(keyn, 2));
+        PrintAndLogEx(INFO, "--key index: %s", sprint_hex(keyn, 2));
     }
 
     int res = MifareAuth4(&mf4session, keyn, key, false, true, true, true, verbose, false);
@@ -1462,7 +1462,7 @@ static int CmdHFMFPChConf(const char *Cmd) {
     keyn[1] = usecck ? 0x01 : 0x00;
 
     if (verbose) {
-        PrintAndLogEx(INFO, "--key index:", sprint_hex(keyn, 2));
+        PrintAndLogEx(INFO, "--key index: %s", sprint_hex(keyn, 2));
     }
 
     int res = MifareAuth4(&mf4session, keyn, key, false, true, true, true, verbose, false);

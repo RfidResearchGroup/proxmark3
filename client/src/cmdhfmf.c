@@ -11288,7 +11288,7 @@ static int CmdHF14AMfValue(const char *Cmd) {
         optionsprovided++;
         action = 0;
         if ((incval <= 0) || (incval > 2147483647)) {
-            PrintAndLogEx(WARNING, "increment value must be between 1 and 2147483647. Got %lli", incval);
+            PrintAndLogEx(WARNING, "increment value must be between 1 and 2147483647. Got %" PRId64, incval);
             return PM3_EINVARG;
         } else
             value = (uint32_t)incval;
@@ -11298,7 +11298,7 @@ static int CmdHF14AMfValue(const char *Cmd) {
         optionsprovided++;
         action = 1;
         if ((decval <= 0) || (decval > 2147483647)) {
-            PrintAndLogEx(WARNING, "decrement value must be between 1 and 2147483647. Got %lli", decval);
+            PrintAndLogEx(WARNING, "decrement value must be between 1 and 2147483647. Got %" PRId64, decval);
             return PM3_EINVARG;
         } else
             value = (uint32_t)decval;
@@ -11308,7 +11308,7 @@ static int CmdHF14AMfValue(const char *Cmd) {
         optionsprovided++;
         action = 3;
         if ((setval < -2147483647) || (setval > 2147483647)) {
-            PrintAndLogEx(WARNING, "set value must be between -2147483647 and 2147483647. Got %lli", setval);
+            PrintAndLogEx(WARNING, "set value must be between -2147483647 and 2147483647. Got %" PRId64, setval);
             return PM3_EINVARG;
         } else
             value = (uint32_t)setval;
