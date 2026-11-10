@@ -11665,6 +11665,48 @@ static int CmdHF14AMfSAM(const char *Cmd) {
     return hid_sam_iso14a_cmd(Cmd, "hf mf sam", CMD_HF_SAM_MFC, HID_SRC_MFC);
 }
 
+// Transit fingerprint. Sector keys info already found count, every other sector a
+// parser identifies by gets one key check per key type with just its candidate keys.
+static void mf_info_transit(const sector_t *e_sector, uint8_t sectors, uint8_t keytype, const uint8_t *key, transit_idents_t *ids) {
+
+    transit_mfc_info_t info;
+    memset(&info, 0, sizeof(info));
+    for (uint8_t s = 0; e_sector != NULL && s < sectors && s < TRANSIT_MFC_MAX_SECTORS; s++) {
+        for (uint8_t t = 0; t < 2; t++) {
+            info.found[s][t] = e_sector[s].foundKey[t];
+            info.key[s][t] = e_sector[s].Key[t];
+        }
+    }
+
+    // MAD block 1 with the sector 0 key info found
+    uint8_t blk1[MFBLOCK_SIZE] = {0};
+    if (keytype != 0xFF && mf_read_block(1, keytype, key, blk1) == PM3_SUCCESS) {
+        info.block1 = blk1;
+    }
+
+    uint64_t mask = transit_mfc_probe_sectors();
+    for (uint8_t s = 0; s < TRANSIT_MFC_MAX_SECTORS; s++) {
+        if ((mask & (1ULL << s)) == 0) {
+            continue;
+        }
+        for (uint8_t t = 0; t < 2; t++) {
+            // skip keys already known, and key B once key A is
+            if (info.found[s][t] || (t == MF_KEY_B && info.found[s][MF_KEY_A])) {
+                continue;
+            }
+            uint8_t keys[16 * MIFARE_KEY_SIZE];
+            size_t n = transit_mfc_probe_keys(s, t, keys, 16);
+            uint64_t found = 0;
+            if (n > 0 && mf_check_keys(mfFirstBlockOfSector(s), t, false, n, keys, &found) == PM3_SUCCESS) {
+                info.found[s][t] = true;
+                info.key[s][t] = found;
+            }
+        }
+    }
+
+    transit_mfc_identify(&info, ids);
+}
+
 static int CmdHF14AMfInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf info",
@@ -11947,6 +11989,9 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         PrintAndLogEx(NORMAL, "%s", sprint_ascii(blockdata + 8, 8));
     }
 
+    transit_idents_t transit_ids;
+    mf_info_transit(e_sector, sectorsCnt, fKeyType, fkey, &transit_ids);
+
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint"));
     bool expect_static_enc_nonce = false;
@@ -12052,9 +12097,12 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             ParseAndPrintSaflokData(&e_sector[0], &e_sector[1]);
         }
 
-    } else {
+    } else if (transit_ids.count == 0) {
         PrintAndLogEx(INFO, "<n/a>");
     }
+
+    transit_print_idents(&transit_ids);
+    transit_print_ident_hints(&transit_ids, NULL);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Magic Tag Information"));
