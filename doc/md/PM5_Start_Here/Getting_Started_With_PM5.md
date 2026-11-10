@@ -82,22 +82,12 @@ For more options, look [here](#Build-Extras)
 
 ## Flash the FPGA
 
+This writes `client/resources/fpga_pm5.bin` to the FPGA flash.
 ```
 ./pm3
 script run update_fpga
 ```
 
-This writes `client/resources/fpga_pm5.bin` to the FPGA flash.
-
-### Build the FPGA image from source
-The PM5 bitstream is built with the open source toolchain (yosys, nextpnr-himbaechel, apicula) from [oss-cad-suite](https://github.com/YosysHQ/oss-cad-suite-build/releases). Use the release pinned in `.github/workflows/fpga-pm5.yml`: older yosys builds give images with a weaker antenna drive. Unpack it next to the repository (`../oss-cad-suite`) or point `OSS_CAD_SUITE` at it.
-
-```
-make -C fpga pm5                 # builds fpga/fpga_pm5.bin
-make -C fpga fpga_pm5_release    # also copies it to client/resources
-```
-
-The build is reproducible: the same sources and toolchain give the same bytes as the CI artifact. To try an image without touching the FPGA flash, load it into SRAM with `hw fpga config -s -f fpga/fpga_pm5.bin`. A power cycle returns to the image in flash.
 
 ## I Have A BWM Now What
 
@@ -166,6 +156,8 @@ On Windows, you can try the following:
 - Open the proxmark client to try to connect to verify your device is re-working.
 
 
+##
+
 ## Build Extras
 The Proxmark5 platform must be specified when compiling the firmware.
 You have several options:
@@ -198,3 +190,4 @@ Do not use them unless you fully understand what you're doing.
 - [PM5 RGB Controller](./PM5_Controllers/PM5_RGB_Controller_RM.md)
 - [PM5 BWM Install](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/master/INSTALL.md)
 - [PM5 <--> Flipper Usage](./PM5-FLIPPER-USAGE.md)
+- [Compile the FPGA Image From Source](./Compiling_the_FGPA.md)
