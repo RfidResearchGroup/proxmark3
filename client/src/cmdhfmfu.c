@@ -41,6 +41,7 @@
 #include "crc16.h"
 #include "crypto/originality.h"
 #include "util.h"
+#include "parsers/parsetransit.h"   // transit card parsers
 #include <pthread.h>
 #include <vec/vec.h>
 
@@ -3932,6 +3933,10 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 
     if (ndef_detect_message(dump_file_data.data, pages * MFU_BLOCK_SIZE)) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu ndefread")"`");
+    }
+
+    if (start_page == 0) {
+        (void)transit_mfu_parse(dump_file_data.data, pages * MFU_BLOCK_SIZE);
     }
 
     if (nosave) {
@@ -8574,13 +8579,15 @@ static int CmdHF14AMfuView(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfu view",
                   "Print a MIFARE Ultralight/NTAG dump file (bin/eml/json)",
-                  "hf mfu view -f hf-mfu-01020304-dump.bin"
+                  "hf mfu view -f hf-mfu-01020304-dump.bin\n"
+                  "hf mfu view --selftest"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
+        arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0("v", "verbose", "Verbose output"),
         arg_lit0("z", "dense", "dense dump output style"),
+        arg_lit0(NULL, "selftest", "Run the dump parsers self tests and exit"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -8589,7 +8596,17 @@ static int CmdHF14AMfuView(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     bool verbose = arg_get_lit(ctx, 2);
     bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 3));
+    bool selftest = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
+
+    if (selftest) {
+        return transit_mfu_selftest();
+    }
+
+    if (fnlen == 0) {
+        PrintAndLogEx(ERR, "Specify a filename with `-f` or run `--selftest`");
+        return PM3_EINVARG;
+    }
 
     // read dump file
     uint8_t *dump = NULL;
@@ -8630,6 +8647,8 @@ static int CmdHF14AMfuView(const char *Cmd) {
     if (ndef_detect_message(p->data, block_cnt * MFU_BLOCK_SIZE)) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu ndefread")"`");
     }
+
+    (void)transit_mfu_parse(p->data, block_cnt * MFU_BLOCK_SIZE);
 
     free(dump);
     return PM3_SUCCESS;

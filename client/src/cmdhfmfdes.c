@@ -36,6 +36,7 @@
 #include "protocols.h"
 #include "parsers/parsehrt.h"
 #include "parsers/parsenortic.h"
+#include "parsers/parsetransit.h"  // transit card parsers
 #include "cmdtrace.h"
 #include "cliparser.h"
 #include "iso7816/apduinfo.h"       // APDU manipulation / errorcodes
@@ -9058,6 +9059,8 @@ static int CmdHF14ADesDump(const char *Cmd) {
 
     DropField();
 
+    (void)transit_mfdes_parse(dump);
+
     if (nosave) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "Called with no save option");
@@ -9863,7 +9866,11 @@ static int CmdHF14ADesView(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (selftest) {
-        return nortic_selftest();
+        int res = nortic_selftest();
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+        return transit_mfdes_selftest();
     }
 
     if (fnlen == 0) {
@@ -9943,6 +9950,8 @@ static int CmdHF14ADesView(const char *Cmd) {
     if (is_valid_nortic_card(dump)) {
         (void)nortic_parser_parse(dump);
     }
+
+    (void)transit_mfdes_parse(dump);
 
     if (verbose) {
         PrintAndLogEx(NORMAL, "");

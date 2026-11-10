@@ -48,6 +48,7 @@
 #include "parsers/parsehexact.h"
 #include "parsers/parseproac.h"
 #include "parsers/parserkf.h"
+#include "parsers/parsetransit.h"  // transit card parsers
 #include "generator.h"              // keygens.
 #include "fpga.h"
 #include "mifare/mifarehost.h"
@@ -913,6 +914,8 @@ static int mf_view_dump(uint8_t *dump, size_t bytes_read, uint16_t block_cnt, bo
     if (is_valid_rkf_card(dump, bytes_read)) {
         (void)rkf_parser_parse(dump, bytes_read);
     }
+
+    (void)transit_mfc_parse(dump, bytes_read);
 
     return PM3_SUCCESS;
 }
@@ -4046,6 +4049,8 @@ all_found:
     free(fptr);
 
     pm3_save_mf_dump(outfilename, dump, bytes, jsfCardMemory);
+
+    (void)transit_mfc_parse(dump, bytes);
     free(dump);
 
 out:
@@ -8770,7 +8775,11 @@ static int CmdHF14AMfView(const char *Cmd) {
         if (res != PM3_SUCCESS) {
             return res;
         }
-        return rkf_selftest();
+        res = rkf_selftest();
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+        return transit_mfc_selftest();
     }
 
     if (fnlen == 0) {

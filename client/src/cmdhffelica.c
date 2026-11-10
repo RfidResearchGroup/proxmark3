@@ -39,6 +39,7 @@
 #include "util_posix.h"  // msleep, msclock
 #include "jansson.h"
 #include "jsonutils.h"
+#include "parsers/parsetransit.h"  // transit card parsers
 
 
 #define FELICA_BLK_SIZE 16
@@ -5437,6 +5438,60 @@ static void felica_dump_systems_free(felica_dump_system_t *systems, size_t syste
     }
 }
 
+// Hand the public service blocks to the transit parsers, blocks laid out by number
+static void felica_dump_run_transit_parsers(const felica_dump_system_t *systems, size_t system_count) {
+    transit_felica_system_t tsys[FELICA_DISCOVERED_SYSTEM_MAX_COUNT];
+    memset(tsys, 0, sizeof(tsys));
+    size_t tcount = 0;
+
+    for (size_t i = 0; i < system_count && tcount < ARRAYLEN(tsys); i++) {
+        const felica_dump_system_t *sys = &systems[i];
+        transit_felica_service_t *svc = calloc(sys->node_count + 1, sizeof(transit_felica_service_t));
+        if (svc == NULL) {
+            break;
+        }
+        size_t n = 0;
+        for (size_t j = 0; j < sys->node_count; j++) {
+            const felica_dump_node_t *node = &sys->nodes[j];
+            if (node->type != FELICA_NODE_TYPE_SERVICE || node->block_count == 0) {
+                continue;
+            }
+            uint16_t blocks = 0;
+            for (size_t k = 0; k < node->block_count; k++) {
+                if (node->blocks[k].block_number >= blocks) {
+                    blocks = node->blocks[k].block_number + 1;
+                }
+            }
+            uint8_t *buf = calloc(blocks, FELICA_BLK_SIZE);
+            if (buf == NULL) {
+                continue;
+            }
+            for (size_t k = 0; k < node->block_count; k++) {
+                memcpy(buf + (node->blocks[k].block_number * FELICA_BLK_SIZE), node->blocks[k].data, FELICA_BLK_SIZE);
+            }
+            svc[n].code = node->node_code_le;
+            svc[n].block_count = blocks;
+            svc[n].blocks = buf;
+            n++;
+        }
+        tsys[tcount].system_code = sys->system_code;
+        memcpy(tsys[tcount].idm, sys->idm, sizeof(tsys[tcount].idm));
+        tsys[tcount].service_count = n;
+        tsys[tcount].services = svc;
+        tcount++;
+    }
+
+    transit_felica_card_t card = { .system_count = tcount, .systems = tsys };
+    (void)transit_felica_parse(&card);
+
+    for (size_t i = 0; i < tcount; i++) {
+        for (size_t j = 0; j < tsys[i].service_count; j++) {
+            free((void *)tsys[i].services[j].blocks);
+        }
+        free((void *)tsys[i].services);
+    }
+}
+
 static felica_dump_node_t *felica_dump_system_add_node(felica_dump_system_t *system,
                                                        const felica_discovered_node_t *node) {
     if (system == NULL || node == NULL) {
@@ -7196,7 +7251,8 @@ static int CmdHFFelicaDump(const char *Cmd) {
                   "hf felica dump\n"
                   "hf felica dump --retry 5\n"
                   "hf felica dump --idm 11100910C11BC407\n"
-                  "hf felica dump -f my-felica-dump");
+                  "hf felica dump -f my-felica-dump\n"
+                  "hf felica dump --selftest");
     void *argtable[] = {
         arg_param_begin,
         arg_lit0(NULL, "no-auth", "read public services"),
@@ -7204,6 +7260,7 @@ static int CmdHFFelicaDump(const char *Cmd) {
         arg_str0(NULL, "idm", "<hex>", "use custom IDm"),
         arg_str0("f", "file", "<fn>", "Specify a filename for JSON dump file"),
         arg_lit0(NULL, "no-ic-optimizations", "attempt all commands even if the IC is known not to support them"),
+        arg_lit0(NULL, "selftest", "Run the transit parsers self tests and exit"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -7215,9 +7272,20 @@ static int CmdHFFelicaDump(const char *Cmd) {
     int fnlen = 0;
     CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     bool no_ic_optimizations = arg_get_lit(ctx, 5);
+    bool selftest = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
     if (res) {
         return PM3_EINVARG;
+    }
+
+    if (selftest) {
+        return transit_felica_selftest();
+    }
+
+    // listed as always available so the self test runs offline
+    if (IfPm3Felica() == false) {
+        PrintAndLogEx(WARNING, "Only offline mode is available, use `" _YELLOW_("--selftest") "`");
+        return PM3_ENOTTY;
     }
 
     // bool no_auth = arg_get_lit(ctx, 1);
@@ -7297,6 +7365,8 @@ static int CmdHFFelicaDump(const char *Cmd) {
     if (fnlen == 0) {
         snprintf(filename, sizeof(filename), "hf-felica-%s-dump", sprint_hex_inrow(idm, sizeof(idm)));
     }
+
+    felica_dump_run_transit_parsers(dump_systems, dump_system_count);
 
     json_t *root = felica_dump_systems_json(dump_systems, dump_system_count, &dump_metadata);
     if (root == NULL) {
@@ -9565,7 +9635,7 @@ static command_t CommandTable[] = {
     {"-----------",     CmdHelp,                          AlwaysAvailable, "----------------------- " _CYAN_("FeliCa SEAC") " -----------------------"},
     {"seacauth1",       CmdHFFelicaSeacAuth1,             IfPm3Felica,     "FeliCa SEAC Authentication1"},
     {"-----------",     CmdHelp,                          AlwaysAvailable, "----------------------- " _CYAN_("FeliCa Standard") " -----------------------"},
-    {"dump",            CmdHFFelicaDump,                  IfPm3Felica,     "Wait for and try dumping FeliCa"},
+    {"dump",            CmdHFFelicaDump,                  AlwaysAvailable,     "Wait for and try dumping FeliCa"},
     {"discnodes",       CmdHFFelicaDiscoverNodes,         IfPm3Felica,     "discover Area Code and Service Code nodes."},
     {"sim",             CmdHFFelicaSim,                   IfPm3Felica,     "Emulate FeliCa Standard from dump file"},
     {"rqservice",       CmdHFFelicaRequestService,        IfPm3Felica,     "verify the existence of Area and Service, and to acquire Key Version."},

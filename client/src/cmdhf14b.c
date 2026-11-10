@@ -41,6 +41,7 @@
 #include "atrs.h"               // atqbToEmulatedAtr
 #include "pla.h"                // ECP parsing
 #include "parsers/parsemykey.h" // MyKey / COGES
+#include "parsers/parsetransit.h" // transit card parsers
 
 #define MAX_14B_TIMEOUT_MS (4949U)
 
@@ -937,6 +938,8 @@ static void sr_view_dump(uint8_t *data, size_t len, const uint8_t *uid, bool den
     if (is_valid_mykey_card(data, len)) {
         (void)mykey_parser_parse(data, len, uid);
     }
+
+    (void)transit_st25tb_parse(data, len, uid);
 }
 
 static void print_std_blocks(uint8_t *data, size_t len, const uint8_t *uid, uint8_t uidlen, bool dense_output) {
@@ -3362,7 +3365,11 @@ static int CmdHF14BView(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (selftest) {
-        return mykey_selftest();
+        int res = mykey_selftest();
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+        return transit_st25tb_selftest();
     }
 
     if (fnlen == 0) {
