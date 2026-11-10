@@ -131,6 +131,16 @@ static int CmdLFPCF7931Config(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    if (delay != -1 && (delay == 0 || delay > 0xFFFF)) {
+        PrintAndLogEx(ERR, "Delay must be between 1-65535 us");
+        return PM3_EINVARG;
+    }
+
+    if ((ow != 0xFFFF && (ow < -128 || ow > 127)) || (op != 0xFFFF && (op < -128 || op > 127))) {
+        PrintAndLogEx(ERR, "Offsets must be between -128 and 127 us");
+        return PM3_EINVARG;
+    }
+
     if (pwd_len) {
         memcpy(configPcf.Pwd, pwd, sizeof(configPcf.Pwd));
     }
