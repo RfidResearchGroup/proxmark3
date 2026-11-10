@@ -479,6 +479,7 @@ while true; do
       if ! CheckExecute "jooki encode test"       "$CLIENTBIN -c 'hf jooki encode --test'" "04 28 F4 DA F0 4A 81  \( ok \)"; then break; fi
       if ! CheckExecute "vigik signature selftest" "$CLIENTBIN -c 'hf mf view --selftest'" "selftest \\( ok \\)"; then break; fi
       if ! CheckExecute "analyse regex selftest"  "$CLIENTBIN -c 'analyse regex --test'" "Tests \( ok \)"; then break; fi
+      if ! CheckExecute "hf 15 implant selftest"  "$CLIENTBIN -c 'hf 15 implant --test'" "Tests \( ok \)"; then break; fi
       if ! CheckExecute "trace load/list 14a"     "$CLIENTBIN -c 'trace load -f traces/hf_14a_mfu.trace; trace list -1 -t 14a;'" "READBLOCK\(8\)"; then break; fi
       if ! CheckExecute "trace load/list x"       "$CLIENTBIN -c 'trace load -f traces/hf_14a_mfu.trace; trace list -x1 -t 14a;'" "0.0101840425"; then break; fi
       if ! CheckExecute "trace list 7816 T=0 apdu"  "$CLIENTBIN -c 'trace load -f traces/smart_7816.trace; trace list -1 -t 7816;'" "A0  A4  00  00  02  3F  00 .*SELECT FILE"; then break; fi

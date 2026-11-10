@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hf 15 implant` - read temperature from NTAG 5 link sensor implants (VivoKey Thermo, Temptress) with TMP112/TMP117/TMP119 (@iceman1001)
 - Added `hf goodisplay load` - write images to Goodisplay NFC e-paper tags GDEY0154D67, GDEY0213B74, GDEY029T94 and GDEY037T03, protocol from the Flipper Zero NFC Eink app (@iceman1001)
 - Changed `hf 14a info` - hints at `hf waveshare` / `hf goodisplay` for e-paper tags (@iceman1001)
 - Fixed `hf waveshare load` - 2.7" height is 264, and last pixels of non byte-aligned rows (2.13") were misplaced (@iceman1001)

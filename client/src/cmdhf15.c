@@ -1244,7 +1244,9 @@ static int CmdHF15Info(const char *Cmd) {
             return NxpSysInfo(uid);
         } else if (d[7] == 0x01 && nxp_version == 0x18) { // If it is an NTAG 5 / ICODE DNA
             PrintAndLogEx(DEBUG, "NTAG 5 / ICODE DNA Detected, getting NXP System Info");
-            return NxpSysInfo(uid);
+            int res = NxpSysInfo(uid);
+            PrintAndLogEx(HINT, "Hint: NTAG 5 link sensor implant? Try `" _YELLOW_("hf 15 implant") "`");
+            return res;
         } else if (d[7] == 0x01 && ((d[6] & 0x78) == 0x20)) { // If it is an NTAG ICODE 3
             PrintAndLogEx(DEBUG, "ICODE 3 Detected, getting NXP System Info");
             return NxpSysInfo(uid);
@@ -4240,6 +4242,809 @@ static int CmdHF15Wipe(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// NTAG 5 link (NTP5332) I2C master + TI TMP112/TMP117/TMP119 sensor implants
+// e.g. VivoKey Thermo, Temptress.
+// Refs: NXP NTP53x2 datasheet rev 3.3, AN12365, AN12368, TI TMP112/TMP117/TMP119 datasheets.
+// Sequence cross-checked with VivoKey ntag5sensor and vkthermo-flipper.
+#define NTAG5_CMD_READ_CONFIG       0xC0
+#define NTAG5_CMD_WRITE_CONFIG      0xC1
+#define NTAG5_CMD_READ_SRAM         0xD2
+#define NTAG5_CMD_WRITE_I2C         0xD4
+#define NTAG5_CMD_READ_I2C          0xD5
+
+// session registers, NFC block address
+#define NTAG5_REG_STATUS            0xA0
+#define NTAG5_REG_CONFIG            0xA1
+#define NTAG5_REG_EH_CONFIG         0xA7
+#define NTAG5_REG_I2C_M_STATUS      0xAD
+
+#define NTAG5_STATUS1_VCC_BOOT_OK   0x80
+#define NTAG5_CONFIG1_USE_CASE_MASK 0x30
+#define NTAG5_CONFIG1_I2C_MASTER    0x10
+#define NTAG5_CONFIG1_SRAM_ENABLED  0x02
+#define NTAG5_EH_LOAD_OK            0x80
+// EH_TRIGGER must be set on every write
+#define NTAG5_EH_TRIGGER            0x08
+#define NTAG5_EH_ENABLE             0x01
+#define NTAG5_I2C_M_WDT_EXPIRED     0x08
+#define NTAG5_I2C_M_TRANS_MASK      0x06
+#define NTAG5_I2C_M_ADDR_NAK        0x02
+#define NTAG5_I2C_M_DATA_NAK        0x04
+#define NTAG5_I2C_M_SUCCESS         0x06
+#define NTAG5_I2C_M_BUSY            0x01
+
+#define TMP_REG_TEMP                0x00
+#define TMP_REG_CONFIG              0x01
+#define TMP_REG_DEVICE_ID           0x0F
+#define TMP11X_DID                  0x0117
+#define TMP119_REV                  0x2
+#define TMP112_CFG_OS               0x8000
+#define TMP112_CFG_SD               0x0100
+#define TMP117_CFG_DATA_READY       0x2000
+#define TMP117_CFG_MOD_ONESHOT      0x0C00
+// CONV, AVG, T/nA, POL, DR/Alert
+#define TMP117_CFG_KEEP             0x03FC
+
+#define IMPLANT_I2C_ADDR_FIRST      0x48
+#define IMPLANT_I2C_ADDR_LAST       0x4B
+#define IMPLANT_MAX_SENSORS         (IMPLANT_I2C_ADDR_LAST - IMPLANT_I2C_ADDR_FIRST + 1)
+
+typedef enum {
+    TMP_SENSOR_AUTO = 0,
+    TMP_SENSOR_TMP112,
+    TMP_SENSOR_TMP117,
+    TMP_SENSOR_TMP119,
+} tmp_sensor_t;
+
+typedef struct {
+    uint8_t uid[ISO15693_UID_LENGTH];
+    bool field_on;
+    bool verbose;
+} ntag5_ctx_t;
+
+typedef struct {
+    uint8_t addr;
+    tmp_sensor_t type;
+} tmp_dev_t;
+
+static const char *tmp_sensor_str(tmp_sensor_t t) {
+    switch (t) {
+        case TMP_SENSOR_TMP112:
+            return "TMP112";
+        case TMP_SENSOR_TMP117:
+            return "TMP117";
+        case TMP_SENSOR_TMP119:
+            return "TMP119";
+        case TMP_SENSOR_AUTO:
+        default:
+            return "unknown";
+    }
+}
+
+// TMP117 and TMP119 share DID 117h, TMP119 has Rev 2h. Anything else is taken as TMP112
+static tmp_sensor_t tmp_sensor_from_id(uint16_t id) {
+    if ((id & 0x0FFF) != TMP11X_DID) {
+        return TMP_SENSOR_TMP112;
+    }
+    return ((id >> 12) == TMP119_REV) ? TMP_SENSOR_TMP119 : TMP_SENSOR_TMP117;
+}
+
+static double tmp_raw_to_celsius(tmp_sensor_t t, uint16_t raw) {
+    if (t == TMP_SENSOR_TMP112) {
+        // 0.0625 C/LSB, left justified. D0 set = extended mode, 13 bit
+        if (raw & 0x0001) {
+            return (int16_t)(raw & 0xFFF8) / 128.0;
+        }
+        return (int16_t)(raw & 0xFFF0) / 256.0;
+    }
+    // 7.8125 mC/LSB
+    return (int16_t)raw / 128.0;
+}
+
+static double celsius_to_fahrenheit(double c) {
+    return (c * 9.0 / 5.0) + 32.0;
+}
+
+static bool implant_dbl_eq(double a, double b) {
+    double d = a - b;
+    return (d < 1e-9 && d > -1e-9);
+}
+
+// uid is LSB first. NTAG 5 family, see uidmapping
+static bool ntag5_uid_match(const uint8_t *uid) {
+    return (uid[7] == 0xE0 && uid[6] == 0x04 && uid[5] == 0x01 && ((uid[4] & 0x18) == 0x18));
+}
+
+// Addressed NXP custom command, field kept on between calls.
+// out gets the payload without flags and CRC.
+static int ntag5_cmd(ntag5_ctx_t *c, uint8_t cmd, const uint8_t *param, uint8_t plen, bool write_alike,
+                     uint8_t *out, uint16_t outmax, uint16_t *outlen) {
+
+    if (outlen) {
+        *outlen = 0;
+    }
+
+    uint16_t len = 3 + ISO15693_UID_LENGTH + plen + 2;
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + len);
+    if (packet == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    packet->raw[packet->rawlen++] = (ISO15_REQ_SUBCARRIER_SINGLE | ISO15_REQ_DATARATE_HIGH | ISO15_REQ_NONINVENTORY | ISO15_REQ_ADDRESS);
+    packet->raw[packet->rawlen++] = cmd;
+    packet->raw[packet->rawlen++] = 0x04; // IC manufacturer code
+    memcpy(packet->raw + packet->rawlen, c->uid, ISO15693_UID_LENGTH);
+    packet->rawlen += ISO15693_UID_LENGTH;
+    if (plen) {
+        memcpy(packet->raw + packet->rawlen, param, plen);
+        packet->rawlen += plen;
+    }
+    AddCrc15(packet->raw, packet->rawlen);
+    packet->rawlen += 2;
+
+    // EH needs the field to stay up, only power it up once
+    packet->flags = (ISO15_HIGH_SPEED | ISO15_READ_RESPONSE | ISO15_NO_DISCONNECT);
+    if (c->field_on == false) {
+        packet->flags |= ISO15_CONNECT;
+        c->field_on = true;
+    }
+    if (write_alike) {
+        packet->flags |= ISO15_LONG_WAIT;
+    }
+
+    if (c->verbose) {
+        PrintAndLogEx(INFO, "TX: %s", sprint_hex_inrow(packet->raw, packet->rawlen));
+    }
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
+    free(packet);
+
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
+        PrintAndLogEx(DEBUG, "iso15693 timeout");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status == PM3_ETEAROFF) {
+        return resp.status;
+    }
+
+    if (resp.length < 3) {
+        if (c->verbose) {
+            PrintAndLogEx(INFO, "RX: no answer");
+        }
+        return PM3_ETIMEOUT;
+    }
+
+    uint8_t *d = resp.data.asBytes;
+    if (c->verbose) {
+        PrintAndLogEx(INFO, "RX: %s", sprint_hex_inrow(d, resp.length));
+    }
+
+    if (check_crc(CRC_15693, d, resp.length) == false) {
+        PrintAndLogEx(DEBUG, "crc fail");
+        return PM3_ECRC;
+    }
+
+    if ((d[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) {
+        PrintAndLogEx((c->verbose) ? INFO : DEBUG, "cmd %02X, tag error %02X: %s", cmd, d[1], TagErrorStr(d[1]));
+        return PM3_EWRONGANSWER;
+    }
+
+    if (out && outlen) {
+        *outlen = MIN(resp.length - 3, outmax);
+        memcpy(out, d + 1, *outlen);
+    }
+    return PM3_SUCCESS;
+}
+
+// session register, one 4 byte block
+static int ntag5_read_reg(ntag5_ctx_t *c, uint8_t addr, uint8_t *blk) {
+    uint8_t param[] = { addr, 0x00 };
+    uint16_t n = 0;
+    int res = ntag5_cmd(c, NTAG5_CMD_READ_CONFIG, param, sizeof(param), false, blk, 4, &n);
+    if (res == PM3_SUCCESS && n < 4) {
+        return PM3_ELENGTH;
+    }
+    return res;
+}
+
+static int ntag5_write_reg(ntag5_ctx_t *c, uint8_t addr, const uint8_t *blk) {
+    uint8_t param[5] = { addr };
+    memcpy(param + 1, blk, 4);
+    int res = ntag5_cmd(c, NTAG5_CMD_WRITE_CONFIG, param, sizeof(param), true, NULL, 0, NULL);
+    // reply may be missed while VOUT ramps, caller verifies by reading back
+    if (res == PM3_ETIMEOUT) {
+        PrintAndLogEx(DEBUG, "no reply to WRITE CONFIG %02X", addr);
+        return PM3_SUCCESS;
+    }
+    return res;
+}
+
+// Energy harvesting via session register, AN12365 4.1
+static int ntag5_power_up(ntag5_ctx_t *c, uint32_t timeout_ms) {
+
+    uint8_t st[4] = {0};
+    uint64_t t0 = msclock();
+    int res;
+    do {
+        res = ntag5_read_reg(c, NTAG5_REG_STATUS, st);
+        if (res == PM3_ETEAROFF) {
+            return res;
+        }
+        if (res != PM3_SUCCESS) {
+            msleep(20);
+        }
+    } while (res != PM3_SUCCESS && (msclock() - t0) < timeout_ms);
+
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "no answer from tag");
+        return res;
+    }
+
+    if (st[1] & NTAG5_STATUS1_VCC_BOOT_OK) {
+        PrintAndLogEx(INFO, "VCC already up, energy harvesting active");
+        return PM3_SUCCESS;
+    }
+
+    uint8_t eh[4] = { NTAG5_EH_TRIGGER, 0x00, 0x00, 0x00 };
+    res = ntag5_write_reg(c, NTAG5_REG_EH_CONFIG, eh);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "failed to trigger energy harvesting");
+        return res;
+    }
+
+    PrintAndLogEx(INPLACE, "Waiting for energy harvesting...");
+    bool load_ok = false;
+    while ((msclock() - t0) < timeout_ms) {
+
+        if (kbd_enter_pressed()) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(WARNING, "aborted via keyboard");
+            return PM3_EOPABORTED;
+        }
+
+        if (ntag5_read_reg(c, NTAG5_REG_EH_CONFIG, eh) == PM3_SUCCESS && (eh[0] & NTAG5_EH_LOAD_OK)) {
+            load_ok = true;
+            break;
+        }
+        msleep(50);
+    }
+    PrintAndLogEx(NORMAL, "");
+
+    if (load_ok == false) {
+        PrintAndLogEx(FAILED, "energy harvesting not ready after %u ms, field too weak? Try to reposition or increase `--wait`", timeout_ms);
+        return PM3_ETIMEOUT;
+    }
+
+    eh[0] = (NTAG5_EH_TRIGGER | NTAG5_EH_ENABLE);
+    res = ntag5_write_reg(c, NTAG5_REG_EH_CONFIG, eh);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "failed to enable energy harvesting");
+        return res;
+    }
+
+    // VCC ramp up is write alike, max 20 ms
+    uint64_t t1 = msclock();
+    while ((msclock() - t1) < 100) {
+        msleep(10);
+        if (ntag5_read_reg(c, NTAG5_REG_STATUS, st) == PM3_SUCCESS && (st[1] & NTAG5_STATUS1_VCC_BOOT_OK)) {
+            PrintAndLogEx(INFO, "Energy harvesting ( " _GREEN_("ok") " ) after %u ms", (uint32_t)(msclock() - t0));
+            return PM3_SUCCESS;
+        }
+    }
+
+    PrintAndLogEx(WARNING, "VCC_BOOT_OK not set, sensor may be unpowered. Trying anyway");
+    return PM3_SUCCESS;
+}
+
+static const char *ntag5_i2c_status_str(uint8_t st) {
+    if (st & NTAG5_I2C_M_BUSY) {
+        return "bus busy";
+    }
+    if (st & NTAG5_I2C_M_WDT_EXPIRED) {
+        return "watchdog expired";
+    }
+    switch (st & NTAG5_I2C_M_TRANS_MASK) {
+        case NTAG5_I2C_M_ADDR_NAK:
+            return "address NAK";
+        case NTAG5_I2C_M_DATA_NAK:
+            return "data NAK";
+        case NTAG5_I2C_M_SUCCESS:
+            return "ok";
+        default:
+            return "no transaction";
+    }
+}
+
+// Poll I2C master status until idle.
+// PM3_ENODATA address NAK, PM3_EWRONGANSWER data NAK, PM3_ETIMEOUT busy / WDT
+static int ntag5_i2c_wait(ntag5_ctx_t *c, bool check_result) {
+    uint8_t st[4] = {0};
+    int res = PM3_ETIMEOUT;
+    for (uint8_t i = 0; i < 20; i++) {
+        res = ntag5_read_reg(c, NTAG5_REG_I2C_M_STATUS, st);
+        if (res == PM3_SUCCESS && (st[0] & NTAG5_I2C_M_BUSY) == 0) {
+            break;
+        }
+        res = PM3_ETIMEOUT;
+        msleep(5);
+    }
+
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(DEBUG, "I2C master busy / no status");
+        return res;
+    }
+
+    if (check_result == false) {
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(DEBUG, "I2C status %02X ( %s )", st[0], ntag5_i2c_status_str(st[0]));
+
+    if (st[0] & NTAG5_I2C_M_WDT_EXPIRED) {
+        return PM3_ETIMEOUT;
+    }
+
+    switch (st[0] & NTAG5_I2C_M_TRANS_MASK) {
+        case NTAG5_I2C_M_SUCCESS:
+            return PM3_SUCCESS;
+        case NTAG5_I2C_M_ADDR_NAK:
+            return PM3_ENODATA;
+        default:
+            return PM3_EWRONGANSWER;
+    }
+}
+
+static int ntag5_i2c_write(ntag5_ctx_t *c, uint8_t addr, const uint8_t *data, uint8_t len) {
+    if (len == 0 || len > 8) {
+        return PM3_EINVARG;
+    }
+
+    int res = ntag5_i2c_wait(c, false);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    // param: bit7 = 0 generates STOP, bits 6..0 slave address
+    uint8_t param[2 + 8] = { addr & 0x7F, len - 1 };
+    memcpy(param + 2, data, len);
+    res = ntag5_cmd(c, NTAG5_CMD_WRITE_I2C, param, 2 + len, false, NULL, 0, NULL);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+    return ntag5_i2c_wait(c, true);
+}
+
+static int ntag5_i2c_read(ntag5_ctx_t *c, uint8_t addr, uint8_t *out, uint8_t len) {
+    if (len == 0 || len > 8) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t param[] = { addr & 0x7F, len - 1 };
+    int res = ntag5_cmd(c, NTAG5_CMD_READ_I2C, param, sizeof(param), false, NULL, 0, NULL);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    res = ntag5_i2c_wait(c, true);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    // result lands at SRAM block 0
+    uint8_t sram_param[] = { 0x00, ((len + 3) / 4) - 1 };
+    uint8_t buf[8] = {0};
+    uint16_t n = 0;
+    res = ntag5_cmd(c, NTAG5_CMD_READ_SRAM, sram_param, sizeof(sram_param), false, buf, sizeof(buf), &n);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+    if (n < len) {
+        return PM3_ELENGTH;
+    }
+    memcpy(out, buf, len);
+    return PM3_SUCCESS;
+}
+
+static int tmp_read_reg(ntag5_ctx_t *c, uint8_t addr, uint8_t reg, uint16_t *val) {
+    int res = ntag5_i2c_write(c, addr, &reg, 1);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+    uint8_t d[2] = {0};
+    res = ntag5_i2c_read(c, addr, d, sizeof(d));
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+    *val = MemBeToUint2byte(d);
+    return PM3_SUCCESS;
+}
+
+static int tmp_write_reg(ntag5_ctx_t *c, uint8_t addr, uint8_t reg, uint16_t val) {
+    uint8_t d[3] = { reg, (val >> 8) & 0xFF, val & 0xFF };
+    return ntag5_i2c_write(c, addr, d, sizeof(d));
+}
+
+// PM3_ENODATA when nothing acks the address
+static int tmp_identify(ntag5_ctx_t *c, uint8_t addr, tmp_sensor_t *t) {
+    uint16_t id = 0;
+    int res = tmp_read_reg(c, addr, TMP_REG_DEVICE_ID, &id);
+    if (res == PM3_SUCCESS) {
+        *t = tmp_sensor_from_id(id);
+        PrintAndLogEx((c->verbose) ? INFO : DEBUG, "0x%02X device id %04X", addr, id);
+        return PM3_SUCCESS;
+    }
+
+    // TMP112 has no register 0Fh and may NAK the pointer
+    if (res == PM3_EWRONGANSWER) {
+        *t = TMP_SENSOR_TMP112;
+        return PM3_SUCCESS;
+    }
+    return res;
+}
+
+// one-shot conversion, then read the result register
+static int tmp_measure(ntag5_ctx_t *c, uint8_t addr, tmp_sensor_t t, uint16_t *raw) {
+
+    uint16_t cfg = 0;
+    int res = tmp_read_reg(c, addr, TMP_REG_CONFIG, &cfg);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    uint16_t ready_mask;
+    uint32_t timeout_ms;
+    if (t == TMP_SENSOR_TMP112) {
+        // one-shot only starts from shutdown
+        if ((cfg & TMP112_CFG_SD) == 0) {
+            cfg = (cfg | TMP112_CFG_SD) & ~TMP112_CFG_OS;
+            res = tmp_write_reg(c, addr, TMP_REG_CONFIG, cfg);
+            if (res != PM3_SUCCESS) {
+                return res;
+            }
+            // let a running conversion finish
+            msleep(40);
+        }
+        res = tmp_write_reg(c, addr, TMP_REG_CONFIG, cfg | TMP112_CFG_SD | TMP112_CFG_OS);
+        // OS reads 0 while converting, 1 when done
+        ready_mask = TMP112_CFG_OS;
+        timeout_ms = 200;
+    } else {
+        res = tmp_write_reg(c, addr, TMP_REG_CONFIG, (cfg & TMP117_CFG_KEEP) | TMP117_CFG_MOD_ONESHOT);
+        ready_mask = TMP117_CFG_DATA_READY;
+        // 64 averages take ~1 s
+        timeout_ms = 1500;
+    }
+
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    uint64_t t0 = msclock();
+    bool ready = false;
+    while ((msclock() - t0) < timeout_ms) {
+        msleep(10);
+        res = tmp_read_reg(c, addr, TMP_REG_CONFIG, &cfg);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+        if (cfg & ready_mask) {
+            ready = true;
+            break;
+        }
+    }
+
+    if (ready == false) {
+        PrintAndLogEx(WARNING, "0x%02X conversion not ready ( config %04X ), reading anyway", addr, cfg);
+    }
+
+    return tmp_read_reg(c, addr, TMP_REG_TEMP, raw);
+}
+
+static void ntag5_print_i2c_error(uint8_t addr, int res) {
+    switch (res) {
+        case PM3_ENODATA:
+            PrintAndLogEx(FAILED, "I2C 0x%02X address " _RED_("NAK") ", no sensor", addr);
+            break;
+        case PM3_EWRONGANSWER:
+            PrintAndLogEx(FAILED, "I2C 0x%02X data " _RED_("NAK") " or tag error", addr);
+            break;
+        case PM3_ETIMEOUT:
+            PrintAndLogEx(FAILED, "I2C 0x%02X timeout, bus busy or tag lost", addr);
+            break;
+        default:
+            PrintAndLogEx(FAILED, "I2C 0x%02X failed ( %d )", addr, res);
+            break;
+    }
+}
+
+static int implant_selftest(void) {
+
+    PrintAndLogEx(INFO, "======== " _CYAN_("self test") " ===========================================");
+
+    // vectors from the TI datasheet temperature data format tables
+    const struct {
+        tmp_sensor_t t;
+        uint16_t raw;
+        double c;
+    } conv[] = {
+        { TMP_SENSOR_TMP117, 0x7FFF, 255.9921875 },
+        { TMP_SENSOR_TMP117, 0x0C80, 25.0 },
+        { TMP_SENSOR_TMP117, 0x0001, 0.0078125 },
+        { TMP_SENSOR_TMP117, 0x0000, 0.0 },
+        { TMP_SENSOR_TMP117, 0xFFFF, -0.0078125 },
+        { TMP_SENSOR_TMP117, 0xF380, -25.0 },
+        { TMP_SENSOR_TMP119, 0x8000, -256.0 },
+        { TMP_SENSOR_TMP112, 0x7FF0, 127.9375 },
+        { TMP_SENSOR_TMP112, 0x3200, 50.0 },
+        { TMP_SENSOR_TMP112, 0x0010, 0.0625 },
+        { TMP_SENSOR_TMP112, 0xFFF0, -0.0625 },
+        { TMP_SENSOR_TMP112, 0xE700, -25.0 },
+        { TMP_SENSOR_TMP112, 0xC900, -55.0 },
+        { TMP_SENSOR_TMP112, 0x4B01, 150.0 },
+        { TMP_SENSOR_TMP112, 0xFFF9, -0.0625 },
+    };
+
+    const struct {
+        uint16_t id;
+        tmp_sensor_t t;
+    } ids[] = {
+        { 0x0117, TMP_SENSOR_TMP117 },
+        { 0x1117, TMP_SENSOR_TMP117 },
+        { 0x2117, TMP_SENSOR_TMP119 },
+        { 0x5000, TMP_SENSOR_TMP112 },
+    };
+
+    const struct {
+        uint8_t uid[ISO15693_UID_LENGTH];
+        bool match;
+    } uids[] = {
+        { { 0x01, 0x02, 0x03, 0x04, 0x18, 0x01, 0x04, 0xE0 }, true },
+        { { 0x01, 0x02, 0x03, 0x04, 0x08, 0x01, 0x04, 0xE0 }, false },
+        { { 0x01, 0x02, 0x03, 0x04, 0x18, 0x01, 0x02, 0xE0 }, false },
+    };
+
+    bool all_ok = true;
+
+    for (size_t i = 0; i < ARRAYLEN(conv); i++) {
+        double c = tmp_raw_to_celsius(conv[i].t, conv[i].raw);
+        bool ok = implant_dbl_eq(c, conv[i].c);
+        all_ok &= ok;
+        PrintAndLogEx(INFO, "%s %04X -> %11.7f C ( %s )", tmp_sensor_str(conv[i].t), conv[i].raw, c, ok ? _GREEN_("ok") : _RED_("fail"));
+    }
+
+    for (size_t i = 0; i < ARRAYLEN(ids); i++) {
+        tmp_sensor_t t = tmp_sensor_from_id(ids[i].id);
+        bool ok = (t == ids[i].t);
+        all_ok &= ok;
+        PrintAndLogEx(INFO, "device id %04X -> %s ( %s )", ids[i].id, tmp_sensor_str(t), ok ? _GREEN_("ok") : _RED_("fail"));
+    }
+
+    for (size_t i = 0; i < ARRAYLEN(uids); i++) {
+        bool ok = (ntag5_uid_match(uids[i].uid) == uids[i].match);
+        all_ok &= ok;
+        PrintAndLogEx(INFO, "uid %s NTAG 5 %s ( %s )", iso15693_sprintUID(NULL, (uint8_t *)uids[i].uid), uids[i].match ? "yes" : "no", ok ? _GREEN_("ok") : _RED_("fail"));
+    }
+
+    bool ok = implant_dbl_eq(celsius_to_fahrenheit(37.0), 98.6) && implant_dbl_eq(celsius_to_fahrenheit(-40.0), -40.0);
+    all_ok &= ok;
+    PrintAndLogEx(INFO, "fahrenheit ( %s )", ok ? _GREEN_("ok") : _RED_("fail"));
+
+    PrintAndLogEx(all_ok ? SUCCESS : FAILED, "Tests ( %s )", all_ok ? _GREEN_("ok") : _RED_("fail"));
+    return all_ok ? PM3_SUCCESS : PM3_ESOFT;
+}
+
+static int CmdHF15Implant(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 15 implant",
+                  "Read the temperature of an NTAG 5 link (NTP5332) based sensor implant,\n"
+                  "e.g. VivoKey Thermo (TMP112/TMP117/TMP119) or Temptress (2x TMP117 at 0x49, 0x4A).\n"
+                  "Powers the sensor by energy harvesting and talks I2C through the NTAG 5 link.\n"
+                  "Sensors at 0x48-0x4B are found by probing and identified by TMP117/119 device id.",
+                  "hf 15 implant\n"
+                  "hf 15 implant -n 5 -v\n"
+                  "hf 15 implant --dual\n"
+                  "hf 15 implant --addr 49 --sensor tmp117\n"
+                  "hf 15 implant -u E004011800000000 --wait 5000\n"
+                  "hf 15 implant --test"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("u", "uid", "<hex>", "full UID (8 hex bytes)"),
+        arg_str0(NULL, "addr", "<hex>", "I2C address of sensor (def probe 48..4B)"),
+        arg_str0(NULL, "sensor", "<str>", "sensor type: auto, tmp112, tmp117, tmp119 (def auto)"),
+        arg_lit0(NULL, "dual", "Temptress, TMP117 at 0x49 and 0x4A"),
+        arg_int0("n", NULL, "<dec>", "number of readings (def 1)"),
+        arg_int0(NULL, "wait", "<ms>", "energy harvesting timeout (def 2000)"),
+        arg_lit0("v", "verbose", "verbose output, show raw frames"),
+        arg_lit0(NULL, "test", "perform self test"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t uid[ISO15693_UID_LENGTH] = {0};
+    int uidlen = 0;
+    CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
+
+    uint8_t addrbuf[1] = {0};
+    int addrlen = 0;
+    CLIGetHexWithReturn(ctx, 2, addrbuf, &addrlen);
+    uint8_t addr = addrbuf[0];
+
+    const CLIParserOption sensor_opts[] = {
+        {TMP_SENSOR_AUTO, "auto"},
+        {TMP_SENSOR_TMP112, "tmp112"},
+        {TMP_SENSOR_TMP117, "tmp117"},
+        {TMP_SENSOR_TMP119, "tmp119"},
+        {0, NULL},
+    };
+    int sensor = TMP_SENSOR_AUTO;
+    if (CLIGetOptionList(arg_get_str(ctx, 3), sensor_opts, &sensor)) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    bool dual = arg_get_lit(ctx, 4);
+    int count = arg_get_int_def(ctx, 5, 1);
+    int wait = arg_get_int_def(ctx, 6, 2000);
+    bool verbose = arg_get_lit(ctx, 7);
+    bool selftest = arg_get_lit(ctx, 8);
+    CLIParserFree(ctx);
+
+    if (selftest) {
+        return implant_selftest();
+    }
+
+    if (IfPm3Iso15693() == false) {
+        PrintAndLogEx(WARNING, "Only offline self test is available");
+        return PM3_ENOTTY;
+    }
+
+    if (uidlen != 0 && uidlen != ISO15693_UID_LENGTH) {
+        PrintAndLogEx(WARNING, "UID must be 8 bytes, got " _RED_("%d"), uidlen);
+        return PM3_EINVARG;
+    }
+
+    if (addrlen && (addr < 0x08 || addr > 0x77)) {
+        PrintAndLogEx(WARNING, "I2C address must be 7-bit, 08..77");
+        return PM3_EINVARG;
+    }
+
+    if (dual && addrlen) {
+        PrintAndLogEx(WARNING, "Select only one option --addr/--dual");
+        return PM3_EINVARG;
+    }
+
+    if (count < 1 || wait < 0) {
+        PrintAndLogEx(WARNING, "invalid -n / --wait");
+        return PM3_EINVARG;
+    }
+
+    ntag5_ctx_t c = { .field_on = false, .verbose = verbose };
+
+    if (uidlen == ISO15693_UID_LENGTH) {
+        reverse_array_copy(uid, ISO15693_UID_LENGTH, c.uid);
+    } else if (getUID(false, false, c.uid) != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "no tag found");
+        return PM3_ENODATA;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "UID....... " _GREEN_("%s"), iso15693_sprintUID(NULL, c.uid));
+
+    if (ntag5_uid_match(c.uid) == false) {
+        PrintAndLogEx(FAILED, "Not an NTAG 5 ( UID mismatch )");
+        return PM3_EWRONGANSWER;
+    }
+
+    // host interface must be I2C master, only NTP5332 has it
+    uint8_t cfg[4] = {0};
+    int res = ntag5_read_reg(&c, NTAG5_REG_CONFIG, cfg);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "failed to read NTAG 5 session register, not an NTAG 5 link?");
+        goto out;
+    }
+
+    if ((cfg[1] & NTAG5_CONFIG1_USE_CASE_MASK) != NTAG5_CONFIG1_I2C_MASTER) {
+        PrintAndLogEx(FAILED, "NTAG 5 is not in I2C master mode ( CONFIG_1 %02X )", cfg[1]);
+        res = PM3_EWRONGANSWER;
+        goto out;
+    }
+    PrintAndLogEx(SUCCESS, "NTAG 5 link in I2C master mode");
+
+    res = ntag5_power_up(&c, wait);
+    if (res != PM3_SUCCESS) {
+        goto out;
+    }
+
+    // SRAM holds the I2C read data
+    if (ntag5_read_reg(&c, NTAG5_REG_CONFIG, cfg) == PM3_SUCCESS && (cfg[1] & NTAG5_CONFIG1_SRAM_ENABLED) == 0) {
+        PrintAndLogEx(WARNING, "SRAM not accessible ( CONFIG_1 %02X ), I2C reads will likely fail", cfg[1]);
+    }
+
+    tmp_dev_t devs[IMPLANT_MAX_SENSORS];
+    uint8_t ndevs = 0;
+
+    if (dual) {
+        devs[ndevs++] = (tmp_dev_t) { 0x49, (sensor == TMP_SENSOR_AUTO) ? TMP_SENSOR_TMP117 : sensor };
+        devs[ndevs++] = (tmp_dev_t) { 0x4A, (sensor == TMP_SENSOR_AUTO) ? TMP_SENSOR_TMP117 : sensor };
+    } else {
+        uint8_t first = (addrlen) ? addr : IMPLANT_I2C_ADDR_FIRST;
+        uint8_t last = (addrlen) ? addr : IMPLANT_I2C_ADDR_LAST;
+        for (uint8_t a = first; a <= last; a++) {
+
+            tmp_sensor_t t = TMP_SENSOR_AUTO;
+            int ires = tmp_identify(&c, a, &t);
+            if (ires == PM3_ENODATA) {
+                PrintAndLogEx((verbose) ? INFO : DEBUG, "0x%02X no answer", a);
+                continue;
+            }
+            if (ires != PM3_SUCCESS) {
+                ntag5_print_i2c_error(a, ires);
+                res = ires;
+                goto out;
+            }
+            if (sensor != TMP_SENSOR_AUTO) {
+                t = sensor;
+            }
+            devs[ndevs++] = (tmp_dev_t) { a, t };
+        }
+    }
+
+    if (ndevs == 0) {
+        PrintAndLogEx(FAILED, "no temperature sensor found on I2C bus");
+        res = PM3_ENODATA;
+        goto out;
+    }
+
+    for (uint8_t i = 0; i < ndevs; i++) {
+        PrintAndLogEx(SUCCESS, "Sensor.... " _GREEN_("%s") " at I2C 0x%02X", tmp_sensor_str(devs[i].type), devs[i].addr);
+    }
+    PrintAndLogEx(NORMAL, "");
+
+    for (int n = 0; n < count; n++) {
+
+        double sum = 0;
+        for (uint8_t i = 0; i < ndevs; i++) {
+            uint16_t raw = 0;
+            res = tmp_measure(&c, devs[i].addr, devs[i].type, &raw);
+            if (res != PM3_SUCCESS) {
+                ntag5_print_i2c_error(devs[i].addr, res);
+                goto out;
+            }
+
+            double tc = tmp_raw_to_celsius(devs[i].type, raw);
+            sum += tc;
+            PrintAndLogEx(SUCCESS, "%s 0x%02X... " _GREEN_("%.2f") " C / " _GREEN_("%.2f") " F  ( raw %04X )"
+                          , tmp_sensor_str(devs[i].type)
+                          , devs[i].addr
+                          , tc
+                          , celsius_to_fahrenheit(tc)
+                          , raw
+                         );
+        }
+
+        if (ndevs > 1) {
+            double avg = sum / ndevs;
+            PrintAndLogEx(SUCCESS, "Average........ " _GREEN_("%.2f") " C / " _GREEN_("%.2f") " F", avg, celsius_to_fahrenheit(avg));
+        }
+
+        if (kbd_enter_pressed()) {
+            PrintAndLogEx(WARNING, "aborted via keyboard");
+            break;
+        }
+    }
+    res = PM3_SUCCESS;
+
+out:
+    DropField();
+    return res;
+}
+
 static command_t CommandTable[] = {
     {"-----------",         CmdHF15Help,              AlwaysAvailable, "----------------------- " _CYAN_("General") " -----------------------"},
     {"help",                CmdHF15Help,              AlwaysAvailable, "This help"},
@@ -4247,6 +5052,7 @@ static command_t CommandTable[] = {
     {"-----------",         CmdHF15Help,              AlwaysAvailable, "----------------------- " _CYAN_("Operations") " -----------------------"},
     {"demod",               CmdHF15Demod,             AlwaysAvailable, "Demodulate ISO-15693 from tag"},
     {"dump",                CmdHF15Dump,              IfPm3Iso15693,   "Read all memory pages of an ISO-15693 tag, save to file"},
+    {"implant",             CmdHF15Implant,           AlwaysAvailable, "Read temperature from NTAG 5 link sensor implant"},
     {"info",                CmdHF15Info,              IfPm3Iso15693,   "Tag information"},
     {"sniff",               CmdHF15Sniff,             IfPm3Iso15693,   "Sniff ISO-15693 traffic"},
     {"raw",                 CmdHF15Raw,               IfPm3Iso15693,   "Send raw hex data to tag"},
