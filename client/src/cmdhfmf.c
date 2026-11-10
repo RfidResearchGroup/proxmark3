@@ -11510,32 +11510,13 @@ static int CmdHF14AMfValue(const char *Cmd) {
 // Encode the normalized Wiegand payload into the sentinel-prefixed byte layout stored in
 // the HID-specific MIFARE payload block.
 static int hfmf_encodehid_pack_block5(const char *binstr, uint8_t *block) {
-    if (binstr == NULL || block == NULL) {
-        return PM3_EINVARG;
-    }
-
-    char bits_with_sentinel[121] = {0};
-    size_t binlen = strlen(binstr);
-
-    if (binlen == 0 || (binlen + 1) > 120) {
+    if (block == NULL) {
         return PM3_EINVARG;
     }
 
     // MIFARE block 5 stores the Wiegand payload with the same sentinel-prefixed layout
     // expected by existing HID cards: one leading 1 followed by the logical payload bits.
-    bits_with_sentinel[0] = '1';
-    memcpy(bits_with_sentinel + 1, binstr, binlen + 1);
-
-    size_t hexlen = 0;
-    uint8_t hex[15] = {0};
-    binstr_2_bytes(hex, &hexlen, bits_with_sentinel);
-    if (hexlen == 0 || hexlen > (MFBLOCK_SIZE - 1)) {
-        return PM3_EINVARG;
-    }
-
-    memset(block + 1, 0x00, MFBLOCK_SIZE - 1);
-    memcpy(block + 1 + ((MFBLOCK_SIZE - 1) - hexlen), hex, hexlen);
-    return PM3_SUCCESS;
+    return wiegand_pack_sentinel_bytes(binstr, block + 1, MFBLOCK_SIZE - 1);
 }
 
 static int CmdHFMFHidEncode(const char *Cmd) {
