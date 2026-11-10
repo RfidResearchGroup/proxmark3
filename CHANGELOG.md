@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added transit card parsers in `client/src/parsers/`, run by `hf mf`, `hf mfu`, `hf mfdes`, `hf felica`, `hf 14b` and `hf calypso` dump/view/info (Clipper, Opal, Suica, Octopus, Navigo, Troika, CharlieCard, Bip!, SmartRider, ...) (@iceman1001)
 - Added `hf 15 implant` - read temperature from NTAG 5 link sensor implants (VivoKey Thermo, Temptress) with TMP112/TMP117/TMP119 (@iceman1001)
 - Added `hf goodisplay load` - write images to Goodisplay NFC e-paper tags GDEY0154D67, GDEY0213B74, GDEY029T94 and GDEY037T03, protocol from the Flipper Zero NFC Eink app (@iceman1001)
 - Changed `hf 14a info` - hints at `hf waveshare` / `hf goodisplay` for e-paper tags (@iceman1001)

@@ -4940,7 +4940,7 @@ static int CmdHFCalypsoInfo(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help", CmdHelp,          AlwaysAvailable, "This help"},
-    {"info", CmdHFCalypsoInfo, AlwaysAvailable,   "Tag information"},
+    {"info", CmdHFCalypsoInfo, AlwaysAvailable, "Tag information"},
     {"dump", CmdHFCalypsoDump, IfPm3Iso14443, "Dump nodes after application profile scan"},
     {"probecmdcompat", CmdHFCalypsoProbe, IfPm3Iso14443, "Probe SELECT command compatibility"},
     {"list", CmdHFCalypsoList, AlwaysAvailable, "List Calypso history"},

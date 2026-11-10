@@ -9635,7 +9635,7 @@ static command_t CommandTable[] = {
     {"-----------",     CmdHelp,                          AlwaysAvailable, "----------------------- " _CYAN_("FeliCa SEAC") " -----------------------"},
     {"seacauth1",       CmdHFFelicaSeacAuth1,             IfPm3Felica,     "FeliCa SEAC Authentication1"},
     {"-----------",     CmdHelp,                          AlwaysAvailable, "----------------------- " _CYAN_("FeliCa Standard") " -----------------------"},
-    {"dump",            CmdHFFelicaDump,                  AlwaysAvailable,     "Wait for and try dumping FeliCa"},
+    {"dump",            CmdHFFelicaDump,                  AlwaysAvailable, "Wait for and try dumping FeliCa"},
     {"discnodes",       CmdHFFelicaDiscoverNodes,         IfPm3Felica,     "discover Area Code and Service Code nodes."},
     {"sim",             CmdHFFelicaSim,                   IfPm3Felica,     "Emulate FeliCa Standard from dump file"},
     {"rqservice",       CmdHFFelicaRequestService,        IfPm3Felica,     "verify the existence of Area and Service, and to acquire Key Version."},
