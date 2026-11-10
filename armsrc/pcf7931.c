@@ -37,6 +37,8 @@
 #define ALLOC 16
 // one full 8-block cycle plus repeats, so the client can check the cycle
 #define PCF7931_MIN_CAPTURE_BLOCKS 10
+// a reset-aligned capture of a present tag always decodes, ~1.3s per empty one
+#define PCF7931_NO_TAG_CAPTURES 3
 // capture starts inside the first block after reset (tRESET <= 20ms), its PMC lands after this sample
 #define PCF7931_FIRST_PMC_MIN 300
 
@@ -326,7 +328,7 @@ void ReadPCF7931(bool ledcontrol) {
             ++errors;
 
         // exit if no block is received
-        if (errors >= 10 && found_blocks == 0 && single_blocks_cnt == 0) {
+        if (errors >= PCF7931_NO_TAG_CAPTURES && found_blocks == 0 && single_blocks_cnt == 0) {
             Dbprintf("[!!] Error, no tag or bad tag");
             goto end;
         }
