@@ -44,84 +44,6 @@
 
 
 /**
- * @brief Sets the card detected status for the SAM (Secure Access Module).
- *
- * This function informs that a card has been detected by the reader and
- * initializes SAM communication with the card.
- *
- * @param card_select Pointer to the descriptor of the detected card.
- * @return Status code indicating success or failure of the operation.
- */
-static int sam_set_card_detected_seos(iso14a_card_select_t *card_select) {
-    int res = PM3_SUCCESS;
-    if (g_dbglevel >= DBG_DEBUG) {
-        DbpString("start sam_set_card_detected");
-    }
-
-    uint8_t *request = BigBuf_calloc(ISO7816_MAX_FRAME);
-    uint16_t request_len = ISO7816_MAX_FRAME;
-
-    uint8_t *response = BigBuf_calloc(ISO7816_MAX_FRAME);
-    uint16_t response_len = ISO7816_MAX_FRAME;
-    if (request == NULL || response == NULL) {
-        res = PM3_EMALLOC;
-        goto out;
-    }
-
-    const uint8_t payload[] = {
-        0xa0, 8, // <- SAM command
-        0xad, 6, // <- set detected card
-        0xa0, 4, // <- detected card details
-        0x80, 2, // <- protocol
-        0x00, 0x02 // <- ISO14443A
-    };
-
-    memcpy(request, payload, sizeof(payload));
-    sam_append_asn1_node(request, request + 4, 0x81, card_select->uid, card_select->uidlen);
-    sam_append_asn1_node(request, request + 4, 0x82, card_select->atqa, 2);
-    sam_append_asn1_node(request, request + 4, 0x83, &card_select->sak, 1);
-    request_len = request[1] + 2;
-
-    sam_send_payload(
-        0x44, 0x0a, 0x44,
-        request,
-        &request_len,
-        response,
-        &response_len
-    );
-
-    // resp:
-    // c1 64 00 00 00
-    //    bd 02 <- response
-    //     8a 00 <- empty response (accepted)
-    // 90 00
-
-    if (sam_bd_offset(response, response_len) == 0) {
-        if (g_dbglevel >= DBG_ERROR)
-            Dbprintf("Invalid SAM response");
-        goto error;
-    } else {
-        // uint8_t * sam_response_an = sam_find_asn1_node(response + 5, 0x8a);
-        // if(sam_response_an == NULL){
-        //     if (g_dbglevel >= DBG_ERROR)
-        //         Dbprintf("Invalid SAM response");
-        //     goto error;
-        // }
-        goto out;
-    }
-error:
-    res = PM3_ESOFT;
-
-out:
-    BigBuf_free();
-
-    if (g_dbglevel >= DBG_DEBUG) {
-        DbpString("end sam_set_card_detected");
-    }
-    return res;
-}
-
-/**
  * @brief Sends a request to the SAM and retrieves the response.
  *
  * Unpacks request to the SAM and relays ISO14A traffic to the card.
@@ -183,11 +105,22 @@ static int sam_send_request_iso14a(const uint8_t *const request, const uint8_t r
         sam_rx_buf, &sam_rx_len
     );
 
+    // Seader's DESFire EV2 handling: an EV2 answers the Seos select with this
+    // FCI, which is hidden from the SAM, and wants Le on the DESFire select.
+    static const uint8_t select_seos[] = { 0x00, 0xa4, 0x04, 0x00, 0x0a, 0xa0, 0x00, 0x00, 0x04, 0x40, 0x00, 0x01, 0x01, 0x00, 0x01, 0x00 };
+    static const uint8_t select_desfire_no_le[] = { 0x00, 0xA4, 0x04, 0x00, 0x07, 0xD2, 0x76, 0x00, 0x00, 0x85, 0x01, 0x00 };
+    static const uint8_t ev2_fci[] = { 0x6F, 0x22, 0x85, 0x20 };
+    bool is_ev2 = false;
+
     if (sam_relay_pending(sam_rx_buf, sam_rx_len)) { // commands to be relayed to card starts with 0x61
         // tag <-> SAM exchange starts here
         while (sam_relay_pending(sam_rx_buf, sam_rx_len)) {
             switch_clock_to_countsspclk();
             nfc_tx_len = sam_copy_payload_sam2nfc(nfc_tx_buf, sam_rx_buf, sam_rx_len);
+
+            if (is_ev2 && nfc_tx_len == sizeof(select_desfire_no_le) && memcmp(nfc_tx_buf, select_desfire_no_le, nfc_tx_len) == 0) {
+                nfc_tx_buf[nfc_tx_len++] = 0x00;
+            }
 
             int nfc_res = iso14_apdu(nfc_tx_buf, nfc_tx_len, false, nfc_rx_buf, ISO7816_MAX_FRAME, NULL);
 
@@ -204,6 +137,18 @@ static int sam_send_request_iso14a(const uint8_t *const request, const uint8_t r
             }
 
             nfc_rx_len = (uint16_t)nfc_res;
+
+            // R-APDU length, CRC stripped
+            if (nfc_tx_len == sizeof(select_seos) && memcmp(nfc_tx_buf, select_seos, nfc_tx_len) == 0 &&
+                    nfc_rx_len - 2 == 38 && memcmp(nfc_rx_buf, ev2_fci, sizeof(ev2_fci)) == 0) {
+                is_ev2 = true;
+                nfc_rx_buf[0] = 0x6A;
+                nfc_rx_buf[1] = 0x82;
+                nfc_rx_len = 2 + 2;
+            }
+
+            sam_capture_desfire(nfc_tx_buf, nfc_tx_len, nfc_rx_buf, nfc_rx_len - 2);
+
             sam_tx_len = sam_copy_payload_nfc2sam(sam_tx_buf, nfc_rx_buf, nfc_rx_len - 2);
 
             sam_send_payload(0x14, 0x0a, 0x14, sam_tx_buf, &sam_tx_len, sam_rx_buf, &sam_rx_len);
@@ -289,6 +234,7 @@ int sam_seos_get_pacs(PacketCommandNG *c) {
     const uint8_t flags = c->data.asBytes[0];
     const bool disconnectAfter = !!(flags & BITMASK(0));
     const bool skipDetect = !!(flags & BITMASK(1));
+    const bool extReply = !!(flags & BITMASK(2));
 
     uint8_t *cmd = c->data.asBytes + 1;
     uint16_t cmd_len = c->length - 1;
@@ -297,6 +243,7 @@ int sam_seos_get_pacs(PacketCommandNG *c) {
     int res = PM3_EFAILED;
 
     clear_trace();
+    sam_capture_reset();
     // Like the PICOPASS dispatcher, this reset destroys a live SC session.
     // Mark it stale so the next CMD_HF_SAM_SC call performs its reset/ATR
     // synchronization path before sending a secured APDU.
@@ -334,8 +281,10 @@ int sam_seos_get_pacs(PacketCommandNG *c) {
 
         switch_clock_to_ticks();
 
+        sam_capture_uid(card_a_info.uid, card_a_info.uidlen);
+
         // step 3: SamCommand CardDetected
-        sam_set_card_detected_seos(&card_a_info);
+        sam_set_card_detected_iso14a(&card_a_info, true);
     }
 
     // step 3: SamCommand RequestPACS, relay NFC communication
@@ -358,7 +307,7 @@ err:
     goto off;
 
 out:
-    reply_ng(CMD_HF_SAM_SEOS, PM3_SUCCESS, sam_response, sam_response_len);
+    sam_reply_pacs(CMD_HF_SAM_SEOS, extReply && (cmd_len == 0), sam_response, sam_response_len);
 
 off:
     if (disconnectAfter) {

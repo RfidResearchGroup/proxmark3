@@ -30,6 +30,7 @@
 #include "iso15693.h"
 #include "protocols.h"
 #include "crc16.h"
+#include "cmd.h"
 
 
 /**
@@ -940,4 +941,237 @@ uint16_t sam_copy_payload_sam2nfc(uint8_t *nfc_tx_buf, uint8_t *sam_rx_buf, uint
 
     memcpy(nfc_tx_buf, sam_rx_buf + p + 6, nfc_tx_len);
     return nfc_tx_len;
+}
+
+/**
+ * @brief Sets the card detected status for the SAM (Secure Access Module).
+ *
+ * This function informs that a card has been detected by the reader and
+ * initializes SAM communication with the card.
+ *
+ * @param card_select Pointer to the descriptor of the detected card.
+ * @param with_atqa Include the ATQA node. Seader leaves it out for MIFARE Classic.
+ * @return Status code indicating success or failure of the operation.
+ */
+int sam_set_card_detected_iso14a(const iso14a_card_select_t *card_select, bool with_atqa) {
+    int res = PM3_SUCCESS;
+    if (g_dbglevel >= DBG_DEBUG) {
+        DbpString("start sam_set_card_detected");
+    }
+
+    uint8_t *request = BigBuf_calloc(ISO7816_MAX_FRAME);
+    uint16_t request_len = ISO7816_MAX_FRAME;
+
+    uint8_t *response = BigBuf_calloc(ISO7816_MAX_FRAME);
+    uint16_t response_len = ISO7816_MAX_FRAME;
+    if (request == NULL || response == NULL) {
+        res = PM3_EMALLOC;
+        goto out;
+    }
+
+    const uint8_t payload[] = {
+        0xa0, 8, // <- SAM command
+        0xad, 6, // <- set detected card
+        0xa0, 4, // <- detected card details
+        0x80, 2, // <- protocol
+        0x00, 0x02 // <- ISO14443A
+    };
+
+    memcpy(request, payload, sizeof(payload));
+    sam_append_asn1_node(request, request + 4, 0x81, card_select->uid, card_select->uidlen);
+    if (with_atqa) {
+        sam_append_asn1_node(request, request + 4, 0x82, card_select->atqa, 2);
+    }
+    sam_append_asn1_node(request, request + 4, 0x83, &card_select->sak, 1);
+    request_len = request[1] + 2;
+
+    sam_send_payload(
+        0x44, 0x0a, 0x44,
+        request,
+        &request_len,
+        response,
+        &response_len
+    );
+
+    // resp:
+    // c1 64 00 00 00
+    //    bd 02 <- response
+    //     8a 00 <- empty response (accepted)
+    // 90 00
+
+    if (sam_bd_offset(response, response_len) == 0) {
+        if (g_dbglevel >= DBG_ERROR)
+            Dbprintf("Invalid SAM response");
+        goto error;
+    } else {
+        // uint8_t * sam_response_an = sam_find_asn1_node(response + 5, 0x8a);
+        // if(sam_response_an == NULL){
+        //     if (g_dbglevel >= DBG_ERROR)
+        //         Dbprintf("Invalid SAM response");
+        //     goto error;
+        // }
+        goto out;
+    }
+error:
+    res = PM3_ESOFT;
+
+out:
+    BigBuf_free();
+
+    if (g_dbglevel >= DBG_DEBUG) {
+        DbpString("end sam_set_card_detected");
+    }
+    return res;
+}
+
+// Plaintext seen on the air during a SAM conversation, for the extended reply.
+#define SAM_CAP_FIRST_BLOCK 6
+#define SAM_CAP_BLOCKS      (SAM_EXT_SIO_MAX / 8)
+
+static struct {
+    uint8_t uid[10];
+    uint8_t uid_len;
+    uint8_t data[SAM_EXT_SIO_MAX];
+    uint16_t len;           // DESFire: bytes captured
+    uint32_t block_map;     // iCLASS: bit n set when block 6 + n was captured
+    bool desfire_more;      // DESFire: last read answered 91 AF
+} sam_cap;
+
+void sam_capture_reset(void) {
+    memset(&sam_cap, 0, sizeof(sam_cap));
+}
+
+void sam_capture_uid(const uint8_t *uid, uint8_t uid_len) {
+    sam_cap.uid_len = MIN(uid_len, sizeof(sam_cap.uid));
+    memcpy(sam_cap.uid, uid, sam_cap.uid_len);
+}
+
+// iCLASS READ / READ4 answers from block 6 on. rx is the tag answer.
+void sam_capture_iclass(const uint8_t *tx, uint16_t tx_len, const uint8_t *rx, uint16_t rx_len) {
+
+    if (tx_len < 2) {
+        return;
+    }
+
+    uint8_t blocks;
+    if ((tx[0] & 0x0F) == ICLASS_CMD_READ_OR_IDENTIFY && rx_len >= 8) {
+        blocks = 1;
+    } else if ((tx[0] & 0x0F) == ICLASS_CMD_READ4 && rx_len >= 32) {
+        blocks = 4;
+    } else {
+        return;
+    }
+
+    for (uint8_t i = 0; i < blocks; i++) {
+        uint16_t blk = tx[1] + i;
+        if (blk < SAM_CAP_FIRST_BLOCK || blk >= SAM_CAP_FIRST_BLOCK + SAM_CAP_BLOCKS) {
+            continue;
+        }
+        uint8_t n = blk - SAM_CAP_FIRST_BLOCK;
+        memcpy(sam_cap.data + (n * 8), rx + (i * 8), 8);
+        sam_cap.block_map |= (1u << n);
+    }
+}
+
+// DESFire ReadData of file 0x0F (what Seader keys on) plus its 91 AF continuations.
+// rx is the R-APDU, SW included.
+void sam_capture_desfire(const uint8_t *tx, uint16_t tx_len, const uint8_t *rx, uint16_t rx_len) {
+
+    static const uint8_t read_sio[] = { 0x90, 0xBD, 0x00, 0x00, 0x07, 0x0F, 0x00, 0x00, 0x00 };
+    static const uint8_t read_more[] = { 0x90, 0xAF, 0x00, 0x00, 0x00 };
+
+    if (rx_len < 2) {
+        sam_cap.desfire_more = false;
+        return;
+    }
+
+    bool first = (tx_len == 13 && memcmp(tx, read_sio, sizeof(read_sio)) == 0 && rx_len > 2 && rx[0] == 0x30);
+    bool more = (sam_cap.desfire_more && tx_len == sizeof(read_more) && memcmp(tx, read_more, sizeof(read_more)) == 0);
+
+    if (first) {
+        sam_cap.len = 0;
+    }
+
+    if (first || more) {
+        uint16_t n = MIN((uint16_t)(rx_len - 2), (uint16_t)(sizeof(sam_cap.data) - sam_cap.len));
+        memcpy(sam_cap.data + sam_cap.len, rx, n);
+        sam_cap.len += n;
+    }
+
+    sam_cap.desfire_more = (first || more) && rx[rx_len - 2] == 0x91 && rx[rx_len - 1] == 0xAF;
+}
+
+// DER length of the SIO at p, tag and length bytes included. 0 if unusable.
+static uint16_t sam_sio_der_len(const uint8_t *p, uint16_t avail) {
+    if (avail < 2 || p[0] != 0x30) {
+        return 0;
+    }
+    uint16_t len;
+    if (p[1] < 0x80) {
+        len = p[1] + 2;
+    } else if (p[1] == 0x81 && avail >= 3) {
+        len = p[2] + 3;
+    } else {
+        return 0;
+    }
+    return (len <= avail) ? len : 0;
+}
+
+// The iCLASS SIO is the lowest captured block holding a SEQUENCE whose length
+// is covered by contiguous captured blocks. Moves it to offset 0.
+static uint16_t sam_capture_iclass_sio(uint8_t *start_block) {
+    for (uint8_t n = 0; n < SAM_CAP_BLOCKS; n++) {
+        if ((sam_cap.block_map & (1u << n)) == 0) {
+            continue;
+        }
+
+        uint8_t run = 0;
+        while ((n + run) < SAM_CAP_BLOCKS && (sam_cap.block_map & (1u << (n + run)))) {
+            run++;
+        }
+
+        uint16_t len = sam_sio_der_len(sam_cap.data + (n * 8), run * 8);
+        if (len) {
+            memmove(sam_cap.data, sam_cap.data + (n * 8), len);
+            *start_block = SAM_CAP_FIRST_BLOCK + n;
+            return len;
+        }
+    }
+    return 0;
+}
+
+// Sends the PACS reply, extended with UID and SIO when asked for. Falls back to
+// the plain SAM response if the extended one cannot be built.
+void sam_reply_pacs(uint16_t cmd, bool ext, const uint8_t *sam, uint8_t sam_len) {
+
+    if (ext == false) {
+        reply_ng(cmd, PM3_SUCCESS, sam, sam_len);
+        return;
+    }
+
+    sam_ext_reply_hdr_t hdr = {0};
+    hdr.magic = SAM_EXT_REPLY_MAGIC;
+    hdr.uid_len = sam_cap.uid_len;
+    memcpy(hdr.uid, sam_cap.uid, sam_cap.uid_len);
+
+    uint16_t sio_len = 0;
+    if (sam_cap.block_map) {
+        sio_len = sam_capture_iclass_sio(&hdr.sio_start);
+    } else if (sam_cap.len) {
+        sio_len = sam_sio_der_len(sam_cap.data, sam_cap.len);
+    }
+    hdr.sio_len = (uint8_t)sio_len;
+    hdr.sam_len = sam_len;
+
+    uint16_t n = sizeof(hdr) + sio_len + sam_len;
+    uint8_t *buf = BigBuf_calloc(n);
+    if (buf == NULL) {
+        reply_ng(cmd, PM3_SUCCESS, sam, sam_len);
+        return;
+    }
+
+    memcpy(buf, &hdr, sizeof(hdr));
+    memcpy(buf + sizeof(hdr), sam_cap.data, sio_len);
+    memcpy(buf + sizeof(hdr) + sio_len, sam, sam_len);
+    reply_ng(cmd, PM3_SUCCESS, buf, n);
 }

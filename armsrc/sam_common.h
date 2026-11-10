@@ -17,6 +17,7 @@
 #define __SAM_COMMON_H
 
 #include "common.h"
+#include "mifare.h"
 
 static const uint8_t SAM_TX_APDU_PREFIX_LENGTH = 5;
 static const uint8_t SAM_TX_ASN1_PREFIX_LENGTH = 6;
@@ -93,5 +94,14 @@ int sam_relay_iso15_loop(
     uint16_t *nr_mac_len_out,
     bool *got_nr_mac
 );
+
+int sam_set_card_detected_iso14a(const iso14a_card_select_t *card_select, bool with_atqa);
+
+// Capture of UID and plaintext SIO for the extended PACS reply (sam_ext_reply_hdr_t)
+void sam_capture_reset(void);
+void sam_capture_uid(const uint8_t *uid, uint8_t uid_len);
+void sam_capture_iclass(const uint8_t *tx, uint16_t tx_len, const uint8_t *rx, uint16_t rx_len);
+void sam_capture_desfire(const uint8_t *tx, uint16_t tx_len, const uint8_t *rx, uint16_t rx_len);
+void sam_reply_pacs(uint16_t cmd, bool ext, const uint8_t *sam, uint8_t sam_len);
 
 #endif

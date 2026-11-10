@@ -340,6 +340,20 @@ typedef struct {
     bool EM;
 } PACKED lf_hidsim_t;
 
+// Extended PACS reply of CMD_HF_SAM_PICOPASS (flag bit 7), CMD_HF_SAM_SEOS and
+// CMD_HF_SAM_MFC (flag bit 2). Followed by sio_len SIO bytes, then sam_len
+// bytes of SAM response. Only sent for a plain PACS request.
+#define SAM_EXT_REPLY_MAGIC   0xE5
+#define SAM_EXT_SIO_MAX       128
+typedef struct {
+    uint8_t magic;
+    uint8_t uid_len;
+    uint8_t uid[10];        // CSN for iCLASS, UID for ISO14443-A
+    uint8_t sio_start;      // iCLASS block the SIO was read from, 0 otherwise
+    uint8_t sio_len;        // plaintext SIO seen on the air, 0 if none
+    uint8_t sam_len;
+} PACKED sam_ext_reply_hdr_t;
+
 // For CMD_LF_FSK_SIMULATE (FSK)
 typedef struct {
     uint8_t fchigh;
