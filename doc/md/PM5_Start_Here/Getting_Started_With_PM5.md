@@ -87,6 +87,18 @@ For more options, look [here](#Build-Extras)
 script run update_fpga
 ```
 
+This writes `client/resources/fpga_pm5.bin` to the FPGA flash.
+
+### Build the FPGA image from source
+The PM5 bitstream is built with the open source toolchain (yosys, nextpnr-himbaechel, apicula) from [oss-cad-suite](https://github.com/YosysHQ/oss-cad-suite-build/releases). Use the release pinned in `.github/workflows/fpga-pm5.yml`: older yosys builds give images with a weaker antenna drive. Unpack it next to the repository (`../oss-cad-suite`) or point `OSS_CAD_SUITE` at it.
+
+```
+make -C fpga pm5                 # builds fpga/fpga_pm5.bin
+make -C fpga fpga_pm5_release    # also copies it to client/resources
+```
+
+The build is reproducible: the same sources and toolchain give the same bytes as the CI artifact. To try an image without touching the FPGA flash, load it into SRAM with `hw fpga config -s -f fpga/fpga_pm5.bin`. A power cycle returns to the image in flash.
+
 ## I Have A BWM Now What
 
 ### Install the BWM

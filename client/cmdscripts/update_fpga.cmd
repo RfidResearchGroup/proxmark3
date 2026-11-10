@@ -1,4 +1,4 @@
 #!/usr/bin/env -S pm3 -s
-hw fpga config -f PM5_FPGA_fix_loedge_bug.bin
+hw fpga config -f fpga_pm5.bin
 hf 14a read --drop
 

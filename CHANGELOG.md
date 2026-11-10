@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed PM5 FPGA image - `client/resources/fpga_pm5.bin` is now built from the repo sources (`make -C fpga fpga_pm5_release`) and replaces the vendor built `PM5_FPGA_fix_loedge_bug.bin` (@iceman1001)
 - Changed `hf mf info`, `hf mfu info`, `hf mfdes info`, `hf felica info`, `hf 14b info`, `hf calypso info` and `hf 14a info` - identify transit cards by keys, AIDs, system codes or data, show card number / balance where free to read and hint at the full decode (@iceman1001)
 - Fixed PM5 `hf mf sim` and other 14a sims - the RSSI ADC was reset and recalibrated before every listen, missing fast reader frames such as the auth nR/aR (@iceman1001)
 - Added `hf mf sam` and `hf mfdes sam` - read PACS from MIFARE Classic SE and DESFire EV1/EV2 through a HID SAM, as Seader does (@iceman1001)
