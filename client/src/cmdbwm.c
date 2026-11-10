@@ -299,7 +299,10 @@ static int CmdBWMWifi(const char *Cmd) {
     }
     if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "BWM WiFi bring-up failed (check SSID/password and signal)");
-        PrintAndLogEx(HINT, "If it may have joined after DHCP, check: " _YELLOW_("hw bwm wifi status"));
+        // PM3_ENODATA: no IP yet, but not refused either
+        if (resp.status == PM3_ENODATA) {
+            PrintAndLogEx(HINT, "If it may have joined after DHCP, check: " _YELLOW_("hw bwm wifi status"));
+        }
         return resp.status;
     }
 

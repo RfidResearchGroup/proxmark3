@@ -50,6 +50,7 @@ int bwm_cmd(uint16_t cmd, const uint8_t *req, uint16_t req_len,
 
 // High-level: full STA-join + TCP-server bring-up. On success writes the
 // BWM's IPv4 (host byte order, a in low byte) to *ip_out.
+// PM3_ENODATA: no IP yet but not refused (may still come up), PM3_EFAILED: join refused.
 int bwm_wifi_forward_up(const char *ssid, const char *password,
                         const char *hostname, uint16_t tcp_port, uint32_t *ip_out);
 

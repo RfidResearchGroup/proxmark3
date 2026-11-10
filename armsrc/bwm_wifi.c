@@ -263,14 +263,16 @@ int bwm_wifi_forward_up(const char *ssid, const char *password,
     }
     if (ip == 0) {
         // wr[0]: ESP join result, 0 joined / 1 failed (wr[1] = WiFi reason) / 2 timed out
+        // PM3_ENODATA: may still come up (client hints at wifi status), PM3_EFAILED: join refused
         if (wr[0] == 0) {
             Dbprintf("[bwm-wifi] joined but no IP after DHCP wait");
         } else if (wr[0] == 1) {
             Dbprintf("[bwm-wifi] could not join: %s (reason %u)", bwm_wifi_reason_str(wr[1]), wr[1]);
+            return PM3_EFAILED;
         } else {
             Dbprintf("[bwm-wifi] join timed out, no IP");
         }
-        return PM3_EFAILED;
+        return PM3_ENODATA;
     }
 
     // 6) start the TCP server (binds the STA interface now that it has an IP)
