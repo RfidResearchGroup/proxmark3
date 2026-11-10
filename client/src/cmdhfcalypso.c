@@ -2084,6 +2084,13 @@ static void calypso_run_transit_parsers(const calypso_select_result_t *selected,
     card.env.len = (uint8_t)MIN(env_len, sizeof(card.env.data));
     memcpy(card.env.data, env, card.env.len);
 
+    // same identifier line as the other info commands, the parsers below decode it
+    transit_idents_t transit_ids;
+    if (transit_calypso_identify(&card, &transit_ids) > 0) {
+        PrintAndLogEx(NORMAL, "");
+        transit_print_idents(&transit_ids);
+    }
+
     (void)calypso_read_transit_record(0x1E, 1, &card.contract_list);
     (void)calypso_read_transit_record(0x19, 1, &card.counters);
 
