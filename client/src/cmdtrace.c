@@ -285,14 +285,12 @@ static uint32_t extractChallenges(uint32_t tracepos, uint32_t traceLen, uint8_t 
             if (next_hdr == NULL) {
                 break;
             }
-            tracepos += SKIP_TO_NEXT(next_hdr);
-            if (next_hdr->data_len != 11) {
-                break;
-            }
 
-            if (next_hdr->frame[0] != MIFARE_ULC_AUTH_2) {
+            // only consume a matching tag reply, a retried AUTH must stay for the next pass
+            if ((next_hdr->isResponse == false) || (next_hdr->data_len != 11) || (next_hdr->frame[0] != MIFARE_ULC_AUTH_2)) {
                 break;
             }
+            tracepos += SKIP_TO_NEXT(next_hdr);
 
             PrintAndLogEx(INFO, "Found a MFU-C authententication attempt");
             PrintAndLogEx(INFO, "3DES %s " NOLF, sprint_hex_inrow(next_hdr->frame + 1, 8));
@@ -346,10 +344,10 @@ static uint32_t extractChallenges(uint32_t tracepos, uint32_t traceLen, uint8_t 
                     if (next_hdr == NULL) {
                         break;
                     }
-                    tracepos += SKIP_TO_NEXT(next_hdr);
-                    if (next_hdr->data_len < 8) {
+                    if ((next_hdr->isResponse == false) || (next_hdr->data_len < 8)) {
                         break;
                     }
+                    tracepos += SKIP_TO_NEXT(next_hdr);
                     memcpy(extract_epurse, next_hdr->frame, 8);
                 }
                 break;
