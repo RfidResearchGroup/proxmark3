@@ -74,7 +74,7 @@ static model_t models[] = {
     {"2.9  inch e-paper",               16, 296, 128},
     {"4.2  inch e-paper",              100, 400, 300}, // tested
     {"7.5  inch e-paper",              120, 800, 480},
-    {"2.7  inch e-paper",              121, 176, 276}, // tested
+    {"2.7  inch e-paper",              121, 176, 264}, // tested
     {"2.13 inch e-paper B (with red)", 106, 104, 212}, // tested
     {"1.54 inch e-paper B (with red)", 100, 200, 200}, // tested
     {"7.5  inch e-paper HD",           120, 880, 528},
@@ -100,6 +100,8 @@ static uint8_t *map8to1(gdImagePtr img, int color) {
             }
             count += 1;
             if ((count >= 8) || (X == gdImageSX(img) - 1)) {
+                // MSB-align a partial last byte
+                data = (data << (8 - count)) & 0xFF;
                 colormap8[X / 8 + Y * width8] = (~data) & 0xFF;
                 count = 0;
                 data = 0;

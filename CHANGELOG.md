@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf waveshare load` - 2.7" height is 264, and last pixels of non byte-aligned rows (2.13") were misplaced (@iceman1001)
 - Preserve jobserver in Makefile builds to fix ProxSpace build speeds (@tpglitch)
 - Added `hf gp info`, `hf gp crs` and `hf gp aids` - read GlobalPlatform card info, list CRS registered applets and find applet AIDs, all without keys (@iceman1001)
 - Added GlobalPlatform ISD, CRS, ARA-M, telecom, UnionPay and digital key AIDs to `aidlist.json` (@iceman1001)
