@@ -614,6 +614,8 @@ while true; do
       if ! CheckExecute "lf PSK reject test"         "$CLIENTBIN -c 'data load -f traces/lf_NRZ_RF64_fc2-ripple_synthetic.pm3;lf search -1'" "No known 125/134 kHz tags found"; then break; fi
       if ! CheckExecute "lf KERI test"               "$CLIENTBIN -c 'data load -f traces/lf_Keri.pm3;lf search -1'" "Pyramid ID found"; then break; fi
       if ! CheckExecute "lf NEXWATCH test"           "$CLIENTBIN -c 'data load -f traces/lf_NEXWATCH_Quadrakey-521512301.pm3;lf search -1 '" "NexWatch ID found"; then break; fi
+      if ! CheckExecute "lf NEXWATCH raw id test"    "$CLIENTBIN -c 'data load -f traces/lf_NEXWATCH_Quadrakey-521512301.pm3; lf nexwatch demod'" "NexWatch raw id : 0x213c9f8f"; then break; fi
+      if ! CheckExecute "lf NEXWATCH raw id test 2"  "$CLIENTBIN -c 'data load -f traces/lf_NEXWATCH_Nexkey_74755342.pm3; lf nexwatch demod'" "NexWatch raw id : 0x24643f12"; then break; fi
       if ! CheckExecute "lf SECURAKEY test"          "$CLIENTBIN -c 'data load -f traces/lf_NEXWATCH_Securakey-64169.pm3;lf search -1 '" "Securakey ID found"; then break; fi
       if ! CheckExecute "lf PAC test"                "$CLIENTBIN -c 'data load -f traces/lf_PAC-8E4C058E.pm3;lf search -1'" "PAC/Stanley ID found"; then break; fi
       if ! CheckExecute "lf PARADOX test"            "$CLIENTBIN -c 'data load -f traces/lf_Paradox-96_40426-APJN08.pm3;lf search -1'" "Paradox ID found"; then break; fi
