@@ -33,13 +33,18 @@
 // The stored balance carries a +1.00 GEL offset (Flipper), Metrodroid shows it raw
 #define METROMONEY_OFFSET       100
 
+static const transit_mfc_key_t metromoney_keys[] = {
+    {0, TRANSIT_MFC_KEY_AB, METROMONEY_S0_KEY_A}, {0, TRANSIT_MFC_KEY_AB, METROMONEY_S0_KEY_B},
+    {1, TRANSIT_MFC_KEY_AB, METROMONEY_S1_KEY_A}, {1, TRANSIT_MFC_KEY_AB, METROMONEY_S1_KEY_B},
+};
+
+const transit_mfc_keyset_t metromoney_keyset = { metromoney_keys, ARRAYLEN(metromoney_keys), false };
+
 bool is_valid_metromoney_card(const uint8_t *dump, size_t dumplen) {
     if (transit_mfc_block(dump, dumplen, 1, 3) == NULL) {
         return false;
     }
-    bool s0 = transit_mfc_has_key(dump, dumplen, 0, METROMONEY_S0_KEY_A) || transit_mfc_has_key(dump, dumplen, 0, METROMONEY_S0_KEY_B);
-    bool s1 = transit_mfc_has_key(dump, dumplen, 1, METROMONEY_S1_KEY_A) || transit_mfc_has_key(dump, dumplen, 1, METROMONEY_S1_KEY_B);
-    return s0 && s1;
+    return transit_mfc_keyset_match_dump(&metromoney_keyset, dump, dumplen);
 }
 
 int metromoney_parser_parse(const uint8_t *dump, size_t dumplen) {
@@ -74,11 +79,13 @@ int metromoney_selftest(void) {
     memcpy(dump + (5 * 16), value, sizeof(value));
 
     bool ok = transit_check("detected", is_valid_metromoney_card(dump, sizeof(dump)), 1);
+    ok &= transit_mfc_check_identify("identify", dump, sizeof(dump), "Metromoney", TRANSIT_ID_MATCH);
     ok &= transit_check("card number", MemLeToUint4byte(dump), 0xDEADBEEF);
     ok &= transit_check("stored value", MemLeToUint4byte(dump + (5 * 16)), 1234);
 
     transit_mfc_set_key(dump, sizeof(dump), 0, false, 0xFFFFFFFFFFFF);
     ok &= transit_check("sector 0 key required", is_valid_metromoney_card(dump, sizeof(dump)), 0);
+    ok &= transit_mfc_check_identify("not identified", dump, sizeof(dump), "Metromoney", TRANSIT_ID_NONE);
 
     return transit_selftest_result("Metromoney", ok);
 }

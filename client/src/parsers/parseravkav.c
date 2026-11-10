@@ -293,6 +293,7 @@ int ravkav_selftest(void) {
 
     bool ok = true;
     ok &= transit_check("detect", is_valid_ravkav_card(&card), true);
+    ok &= transit_calypso_check_identify("identify", &card, "Rav-Kav", TRANSIT_ID_MATCH);
 
     en1545_parsed_t env;
     (void)en1545_parse(card.env.data, card.env.len, 0, &ravkav_env, &env);
@@ -332,6 +333,7 @@ int ravkav_selftest(void) {
     transit_set_bits_be(fr.env.data, fr.env.len, 6, 7, 0x01);
     transit_set_bits_be(fr.env.data, fr.env.len, 13, 24, 0x250901);
     ok &= transit_check("rejects Navigo env", is_valid_ravkav_card(&fr), false);
+    ok &= transit_calypso_check_identify("not identified", &fr, "Rav-Kav", TRANSIT_ID_NONE);
 
     if (ok) {
         ok &= (ravkav_parser_parse(&card) == PM3_SUCCESS);

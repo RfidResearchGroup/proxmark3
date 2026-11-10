@@ -73,8 +73,14 @@ static bool itso_isrn_str(const uint8_t *d, char *out, size_t outlen) {
     return true;
 }
 
+transit_id_t itso_identify(const transit_mfdes_info_t *info) {
+    return (transit_mfdes_info_has_aid(info, ITSO_AID)) ? TRANSIT_ID_MATCH : TRANSIT_ID_NONE;
+}
+
 bool is_valid_itso_card(const desfire_dump_t *dump) {
-    return (itso_find_app(dump) != NULL);
+    transit_mfdes_info_t info;
+    transit_mfdes_info_from_dump(dump, &info);
+    return itso_identify(&info) == TRANSIT_ID_MATCH;
 }
 
 int itso_parser_parse(const desfire_dump_t *dump) {
@@ -141,9 +147,12 @@ int itso_selftest(void) {
     dump->app[0].files[0].data = shell;
     dump->app[0].files[0].datalen = sizeof(shell);
     ok &= transit_check("detected", is_valid_itso_card(dump), true);
+    ok &= transit_mfdes_check_identify("identify", dump, "ITSO", TRANSIT_ID_MATCH);
     if (ok) {
         itso_parser_parse(dump);
     }
+    dump->app[0].aid = 0x000001;
+    ok &= transit_mfdes_check_identify("not identified", dump, "ITSO", TRANSIT_ID_NONE);
     free(dump);
 
     return transit_selftest_result("ITSO", ok);

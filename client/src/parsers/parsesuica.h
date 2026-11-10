@@ -33,6 +33,9 @@
 // True when system 0003 carries a readable history service
 bool is_valid_suica_card(const transit_felica_card_t *card);
 
+// System 0003 among the system codes
+transit_id_t suica_identify(const uint16_t *system_codes, size_t count);
+
 // Name the card from its service codes, print balance and history
 int suica_parser_parse(const transit_felica_card_t *card);
 

@@ -250,6 +250,7 @@ int opus_selftest(void) {
 
     bool ok = true;
     ok &= transit_check("detect", is_valid_opus_card(&card), true);
+    ok &= transit_calypso_check_identify("identify", &card, "Opus", TRANSIT_ID_MATCH);
 
     en1545_parsed_t cp;
     (void)en1545_parse(c->data, c->len, 0, &opus_contract, &cp);
@@ -271,6 +272,7 @@ int opus_selftest(void) {
     // an Intercode card must not be taken for Opus
     transit_set_bits_be(card.env.data, card.env.len, 13, 24, 0x250901);
     ok &= transit_check("rejects Navigo env", is_valid_opus_card(&card), false);
+    ok &= transit_calypso_check_identify("not identified", &card, "Opus", TRANSIT_ID_NONE);
     transit_set_bits_be(card.env.data, card.env.len, 13, 24, OPUS_NETWORK_ID);
 
     if (ok) {

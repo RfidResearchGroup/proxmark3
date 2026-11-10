@@ -31,10 +31,12 @@
 #define KAZAN_TYPE_PURSE        0x53
 
 // Sector 8 keys of the known key sets
-static const uint64_t kazan_keys[] = {
-    0xE954024EE754, 0x0CD464CDC100,
-    0x2058EAEE8446, 0xCB9B23815F87,
+static const transit_mfc_key_t kazan_keys[] = {
+    {KAZAN_TICKET_SECTOR, TRANSIT_MFC_KEY_AB, 0xE954024EE754}, {KAZAN_TICKET_SECTOR, TRANSIT_MFC_KEY_AB, 0x0CD464CDC100},
+    {KAZAN_TICKET_SECTOR, TRANSIT_MFC_KEY_AB, 0x2058EAEE8446}, {KAZAN_TICKET_SECTOR, TRANSIT_MFC_KEY_AB, 0xCB9B23815F87},
 };
+
+const transit_mfc_keyset_t kazan_keyset = { kazan_keys, ARRAYLEN(kazan_keys), false };
 
 typedef struct {
     uint8_t type;
@@ -57,12 +59,7 @@ bool is_valid_kazan_card(const uint8_t *dump, size_t dumplen) {
     if (transit_mfc_block(dump, dumplen, KAZAN_COUNTER_SECTOR, 3) == NULL) {
         return false;
     }
-    for (size_t i = 0; i < ARRAYLEN(kazan_keys); i++) {
-        if (transit_mfc_has_key(dump, dumplen, KAZAN_TICKET_SECTOR, kazan_keys[i])) {
-            return true;
-        }
-    }
-    return false;
+    return transit_mfc_keyset_match_dump(&kazan_keyset, dump, dumplen);
 }
 
 // YY MM DD, false when unset or out of range
@@ -139,6 +136,7 @@ int kazan_selftest(void) {
     dump[36 * 16] = 150;
 
     bool ok = transit_check("detected", is_valid_kazan_card(dump, sizeof(dump)), 1);
+    ok &= transit_mfc_check_identify("identify", dump, sizeof(dump), "Kazan", TRANSIT_ID_MATCH);
     ok &= transit_check("card number", MemLeToUint4byte(dump), 0x12345678);
     ok &= transit_check("counter", MemLeToUint4byte(dump + (36 * 16)), 150);
 
@@ -153,6 +151,7 @@ int kazan_selftest(void) {
 
     transit_mfc_set_key(dump, sizeof(dump), KAZAN_TICKET_SECTOR, false, 0xFFFFFFFFFFFF);
     ok &= transit_check("wrong key rejected", is_valid_kazan_card(dump, sizeof(dump)), 0);
+    ok &= transit_mfc_check_identify("not identified", dump, sizeof(dump), "Kazan", TRANSIT_ID_NONE);
 
     return transit_selftest_result("Kazan", ok);
 }

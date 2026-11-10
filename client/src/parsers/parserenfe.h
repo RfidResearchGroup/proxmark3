@@ -23,6 +23,10 @@
 #define PARSERENFE_H__
 
 #include "common.h"
+#include "parsetransit.h"       // transit_mfc_keyset_t
+
+// Sector 0 and 1 key A, identifying for info commands too
+extern const transit_mfc_keyset_t renfe_keyset;
 
 // True when the sector 0 and 1 key A are the RENFE ones
 bool is_valid_renfe_card(const uint8_t *dump, size_t dumplen);

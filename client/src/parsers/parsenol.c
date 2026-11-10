@@ -66,8 +66,14 @@ static void nol_serial_str(const uint8_t *d, char *out, size_t outlen) {
     snprintf(out, outlen, "%03u %03u %04u", (s / 10000000U) % 1000U, (s / 10000U) % 1000U, s % 10000U);
 }
 
+transit_id_t nol_identify(const transit_mfdes_info_t *info) {
+    return (transit_mfdes_info_has_aid(info, NOL_AID_TRANSIT) && transit_mfdes_info_has_aid(info, NOL_AID_SERIAL)) ? TRANSIT_ID_MATCH : TRANSIT_ID_NONE;
+}
+
 bool is_valid_nol_card(const desfire_dump_t *dump) {
-    return (nol_find_app(dump, NOL_AID_TRANSIT) != NULL) && (nol_find_app(dump, NOL_AID_SERIAL) != NULL);
+    transit_mfdes_info_t info;
+    transit_mfdes_info_from_dump(dump, &info);
+    return nol_identify(&info) == TRANSIT_ID_MATCH;
 }
 
 int nol_parser_parse(const desfire_dump_t *dump) {
@@ -125,11 +131,13 @@ int nol_selftest(void) {
     dump->app[1].files[0].data = file;
     dump->app[1].files[0].datalen = sizeof(file);
     ok &= transit_check("detected", is_valid_nol_card(dump), true);
+    ok &= transit_mfdes_check_identify("identify", dump, "nol", TRANSIT_ID_MATCH);
     if (ok) {
         nol_parser_parse(dump);
     }
     dump->app[0].aid = 0x000001;
     ok &= transit_check("FFFFFF alone rejected", is_valid_nol_card(dump), false);
+    ok &= transit_mfdes_check_identify("not identified", dump, "nol", TRANSIT_ID_NONE);
     free(dump);
 
     return transit_selftest_result("nol", ok);

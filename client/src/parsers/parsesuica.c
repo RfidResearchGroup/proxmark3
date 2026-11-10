@@ -319,6 +319,10 @@ bool is_valid_suica_card(const transit_felica_card_t *card) {
     return (h != NULL && h->block_count > 0);
 }
 
+transit_id_t suica_identify(const uint16_t *system_codes, size_t count) {
+    return transit_felica_has_system_code(system_codes, count, SUICA_SYSTEM_CODE) ? TRANSIT_ID_MATCH : TRANSIT_ID_NONE;
+}
+
 int suica_parser_parse(const transit_felica_card_t *card) {
 
     if (is_valid_suica_card(card) == false) {
@@ -487,6 +491,8 @@ int suica_selftest(void) {
 
     sys.system_code = 0x8008;
     ok &= transit_check("other system not detected", is_valid_suica_card(&card), 0);
+    ok &= transit_felica_check_identify("identify", SUICA_SYSTEM_CODE, "Japan IC", TRANSIT_ID_MATCH);
+    ok &= transit_felica_check_identify("other system not identified", 0x8008, "Japan IC", TRANSIT_ID_NONE);
 
     return transit_selftest_result("Japan IC", ok);
 }

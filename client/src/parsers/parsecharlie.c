@@ -24,33 +24,26 @@
 #include "commonutil.h"         // MemBeToUint4byte
 #include "ui.h"                 // PrintAndLogEx
 #include "parsetransit.h"
+#include "parsetransitmfc.h"
 
 #define CHARLIE_DUMP_MIN        1024
 #define CHARLIE_BLK(s, b)       ((((s) * 4) + (b)) * 16)
 #define CHARLIE_TRIPS           12
 
-// Sector 0 keys, either may sit in A or B depending on the dump
-static const uint64_t charlie_s0_keys[2] = { 0x3060206F5B0A, 0xF1B9F5669CC8 };
-// Data sector keys, A and B
-static const uint64_t charlie_data_keys[2] = { 0x5EC39B022F2B, 0xF662248E7E89 };
+// Sector 0 keys, either may sit in A or B depending on the dump,
+// then the data sector keys, A and B
+static const transit_mfc_key_t charlie_keys[4] = {
+    {0, TRANSIT_MFC_KEY_AB, 0x3060206F5B0A}, {0, TRANSIT_MFC_KEY_AB, 0xF1B9F5669CC8},
+    {1, TRANSIT_MFC_KEY_AB, 0x5EC39B022F2B}, {1, TRANSIT_MFC_KEY_AB, 0xF662248E7E89},
+};
 
-static uint64_t charlie_key(const uint8_t *dump, uint8_t sector, bool key_b) {
-    return MemBeToUint6byte(dump + CHARLIE_BLK(sector, 3) + (key_b ? 10 : 0));
-}
-
-static bool charlie_key_in(uint64_t k, const uint64_t *set) {
-    return k == set[0] || k == set[1];
-}
+const transit_mfc_keyset_t charlie_keyset = { charlie_keys, ARRAYLEN(charlie_keys), false };
 
 bool is_valid_charlie_card(const uint8_t *dump, size_t dumplen) {
     if (dump == NULL || dumplen < CHARLIE_DUMP_MIN) {
         return false;
     }
-    bool s0 = charlie_key_in(charlie_key(dump, 0, false), charlie_s0_keys) ||
-              charlie_key_in(charlie_key(dump, 0, true), charlie_s0_keys);
-    bool s1 = charlie_key_in(charlie_key(dump, 1, false), charlie_data_keys) ||
-              charlie_key_in(charlie_key(dump, 1, true), charlie_data_keys);
-    return s0 && s1;
+    return transit_mfc_keyset_match_dump(&charlie_keyset, dump, dumplen);
 }
 
 // Money in half cents, top bit is the sign
@@ -184,10 +177,8 @@ int charlie_selftest(void) {
     memset(d, 0, sizeof(d));
 
     charlie_put_be(d, 0x12345678, 4);
-    charlie_put_be(d + CHARLIE_BLK(0, 3), (uint32_t)(charlie_s0_keys[1] >> 16), 4);
-    charlie_put_be(d + CHARLIE_BLK(0, 3) + 4, (uint32_t)(charlie_s0_keys[1] & 0xFFFF), 2);
-    charlie_put_be(d + CHARLIE_BLK(1, 3), (uint32_t)(charlie_data_keys[0] >> 16), 4);
-    charlie_put_be(d + CHARLIE_BLK(1, 3) + 4, (uint32_t)(charlie_data_keys[0] & 0xFFFF), 2);
+    transit_mfc_set_key(d, sizeof(d), 0, false, charlie_keys[1].key);
+    transit_mfc_set_key(d, sizeof(d), 1, false, charlie_keys[2].key);
 
     // sector 3 newer than sector 2, adult card, $12.50, issued 2020-01-01 00:00
     transit_set_bits_be(d + CHARLIE_BLK(2, 0), 16, 81, 16, 4);
@@ -206,6 +197,7 @@ int charlie_selftest(void) {
 
     bool ok = true;
     ok &= transit_check("detected", is_valid_charlie_card(d, sizeof(d)), true);
+    ok &= transit_mfc_check_identify("identify", d, sizeof(d), "CharlieCard", TRANSIT_ID_MATCH);
     ok &= transit_check("balance sector", charlie_balance_sector(d), 3);
     ok &= transit_check("balance cents", (uint64_t)charlie_price(b1 + 5), 1250);
     ok &= transit_check("card type", MemBeToUint2byte(b1) >> 6, 367);
@@ -218,6 +210,7 @@ int charlie_selftest(void) {
 
     d[CHARLIE_BLK(1, 3)] ^= 0xFF;
     ok &= transit_check("wrong data key", is_valid_charlie_card(d, sizeof(d)), false);
+    ok &= transit_mfc_check_identify("not identified", d, sizeof(d), "CharlieCard", TRANSIT_ID_NONE);
 
     return transit_selftest_result("CharlieCard", ok);
 }

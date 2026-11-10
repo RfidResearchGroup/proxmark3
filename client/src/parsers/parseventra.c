@@ -233,6 +233,7 @@ int ventra_selftest(void) {
 
     bool ok = true;
     ok &= transit_check("detected", is_valid_ventra_card(data, sizeof(data)), true);
+    ok &= transit_mfu_check_identify("identify", data, sizeof(data), "Ventra", TRANSIT_ID_POSSIBLE);
     char buf[40];
     transit_date_str(buf, sizeof(buf), ventra_base_days(data));
     ok &= transit_check_str("expiry", buf, "2024-05-19");
@@ -254,6 +255,7 @@ int ventra_selftest(void) {
 
     p[4 * 4] = 0x0B;
     ok &= transit_check("other header rejected", is_valid_ventra_card(data, sizeof(data)), false);
+    ok &= transit_mfu_check_identify("not identified", data, sizeof(data), "Ventra", TRANSIT_ID_NONE);
 
     return transit_selftest_result("Ventra", ok);
 }

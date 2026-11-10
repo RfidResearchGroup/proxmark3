@@ -24,6 +24,7 @@
 
 #include "common.h"
 #include "fileutils.h"          // desfire_dump_t
+#include "parsetransit.h"       // transit_mfdes_info_t
 
 // AIDs as pm3 holds them, wire order 00 11 F2 and F0 10 F2
 #define MYKI_AID_1              0xF21100
@@ -31,6 +32,10 @@
 #define MYKI_FID_SERIAL         0x0F
 
 bool is_valid_myki_card(const desfire_dump_t *dump);
+
+// Both myki AIDs in the application list
+transit_id_t myki_identify(const transit_mfdes_info_t *info);
+
 int myki_parser_parse(const desfire_dump_t *dump);
 int myki_selftest(void);
 

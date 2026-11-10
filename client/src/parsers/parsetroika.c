@@ -83,11 +83,13 @@ typedef struct {
 } troika_block_t;
 
 // Sector keys A, 1K and 4K agree on these
+#define TROIKA_S4_KEY_A         0x73068F118C13
+#define TROIKA_S8_KEY_A         0xA73F5DC1D333
 static const uint64_t troika_sector_keys[16] = {
     [1] = 0xA82607B01C0D,
-    [4] = 0x73068F118C13,
+    [4] = TROIKA_S4_KEY_A,
     [7] = 0xAE3D65A3DAD4,
-    [8] = 0xA73F5DC1D333,
+    [8] = TROIKA_S8_KEY_A,
 };
 
 // Sector 1 on a 4K card uses the MAD key A, key B tells it apart
@@ -464,6 +466,12 @@ static void troika_print_block(const troika_block_t *t, const char *where) {
 // MIFARE Classic
 //-----------------------------------------------------------------------------
 
+static const transit_mfc_key_t troika_id_keys[] = {
+    {8, TRANSIT_MFC_KEY_AB, TROIKA_S8_KEY_A}, {4, TRANSIT_MFC_KEY_AB, TROIKA_S4_KEY_A},
+};
+
+const transit_mfc_keyset_t troika_keyset = { troika_id_keys, ARRAYLEN(troika_id_keys), true };
+
 static bool troika_sector_has_key(const uint8_t *dump, size_t dumplen, uint8_t sector) {
     if (transit_mfc_has_key(dump, dumplen, sector, troika_sector_keys[sector])) {
         return true;
@@ -584,12 +592,14 @@ int troika_ul_selftest(void) {
     PrintAndLogEx(INFO, "Testing Troika Ultralight decode");
 
     bool ok = transit_check("detected", is_valid_troika_ul_card(troika_ul_vector, sizeof(troika_ul_vector)), 1);
+    ok &= transit_mfu_check_identify("identify", troika_ul_vector, sizeof(troika_ul_vector), "Troika Ultralight", TRANSIT_ID_POSSIBLE);
     ok &= troika_check_ul_vector(troika_ul_vector + (TROIKA_UL_FIRST_PAGE * 4));
 
     uint8_t bad[sizeof(troika_ul_vector)];
     memcpy(bad, troika_ul_vector, sizeof(bad));
     bad[16] = 0x00;
     ok &= transit_check("bad header rejected", is_valid_troika_ul_card(bad, sizeof(bad)), 0);
+    ok &= transit_mfu_check_identify("not identified", bad, sizeof(bad), "Troika Ultralight", TRANSIT_ID_NONE);
     return transit_selftest_result("Troika Ultralight", ok);
 }
 
@@ -606,6 +616,7 @@ int troika_selftest(void) {
     transit_mfc_set_key(dump, sizeof(dump), 8, false, troika_sector_keys[8]);
 
     bool ok = transit_check("detected", is_valid_troika_card(dump, sizeof(dump)), 1);
+    ok &= transit_mfc_check_identify("identify", dump, sizeof(dump), "Troika", TRANSIT_ID_MATCH);
 
     uint8_t b[TROIKA_BLOCK_LEN];
     ok &= transit_check("sector 8 read", troika_sector_block(dump, sizeof(dump), 8, b), 1);
@@ -641,6 +652,7 @@ int troika_selftest(void) {
     transit_mfc_set_key(dump, sizeof(dump), 8, false, 0xFFFFFFFFFFFF);
     transit_mfc_set_key(dump, sizeof(dump), 4, false, 0xFFFFFFFFFFFF);
     ok &= transit_check("wrong keys rejected", is_valid_troika_card(dump, sizeof(dump)), 0);
+    ok &= transit_mfc_check_identify("not identified", dump, sizeof(dump), "Troika", TRANSIT_ID_NONE);
     ok &= transit_check("short dump rejected", is_valid_troika_card(dump, 512), 0);
 
     return transit_selftest_result("Troika", ok);

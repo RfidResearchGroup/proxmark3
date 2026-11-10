@@ -45,11 +45,19 @@ typedef enum {
     NF_MSPGOTO,
 } nf_system_t;
 
+static bool nf_block1_match(const uint8_t *block1) {
+    return (block1 != NULL) && (memcmp(block1 + 1, nf_manufacturer, sizeof(nf_manufacturer)) == 0);
+}
+
 bool is_valid_nextfare_card(const uint8_t *dump, size_t dumplen) {
     if (dump == NULL || dumplen < NF_DUMP_MIN) {
         return false;
     }
-    return memcmp(dump + NF_BLK(0, 1) + 1, nf_manufacturer, sizeof(nf_manufacturer)) == 0;
+    return nf_block1_match(dump + NF_BLK(0, 1));
+}
+
+transit_id_t nextfare_identify(const transit_mfc_info_t *info) {
+    return nf_block1_match(info->block1) ? TRANSIT_ID_MATCH : TRANSIT_ID_NONE;
 }
 
 static nf_system_t nf_system(const uint8_t *dump) {
@@ -355,6 +363,7 @@ int nextfare_selftest(void) {
     memcpy(d + NF_BLK(1, 0), bal[0], 16);
     memcpy(d + NF_BLK(1, 2), cfg[0], 16);
     ok &= transit_check("detected", is_valid_nextfare_card(d, sizeof(d)), true);
+    ok &= transit_mfc_check_identify("identify", d, sizeof(d), "Nextfare", TRANSIT_ID_MATCH);
     ok &= transit_check("Go card system", nf_system(d), NF_SEQGO);
     ok &= transit_check("parse", nextfare_parser_parse(d, sizeof(d)), PM3_SUCCESS);
 
@@ -365,6 +374,9 @@ int nextfare_selftest(void) {
     ok &= transit_check("TAP system", nf_system(d), NF_LAXTAP);
     memset(d + NF_BLK(0, 2), 0xFF, 16);
     ok &= transit_check("unknown system", nf_system(d), NF_UNKNOWN);
+
+    d[NF_BLK(0, 1) + 1] ^= 0xFF;
+    ok &= transit_mfc_check_identify("not identified", d, sizeof(d), "Nextfare", TRANSIT_ID_NONE);
 
     return transit_selftest_result("Nextfare", ok);
 }

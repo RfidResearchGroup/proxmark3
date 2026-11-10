@@ -23,6 +23,10 @@
 #define PARSETROIKA_H__
 
 #include "common.h"
+#include "parsetransit.h"       // transit_mfc_keyset_t
+
+// Sector 8 or 4 key, identifying for info commands, the data check needs a dump
+extern const transit_mfc_keyset_t troika_keyset;
 
 // MIFARE Classic, a Troika block in sector 8 or 4 under the Troika keys
 bool is_valid_troika_card(const uint8_t *dump, size_t dumplen);

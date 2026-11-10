@@ -24,9 +24,13 @@
 #define PARSEZOLOTAYAKORONA_H__
 
 #include "common.h"
+#include "parsetransit.h"       // transit_mfc_info_t
 
 // MAD entries for AID 18EE or the issuer name in sector 15
 bool is_valid_zolotayakorona_card(const uint8_t *dump, size_t dumplen);
+
+// The MAD entries in the block 1 an info command read
+transit_id_t zolotayakorona_identify(const transit_mfc_info_t *info);
 int zolotayakorona_parser_parse(const uint8_t *dump, size_t dumplen);
 int zolotayakorona_selftest(void);
 

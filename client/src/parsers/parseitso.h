@@ -23,12 +23,17 @@
 
 #include "common.h"
 #include "fileutils.h"          // desfire_dump_t
+#include "parsetransit.h"       // transit_mfdes_info_t
 
 // AID as pm3 holds it, wire order 16 02 A0
 #define ITSO_AID                0xA00216
 #define ITSO_FID_SHELL          0x0F
 
 bool is_valid_itso_card(const desfire_dump_t *dump);
+
+// ITSO AID in the application list
+transit_id_t itso_identify(const transit_mfdes_info_t *info);
+
 int itso_parser_parse(const desfire_dump_t *dump);
 int itso_selftest(void);
 

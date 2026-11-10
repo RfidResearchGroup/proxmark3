@@ -23,6 +23,10 @@
 #define PARSEBIP_H__
 
 #include "common.h"
+#include "parsetransit.h"       // transit_mfc_keyset_t
+
+// Sector 0 and 1 keys, identifying for info commands too
+extern const transit_mfc_keyset_t bip_keyset;
 
 // True when the sector 0 and 1 keys are the Bip! ones
 bool is_valid_bip_card(const uint8_t *dump, size_t dumplen);

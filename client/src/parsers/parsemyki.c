@@ -80,8 +80,14 @@ static bool myki_serial_str(const uint8_t *d, char *out, size_t outlen) {
     return true;
 }
 
+transit_id_t myki_identify(const transit_mfdes_info_t *info) {
+    return (transit_mfdes_info_has_aid(info, MYKI_AID_1) && transit_mfdes_info_has_aid(info, MYKI_AID_2)) ? TRANSIT_ID_MATCH : TRANSIT_ID_NONE;
+}
+
 bool is_valid_myki_card(const desfire_dump_t *dump) {
-    return (myki_find_app(dump, MYKI_AID_1) != NULL) && (myki_find_app(dump, MYKI_AID_2) != NULL);
+    transit_mfdes_info_t info;
+    transit_mfdes_info_from_dump(dump, &info);
+    return myki_identify(&info) == TRANSIT_ID_MATCH;
 }
 
 int myki_parser_parse(const desfire_dump_t *dump) {
@@ -141,11 +147,13 @@ int myki_selftest(void) {
     dump->app[0].files[0].datalen = sizeof(file);
     dump->app[1].aid = MYKI_AID_2;
     ok &= transit_check("detected", is_valid_myki_card(dump), true);
+    ok &= transit_mfdes_check_identify("identify", dump, "myki", TRANSIT_ID_MATCH);
     if (ok) {
         myki_parser_parse(dump);
     }
     dump->appcount = 1;
     ok &= transit_check("one AID only rejected", is_valid_myki_card(dump), false);
+    ok &= transit_mfdes_check_identify("not identified", dump, "myki", TRANSIT_ID_NONE);
     free(dump);
 
     return transit_selftest_result("myki", ok);

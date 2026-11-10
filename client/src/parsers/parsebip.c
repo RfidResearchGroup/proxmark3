@@ -29,24 +29,18 @@
 #define BIP_BLK(s, b)           ((((s) * 4) + (b)) * 16)
 
 // Key A and key B of sector 0, key A and key B of sector 1
-static const uint64_t bip_keys[4] = {
-    0x3A42F33AF429, 0x1FC235AC1309, 0x6338A371C0ED, 0x243F160918D1
+static const transit_mfc_key_t bip_keys[4] = {
+    {0, TRANSIT_MFC_KEY_A, 0x3A42F33AF429}, {0, TRANSIT_MFC_KEY_B, 0x1FC235AC1309},
+    {1, TRANSIT_MFC_KEY_A, 0x6338A371C0ED}, {1, TRANSIT_MFC_KEY_B, 0x243F160918D1},
 };
 
-static uint64_t bip_key(const uint8_t *dump, uint8_t sector, bool key_b) {
-    return MemBeToUint6byte(dump + BIP_BLK(sector, 3) + (key_b ? 10 : 0));
-}
-
-static bool bip_sector_key_ok(const uint8_t *dump, uint8_t sector) {
-    return bip_key(dump, sector, false) == bip_keys[sector * 2] ||
-           bip_key(dump, sector, true) == bip_keys[(sector * 2) + 1];
-}
+const transit_mfc_keyset_t bip_keyset = { bip_keys, ARRAYLEN(bip_keys), false };
 
 bool is_valid_bip_card(const uint8_t *dump, size_t dumplen) {
     if (dump == NULL || dumplen < BIP_DUMP_MIN) {
         return false;
     }
-    return bip_sector_key_ok(dump, 0) && bip_sector_key_ok(dump, 1);
+    return transit_mfc_keyset_match_dump(&bip_keyset, dump, dumplen);
 }
 
 // Timestamp packed least significant bit first in the first five bytes
@@ -173,8 +167,8 @@ int bip_selftest(void) {
     for (uint8_t s = 0; s < 2; s++) {
         uint8_t *t = d + BIP_BLK(s, 3);
         for (int i = 0; i < 6; i++) {
-            t[i] = (uint8_t)(bip_keys[s * 2] >> (40 - (8 * i)));
-            t[10 + i] = (uint8_t)(bip_keys[(s * 2) + 1] >> (40 - (8 * i)));
+            t[i] = (uint8_t)(bip_keys[s * 2].key >> (40 - (8 * i)));
+            t[10 + i] = (uint8_t)(bip_keys[(s * 2) + 1].key >> (40 - (8 * i)));
         }
     }
 
@@ -200,6 +194,7 @@ int bip_selftest(void) {
 
     bool ok = true;
     ok &= transit_check("detected", is_valid_bip_card(d, sizeof(d)), true);
+    ok &= transit_mfc_check_identify("identify", d, sizeof(d), "Bip!", TRANSIT_ID_MATCH);
     ok &= transit_check("card number", MemLeToUint4byte(d + BIP_BLK(0, 1) + 4), 12345678);
     ok &= transit_check("balance, negated", (uint64_t)(-bip_balance(d)), 1500);
     ok &= transit_check("holder id", bip_holder_id(d), 7654321);
@@ -215,6 +210,7 @@ int bip_selftest(void) {
     ok &= transit_check("sector 1 key B alone", is_valid_bip_card(d, sizeof(d)), true);
     d[BIP_BLK(1, 3) + 10] ^= 0xFF;
     ok &= transit_check("no sector 1 key", is_valid_bip_card(d, sizeof(d)), false);
+    ok &= transit_mfc_check_identify("not identified", d, sizeof(d), "Bip!", TRANSIT_ID_NONE);
     ok &= transit_check("short dump", is_valid_bip_card(d, 512), false);
 
     return transit_selftest_result("Bip!", ok);

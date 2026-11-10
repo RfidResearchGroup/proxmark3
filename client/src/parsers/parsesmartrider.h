@@ -22,6 +22,11 @@
 #define PARSESMARTRIDER_H__
 
 #include "common.h"
+#include "parsetransit.h"       // transit_mfc_keyset_t
+
+// SmartRider sector 7 keys, identifying for info commands too. MyWay is
+// only known by a digest of its key, so it cannot be probed for
+extern const transit_mfc_keyset_t smartrider_keyset;
 
 // True when the sector 7 keys are the SmartRider or MyWay common keys
 bool is_valid_smartrider_card(const uint8_t *dump, size_t dumplen);

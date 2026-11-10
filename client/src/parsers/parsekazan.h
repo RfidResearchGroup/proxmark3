@@ -23,6 +23,10 @@
 #define PARSEKAZAN_H__
 
 #include "common.h"
+#include "parsetransit.h"       // transit_mfc_keyset_t
+
+// Sector 8 keys, identifying for info commands too
+extern const transit_mfc_keyset_t kazan_keyset;
 
 // Sector 8 under one of the Kazan key sets
 bool is_valid_kazan_card(const uint8_t *dump, size_t dumplen);

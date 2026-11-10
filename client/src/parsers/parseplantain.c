@@ -68,13 +68,18 @@ static void plantain_time_str(char *out, size_t outlen, uint32_t mins) {
     transit_datetime_str(out, outlen, ((int64_t)PLANTAIN_DAYS_TO_2010 * 86400) + ((int64_t)mins * 60));
 }
 
+static const transit_mfc_key_t plantain_keys[] = {
+    {4, TRANSIT_MFC_KEY_AB, PLANTAIN_S4_KEY_A}, {4, TRANSIT_MFC_KEY_AB, PLANTAIN_S4_KEY_B},
+    {5, TRANSIT_MFC_KEY_AB, PLANTAIN_S5_KEY_A}, {5, TRANSIT_MFC_KEY_AB, PLANTAIN_S5_KEY_B},
+};
+
+const transit_mfc_keyset_t plantain_keyset = { plantain_keys, ARRAYLEN(plantain_keys), false };
+
 bool is_valid_plantain_card(const uint8_t *dump, size_t dumplen) {
     if (transit_mfc_block(dump, dumplen, 5, 3) == NULL) {
         return false;
     }
-    bool s4 = transit_mfc_has_key(dump, dumplen, 4, PLANTAIN_S4_KEY_A) || transit_mfc_has_key(dump, dumplen, 4, PLANTAIN_S4_KEY_B);
-    bool s5 = transit_mfc_has_key(dump, dumplen, 5, PLANTAIN_S5_KEY_A) || transit_mfc_has_key(dump, dumplen, 5, PLANTAIN_S5_KEY_B);
-    return s4 && s5;
+    return transit_mfc_keyset_match_dump(&plantain_keyset, dump, dumplen);
 }
 
 static void plantain_decode(const uint8_t *dump, size_t dumplen, plantain_t *p) {
@@ -223,6 +228,7 @@ int plantain_selftest(void) {
     memcpy(s5 + 32, s5b2, sizeof(s5b2));
 
     bool ok = transit_check("detected", is_valid_plantain_card(dump, sizeof(dump)), 1);
+    ok &= transit_mfc_check_identify("identify", dump, sizeof(dump), "Podorozhnik", TRANSIT_ID_MATCH);
 
     plantain_t p;
     plantain_decode(dump, sizeof(dump), &p);
@@ -247,6 +253,7 @@ int plantain_selftest(void) {
 
     transit_mfc_set_key(dump, sizeof(dump), 5, true, 0xFFFFFFFFFFFF);
     ok &= transit_check("wrong sector 5 key rejected", is_valid_plantain_card(dump, sizeof(dump)), 0);
+    ok &= transit_mfc_check_identify("not identified", dump, sizeof(dump), "Podorozhnik", TRANSIT_ID_NONE);
 
     return transit_selftest_result("Podorozhnik", ok);
 }

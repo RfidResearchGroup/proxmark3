@@ -46,6 +46,14 @@ bool is_valid_octopus_card(const transit_felica_card_t *card) {
            (octopus_block(card, SZT_SYSTEM_CODE, SZT_SERVICE_BALANCE) != NULL);
 }
 
+transit_id_t octopus_identify(const uint16_t *system_codes, size_t count) {
+    return transit_felica_has_system_code(system_codes, count, OCTOPUS_SYSTEM_CODE) ? TRANSIT_ID_MATCH : TRANSIT_ID_NONE;
+}
+
+transit_id_t szt_identify(const uint16_t *system_codes, size_t count) {
+    return transit_felica_has_system_code(system_codes, count, SZT_SYSTEM_CODE) ? TRANSIT_ID_MATCH : TRANSIT_ID_NONE;
+}
+
 int octopus_parser_parse(const transit_felica_card_t *card) {
 
     if (is_valid_octopus_card(card) == false) {
@@ -111,6 +119,10 @@ int octopus_selftest(void) {
 
     sys.system_code = 0x0003;
     ok &= transit_check("other system not detected", is_valid_octopus_card(&card), 0);
+    ok &= transit_felica_check_identify("identify", OCTOPUS_SYSTEM_CODE, "Octopus", TRANSIT_ID_MATCH);
+    ok &= transit_felica_check_identify("identify Shenzhen Tong", SZT_SYSTEM_CODE, "Shenzhen Tong", TRANSIT_ID_MATCH);
+    ok &= transit_felica_check_identify("Shenzhen Tong is not Octopus", SZT_SYSTEM_CODE, "Octopus", TRANSIT_ID_NONE);
+    ok &= transit_felica_check_identify("other system not identified", 0x0003, "Octopus", TRANSIT_ID_NONE);
 
     return transit_selftest_result("Octopus", ok);
 }

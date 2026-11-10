@@ -461,6 +461,7 @@ int intertic_selftest(void) {
     const intertic_network_t *n = intertic_find_network(d.country, d.authority, d.provider);
     ok &= transit_check_str("network", n ? n->city : NULL, "Rennes");
     ok &= transit_check("detected", is_valid_intertic_card(card, sizeof(card), NULL), 1);
+    ok &= transit_st25tb_check_identify("identify", card, sizeof(card), "Intertic", TRANSIT_ID_POSSIBLE);
     ok &= transit_check("parse", (uint64_t)intertic_parser_parse(card, sizeof(card), NULL), PM3_SUCCESS);
 
     // PID 10, distribution runs 32..95 and on into block 0, usage A is split around the counter
@@ -487,6 +488,7 @@ int intertic_selftest(void) {
     ok &= transit_check("unknown pid rejected", is_valid_intertic_card(card, sizeof(card), NULL), 0);
     memset(card, 0xFF, sizeof(card));
     ok &= transit_check("blank rejected", is_valid_intertic_card(card, sizeof(card), NULL), 0);
+    ok &= transit_st25tb_check_identify("not identified", card, sizeof(card), "Intertic", TRANSIT_ID_NONE);
 
     return transit_selftest_result("Intertic", ok);
 }

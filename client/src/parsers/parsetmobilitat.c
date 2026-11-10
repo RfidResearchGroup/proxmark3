@@ -63,20 +63,26 @@ static void tmobilitat_number_str(uint32_t n, char *out, size_t outlen) {
     snprintf(out, outlen, "%03u %03u %03u%s", (n / 1000000) % 1000, (n / 1000) % 1000, n % 1000, ctl);
 }
 
-bool is_valid_tmobilitat_card(const desfire_dump_t *dump) {
-    if (dump == NULL) {
-        return false;
-    }
-    bool aid = false;
-    for (uint8_t i = 0; i < dump->appcount && i < DESFIRE_MAX_APP_COUNT; i++) {
-        if (dump->app[i].aid == TMOBILITAT_AID) {
-            aid = true;
-            break;
-        }
+transit_id_t tmobilitat_identify(const transit_mfdes_info_t *info) {
+    if (info == NULL || info->card == NULL) {
+        return TRANSIT_ID_NONE;
     }
     uint8_t hlen = 0;
-    const uint8_t *h = tmobilitat_hist(&dump->card_info, &hlen);
-    return aid && h != NULL && hlen >= 6 && memcmp(h, tmobilitat_hist_tag, sizeof(tmobilitat_hist_tag)) == 0;
+    const uint8_t *h = tmobilitat_hist(info->card, &hlen);
+    if (h == NULL || hlen < 6 || memcmp(h, tmobilitat_hist_tag, sizeof(tmobilitat_hist_tag)) != 0) {
+        return TRANSIT_ID_NONE;
+    }
+    // historical bytes alone are a short tag
+    if (info->aids_known == false) {
+        return TRANSIT_ID_POSSIBLE;
+    }
+    return transit_mfdes_info_has_aid(info, TMOBILITAT_AID) ? TRANSIT_ID_MATCH : TRANSIT_ID_NONE;
+}
+
+bool is_valid_tmobilitat_card(const desfire_dump_t *dump) {
+    transit_mfdes_info_t info;
+    transit_mfdes_info_from_dump(dump, &info);
+    return tmobilitat_identify(&info) == TRANSIT_ID_MATCH;
 }
 
 int tmobilitat_parser_parse(const desfire_dump_t *dump) {
@@ -125,6 +131,13 @@ int tmobilitat_selftest(void) {
     ok &= transit_check("historical length", hlen, 8);
     ok &= transit_check("number", (h != NULL) ? MemBeToUint4byte(h + hlen - 4) : 0, 123456789);
     ok &= transit_check("detected", is_valid_tmobilitat_card(dump), true);
+    ok &= transit_mfdes_check_identify("identify", dump, "T-Mobilitat", TRANSIT_ID_MATCH);
+
+    // ATS only, as `hf 14a info` sees it
+    transit_mfdes_info_t info = { .card = &dump->card_info };
+    transit_idents_t ids;
+    transit_mfdes_identify(&info, &ids);
+    ok &= transit_check_ident("ATS only possible", &ids, "T-Mobilitat", TRANSIT_ID_POSSIBLE);
     if (ok) {
         tmobilitat_parser_parse(dump);
     }
@@ -132,6 +145,7 @@ int tmobilitat_selftest(void) {
     // Ljubljana Urbana shares the AID
     dump->card_info.ats[5] = 0x80;
     ok &= transit_check("other ATS rejected", is_valid_tmobilitat_card(dump), false);
+    ok &= transit_mfdes_check_identify("not identified", dump, "T-Mobilitat", TRANSIT_ID_NONE);
     free(dump);
 
     return transit_selftest_result("T-Mobilitat", ok);

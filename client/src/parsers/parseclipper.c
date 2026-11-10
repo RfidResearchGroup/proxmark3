@@ -27,12 +27,6 @@
 #include "util.h"               // sprint_hex_inrow
 #include "parsetransit.h"
 
-#define CLIPPER_FID_INFO        0x01    // expiry
-#define CLIPPER_FID_ECASH       0x02    // balance
-#define CLIPPER_FID_REFILLS     0x04
-#define CLIPPER_FID_IDENTITY    0x08    // serial
-#define CLIPPER_FID_HISTORY     0x0E
-
 #define CLIPPER_RECORD_LEN      32
 #define CLIPPER_MAX_RECORDS     64
 
@@ -284,8 +278,14 @@ static size_t clipper_collect_trips(const uint8_t *d, uint32_t len, clipper_trip
 // Detection and printing
 //-----------------------------------------------------------------------------
 
+transit_id_t clipper_identify(const transit_mfdes_info_t *info) {
+    return (transit_mfdes_info_has_aid(info, CLIPPER_AID_CARD) || transit_mfdes_info_has_aid(info, CLIPPER_AID_MOBILE)) ? TRANSIT_ID_MATCH : TRANSIT_ID_NONE;
+}
+
 bool is_valid_clipper_card(const desfire_dump_t *dump) {
-    return (clipper_find_app(dump) != NULL);
+    transit_mfdes_info_t info;
+    transit_mfdes_info_from_dump(dump, &info);
+    return clipper_identify(&info) == TRANSIT_ID_MATCH;
 }
 
 static void clipper_print_trips(const desfire_dump_app_t *app) {
@@ -447,6 +447,12 @@ int clipper_selftest(void) {
 
     bool ok = true;
     ok &= transit_check("detected", is_valid_clipper_card(dump), true);
+    ok &= transit_mfdes_check_identify("identify", dump, "Clipper", TRANSIT_ID_MATCH);
+
+    transit_mfdes_info_t info;
+    transit_mfdes_info_from_dump(dump, &info);
+    transit_mfdes_file_t sf[4];
+    ok &= transit_check("summary files", transit_mfdes_summary_files(&info, sf, ARRAYLEN(sf)), 2);
     ok &= transit_check("serial", MemBeToUint4byte(clipper_file_data(app, CLIPPER_FID_IDENTITY, 5, NULL) + 1), 572691763);
     ok &= transit_check("balance cents", (uint16_t)MemBeToUint2byte(ecash + 0x12), 30583);
 
@@ -479,6 +485,7 @@ int clipper_selftest(void) {
 
     app->aid = 0x534531;
     ok &= transit_check("other AID rejected", is_valid_clipper_card(dump), false);
+    ok &= transit_mfdes_check_identify("not identified", dump, "Clipper", TRANSIT_ID_NONE);
     app->aid = CLIPPER_AID_CARD;
 
     if (ok) {

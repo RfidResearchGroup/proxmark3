@@ -32,6 +32,10 @@
 // True when either balance service was read
 bool is_valid_octopus_card(const transit_felica_card_t *card);
 
+// System 8008 resp. 8005 among the system codes
+transit_id_t octopus_identify(const uint16_t *system_codes, size_t count);
+transit_id_t szt_identify(const uint16_t *system_codes, size_t count);
+
 // Print the Octopus and / or Shenzhen Tong balance
 int octopus_parser_parse(const transit_felica_card_t *card);
 

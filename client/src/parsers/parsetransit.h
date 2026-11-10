@@ -18,7 +18,7 @@
 // Each card system lives in its own parsers/parse<name>.c and exposes
 // is_valid_<name>_card(), <name>_parser_parse() and <name>_selftest() over
 // plain byte buffers. The dispatchers below run every parser of a technology
-// whose detection matches.
+// whose detection matches, the identify functions name a card for info commands.
 //-----------------------------------------------------------------------------
 
 #ifndef PARSETRANSIT_H__
@@ -141,6 +141,120 @@ typedef struct {
     uint8_t event_count;
     transit_calypso_record_t events[TRANSIT_CALYPSO_MAX_EVENTS];        // SFI 08, 2010
 } transit_calypso_card_t;
+
+//-----------------------------------------------------------------------------
+// Identification from the partial data an info command has at hand
+//-----------------------------------------------------------------------------
+
+typedef enum {
+    TRANSIT_ID_NONE = 0,
+    TRANSIT_ID_POSSIBLE,        // heuristic evidence only
+    TRANSIT_ID_MATCH,
+} transit_id_t;
+
+typedef struct {
+    const char *name;
+    const char *region;         // area or operator
+    const char *hint;           // command that fully decodes it
+    bool possible;
+} transit_ident_t;
+
+#define TRANSIT_MAX_IDENTS      4
+
+typedef struct {
+    uint8_t count;
+    transit_ident_t ident[TRANSIT_MAX_IDENTS];
+} transit_idents_t;
+
+// "Transit.......... name ( region )" per identification
+void transit_print_idents(const transit_idents_t *ids);
+
+// One hint per distinct decode command, skipping the command already running
+void transit_print_ident_hints(const transit_idents_t *ids, const char *current_cmd);
+
+// Self test helper, checks how ids name a card system
+bool transit_check_ident(const char *what, const transit_idents_t *ids, const char *name, transit_id_t want);
+
+// MIFARE Classic: keys found per sector, MAD block when read
+#define TRANSIT_MFC_MAX_SECTORS 40
+#define TRANSIT_MFC_KEY_A       0       // same as MF_KEY_A
+#define TRANSIT_MFC_KEY_B       1
+#define TRANSIT_MFC_KEY_AB      2
+
+typedef struct {
+    bool found[TRANSIT_MFC_MAX_SECTORS][2];
+    uint64_t key[TRANSIT_MFC_MAX_SECTORS][2];
+    const uint8_t *block1;      // sector 0 block 1, NULL when not read
+} transit_mfc_info_t;
+
+// Identifying key of a sector
+typedef struct {
+    uint8_t sector;
+    uint8_t keytype;
+    uint64_t key;
+} transit_mfc_key_t;
+
+// Every listed sector needs one matching key, or just one sector with any_sector
+typedef struct {
+    const transit_mfc_key_t *keys;
+    uint8_t count;
+    bool any_sector;
+} transit_mfc_keyset_t;
+
+bool transit_mfc_keyset_match_dump(const transit_mfc_keyset_t *ks, const uint8_t *dump, size_t dumplen);
+bool transit_mfc_keyset_match_info(const transit_mfc_keyset_t *ks, const transit_mfc_info_t *info);
+
+// Sectors with identifying keys, bit n for sector n
+uint64_t transit_mfc_probe_sectors(void);
+
+// Distinct identifying keys of a sector for one key type, 6 bytes each, returns the count
+size_t transit_mfc_probe_keys(uint8_t sector, uint8_t keytype, uint8_t *keys, size_t maxkeys);
+
+// Self test helper, identifies a dump from the keys an info command probe would find
+bool transit_mfc_check_identify(const char *what, const uint8_t *dump, size_t dumplen, const char *name, transit_id_t want);
+
+int transit_mfc_identify(const transit_mfc_info_t *info, transit_idents_t *ids);
+
+// MIFARE DESFire: application list and ATS
+typedef struct {
+    bool aids_known;
+    uint8_t aidcount;
+    uint32_t aids[DESFIRE_MAX_APP_COUNT];
+    const iso14a_card_select_t *card;   // NULL when the ATS is unknown
+} transit_mfdes_info_t;
+
+typedef struct {
+    uint32_t aid;
+    uint8_t fid;
+} transit_mfdes_file_t;
+
+void transit_mfdes_info_from_dump(const desfire_dump_t *dump, transit_mfdes_info_t *info);
+bool transit_mfdes_info_has_aid(const transit_mfdes_info_t *info, uint32_t aid);
+
+int transit_mfdes_identify(const transit_mfdes_info_t *info, transit_idents_t *ids);
+
+// Self test helper, identifies a dump from its application list and ATS
+bool transit_mfdes_check_identify(const char *what, const desfire_dump_t *dump, const char *name, transit_id_t want);
+
+// Free files the identified parsers decode a summary from, returns the count
+size_t transit_mfdes_summary_files(const transit_mfdes_info_t *info, transit_mfdes_file_t *files, size_t maxfiles);
+
+// FeliCa: system codes as the specs write them
+bool transit_felica_has_system_code(const uint16_t *system_codes, size_t count, uint16_t code);
+int transit_felica_identify(const uint16_t *system_codes, size_t count, transit_idents_t *ids);
+
+// Self test helper, identifies a card from one system code
+bool transit_felica_check_identify(const char *what, uint16_t system_code, const char *name, transit_id_t want);
+
+// Ultralight, ST25TB and Calypso info commands read the same data a dump has
+int transit_mfu_identify(const uint8_t *data, size_t datalen, transit_idents_t *ids);
+int transit_st25tb_identify(const uint8_t *data, size_t datalen, const uint8_t *uid, transit_idents_t *ids);
+int transit_calypso_identify(const transit_calypso_card_t *card, transit_idents_t *ids);
+
+// Self test helpers for the three above
+bool transit_mfu_check_identify(const char *what, const uint8_t *data, size_t datalen, const char *name, transit_id_t want);
+bool transit_st25tb_check_identify(const char *what, const uint8_t *data, size_t datalen, const char *name, transit_id_t want);
+bool transit_calypso_check_identify(const char *what, const transit_calypso_card_t *card, const char *name, transit_id_t want);
 
 //-----------------------------------------------------------------------------
 // Dispatch per technology, return how many parsers matched

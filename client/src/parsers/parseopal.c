@@ -131,8 +131,14 @@ static void opal_time_str(char *out, size_t outlen, const opal_card_t *c) {
     }
 }
 
+transit_id_t opal_identify(const transit_mfdes_info_t *info) {
+    return (transit_mfdes_info_has_aid(info, OPAL_AID)) ? TRANSIT_ID_MATCH : TRANSIT_ID_NONE;
+}
+
 bool is_valid_opal_card(const desfire_dump_t *dump) {
-    return (opal_find_app(dump) != NULL);
+    transit_mfdes_info_t info;
+    transit_mfdes_info_from_dump(dump, &info);
+    return opal_identify(&info) == TRANSIT_ID_MATCH;
 }
 
 int opal_parser_parse(const desfire_dump_t *dump) {
@@ -229,11 +235,13 @@ int opal_selftest(void) {
     dump->app[0].files[0].data = litter;
     dump->app[0].files[0].datalen = sizeof(litter);
     ok &= transit_check("detected", is_valid_opal_card(dump), true);
+    ok &= transit_mfdes_check_identify("identify", dump, "Opal", TRANSIT_ID_MATCH);
     if (ok) {
         opal_parser_parse(dump);
     }
     dump->app[0].aid = 0xF21190;
     ok &= transit_check("other AID rejected", is_valid_opal_card(dump), false);
+    ok &= transit_mfdes_check_identify("not identified", dump, "Opal", TRANSIT_ID_NONE);
     free(dump);
 
     return transit_selftest_result("Opal", ok);

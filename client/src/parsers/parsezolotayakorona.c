@@ -93,12 +93,16 @@ static bool zk_has_signature(const uint8_t *dump, size_t dumplen) {
     return (memcmp(b0, zk_signature, 16) == 0) && (memcmp(b1, zk_signature + 16, sizeof(zk_signature) - 16) == 0);
 }
 
-static bool zk_has_mad(const uint8_t *dump, size_t dumplen) {
-    const uint8_t *toc = transit_mfc_block(dump, dumplen, 0, 1);
+// MAD block 1, sectors 4 and 6
+static bool zk_mad_match(const uint8_t *toc) {
     if (toc == NULL) {
         return false;
     }
     return toc[8] == ZK_MAD_AID_HI && toc[9] == ZK_MAD_AID_LO && toc[12] == ZK_MAD_AID_HI && toc[13] == ZK_MAD_AID_LO;
+}
+
+static bool zk_has_mad(const uint8_t *dump, size_t dumplen) {
+    return zk_mad_match(transit_mfc_block(dump, dumplen, 0, 1));
 }
 
 bool is_valid_zolotayakorona_card(const uint8_t *dump, size_t dumplen) {
@@ -106,6 +110,10 @@ bool is_valid_zolotayakorona_card(const uint8_t *dump, size_t dumplen) {
         return false;
     }
     return zk_has_signature(dump, dumplen) || zk_has_mad(dump, dumplen);
+}
+
+transit_id_t zolotayakorona_identify(const transit_mfc_info_t *info) {
+    return zk_mad_match(info->block1) ? TRANSIT_ID_MATCH : TRANSIT_ID_NONE;
 }
 
 static void zk_decode(const uint8_t *dump, size_t dumplen, zk_t *z) {
@@ -248,11 +256,13 @@ int zolotayakorona_selftest(void) {
 
     s15[11] ^= 0x01;
     ok &= transit_check("bad signature rejected", is_valid_zolotayakorona_card(dump, sizeof(dump)), 0);
+    ok &= transit_mfc_check_identify("not identified", dump, sizeof(dump), "Zolotaya Korona", TRANSIT_ID_NONE);
     dump[16 + 8] = ZK_MAD_AID_HI;
     dump[16 + 9] = ZK_MAD_AID_LO;
     dump[16 + 12] = ZK_MAD_AID_HI;
     dump[16 + 13] = ZK_MAD_AID_LO;
     ok &= transit_check("detected by MAD", is_valid_zolotayakorona_card(dump, sizeof(dump)), 1);
+    ok &= transit_mfc_check_identify("identify by MAD", dump, sizeof(dump), "Zolotaya Korona", TRANSIT_ID_MATCH);
 
     return transit_selftest_result("Zolotaya Korona", ok);
 }

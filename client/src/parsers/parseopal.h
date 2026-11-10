@@ -23,12 +23,17 @@
 
 #include "common.h"
 #include "fileutils.h"          // desfire_dump_t
+#include "parsetransit.h"       // transit_mfdes_info_t
 
 // AID as pm3 holds it, wire order 31 45 53
 #define OPAL_AID                0x534531
 #define OPAL_FID_CARD           0x07
 
 bool is_valid_opal_card(const desfire_dump_t *dump);
+
+// Opal AID in the application list
+transit_id_t opal_identify(const transit_mfdes_info_t *info);
+
 int opal_parser_parse(const desfire_dump_t *dump);
 int opal_selftest(void);
 

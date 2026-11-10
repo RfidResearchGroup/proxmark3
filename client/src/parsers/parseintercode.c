@@ -662,6 +662,8 @@ static bool intercode_selftest_common(bool navigo) {
     ok &= transit_check("network id", calypso_intercode_network(&card), net);
     ok &= transit_check("navigo detect", is_valid_navigo_card(&card), navigo);
     ok &= transit_check("intercode detect", is_valid_intercode_card(&card), navigo == false);
+    ok &= transit_calypso_check_identify("navigo identify", &card, "Navigo", navigo ? TRANSIT_ID_MATCH : TRANSIT_ID_NONE);
+    ok &= transit_calypso_check_identify("intercode identify", &card, "Intercode", navigo ? TRANSIT_ID_NONE : TRANSIT_ID_MATCH);
 
     en1545_parsed_t env;
     (void)en1545_parse(card.env.data, card.env.len, 0, &calypso_intercode_env, &env);

@@ -24,11 +24,16 @@
 
 #include "common.h"
 #include "fileutils.h"          // desfire_dump_t
+#include "parsetransit.h"       // transit_mfdes_info_t
 
 // AID as pm3 holds it, wire order 05 00 00. Ljubljana Urbana uses it too.
 #define TMOBILITAT_AID          0x000005
 
 bool is_valid_tmobilitat_card(const desfire_dump_t *dump);
+
+// Historical bytes and AID, only possible when the application list is unknown
+transit_id_t tmobilitat_identify(const transit_mfdes_info_t *info);
+
 int tmobilitat_parser_parse(const desfire_dump_t *dump);
 int tmobilitat_selftest(void);
 

@@ -26,6 +26,7 @@
 #include "util.h"               // sprint_hex_inrow
 #include "mbedtls/md5.h"
 #include "parsetransit.h"
+#include "parsetransitmfc.h"
 
 #define SR_DUMP_MIN             1024
 #define SR_BLK(s, b)            ((((s) * 4) + (b)) * 16)
@@ -39,7 +40,11 @@ typedef enum {
 } sr_type_t;
 
 // Sector 7 common keys, SmartRider key A and key B
-static const uint64_t sr_s7_keys[2] = { 0x9189449EA24E, 0x568C9083F71C };
+static const transit_mfc_key_t sr_s7_keys[2] = {
+    {7, TRANSIT_MFC_KEY_A, 0x9189449EA24E}, {7, TRANSIT_MFC_KEY_B, 0x568C9083F71C},
+};
+
+const transit_mfc_keyset_t smartrider_keyset = { sr_s7_keys, ARRAYLEN(sr_s7_keys), false };
 
 // md5("myway" || key || "myway") of the MyWay sector 7 key, from Metrodroid
 static const uint8_t sr_myway_digest[16] = {
@@ -68,7 +73,7 @@ static sr_type_t sr_detect(const uint8_t *dump, size_t dumplen) {
         return SR_UNKNOWN;
     }
     const uint8_t *t = dump + SR_BLK(7, 3);
-    if (MemBeToUint6byte(t) == sr_s7_keys[0] || MemBeToUint6byte(t + 10) == sr_s7_keys[1]) {
+    if (transit_mfc_keyset_match_dump(&smartrider_keyset, dump, dumplen)) {
         return SR_SMARTRIDER;
     }
     if (sr_key_digest_is(t, "myway", sr_myway_digest) || sr_key_digest_is(t + 10, "myway", sr_myway_digest)) {
@@ -269,9 +274,10 @@ int smartrider_selftest(void) {
     // key A of sector 7
     uint8_t *t = d + SR_BLK(7, 3);
     for (int i = 0; i < 6; i++) {
-        t[i] = (uint8_t)(sr_s7_keys[0] >> (40 - (8 * i)));
+        t[i] = (uint8_t)(sr_s7_keys[0].key >> (40 - (8 * i)));
     }
     ok &= transit_check("detected", is_valid_smartrider_card(d, sizeof(d)), true);
+    ok &= transit_mfc_check_identify("identify", d, sizeof(d), "SmartRider", TRANSIT_ID_MATCH);
 
     // Metrodroid's published digest of the SmartRider key A proves the hashing
     static const uint8_t sr_key2_digest[16] = {
@@ -314,6 +320,7 @@ int smartrider_selftest(void) {
 
     t[0] ^= 0xFF;
     ok &= transit_check("wrong sector 7 key", is_valid_smartrider_card(d, sizeof(d)), false);
+    ok &= transit_mfc_check_identify("not identified", d, sizeof(d), "SmartRider", TRANSIT_ID_NONE);
 
     return transit_selftest_result("SmartRider", ok);
 }

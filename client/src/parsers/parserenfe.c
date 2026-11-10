@@ -29,7 +29,11 @@
 #define RENFE_DUMP_MIN          1024
 #define RENFE_BLK(b)            ((b) * 16)
 
-static const uint64_t renfe_keys[2] = { 0xA8844B0BCA06, 0xCB5ED0E57B08 };
+static const transit_mfc_key_t renfe_keys[2] = {
+    {0, TRANSIT_MFC_KEY_A, 0xA8844B0BCA06}, {1, TRANSIT_MFC_KEY_A, 0xCB5ED0E57B08},
+};
+
+const transit_mfc_keyset_t renfe_keyset = { renfe_keys, ARRAYLEN(renfe_keys), false };
 
 // Blocks Metroflip found the event log in
 static const uint8_t renfe_history_blocks[] = { 18, 22, 28, 29, 30, 44, 45, 46 };
@@ -38,8 +42,7 @@ bool is_valid_renfe_card(const uint8_t *dump, size_t dumplen) {
     if (dump == NULL || dumplen < RENFE_DUMP_MIN) {
         return false;
     }
-    return MemBeToUint6byte(dump + RENFE_BLK(3)) == renfe_keys[0] &&
-           MemBeToUint6byte(dump + RENFE_BLK(7)) == renfe_keys[1];
+    return transit_mfc_keyset_match_dump(&renfe_keyset, dump, dumplen);
 }
 
 static const char *renfe_event_name(uint8_t type) {
@@ -166,12 +169,14 @@ int renfe_selftest(void) {
 
     bool ok = true;
     ok &= transit_check("detected", is_valid_renfe_card(d, sizeof(d)), true);
+    ok &= transit_mfc_check_identify("identify", d, sizeof(d), "RENFE Suma 10", TRANSIT_ID_MATCH);
     ok &= transit_check("events", n, 2);
     ok &= transit_check("newest is exit", (n > 0) ? ev[0][0] : 0, 0x1A);
     ok &= transit_check("parse", renfe_parser_parse(d, sizeof(d)), PM3_SUCCESS);
 
     d[RENFE_BLK(7)] ^= 0xFF;
     ok &= transit_check("wrong sector 1 key", is_valid_renfe_card(d, sizeof(d)), false);
+    ok &= transit_mfc_check_identify("not identified", d, sizeof(d), "RENFE Suma 10", TRANSIT_ID_NONE);
 
     return transit_selftest_result("RENFE Suma 10", ok);
 }

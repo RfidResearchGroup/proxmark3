@@ -23,6 +23,10 @@
 #define PARSECHARLIE_H__
 
 #include "common.h"
+#include "parsetransit.h"       // transit_mfc_keyset_t
+
+// Sector 0 and 1 keys, identifying for info commands too
+extern const transit_mfc_keyset_t charlie_keyset;
 
 // True when the sector 0 and 1 keys are the CharlieCard ones
 bool is_valid_charlie_card(const uint8_t *dump, size_t dumplen);

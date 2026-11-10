@@ -120,6 +120,7 @@ int trt_selftest(void) {
     ok &= transit_check("hour", t.hour, 13);
     ok &= transit_check("minute", t.minute, 45);
     ok &= transit_check("balance", t.balance, 200);
+    ok &= transit_mfu_check_identify("identify", data, sizeof(data), "TRT", TRANSIT_ID_POSSIBLE);
     if (ok) {
         trt_parser_parse(data, sizeof(data));
     }
@@ -130,6 +131,7 @@ int trt_selftest(void) {
     data[(TRT_PAGE_SALE_A - 1) * TRT_PAGE_SIZE] ^= 0x01;
     data[3 * TRT_PAGE_SIZE] = TRT_NDEF_CC_MAGIC;
     ok &= transit_check("NDEF tag rejected", is_valid_trt_card(data, sizeof(data)), false);
+    ok &= transit_mfu_check_identify("not identified", data, sizeof(data), "TRT", TRANSIT_ID_NONE);
 
     return transit_selftest_result("TRT", ok);
 }

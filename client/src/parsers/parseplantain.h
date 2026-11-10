@@ -24,6 +24,10 @@
 #define PARSEPLANTAIN_H__
 
 #include "common.h"
+#include "parsetransit.h"       // transit_mfc_keyset_t
+
+// Sector 4 and 5 keys, identifying for info commands too
+extern const transit_mfc_keyset_t plantain_keyset;
 
 // Sectors 4 and 5 under the Podorozhnik keys
 bool is_valid_plantain_card(const uint8_t *dump, size_t dumplen);
