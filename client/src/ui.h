@@ -30,7 +30,7 @@ extern "C" {
 
 #define _USE_MATH_DEFINES
 
-// mingw: match GNU printf enabled via _ISOC99_SOURCE, not ms_printf
+// mingw gcc maps plain printf to ms_printf; client relies on C99 formats (UCRT / ANSI stdio)
 #ifdef __MINGW32__
 #define PM3_PRINTF_FORMAT gnu_printf
 #else
