@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Fixed `lf pcf7931 config` - out of range delay and offsets are refused instead of silently truncated (@GiacoBot)
+- Fixed `lf pcf7931 write` - device froze on the 16-bit timer wrap, client always timed out, write right after a read failed; default init delay is now 17450 us (@GiacoBot)
 - Fixed `lf nexwatch clone` - `-m` defaults to 1 as its help says, values the frame can't carry and conflicting options are refused, `--psk2` writes block 4 (@matrix)
 - Fixed `lf nexwatch demod` - the raw id is the id field the tag sends instead of 0x40c00080 for every tag (@matrix)
 - Fixed `lf nexwatch demod` - a magic number of 0xFF is found (@matrix)
