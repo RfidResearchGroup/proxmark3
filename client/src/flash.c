@@ -472,7 +472,8 @@ static bool port_is_wireless(const char *name) {
 }
 
 // Get the state of the proxmark, backwards compatible
-static int get_proxmark_state(uint32_t *state, const char *serial_port_name) {
+// report: print the bootloader's BWM link probe (once per flash, not on every query)
+static int get_proxmark_state(uint32_t *state, const char *serial_port_name, bool report) {
     PacketResponseNG resp;
     bool got = false;
     for (int attempt = 0; (attempt < 3) && (got == false); attempt++) {
@@ -510,7 +511,7 @@ static int get_proxmark_state(uint32_t *state, const char *serial_port_name) {
             *state = resp.oldarg[0];
             PrintAndLogEx(DEBUG, "DEVICE_INFO flags 0x%08x", *state);
             // A BWM bootrom reports the baud it probed in oldarg[2]; 0 means no ESP answered.
-            if ((*state & DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM) == DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM) {
+            if (report && ((*state & DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM) == DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM)) {
                 if (resp.oldarg[2]) {
                     PrintAndLogEx(INFO, "Bootloader BWM link at " _YELLOW_("%" PRIu64) " baud", resp.oldarg[2]);
                 } else {
@@ -531,7 +532,7 @@ static int get_proxmark_state(uint32_t *state, const char *serial_port_name) {
 static int enter_bootloader(char *serial_port_name, bool wait_appear) {
 
     uint32_t state = 0;
-    int ret = get_proxmark_state(&state, serial_port_name);
+    int ret = get_proxmark_state(&state, serial_port_name, false);
     if (ret != PM3_SUCCESS) {
         return ret;
     }
@@ -732,7 +733,7 @@ int flash_start_flashing(int enable_bl_writes, char *serial_port_name, flash_dev
     }
 
     uint32_t state = 0;
-    ret = get_proxmark_state(&state, serial_port_name);
+    ret = get_proxmark_state(&state, serial_port_name, true);
     if (ret != PM3_SUCCESS) {
         return ret;
     }
