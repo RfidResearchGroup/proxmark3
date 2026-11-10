@@ -2032,7 +2032,7 @@
         },
         "hf 15 help": {
             "command": "hf 15 help",
-            "description": "----------- ----------------------- General ----------------------- help This help list List ISO-15693 history ----------- ----------------------- Operations ----------------------- demod Demodulate ISO-15693 from tag view Display content from tag dump file --------------------------------------------------------------------------------------- hf 15 list available offline: yes Alias of `trace list -t 15 -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "----------- ----------------------- General ----------------------- help This help list List ISO-15693 history ----------- ----------------------- Operations ----------------------- demod Demodulate ISO-15693 from tag implant Read temperature from NTAG 5 link sensor implant view Display content from tag dump file --------------------------------------------------------------------------------------- hf 15 list available offline: yes Alias of `trace list -t 15 -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf 15 list --frame -> show frame delay times",
                 "hf 15 list -1 -> use trace buffer"
@@ -2050,6 +2050,31 @@
                 "-f, --file <fn> filename of dictionary"
             ],
             "usage": "hf 15 list [-h1crux] [--frame] [-f <fn>]"
+        },
+        "hf 15 implant": {
+            "command": "hf 15 implant",
+            "description": "Read the temperature of an NTAG 5 link (NTP5332) based sensor implant, e.g. VivoKey Thermo (TMP112/TMP117/TMP119) or Temptress (2x TMP117 at 0x49, 0x4A). Powers the sensor by energy harvesting and talks I2C through the NTAG 5 link. Sensors at 0x48-0x4B are found by probing and identified by TMP117/119 device id.",
+            "notes": [
+                "hf 15 implant",
+                "hf 15 implant -n 5 -v",
+                "hf 15 implant --dual",
+                "hf 15 implant --addr 49 --sensor tmp117",
+                "hf 15 implant -u E004011800000000 --wait 5000",
+                "hf 15 implant --test"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-u, --uid <hex> full UID (8 hex bytes)",
+                "--addr <hex> I2C address of sensor (def probe 48..4B)",
+                "--sensor <str> sensor type: auto, tmp112, tmp117, tmp119 (def auto)",
+                "--dual Temptress, TMP117 at 0x49 and 0x4A",
+                "-n <dec> number of readings (def 1)",
+                "--wait <ms> energy harvesting timeout (def 2000)",
+                "-v, --verbose verbose output, show raw frames",
+                "--test perform self test"
+            ],
+            "usage": "hf 15 implant [-hv] [-u <hex>] [--addr <hex>] [--sensor <str>] [--dual] [-n <dec>] [--wait <ms>] [--test]"
         },
         "hf 15 info": {
             "command": "hf 15 info",
@@ -2499,19 +2524,21 @@
         },
         "hf calypso help": {
             "command": "hf calypso help",
-            "description": "help This help list List Calypso history --------------------------------------------------------------------------------------- hf calypso info available offline: no Tag information for Calypso cards",
+            "description": "help This help info Tag information list List Calypso history --------------------------------------------------------------------------------------- hf calypso info available offline: yes Tag information for Calypso cards",
             "notes": [
                 "hf calypso info",
                 "hf calypso info -v",
-                "hf calypso info --aid 315449432E494341"
+                "hf calypso info --aid 315449432E494341",
+                "hf calypso info --selftest"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "--aid <hex> Calypso application AID or AID prefix (5..16 bytes)",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "--selftest Run the transit parsers self tests and exit"
             ],
-            "usage": "hf calypso info [-hv] [--aid <hex>]"
+            "usage": "hf calypso info [-hv] [--aid <hex>] [--selftest]"
         },
         "hf calypso list": {
             "command": "hf calypso list",
@@ -3064,22 +3091,24 @@
                 "hf felica dump",
                 "hf felica dump --retry 5",
                 "hf felica dump --idm 11100910C11BC407",
-                "hf felica dump -f my-felica-dump"
+                "hf felica dump -f my-felica-dump",
+                "hf felica dump --selftest"
             ],
-            "offline": false,
+            "offline": true,
             "options": [
                 "-h, --help This help",
                 "--no-auth read public services",
                 "-r, --retry <dec> number of retries",
                 "--idm <hex> use custom IDm",
                 "-f, --file <fn> Specify a filename for JSON dump file",
-                "--no-ic-optimizations attempt all commands even if the IC is known not to support them"
+                "--no-ic-optimizations attempt all commands even if the IC is known not to support them",
+                "--selftest Run the transit parsers self tests and exit"
             ],
-            "usage": "hf felica dump [-h] [--no-auth] [-r <dec>] [--idm <hex>] [-f <fn>] [--no-ic-optimizations]"
+            "usage": "hf felica dump [-h] [--no-auth] [-r <dec>] [--idm <hex>] [-f <fn>] [--no-ic-optimizations] [--selftest]"
         },
         "hf felica help": {
             "command": "hf felica help",
-            "description": "----------- ----------------------- General ----------------------- help This help list List ISO 18092/FeliCa history ----------- ----------------------- Operations ----------------------- ----------- ----------------------- FeliCa SEAC ----------------------- ----------- ----------------------- FeliCa Standard ----------------------- ----------- ----------------------- FeliCa Light ----------------------- --------------------------------------------------------------------------------------- hf felica list available offline: yes Alias of `trace list -t felica` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "----------- ----------------------- General ----------------------- help This help list List ISO 18092/FeliCa history ----------- ----------------------- Operations ----------------------- ----------- ----------------------- FeliCa SEAC ----------------------- ----------- ----------------------- FeliCa Standard ----------------------- dump Wait for and try dumping FeliCa ----------- ----------------------- FeliCa Light ----------------------- --------------------------------------------------------------------------------------- hf felica list available offline: yes Alias of `trace list -t felica` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf felica list --frame -> show frame delay times",
                 "hf felica list -1 -> use trace buffer"
@@ -4314,6 +4343,24 @@
             ],
             "usage": "hf gallagher reader [-h@vc] [--aid <hex>] [--sitekey <hex>] [--apdu]"
         },
+        "hf goodisplay help": {
+            "command": "hf goodisplay help",
+            "description": "help This help load Load image file to Goodisplay NFC ePaper --------------------------------------------------------------------------------------- hf goodisplay load available offline: yes Load image file to Goodisplay NFC ePaper (NFC-D1 tags). Image is cropped to the panel's native portrait size, black/white only.",
+            "notes": [
+                "hf goodisplay load -f myfile -m 0 -> GDEY0154D67 1.54 inch ( 200, 200 )",
+                "hf goodisplay load -f myfile -m 1 -> GDEY0213B74 2.13 inch ( 122, 250 )",
+                "hf goodisplay load -f myfile -m 2 -> GDEY029T94 2.9 inch ( 128, 296 )",
+                "hf goodisplay load -f myfile -m 3 -> GDEY037T03 3.7 inch ( 240, 416 )"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-m <nr> model number [0 - 3] of your tag",
+                "-f, --file <fn> specify image to upload to tag",
+                "-s, --save <fn> save paletized version in file"
+            ],
+            "usage": "hf goodisplay load [-h] -m <nr> -f <fn> [-s <fn>]"
+        },
         "hf gp crs": {
             "command": "hf gp crs",
             "description": "List contactless applets registered in the GlobalPlatform CRS (Contactless Registry Service). GET STATUS on the CRS needs no keys.",
@@ -4444,7 +4491,7 @@
         },
         "hf help": {
             "command": "hf help",
-            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } aliro { ALIRO digital access credentials... } calypso { Calypso transport cards... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fmcos { FMCOS CPU cards... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } gp { GlobalPlatform secure elements... } gst { Google Smart Tap passes... } secc { iClass SE Config Card Emulator... } iclass { ICLASS RFIDs... } ict { ICT MFC/DESfire RFIDs... } jooki { Jooki RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } saflok { Saflok MFC RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } tesla { TESLA Cards... } texkom { Texkom RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } vas { Apple Value Added Service... } waveshare { Waveshare NFC ePaper... } xerox { Fuji/Xerox cartridge RFIDs... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags --------------------------------------------------------------------------------------- hf list available offline: yes Alias of `trace list -t raw` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } aliro { ALIRO digital access credentials... } calypso { Calypso transport cards... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fmcos { FMCOS CPU cards... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } goodisplay { Goodisplay NFC ePaper... } gp { GlobalPlatform secure elements... } gst { Google Smart Tap passes... } secc { iClass SE Config Card Emulator... } iclass { ICLASS RFIDs... } ict { ICT MFC/DESfire RFIDs... } jooki { Jooki RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } saflok { Saflok MFC RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } tesla { TESLA Cards... } texkom { Texkom RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } vas { Apple Value Added Service... } waveshare { Waveshare NFC ePaper... } xerox { Fuji/Xerox cartridge RFIDs... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags --------------------------------------------------------------------------------------- hf list available offline: yes Alias of `trace list -t raw` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf list --frame -> show frame delay times",
                 "hf list -1 -> use trace buffer"
@@ -4967,7 +5014,9 @@
                 "hf iclass sam -p -d a005a103800104 -> get PACS data, prevent epurse update",
                 "hf iclass sam --break -> get Nr-MAC for extracting encrypted SIO",
                 "hf iclass sam -f hf-iclass-dump.bin -> emulate card from dump file to SAM",
-                "hf iclass sam --info -> get SAM version + serial (also warms up the SAM)"
+                "hf iclass sam --info -> get SAM version + serial (also warms up the SAM)",
+                "hf iclass sam --dg sr -> get PACS and SIO, save an iCLASS SR dump",
+                "hf iclass sam --save --dg prox -> save credential, print HID Prox clone commands"
             ],
             "offline": false,
             "options": [
@@ -4982,9 +5031,11 @@
                 "-d, --data <hex> DER encoded command to send to SAM",
                 "-s, --snmp data is in snmp format without headers",
                 "--info get SAM infos (version, serial number)",
-                "-f, --file <fn> dump file to emulate to SAM instead of a real card"
+                "-f, --file <fn> dump file to emulate to SAM instead of a real card",
+                "--dg <legacy|sr|prox|mfc> downgrade the credential to",
+                "--save save credential to file"
             ],
-            "usage": "hf iclass sam [-hvkntps] [--break] [--shallow] [-d <hex>]... [--info] [-f <fn>]"
+            "usage": "hf iclass sam [-hvkntps] [--break] [--shallow] [-d <hex>]... [--info] [-f <fn>] [--dg <legacy|sr|prox|mfc>] [--save]"
         },
         "hf iclass sim": {
             "command": "hf iclass sim",
@@ -7043,6 +7094,28 @@
             ],
             "usage": "hf mf restore [-h] [--mini] [--1k] [--2k] [--4k] [-u <hex>] [-f <fn>] [-k <fn>] [--ka] [--force]"
         },
+        "hf mf sam": {
+            "command": "hf mf sam",
+            "description": "Extract PACS information via a HID SAM Make sure you got a SAM inserted in your sim module",
+            "notes": [
+                "hf mf sam",
+                "hf mf sam -d a005a103800104 -> get PACS data",
+                "hf mf sam --dg mfc -> get PACS, save a MIFARE Classic dump",
+                "hf mf sam --save --dg prox -> save credential, print HID Prox clone commands"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-v, --verbose verbose output",
+                "-k, --keep keep the field active after command executed",
+                "-n, --nodetect skip selecting the card and sending card details to SAM",
+                "-t, --tlv decode TLV",
+                "-d, --data <hex> DER encoded command to send to SAM",
+                "--dg <legacy|sr|prox|mfc> downgrade the credential to",
+                "--save save credential to file"
+            ],
+            "usage": "hf mf sam [-hvknt] [-d <hex>]... [--dg <legacy|sr|prox|mfc>] [--save]"
+        },
         "hf mf sen": {
             "command": "hf mf sen",
             "description": "Recover FM11RF08S keys using static encrypted nonce evidence in native client code",
@@ -8553,6 +8626,28 @@
             ],
             "usage": "hf mfdes read [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--aid <hex>] [--fid <hex>] [--no-auth] [--type <auto|data|value|record|mac>] [-o <hex>] [-l <hex>] [--isoid <hex>] [--dfname <hex>] [--fileisoid <hex>] [--isochain]"
         },
+        "hf mfdes sam": {
+            "command": "hf mfdes sam",
+            "description": "Extract PACS information via a HID SAM Make sure you got a SAM inserted in your sim module",
+            "notes": [
+                "hf mfdes sam",
+                "hf mfdes sam -d a005a103800104 -> get PACS data",
+                "hf mfdes sam --dg mfc -> get PACS, save a MIFARE Classic dump",
+                "hf mfdes sam --save --dg prox -> save credential, print HID Prox clone commands"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-v, --verbose verbose output",
+                "-k, --keep keep the field active after command executed",
+                "-n, --nodetect skip selecting the card and sending card details to SAM",
+                "-t, --tlv decode TLV",
+                "-d, --data <hex> DER encoded command to send to SAM",
+                "--dg <legacy|sr|prox|mfc> downgrade the credential to",
+                "--save save credential to file"
+            ],
+            "usage": "hf mfdes sam [-hvknt] [-d <hex>]... [--dg <legacy|sr|prox|mfc>] [--save]"
+        },
         "hf mfdes selectapp": {
             "command": "hf mfdes selectapp",
             "description": "Select application on the card. It selects app if it is a valid one or returns an error.",
@@ -9660,20 +9755,21 @@
         },
         "hf mfu pwdgen": {
             "command": "hf mfu pwdgen",
-            "description": "Generate different passwords from known pwdgen algos",
+            "description": "Generate different passwords from known pwdgen algos. Reads UID and Philips MFG string from the tag, or works offline with `--uid`.",
             "notes": [
-                "hf mfu pwdgen -r",
-                "hf mfu pwdgen --uid 11223344556677",
+                "hf mfu pwdgen -> read from tag",
+                "hf mfu pwdgen --uid 11223344556677 -> offline",
+                "hf mfu pwdgen --uid 040D4B5AC57181 --mfg 3231303632382035324D -> offline, Philips pwd FBCFACC1",
                 "hf mfu pwdgen --test"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-u, --uid <hex> UID (7 hex bytes)",
-                "-r Read UID from tag",
+                "-u, --uid <hex> UID (7 hex bytes), offline",
+                "--mfg <hex> Philips toothbrush MFG string, pages 21-23 bytes 2..11 (10 hex bytes)",
                 "--test self test"
             ],
-            "usage": "hf mfu pwdgen [-hr] [-u <hex>] [--test]"
+            "usage": "hf mfu pwdgen [-h] [-u <hex>] [--mfg <hex>] [--test]"
         },
         "hf mfu rdbl": {
             "command": "hf mfu rdbl",
@@ -9798,16 +9894,18 @@
             "command": "hf mfu view",
             "description": "Print a MIFARE Ultralight/NTAG dump file (bin/eml/json)",
             "notes": [
-                "hf mfu view -f hf-mfu-01020304-dump.bin"
+                "hf mfu view -f hf-mfu-01020304-dump.bin",
+                "hf mfu view --selftest"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> Specify a filename for dump file",
                 "-v, --verbose Verbose output",
-                "-z, --dense dense dump output style"
+                "-z, --dense dense dump output style",
+                "--selftest Run the dump parsers self tests and exit"
             ],
-            "usage": "hf mfu view [-hvz] -f <fn>"
+            "usage": "hf mfu view [-hvz] [-f <fn>] [--selftest]"
         },
         "hf mfu wipe": {
             "command": "hf mfu wipe",
@@ -10360,7 +10458,9 @@
             "description": "Extract PACS information via a HID SAM Make sure you got a SAM inserted in your sim module",
             "notes": [
                 "hf seos sam",
-                "hf seos sam -d a005a103800104 -> get PACS data"
+                "hf seos sam -d a005a103800104 -> get PACS data",
+                "hf seos sam --dg mfc -> get PACS, save a MIFARE Classic dump",
+                "hf seos sam --save --dg prox -> save credential, print HID Prox clone commands"
             ],
             "offline": false,
             "options": [
@@ -10369,9 +10469,11 @@
                 "-k, --keep keep the field active after command executed",
                 "-n, --nodetect skip selecting the card and sending card details to SAM",
                 "-t, --tlv decode TLV",
-                "-d, --data <hex> DER encoded command to send to SAM"
+                "-d, --data <hex> DER encoded command to send to SAM",
+                "--dg <legacy|sr|prox|mfc> downgrade the credential to",
+                "--save save credential to file"
             ],
-            "usage": "hf seos sam [-hvknt] [-d <hex>]..."
+            "usage": "hf seos sam [-hvknt] [-d <hex>]... [--dg <legacy|sr|prox|mfc>] [--save]"
         },
         "hf seos sim": {
             "command": "hf seos sim",
@@ -10928,7 +11030,7 @@
                 "hf waveshare load -f myfile -m 1 -> 2.9 inch e-paper ( 296, 128 )",
                 "hf waveshare load -f myfile -m 2 -> 4.2 inch e-paper ( 400, 300 )",
                 "hf waveshare load -f myfile -m 3 -> 7.5 inch e-paper ( 800, 480 )",
-                "hf waveshare load -f myfile -m 4 -> 2.7 inch e-paper ( 176, 276 )",
+                "hf waveshare load -f myfile -m 4 -> 2.7 inch e-paper ( 176, 264 )",
                 "hf waveshare load -f myfile -m 5 -> 2.13 inch e-paper B (with red) ( 104, 212 )",
                 "hf waveshare load -f myfile -m 6 -> 1.54 inch e-paper B (with red) ( 200, 200 )",
                 "hf waveshare load -f myfile -m 7 -> 7.5 inch e-paper HD ( 880, 528 )"
@@ -11214,7 +11316,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--set <name> new BLE name (1-31 chars); omit to read current name"
+                "--set <name> new BLE name (1-15 chars); omit to read current name"
             ],
             "usage": "hw bwm name [-h] [--set <name>]"
         },
@@ -16845,6 +16947,29 @@
             ],
             "usage": "wiegand decode [-hf] [-r <hex>] [-b <bin>] [-n <hex>]"
         },
+        "wiegand downgrade": {
+            "command": "wiegand downgrade",
+            "description": "Downgrade a HID credential, as Seader does, to an iCLASS legacy or SR dump, a MIFARE Classic dump, or HID Prox clone commands. Input is a credential saved by a `sam` command with --save, or PACS bits",
+            "notes": [
+                "wiegand downgrade -f hf-iclass-E44B4403F8FF12E0-credential.json --dg sr",
+                "wiegand downgrade --new 068F80A8C0 --dg mfc",
+                "wiegand downgrade --bin 10001111100000001010100011 --dg prox",
+                "wiegand downgrade --selftest"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> credential file",
+                "-b, --bin <bin> binary string",
+                "-n, --new <hex> new ASN.1 encoded PACS, as a SAM returns it",
+                "--csn <hex> iCLASS CSN the SIO belongs to",
+                "--sio <hex> SIO read from that iCLASS card",
+                "--dg <legacy|sr|prox|mfc> downgrade the credential to",
+                "--save save credential to file",
+                "--selftest run selftest"
+            ],
+            "usage": "wiegand downgrade [-h] [-f <fn>] [-b <bin>] [-n <hex>] [--csn <hex>] [--sio <hex>] [--dg <legacy|sr|prox|mfc>] [--save] [--selftest]"
+        },
         "wiegand encode": {
             "command": "wiegand encode",
             "description": "Encode wiegand formatted number to raw hex",
@@ -16871,7 +16996,7 @@
         },
         "wiegand help": {
             "command": "wiegand help",
-            "description": "help This help list List available wiegand formats encode Encode to wiegand raw hex (currently for HID Prox) decode Convert raw hex to decoded wiegand format (currently for HID Prox) --------------------------------------------------------------------------------------- wiegand list available offline: yes List available wiegand formats",
+            "description": "help This help list List available wiegand formats encode Encode to wiegand raw hex (currently for HID Prox) decode Convert raw hex to decoded wiegand format (currently for HID Prox) downgrade Downgrade a HID credential to iCLASS, MIFARE Classic or HID Prox --------------------------------------------------------------------------------------- wiegand list available offline: yes List available wiegand formats",
             "notes": [
                 "wiegand list"
             ],
@@ -16883,8 +17008,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 940,
+        "commands_extracted": 945,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-11-09T05:12:17+00:00"
+        "extracted_on": "2026-11-10T05:21:34+00:00"
     }
 }
