@@ -352,6 +352,12 @@ static int CmdNexWatchClone(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    // 0x00042080 below is a T55x7 config block
+    if (use_psk2 && (q5 || em)) {
+        PrintAndLogEx(FAILED, "Can't specify PSK2 together with Q5 or EM4305");
+        return PM3_EINVARG;
+    }
+
     // 56000000 00213C9F 8F150C00
     bool use_raw = (raw_len != 0);
 
@@ -412,7 +418,8 @@ static int CmdNexWatchClone(const char *Cmd) {
     }
     PrintAndLogEx(INFO, "Magic byte selected... " _YELLOW_("0x%X"), magic);
 
-    uint32_t blocks[4];
+    uint32_t blocks[5] = {0};
+    uint8_t nblocks = 4;
 
     //Nexwatch - compat mode, PSK, data rate 40, 3 data blocks
     blocks[0] = T55x7_MODULATION_PSK1 | T55x7_BITRATE_RF_32 | 3 << T55x7_MAXBLOCK_SHIFT;
@@ -438,6 +445,8 @@ static int CmdNexWatchClone(const char *Cmd) {
 
     if (use_psk2) {
         blocks[0] = 0x00042080;
+        // maxblock 4: block 4 stays 0, the 32 zero bits that end a 128-bit frame
+        nblocks = 5;
 
         uint8_t *res_shifted = calloc(96, sizeof(uint8_t));
         if (res_shifted == NULL) {
@@ -461,18 +470,18 @@ static int CmdNexWatchClone(const char *Cmd) {
     }
 
 
-    for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
+    for (uint8_t i = 1; i < 4; i++) {
         blocks[i] = bytes_to_num(raw + ((i - 1) * 4), sizeof(uint32_t));
     }
 
     PrintAndLogEx(INFO, "Preparing to clone NexWatch to " _YELLOW_("%s") " raw " _YELLOW_("%s"), cardtype, sprint_hex_inrow(raw, sizeof(raw)));
-    print_blocks(blocks,  ARRAYLEN(blocks));
+    print_blocks(blocks, nblocks);
 
     int res;
     if (em) {
-        res = em4x05_clone_tag(blocks, ARRAYLEN(blocks), 0, false);
+        res = em4x05_clone_tag(blocks, nblocks, 0, false);
     } else {
-        res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+        res = clone_t55xx_tag(blocks, nblocks);
     }
     PrintAndLogEx(SUCCESS, "Done!");
     PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`lf nexwatch reader`") " to verify");
