@@ -120,9 +120,9 @@ static int nexwatch_scamble(NexWatchScramble_t action, uint32_t *id, uint32_t *s
 }
 
 static int nexwatch_magic_bruteforce(uint32_t cn, uint8_t calc_parity, uint8_t chk) {
-    for (uint8_t magic = 0; magic < 255; magic++) {
+    for (uint16_t magic = 0; magic < 0x100; magic++) {
         uint8_t temp_checksum;
-        temp_checksum = nexwatch_checksum(magic, cn, calc_parity);
+        temp_checksum = nexwatch_checksum((uint8_t)magic, cn, calc_parity);
         if (temp_checksum == chk) {
             PrintAndLogEx(SUCCESS, "    Magic number : " _GREEN_("0x%X"),  magic);
             return PM3_SUCCESS;
@@ -176,14 +176,6 @@ int demodNexWatch(bool verbose) {
     uint32_t raw2 = bytebits_to_byte(g_DemodBuffer + 32, 32);
     uint32_t raw3 = bytebits_to_byte(g_DemodBuffer + 32 + 32, 32);
 
-    // get rawid
-    uint32_t rawid = 0;
-    for (uint8_t k = 0; k < 4; k++) {
-        for (uint8_t m = 0; m < 8; m++) {
-            rawid = (rawid << 1) | g_DemodBuffer[m + k + (m * 4)];
-        }
-    }
-
     // descrambled id
     uint32_t cn = 0;
     uint32_t scambled = bytebits_to_byte(g_DemodBuffer + 8 + 32, 32);
@@ -225,7 +217,7 @@ int demodNexWatch(bool verbose) {
     }
 
     // output
-    PrintAndLogEx(SUCCESS, " NexWatch raw id : " _YELLOW_("0x%08"PRIx32), rawid);
+    PrintAndLogEx(SUCCESS, " NexWatch raw id : " _YELLOW_("0x%08"PRIx32), scambled);
 
     if (m_idx < ARRAYLEN(items)) {
         PrintAndLogEx(SUCCESS, "     fingerprint : " _GREEN_("%s"),  items[m_idx].desc);
@@ -466,10 +458,10 @@ static int CmdNexWatchSim(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf nexwatch sim",
-                  "Enables simulation of secura card with specified card number.\n"
+                  "Enables simulation of NexWatch card with specified card number.\n"
                   "Simulation runs until the button is pressed or another USB command is issued.\n"
                   "You can use raw hex values or create a credential based on id, mode\n"
-                  "and type of credential (Nexkey/Quadrakey)",
+                  "and type of credential (Nexkey / Quadrakey / Honeywell)",
                   "lf nexwatch sim --raw 5600000000213C9F8F150C00\n"
                   "lf nexwatch sim --cn 521512301 -m 1 --nc    -> Nexkey credential\n"
                   "lf nexwatch sim --cn 521512301 -m 1 --qc    -> Quadrakey credential\n"
@@ -495,48 +487,78 @@ static int CmdNexWatchSim(const char *Cmd) {
     uint8_t raw[12] = {0x56, 0};
     CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
 
-    uint32_t cn = arg_get_u32_def(ctx, 2, -1);
-    uint32_t mode = arg_get_u32_def(ctx, 3, -1);
+    bool use_cn = arg_get_u64_count(ctx, 2);
+    uint64_t cn_arg = arg_get_u64_def(ctx, 2, 0);
+    bool use_mode = arg_get_u64_count(ctx, 3);
+    uint64_t mode = arg_get_u64_def(ctx, 3, 1);
     bool use_nexkey = arg_get_lit(ctx, 4);
     bool use_quadrakey = arg_get_lit(ctx, 5);
     bool use_unk = arg_get_lit(ctx, 6);
+
+    uint8_t magic_arg[2];
+    int mlen = 0;
+    CLIGetHexWithReturn(ctx, 7, magic_arg, &mlen);
     CLIParserFree(ctx);
 
-    if (use_nexkey && use_quadrakey) {
-        PrintAndLogEx(FAILED, "Can't specify both Nexkey and Quadrakey at the same time");
+    if ((use_nexkey + use_quadrakey + use_unk) > 1) {
+        PrintAndLogEx(FAILED, "Can't specify more than one of Nexkey, Quadrakey and Honeywell");
+        return PM3_EINVARG;
+    }
+
+    if (mlen > 1) {
+        PrintAndLogEx(FAILED, "Can't specify a magic number bigger than one byte");
         return PM3_EINVARG;
     }
 
     bool use_raw = (raw_len != 0);
 
-    if (use_raw && cn != -1) {
+    if (use_raw && raw_len != 12) {
+        PrintAndLogEx(FAILED, "Must specify 12 bytes, got " _YELLOW_("%d"), raw_len);
+        return PM3_EINVARG;
+    }
+
+    if (use_raw && use_cn) {
         PrintAndLogEx(FAILED, "Can't specify both Raw and Card id at the same time");
         return PM3_EINVARG;
     }
 
-    if (cn != -1) {
+    if (use_raw && use_mode) {
+        PrintAndLogEx(FAILED, "Can't specify both Raw and Mode at the same time");
+        return PM3_EINVARG;
+    }
+
+    if (use_raw == false && use_cn == false) {
+        PrintAndLogEx(FAILED, "Must specify either Raw or Card id");
+        return PM3_EINVARG;
+    }
+
+    // the frame carries 32 bits of card id and 4 of mode
+    if (cn_arg > 0xFFFFFFFF || mode > 15) {
+        PrintAndLogEx(FAILED, "Card id has a max value of 4294967295 and Mode has a max value of 15");
+        return PM3_EINVARG;
+    }
+
+    uint32_t cn = (uint32_t)cn_arg;
+    if (use_cn) {
         uint32_t scrambled;
         nexwatch_scamble(SCRAMBLE, &cn, &scrambled);
         num_to_bytes(scrambled, 4, raw + 5);
-    }
-
-    if (mode != -1) {
-        if (mode > 15) {
-            mode = 1;
-        }
-        mode &= 0x0F;
-        raw[9] |= (mode << 4);
+        raw[9] |= (uint8_t)(mode << 4);
     }
 
     uint8_t magic = 0xBE;
-    if (use_nexkey)
-        magic = 0x88;
+    if (mlen != 0) {
+        magic = magic_arg[0];
+    } else {
+        if (use_nexkey)
+            magic = 0x88;
 
-    if (use_quadrakey)
-        magic = 0xBE;
+        if (use_quadrakey)
+            magic = 0xBE;
 
-    if (use_unk)
-        magic = 0x86;
+        if (use_unk)
+            magic = 0x86;
+    }
 
     if (use_raw == false) {
         uint8_t parity = nexwatch_parity(raw + 5) & 0xF;
