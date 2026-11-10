@@ -24,6 +24,18 @@
 
 #include "ui.h"                 // PrintAndLogEx
 
+#include "parsebip.h"
+#include "parsecharlie.h"
+#include "parsekazan.h"
+#include "parsemetromoney.h"
+#include "parsenextfare.h"
+#include "parseplantain.h"
+#include "parserenfe.h"
+#include "parsesmartrider.h"
+#include "parsetroika.h"
+#include "parseumarsh.h"
+#include "parsezolotayakorona.h"
+
 #define TRANSIT_LABEL_WIDTH     17
 
 //-----------------------------------------------------------------------------
@@ -320,6 +332,17 @@ typedef struct {
 } transit_calypso_parser_t;
 
 static const transit_buf_parser_t mfc_parsers[] = {
+    {"Bip!", is_valid_bip_card, bip_parser_parse, bip_selftest},
+    {"CharlieCard", is_valid_charlie_card, charlie_parser_parse, charlie_selftest},
+    {"Kazan", is_valid_kazan_card, kazan_parser_parse, kazan_selftest},
+    {"Metromoney", is_valid_metromoney_card, metromoney_parser_parse, metromoney_selftest},
+    {"Nextfare", is_valid_nextfare_card, nextfare_parser_parse, nextfare_selftest},
+    {"Podorozhnik", is_valid_plantain_card, plantain_parser_parse, plantain_selftest},
+    {"RENFE Suma 10", is_valid_renfe_card, renfe_parser_parse, renfe_selftest},
+    {"SmartRider", is_valid_smartrider_card, smartrider_parser_parse, smartrider_selftest},
+    {"Troika", is_valid_troika_card, troika_parser_parse, troika_selftest},
+    {"Umarsh", is_valid_umarsh_card, umarsh_parser_parse, umarsh_selftest},
+    {"Zolotaya Korona", is_valid_zolotayakorona_card, zolotayakorona_parser_parse, zolotayakorona_selftest},
     {NULL, NULL, NULL, NULL}
 };
 
@@ -328,6 +351,7 @@ static const transit_mfdes_parser_t mfdes_parsers[] = {
 };
 
 static const transit_buf_parser_t mfu_parsers[] = {
+    {"Troika Ultralight", is_valid_troika_ul_card, troika_ul_parser_parse, troika_ul_selftest},
     {NULL, NULL, NULL, NULL}
 };
 

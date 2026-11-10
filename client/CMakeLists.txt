@@ -518,6 +518,17 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/parsers/parserkf.c
         ${PM3_ROOT}/client/src/parsers/parsenortic.c
         ${PM3_ROOT}/client/src/parsers/parsetransit.c
+        ${PM3_ROOT}/client/src/parsers/parsebip.c
+        ${PM3_ROOT}/client/src/parsers/parsecharlie.c
+        ${PM3_ROOT}/client/src/parsers/parsekazan.c
+        ${PM3_ROOT}/client/src/parsers/parsemetromoney.c
+        ${PM3_ROOT}/client/src/parsers/parsenextfare.c
+        ${PM3_ROOT}/client/src/parsers/parseplantain.c
+        ${PM3_ROOT}/client/src/parsers/parserenfe.c
+        ${PM3_ROOT}/client/src/parsers/parsesmartrider.c
+        ${PM3_ROOT}/client/src/parsers/parsetroika.c
+        ${PM3_ROOT}/client/src/parsers/parseumarsh.c
+        ${PM3_ROOT}/client/src/parsers/parsezolotayakorona.c
         ${PM3_ROOT}/client/src/parsers/hrtparser/hrtparser.c
         ${PM3_ROOT}/client/src/pla.c
         ${PM3_ROOT}/client/src/preferences.c
