@@ -722,7 +722,7 @@ static int CmdBwmName(const char *Cmd) {
                   "hw bwm name --set MyPM5      --> set BLE name to 'MyPM5'");
     void *argtable[] = {
         arg_param_begin,
-        arg_str0(NULL, "set", "<name>", "new BLE name (1-31 chars); omit to read current name"),
+        arg_str0(NULL, "set", "<name>", "new BLE name (1-15 chars); omit to read current name"),
         arg_param_end,
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

@@ -978,7 +978,7 @@ typedef struct {
 #define CMD_PM5_BWM_BLE_NAME 0x017F   // payload: [action:u8][name bytes if SET]
 #define BWM_BLE_NAME_ACTION_GET 0x00  // resp: current BLE device name string
 #define BWM_BLE_NAME_ACTION_SET 0x01  // req: name bytes follow the action byte; BWM reboots to apply
-#define BWM_BLE_NAME_MAX_LEN    15    // usable chars; ESP name buffer is 16 incl NUL
+#define BWM_BLE_NAME_MAX_LEN    15    // usable chars; BLE advert fits at most 17
 // PM5, toggle the power-save idle (48 MHz + WFI when idle). Used by `hw powersave`.
 #define CMD_PM5_POWERSAVE    0x0180
 // PM5, BWM power-save switch on the ESP (DFS, light sleep, low-duty advertising;
