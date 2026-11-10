@@ -2231,6 +2231,7 @@ static int mfu_fingerprint(uint64_t tagtype, bool has_auth_key, const uint8_t *a
     }
 
     maxbytes = ((maxbytes / MFU_BLOCK_SIZE) + 1) * MFU_BLOCK_SIZE;
+    maxbytes = MAX(maxbytes, TRANSIT_MFU_IDENTIFY_LEN);
     data = calloc(maxbytes, sizeof(uint8_t));
     if (data == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
@@ -2335,6 +2336,14 @@ static int mfu_fingerprint(uint64_t tagtype, bool has_auth_key, const uint8_t *a
                 PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("%s") "`", item->hint);
             }
         }
+    }
+
+    transit_idents_t transit_ids;
+    if (transit_mfu_identify(data, buffer_size, &transit_ids) > 0) {
+        transit_print_idents(&transit_ids);
+        (void)transit_mfu_parse(data, buffer_size);
+        transit_print_ident_hints(&transit_ids, NULL);
+        res = PM3_SUCCESS;
     }
 
 out:

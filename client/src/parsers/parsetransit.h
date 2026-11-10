@@ -247,6 +247,7 @@ int transit_felica_identify(const uint16_t *system_codes, size_t count, transit_
 bool transit_felica_check_identify(const char *what, uint16_t system_code, const char *name, transit_id_t want);
 
 // Ultralight, ST25TB and Calypso info commands read the same data a dump has
+#define TRANSIT_MFU_IDENTIFY_LEN    64      // pages 0..15 cover every Ultralight parser
 int transit_mfu_identify(const uint8_t *data, size_t datalen, transit_idents_t *ids);
 int transit_st25tb_identify(const uint8_t *data, size_t datalen, const uint8_t *uid, transit_idents_t *ids);
 int transit_calypso_identify(const transit_calypso_card_t *card, transit_idents_t *ids);
