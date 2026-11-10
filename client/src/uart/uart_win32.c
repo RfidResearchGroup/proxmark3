@@ -226,7 +226,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
 
         int s = getaddrinfo(addrStr, portStr, &info, &addr);
         if (s != 0) {
-            PrintAndLogEx(ERR, "error: getaddrinfo: %d: %s", s, gai_strerror(s));
+            PrintAndLogEx(ERR, "error: getaddrinfo: %d: %s", s, gai_strerrorA(s));
             freeaddrinfo(addr);
             free(addrPortStr);
             free(sp);
