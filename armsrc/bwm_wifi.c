@@ -188,6 +188,23 @@ static int step(uint16_t cmd, const uint8_t *req, uint16_t rl,
     return r;
 }
 
+// ESP-IDF wifi_err_reason_t values seen when a join fails
+static const char *bwm_wifi_reason_str(uint8_t reason) {
+    switch (reason) {
+        case 2:
+        case 15:
+        case 202:
+        case 204:
+            return "wrong password?";
+        case 201:
+            return "network not found";
+        case 210:
+            return "no network with compatible security";
+        default:
+            return "join failed";
+    }
+}
+
 int bwm_wifi_forward_up(const char *ssid, const char *password,
                         const char *hostname, uint16_t tcp_port, uint32_t *ip_out) {
     int r;
@@ -220,7 +237,7 @@ int bwm_wifi_forward_up(const char *ssid, const char *password,
     // 4) join the AP and wait for it to finish (up to ~15s)
     if ((r = step(BWM_CMD_START_WIFI_CONNECT_TASK, NULL, 0, NULL, NULL, TO, "start connect")) != PM3_SUCCESS) return r;
     uint8_t secs = 25;   // iPhone/phone hotspots can be slow to become joinable
-    uint8_t wr[2];
+    uint8_t wr[2] = { 2, 0 };   // "timed out" if the reply is short
     uint16_t wl = sizeof(wr);
     if ((r = step(BWM_CMD_WAIT_FOR_WIFI_CONNECT_TASK, &secs, 1, wr, &wl, 30000, "wait connect")) != PM3_SUCCESS) return r;
 
@@ -245,7 +262,14 @@ int bwm_wifi_forward_up(const char *ssid, const char *password,
         while (GetTickCountDelta(t) < BWM_WIFI_DHCP_POLL_MS) { }
     }
     if (ip == 0) {
-        Dbprintf("[bwm-wifi] joined but no IP after DHCP wait (result=%u err=%u)", wr[0], wr[1]);
+        // wr[0]: ESP join result, 0 joined / 1 failed (wr[1] = WiFi reason) / 2 timed out
+        if (wr[0] == 0) {
+            Dbprintf("[bwm-wifi] joined but no IP after DHCP wait");
+        } else if (wr[0] == 1) {
+            Dbprintf("[bwm-wifi] could not join: %s (reason %u)", bwm_wifi_reason_str(wr[1]), wr[1]);
+        } else {
+            Dbprintf("[bwm-wifi] join timed out, no IP");
+        }
         return PM3_EFAILED;
     }
 
