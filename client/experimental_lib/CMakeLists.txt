@@ -447,14 +447,22 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/parsers/parsetransit.c
         ${PM3_ROOT}/client/src/parsers/parsebip.c
         ${PM3_ROOT}/client/src/parsers/parsecharlie.c
+        ${PM3_ROOT}/client/src/parsers/parseclipper.c
+        ${PM3_ROOT}/client/src/parsers/parseitso.c
         ${PM3_ROOT}/client/src/parsers/parsekazan.c
         ${PM3_ROOT}/client/src/parsers/parsemetromoney.c
+        ${PM3_ROOT}/client/src/parsers/parsemyki.c
         ${PM3_ROOT}/client/src/parsers/parsenextfare.c
+        ${PM3_ROOT}/client/src/parsers/parsenol.c
+        ${PM3_ROOT}/client/src/parsers/parseopal.c
         ${PM3_ROOT}/client/src/parsers/parseplantain.c
         ${PM3_ROOT}/client/src/parsers/parserenfe.c
         ${PM3_ROOT}/client/src/parsers/parsesmartrider.c
+        ${PM3_ROOT}/client/src/parsers/parsetmobilitat.c
         ${PM3_ROOT}/client/src/parsers/parsetroika.c
+        ${PM3_ROOT}/client/src/parsers/parsetrt.c
         ${PM3_ROOT}/client/src/parsers/parseumarsh.c
+        ${PM3_ROOT}/client/src/parsers/parseventra.c
         ${PM3_ROOT}/client/src/parsers/parsezolotayakorona.c
         ${PM3_ROOT}/client/src/parsers/hrtparser/hrtparser.c
         ${PM3_ROOT}/client/src/pla.c

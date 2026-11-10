@@ -927,14 +927,22 @@ SRCS =  mifare/aiddesfire.c \
         parsers/parsetransit.c \
         parsers/parsebip.c \
         parsers/parsecharlie.c \
+        parsers/parseclipper.c \
+        parsers/parseitso.c \
         parsers/parsekazan.c \
         parsers/parsemetromoney.c \
+        parsers/parsemyki.c \
         parsers/parsenextfare.c \
+        parsers/parsenol.c \
+        parsers/parseopal.c \
         parsers/parseplantain.c \
         parsers/parserenfe.c \
         parsers/parsesmartrider.c \
+        parsers/parsetmobilitat.c \
         parsers/parsetroika.c \
+        parsers/parsetrt.c \
         parsers/parseumarsh.c \
+        parsers/parseventra.c \
         parsers/parsezolotayakorona.c \
         parsers/hrtparser/hrtparser.c \
         pm3.c \

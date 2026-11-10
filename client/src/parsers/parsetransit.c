@@ -26,14 +26,22 @@
 
 #include "parsebip.h"
 #include "parsecharlie.h"
+#include "parseclipper.h"
+#include "parseitso.h"
 #include "parsekazan.h"
 #include "parsemetromoney.h"
+#include "parsemyki.h"
 #include "parsenextfare.h"
+#include "parsenol.h"
+#include "parseopal.h"
 #include "parseplantain.h"
 #include "parserenfe.h"
 #include "parsesmartrider.h"
+#include "parsetmobilitat.h"
 #include "parsetroika.h"
+#include "parsetrt.h"
 #include "parseumarsh.h"
+#include "parseventra.h"
 #include "parsezolotayakorona.h"
 
 #define TRANSIT_LABEL_WIDTH     17
@@ -347,11 +355,19 @@ static const transit_buf_parser_t mfc_parsers[] = {
 };
 
 static const transit_mfdes_parser_t mfdes_parsers[] = {
+    {"Clipper", is_valid_clipper_card, clipper_parser_parse, clipper_selftest},
+    {"ITSO", is_valid_itso_card, itso_parser_parse, itso_selftest},
+    {"myki", is_valid_myki_card, myki_parser_parse, myki_selftest},
+    {"nol", is_valid_nol_card, nol_parser_parse, nol_selftest},
+    {"Opal", is_valid_opal_card, opal_parser_parse, opal_selftest},
+    {"T-Mobilitat", is_valid_tmobilitat_card, tmobilitat_parser_parse, tmobilitat_selftest},
     {NULL, NULL, NULL, NULL}
 };
 
 static const transit_buf_parser_t mfu_parsers[] = {
     {"Troika Ultralight", is_valid_troika_ul_card, troika_ul_parser_parse, troika_ul_selftest},
+    {"TRT", is_valid_trt_card, trt_parser_parse, trt_selftest},
+    {"Ventra", is_valid_ventra_card, ventra_parser_parse, ventra_selftest},
     {NULL, NULL, NULL, NULL}
 };
 
