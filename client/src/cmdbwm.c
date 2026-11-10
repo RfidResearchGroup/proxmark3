@@ -568,6 +568,25 @@ static int bwm_get_version(char *out, size_t outlen) {
     return PM3_SUCCESS;
 }
 
+// Does the running BWM fw match the image? ESP reports only the git hash,
+// the image app descriptor holds the full describe string (e.g. V1-12-g<hash>).
+static const char *bwm_ver_tag(const char *running, const uint8_t *fw, size_t fwlen) {
+    // esp_app_desc_t.version[32] at 0x30
+    if (running == NULL || running[0] == 0 || fwlen < 0x50 || fw[0x30] == 0) {
+        return " ( " _CYAN_("n/a") " )";
+    }
+    char img[33] = {0};
+    memcpy(img, fw + 0x30, 32);
+
+    size_t rl = strlen(running);
+    size_t il = strlen(img);
+    bool match = (strcmp(img, running) == 0);
+    if (match == false && il > rl + 2) {
+        match = (strncmp(img + il - rl - 2, "-g", 2) == 0) && (strcmp(img + il - rl, running) == 0);
+    }
+    return match ? " ( " _GREEN_("ok") " )" : " ( " _RED_("fail") " )";
+}
+
 static int CmdBWMUpgrade(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw bwm upgrade",
@@ -638,7 +657,9 @@ static int CmdBWMUpgrade(const char *Cmd) {
     char ver_before[64] = {0};
     bool have_before = (bwm_get_version(ver_before, sizeof(ver_before)) == PM3_SUCCESS);
     if (have_before) {
-        PrintAndLogEx(INFO, "Current BWM firmware..... " _YELLOW_("%s"), ver_before);
+        PrintAndLogEx(INFO, "Current BWM firmware..... " _YELLOW_("%s") "%s", ver_before, bwm_ver_tag(ver_before, fw, fwlen));
+    } else {
+        PrintAndLogEx(INFO, "Current BWM firmware..... unknown%s", bwm_ver_tag(NULL, fw, fwlen));
     }
 
     // No resume (DEV.md 8.4): a chunk lost mid-transfer restarts the whole upload.
