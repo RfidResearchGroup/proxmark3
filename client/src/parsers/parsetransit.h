@@ -204,11 +204,15 @@ typedef struct {
 bool transit_mfc_keyset_match_dump(const transit_mfc_keyset_t *ks, const uint8_t *dump, size_t dumplen);
 bool transit_mfc_keyset_match_info(const transit_mfc_keyset_t *ks, const transit_mfc_info_t *info);
 
-// Sectors with identifying keys, bit n for sector n
-uint64_t transit_mfc_probe_sectors(void);
+// Distinct signature keys of a sector for one key type, 6 bytes each, returns the count
+size_t transit_mfc_signature_keys(uint8_t sector, uint8_t keytype, uint8_t *keys, size_t maxkeys);
 
-// Distinct identifying keys of a sector for one key type, 6 bytes each, returns the count
-size_t transit_mfc_probe_keys(uint8_t sector, uint8_t keytype, uint8_t *keys, size_t maxkeys);
+// Checks keys of one sector, true and *found set when one authenticates
+typedef bool (*transit_mfc_check_fn)(void *ctx, uint8_t sector, uint8_t keytype, const uint8_t *keys, size_t n, uint64_t *found);
+
+// Two stage probe: one key A check per sector with the parsers' signature keys, then only
+// the remaining keys of parsers whose signature matched. Keys already in info are reused.
+void transit_mfc_probe(transit_mfc_info_t *info, uint8_t sectors, transit_mfc_check_fn check, void *ctx);
 
 // Self test helper, identifies a dump from the keys an info command probe would find
 bool transit_mfc_check_identify(const char *what, const uint8_t *dump, size_t dumplen, const char *name, transit_id_t want);

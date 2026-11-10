@@ -11665,8 +11665,15 @@ static int CmdHF14AMfSAM(const char *Cmd) {
     return hid_sam_iso14a_cmd(Cmd, "hf mf sam", CMD_HF_SAM_MFC, HID_SRC_MFC);
 }
 
-// Transit fingerprint. Sector keys info already found count, every other sector a
-// parser identifies by gets one key check per key type with just its candidate keys.
+static bool mf_info_transit_check(void *ctx, uint8_t sector, uint8_t keytype, const uint8_t *keys, size_t n, uint64_t *found) {
+    (void)ctx;
+    uint8_t kb[16 * MIFARE_KEY_SIZE];
+    n = MIN(n, ARRAYLEN(kb) / MIFARE_KEY_SIZE);
+    memcpy(kb, keys, n * MIFARE_KEY_SIZE);
+    return mf_check_keys(mfFirstBlockOfSector(sector), keytype, false, n, kb, found) == PM3_SUCCESS;
+}
+
+// Transit fingerprint, reuses the keys info found, then the two stage signature probe
 static void mf_info_transit(const sector_t *e_sector, uint8_t sectors, uint8_t keytype, const uint8_t *key, transit_idents_t *ids) {
 
     transit_mfc_info_t info;
@@ -11684,26 +11691,7 @@ static void mf_info_transit(const sector_t *e_sector, uint8_t sectors, uint8_t k
         info.block1 = blk1;
     }
 
-    uint64_t mask = transit_mfc_probe_sectors();
-    for (uint8_t s = 0; s < TRANSIT_MFC_MAX_SECTORS; s++) {
-        if ((mask & (1ULL << s)) == 0) {
-            continue;
-        }
-        for (uint8_t t = 0; t < 2; t++) {
-            // skip keys already known, and key B once key A is
-            if (info.found[s][t] || (t == MF_KEY_B && info.found[s][MF_KEY_A])) {
-                continue;
-            }
-            uint8_t keys[16 * MIFARE_KEY_SIZE];
-            size_t n = transit_mfc_probe_keys(s, t, keys, 16);
-            uint64_t found = 0;
-            if (n > 0 && mf_check_keys(mfFirstBlockOfSector(s), t, false, n, keys, &found) == PM3_SUCCESS) {
-                info.found[s][t] = true;
-                info.key[s][t] = found;
-            }
-        }
-    }
-
+    transit_mfc_probe(&info, TRANSIT_MFC_MAX_SECTORS, mf_info_transit_check, NULL);
     transit_mfc_identify(&info, ids);
 }
 

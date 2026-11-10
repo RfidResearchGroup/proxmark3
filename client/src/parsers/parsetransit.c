@@ -607,28 +607,31 @@ int transit_mfc_parse(const uint8_t *dump, size_t dumplen) {
     TRANSIT_RUN_PARSERS(mfc_parsers, dump != NULL, dump, dumplen);
 }
 
+static bool transit_mfc_probe_selftest(void);
+
 int transit_mfc_selftest(void) {
+    if (transit_mfc_probe_selftest() == false) {
+        return transit_selftest_result("Transit", false);
+    }
     TRANSIT_RUN_SELFTESTS(mfc_parsers);
 }
 
-uint64_t transit_mfc_probe_sectors(void) {
-    uint64_t mask = 0;
-    for (size_t i = 0; mfc_parsers[i].name != NULL; i++) {
-        const transit_mfc_keyset_t *ks = mfc_parsers[i].keyset;
-        for (uint8_t k = 0; ks != NULL && k < ks->count; k++) {
-            mask |= 1ULL << ks->keys[k].sector;
-        }
-    }
-    return mask;
+// A keyset's signature: all keys with any_sector, else the keys of its first listed sector
+static bool transit_mfc_is_signature(const transit_mfc_keyset_t *ks, uint8_t k) {
+    return ks->any_sector || (ks->keys[k].sector == ks->keys[0].sector);
 }
 
-size_t transit_mfc_probe_keys(uint8_t sector, uint8_t keytype, uint8_t *keys, size_t maxkeys) {
+static bool transit_mfc_keytype_ok(const transit_mfc_key_t *e, uint8_t keytype) {
+    return (e->keytype == keytype) || (e->keytype == TRANSIT_MFC_KEY_AB);
+}
+
+size_t transit_mfc_signature_keys(uint8_t sector, uint8_t keytype, uint8_t *keys, size_t maxkeys) {
     size_t n = 0;
     for (size_t i = 0; mfc_parsers[i].name != NULL; i++) {
         const transit_mfc_keyset_t *ks = mfc_parsers[i].keyset;
         for (uint8_t k = 0; ks != NULL && k < ks->count && n < maxkeys; k++) {
             const transit_mfc_key_t *e = &ks->keys[k];
-            if (e->sector != sector || (e->keytype != keytype && e->keytype != TRANSIT_MFC_KEY_AB)) {
+            if (e->sector != sector || transit_mfc_keytype_ok(e, keytype) == false || transit_mfc_is_signature(ks, k) == false) {
                 continue;
             }
             bool dup = false;
@@ -644,26 +647,122 @@ size_t transit_mfc_probe_keys(uint8_t sector, uint8_t keytype, uint8_t *keys, si
     return n;
 }
 
-static void transit_mfc_info_probe_dump(const uint8_t *dump, size_t dumplen, transit_mfc_info_t *info) {
-    memset(info, 0, sizeof(*info));
-    uint64_t mask = transit_mfc_probe_sectors();
-    for (uint8_t s = 0; s < TRANSIT_MFC_MAX_SECTORS; s++) {
-        if ((mask & (1ULL << s)) == 0) {
+static bool transit_mfc_probe_one(transit_mfc_info_t *info, uint8_t sector, uint8_t keytype, const uint8_t *keys, size_t n,
+                                  transit_mfc_check_fn check, void *ctx) {
+    uint64_t found = 0;
+    if (n == 0 || check(ctx, sector, keytype, keys, n, &found) == false) {
+        return false;
+    }
+    info->found[sector][keytype] = true;
+    info->key[sector][keytype] = found;
+    return true;
+}
+
+void transit_mfc_probe(transit_mfc_info_t *info, uint8_t sectors, transit_mfc_check_fn check, void *ctx) {
+
+    sectors = MIN(sectors, TRANSIT_MFC_MAX_SECTORS);
+
+    // stage 1, one key A check per sector with the parsers' signature keys.
+    // Signatures are A or A/B keys, so key A holds one of them on a real card.
+    for (uint8_t s = 0; s < sectors; s++) {
+        if (info->found[s][TRANSIT_MFC_KEY_A]) {
             continue;
         }
-        for (uint8_t t = 0; t < 2; t++) {
-            uint8_t keys[16 * 6];
-            size_t n = transit_mfc_probe_keys(s, t, keys, 16);
-            uint64_t have = transit_mfc_key(dump, dumplen, s, t == TRANSIT_MFC_KEY_B);
-            for (size_t i = 0; i < n; i++) {
-                if (bytes_to_num(keys + (i * 6), 6) == have) {
-                    info->found[s][t] = true;
-                    info->key[s][t] = have;
+        uint8_t keys[16 * 6];
+        size_t n = transit_mfc_signature_keys(s, TRANSIT_MFC_KEY_A, keys, 16);
+        (void)transit_mfc_probe_one(info, s, TRANSIT_MFC_KEY_A, keys, n, check, ctx);
+    }
+
+    // stage 2, the remaining keys of parsers whose signature matched
+    for (size_t i = 0; mfc_parsers[i].name != NULL; i++) {
+        const transit_mfc_keyset_t *ks = mfc_parsers[i].keyset;
+        bool hit = false;
+        for (uint8_t k = 0; ks != NULL && k < ks->count && hit == false; k++) {
+            const transit_mfc_key_t *e = &ks->keys[k];
+            for (uint8_t t = 0; t < 2 && e->sector < sectors; t++) {
+                hit |= transit_mfc_is_signature(ks, k) && transit_mfc_keytype_ok(e, t) &&
+                       info->found[e->sector][t] && (info->key[e->sector][t] == e->key);
+            }
+        }
+        for (uint8_t k = 0; hit && k < ks->count; k++) {
+            const transit_mfc_key_t *e = &ks->keys[k];
+            for (uint8_t t = 0; t < 2 && e->sector < sectors; t++) {
+                if (transit_mfc_keytype_ok(e, t) == false) {
+                    continue;
+                }
+                if (info->found[e->sector][t]) {
+                    if (info->key[e->sector][t] == e->key) {
+                        break;
+                    }
+                    continue;
+                }
+                uint8_t key[6];
+                num_to_bytes(e->key, 6, key);
+                if (transit_mfc_probe_one(info, e->sector, t, key, 1, check, ctx)) {
+                    break;
                 }
             }
         }
     }
+}
+
+typedef struct {
+    const uint8_t *dump;
+    size_t dumplen;
+    uint32_t calls;
+} transit_mfc_dump_ctx_t;
+
+// key check against a dump's sector trailers, for the self tests
+static bool transit_mfc_dump_check(void *ctx, uint8_t sector, uint8_t keytype, const uint8_t *keys, size_t n, uint64_t *found) {
+    transit_mfc_dump_ctx_t *d = (transit_mfc_dump_ctx_t *)ctx;
+    d->calls++;
+    uint64_t have = transit_mfc_key(d->dump, d->dumplen, sector, keytype == TRANSIT_MFC_KEY_B);
+    if (transit_mfc_block(d->dump, d->dumplen, sector, 0) == NULL) {
+        return false;
+    }
+    for (size_t i = 0; i < n; i++) {
+        if (bytes_to_num(keys + (i * 6), 6) == have) {
+            *found = have;
+            return true;
+        }
+    }
+    return false;
+}
+
+static uint32_t transit_mfc_info_probe_dump(const uint8_t *dump, size_t dumplen, transit_mfc_info_t *info) {
+    memset(info, 0, sizeof(*info));
+    transit_mfc_dump_ctx_t ctx = { dump, dumplen, 0 };
+    transit_mfc_probe(info, TRANSIT_MFC_MAX_SECTORS, transit_mfc_dump_check, &ctx);
     info->block1 = transit_mfc_block(dump, dumplen, 0, 1);
+    return ctx.calls;
+}
+
+// Probe cost: a foreign card costs one check per signature slot, a match only adds its own keys
+static bool transit_mfc_probe_selftest(void) {
+    uint32_t slots = 0;
+    for (uint8_t s = 0; s < TRANSIT_MFC_MAX_SECTORS; s++) {
+        uint8_t keys[16 * 6];
+        slots += (transit_mfc_signature_keys(s, TRANSIT_MFC_KEY_A, keys, 16) > 0);
+    }
+
+    uint8_t dump[1024];
+    memset(dump, 0, sizeof(dump));
+    transit_mfc_info_t info;
+    transit_idents_t ids;
+    uint32_t calls = transit_mfc_info_probe_dump(dump, sizeof(dump), &info);
+    bool ok = transit_check("probe checks, foreign card", calls, slots);
+    ok &= transit_check("foreign card not identified", transit_mfc_identify(&info, &ids), 0);
+
+    // Bip! keys, sector 0 is its signature, sector 1 the confirmation
+    transit_mfc_set_key(dump, sizeof(dump), 0, false, 0x3A42F33AF429);
+    transit_mfc_set_key(dump, sizeof(dump), 0, true, 0x1FC235AC1309);
+    transit_mfc_set_key(dump, sizeof(dump), 1, false, 0x6338A371C0ED);
+    transit_mfc_set_key(dump, sizeof(dump), 1, true, 0x243F160918D1);
+    calls = transit_mfc_info_probe_dump(dump, sizeof(dump), &info);
+    ok &= transit_check("probe checks, Bip!", calls, slots + 3);
+    transit_mfc_identify(&info, &ids);
+    ok &= transit_check_ident("Bip! via probe", &ids, "Bip!", TRANSIT_ID_MATCH);
+    return ok;
 }
 
 int transit_mfc_identify(const transit_mfc_info_t *info, transit_idents_t *ids) {
@@ -682,7 +781,7 @@ int transit_mfc_identify(const transit_mfc_info_t *info, transit_idents_t *ids) 
 
 bool transit_mfc_check_identify(const char *what, const uint8_t *dump, size_t dumplen, const char *name, transit_id_t want) {
     transit_mfc_info_t info;
-    transit_mfc_info_probe_dump(dump, dumplen, &info);
+    (void)transit_mfc_info_probe_dump(dump, dumplen, &info);
     transit_idents_t ids;
     transit_mfc_identify(&info, &ids);
     return transit_check_ident(what, &ids, name, want);
