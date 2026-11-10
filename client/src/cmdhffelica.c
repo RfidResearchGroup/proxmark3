@@ -3209,6 +3209,18 @@ static int info_felica(bool verbose, bool no_ic_optimizations) {
         for (size_t i = 0; i < discovered_systems.count; i++) {
             felica_info_process_system(INFO, optional_flags, &discovered_systems.systems[i], &auth_keys, &caps, verbose);
         }
+
+        uint16_t codes[FELICA_DISCOVERED_SYSTEM_MAX_COUNT];
+        size_t ncodes = 0;
+        for (size_t i = 0; i < discovered_systems.count && ncodes < ARRAYLEN(codes); i++) {
+            codes[ncodes++] = discovered_systems.systems[i].system_code;
+        }
+        transit_idents_t transit_ids;
+        if (transit_felica_identify(codes, ncodes, &transit_ids) > 0) {
+            PrintAndLogEx(NORMAL, "");
+            transit_print_idents(&transit_ids);
+            transit_print_ident_hints(&transit_ids, NULL);
+        }
     }
 
     felica_auth_key_store_free(&auth_keys);
