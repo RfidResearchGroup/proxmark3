@@ -1411,6 +1411,33 @@ static bool HF14B_Std_Info(bool verbose, bool do_aid_search) {
 }
 
 // SRx get and print full info (needs more info...)
+static int read_sr_block(uint8_t blockno, uint8_t *out, uint16_t out_len);
+
+// Transit tickets live on 512 bit tags, read the whole tag and identify it
+static void sr_info_transit(const uint8_t *uid) {
+    if (get_st_cardsize(uid) != SR_SIZE_512) {
+        return;
+    }
+
+    uint8_t data[(512 / 8) + ST25TB_SR_BLOCK_SIZE] = {0};
+    for (uint8_t i = 0; i <= 0x0F; i++) {
+        if (read_sr_block(i, data + (i * ST25TB_SR_BLOCK_SIZE), ST25TB_SR_BLOCK_SIZE) != PM3_SUCCESS) {
+            return;
+        }
+    }
+    if (read_sr_block(0xFF, data + (0x10 * ST25TB_SR_BLOCK_SIZE), ST25TB_SR_BLOCK_SIZE) != PM3_SUCCESS) {
+        return;
+    }
+
+    transit_idents_t transit_ids;
+    if (transit_st25tb_identify(data, sizeof(data), uid, &transit_ids) > 0) {
+        PrintAndLogEx(NORMAL, "");
+        transit_print_idents(&transit_ids);
+        (void)transit_st25tb_parse(data, sizeof(data), uid);
+        transit_print_ident_hints(&transit_ids, NULL);
+    }
+}
+
 static bool HF14B_ST_Info(bool verbose, bool do_aid_search) {
 
     iso14b_raw_cmd_t packet = {
@@ -1442,6 +1469,7 @@ static bool HF14B_ST_Info(bool verbose, bool do_aid_search) {
     }
 
     print_st_general_info(card.uid, card.uidlen);
+    sr_info_transit(card.uid);
 
     if (do_aid_search) {
         hf14b_aid_search(verbose);
