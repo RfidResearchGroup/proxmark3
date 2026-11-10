@@ -453,6 +453,9 @@ while true; do
       if ! CheckExecute "proxmark multi stdin 4/4"         "echo -e 'rem foo\nrem bar;quit' |$CLIENTBIN" "remark: bar"; then break; fi
 
       echo -e "\n${C_BLUE}Testing scripts:${C_NC}"
+      if [[ "$(uname -s)" == "Darwin" || "$(uname -s)" == "Linux" ]]; then
+        if ! CheckExecute "script listing paths" "$PYTHON tools/filelist_test.py 2>&1" "File listing tests: OK"; then break; fi
+      fi
       if ! CheckExecute "script run cmdscript"             "$CLIENTBIN -c 'script run example.cmd'" "remark: world"; then break; fi
       if ! CheckExecute "script run luascript"             "$CLIENTBIN -c 'script run data_hex_crc -d 010203040506070809'" "CDMA2000.*7B02"; then break; fi
 
