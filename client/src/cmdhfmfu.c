@@ -1944,13 +1944,13 @@ static mfu_identify_t mfu_ident_table[] = {
         "Philips Toothbrush", "0004040201010F03",
         16, 20, "0310D1010C55027068696C6970732E636F6DFE00",
         ul_ev1_pwdgen_def, ul_ev1_packgen_def,
-        "hf mfu pwdgen -r"
+        "hf mfu pwdgen"
     },
     {
         "Philips Toothbrush", "0004040201010F03",
         16, 36, "0320D1011C55027068696C6970732E636F6D2F6E6663627275736868656164746170FE00",
         ul_ev1_pwdgen_def, ul_ev1_packgen_def,
-        "hf mfu pwdgen -r"
+        "hf mfu pwdgen"
     },
     {
         "Bank Of Archie brothers", "0004030101000B03",
@@ -3052,11 +3052,11 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             }
             if (len < 1) {
                 PrintAndLogEx(WARNING, _YELLOW_("password not known"));
-                PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
+                PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfu pwdgen`") " to get see known pwd gen algo suggestions");
             }
         } else {
             if (locked) {
-                PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
+                PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfu pwdgen`") " to get see known pwd gen algo suggestions");
             }
         }
     }
@@ -3068,7 +3068,7 @@ out:
 
     if (locked) {
         PrintAndLogEx(INFO, "\nTag appears to be locked, try using a key to get more info");
-        PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
+        PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfu pwdgen`") " to get see known pwd gen algo suggestions");
     }
 
     if (tagtype & (MFU_TT_MAGIC_1A | MFU_TT_MAGIC_1B | MFU_TT_MAGIC_2)) {
@@ -6323,16 +6323,18 @@ static int CmdHF14AMfUKeyGen(const char *Cmd) {
 static int CmdHF14AMfUPwdGen(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfu pwdgen",
-                  "Generate different passwords from known pwdgen algos",
-                  "hf mfu pwdgen -r\n"
-                  "hf mfu pwdgen --uid 11223344556677\n"
+                  "Generate different passwords from known pwdgen algos.\n"
+                  "Reads UID and Philips MFG string from the tag, or works offline with `--uid`.",
+                  "hf mfu pwdgen                          -> read from tag\n"
+                  "hf mfu pwdgen --uid 11223344556677     -> offline\n"
+                  "hf mfu pwdgen --uid 040D4B5AC57181 --mfg 3231303632382035324D  -> offline, Philips pwd FBCFACC1\n"
                   "hf mfu pwdgen --test"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("u", "uid", "<hex>", "UID (7 hex bytes)"),
-        arg_lit0("r", NULL, "Read UID from tag"),
+        arg_str0("u", "uid", "<hex>", "UID (7 hex bytes), offline"),
+        arg_str0(NULL, "mfg", "<hex>", "Philips toothbrush MFG string, pages 21-23 bytes 2..11 (10 hex bytes)"),
         arg_lit0(NULL, "test", "self test"),
         arg_param_end
     };
@@ -6341,7 +6343,9 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
     int u_len = 0;
     uint8_t uid[7] = {0x00};
     CLIGetHexWithReturn(ctx, 1, uid, &u_len);
-    bool use_tag = arg_get_lit(ctx, 2);
+    int mfg_len = 0;
+    uint8_t philips_mfg[10] = {0};
+    CLIGetHexWithReturn(ctx, 2, philips_mfg, &mfg_len);
     bool selftest = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
@@ -6349,9 +6353,23 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
         return generator_selftest();
     }
 
-    uint8_t philips_mfg[10] = {0};
+    if (mfg_len && mfg_len != sizeof(philips_mfg)) {
+        PrintAndLogEx(WARNING, "MFG must be 10 hex bytes");
+        return PM3_EINVARG;
+    }
 
-    if (use_tag) {
+    if (mfg_len && u_len == 0) {
+        PrintAndLogEx(WARNING, "`--mfg` needs `--uid`");
+        return PM3_EINVARG;
+    }
+
+    if (u_len == 0) {
+
+        if (g_session.pm3_present == false) {
+            PrintAndLogEx(WARNING, "Offline, use `--uid`");
+            return PM3_ENOTTY;
+        }
+
         // read uid from tag
         int res = ul_read_uid(uid);
         if (res == PM3_ELENGTH) {
