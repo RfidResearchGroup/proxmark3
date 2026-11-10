@@ -18,5 +18,8 @@
 
 #include "common.h"
 #include "sam_common.h"
+#include "pm3_cmd.h"
+
+int sam_mfc_get_pacs(PacketCommandNG *c);
 
 #endif

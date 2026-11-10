@@ -96,6 +96,13 @@ int sam_relay_iso15_loop(
 );
 
 int sam_set_card_detected_iso14a(const iso14a_card_select_t *card_select, bool with_atqa);
+uint16_t sam_copy_payload_nfc2sam_status(uint8_t *sam_tx, const uint8_t *nfc_rx, uint8_t nfc_len, uint16_t rf_status);
+bool sam_nfc_send_format(const uint8_t *sam_rx_buf, uint16_t sam_rx_len, uint8_t *format);
+
+// nfcRx rfStatus values, as Seader reports them
+#define SAM_RF_STATUS_OK        0x0000
+#define SAM_RF_STATUS_TIMEOUT   0x0020
+#define SAM_RF_STATUS_PROTOCOL  0x0004
 
 // Capture of UID and plaintext SIO for the extended PACS reply (sam_ext_reply_hdr_t)
 void sam_capture_reset(void);

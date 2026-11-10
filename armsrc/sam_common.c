@@ -1024,6 +1024,62 @@ out:
     return res;
 }
 
+/**
+ * @brief Wraps a card answer, or an RF error, into an nfcRx for the SAM.
+ *
+ * With nfc_len 0 the data node is left out, as Seader does for errors.
+ *
+ * @param rf_status 0x0000 ok, 0x0020 timeout, 0x0004 protocol error (Seader's codes)
+ * @return Length of SAM APDU to be sent.
+ */
+uint16_t sam_copy_payload_nfc2sam_status(uint8_t *sam_tx, const uint8_t *nfc_rx, uint8_t nfc_len, uint16_t rf_status) {
+
+    const uint8_t payload[] = {
+        0xbd, 4,
+        0xa0, 2,
+        0xa0, 0
+    };
+
+    const uint8_t tag81[] = {
+        (uint8_t)(rf_status >> 8), (uint8_t)rf_status
+    };
+
+    memcpy(sam_tx, payload, sizeof(payload));
+
+    if (nfc_len) {
+        sam_append_asn1_node(sam_tx, sam_tx + 4, 0x80, nfc_rx, nfc_len);
+    }
+    sam_append_asn1_node(sam_tx, sam_tx + 4, 0x81, tag81, sizeof(tag81));
+
+    return sam_tx[1] + 2;
+}
+
+// Copies the 3 byte format node of the SAM's nfcSend, if there is one.
+bool sam_nfc_send_format(const uint8_t *sam_rx_buf, uint16_t sam_rx_len, uint8_t *format) {
+
+    // a1 <len> a1 <len> 80 .. 81 .. 82 .. 85 03 <format>
+    uint16_t p = sam_rx_prefix_len(sam_rx_buf, sam_rx_len);
+    if ((uint16_t)(p + 4) >= sam_rx_len) {
+        return false;
+    }
+
+    const uint8_t *node = sam_rx_buf + p + 2;
+    const uint8_t *end = node + 2 + node[1];
+    if (end > sam_rx_buf + sam_rx_len) {
+        return false;
+    }
+
+    const uint8_t *cur = node + 2;
+    while (cur + 2 <= end) {
+        if (cur[0] == 0x85 && cur[1] == 3 && cur + 5 <= end) {
+            memcpy(format, cur + 2, 3);
+            return true;
+        }
+        cur += 2 + cur[1];
+    }
+    return false;
+}
+
 // Plaintext seen on the air during a SAM conversation, for the extended reply.
 #define SAM_CAP_FIRST_BLOCK 6
 #define SAM_CAP_BLOCKS      (SAM_EXT_SIO_MAX / 8)

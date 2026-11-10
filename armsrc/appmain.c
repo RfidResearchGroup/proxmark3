@@ -3248,7 +3248,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
 
         case CMD_HF_SAM_MFC: {
-//            sam_mfc_get_pacs();
+            sam_mfc_get_pacs(packet);
             break;
         }
 
