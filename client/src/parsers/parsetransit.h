@@ -131,11 +131,13 @@ typedef struct {
 typedef struct {
     uint8_t serial[8];
     bool has_serial;
+    transit_calypso_record_t icc;           // SFI 02, 0002
     transit_calypso_record_t env;           // SFI 07, 2001
     transit_calypso_record_t contract_list; // SFI 1E, 2050
     transit_calypso_record_t counters;      // SFI 19, 2069
     uint8_t contract_count;
-    transit_calypso_record_t contracts[TRANSIT_CALYPSO_MAX_CONTRACTS];  // SFI 09, 2020
+    transit_calypso_record_t contracts[TRANSIT_CALYPSO_MAX_CONTRACTS];  // SFI 09 then 06, 2020 / 2030
+    transit_calypso_record_t contract_counters[4];                      // SFI 0A..0D, 202A..202D
     uint8_t event_count;
     transit_calypso_record_t events[TRANSIT_CALYPSO_MAX_EVENTS];        // SFI 08, 2010
 } transit_calypso_card_t;

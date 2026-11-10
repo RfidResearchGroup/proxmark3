@@ -446,8 +446,10 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/parsers/parsenortic.c
         ${PM3_ROOT}/client/src/parsers/parsetransit.c
         ${PM3_ROOT}/client/src/parsers/parsebip.c
+        ${PM3_ROOT}/client/src/parsers/parsecalypso.c
         ${PM3_ROOT}/client/src/parsers/parsecharlie.c
         ${PM3_ROOT}/client/src/parsers/parseclipper.c
+        ${PM3_ROOT}/client/src/parsers/parseintercode.c
         ${PM3_ROOT}/client/src/parsers/parseintertic.c
         ${PM3_ROOT}/client/src/parsers/parseitso.c
         ${PM3_ROOT}/client/src/parsers/parsekazan.c
@@ -457,7 +459,9 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/parsers/parsenol.c
         ${PM3_ROOT}/client/src/parsers/parseoctopus.c
         ${PM3_ROOT}/client/src/parsers/parseopal.c
+        ${PM3_ROOT}/client/src/parsers/parseopus.c
         ${PM3_ROOT}/client/src/parsers/parseplantain.c
+        ${PM3_ROOT}/client/src/parsers/parseravkav.c
         ${PM3_ROOT}/client/src/parsers/parserenfe.c
         ${PM3_ROOT}/client/src/parsers/parsesmartrider.c
         ${PM3_ROOT}/client/src/parsers/parsesuica.c

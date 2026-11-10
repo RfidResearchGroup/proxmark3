@@ -926,8 +926,10 @@ SRCS =  mifare/aiddesfire.c \
         parsers/parsenortic.c \
         parsers/parsetransit.c \
         parsers/parsebip.c \
+        parsers/parsecalypso.c \
         parsers/parsecharlie.c \
         parsers/parseclipper.c \
+        parsers/parseintercode.c \
         parsers/parseintertic.c \
         parsers/parseitso.c \
         parsers/parsekazan.c \
@@ -937,7 +939,9 @@ SRCS =  mifare/aiddesfire.c \
         parsers/parsenol.c \
         parsers/parseoctopus.c \
         parsers/parseopal.c \
+        parsers/parseopus.c \
         parsers/parseplantain.c \
+        parsers/parseravkav.c \
         parsers/parserenfe.c \
         parsers/parsesmartrider.c \
         parsers/parsesuica.c \

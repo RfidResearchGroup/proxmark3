@@ -2066,13 +2066,19 @@ static bool calypso_read_transit_record(uint8_t sfi, uint8_t record, transit_cal
 }
 
 // Contracts, events and counters for the transit parsers, by SFI in the selected application
-static void calypso_run_transit_parsers(const calypso_select_result_t *selected, const uint8_t *env, size_t env_len) {
+static void calypso_run_transit_parsers(const calypso_select_result_t *selected, const uint8_t *icc, size_t icc_len,
+                                        const uint8_t *env, size_t env_len) {
     transit_calypso_card_t card;
     memset(&card, 0, sizeof(card));
 
     if (selected->parsed.has_serial) {
         memcpy(card.serial, selected->parsed.serial, sizeof(card.serial));
         card.has_serial = true;
+    }
+
+    if (icc != NULL) {
+        card.icc.len = (uint8_t)MIN(icc_len, sizeof(card.icc.data));
+        memcpy(card.icc.data, icc, card.icc.len);
     }
 
     card.env.len = (uint8_t)MIN(env_len, sizeof(card.env.data));
@@ -2087,6 +2093,17 @@ static void calypso_run_transit_parsers(const calypso_select_result_t *selected,
             break;
         }
         card.contract_count++;
+    }
+    // second contracts file, only after a full first one
+    for (uint8_t i = 4; card.contract_count == 4 && i < TRANSIT_CALYPSO_MAX_CONTRACTS; i++) {
+        if (calypso_read_transit_record(0x06, i - 3, &card.contracts[i]) == false) {
+            break;
+        }
+        card.contract_count++;
+    }
+    // per contract counters, Rav-Kav keeps its stored value here
+    for (uint8_t i = 0; i < ARRAYLEN(card.contract_counters); i++) {
+        (void)calypso_read_transit_record(0x0A + i, 1, &card.contract_counters[i]);
     }
     for (uint8_t i = 0; i < TRANSIT_CALYPSO_MAX_EVENTS; i++) {
         if (calypso_read_transit_record(0x08, i + 1, &card.events[i]) == false) {
@@ -4910,7 +4927,7 @@ static int CmdHFCalypsoInfo(const char *Cmd) {
     res = calypso_read_ticketing_environment(ticket_env, sizeof(ticket_env), &ticket_env_len, &ticket_env_sw);
     if (res == PM3_SUCCESS && ticket_env_sw == ISO7816_OK) {
         calypso_print_ticketing_environment(ticket_env, ticket_env_len, verbose);
-        calypso_run_transit_parsers(&selected, ticket_env, ticket_env_len);
+        calypso_run_transit_parsers(&selected, (icc_valid || icc_read_ok) ? icc : NULL, icc_len, ticket_env, ticket_env_len);
     } else if (verbose) {
         PrintAndLogEx(INFO, "");
         PrintAndLogEx(INFO, "Ticketing environment unavailable (%04X - %s)", ticket_env_sw, GetAPDUCodeDescription(ticket_env_sw >> 8, ticket_env_sw & 0xFF));

@@ -27,6 +27,7 @@
 #include "parsebip.h"
 #include "parsecharlie.h"
 #include "parseclipper.h"
+#include "parseintercode.h"
 #include "parseintertic.h"
 #include "parseitso.h"
 #include "parsekazan.h"
@@ -36,7 +37,9 @@
 #include "parsenol.h"
 #include "parseoctopus.h"
 #include "parseopal.h"
+#include "parseopus.h"
 #include "parseplantain.h"
+#include "parseravkav.h"
 #include "parserenfe.h"
 #include "parsesmartrider.h"
 #include "parsesuica.h"
@@ -386,6 +389,10 @@ static const transit_felica_parser_t felica_parsers[] = {
 };
 
 static const transit_calypso_parser_t calypso_parsers[] = {
+    {"Navigo", is_valid_navigo_card, navigo_parser_parse, navigo_selftest},
+    {"Intercode", is_valid_intercode_card, intercode_parser_parse, intercode_selftest},
+    {"Opus", is_valid_opus_card, opus_parser_parse, opus_selftest},
+    {"Rav-Kav", is_valid_ravkav_card, ravkav_parser_parse, ravkav_selftest},
     {NULL, NULL, NULL, NULL}
 };
 
