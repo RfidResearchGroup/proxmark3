@@ -676,6 +676,7 @@ if (NOT SKIPGD EQUAL 1 AND GD_FOUND)
     set(ADDITIONAL_LNKDIRS ${GD_LIBRARY_DIRS} ${ADDITIONAL_LNKDIRS})
     set(TARGET_SOURCES
             ${PM3_ROOT}/client/src/imgutils.c
+            ${PM3_ROOT}/client/src/cmdhfgoodisplay.c
             ${PM3_ROOT}/client/src/cmdhfwaveshare.c
             ${TARGET_SOURCES})
     add_definitions("-DHAVE_GD")

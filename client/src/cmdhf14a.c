@@ -3146,6 +3146,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     bool isISO18092 = false;
     bool isNTAG424 = false;
     bool isSEOS = false;
+    bool isWaveshare = false;
+    bool isGoodisplay = false;
     int nxptype = MTNONE;
 
     if (card.uidlen <= 4) {
@@ -3237,8 +3239,9 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 break;
             }
             case 0x46: {
-                if (memcmp(card.uid, "FSTN10m", 7) == 0) {
+                if ((memcmp(card.uid, "FSTN10m", 7) == 0) || (memcmp(card.uid, "FSTN11m", 7) == 0)) {
                     isMifareClassic = false;
+                    isWaveshare = true;
                     printTag("Waveshare NFC-Powered e-Paper 1.54\" (please disregard MANUFACTURER mapping above)");
                 }
                 break;
@@ -3246,6 +3249,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             case 0x57: {
                 if (memcmp(card.uid, "WSDZ10m", 7) == 0) {
                     isMifareClassic = false;
+                    isWaveshare = true;
                     printTag("Waveshare NFC-Powered e-Paper (please disregard MANUFACTURER mapping above)");
                 }
                 break;
@@ -3351,6 +3355,13 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             isSEOS = true;
             isNTAG424 = false;
             isMifareDESFire = false;
+        }
+
+        // Goodisplay NFC e-paper (FM1280), historical bytes 90 <UID> 00
+        if ((card.sak == 0x28) && (card.uidlen == 4) && (card.ats_len == 13) &&
+                (memcmp(card.ats, "\x0B\x78\x33\xA0\x02\x90", 6) == 0) &&
+                (memcmp(card.ats + 6, card.uid, 4) == 0) && (card.ats[10] == 0x00)) {
+            isGoodisplay = true;
         }
 
         PrintAndLogEx(SUCCESS, "ATS: " _YELLOW_("%s")"[ %02X %02X ]", sprint_hex(card.ats, card.ats_len - 2), card.ats[card.ats_len - 2], card.ats[card.ats_len - 1]);
@@ -3654,6 +3665,20 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     if (isNTAG424) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf ntag424 info") "`");
     }
+
+#ifdef HAVE_GD
+    if (isWaveshare) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf waveshare load -h") "`");
+    }
+
+    if (isGoodisplay) {
+        PrintAndLogEx(HINT, "Hint: Possible Goodisplay NFC e-paper, try `" _YELLOW_("hf goodisplay load -h") "`");
+    }
+#else
+    // e-paper commands need libgd
+    (void)isWaveshare;
+    (void)isGoodisplay;
+#endif
 
     if (isMifareClassic || isMifareMini) {
         if (((isMagic & MAGIC_FLAG_GEN_1A) == MAGIC_FLAG_GEN_1A) || ((isMagic & MAGIC_FLAG_GEN_1B) == MAGIC_FLAG_GEN_1B)) {

@@ -18,6 +18,7 @@
 #ifndef IMGUTILS_H__
 #define IMGUTILS_H__
 
+#include <stdint.h>
 #include <gd.h>
 
 /*
@@ -35,5 +36,22 @@ gdImagePtr img_palettize(gdImagePtr rgb, int *palette, int palette_size);
  * Think of "background-size: cover" in CSS.
  */
 gdImagePtr img_crop_to_fit(gdImagePtr orig, int width, int height);
+
+/*
+ * Loads an image file, crops it to width x height and dithers it to the palette.
+ * Returns a PM3 status code, *out is set on success only.
+ */
+int img_load_dithered(const char *filename, int width, int height, int *palette, int palette_size, gdImagePtr *out);
+
+/*
+ * Saves an image, format chosen by file extension. Returns a PM3 status code.
+ */
+int img_save(gdImagePtr img, const char *filename);
+
+/*
+ * Packs one palette index into a 1bpp plane, MSB first, rows padded to whole bytes.
+ * Pixels of that index are 0, all others 1. Caller frees.
+ */
+uint8_t *img_to_bitplane(gdImagePtr img, int color);
 
 #endif

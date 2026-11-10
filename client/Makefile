@@ -970,6 +970,7 @@ SRCS += bucketsort.c \
 ifeq ($(GD_FOUND),1)
     # electronic shelf labels
     SRCS += imgutils.c \
+            cmdhfgoodisplay.c \
             cmdhfwaveshare.c
 endif
 

@@ -60,6 +60,7 @@
 #include "cmdhftopaz.h"     // TOPAZ
 #include "cmdhfvas.h"       // Value added services
 #include "cmdhfwaveshare.h" // Waveshare
+#include "cmdhfgoodisplay.h" // Goodisplay
 #include "cmdhfxerox.h"     // Xerox
 #include "cmdtrace.h"       // trace list
 #include "ui.h"
@@ -646,6 +647,9 @@ static command_t CommandTable[] = {
     {"fmcos",       CmdHFFmcos,       AlwaysAvailable, "{ FMCOS CPU cards...                  }"},
     {"fudan",       CmdHFFudan,       AlwaysAvailable, "{ Fudan RFIDs...                      }"},
     {"gallagher",   CmdHFGallagher,   AlwaysAvailable, "{ Gallagher DESFire RFIDs...          }"},
+#ifdef HAVE_GD
+    {"goodisplay",  CmdHFGoodisplay,  AlwaysAvailable, "{ Goodisplay NFC ePaper...            }"},
+#endif
     {"gp",          CmdHFGP,          AlwaysAvailable, "{ GlobalPlatform secure elements...   }"},
     {"gst",         CmdHFGST,         AlwaysAvailable, "{ Google Smart Tap passes...          }"},
     {"secc",        CmdHFHIDConfig,   AlwaysAvailable, "{ iClass SE Config Card Emulator...   }"},
