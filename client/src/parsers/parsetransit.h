@@ -97,7 +97,7 @@ int transit_selftest_result(const char *name, bool ok);
 typedef struct {
     uint16_t code;
     uint16_t block_count;
-    const uint8_t *blocks;      // block_count * 16 bytes, block 0 first
+    const uint8_t *blocks;      // block_count * 16 bytes, block 0 first, NULL when not read
 } transit_felica_service_t;
 
 typedef struct {

@@ -27,16 +27,19 @@
 #include "parsebip.h"
 #include "parsecharlie.h"
 #include "parseclipper.h"
+#include "parseintertic.h"
 #include "parseitso.h"
 #include "parsekazan.h"
 #include "parsemetromoney.h"
 #include "parsemyki.h"
 #include "parsenextfare.h"
 #include "parsenol.h"
+#include "parseoctopus.h"
 #include "parseopal.h"
 #include "parseplantain.h"
 #include "parserenfe.h"
 #include "parsesmartrider.h"
+#include "parsesuica.h"
 #include "parsetmobilitat.h"
 #include "parsetroika.h"
 #include "parsetrt.h"
@@ -372,10 +375,13 @@ static const transit_buf_parser_t mfu_parsers[] = {
 };
 
 static const transit_st25tb_parser_t st25tb_parsers[] = {
+    {"Intertic", is_valid_intertic_card, intertic_parser_parse, intertic_selftest},
     {NULL, NULL, NULL, NULL}
 };
 
 static const transit_felica_parser_t felica_parsers[] = {
+    {"Japan IC (Suica)", is_valid_suica_card, suica_parser_parse, suica_selftest},
+    {"Octopus", is_valid_octopus_card, octopus_parser_parse, octopus_selftest},
     {NULL, NULL, NULL, NULL}
 };
 

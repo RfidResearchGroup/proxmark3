@@ -5453,25 +5453,25 @@ static void felica_dump_run_transit_parsers(const felica_dump_system_t *systems,
         size_t n = 0;
         for (size_t j = 0; j < sys->node_count; j++) {
             const felica_dump_node_t *node = &sys->nodes[j];
-            if (node->type != FELICA_NODE_TYPE_SERVICE || node->block_count == 0) {
+            if (node->type != FELICA_NODE_TYPE_SERVICE) {
                 continue;
             }
-            uint16_t blocks = 0;
+            // locked services stay listed without blocks, some parsers name the issuer by them
+            svc[n].code = node->node_code_le;
+            uint32_t blocks = 0;
             for (size_t k = 0; k < node->block_count; k++) {
                 if (node->blocks[k].block_number >= blocks) {
-                    blocks = node->blocks[k].block_number + 1;
+                    blocks = (uint32_t)node->blocks[k].block_number + 1;
                 }
             }
-            uint8_t *buf = calloc(blocks, FELICA_BLK_SIZE);
-            if (buf == NULL) {
-                continue;
+            uint8_t *buf = (blocks > 0) ? calloc(blocks, FELICA_BLK_SIZE) : NULL;
+            if (buf != NULL) {
+                for (size_t k = 0; k < node->block_count; k++) {
+                    memcpy(buf + ((size_t)node->blocks[k].block_number * FELICA_BLK_SIZE), node->blocks[k].data, FELICA_BLK_SIZE);
+                }
+                svc[n].block_count = (uint16_t)blocks;
+                svc[n].blocks = buf;
             }
-            for (size_t k = 0; k < node->block_count; k++) {
-                memcpy(buf + (node->blocks[k].block_number * FELICA_BLK_SIZE), node->blocks[k].data, FELICA_BLK_SIZE);
-            }
-            svc[n].code = node->node_code_le;
-            svc[n].block_count = blocks;
-            svc[n].blocks = buf;
             n++;
         }
         tsys[tcount].system_code = sys->system_code;
