@@ -995,6 +995,88 @@ static bool DesfirePrintVersionInfo(const mfdes_info_res_t *info, nxp_cardtype_t
     return true;
 }
 
+static void DesfireDumpFillFileSettings(const FileSettings_t *fs, desfire_dump_file_t *f, bool settings_ok);
+static int DesfireDumpReadFile(DesfireContext_t *dctx, const FileSettings_t *fs, desfire_dump_file_t *f,
+                               uint32_t maxdatafilelength, bool verbose);
+
+// Names a transit card from the AID list, decodes the free files with card number and balance
+static void DesfireInfoTransit(DesfireContext_t *dctx, const uint8_t *aidbuf, size_t aidbuflen, const iso14a_card_select_t *card) {
+
+    transit_mfdes_info_t info = { .aids_known = true, .card = card };
+    for (size_t i = 0; i + 3 <= aidbuflen && info.aidcount < DESFIRE_MAX_APP_COUNT; i += 3) {
+        info.aids[info.aidcount++] = DesfireAIDByteToUint(&aidbuf[i]);
+    }
+
+    transit_idents_t ids;
+    if (transit_mfdes_identify(&info, &ids) == 0) {
+        return;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    transit_print_idents(&ids);
+
+    desfire_dump_t *dump = calloc(1, sizeof(desfire_dump_t));
+    if (dump == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return;
+    }
+    if (card != NULL) {
+        dump->card_info = *card;
+    }
+    dump->appcount = info.aidcount;
+    for (uint8_t i = 0; i < info.aidcount; i++) {
+        dump->app[i].aid = info.aids[i];
+    }
+
+    transit_mfdes_file_t files[8];
+    size_t n = transit_mfdes_summary_files(&info, files, ARRAYLEN(files));
+    bool selected = false;
+    uint32_t selected_aid = 0;
+
+    for (size_t i = 0; i < n; i++) {
+
+        desfire_dump_app_t *app = NULL;
+        for (uint8_t a = 0; a < dump->appcount; a++) {
+            if (dump->app[a].aid == files[i].aid) {
+                app = &dump->app[a];
+            }
+        }
+        if (app == NULL || app->filecount >= DESFIRE_MAX_FILE_COUNT) {
+            continue;
+        }
+
+        // a refused read ends the session, select again before the next file
+        if (selected == false || selected_aid != files[i].aid) {
+            DesfireSetCommMode(dctx, DCMPlain);
+            DesfireSetCommandSet(dctx, DCCNative);
+            selected = (DesfireSelectAIDHex(dctx, files[i].aid, false, 0) == PM3_SUCCESS);
+            selected_aid = files[i].aid;
+            if (selected == false) {
+                continue;
+            }
+        }
+
+        FileSettings_t fs = {0};
+        if (DesfireFileSettingsStruct(dctx, files[i].fid, &fs) != PM3_SUCCESS) {
+            selected = false;
+            continue;
+        }
+
+        desfire_dump_file_t *f = &app->files[app->filecount++];
+        f->num = files[i].fid;
+        DesfireDumpFillFileSettings(&fs, f, true);
+        if (DesfireDumpReadFile(dctx, &fs, f, 0, false) == PM3_ESOFT) {
+            selected = false;
+        }
+    }
+
+    (void)transit_mfdes_parse(dump);
+    desfire_dump_free(dump);
+    free(dump);
+
+    transit_print_ident_hints(&ids, "hf mfdes info");
+}
+
 static int CmdHF14ADesInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes info",
@@ -1119,6 +1201,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
 
     iso14a_card_select_t card;
     res = SelectCard14443A_4(true, false, &card);
+    bool card_ok = (res == PM3_SUCCESS);
     if (res == PM3_SUCCESS) {
 
         if (card.sak == 0x20) {
@@ -1161,6 +1244,8 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     if (is_valid_hrt_card(&dctx, aidbuf, aidbuflen)) {
         (void)hrt_parser_parse(&dctx);
     }
+
+    DesfireInfoTransit(&dctx, aidbuf, aidbuflen, card_ok ? &card : NULL);
 
     DropField();
     return PM3_SUCCESS;
