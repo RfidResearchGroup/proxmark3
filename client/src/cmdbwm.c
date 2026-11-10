@@ -451,16 +451,6 @@ static int CmdBwmSetCap(const char *Cmd) {
 }
 
 
-static void progressbar(long sent, long total, int style) {
-    int percent = (int)((double)sent / total * 100);
-
-    // Use \r at the start to move the cursor back to the beginning of the line
-    printf("\rProgress: [%d%%]", percent);
-
-    // Force stdout to print immediately without waiting for a newline
-    fflush(stdout);
-}
-
 // One full OTA attempt: BEGIN -> WRITE... -> END. The BWM OTA has no resume
 // (DEV.md 8.4): a dropped chunk can't be re-sent, so any failure here means the
 // caller must restart the whole thing.
@@ -516,7 +506,11 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms
             return PM3_EFAILED;
         }
         sent += n;
-        progressbar(sent, fwlen, STYLE_MIXED);
+        PrintAndLogEx(INPLACE, "Sent " _YELLOW_("%zu") " / " _YELLOW_("%zu") " bytes  (" _YELLOW_("%u") "%%)"
+                      , sent
+                      , fwlen
+                      , (uint32_t)((sent * 100) / fwlen)
+                     );
 
         // Pace the stream. The client->AT32 hop (USB/BLE) is far faster than the
         // AT32->ESP UART, so back-to-back writes can outrun the UART and drop a
@@ -728,7 +722,7 @@ static int CmdBwmName(const char *Cmd) {
                   "hw bwm name --set MyPM5      --> set BLE name to 'MyPM5'");
     void *argtable[] = {
         arg_param_begin,
-        arg_str0(NULL, "set", "<name>", "new BLE name (1-31 chars); omit to read current name"),
+        arg_str0(NULL, "set", "<name>", "new BLE name (1-15 chars); omit to read current name"),
         arg_param_end,
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

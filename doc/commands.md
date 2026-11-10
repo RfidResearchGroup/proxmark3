@@ -253,6 +253,7 @@ Check column "offline" for their availability.
 |`hf 15 list             `|Y       |`List ISO-15693 history`
 |`hf 15 demod            `|Y       |`Demodulate ISO-15693 from tag`
 |`hf 15 dump             `|N       |`Read all memory pages of an ISO-15693 tag, save to file`
+|`hf 15 implant          `|Y       |`Read temperature from NTAG 5 link sensor implant`
 |`hf 15 info             `|N       |`Tag information`
 |`hf 15 sniff            `|N       |`Sniff ISO-15693 traffic`
 |`hf 15 raw              `|N       |`Send raw hex data to tag`
@@ -302,7 +303,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf calypso help        `|Y       |`This help`
-|`hf calypso info        `|N       |`Tag information`
+|`hf calypso info        `|Y       |`Tag information`
 |`hf calypso dump        `|N       |`Dump nodes after application profile scan`
 |`hf calypso probecmdcompat`|N       |`Probe SELECT command compatibility`
 |`hf calypso list        `|Y       |`List Calypso history`
@@ -371,7 +372,7 @@ Check column "offline" for their availability.
 |`hf felica sniff        `|N       |`Sniff ISO 18092/FeliCa traffic`
 |`hf felica wrbl         `|N       |`write block data to an authentication-not-required Service.`
 |`hf felica seacauth1    `|N       |`FeliCa SEAC Authentication1`
-|`hf felica dump         `|N       |`Wait for and try dumping FeliCa`
+|`hf felica dump         `|Y       |`Wait for and try dumping FeliCa`
 |`hf felica discnodes    `|N       |`discover Area Code and Service Code nodes.`
 |`hf felica sim          `|N       |`Emulate FeliCa Standard from dump file`
 |`hf felica rqservice    `|N       |`verify the existence of Area and Service, and to acquire Key Version.`
@@ -472,6 +473,16 @@ Check column "offline" for their availability.
 |`hf gallagher decode    `|Y       |`Decode Gallagher credential block`
 |`hf gallagher encode    `|Y       |`Encode Gallagher credential block`
 |`hf gallagher reader    `|N       |`Read & decode all Gallagher credentials on a DESFire or Classic card`
+
+
+### hf goodisplay
+
+ { Goodisplay NFC ePaper...            }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf goodisplay help     `|Y       |`This help`
+|`hf goodisplay load     `|Y       |`Load image file to Goodisplay NFC ePaper`
 
 
 ### hf gp
@@ -669,6 +680,7 @@ Check column "offline" for their availability.
 |`hf mf rdbl             `|N       |`Read MIFARE Classic block`
 |`hf mf rdsc             `|N       |`Read MIFARE Classic sector`
 |`hf mf restore          `|N       |`Restore MIFARE Classic binary file to tag`
+|`hf mf sam              `|N       |`Extract PACS via a HID SAM`
 |`hf mf setmod           `|N       |`Set MIFARE Classic EV1 load modulation strength`
 |`hf mf value            `|Y       |`Value blocks`
 |`hf mf view             `|Y       |`Display content from tag dump file`
@@ -804,6 +816,7 @@ Check column "offline" for their availability.
 |`hf mfdes getversion    `|N       |`Get version/type information`
 |`hf mfdes getuid        `|N       |`Get uid from card`
 |`hf mfdes pc            `|N       |`Run proximity check`
+|`hf mfdes sam           `|N       |`Extract PACS via a HID SAM`
 |`hf mfdes info          `|N       |`Tag information`
 |`hf mfdes mad           `|N       |`Prints MAD records / files from the card`
 |`hf mfdes setconfig     `|N       |`Set card configuration`
@@ -1860,6 +1873,7 @@ Check column "offline" for their availability.
 |`wiegand list           `|Y       |`List available wiegand formats`
 |`wiegand encode         `|Y       |`Encode to wiegand raw hex (currently for HID Prox)`
 |`wiegand decode         `|Y       |`Convert raw hex to decoded wiegand format (currently for HID Prox)`
+|`wiegand downgrade      `|Y       |`Downgrade a HID credential to iCLASS, MIFARE Classic or HID Prox`
 
 
 Full help dump done.

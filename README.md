@@ -27,7 +27,7 @@ Iceman repository is considered to be the pinnacle of features and functionality
 - [Development](#development)
   - [Supported operating systems](#supported-operating-systems)
   - [Precompiled binaries](#precompiled-binaries)
-  - [Proxmark3 GUI](#proxmark3-gui)
+  - [GUIs](./doc/md/Use_of_Proxmark/Promark-GUIs.md)
   - [Official channels](#official-channels)
   - [Maintainers](#maintainers)
   - [Citation](#citation)
@@ -171,16 +171,6 @@ This repo compiles nicely on
 ## Precompiled binaries
 
 See [Proxmark3 precompiled builds](https://www.proxmarkbuilds.org/) 
-
-
-## Proxmark3 GUI
-
-Most community driven GUI for Proxmark tends to be quite old and out-of-date.
-Here is a list of a few:
-
-- [Proxmark3 Universal GUI](https://github.com/burma69/PM3UniversalGUI) will work more or less.
-- [Proxmark3 GUI cross-compiled](https://github.com/wh201906/Proxmark3GUI/) which is recently updated and claims to support latest source of this repo.
-- [Proxmark3_GUI](https://github.com/Phreak87/Proxmark3_GUI) simple gui in vb.net
 
 
 ## Official channels

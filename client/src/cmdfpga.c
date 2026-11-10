@@ -102,8 +102,9 @@ static int CmdConfigFpga(const char *Cmd) {
         }
         offset += chunk_size;
         // Print progress
-        PrintAndLogEx(INFO, "Sent "_YELLOW_("%zu")" bytes, progress: "_YELLOW_("%.2f%%"), chunk_size, (offset / (float)datalen) * 100);
+        PrintAndLogEx(INPLACE, "Sent "_YELLOW_("%zu")" bytes, progress: "_YELLOW_("%.2f%%"), chunk_size, (offset / (float)datalen) * 100);
     }
+    PrintAndLogEx(NORMAL, "");
 
     PrintAndLogEx(SUCCESS, "FPGA configuration transfer complete!");
 

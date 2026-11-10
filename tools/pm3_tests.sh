@@ -475,6 +475,7 @@ while true; do
       if ! CheckExecute "data rawdemod ar samples"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_keri.pm3; data setdebugmode -1; data rawdemod --ar --samples 1000' 2>&1" "maxLen 1000"; then break; fi
       if ! CheckExecute "data rawdemod am max errors"            "$CLIENTBIN -c 'data load -f traces/lf_EM4102-1.pm3; data setdebugmode -1; data rawdemod --am --max 300' 2>&1" "maxErr 300"; then break; fi
       if ! CheckExecute "mfu pwdgen test"         "$CLIENTBIN -c 'hf mfu pwdgen --test'" "Selftest ok"; then break; fi
+      if ! CheckExecute "mfu pwdgen philips"      "$CLIENTBIN -c 'hf mfu pwdgen --uid 040D4B5AC57181 --mfg 3231303632382035324D'" "Philips Toothbrush \\| FBCFACC1"; then break; fi
       if ! CheckExecute "mfu keygen test"         "$CLIENTBIN -c 'hf mfu keygen --uid 11223344556677'" "80 B1 C2 71 D8 A0"; then break; fi
       if ! CheckExecute "jooki encode test"       "$CLIENTBIN -c 'hf jooki encode --test'" "04 28 F4 DA F0 4A 81  \( ok \)"; then break; fi
       if ! CheckExecute "vigik signature selftest" "$CLIENTBIN -c 'hf mf view --selftest'" "selftest \\( ok \\)"; then break; fi

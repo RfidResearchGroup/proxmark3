@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Updated `/Getting_Started_With_PM5.md` (@innocentbystanderproxmark)
+- Changed `hf mfu pwdgen` - reads the tag by default (`-r` removed), `--uid` is offline, new `--mfg` for the Philips toothbrush algo offline (@iceman1001)
 - Changed PM5 FPGA image - `client/resources/fpga_pm5.bin` is now built from the repo sources (`make -C fpga fpga_pm5_release`) and replaces the vendor built `PM5_FPGA_fix_loedge_bug.bin` (@iceman1001)
 - Changed `hf mf info`, `hf mfu info`, `hf mfdes info`, `hf felica info`, `hf 14b info`, `hf calypso info` and `hf 14a info` - identify transit cards by keys, AIDs, system codes or data, show card number / balance where free to read and hint at the full decode (@iceman1001)
 - Fixed PM5 `hf mf sim` and other 14a sims - the RSSI ADC was reset and recalibrated before every listen, missing fast reader frames such as the auth nR/aR (@iceman1001)
