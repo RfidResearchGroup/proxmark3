@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed PM5 `hf mf sim` and other 14a sims - the RSSI ADC was reset and recalibrated before every listen, missing fast reader frames such as the auth nR/aR (@iceman1001)
 - Added `hf mf sam` and `hf mfdes sam` - read PACS from MIFARE Classic SE and DESFire EV1/EV2 through a HID SAM, as Seader does (@iceman1001)
 - Added `--dg` / `--save` to the HID SAM commands and `wiegand downgrade` - Seader style downgrades to iCLASS legacy / SR dumps, MIFARE Classic dumps and HID Prox clone commands (@iceman1001)
 - Changed `hf iclass sam`, `hf seos sam` - show the CSN / UID and the plaintext SIO seen during the read (@iceman1001)

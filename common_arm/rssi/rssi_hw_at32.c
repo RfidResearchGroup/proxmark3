@@ -17,7 +17,18 @@ static void gpio_config(void) {
     gpio_init(AT32_GPIO_ADC_RSSI, &gpio_initstructure);
 }
 
+// Channel of the last full setup, -1 = none
+static int s_rssi_ch = -1;
+
 void AdcSetupRssiChannel(adc_rssi_ch_t ch) {
+    // Full setup blocks for tens of us (reset, calibration, vref read), too slow
+    // for the 14a tag sim turnaround. Same channel and ADC still up: just restart.
+    if ((s_rssi_ch == (int)ch) && adc_flag_get(AT32_RSSI_ADC, ADC_RDY_FLAG)) {
+        adc_flag_clear(AT32_RSSI_ADC, ADC_OCCE_FLAG); // drop a stale result
+        AdcRssiConversionStart();
+        return;
+    }
+
     adc_common_config_type adc_common_struct;
     adc_base_config_type adc_base_struct;
 
@@ -74,5 +85,6 @@ void AdcSetupRssiChannel(adc_rssi_ch_t ch) {
     } else {
         adc_ordinary_channel_set(AT32_RSSI_ADC, AT32_RSSI_ADC_LF_CHANNEL, 1, ADC_SAMPLETIME_640_5);
     }
+    s_rssi_ch = (int)ch;
     AdcRssiConversionStart();
 }
