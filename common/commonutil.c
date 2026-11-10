@@ -702,3 +702,44 @@ int hexstr2ByteArr(const char *hexstr, unsigned char *array, size_t asize) {
     }
     return n >> 1;
 }
+
+// ISO14443-A air order stream: per byte 8 data bits LSB first, then its parity
+// bit, packed LSB first. Parity arrays use the PM3 layout, MSB first per byte.
+// Returns the number of bytes written to out.
+uint16_t iso14a_air_bits_pack(const uint8_t *data, const uint8_t *par, uint16_t n, uint8_t *out) {
+    uint16_t out_len = (uint16_t)(((uint32_t)n * 9 + 7) / 8);
+    memset(out, 0, out_len);
+
+    for (uint16_t i = 0; i < n; i++) {
+        uint32_t pos = (uint32_t)i * 9;
+        for (uint8_t j = 0; j < 8; j++, pos++) {
+            if ((data[i] >> j) & 1) {
+                out[pos >> 3] |= (uint8_t)(1 << (pos & 7));
+            }
+        }
+        if (par[i >> 3] & (0x80 >> (i & 7))) {
+            out[pos >> 3] |= (uint8_t)(1 << (pos & 7));
+        }
+    }
+    return out_len;
+}
+
+// Inverse of iso14a_air_bits_pack. Trailing bits short of a whole 9 bit symbol
+// are padding. Returns the number of data bytes.
+uint16_t iso14a_air_bits_unpack(const uint8_t *in, uint16_t in_len, uint8_t *data, uint8_t *par) {
+    uint16_t n = (uint16_t)(((uint32_t)in_len * 8) / 9);
+    memset(par, 0, (n + 7) / 8);
+
+    for (uint16_t i = 0; i < n; i++) {
+        uint32_t pos = (uint32_t)i * 9;
+        uint8_t b = 0;
+        for (uint8_t j = 0; j < 8; j++, pos++) {
+            b |= (uint8_t)(((in[pos >> 3] >> (pos & 7)) & 1) << j);
+        }
+        data[i] = b;
+        if ((in[pos >> 3] >> (pos & 7)) & 1) {
+            par[i >> 3] |= (uint8_t)(0x80 >> (i & 7));
+        }
+    }
+    return n;
+}

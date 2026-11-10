@@ -161,4 +161,7 @@ void reverse_arraybytes_copy(const uint8_t *arr, uint8_t *dest, size_t len);
 size_t concatbits(uint8_t *dest, int dest_offset, const uint8_t *src, int src_offset, size_t nbits, bool src_lsb);
 int char2int(char c);
 int hexstr2ByteArr(const char *hexstr, unsigned char *array, size_t asize);
+
+uint16_t iso14a_air_bits_pack(const uint8_t *data, const uint8_t *par, uint16_t n, uint8_t *out);
+uint16_t iso14a_air_bits_unpack(const uint8_t *in, uint16_t in_len, uint8_t *data, uint8_t *par);
 #endif
