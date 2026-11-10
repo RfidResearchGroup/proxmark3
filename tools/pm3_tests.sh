@@ -478,6 +478,12 @@ while true; do
       if ! CheckExecute "mfu keygen test"         "$CLIENTBIN -c 'hf mfu keygen --uid 11223344556677'" "80 B1 C2 71 D8 A0"; then break; fi
       if ! CheckExecute "jooki encode test"       "$CLIENTBIN -c 'hf jooki encode --test'" "04 28 F4 DA F0 4A 81  \( ok \)"; then break; fi
       if ! CheckExecute "vigik signature selftest" "$CLIENTBIN -c 'hf mf view --selftest'" "selftest \\( ok \\)"; then break; fi
+      if ! CheckExecute "transit mfc selftest"      "$CLIENTBIN -c 'hf mf view --selftest'" "Transit selftest \\( ok \\)"; then break; fi
+      if ! CheckExecute "transit mfdes selftest"    "$CLIENTBIN -c 'hf mfdes view --selftest'" "Transit selftest \\( ok \\)"; then break; fi
+      if ! CheckExecute "transit mfu selftest"      "$CLIENTBIN -c 'hf mfu view --selftest'" "Transit selftest \\( ok \\)"; then break; fi
+      if ! CheckExecute "transit st25tb selftest"   "$CLIENTBIN -c 'hf 14b view --selftest'" "Transit selftest \\( ok \\)"; then break; fi
+      if ! CheckExecute "transit felica selftest"   "$CLIENTBIN -c 'hf felica dump --selftest'" "Transit selftest \\( ok \\)"; then break; fi
+      if ! CheckExecute "transit calypso selftest"  "$CLIENTBIN -c 'hf calypso info --selftest'" "Transit selftest \\( ok \\)"; then break; fi
       if ! CheckExecute "analyse regex selftest"  "$CLIENTBIN -c 'analyse regex --test'" "Tests \( ok \)"; then break; fi
       if ! CheckExecute "hf 15 implant selftest"  "$CLIENTBIN -c 'hf 15 implant --test'" "Tests \( ok \)"; then break; fi
       if ! CheckExecute "trace load/list 14a"     "$CLIENTBIN -c 'trace load -f traces/hf_14a_mfu.trace; trace list -1 -t 14a;'" "READBLOCK\(8\)"; then break; fi
