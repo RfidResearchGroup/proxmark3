@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `lf nexwatch clone` - `-m` defaults to 1 as its help says, values the frame can't carry and conflicting options are refused, `--psk2` writes block 4 (@matrix)
 - Fixed `lf nexwatch demod` - the raw id is the id field the tag sends instead of 0x40c00080 for every tag (@matrix)
 - Fixed `lf nexwatch demod` - a magic number of 0xFF is found (@matrix)
 - Fixed `lf nexwatch sim` - `--magic` is applied, `-m` defaults to 1 as its help says, values the frame can't carry and conflicting options are refused (@matrix)

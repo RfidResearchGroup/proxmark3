@@ -288,7 +288,7 @@ static int CmdNexWatchClone(const char *Cmd) {
     CLIParserInit(&ctx, "lf nexwatch clone",
                   "clone a Nexwatch tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\n"
                   "You can use raw hex values or create a credential based on id, mode\n"
-                  "and type of credential (Nexkey / Quadrakey / Russian)",
+                  "and type of credential (Nexkey / Quadrakey / Honeywell)",
                   "lf nexwatch clone --raw 5600000000213C9F8F150C00\n"
                   "lf nexwatch clone --cn 521512301 -m 1 --nc    -> Nexkey credential\n"
                   "lf nexwatch clone --cn 521512301 -m 1 --qc    -> Quadrakey credential\n"
@@ -316,8 +316,10 @@ static int CmdNexWatchClone(const char *Cmd) {
     uint8_t raw[12] = {0x56, 0};
     CLIGetHexWithReturn(ctx, 1, raw, &raw_len);
 
-    uint32_t cn = arg_get_u32_def(ctx, 2, -1);
-    uint32_t mode = arg_get_u32_def(ctx, 3, -1);
+    bool use_cn = arg_get_u64_count(ctx, 2);
+    uint64_t cn_arg = arg_get_u64_def(ctx, 2, 0);
+    bool use_mode = arg_get_u64_count(ctx, 3);
+    uint64_t mode = arg_get_u64_def(ctx, 3, 1);
     bool use_nexkey = arg_get_lit(ctx, 4);
     bool use_quadrakey = arg_get_lit(ctx, 5);
     bool use_honeywell = arg_get_lit(ctx, 6);
@@ -332,13 +334,19 @@ static int CmdNexWatchClone(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    if (use_nexkey && use_quadrakey) {
-        PrintAndLogEx(FAILED, "Can't specify both Nexkey and Quadrakey at the same time");
+    if ((use_nexkey + use_quadrakey + use_honeywell) > 1) {
+        PrintAndLogEx(FAILED, "Can't specify more than one of Nexkey, Quadrakey and Honeywell");
         return PM3_EINVARG;
     }
 
     if (q5 && em) {
         PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+        return PM3_EINVARG;
+    }
+
+    // 0x00042080 below is a T55x7 config block
+    if (use_psk2 && (q5 || em)) {
+        PrintAndLogEx(FAILED, "Can't specify PSK2 together with Q5 or EM4305");
         return PM3_EINVARG;
     }
 
@@ -352,23 +360,38 @@ static int CmdNexWatchClone(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (use_raw && cn != -1) {
+    if (use_raw && raw_len != 12) {
+        PrintAndLogEx(FAILED, "Must specify 12 bytes, got " _YELLOW_("%d"), raw_len);
+        return PM3_EINVARG;
+    }
+
+    if (use_raw && use_cn) {
         PrintAndLogEx(FAILED, "Can't specify both Raw and Card id at the same time");
         return PM3_EINVARG;
     }
 
-    if (cn != -1) {
+    if (use_raw && use_mode) {
+        PrintAndLogEx(FAILED, "Can't specify both Raw and Mode at the same time");
+        return PM3_EINVARG;
+    }
+
+    if (use_raw == false && use_cn == false) {
+        PrintAndLogEx(FAILED, "Must specify either Raw or Card id");
+        return PM3_EINVARG;
+    }
+
+    // the frame carries 32 bits of card id and 4 of mode
+    if (cn_arg > 0xFFFFFFFF || mode > 15) {
+        PrintAndLogEx(FAILED, "Card id has a max value of 4294967295 and Mode has a max value of 15");
+        return PM3_EINVARG;
+    }
+
+    uint32_t cn = (uint32_t)cn_arg;
+    if (use_cn) {
         uint32_t scrambled;
         nexwatch_scamble(SCRAMBLE, &cn, &scrambled);
         num_to_bytes(scrambled, 4, raw + 5);
-    }
-
-    if (mode != -1) {
-        if (mode > 15) {
-            mode = 1;
-        }
-        mode &= 0x0F;
-        raw[9] |= (mode << 4);
+        raw[9] |= (uint8_t)(mode << 4);
     }
 
     uint8_t magic = 0xBE;
@@ -387,7 +410,8 @@ static int CmdNexWatchClone(const char *Cmd) {
     }
     PrintAndLogEx(INFO, "Magic byte selected... " _YELLOW_("0x%X"), magic);
 
-    uint32_t blocks[4];
+    uint32_t blocks[5] = {0};
+    uint8_t nblocks = 4;
 
     //Nexwatch - compat mode, PSK, data rate 40, 3 data blocks
     blocks[0] = T55x7_MODULATION_PSK1 | T55x7_BITRATE_RF_32 | 3 << T55x7_MAXBLOCK_SHIFT;
@@ -413,6 +437,8 @@ static int CmdNexWatchClone(const char *Cmd) {
 
     if (use_psk2) {
         blocks[0] = 0x00042080;
+        // maxblock 4: block 4 stays 0, the 32 zero bits that end a 128-bit frame
+        nblocks = 5;
 
         uint8_t *res_shifted = calloc(96, sizeof(uint8_t));
         if (res_shifted == NULL) {
@@ -436,18 +462,18 @@ static int CmdNexWatchClone(const char *Cmd) {
     }
 
 
-    for (uint8_t i = 1; i < ARRAYLEN(blocks); i++) {
+    for (uint8_t i = 1; i < 4; i++) {
         blocks[i] = bytes_to_num(raw + ((i - 1) * 4), sizeof(uint32_t));
     }
 
     PrintAndLogEx(INFO, "Preparing to clone NexWatch to " _YELLOW_("%s") " raw " _YELLOW_("%s"), cardtype, sprint_hex_inrow(raw, sizeof(raw)));
-    print_blocks(blocks,  ARRAYLEN(blocks));
+    print_blocks(blocks, nblocks);
 
     int res;
     if (em) {
-        res = em4x05_clone_tag(blocks, ARRAYLEN(blocks), 0, false);
+        res = em4x05_clone_tag(blocks, nblocks, 0, false);
     } else {
-        res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
+        res = clone_t55xx_tag(blocks, nblocks);
     }
     PrintAndLogEx(SUCCESS, "Done!");
     PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`lf nexwatch reader`") " to verify");
