@@ -571,6 +571,9 @@ while true; do
       if ! CheckExecute "wiegand Verkada40 decode test 3" "$CLIENTBIN -c 'wiegand decode --raw 8A20002721'" "Verkada40.*FC: 81  CN: 5008  parity \( ok \)"; then break; fi
       if ! CheckExecute "wiegand IR56 encode roundtrip"   "$CLIENTBIN -c 'wiegand encode -w IR56 --fc 123 --cn 123 --pre'" "9E000000100007B0000007B"; then break; fi
       if ! CheckExecute "wiegand IR56 decode roundtrip"   "$CLIENTBIN -c 'wiegand decode --raw 9E000000100007B0000007B'" "IR56.*FC: 123  CN: 123"; then break; fi
+      if ! CheckExecute "wiegand downgrade selftest"      "$CLIENTBIN -c 'wiegand downgrade --selftest'" "Tests \( ok \)"; then break; fi
+      if ! CheckExecute "wiegand downgrade prox"          "$CLIENTBIN -c 'wiegand downgrade --new 068F80A8C0 --dg prox'" "lf hid clone -w H10301 --fc 31 --cn 337"; then break; fi
+      if ! CheckExecute "wiegand downgrade sr needs sio"  "$CLIENTBIN -c 'wiegand downgrade --new 068F80A8C0 --dg sr'" "iCLASS SR needs a SIO"; then break; fi
 
       echo -e "\n${C_BLUE}Testing LF:${C_NC}"
       if ! CheckExecute "lf hitag2 test"             "$CLIENTBIN -c 'lf hitag test'" "Tests \( ok"; then break; fi

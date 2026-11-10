@@ -38,6 +38,7 @@
 #include "crypto/libpcrypto.h"
 #include "wiegand_formats.h"
 #include "wiegand_formatutils.h"
+#include "hidsio.h"
 #include "cmdhw.h"                 // set_fpga_mode
 #include "loclass/cipherutils.h"   // BitstreamOut_t
 #include "proxendian.h"
@@ -11660,6 +11661,10 @@ static int CmdHFMFHidEncode(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14AMfSAM(const char *Cmd) {
+    return hid_sam_iso14a_cmd(Cmd, "hf mf sam", CMD_HF_SAM_MFC, HID_SRC_MFC);
+}
+
 static int CmdHF14AMfInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf info",
@@ -12554,6 +12559,7 @@ static command_t CommandTable[] = {
     {"rdbl",        CmdHF14AMfRdBl,         IfPm3Iso14443a,  "Read MIFARE Classic block"},
     {"rdsc",        CmdHF14AMfRdSc,         IfPm3Iso14443a,  "Read MIFARE Classic sector"},
     {"restore",     CmdHF14AMfRestore,      IfPm3Iso14443a,  "Restore MIFARE Classic binary file to tag"},
+    {"sam",         CmdHF14AMfSAM,          IfPm3Smartcard,  "Extract PACS via a HID SAM"},
     {"setmod",      CmdHf14AMfSetMod,       IfPm3Iso14443a,  "Set MIFARE Classic EV1 load modulation strength"},
     {"value",       CmdHF14AMfValue,        AlwaysAvailable, "Value blocks"},
     {"view",        CmdHF14AMfView,         AlwaysAvailable, "Display content from tag dump file"},

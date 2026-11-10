@@ -8007,6 +8007,8 @@ static int CmdHFiClassSAMExtract(const char *Cmd) {
                   "hf iclass sam --break               -> get Nr-MAC for extracting encrypted SIO\n"
                   "hf iclass sam -f hf-iclass-dump.bin -> emulate card from dump file to SAM\n"
                   "hf iclass sam --info                -> get SAM version + serial (also warms up the SAM)\n"
+                  "hf iclass sam --dg sr               -> get PACS and SIO, save an iCLASS SR dump\n"
+                  "hf iclass sam --save --dg prox      -> save credential, print HID Prox clone commands\n"
                  );
 
     void *argtable[] = {
@@ -8022,9 +8024,18 @@ static int CmdHFiClassSAMExtract(const char *Cmd) {
         arg_lit0("s", "snmp",  "data is in snmp format without headers"),
         arg_lit0(NULL, "info",  "get SAM infos (version, serial number)"),
         arg_str0("f",  "file", "<fn>", "dump file to emulate to SAM instead of a real card"),
+        arg_str0(NULL, "dg",   "<legacy|sr|prox|mfc>", "downgrade the credential to"),
+        arg_lit0(NULL, "save", "save credential to file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int dg = HID_DG_NONE;
+    if (CLIGetOptionList(arg_get_str(ctx, 12), hid_dg_opts, &dg)) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    bool save_cred = arg_get_lit(ctx, 13);
 
     bool verbose = arg_get_lit(ctx, 1);
     bool disconnect_after = !arg_get_lit(ctx, 2);
@@ -8069,6 +8080,9 @@ static int CmdHFiClassSAMExtract(const char *Cmd) {
     if (emulate_from_file) {
         flags |= BITMASK(6);
     }
+
+    // extended reply with CSN and SIO
+    flags |= BITMASK(7);
 
     uint8_t data[PM3_CMD_DATA_SIZE] = {0};
     data[0] = flags;
@@ -8135,78 +8149,21 @@ static int CmdHFiClassSAMExtract(const char *Cmd) {
             return resp.status;
     }
 
+    hid_sam_cred_t cred;
+    memset(&cred, 0, sizeof(cred));
+    cred.source = HID_SRC_ICLASS;
+
     uint8_t *d = resp.data.asBytes;
-    // check for standard SamCommandGetContentElement response
-    // bd 09
-    //    8a 07
-    //       03 05 <- tag + length
-    //          06 85 80 6d c0 <- decoded PACS data
-    if (d[0] == 0xbd && d[2] == 0x8a && d[4] == 0x03) {
-        uint8_t pacs_length = d[5];
-        uint8_t *pacs_data = d + 6;
-        int res = HIDDumpPACSBits(pacs_data, pacs_length, verbose);
+    size_t dlen = resp.length;
+    hid_sam_unwrap_reply(&d, &dlen, &cred);
+
+    bool got_pacs = false;
+    if (hid_sam_is_pacs_reply(d, dlen)) {
+        int res = hid_sam_print_pacs(d, dlen, &cred, verbose);
         if (res != PM3_SUCCESS) {
             return res;
         }
-        // check for standard samCommandGetContentElement2:
-        // bd 1e
-        //    b3 1c
-        //       a0 1a
-        //          80 05
-        //             06 85 80 6d c0
-        //          81 0e
-        //             2b 06 01 04 01 81 e4 38 01 01 02 04 3c ff
-        //          82 01
-        //             07
-    } else if (d[0] == 0xbd && d[2] == 0xb3 && d[4] == 0xa0) {
-        const uint8_t *pacs = d + 6;
-        // The a0 content element normally starts with 80 <len> <PACS bits>.
-        // Some SAMs / cards return a status-only element with no access-bits
-        // field, e.g. a0 03 82 01 03 - here the first inner tag is 82, not 80.
-        // Don't parse the status byte as PACS (that yields a bogus
-        // "Invalid PACS value"); report that the card has no readable PACS.
-        if (pacs[0] != 0x80) {
-            PrintAndLogEx(WARNING, "No PACS/SIO access-bits returned by the SAM");
-            if (pacs[0] == 0x82 && pacs[1] == 0x01) {
-                PrintAndLogEx(INFO, "SAM content status: " _YELLOW_("0x%02X") " (no physicalAccessBits field)", pacs[2]);
-            }
-            if (verbose) {
-                print_hex(d, resp.length);
-            }
-            return PM3_ENOPACS;
-        }
-        const uint8_t pacs_length = pacs[1];
-        const uint8_t *pacs_data = pacs + 2;
-        int res = HIDDumpPACSBits(pacs_data, pacs_length, verbose);
-        if (res != PM3_SUCCESS) {
-            return res;
-        }
-
-        // The a0 element holds 80 (PACS) and optionally 81 (SIO OID) and 82
-        // (media type). An iCLASS SE credential often omits 81, so walk the
-        // nodes rather than assuming all three are present in order.
-        const uint8_t *p = pacs + 2 + pacs_length;
-        const uint8_t *end = d + 6 + d[5];
-        if (end > d + resp.length) {
-            end = d + resp.length;
-        }
-
-        while (p + 1 < end) {
-
-            uint8_t tag = p[0];
-            uint8_t len = p[1];
-            if (p + 2 + len > end) {
-                break;
-            }
-
-            if (tag == 0x81) {
-                PrintAndLogEx(SUCCESS, "SIO OID.......... " _GREEN_("%s"), sprint_hex_inrow(p + 2, len));
-            } else if ((tag == 0x82) && (len >= 1)) {
-                PrintAndLogEx(SUCCESS, "SIO Media Type... " _GREEN_("%s"), getSioMediaTypeInfo(p[2]));
-            }
-
-            p += 2 + len;
-        }
+        got_pacs = true;
     } else if (break_nrmac && d[0] == 0x05) {
         PrintAndLogEx(SUCCESS, "Nr-MAC........... " _GREEN_("%s"), sprint_hex_inrow(d + 1, 8));
         if (verbose) {
@@ -8217,23 +8174,30 @@ static int CmdHFiClassSAMExtract(const char *Cmd) {
         //if it is an error decode it
         if (memcmp(d, "\xBE\x07\x80\x01", 4) == 0) { //if it the string is 0xbe 0x07 0x80 0x01 the next byte will indicate the error code
             PrintAndLogEx(ERR, _RED_("Sam Error Code: %02x"), d[4]);
-            print_hex(d, resp.length);
+            print_hex(d, dlen);
         } else if (match_with_wildcard(d, snmp_pattern, snmp_mask, 6)) {
             is_snmp = true;
-            PrintAndLogEx(SUCCESS, _YELLOW_("[samSNMPMessageResponse] ")"%s", sprint_hex(d + 6, resp.length - 6));
+            PrintAndLogEx(SUCCESS, _YELLOW_("[samSNMPMessageResponse] ")"%s", sprint_hex(d + 6, dlen - 6));
         } else if (match_with_wildcard(d, ok_pattern, ok_mask, 3)) {
-            PrintAndLogEx(SUCCESS, _YELLOW_("[samResponseAcknowledge] ")"%s", sprint_hex(d + 4, resp.length - 4));
+            PrintAndLogEx(SUCCESS, _YELLOW_("[samResponseAcknowledge] ")"%s", sprint_hex(d + 4, dlen - 4));
         } else {
-            print_hex(d, resp.length);
+            print_hex(d, dlen);
         }
     }
 
     if (decodeTLV && is_snmp == false) {
         asn1_print(d, d[1] + 2, " ");
     } else if (decodeTLV && is_snmp) {
-        asn1_print(d + 6, resp.length - 6, "  ");
+        asn1_print(d + 6, dlen - 6, "  ");
     }
 
+    if (got_pacs) {
+        return hid_sam_output(&cred, dg, save_cred);
+    }
+
+    if (dg != HID_DG_NONE || save_cred) {
+        PrintAndLogEx(WARNING, "No PACS to save or downgrade");
+    }
     return PM3_SUCCESS;
 }
 

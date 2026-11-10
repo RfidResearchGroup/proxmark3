@@ -31,6 +31,7 @@
 #include "wiegand_formats.h"
 #include "wiegand_formatutils.h"
 #include "util.h"
+#include "hidsio.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -340,11 +341,116 @@ int CmdWiegandDecode(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdWiegandDowngrade(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "wiegand downgrade",
+                  "Downgrade a HID credential, as Seader does, to an iCLASS legacy or SR dump,\n"
+                  "a MIFARE Classic dump, or HID Prox clone commands.\n"
+                  "Input is a credential saved by a `sam` command with --save, or PACS bits",
+                  "wiegand downgrade -f hf-iclass-E44B4403F8FF12E0-credential.json --dg sr\n"
+                  "wiegand downgrade --new 068F80A8C0 --dg mfc\n"
+                  "wiegand downgrade --bin 10001111100000001010100011 --dg prox\n"
+                  "wiegand downgrade --selftest"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<fn>", "credential file"),
+        arg_str0("b", "bin", "<bin>", "binary string"),
+        arg_str0("n", "new", "<hex>", "new ASN.1 encoded PACS, as a SAM returns it"),
+        arg_str0(NULL, "csn", "<hex>", "iCLASS CSN the SIO belongs to"),
+        arg_str0(NULL, "sio", "<hex>", "SIO read from that iCLASS card"),
+        arg_str0(NULL, "dg", "<legacy|sr|prox|mfc>", "downgrade the credential to"),
+        arg_lit0(NULL, "save", "save credential to file"),
+        arg_lit0(NULL, "selftest", "run selftest"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    int blen = 0;
+    char bin[121] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)bin, sizeof(bin) - 1, &blen);
+
+    int plen = 0;
+    uint8_t pacs[16] = {0};
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 3), pacs, sizeof(pacs), &plen);
+
+    int csnlen = 0;
+    uint8_t csn[8] = {0};
+    res |= CLIParamHexToBuf(arg_get_str(ctx, 4), csn, sizeof(csn), &csnlen);
+
+    int siolen = 0;
+    uint8_t sio[SAM_EXT_SIO_MAX] = {0};
+    res |= CLIParamHexToBuf(arg_get_str(ctx, 5), sio, sizeof(sio), &siolen);
+
+    int dg = HID_DG_NONE;
+    res |= CLIGetOptionList(arg_get_str(ctx, 6), hid_dg_opts, &dg);
+
+    bool save = arg_get_lit(ctx, 7);
+    bool selftest = arg_get_lit(ctx, 8);
+    CLIParserFree(ctx);
+
+    if (res) {
+        PrintAndLogEx(ERR, "Error parsing input");
+        return PM3_EINVARG;
+    }
+
+    if (selftest) {
+        return hid_sam_selftest();
+    }
+
+    if ((fnlen > 0) + (blen > 0) + (plen > 0) != 1) {
+        PrintAndLogEx(ERR, "Use exactly one of `--file`, `--bin` or `--new`");
+        return PM3_EINVARG;
+    }
+
+    hid_sam_cred_t cred;
+    memset(&cred, 0, sizeof(cred));
+
+    if (fnlen) {
+        res = hid_sam_load_cred(filename, &cred);
+    } else if (blen) {
+        res = hid_sam_cred_from_bin(&cred, bin);
+    } else {
+        res = hid_sam_cred_from_pacs(&cred, pacs, plen);
+    }
+
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Invalid credential");
+        return res;
+    }
+
+    if (csnlen) {
+        if (csnlen != sizeof(csn)) {
+            PrintAndLogEx(ERR, "CSN must be 8 bytes");
+            return PM3_EINVARG;
+        }
+        cred.source = HID_SRC_ICLASS;
+        cred.uid_len = csnlen;
+        memcpy(cred.uid, csn, csnlen);
+    }
+
+    if (siolen) {
+        cred.sio_len = siolen;
+        memcpy(cred.sio, sio, siolen);
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "Credential....... " _GREEN_("%s") " ( %u bits )", cred.binstr, cred.bit_len);
+    return hid_sam_output(&cred, dg, save);
+}
+
 static command_t CommandTable[] = {
     {"help",    CmdHelp,           AlwaysAvailable, "This help"},
     {"list",    CmdWiegandList,    AlwaysAvailable, "List available wiegand formats"},
     {"encode",  CmdWiegandEncode,  AlwaysAvailable, "Encode to wiegand raw hex (currently for HID Prox)"},
     {"decode",  CmdWiegandDecode,  AlwaysAvailable, "Convert raw hex to decoded wiegand format (currently for HID Prox)"},
+    {"downgrade", CmdWiegandDowngrade, AlwaysAvailable, "Downgrade a HID credential to iCLASS, MIFARE Classic or HID Prox"},
     {NULL, NULL, NULL, NULL}
 };
 

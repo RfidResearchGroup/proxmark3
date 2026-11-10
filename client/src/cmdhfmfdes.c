@@ -25,6 +25,7 @@
 #include "jansson.h"
 #include "commonutil.h"             // ARRAYLEN
 #include "cmdparser.h"              // command_t
+#include "hidsio.h"
 #include "comms.h"
 #include "mifare/desfirecrypto.h"
 #include "pm3_cmd.h"
@@ -4913,6 +4914,10 @@ static int CmdHF14ADesGetUID(const char *Cmd) {
 
     DropField();
     return PM3_SUCCESS;
+}
+
+static int CmdHF14ADesSAM(const char *Cmd) {
+    return hid_sam_iso14a_cmd(Cmd, "hf mfdes sam", CMD_HF_SAM_SEOS, HID_SRC_ISO14443A);
 }
 
 static int CmdHF14ADesPC(const char *Cmd) {
@@ -11590,6 +11595,7 @@ static command_t CommandTable[] = {
     {"getversion",       CmdHF14ADesGetVersion,       IfPm3Iso14443a,  "Get version/type information"},
     {"getuid",           CmdHF14ADesGetUID,           IfPm3Iso14443a,  "Get uid from card"},
     {"pc",               CmdHF14ADesPC,               IfPm3Iso14443a,  "Run proximity check"},
+    {"sam",              CmdHF14ADesSAM,              IfPm3Smartcard,  "Extract PACS via a HID SAM"},
     {"info",             CmdHF14ADesInfo,             IfPm3Iso14443a,  "Tag information"},
     {"mad",              CmdHF14aDesMAD,              IfPm3Iso14443a,  "Prints MAD records / files from the card"},
     {"setconfig",        CmdHF14ADesSetConfiguration, IfPm3Iso14443a,  "Set card configuration"},
