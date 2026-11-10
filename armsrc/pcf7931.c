@@ -209,6 +209,8 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
                 bitPos = 0;
                 block_done = 0;
                 half_switch = 0;
+                // a stale 16T0 plus a leading 32T0 half bit would look like another PMC
+                lastClockDuration = 0;
             }
 
         } else {
@@ -305,7 +307,7 @@ void ReadPCF7931(bool ledcontrol) {
         // exit if no block is received
         if (errors >= 10 && found_blocks == 0 && single_blocks_cnt == 0) {
             Dbprintf("[!!] Error, no tag or bad tag");
-            return;
+            goto end;
         }
         // exit if too many tries without finding the first block
         if (tries > 10) {
@@ -354,6 +356,8 @@ void ReadPCF7931(bool ledcontrol) {
         for (i = 0; i < n; ++i) {
             print_result("Block found: ", tmp_blocks[i], 16);
         }
+        // blocks are not sorted, stop once a cycle worth of them is printed
+        found_blocks += n;
 
         // i = 0;
         // if (!found_0_1) {
@@ -444,6 +448,8 @@ end:
         }
     */
 
+    // field off, so a following command starts from a tag reset
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     reply_ng(CMD_LF_PCF7931_READ, PM3_SUCCESS, NULL, 0);
 }
 
