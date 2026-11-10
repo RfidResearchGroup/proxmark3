@@ -584,7 +584,7 @@ static const char *bwm_ver_tag(const char *running, const uint8_t *fw, size_t fw
     if (match == false && il > rl + 2) {
         match = (strncmp(img + il - rl - 2, "-g", 2) == 0) && (strcmp(img + il - rl, running) == 0);
     }
-    return match ? " ( " _GREEN_("ok") " )" : " ( " _RED_("fail") " )";
+    return match ? " ( " _GREEN_("ok") " )" : " ( " _RED_("outdated") " )";
 }
 
 static int CmdBWMUpgrade(const char *Cmd) {
