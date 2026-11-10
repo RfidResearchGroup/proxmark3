@@ -51,6 +51,7 @@
 #include "mbedtls/cmac.h"
 #include "jansson.h"             // JSON parsing
 #include "pla.h"                 // ECP parsing
+#include "parsers/parsetransit.h"  // transit card identification
 
 static bool g_apdu_in_framing_enable = true;
 bool Get_apdu_in_framing(void) {
@@ -3627,8 +3628,17 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfp info") "`");
     }
 
-    if (isMifareDESFire && (isMagic == MAGIC_FLAG_NONE) && isEMV == false) {
+    bool mfdes_hint = (isMifareDESFire && (isMagic == MAGIC_FLAG_NONE) && isEMV == false);
+    if (mfdes_hint) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfdes info") "`");
+    }
+
+    // transit cards known by their ATS alone, no card exchange
+    transit_mfdes_info_t transit_info = { .aids_known = false, .card = &card };
+    transit_idents_t transit_ids;
+    if (card.ats_len > 0 && transit_mfdes_identify(&transit_info, &transit_ids) > 0) {
+        transit_print_idents(&transit_ids);
+        transit_print_ident_hints(&transit_ids, mfdes_hint ? "hf mfdes info" : NULL);
     }
 
     if (isST) {
