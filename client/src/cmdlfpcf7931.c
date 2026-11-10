@@ -554,8 +554,28 @@ static int CmdLFPCF7931Write(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    PrintAndLogEx(SUCCESS, "Done!");
-    PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`lf pcf7931 reader`") " to verify");
+    if (resp.status == PM3_EINVARG) {
+        PrintAndLogEx(ERR, "Firmware rejected the write request");
+        return PM3_EINVARG;
+    }
+
+    // a good write makes the tag send the written block back (read after write)
+    bool has_block = (resp.length == PCF7931_BLOCK_SIZE);
+    if (resp.status != PM3_SUCCESS) {
+        if (has_block) {
+            PrintAndLogEx(FAILED, "Tag sent block %u back without the new byte... " _RED_("%s"), block, sprint_hex(resp.data.asBytes, PCF7931_BLOCK_SIZE));
+        } else {
+            PrintAndLogEx(FAILED, "Write not confirmed by the tag");
+            PrintAndLogEx(HINT, "Hint: wrong password, write protected block or init delay off. Check with " _YELLOW_("`lf pcf7931 reader`"));
+        }
+        return PM3_EFAILED;
+    }
+
+    if (has_block) {
+        PrintAndLogEx(SUCCESS, "Write confirmed, block %u now... " _GREEN_("%s"), block, sprint_hex(resp.data.asBytes, PCF7931_BLOCK_SIZE));
+    } else {
+        PrintAndLogEx(SUCCESS, "Write confirmed by tag timing (read after write block not decoded)");
+    }
     return PM3_SUCCESS;
 }
 

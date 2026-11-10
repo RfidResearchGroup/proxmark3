@@ -41,6 +41,13 @@
 #define PCF7931_NO_TAG_CAPTURES 3
 // capture starts inside the first block after reset (tRESET <= 20ms), its PMC lands after this sample
 #define PCF7931_FIRST_PMC_MIN 300
+// a PMC is recognised 32T0 into it, 8192T0 after the start of the block it closes
+#define PCF7931_PMC_TO_START ((8192 + 32) / DECIMATION)
+#define PCF7931_WRITE_ATTEMPTS 3
+// after a good write the read-after-write block follows EEPROM access (640T0) and a PMC (384T0),
+// later blocks keep that grid. +-256T0 margin
+#define PCF7931_RAW_MIN_START ((640 + 384 - 16 - 256) / DECIMATION)
+#define PCF7931_RAW_MAX_START ((640 + 384 - 16 + 256) / DECIMATION)
 
 // IIR filter consts
 #define IIR_CONST1 0.1f
@@ -69,11 +76,13 @@
 #define PCF7931_BLOCK_SAMPLES ((8192 + 384) / DECIMATION)
 // bounded capture, a whole BigBuf takes ~13s on PM5. 12.5 blocks always hold 11-12 whole ones
 #define PCF7931_CAPTURE_SAMPLES ((PCF7931_CAPTURE_BLOCKS * PCF7931_BLOCK_SAMPLES) + (PCF7931_BLOCK_SAMPLES / 2))
+#define PCF7931_WRITE_CAPTURE_BLOCKS 4
+#define PCF7931_WRITE_CAPTURE_SAMPLES ((PCF7931_WRITE_CAPTURE_BLOCKS * PCF7931_BLOCK_SAMPLES) + (PCF7931_BLOCK_SAMPLES / 2))
 
-size_t DemodPCF7931(uint8_t *outBlocks, uint32_t *outStarts, size_t max_blocks, bool ledcontrol) {
+// decode the blocks of a capture already in BigBuf, g_GraphTraceLen samples long
+static size_t DecodePCF7931(uint8_t *outBlocks, uint32_t *outStarts, size_t max_blocks, uint32_t g_GraphTraceLen) {
     uint8_t bits[256] = {0x00};
     uint8_t *dest = BigBuf_get_addr();
-    uint32_t g_GraphTraceLen;
     // limit g_GraphTraceLen to a little more than 2 data frames.
     // To make sure a complete dataframe is in the dataset.
     // 1 Frame is 16 Byte -> 128byte. at a T0 of 64 -> 8129 Samples per frame.
@@ -84,10 +93,6 @@ size_t DemodPCF7931(uint8_t *outBlocks, uint32_t *outStarts, size_t max_blocks, 
     // TODO: Doublecheck why this is being limited? - seems not to be needed.
     // g_GraphTraceLen = (g_GraphTraceLen > 18000) ? 18000 : g_GraphTraceLen;
 
-    BigBuf_Clear_keep_EM();
-    LFSetupFPGAForADC(LF_DIVISOR_125, true);
-    // returns bits, 8 per sample
-    g_GraphTraceLen = DoAcquisition(DECIMATION, 8, 0, 0, false, PCF7931_CAPTURE_SAMPLES, 0, 0, ledcontrol) >> 3;
     if (g_GraphTraceLen < 5) {
         return 0;
     }
@@ -107,6 +112,7 @@ size_t DemodPCF7931(uint8_t *outBlocks, uint32_t *outStarts, size_t max_blocks, 
     size_t num_blocks = 0;
     uint32_t blockStart = UINT32_MAX; // first sample of the current block, known only after a PMC
     uint32_t prevBlockStart = UINT32_MAX; // first sample of the block that just ended
+    uint32_t pmcAt = UINT32_MAX; // sample where the PMC closing the block was recognised
     EdgeType expectedNextEdge = FALLING; // direction in which the next edge is expected should go.
 
     half_switch = 0;
@@ -141,6 +147,7 @@ size_t DemodPCF7931(uint8_t *outBlocks, uint32_t *outStarts, size_t max_blocks, 
                     // It's a PMC
                     if (g_dbglevel >= DBG_EXTENDED)
                         Dbprintf(_GREEN_("PMC 16T0 FOUND:") " bitPos: %d, sample: %d", bitPos, sample);
+                    pmcAt = sample;
                     sample += PMC_16T0_LEN;  // move to the sample after PMC
 
                     expectedNextEdge = FALLING;
@@ -158,6 +165,7 @@ size_t DemodPCF7931(uint8_t *outBlocks, uint32_t *outStarts, size_t max_blocks, 
                     if (g_dbglevel >= DBG_EXTENDED)
                         Dbprintf(_GREEN_("PMC 32T0 FOUND:") " bitPos: %d, sample: %d", bitPos, sample);
 
+                    pmcAt = sample;
                     sample += PMC_32T0_LEN;    // move to the sample after PMC
 
                     expectedNextEdge = FALLING;
@@ -198,6 +206,7 @@ size_t DemodPCF7931(uint8_t *outBlocks, uint32_t *outStarts, size_t max_blocks, 
                 block_done = 1;
                 prevBlockStart = blockStart;
                 blockStart = UINT32_MAX;
+                pmcAt = UINT32_MAX;
             }
 
             if (block_done == 1) {
@@ -208,6 +217,10 @@ size_t DemodPCF7931(uint8_t *outBlocks, uint32_t *outStarts, size_t max_blocks, 
                 // only save if a complete block is being received.
                 if (bitPos == 128 && num_blocks < max_blocks) {
                     outStarts[num_blocks] = prevBlockStart;
+                    // no PMC before it, e.g. after silence: count back from the closing one
+                    if (prevBlockStart == UINT32_MAX && pmcAt != UINT32_MAX && pmcAt >= PCF7931_PMC_TO_START) {
+                        outStarts[num_blocks] = pmcAt - PCF7931_PMC_TO_START;
+                    }
                     for (j = 0; j < 16; ++j) {
                         outBlocks[num_blocks * 16 + j] =
                             128 * bits[j * 8 + 7] +
@@ -244,6 +257,14 @@ size_t DemodPCF7931(uint8_t *outBlocks, uint32_t *outStarts, size_t max_blocks, 
     }
 
     return num_blocks;
+}
+
+size_t DemodPCF7931(uint8_t *outBlocks, uint32_t *outStarts, size_t max_blocks, bool ledcontrol) {
+    BigBuf_Clear_keep_EM();
+    LFSetupFPGAForADC(LF_DIVISOR_125, true);
+    // returns bits, 8 per sample
+    uint32_t len = DoAcquisition(DECIMATION, 8, 0, 0, false, PCF7931_CAPTURE_SAMPLES, 0, 0, ledcontrol) >> 3;
+    return DecodePCF7931(outBlocks, outStarts, max_blocks, len);
 }
 
 bool IsBlock0PCF7931(uint8_t *block) {
@@ -491,11 +512,16 @@ end:
     reply_ng(CMD_LF_PCF7931_READ, PM3_SUCCESS, (uint8_t *)&best, sizeof(best));
 }
 
-static void RealWritePCF7931(
+static void SendFramePCF7931(uint32_t *tab, bool ledcontrol);
+
+// returns PM3_SUCCESS when the tag sent the written block back (read after write).
+// *hasBlock tells if that block could be decoded into rawBlock
+static int RealWritePCF7931(
     uint8_t *pass,
     uint16_t init_delay,
     int8_t offsetPulseWidth, int8_t offsetPulsePosition,
     uint8_t address, uint8_t byte, uint8_t data,
+    uint8_t *rawBlock, bool *hasBlock,
     bool ledcontrol) {
 
     uint32_t tab[PCF7931_FRAME_ENTRIES] = {0}; // data times frame
@@ -562,10 +588,50 @@ static void RealWritePCF7931(
         AddBitPCF7931(1, tab, offsetPulseWidth, offsetPulsePosition);//odd parity
 
     // time access memory (640T0)
-    // Not sure why 335*T0, but should not matter. Since programming should be finished at that point
-    AddPatternPCF7931((640 + 335)* T0_PCF, 0, 0, tab);
+    // keep the field up shortly, EEPROM access and the read after write are captured below
+    AddPatternPCF7931(16 * T0_PCF, 0, 0, tab);
 
-    SendCmdPCF7931(tab, ledcontrol);
+    BigBuf_Clear_keep_EM();
+    SendFramePCF7931(tab, ledcontrol);
+    StopPrecisionCounter();
+
+    // switch to sampling without dropping the field
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | FPGA_LF_ADC_READER_FIELD);
+    SetAdcMuxFor(ADC_MUXSEL_LOPKD);
+    FpgaSetupSsc(FPGA_MAJOR_MODE_LF_READER);
+    StartTicks();
+    // the read after write and a few blocks after it are enough
+    uint32_t len = DoAcquisition(DECIMATION, 8, 0, 0, false, PCF7931_WRITE_CAPTURE_SAMPLES, 0, 0, ledcontrol) >> 3;
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+
+    uint8_t blocks[PCF7931_WRITE_CAPTURE_BLOCKS][16];
+    uint32_t starts[PCF7931_WRITE_CAPTURE_BLOCKS];
+    size_t n = DecodePCF7931((uint8_t *)blocks, starts, ARRAYLEN(blocks), len);
+    *hasBlock = false;
+
+    // on failure there is no read after write and the blocks follow another grid
+    size_t k = 0;
+    while (k < n && starts[k] == UINT32_MAX) {
+        k++;
+    }
+    if (k == n) {
+        return PM3_EFAILED;
+    }
+    uint32_t phase = starts[k] % PCF7931_BLOCK_SAMPLES;
+    if (g_dbglevel >= DBG_EXTENDED) {
+        Dbprintf("block %u start sample %u phase %u (expected %u..%u)", k, starts[k], phase, PCF7931_RAW_MIN_START, PCF7931_RAW_MAX_START);
+    }
+    if (phase < PCF7931_RAW_MIN_START || phase > PCF7931_RAW_MAX_START) {
+        return PM3_EFAILED;
+    }
+
+    // the read-after-write block itself was decoded, check the byte
+    if (starts[k] <= PCF7931_RAW_MAX_START) {
+        memcpy(rawBlock, blocks[k], 16);
+        *hasBlock = true;
+        return (blocks[k][byte & 0x0F] == data) ? PM3_SUCCESS : PM3_EFAILED;
+    }
+    return PM3_SUCCESS;
 }
 
 /* Write on a byte of a PCF7931 tag
@@ -592,8 +658,19 @@ void WritePCF7931(
 
     uint8_t password[7] = {pass1, pass2, pass3, pass4, pass5, pass6, pass7};
 
-    RealWritePCF7931(password, init_delay, offsetPulseWidth, offsetPulsePosition, address, byte, data, ledcontrol);
-    reply_ng(CMD_LF_PCF7931_WRITE, PM3_SUCCESS, NULL, 0);
+    uint8_t rawBlock[16] = {0};
+    bool hasBlock = false;
+    int res = PM3_EFAILED;
+    // rewriting the same byte is harmless; a tag idle for a while often misses the first try
+    for (int attempt = 0; attempt < PCF7931_WRITE_ATTEMPTS && res != PM3_SUCCESS; attempt++) {
+        res = RealWritePCF7931(password, init_delay, offsetPulseWidth, offsetPulsePosition, address, byte, data, rawBlock, &hasBlock, ledcontrol);
+        if (g_dbglevel >= DBG_INFO && res != PM3_SUCCESS)
+            Dbprintf("write attempt %d not confirmed", attempt + 1);
+        if (BUTTON_PRESS() || data_available())
+            break;
+    }
+    // reply carries the read-after-write block when it could be decoded
+    reply_ng(CMD_LF_PCF7931_WRITE, res, rawBlock, hasBlock ? sizeof(rawBlock) : 0);
 }
 
 
@@ -611,6 +688,14 @@ static void WaitUntilPCF7931(uint32_t *elapsed, uint16_t *last, uint32_t target)
 }
 
 void SendCmdPCF7931(uint32_t *tab, bool ledcontrol) {
+    SendFramePCF7931(tab, ledcontrol);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    SpinDelay(200);
+    StopPrecisionCounter();
+}
+
+// send the frame and leave the field on
+static void SendFramePCF7931(uint32_t *tab, bool ledcontrol) {
     uint16_t u = 0;
 
     if (g_dbglevel >= DBG_INFO) {
@@ -658,10 +743,6 @@ void SendCmdPCF7931(uint32_t *tab, bool ledcontrol) {
     }
 
     if (ledcontrol) LED_A_OFF();
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    SpinDelay(200);
-
-    StopPrecisionCounter();
 }
 
 
