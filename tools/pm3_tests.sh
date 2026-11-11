@@ -572,6 +572,12 @@ while true; do
       if ! CheckExecute "wiegand Verkada40 decode test 3" "$CLIENTBIN -c 'wiegand decode --raw 8A20002721'" "Verkada40.*FC: 81  CN: 5008  parity \( ok \)"; then break; fi
       if ! CheckExecute "wiegand IR56 encode roundtrip"   "$CLIENTBIN -c 'wiegand encode -w IR56 --fc 123 --cn 123 --pre'" "9E000000100007B0000007B"; then break; fi
       if ! CheckExecute "wiegand IR56 decode roundtrip"   "$CLIENTBIN -c 'wiegand decode --raw 9E000000100007B0000007B'" "IR56.*FC: 123  CN: 123"; then break; fi
+      if ! CheckExecute "wiegand C37 encode"             "$CLIENTBIN -c 'wiegand encode -w C37 --fc 123 --cn 45678 --new'" "New PACS\\.{9} 0x 03A807BB26E0"; then break; fi
+      if ! CheckExecute "wiegand C37 decode"             "$CLIENTBIN -c 'wiegand decode --new 03A807BB26E0'" "\[C37 +\] Cansec C37 37-bit +FC: 123  CN: 45678  OEM: 40  parity \( ok \)"; then break; fi
+      if ! CheckExecute "wiegand C37 bad oem"            "$CLIENTBIN -c 'wiegand encode -w C37 --oem 41 --fc 123 --cn 45678' 2>&1" "could not be encoded in the selected format"; then break; fi
+      if ! CheckExecute "wiegand WN55 encode"            "$CLIENTBIN -c 'wiegand encode -w WN55 --fc 100 --cn 1234 --new'" "New PACS\\.{9} 0x 0180019000001348"; then break; fi
+      if ! CheckExecute "wiegand WN55 decode"            "$CLIENTBIN -c 'wiegand decode --new 0180019000001348'" "\[WN55 +\] WatchNET 55-bit +FC: 100  CN: 1234  parity \( ok \)"; then break; fi
+      if ! CheckExecute "wiegand WN55 over max"          "$CLIENTBIN -c 'wiegand encode -w WN55 --fc 2097152 --cn 1' 2>&1" "could not be encoded in the selected format"; then break; fi
       if ! CheckExecute "wiegand downgrade selftest"      "$CLIENTBIN -c 'wiegand downgrade --selftest'" "Tests \( ok \)"; then break; fi
       if ! CheckExecute "wiegand downgrade prox"          "$CLIENTBIN -c 'wiegand downgrade --new 068F80A8C0 --dg prox'" "lf hid clone -w H10301 --fc 31 --cn 337"; then break; fi
       if ! CheckExecute "wiegand downgrade sr needs sio"  "$CLIENTBIN -c 'wiegand downgrade --new 068F80A8C0 --dg sr'" "iCLASS SR needs a SIO"; then break; fi
@@ -723,6 +729,49 @@ while true; do
       if ! CheckExecute "lf T55 visa2000 test"              "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_visa2000.pm3; lf search -1'" "Visa2000 ID found"; then break; fi
       if ! CheckExecute "lf T55 visa2000 test 2"            "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_visa2000.pm3; lf visa2000 demod'" \
                                                                      "Visa2000 - Card 112233, Raw: 564953320001B66900000183"; then break; fi
+      if ! CheckExecute "lf watchnet raw test"              "$CLIENTBIN -c 'lf watchnet demod --raw 1fe2be111128811111118d88'" \
+                                                                     "WatchNET - len: 55 FC: 100 CN: 1234 - Wiegand: 4000c8000009a4 parity \( ok \)"; then break; fi
+      if ! CheckExecute "lf watchnet reject test"           "$CLIENTBIN -c 'lf watchnet demod --raw 000000000000000000000000' 2>&1" "Invalid WatchNET raw data"; then break; fi
+      if ! CheckExecute "lf ict 24x raw test"               "$CLIENTBIN -c 'lf ict demod --raw f656595a5a6566696a9596999aa5a6a9aa5556595a65666900000000'" \
+                                                                     "ICT - Type: ICT 24X, Decoded \(94 bits\): 11233456789abcdef0123456"; then break; fi
+      if ! CheckExecute "lf ict gt081 raw test"             "$CLIENTBIN -c 'lf ict demod --raw f5565996999699969996999699969996999696600000000000000000'" \
+                                                                     "ICT - Type: ICT GT 081, Decoded \(78 bits\): 0129a9a9a9a9a9a9a994"; then break; fi
+      if ! CheckExecute "lf ict reject test"                "$CLIENTBIN -c 'lf ict demod --raw 00000000000000000000000000000000000000000000000000000000' 2>&1" \
+                                                                     "Invalid LF ICT preamble/postamble"; then break; fi
+      if ! CheckExecute "lf keri nxt raw test"              "$CLIENTBIN -c 'lf keri demod --raw 0001010101010101123456789ABCDEF0'" \
+                                                                     "KERI NXT - Raw: 0001010101010101123456789ABCDEF0"; then break; fi
+      if ! CheckExecute "lf keri nxt pyramid reject"        "$CLIENTBIN -c 'lf keri demod --raw 00010101010101010101016eb35e5da4' 2>&1" \
+                                                                     "Invalid KERI NXT raw data"; then break; fi
+      if ! CheckExecute "lf securakey short raw test"       "$CLIENTBIN -c 'lf securakey demod --raw 7fc000000065cc92'" \
+                                                                     "Securakey Short - CN: 1697426, Raw: 7FC000000065CC92"; then break; fi
+      if ! CheckExecute "lf securakey short reject"         "$CLIENTBIN -c 'lf securakey demod --raw 7fc000000465cc92' 2>&1" \
+                                                                     "Invalid Securakey Short raw data"; then break; fi
+      if ! CheckExecute "lf indala 40010 raw test"          "$CLIENTBIN -c 'lf indala demod --raw a0000000f4cbdd01'" \
+                                                                     "Keyscan 40010\. FC: 123 CN: 45678"; then break; fi
+      if ! CheckExecute "lf indala 40010 fc0 test"          "$CLIENTBIN -c 'lf indala demod --raw a000000024c1d400'" \
+                                                                     "Keyscan 40010\. FC: 0 CN: 45678"; then break; fi
+      if ! CheckExecute "lf awid cansec37 raw test"         "$CLIENTBIN -c 'lf awid demod --raw 012274811ebdd47781111111'" \
+                                                                     "Farpointe/Cansec 37-bit - FC: 123 CN: 45678"; then break; fi
+      if ! CheckExecute "lf awid hcc40 raw test"            "$CLIENTBIN -c 'lf awid demod --raw 01241b444727114d88111111'" \
+                                                                     "Farpointe HCC40 - ID without parity: 2a499602d2"; then break; fi
+      if ! CheckExecute "lf awid rbh50 raw test"            "$CLIENTBIN -c 'lf awid demod --raw 0128817e41111111711e2811'" \
+                                                                     "RBH - CN: 12345"; then break; fi
+      if ! CheckExecute "lf gproxii 40 raw test"            "$CLIENTBIN -c 'lf gproxii demod --raw fac2b20c2b081af101ae43d8'" \
+                                                                     "G-Prox-II - Len: 40 FC: 123 Card: 555666777 xor: 141"; then break; fi
+      if ! CheckExecute "lf pyramid 35 raw test"            "$CLIENTBIN -c 'lf pyramid demod --raw 00010101010101010102017c802649c4'" \
+                                                                     "Pyramid - len: 35, FC: 1000 Card: 1234 - Wiegand: 007d009a4"; then break; fi
+      if ! CheckExecute "lf pyramid bad crc reject"         "$CLIENTBIN -c 'lf pyramid demod --raw 00010101010101010102017c802649c5' 2>&1" \
+                                                                     "Invalid Pyramid raw data"; then break; fi
+      if ! CheckExecute "lf io ssf raw test"                "$CLIENTBIN -c 'lf io demod --raw 007840603059cf3f'" \
+                                                                     "IO Prox SSF - 0101:01337"; then break; fi
+      if ! CheckExecute "lf em410x cdvi pattern"            "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_em410x.pm3; lf em 410x demod'" \
+                                                                     "Pattern CDVI +: FC: 104 CN: 22155"; then break; fi
+      if ! CheckExecute "lf em410x eyeongate pattern"       "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_em410x.pm3; lf em 410x demod'" \
+                                                                     "Pattern EYEonGATE +: 0006837899"; then break; fi
+      if ! CheckExecute "lf t55xx cfg securakey short"      "$CLIENTBIN -c 'lf t55xx info -c 000C8040'" "SecuraKey Short"; then break; fi
+      if ! CheckExecute "lf t55xx cfg watchnet"             "$CLIENTBIN -c 'lf t55xx info -c 00107060'" "WatchNET"; then break; fi
+      if ! CheckExecute "lf t55xx cfg keri nxt"             "$CLIENTBIN -c 'lf t55xx info -c 00107080'" "Keri NXT"; then break; fi
+      if ! CheckExecute "lf t55xx cfg ict"                  "$CLIENTBIN -c 'lf t55xx info -c 001070E0'" "Config block match\\.\\.\\. ICT"; then break; fi
 
       echo -e "\n${C_BLUE}Testing HF:${C_NC}"
       if ! CheckExecute "hf mf offline text"               "$CLIENTBIN -c 'hf mf'" "content from tag dump file"; then break; fi
