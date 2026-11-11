@@ -61,6 +61,70 @@ static int CmdIOProxWatch(const char *Cmd) {
     return lfsim_wait_check(CMD_LF_IO_WATCH);
 }
 
+static int io_decode_bits(const uint8_t *bits, size_t len) {
+    if (len < 64) {
+        return PM3_ESOFT;
+    }
+
+    // Index map
+    // 0           10          20          30          40          50          60
+    // |           |           |           |           |           |           |
+    // 01234567 8 90123456 7 89012345 6 78901234 5 67890123 4 56789012 3 45678901 23
+    // -----------------------------------------------------------------------------
+    // 00000000 0 11110000 1 facility 1 version* 1 code*one 1 code*two 1 ???????? 11
+    //
+    // XSF(version)facility:codeone+codetwo (raw)
+
+    uint8_t work[64];
+    memcpy(work, bits, sizeof(work));
+
+    if (bytebits_to_byte(work, 9) != 0 || bytebits_to_byte(work + 9, 8) != 0xF0 ||
+        !work[17] || !work[26] || !work[35] || !work[44] || !work[53] || !work[62] || !work[63]) {
+        PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox frame markers invalid");
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(DEBUG, "%d%d%d%d%d%d%d%d %d", work[0], work[1], work[2], work[3], work[4], work[5], work[6], work[7], work[8]);
+    PrintAndLogEx(DEBUG, "%d%d%d%d%d%d%d%d %d", work[9], work[10], work[11], work[12], work[13], work[14], work[15], work[16], work[17]);
+    PrintAndLogEx(DEBUG, "%d%d%d%d%d%d%d%d %d facility", work[18], work[19], work[20], work[21], work[22], work[23], work[24], work[25], work[26]);
+    PrintAndLogEx(DEBUG, "%d%d%d%d%d%d%d%d %d version", work[27], work[28], work[29], work[30], work[31], work[32], work[33], work[34], work[35]);
+    PrintAndLogEx(DEBUG, "%d%d%d%d%d%d%d%d %d code1", work[36], work[37], work[38], work[39], work[40], work[41], work[42], work[43], work[44]);
+    PrintAndLogEx(DEBUG, "%d%d%d%d%d%d%d%d %d code2", work[45], work[46], work[47], work[48], work[49], work[50], work[51], work[52], work[53]);
+    PrintAndLogEx(DEBUG, "%d%d%d%d%d%d%d%d %d%d checksum", work[54], work[55], work[56], work[57], work[58], work[59], work[60], work[61], work[62], work[63]);
+
+    uint32_t code = bytebits_to_byte(work, 32);
+    uint32_t code2 = bytebits_to_byte(work + 32, 32);
+    uint8_t version = bytebits_to_byte(work + 27, 8);
+    uint8_t facilitycode = bytebits_to_byte(work + 18, 8);
+    uint16_t number = (bytebits_to_byte(work + 36, 8) << 8) | bytebits_to_byte(work + 45, 8);
+    uint8_t crc = bytebits_to_byte(work + 54, 8);
+    uint8_t calccrc = 0;
+
+    for (uint8_t i = 1; i < 6; ++i) {
+        calccrc += bytebits_to_byte(work + 9 * i, 8);
+    }
+    calccrc &= 0xff;
+    calccrc = 0xff - calccrc;
+
+    int retval = PM3_SUCCESS;
+    char crc_str[40] = {0};
+
+    if (crc == calccrc) {
+        snprintf(crc_str, sizeof(crc_str), "( " _GREEN_("ok") " )");
+    } else {
+        snprintf(crc_str, sizeof(crc_str), "( " _RED_("fail") " ) 0x%02X != 0x%02X", crc, calccrc);
+        retval = PM3_ESOFT;
+    }
+
+    PrintAndLogEx(SUCCESS, "IO Prox - " _GREEN_("XSF(%02d)%02x:%05d") ", Raw: %08x%08x %s", version, facilitycode, number, code, code2, crc_str);
+    PrintAndLogEx(SUCCESS, "IO Prox SSF - " _GREEN_("%02x%02x:%05u"), version, facilitycode, number);
+
+    if (g_debugMode && crc != calccrc) {
+        PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox crc failed");
+    }
+    return retval;
+}
+
 //IO-Prox demod - FSK RF/64 with preamble of 000000001
 //print ioProx ID and some format details
 int demodIOProx(bool verbose) {
@@ -113,52 +177,9 @@ int demodIOProx(bool verbose) {
         return PM3_ESOFT;
     }
 
-    //Index map
-    //0           10          20          30          40          50          60
-    //|           |           |           |           |           |           |
-    //01234567 8 90123456 7 89012345 6 78901234 5 67890123 4 56789012 3 45678901 23
-    //-----------------------------------------------------------------------------
-    //00000000 0 11110000 1 facility 1 version* 1 code*one 1 code*two 1 ???????? 11
-    //
-    //XSF(version)facility:codeone+codetwo (raw)
-
-    PrintAndLogEx(DEBUG, "%d%d%d%d%d%d%d%d %d", bits[idx], bits[idx + 1], bits[idx + 2], bits[idx + 3], bits[idx + 4], bits[idx + 5], bits[idx + 6], bits[idx + 7], bits[idx + 8]);
-    PrintAndLogEx(DEBUG, "%d%d%d%d%d%d%d%d %d", bits[idx + 9], bits[idx + 10], bits[idx + 11], bits[idx + 12], bits[idx + 13], bits[idx + 14], bits[idx + 15], bits[idx + 16], bits[idx + 17]);
-    PrintAndLogEx(DEBUG, "%d%d%d%d%d%d%d%d %d facility", bits[idx + 18], bits[idx + 19], bits[idx + 20], bits[idx + 21], bits[idx + 22], bits[idx + 23], bits[idx + 24], bits[idx + 25], bits[idx + 26]);
-    PrintAndLogEx(DEBUG, "%d%d%d%d%d%d%d%d %d version", bits[idx + 27], bits[idx + 28], bits[idx + 29], bits[idx + 30], bits[idx + 31], bits[idx + 32], bits[idx + 33], bits[idx + 34], bits[idx + 35]);
-    PrintAndLogEx(DEBUG, "%d%d%d%d%d%d%d%d %d code1", bits[idx + 36], bits[idx + 37], bits[idx + 38], bits[idx + 39], bits[idx + 40], bits[idx + 41], bits[idx + 42], bits[idx + 43], bits[idx + 44]);
-    PrintAndLogEx(DEBUG, "%d%d%d%d%d%d%d%d %d code2", bits[idx + 45], bits[idx + 46], bits[idx + 47], bits[idx + 48], bits[idx + 49], bits[idx + 50], bits[idx + 51], bits[idx + 52], bits[idx + 53]);
-    PrintAndLogEx(DEBUG, "%d%d%d%d%d%d%d%d %d%d checksum", bits[idx + 54], bits[idx + 55], bits[idx + 56], bits[idx + 57], bits[idx + 58], bits[idx + 59], bits[idx + 60], bits[idx + 61], bits[idx + 62], bits[idx + 63]);
-
-    uint32_t code = bytebits_to_byte(bits + idx, 32);
-    uint32_t code2 = bytebits_to_byte(bits + idx + 32, 32);
-    uint8_t version = bytebits_to_byte(bits + idx + 27, 8); //14,4
-    uint8_t facilitycode = bytebits_to_byte(bits + idx + 18, 8) ;
-    uint16_t number = (bytebits_to_byte(bits + idx + 36, 8) << 8) | (bytebits_to_byte(bits + idx + 45, 8)); //36,9
-    uint8_t crc = bytebits_to_byte(bits + idx + 54, 8);
-    uint8_t calccrc = 0;
-
-    for (uint8_t i = 1; i < 6; ++i) {
-        calccrc += bytebits_to_byte(bits + idx + 9 * i, 8);
-    }
-    calccrc &= 0xff;
-    calccrc = 0xff - calccrc;
-
-    char crc_str[40] = {0};
-
-    if (crc == calccrc) {
-        snprintf(crc_str, sizeof(crc_str), "( " _GREEN_("ok") " )");
-    } else {
-        snprintf(crc_str, sizeof(crc_str), "( " _RED_("fail") " ) 0x%02X != 0x%02X", crc, calccrc);
-        retval = PM3_ESOFT;
-    }
-
-    PrintAndLogEx(SUCCESS, "IO Prox - " _GREEN_("XSF(%02d)%02x:%05d") ", Raw: %08x%08x %s", version, facilitycode, number, code, code2, crc_str);
+    retval = io_decode_bits(bits + idx, size);
 
     if (g_debugMode) {
-        if (crc != calccrc)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox crc failed");
-
         PrintAndLogEx(DEBUG, "DEBUG: IO prox idx: %d, Len: %zu, Printing DemodBuffer:", idx, size);
         printDemodBuff(0, false, false, true);
         printDemodBuff(0, false, false, false);
@@ -171,15 +192,39 @@ static int CmdIOProxDemod(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf io demod",
                   "Try to find ioProx preamble, if found decode / descramble data",
-                  "lf io demod"
+                  "lf io demod\n"
+                  "lf io demod --raw 007840603059cf3f -> decode raw 64-bit ioProx hex"
                  );
 
     void *argtable[] = {
         arg_param_begin,
+        arg_str0("r", "raw", "<hex>", "raw hex bytes (8 bytes)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int raw_len = 0;
+    uint8_t raw[8] = {0};
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), raw, sizeof(raw), &raw_len);
     CLIParserFree(ctx);
+
+    if (res) {
+        return PM3_EINVARG;
+    }
+
+    if (raw_len > 0) {
+        if (raw_len != 8) {
+            PrintAndLogEx(FAILED, "Raw data must be 8 bytes (64-bit), got " _YELLOW_("%d"), raw_len);
+            return PM3_EINVARG;
+        }
+        uint8_t bits[64] = {0};
+        bytes_to_bytebits(raw, sizeof(raw), bits);
+        res = io_decode_bits(bits, sizeof(bits));
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Invalid ioProx raw data");
+        }
+        return res;
+    }
+
     return demodIOProx(true);
 }
 // this read is the "normal" read,  which download lf signal and tries to demod here.
@@ -213,39 +258,83 @@ static int CmdIOProxSim(const char *Cmd) {
     CLIParserInit(&ctx, "lf io sim",
                   "Enables simulation of ioProx card with specified facility-code and card number.\n"
                   "Simulation runs until the button is pressed or another USB command is issued.",
-                  "lf io sim --vn 1 --fc 101 --cn 1337"
+                  "lf io sim --vn 1 --fc 101 --cn 1337\n"
+                  "lf io sim --ssf 8004 --cn 45732\n"
+                  "lf io sim --raw 007840603059cf3f"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_u64_1(NULL, "vn", "<dec>", "8bit version"),
-        arg_u64_1(NULL, "fc", "<dec>", "8bit facility code"),
-        arg_u64_1(NULL, "cn", "<dec>", "16bit card number"),
+        arg_u64_0(NULL, "vn", "<dec>", "8bit version"),
+        arg_u64_0(NULL, "fc", "<dec>", "8bit facility code"),
+        arg_u64_0(NULL, "cn", "<dec>", "16bit card number"),
+        arg_str0(NULL, "ssf", "<hex>", "Kantech SSF 2-byte prefix (version+fc hex)"),
+        arg_str0("r", "raw", "<hex>", "raw hex bytes (8 bytes)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t version = arg_get_u32_def(ctx, 1, 0);
-    uint8_t fc = arg_get_u32_def(ctx, 2, 0);
-    uint16_t cn = arg_get_u32_def(ctx, 3, 0);
+    uint32_t vn_arg = arg_get_u32_def(ctx, 1, UINT32_MAX);
+    uint32_t fc_arg = arg_get_u32_def(ctx, 2, UINT32_MAX);
+    uint32_t cn_arg = arg_get_u32_def(ctx, 3, UINT32_MAX);
 
+    int ssf_len = 0;
+    uint8_t ssf[2] = {0};
+    int res1 = CLIParamHexToBuf(arg_get_str(ctx, 4), ssf, sizeof(ssf), &ssf_len);
+
+    int raw_len = 0;
+    uint8_t raw[8] = {0};
+    int res2 = CLIParamHexToBuf(arg_get_str(ctx, 5), raw, sizeof(raw), &raw_len);
     CLIParserFree(ctx);
-
-    if ((cn & 0xFFFF) != cn) {
-        cn &= 0xFFFF;
-        PrintAndLogEx(INFO, "Card Number Truncated to 16-bits (ioProx): %u", cn);
+    if (res1 || res2) {
+        return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS, "Simulating ioProx version: " _YELLOW_("%u") " FC: " _YELLOW_("%u (0x%02x)") " CN: " _YELLOW_("%u"), version, fc, fc, cn);
-    PrintAndLogEx(SUCCESS, "Press " _GREEN_("pm3 button") " to abort simulation or run another command");
+    bool use_raw = (raw_len > 0);
+    bool use_ssf = (ssf_len > 0);
+
+    if (use_raw && raw_len != 8) {
+        PrintAndLogEx(FAILED, "Raw data must be 8 bytes (64-bit), got %d", raw_len);
+        return PM3_EINVARG;
+    }
+    if (use_raw && (use_ssf || vn_arg != UINT32_MAX || fc_arg != UINT32_MAX || cn_arg != UINT32_MAX)) {
+        PrintAndLogEx(FAILED, "Can't combine --raw with --vn/--fc/--cn/--ssf");
+        return PM3_EINVARG;
+    }
+    if (use_ssf && ssf_len != 2) {
+        PrintAndLogEx(FAILED, "SSF prefix must be 2 hex bytes (4 hex chars), got %d", ssf_len);
+        return PM3_EINVARG;
+    }
+    if (use_ssf && (vn_arg != UINT32_MAX || fc_arg != UINT32_MAX || cn_arg == UINT32_MAX)) {
+        PrintAndLogEx(FAILED, "Use --ssf <hex> with --cn <dec> (without --vn or --fc)");
+        return PM3_EINVARG;
+    }
+    if (!use_raw && !use_ssf && (vn_arg == UINT32_MAX || fc_arg == UINT32_MAX || cn_arg == UINT32_MAX)) {
+        PrintAndLogEx(FAILED, "Must specify --vn/--fc/--cn, --ssf/--cn, or --raw");
+        return PM3_EINVARG;
+    }
 
     uint8_t bs[64];
     memset(bs, 0x00, sizeof(bs));
 
-    if (getIOProxBits(version, fc, cn, bs) != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Error with tag bitstream generation.");
-        return PM3_ESOFT;
+    if (use_raw) {
+        bytes_to_bytebits(raw, sizeof(raw), bs);
+        PrintAndLogEx(SUCCESS, "Simulating ioProx - raw " _YELLOW_("%s"), sprint_hex_inrow(raw, sizeof(raw)));
+    } else {
+        uint8_t version = use_ssf ? ssf[0] : (uint8_t)vn_arg;
+        uint8_t fc = use_ssf ? ssf[1] : (uint8_t)fc_arg;
+        if (cn_arg > 0xFFFF) {
+            PrintAndLogEx(INFO, "Card Number Truncated to 16-bits (ioProx): %u", cn_arg & 0xFFFF);
+        }
+        uint16_t cn = (uint16_t)(cn_arg & 0xFFFF);
+
+        PrintAndLogEx(SUCCESS, "Simulating ioProx version: " _YELLOW_("%u") " FC: " _YELLOW_("%u (0x%02x)") " CN: " _YELLOW_("%u"), version, fc, fc, cn);
+        if (getIOProxBits(version, fc, cn, bs) != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Error with tag bitstream generation.");
+            return PM3_ESOFT;
+        }
     }
+    PrintAndLogEx(SUCCESS, "Press " _GREEN_("pm3 button") " to abort simulation or run another command");
     // ioProx uses: fcHigh: 10, fcLow: 8, clk: 64, invert: 1
     // arg1 --- fcHigh<<8 + fcLow
     // arg2 --- Invert and clk setting
@@ -280,43 +369,70 @@ static int CmdIOProxClone(const char *Cmd) {
                   "clone a ioProx card with specified facility-code and card number\n"
                   "to a T55x7, Q5/T5555 or EM4305/4469 tag.\n"
                   "Tag must be on the antenna when issuing this command.",
-                  "lf io clone --vn 1 --fc 101 --cn 1337"
+                  "lf io clone --vn 1 --fc 101 --cn 1337\n"
+                  "lf io clone --ssf 8004 --cn 45732\n"
+                  "lf io clone --raw 007840603059cf3f"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_u64_1(NULL, "vn", "<dec>", "8bit version"),
-        arg_u64_1(NULL, "fc", "<dec>", "8bit facility code"),
-        arg_u64_1(NULL, "cn", "<dec>", "16bit card number"),
+        arg_u64_0(NULL, "vn", "<dec>", "8bit version"),
+        arg_u64_0(NULL, "fc", "<dec>", "8bit facility code"),
+        arg_u64_0(NULL, "cn", "<dec>", "16bit card number"),
+        arg_str0(NULL, "ssf", "<hex>", "Kantech SSF 2-byte prefix (version+fc hex)"),
+        arg_str0("r", "raw", "<hex>", "raw hex bytes (8 bytes)"),
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
         arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t version = arg_get_u32_def(ctx, 1, 0);
-    uint8_t fc = arg_get_u32_def(ctx, 2, 0);
-    uint16_t cn = arg_get_u32_def(ctx, 3, 0);
-    bool q5 = arg_get_lit(ctx, 4);
-    bool em = arg_get_lit(ctx, 5);
+    uint32_t vn_arg = arg_get_u32_def(ctx, 1, UINT32_MAX);
+    uint32_t fc_arg = arg_get_u32_def(ctx, 2, UINT32_MAX);
+    uint32_t cn_arg = arg_get_u32_def(ctx, 3, UINT32_MAX);
+
+    int ssf_len = 0;
+    uint8_t ssf[2] = {0};
+    int res1 = CLIParamHexToBuf(arg_get_str(ctx, 4), ssf, sizeof(ssf), &ssf_len);
+
+    int raw_len = 0;
+    uint8_t raw[8] = {0};
+    int res2 = CLIParamHexToBuf(arg_get_str(ctx, 5), raw, sizeof(raw), &raw_len);
+
+    bool q5 = arg_get_lit(ctx, 6);
+    bool em = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
+    if (res1 || res2) {
+        return PM3_EINVARG;
+    }
 
     if (q5 && em) {
         PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
         return PM3_EINVARG;
     }
 
-    uint8_t bits[64];
-    memset(bits, 0, sizeof(bits));
+    bool use_raw = (raw_len > 0);
+    bool use_ssf = (ssf_len > 0);
 
-    if ((cn & 0xFFFF) != cn) {
-        cn &= 0xFFFF;
-        PrintAndLogEx(INFO, "Card Number Truncated to 16-bits (ioProx): %u", cn);
+    if (use_raw && raw_len != 8) {
+        PrintAndLogEx(FAILED, "Raw data must be 8 bytes (64-bit), got %d", raw_len);
+        return PM3_EINVARG;
     }
-
-    if (getIOProxBits(version, fc, cn, bits) != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Error with tag bitstream generation.");
-        return PM3_ESOFT;
+    if (use_raw && (use_ssf || vn_arg != UINT32_MAX || fc_arg != UINT32_MAX || cn_arg != UINT32_MAX)) {
+        PrintAndLogEx(FAILED, "Can't combine --raw with --vn/--fc/--cn/--ssf");
+        return PM3_EINVARG;
+    }
+    if (use_ssf && ssf_len != 2) {
+        PrintAndLogEx(FAILED, "SSF prefix must be 2 hex bytes (4 hex chars), got %d", ssf_len);
+        return PM3_EINVARG;
+    }
+    if (use_ssf && (vn_arg != UINT32_MAX || fc_arg != UINT32_MAX || cn_arg == UINT32_MAX)) {
+        PrintAndLogEx(FAILED, "Use --ssf <hex> with --cn <dec> (without --vn or --fc)");
+        return PM3_EINVARG;
+    }
+    if (!use_raw && !use_ssf && (vn_arg == UINT32_MAX || fc_arg == UINT32_MAX || cn_arg == UINT32_MAX)) {
+        PrintAndLogEx(FAILED, "Must specify --vn/--fc/--cn, --ssf/--cn, or --raw");
+        return PM3_EINVARG;
     }
 
     uint32_t blocks[3] = {T55x7_MODULATION_FSK2a | T55x7_BITRATE_RF_64 | 2 << T55x7_MAXBLOCK_SHIFT, 0, 0};
@@ -336,8 +452,34 @@ static int CmdIOProxClone(const char *Cmd) {
         snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
     }
 
-    blocks[1] = bytebits_to_byte(bits, 32);
-    blocks[2] = bytebits_to_byte(bits + 32, 32);
+    if (use_raw) {
+        blocks[1] = bytes_to_num(raw, 4);
+        blocks[2] = bytes_to_num(raw + 4, 4);
+        PrintAndLogEx(INFO, "Preparing to clone ioProx to " _YELLOW_("%s") " raw " _GREEN_("%s"), cardtype, sprint_hex_inrow(raw, sizeof(raw)));
+    } else {
+        uint8_t version = use_ssf ? ssf[0] : (uint8_t)vn_arg;
+        uint8_t fc = use_ssf ? ssf[1] : (uint8_t)fc_arg;
+        if (cn_arg > 0xFFFF) {
+            PrintAndLogEx(INFO, "Card Number Truncated to 16-bits (ioProx): %u", cn_arg & 0xFFFF);
+        }
+        uint16_t cn = (uint16_t)(cn_arg & 0xFFFF);
+
+        uint8_t bits[64];
+        memset(bits, 0, sizeof(bits));
+        if (getIOProxBits(version, fc, cn, bits) != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Error with tag bitstream generation.");
+            return PM3_ESOFT;
+        }
+        blocks[1] = bytebits_to_byte(bits, 32);
+        blocks[2] = bytebits_to_byte(bits + 32, 32);
+        PrintAndLogEx(INFO, "Preparing to clone ioProx to " _YELLOW_("%s") " with Version: " _GREEN_("%u") " FC: " _GREEN_("%u (0x%02x)") " CN: " _GREEN_("%u")
+                      , cardtype
+                      , version
+                      , fc
+                      , fc
+                      , cn
+                     );
+    }
 
     // EM4305
     if (em) {
@@ -347,13 +489,6 @@ static int CmdIOProxClone(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(INFO, "Preparing to clone ioProx to " _YELLOW_("%s") " with Version: " _GREEN_("%u") " FC: " _GREEN_("%u (0x%02x)") " CN: " _GREEN_("%u")
-                  , cardtype
-                  , version
-                  , fc
-                  , fc
-                  , cn
-                 );
     print_blocks(blocks,  ARRAYLEN(blocks));
 
     int res;
