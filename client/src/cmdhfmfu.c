@@ -1209,6 +1209,7 @@ typedef enum {
     ULC_CFG_LOCKED,     // lock byte 3 locks the key pages
     ULC_CFG_RELAY,      // key pages writable after authentication
     ULC_CFG_OPEN,       // key pages 0x2C..0x2E writable without authentication
+    ULC_CFG_READ_PROTECTED,
 } ulc_cfg_vuln_t;
 
 static ulc_cfg_vuln_t ulc_config_vuln(const uint8_t *data) {
@@ -1236,6 +1237,30 @@ static void ulc_print_vuln_hint(ulc_cfg_vuln_t v) {
             break;
         case ULC_CFG_UNKNOWN:
         case ULC_CFG_LOCKED:
+        case ULC_CFG_READ_PROTECTED:
+        default:
+            break;
+    }
+}
+
+// green = exploitable, red = not
+static void ulc_print_config_verdict(ulc_cfg_vuln_t v) {
+    switch (v) {
+        case ULC_CFG_LOCKED:
+            PrintAndLogEx(SUCCESS, "ULC config... " _RED_("locked"));
+            break;
+        case ULC_CFG_RELAY:
+            PrintAndLogEx(SUCCESS, "ULC config... " _GREEN_("relay"));
+            PrintAndLogEx(SUCCESS, "Attack....... " _GREEN_("relayed auth 75%%"));
+            break;
+        case ULC_CFG_OPEN:
+            PrintAndLogEx(SUCCESS, "ULC config... " _GREEN_("unlocked"));
+            PrintAndLogEx(SUCCESS, "Attack....... " _GREEN_("partial key overwrite"));
+            break;
+        case ULC_CFG_READ_PROTECTED:
+            PrintAndLogEx(INFO, "ULC config... " _YELLOW_("read protected") ", can't assess the key page lock");
+            break;
+        case ULC_CFG_UNKNOWN:
         default:
             break;
     }
@@ -1272,25 +1297,7 @@ static ulc_cfg_vuln_t ulc_print_configuration(const uint8_t *data) {
                   (data[12] & 1) ? "write access restricted" : _RED_("R/W access restricted")
                  );
 
-    // green = exploitable, red = not
-    ulc_cfg_vuln_t v = ulc_config_vuln(data);
-    switch (v) {
-        case ULC_CFG_LOCKED:
-            PrintAndLogEx(INFO, "ULC config... " _RED_("locked"));
-            break;
-        case ULC_CFG_RELAY:
-            PrintAndLogEx(INFO, "ULC config... " _GREEN_("relay"));
-            PrintAndLogEx(INFO, "Attack....... " _GREEN_("relayed auth 75%%"));
-            break;
-        case ULC_CFG_OPEN:
-            PrintAndLogEx(INFO, "ULC config... " _GREEN_("unlocked"));
-            PrintAndLogEx(INFO, "Attack....... " _GREEN_("partial key overwrite"));
-            break;
-        case ULC_CFG_UNKNOWN:
-        default:
-            break;
-    }
-    return v;
+    return ulc_config_vuln(data);
 }
 
 static ulc_cfg_vuln_t mfu_print_dump_ulc_config(const mfu_dump_t *card, uint16_t block_cnt);
@@ -2837,13 +2844,12 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         if (status == 16) {
             ulc_vuln = ulc_print_configuration(ulc_conf);
         } else {
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(INFO, "--- " _CYAN_("UL-C Configuration") " --------------------------");
-            PrintAndLogEx(INFO, "ULC config... " _YELLOW_("read protected") ", can't assess the key page lock");
+            ulc_vuln = ULC_CFG_READ_PROTECTED;
             locked = true;
         }
 
         mfu_fingerprint(tagtype, has_auth_key, auth_key_ptr, ak_len, use_schann);
+        ulc_print_config_verdict(ulc_vuln);
 
         DropField();
 
@@ -8680,7 +8686,9 @@ static ulc_cfg_vuln_t mfu_print_dump_ulc_config(const mfu_dump_t *card, uint16_t
     if ((mfu_dump_get_tagtype(card) != MFU_TT_UL_C) || (block_cnt < (0x2B + 1))) {
         return ULC_CFG_UNKNOWN;
     }
-    return ulc_print_configuration(card->data + (0x28 * MFU_BLOCK_SIZE));
+    ulc_cfg_vuln_t v = ulc_print_configuration(card->data + (0x28 * MFU_BLOCK_SIZE));
+    ulc_print_config_verdict(v);
+    return v;
 }
 
 // `hf mfu dump` appends the authentication key to the dump when one was given.
