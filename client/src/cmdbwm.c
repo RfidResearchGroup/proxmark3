@@ -457,6 +457,7 @@ static int CmdBwmSetCap(const char *Cmd) {
 // One full OTA attempt: BEGIN -> WRITE... -> END. The BWM OTA has no resume
 // (DEV.md 8.4): a dropped chunk can't be re-sent, so any failure here means the
 // caller must restart the whole thing.
+// PM3_SUCCESS: END acked. PM3_ETIMEOUT: all data sent, END ack lost. Else: not uploaded.
 static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms) {
     PacketResponseNG resp;
 
@@ -472,12 +473,12 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms
     if (WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 75000) == false) {
         PrintAndLogEx(FAILED, "OTA begin timed out (ESP is likely still erasing the OTA slot)");
         PrintAndLogEx(HINT, "Wait a few seconds and retry; do not power-cycle mid-erase.");
-        return PM3_ETIMEOUT;
+        return PM3_EFAILED;
     }
     if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "OTA begin failed (status %d)%s", resp.status,
                       (resp.status == PM3_ETIMEOUT) ? " - UART timeout waiting for ESP" : "");
-        return resp.status;
+        return PM3_EFAILED;
     }
     PrintAndLogEx(INFO, "Uploading " _YELLOW_("%zu") " bytes of ESP firmware over the BWM link...", fwlen);
 
