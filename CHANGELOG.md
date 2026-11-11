@@ -5,6 +5,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 - Fixed `hf mf eload`, `hf mfu eload` - a failed emulator memory write, for example with the device memory full, is reported instead of `Done!`, fast mode no longer stays on after the upload (@matrix)
 - Fixed `hf_mf_tnp3_sim.lua`, `hf_mfu_amiibo_sim.lua` - a failed emulator memory write is reported, tnp3 sends the flags byte and its blocks no longer land one byte off (@matrix)
+- Fixed PM5 BWM link - BWM queries (e.g. `hw status`) no longer drop forward acks and client data over WiFi/BLE: no lost output lines, WiFi up to ~90 KB/s instead of ~20 KB/s (@iceman1001)
+- Changed PM5 bundled BWM firmware to V3 - WiFi + BLE RAM fix (issue #10), OTA at full clock (@iceman1001)
 - Changed PM5 bundled BWM firmware to V2 - power save, ESP-IDF 6.1 support, stability fixes (@iceman1001)
 - Changed `hf mfu info` - UL-C fingerprint prints PRNG, Vendor and Chip IC lines, weak PRNG and counterfeit / magic chips in green (@iceman1001)
 - Added `hf mfu info`, `hf mfu dump -v`, `hf mfu view -v`, `hf mfu eview -v` - UL-C key page lock check from the config pages, flags partial key overwrite / relayed auth attacks (BREAKMEIFYOUCAN, eprint 2026/100) (@iceman1001)

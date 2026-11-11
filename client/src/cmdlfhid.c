@@ -158,7 +158,7 @@ static int sendTry(uint8_t format_idx, wiegand_card_t *card, uint32_t delay, boo
         .hi2 = packed.Top,
         .hi = packed.Mid,
         .lo = packed.Bot,
-        .longFMT = (packed.Mid > 0xFFF)
+        .longFMT = ((packed.Top != 0) || (packed.Mid > 0xFFF))
     };
 
     clearCommandBuffer();
@@ -391,7 +391,7 @@ static int CmdHIDSim(const char *Cmd) {
     payload.hi2 = input.packed.Top;
     payload.hi = input.packed.Mid;
     payload.lo = input.packed.Bot;
-    payload.longFMT = (input.packed.Mid > 0xFFF);
+    payload.longFMT = ((input.packed.Top != 0) || (input.packed.Mid > 0xFFF));
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HID_SIMULATE, (uint8_t *)&payload,  sizeof(payload));
@@ -500,7 +500,7 @@ static int CmdHIDClone(const char *Cmd) {
     payload.hi2 = input.packed.Top;
     payload.hi = input.packed.Mid;
     payload.lo = input.packed.Bot;
-    payload.longFMT = (input.packed.Mid > 0xFFF);
+    payload.longFMT = ((input.packed.Top != 0) || (input.packed.Mid > 0xFFF));
     payload.Q5 = q5;
     payload.EM = em;
 

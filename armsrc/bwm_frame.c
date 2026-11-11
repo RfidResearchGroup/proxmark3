@@ -17,6 +17,7 @@
 //-----------------------------------------------------------------------------
 
 #include "bwm_frame.h"
+#include "string.h"
 
 // CRC-16/CCITT-FALSE, byte-identical to the BWM firmware's crc16_ccitt()
 // (poly 0x1021, init 0xFFFF, MSB-first, no reflection, no xorout).
@@ -78,6 +79,16 @@ static volatile bool s_baud_ack = false;
 // Set true by the parser on a SLAVE_RESP for BWM_CMD_GET_UART_BAUD - proof the
 // ESP is alive and responding at the baud we just switched to (verify step).
 static volatile bool s_getbaud_ack = false;
+
+#ifndef AS_BOOTROM
+// bwm_cmd()'s pending request, see bwm_frame_expect()
+static uint16_t s_exp_cmd = 0;          // 0 = none
+static volatile int8_t s_exp_state = 0;
+static uint8_t *s_exp_buf = NULL;
+static uint16_t s_exp_cap = 0;
+static uint16_t s_exp_len = 0;
+static int32_t s_exp_err = 0;
+#endif
 
 static uint16_t fifo_count(void) {
     return (uint16_t)((s_fifo_head - s_fifo_tail) & (BWM_FIFO_SZ - 1));
@@ -176,6 +187,25 @@ static void bwm_feed_byte(bwm_parser_t *p, uint8_t byte) {
         case S_CRC_HI:
             p->crc_recv |= (uint16_t)byte << 8;
             if (p->crc_recv == p->crc_calc) {
+#ifndef AS_BOOTROM
+                if ((s_exp_cmd != 0) && (s_exp_state == 0)) {
+                    if ((p->is_bcast == false) && (p->cmd == s_exp_cmd)) {
+                        s_exp_len = MIN(p->len, s_exp_cap);
+                        if (s_exp_len) {
+                            memcpy(s_exp_buf, p->payload, s_exp_len);
+                        }
+                        s_exp_state = 1;
+                    } else if (p->is_bcast && (p->cmd == BWM_CMD_CMD_ERROR) && (p->len >= 2) &&
+                               (((uint16_t)p->payload[0] | ((uint16_t)p->payload[1] << 8)) == s_exp_cmd)) {
+                        s_exp_err = 0;
+                        if (p->len >= 6) {
+                            s_exp_err = (int32_t)((uint32_t)p->payload[2] | ((uint32_t)p->payload[3] << 8) |
+                                                  ((uint32_t)p->payload[4] << 16) | ((uint32_t)p->payload[5] << 24));
+                        }
+                        s_exp_state = -1;
+                    }
+                }
+#endif
                 if (p->is_bcast && p->cmd == BWM_CMD_DATA_FORWARD) {
                     for (uint16_t i = 0; i < p->len; i++) {
                         fifo_push(p->payload[i]);
@@ -248,6 +278,32 @@ bool bwm_frame_take_fwd_ack(void) {
     s_fwd_ack = false;
     return true;
 }
+
+#ifndef AS_BOOTROM
+void bwm_frame_expect(uint16_t cmd, uint8_t *buf, uint16_t cap) {
+    s_exp_buf = buf;
+    s_exp_cap = (buf != NULL) ? cap : 0;
+    s_exp_len = 0;
+    s_exp_err = 0;
+    s_exp_state = 0;
+    s_exp_cmd = cmd;
+}
+
+int8_t bwm_frame_expect_poll(uint16_t *len, int32_t *esp_err) {
+    if (len) {
+        *len = s_exp_len;
+    }
+    if (esp_err) {
+        *esp_err = s_exp_err;
+    }
+    return s_exp_state;
+}
+
+void bwm_frame_expect_end(void) {
+    s_exp_cmd = 0;
+    s_exp_buf = NULL;
+}
+#endif
 
 bool bwm_frame_baud_ack(void) {
     return s_baud_ack;
