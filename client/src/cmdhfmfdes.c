@@ -9330,7 +9330,7 @@ static int CmdHF14ADesSim(const char *Cmd) {
         arg_str0(NULL, "probe", "<hex>", "Candidate-key probe payload (33 bytes)"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool has_probe = arg_get_str(ctx, 1)->count > 0;
     uint8_t probe[sizeof(desfire_sim_probe_cmd_t)] = {0};
     int probe_len = 0;
