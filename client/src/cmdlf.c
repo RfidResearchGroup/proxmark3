@@ -47,6 +47,7 @@
 #include "cmdlfhitag.h"     // for hitag menu
 #include "cmdlfhitaghts.h"  // for hitag S sub commands
 #include "cmdlfhitagu.h"    // for hitag µ sub commands
+#include "cmdlfict.h"       // for ICT menu
 #include "cmdlfidteck.h"    // for idteck menu
 #include "cmdlfio.h"        // for ioprox menu
 #include "cmdlfcotag.h"     // for COTAG menu
@@ -2230,6 +2231,14 @@ int CmdLFfind(const char *Cmd) {
             goto out;
         }
     }
+    if (demodLFICT(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ICT ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
 
     // psk
     if (demodIdteck(NULL, true) == PM3_SUCCESS) {
@@ -2434,6 +2443,7 @@ static command_t CommandTable[] = {
     {"gproxii",     CmdLFGuard,         AlwaysAvailable, "{ Guardall Prox II RFIDs...  }"},
     {"hid",         CmdLFHID,           AlwaysAvailable, "{ HID Prox RFIDs...          }"},
     {"hitag",       CmdLFHitag,         AlwaysAvailable, "{ Hitag CHIPs...             }"},
+    {"ict",         CmdLFICT,           AlwaysAvailable, "{ ICT RFIDs...               }"},
     {"idteck",      CmdLFIdteck,        AlwaysAvailable, "{ Idteck RFIDs...            }"},
     {"indala",      CmdLFINDALA,        AlwaysAvailable, "{ Indala RFIDs...            }"},
     {"io",          CmdLFIO,            AlwaysAvailable, "{ ioProx RFIDs...            }"},
