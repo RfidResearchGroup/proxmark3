@@ -2818,13 +2818,23 @@ static void PacketReceived(PacketCommandNG *packet) {
                 payload->blockwidth = MIFARE_BLOCK_SIZE;
             }
 
-            // a whole-dump upload zeroes what was there first, so a smaller dump can't
-            // leave a tail behind that reads back as card data. esetblk never sets this.
-            if (payload->flags & MFEMUL_MEMSET_CLEAR) {
-                BigBuf_Clear_EM();
+            // the data the packet holds
+            if ((uint32_t)payload->blockcnt * payload->blockwidth > packet->length - sizeof(struct p)) {
+                reply_ng(CMD_HF_MIFARE_EML_MEMSET, PM3_EINVARG, NULL, 0);
+                break;
             }
 
-            emlSetMem_xt(payload->data, payload->blockno, payload->blockcnt, payload->blockwidth);
+            // a whole-dump upload zeroes what was there first, so a smaller dump can't
+            // leave a tail behind that reads back as card data. esetblk never sets this.
+            int res = PM3_SUCCESS;
+            if (payload->flags & MFEMUL_MEMSET_CLEAR) {
+                res = BigBuf_Clear_EM();
+            }
+
+            if (res == PM3_SUCCESS) {
+                res = emlSetMem_xt(payload->data, payload->blockno, payload->blockcnt, payload->blockwidth);
+            }
+            reply_ng(CMD_HF_MIFARE_EML_MEMSET, res, NULL, 0);
             break;
         }
         case CMD_HF_MIFARE_EML_MEMGET: {

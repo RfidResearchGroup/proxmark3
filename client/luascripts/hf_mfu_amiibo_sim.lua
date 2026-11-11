@@ -87,8 +87,11 @@ local function LoadEmulator(uid, blocks)
         local block_hi = bit32.rshift(i, 8)
         local payload = ('%02x%02x%02x%02x%02x'):format(block_lo, block_hi, 1, 4, 0)..blockdata
         cmd = Command:newNG{cmd = cmds.CMD_HF_MIFARE_EML_MEMSET, data = payload}
-        local err, msg = cmd:sendNG(true)
-        if err == nil then return err, msg end
+        local res, msg = cmd:sendNG(false)
+        if res == nil then return msg end
+        if res.Status ~= 0 then
+            return ('Setting emulator memory block %d failed, status %d (try "data clear" if the device memory is full)'):format(i, res.Status)
+        end
     end
     io.write('\n')
 end

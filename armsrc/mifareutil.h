@@ -134,7 +134,7 @@ uint8_t SectorTrailer(uint8_t blockNo);
 
 // emulator functions
 void emlClearMem(void);
-void emlSetMem_xt(uint8_t *data, uint16_t blockNum, uint8_t blocksCount, uint8_t block_width);
+int emlSetMem_xt(uint8_t *data, uint16_t blockNum, uint8_t blocksCount, uint8_t block_width);
 void emlGetMem_xt(uint8_t *data, uint16_t blockNum, uint8_t blocksCount, uint8_t block_width);
 
 uint64_t emlGetKey(int sectorNum, int keyType);
