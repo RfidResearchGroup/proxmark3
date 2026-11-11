@@ -608,6 +608,15 @@ amiibo_tools.db =
     ["0x05c0000000060002"] = {
       name = "Samus"
     },
+    ["0x05c00000043b1302"] = {
+      name = "Samus"
+    },
+    ["0x05c00000043a1302"] = {
+      name = "Samus & Vi-O-La"
+    },
+    ["0x05c50000043c1302"] = {
+      name = "Sylux"
+    },
     ["0x37c00000038b0002"] = {
       name = "Simon"
     },
@@ -797,6 +806,9 @@ amiibo_tools.db =
     ["0x00010000000c0002"] = {
       name = "Luigi"
     },
+    ["0x0001000404401c02"] = {
+      name = "Luigi - My Mario Wooden Blocks"
+    },
     ["0x0189010103b10502"] = {
       name = "Label"
     },
@@ -814,6 +826,9 @@ amiibo_tools.db =
     },
     ["0x0003000000370102"] = {
       name = "Yoshi"
+    },
+    ["0x0003000404421c02"] = {
+      name = "Yoshi - My Mario Wooden Blocks"
     },
     ["0x030f0001016d0502"] = {
       name = "Derwin"
@@ -1135,6 +1150,9 @@ amiibo_tools.db =
     },
     ["0x0000000000340102"] = {
       name = "Mario"
+    },
+    ["0x00000004043f1c02"] = {
+      name = "Mario - My Mario Wooden Blocks"
     },
     ["0x07c0020000230002"] = {
       name = "Mii Gunner"
@@ -1886,6 +1904,9 @@ amiibo_tools.db =
     ["0x0002000000010002"] = {
       name = "Peach"
     },
+    ["0x0002000404411c02"] = {
+      name = "Peach - My Mario Wooden Blocks"
+    },
     ["0x0014000002670102"] = {
       name = "Waluigi"
     },
@@ -2226,7 +2247,7 @@ amiibo_tools.db =
       name = "Ryu"
     },
     ["0x34ca000104b51d02"] = {
-      name = "E.Honda"
+      name = "E. Honda"
     },
     ["0x34c8000104b31d02"] = {
       name = "Blanka"
@@ -2257,6 +2278,120 @@ amiibo_tools.db =
     },
     ["0x34d5000104c01d02"] = {
       name = "Akuma"
+    },
+    ["0x34d6000104e11d02"] = {
+      name = "M. Bison"
+    },
+    ["0x3c80000104e81d02"] = {
+      name = "Terry"
+    },
+    ["0x3c81000104f21d02"] = {
+      name = "Mai"
+    },
+    ["0x34d8000104e31d02"] = {
+      name = "Elena"
+    },
+    ["0x34d9000104e41d02"] = {
+      name = "Sagat"
+    },
+    ["0x34da000104e51d02"] = {
+      name = "C. Viper"
+    },
+    ["0x34db000104e61d02"] = {
+      name = "Alex"
+    },
+    ["0x34dc000104e71d02"] = {
+      name = "Ingrid"
+    },
+    ["0x34c2000104cd1d02"] = {
+      name = "Luke"
+    },
+    ["0x34c3000104ce1d02"] = {
+      name = "Jamie"
+    },
+    ["0x34cc000104d71d02"] = {
+      name = "Manon"
+    },
+    ["0x34c4000104cf1d02"] = {
+      name = "Kimberly"
+    },
+    ["0x34cd000104d81d02"] = {
+      name = "Marisa"
+    },
+    ["0x34d0000104db1d02"] = {
+      name = "Lily"
+    },
+    ["0x34ce000104d91d02"] = {
+      name = "JP"
+    },
+    ["0x34c7000104d21d02"] = {
+      name = "Juri"
+    },
+    ["0x34cb000104d61d02"] = {
+      name = "Dee Jay"
+    },
+    ["0x34d1000104dc1d02"] = {
+      name = "Cammy"
+    },
+    ["0x34c0000104cb1d02"] = {
+      name = "Ryu"
+    },
+    ["0x34ca000104d51d02"] = {
+      name = "E. Honda"
+    },
+    ["0x34c8000104d31d02"] = {
+      name = "Blanka"
+    },
+    ["0x34c6000104d11d02"] = {
+      name = "Guile"
+    },
+    ["0x34c1000104cc1d02"] = {
+      name = "Ken"
+    },
+    ["0x34c5000104d01d02"] = {
+      name = "Chun-Li"
+    },
+    ["0x34cf000104da1d02"] = {
+      name = "Zangief"
+    },
+    ["0x34c9000104d41d02"] = {
+      name = "Dhalsim"
+    },
+    ["0x34d2000104dd1d02"] = {
+      name = "Rashid"
+    },
+    ["0x34d3000104de1d02"] = {
+      name = "A.K.I"
+    },
+    ["0x34d4000104df1d02"] = {
+      name = "Ed"
+    },
+    ["0x34d5000104e01d02"] = {
+      name = "Akuma"
+    },
+    ["0x34d6000104eb1d02"] = {
+      name = "M. Bison"
+    },
+    ["0x3c80000104f11d02"] = {
+      name = "Terry"
+    },
+    ["0x3c81000104f31d02"] = {
+      name = "Mai"
+    },
+    ["0x34d8000104ec1d02"] = {
+      name = "Elena"
+    },
+    ["0x34d9000104ed1d02"] = {
+      name = "Sagat"
+    },
+    ["0x34da000104ee1d02"] = {
+      name = "C. Viper"
+    },
+    ["0x34db000104ef1d02"] = {
+      name = "Alex"
+    },
+    ["0x34dc000104f01d02"] = {
+      name = "Ingrid"
     },
     ["0x0398000100bf0502"] = {
       name = "Harry"
@@ -2659,6 +2794,12 @@ amiibo_tools.db =
     },
     ["0x3f000000042e0002"] = {
       name = "Sora"
+    },
+    ["0x1f00000004c41e03"] = {
+      name = "Kirby"
+    },
+    ["0x1f03010004c91e03"] = {
+      name = "Bandana Waddle Dee"
     }
   },
   amiibo_series = {
@@ -2689,13 +2830,15 @@ amiibo_tools.db =
     ["0x17"] = "Power Pros",
     ["0x1a"] = "Donkey Kong",
     ["0x1b"] = "Xenoblade Chronicles 3",
-    ["0x1d"] = "Street Fighter 6"
+    ["0x1c"] = "My Mario Wooden Blocks",
+    ["0x1d"] = "Street Fighter 6",
+    ["0x1e"] = "Kirby Air Riders"
   },
   game_series = {
     ["0x338"] = "Dark Souls",
     ["0x364"] = "Dragon Quest",
     ["0x3c8"] = "Fatal Fury",
-    ["0x224"] = "Xenoblade Chronicles",
+    ["0x224"] = "Xenoblade",
     ["0x080"] = "Splatoon",
     ["0x35c"] = "Shovel Knight",
     ["0x38c"] = "Diablo",
@@ -2814,7 +2957,8 @@ amiibo_tools.db =
     ["0x01"] = "Card",
     ["0x00"] = "Figure",
     ["0x03"] = "Band",
-    ["0x02"] = "Yarn"
+    ["0x02"] = "Yarn",
+    ["0x04"] = "Block"
   }
 }
 
