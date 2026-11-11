@@ -86,6 +86,14 @@ void bwm_frame_inflight_inc(void);
 void bwm_frame_inflight_zero(void);
 
 bool bwm_frame_take_fwd_ack(void);
+#ifndef AS_BOOTROM
+// One expected SLAVE_RESP (bwm_cmd()): the parser copies the reply for `cmd` into
+// buf (up to cap) or notes a CMD_ERROR for it; every other frame is handled as usual.
+void bwm_frame_expect(uint16_t cmd, uint8_t *buf, uint16_t cap);
+// 1: reply (*len bytes copied), -1: CMD_ERROR (*esp_err), 0: still waiting
+int8_t bwm_frame_expect_poll(uint16_t *len, int32_t *esp_err);
+void bwm_frame_expect_end(void);
+#endif
 bool bwm_frame_baud_ack(void);
 void bwm_frame_clear_baud_ack(void);
 bool bwm_frame_getbaud_ack(void);

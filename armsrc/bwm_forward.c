@@ -42,6 +42,7 @@ static volatile uint8_t  s_fc_head = 0;
 static volatile uint8_t  s_fc_count = 0;
 static volatile uint32_t s_fc_bytes = 0;
 static bwm_fc_stats_t s_fc_stats;         // diagnostics since boot, see bwm_fwd_fc_stats()
+static uint32_t s_fc_last_tx = 0;         // tick of the last forward frame
 
 static void fc_reset(void) {
     s_fc_head = 0;
@@ -60,9 +61,8 @@ static void fc_push(uint16_t len) {
 }
 
 // Release the oldest frame: its ack (or CMD_ERROR) came, or the gate gave up on
-// it. Acks are not matched to frames, so an ack that was eaten elsewhere (bwm_cmd()
-// drains the ring, see #3648) or one that comes after the gate forgot its frame
-// just shifts the window by one frame: the gate is one frame too pessimistic or
+// it. Acks are not matched to frames, so an ack that comes after the gate forgot
+// its frame just shifts the window by one frame: the gate is one frame too pessimistic or
 // too optimistic until the window drains, and drains it does after every command.
 static void fc_pop(void) {
     if (s_fc_count == 0) {
@@ -120,6 +120,10 @@ int bwm_fwd_writebuffer_sync(const uint8_t *data, size_t len) {
     {
         uint32_t t0 = GetTickCount();
         uint32_t need = (uint32_t)len + BWM_TX_OVERHEAD;
+        if (s_fc_count && (GetTickCountDelta(s_fc_last_tx) > BWM_FC_IDLE_RESET_MS)) {
+            s_fc_stats.forgotten += s_fc_count;
+            fc_reset();
+        }
         while ((s_fc_count >= BWM_FC_MAX_FRAMES) || (s_fc_bytes + need > BWM_FC_BYTES)) {
             bwm_pump();
             if (GetTickCountDelta(t0) > BWM_FC_ACK_TIMEOUT_MS) {
@@ -142,6 +146,7 @@ int bwm_fwd_writebuffer_sync(const uint8_t *data, size_t len) {
     }
     int wr = bwm_uart_write(frame, n);
     fc_push((uint16_t)n);   // one more forward frame awaiting its ack
+    s_fc_last_tx = GetTickCount();
     return wr;
 }
 
@@ -159,6 +164,10 @@ static void bwm_pump(void) {
         }
         avail = bwm_uart_rx_available();
     }
+}
+
+void bwm_fwd_pump(void) {
+    bwm_pump();
 }
 
 uint16_t bwm_fwd_rxdata_available(void) {

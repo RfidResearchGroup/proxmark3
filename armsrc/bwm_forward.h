@@ -33,10 +33,13 @@
 // answered with CMD_ERROR instead and leaves the window the same way. When acks
 // stall on a full window the gate waits BWM_FC_ACK_TIMEOUT_MS, then forgets just
 // enough of the oldest frames to send this one. Acks are counted, not matched:
-// a lost or late ack shifts the window by a frame until it drains at idle.
+// a lost or late ack shifts the window by a frame until the idle reset below.
 #define BWM_ESP_UART_RX_BUF         12288
 #define BWM_FC_BYTES                (BWM_ESP_UART_RX_BUF - 1024)   // in-flight bytes allowed; slack for the ESP's FIFO and parser lag
 #define BWM_FC_MAX_FRAMES           64     // depth of the in-flight length FIFO; also caps tiny frames in flight
+// No forward frame sent for this long: the ESP has acked or dropped everything
+// (its send() gives up after 3 s), so frames still counted in flight are stale.
+#define BWM_FC_IDLE_RESET_MS        5000
 #ifndef BWM_FC_ACK_TIMEOUT_MS
 // Hard cap (ms) on how long a forward write may block the main loop waiting for
 // acks. A spin COUNT was unbounded in wall-clock time and could hang the main
@@ -45,7 +48,7 @@
 // A full window that stays full this long means the ESP is stuck on the radio
 // (a phone scanning stalls BLE for a few hundred ms); every timeout then leaks
 // one frame into a full ring, so wait long enough for the usual stalls to pass.
-#define BWM_FC_ACK_TIMEOUT_MS       200    // safety valve: proceed if acks stall, never hard-hang
+#define BWM_FC_ACK_TIMEOUT_MS       1000   // safety valve: proceed if acks stall, never hard-hang
 #endif // safety valve: give up waiting for credit (avoid hard hang)
 
 // Wrap `len` raw reply bytes (a whole PacketResponseNG/OLD frame) into one
@@ -61,6 +64,8 @@ uint32_t bwm_read_ng(uint8_t *data, size_t len);
 
 // >0 when raw bytes are waiting on the FPC USART (gate for receive_ng()).
 uint16_t bwm_fwd_rxdata_available(void);
+// Run waiting RX bytes through the app_com parser (acks, forward data, replies).
+void bwm_fwd_pump(void);
 
 // Flow-control diagnostics since boot (hw status at debug level).
 typedef struct {

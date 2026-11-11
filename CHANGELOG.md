@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed PM5 BWM link - BWM queries (e.g. `hw status`) no longer drop forward acks and client data over WiFi/BLE: no lost output lines, WiFi up to ~90 KB/s instead of ~20 KB/s (@iceman1001)
 - Changed PM5 bundled BWM firmware to V3 - WiFi + BLE RAM fix (issue #10), OTA at full clock (@iceman1001)
 - Changed PM5 bundled BWM firmware to V2 - power save, ESP-IDF 6.1 support, stability fixes (@iceman1001)
 - Changed `hf mfu info` - UL-C fingerprint prints PRNG, Vendor and Chip IC lines, weak PRNG and counterfeit / magic chips in green (@iceman1001)

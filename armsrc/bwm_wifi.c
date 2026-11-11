@@ -19,36 +19,14 @@ static uint16_t wifi_crc16(const uint8_t *d, size_t n, uint16_t crc) {
     return crc;
 }
 
-// Minimal one-shot app_com response parser: scans the UART RX stream for a
-// SLAVE_RESP (0x2D 0x3D) echoing want_cmd, or a SLAVE_BCAST CMD_ERROR (8091).
-// Runs only during setup, so it fully owns the RX stream here.
-typedef enum { W_H1, W_H2, W_CL, W_CH, W_LL, W_LH, W_PL, W_KL, W_KH } wstate_t;
-
 #ifndef MIN
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
-// Drop whatever is already sitting in the UART RX ring so a late ACK from a
-// timed-out command cannot be consumed as the next command's response (same
-// cmd code, e.g. a slow OTA_BEGIN ack arriving after we already gave up).
-static void bwm_cmd_drain_rx(void) {
-    uint8_t buf[64];
-    uint32_t t0 = GetTickCount();
-    while (bwm_uart_rx_available()) {
-        uint16_t avail = bwm_uart_rx_available();
-        (void)bwm_uart_read(buf, (uint32_t)MIN(avail, (uint16_t)sizeof(buf)));
-        if (GetTickCountDelta(t0) > 50) {
-            break;
-        }
-    }
-}
-
 int bwm_cmd(uint16_t cmd, const uint8_t *req, uint16_t req_len,
             uint8_t *resp, uint16_t *resp_len, uint32_t timeout_ms) {
 
-    bwm_cmd_drain_rx();
-
-    // ---- build + send HOST_CMD frame ----
+    // ---- build HOST_CMD frame ----
     uint8_t frame[8 + 256];
     if (req_len > sizeof(frame) - 8) {
         return PM3_EOVFLOW;
@@ -67,114 +45,45 @@ int bwm_cmd(uint16_t cmd, const uint8_t *req, uint16_t req_len,
     uint16_t crc = wifi_crc16(frame, idx, 0xFFFF);
     frame[idx++] = (uint8_t)(crc & 0xFF);
     frame[idx++] = (uint8_t)(crc >> 8);
+
+    // The shared parser owns the RX stream: forward acks and client data that
+    // arrive meanwhile must reach bwm_forward, not be dropped. Parse what is
+    // already queued before arming, so a late reply to a timed-out command is
+    // not taken as this one's.
+    bwm_fwd_pump();
+    bool want = (resp != NULL) && (resp_len != NULL);
+    bwm_frame_expect(cmd, want ? resp : NULL, want ? *resp_len : 0);
     bwm_uart_write(frame, idx);
 
-    // ---- wait for the matching SLAVE_RESP ----
-    wstate_t st = W_H1;
-    bool     is_resp = false;
-    uint16_t rcmd = 0, rlen = 0, rgot = 0, rcrc_recv = 0, rcrc_calc = 0;
-    uint8_t  pbuf[256];
-    uint8_t  h1 = 0;
-
+    int res = PM3_ETIMEOUT;
     uint32_t t0 = GetTickCount();
-    for (;;) {
-        if (GetTickCountDelta(t0) > timeout_ms) {
-            return PM3_ETIMEOUT;
-        }
-        uint8_t buf[64];
-        uint16_t avail = bwm_uart_rx_available();
-        if (avail == 0) {
-            SpinDelay(1);
-            continue;
-        }
-        uint32_t n = bwm_uart_read(buf, (uint32_t)MIN(avail, (uint16_t)sizeof(buf)));
-        for (uint32_t i = 0; i < n; i++) {
-            uint8_t byte = buf[i];
-            switch (st) {
-                case W_H1:
-                    if (byte == BWM_HDR_SLAVE_RESP_1 || byte == BWM_HDR_SLAVE_BCAST_1) {
-                        h1 = byte;
-                        is_resp = (byte == BWM_HDR_SLAVE_RESP_1);
-                        st = W_H2;
-                    }
-                    break;
-                case W_H2: {
-                    bool ok = (is_resp  && byte == BWM_HDR_SLAVE_RESP_2) ||
-                              (!is_resp && byte == BWM_HDR_SLAVE_BCAST_2);
-                    if (ok) {
-                        uint8_t hdr[2] = { h1, byte };
-                        rcrc_calc = wifi_crc16(hdr, 2, 0xFFFF);
-                        rgot = 0;
-                        st = W_CL;
-                    } else {
-                        st = W_H1;
-                    }
-                    break;
-                }
-                case W_CL:
-                    rcmd = byte;
-                    rcrc_calc = wifi_crc16(&byte, 1, rcrc_calc);
-                    st = W_CH;
-                    break;
-                case W_CH:
-                    rcmd |= (uint16_t)byte << 8;
-                    rcrc_calc = wifi_crc16(&byte, 1, rcrc_calc);
-                    st = W_LL;
-                    break;
-                case W_LL:
-                    rlen = byte;
-                    rcrc_calc = wifi_crc16(&byte, 1, rcrc_calc);
-                    st = W_LH;
-                    break;
-                case W_LH:
-                    rlen |= (uint16_t)byte << 8;
-                    rcrc_calc = wifi_crc16(&byte, 1, rcrc_calc);
-                    st = (rlen ? W_PL : W_KL);
-                    break;
-                case W_PL:
-                    if (rgot < sizeof(pbuf)) pbuf[rgot] = byte;
-                    rcrc_calc = wifi_crc16(&byte, 1, rcrc_calc);
-                    if (++rgot >= rlen) st = W_KL;
-                    break;
-                case W_KL:
-                    rcrc_recv = byte;
-                    st = W_KH;
-                    break;
-                case W_KH: {
-                    rcrc_recv |= (uint16_t)byte << 8;
-                    if (rcrc_recv == rcrc_calc) {
-                        if (is_resp && rcmd == cmd) {
-                            // matching ack for our command
-                            if (resp && resp_len) {
-                                uint16_t cpy = MIN(rlen, *resp_len);
-                                memcpy(resp, pbuf, cpy);
-                                *resp_len = cpy;
-                            }
-                            return PM3_SUCCESS;
-                        }
-                        if (!is_resp && rcmd == BWM_CMD_CMD_ERROR && rlen >= 2) {
-                            uint16_t failed_cmd = (uint16_t)pbuf[0] | ((uint16_t)pbuf[1] << 8);
-                            if (failed_cmd == cmd) {
-                                int32_t esp_err = 0;
-                                if (rlen >= 6) {
-                                    esp_err = (int32_t)((uint32_t)pbuf[2] | ((uint32_t)pbuf[3] << 8) |
-                                                        ((uint32_t)pbuf[4] << 16) | ((uint32_t)pbuf[5] << 24));
-                                }
-                                // Expected in places (e.g. a status query while WiFi is
-                                // off): only worth seeing when debugging the link.
-                                if (g_dbglevel >= DBG_DEBUG) {
-                                    Dbprintf("[bwm-wifi] cmd 0x%04x failed, esp_err=0x%08x", (unsigned)cmd, (unsigned)esp_err);
-                                }
-                                return PM3_EFAILED;
-                            }
-                        }
-                    }
-                    st = W_H1;
-                    break;
-                }
+    while (GetTickCountDelta(t0) <= timeout_ms) {
+        bwm_fwd_pump();
+        uint16_t rlen = 0;
+        int32_t esp_err = 0;
+        int8_t st = bwm_frame_expect_poll(&rlen, &esp_err);
+        if (st > 0) {
+            if (want) {
+                *resp_len = rlen;
             }
+            res = PM3_SUCCESS;
+            break;
+        }
+        if (st < 0) {
+            // Expected in places (e.g. a status query while WiFi is
+            // off): only worth seeing when debugging the link.
+            if (g_dbglevel >= DBG_DEBUG) {
+                Dbprintf("[bwm-wifi] cmd 0x%04x failed, esp_err=0x%08x", (unsigned)cmd, (unsigned)esp_err);
+            }
+            res = PM3_EFAILED;
+            break;
+        }
+        if (bwm_uart_rx_available() == 0) {
+            SpinDelay(1);
         }
     }
+    bwm_frame_expect_end();
+    return res;
 }
 
 // ---------------------------------------------------------------------------
