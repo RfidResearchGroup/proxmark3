@@ -4,6 +4,10 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Update Amiibo database (@tpglitch)
+- Changed `lf pcf7931 write` - write is verified via the tag's read after write, retried up to 3 times, failures are reported (@GiacoBot)
+- Changed `lf pcf7931 reader` - prints blocks 0-7 in order and decodes PAC, password, write protection and selection; handles partial selections, new `--rfb` param (@GiacoBot)
+- Fixed `hf mf fchk` - `--emu` reports keys not transferred to emulator memory and a partial card dump into it instead of always succeeding (@matrix)
+- Fixed `hf mf chk` - `--emu` reports keys not transferred to emulator memory instead of always saying they were, with no key found it says "No keys found" instead of reporting a transfer (@matrix)
 - Fixed `hf mf staticnested` - `--emu` reports keys not transferred to emulator memory instead of always saying they were (@matrix)
 - Fixed `hf mf eclr` - waits for the device and reports a missing emulator memory instead of always succeeding (@matrix)
 - Fixed `hf mf nested` - `--emu` reports keys not transferred to emulator memory instead of always saying they were, a failed single sector recovery no longer returns success (@matrix)

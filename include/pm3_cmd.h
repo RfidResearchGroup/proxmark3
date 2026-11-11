@@ -529,6 +529,15 @@ typedef struct {
     uint8_t data;
 } PACKED pcf7931_write_t;
 
+#define PCF7931_READ_MAX_BLOCKS 12
+
+// CMD_LF_PCF7931_READ reply payload
+typedef struct {
+    uint8_t count;
+    uint8_t pos[PCF7931_READ_MAX_BLOCKS];   // index in the sequence sent after tag reset, 0 = RFB (or block 1 if RB1)
+    uint8_t blocks[PCF7931_READ_MAX_BLOCKS][16];
+} PACKED pcf7931_read_t;
+
 // CMD_LF_HITAGS_SIMULATE / CMD_LF_HITAGU_SIMULATE payload
 typedef struct {
     uint8_t tag_mem_supplied;
