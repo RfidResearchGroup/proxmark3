@@ -2091,7 +2091,14 @@ int mfu_get_version_uid(uint8_t *version, uint8_t *uid) {
 #define MFULC_PRNG_SAMPLES 40
 #define MFULC_PRNG_CLEAR   39
 
-static int mfulc_prng_test(uint32_t samples) {
+typedef enum {
+    MFULC_PRNG_NA = 0,          // could not collect nonces
+    MFULC_PRNG_WEAK,
+    MFULC_PRNG_GENUINE,
+    MFULC_PRNG_INCONCLUSIVE,
+} mfulc_prng_t;
+
+static mfulc_prng_t mfulc_prng_test(uint32_t samples, uint32_t *got_out, uint32_t *first_dup_out) {
     if (samples < 2) {
         samples = 2;
     }
@@ -2118,9 +2125,10 @@ static int mfulc_prng_test(uint32_t samples) {
         got++;
     }
 
+    *got_out = got;
+    *first_dup_out = 0;
     if (got < 2) {
-        PrintAndLogEx(INFO, "PRNG......... could not collect nonces (got %u)", got);
-        return PM3_ESOFT;
+        return MFULC_PRNG_NA;
     }
 
     uint32_t first_dup = 0;
@@ -2138,16 +2146,20 @@ static int mfulc_prng_test(uint32_t samples) {
     }
 
     if (dups > 0) {
-        PrintAndLogEx(SUCCESS, "PRNG......... " _RED_("Weak") " (RndB collision at %u)", first_dup);
-        return PM3_SUCCESS;
+        *first_dup_out = first_dup;
+        return MFULC_PRNG_WEAK;
     }
+    return (got >= MFULC_PRNG_CLEAR) ? MFULC_PRNG_GENUINE : MFULC_PRNG_INCONCLUSIVE;
+}
 
-    if (got >= MFULC_PRNG_CLEAR) {
-        PrintAndLogEx(SUCCESS, "PRNG......... " _GREEN_("Genuine"));
+// green = counterfeit / magic, exploitable
+static void mfulc_print_ic(const char *vendor, const char *ic, bool counterfeit) {
+    PrintAndLogEx(SUCCESS, "Vendor....... " _YELLOW_("%s"), vendor);
+    if (counterfeit) {
+        PrintAndLogEx(SUCCESS, "Chip IC...... " _GREEN_("%s"), ic);
     } else {
-        PrintAndLogEx(INFO, "PRNG......... inconclusive (%u/%u nonces)", got, (uint32_t)MFULC_PRNG_CLEAR);
+        PrintAndLogEx(SUCCESS, "Chip IC...... " _YELLOW_("%s"), ic);
     }
-    return PM3_SUCCESS;
 }
 
 static int mfulc_fingerprint(void) {
@@ -2166,7 +2178,7 @@ static int mfulc_fingerprint(void) {
     uint16_t rlen_2017 = 0;
     if (WaitForIso14aReply(&resp, 500, &rlen_2017, NULL)) {
         if ((rlen_2017 == 11) && (resp.data.asBytes[0] == 0x00)) {
-            PrintAndLogEx(SUCCESS, _GREEN_("Lab401 Ultralight-C compatible UID modifiable"));
+            mfulc_print_ic("Lab401", "Ultralight-C compatible, UID modifiable", true);
             DropField();
             return PM3_SUCCESS;
         }
@@ -2184,7 +2196,7 @@ static int mfulc_fingerprint(void) {
     uint16_t rlen_2035 = 0;
     if (WaitForIso14aReply(&resp, 500, &rlen_2035, NULL)) {
         if ((rlen_2035 == 11) && (resp.data.asBytes[0] == 0xAF)) {
-            PrintAndLogEx(SUCCESS, _GREEN_("Feiju FJ8010"));
+            mfulc_print_ic("Feiju", "FJ8010", true);
             DropField();
             return PM3_SUCCESS;
         }
@@ -2208,11 +2220,12 @@ static int mfulc_fingerprint(void) {
             response[9] ^= resp.data.asBytes[9];
             response[10] ^= resp.data.asBytes[10];
             if ((response[9] == 0x6C) && (response[10] == 0xF3)) {
-                PrintAndLogEx(SUCCESS, _GREEN_("USCUID-UL with ULC authentication, variant 1"));
+                mfulc_print_ic("unknown", "USCUID-UL with ULC authentication, variant 1", true);
             } else if ((response[9] == 0xB4) && (response[10] == 0xC5)) {
-                PrintAndLogEx(SUCCESS, _GREEN_("USCUID-UL with ULC authentication, variant 2"));
+                mfulc_print_ic("unknown", "USCUID-UL with ULC authentication, variant 2", true);
             } else {
-                PrintAndLogEx(SUCCESS, _GREEN_("USCUID-UL with ULC authentication") _RED_(" unknown variant") ", please report!");
+                mfulc_print_ic("unknown", "USCUID-UL with ULC authentication", true);
+                PrintAndLogEx(INFO, "              " _RED_("unknown variant") ", please report!");
             }
             DropField();
             return PM3_SUCCESS;
@@ -2233,10 +2246,9 @@ static int mfulc_fingerprint(void) {
             uint16_t rlen_2084 = 0;
             if (WaitForIso14aReply(&resp, 500, &rlen_2084, NULL)) {
                 if (rlen_2084 == 18) {
-                    if ((resp.data.asBytes[0] == 0x04) && (resp.data.asBytes[6] == 0x15) && (resp.data.asBytes[7] == 0x89)) {
-                        PrintAndLogEx(SUCCESS, _GREEN_("GT23SC4489"));
-                    } else {
-                        PrintAndLogEx(SUCCESS, _GREEN_("GT23SC4489") _RED_(" unknown variant") ", please report!");
+                    mfulc_print_ic("Giantec", "GT23SC4489", true);
+                    if ((resp.data.asBytes[0] != 0x04) || (resp.data.asBytes[6] != 0x15) || (resp.data.asBytes[7] != 0x89)) {
+                        PrintAndLogEx(INFO, "              " _RED_("unknown variant") ", please report!");
                     }
                     DropField();
                     return PM3_SUCCESS;
@@ -2255,15 +2267,34 @@ static int mfulc_fingerprint(void) {
             cmd[1] = 3;
             status = ul_send_cmd_raw(cmd, sizeof(cmd), data, 4, false);
             if ((status > 0) && (data[0] == 0xE1) && (data[1] == 0x10) && (data[2] == 0x12) && (data[3] == 0x00)) {
-                PrintAndLogEx(INFO, "MIFARE Hospitality (MF0ICU2(H))");
+                mfulc_print_ic("NXP", "MF0ICU2(H), MIFARE Hospitality", false);
                 DropField();
                 return PM3_SUCCESS;
             }
         }
     }
     // weak-PRNG backstop
-    mfulc_prng_test(MFULC_PRNG_SAMPLES);
-    PrintAndLogEx(INFO, "likely MF0ICU2");
+    uint32_t got = 0, first_dup = 0;
+    // green = weak / exploitable, red = genuine
+    switch (mfulc_prng_test(MFULC_PRNG_SAMPLES, &got, &first_dup)) {
+        case MFULC_PRNG_GENUINE:
+            PrintAndLogEx(SUCCESS, "PRNG......... " _RED_("genuine"));
+            mfulc_print_ic("NXP", "MF0ICU2", false);
+            break;
+        case MFULC_PRNG_WEAK:
+            PrintAndLogEx(SUCCESS, "PRNG......... " _GREEN_("weak") " ( RndB collision at nonce %u )", first_dup);
+            mfulc_print_ic("unknown", "counterfeit UL-C", true);
+            break;
+        case MFULC_PRNG_INCONCLUSIVE:
+            PrintAndLogEx(INFO, "PRNG......... " _YELLOW_("inconclusive") " ( %u / %u nonces )", got, (uint32_t)MFULC_PRNG_CLEAR);
+            mfulc_print_ic("likely NXP", "likely MF0ICU2", false);
+            break;
+        case MFULC_PRNG_NA:
+        default:
+            PrintAndLogEx(INFO, "PRNG......... n/a ( got %u nonces )", got);
+            mfulc_print_ic("unknown", "unknown", false);
+            break;
+    }
     DropField();
     return PM3_SUCCESS;
 }
