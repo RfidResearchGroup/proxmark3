@@ -2838,6 +2838,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             ulc_vuln = ulc_print_configuration(ulc_conf);
         } else {
             PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "--- " _CYAN_("UL-C Configuration") " --------------------------");
             PrintAndLogEx(INFO, "ULC config... " _YELLOW_("read protected") ", can't assess the key page lock");
             locked = true;
         }
