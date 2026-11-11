@@ -738,6 +738,13 @@ static void SendStatus(uint32_t wait) {
         if (vres == PM3_SUCCESS) {
             bwm_ver[bwm_ver_len] = 0x00;
             Dbprintf("  BWM fw version...... " _YELLOW_("%s"), bwm_ver);
+            bwm_chip_info_t ci;
+            if (bwm_esp_get_chip_info(&ci, 300) == PM3_SUCCESS) {
+                Dbprintf("  BWM chip............ " _YELLOW_("%s v%u.%u") " pkg %u, flash " _YELLOW_("%s") " %06X (%u MB)",
+                         (ci.model == 12) ? "ESP32-C2" : "ESP32 model ?",
+                         ci.revision / 100, ci.revision % 100, ci.pkg,
+                         bwm_flash_vendor(ci.flash_id >> 16), ci.flash_id & 0xFFFFFF, ci.flash_size >> 20);
+            }
             // Only once the ESP answered; older fw lacks these, so keep the wait short.
             uint8_t ps = 0;
             if (bwm_esp_get_power_save(&ps, 300) == PM3_SUCCESS) {
@@ -746,6 +753,15 @@ static void SendStatus(uint32_t wait) {
             uint8_t bs = 0;
             if (bwm_esp_get_ble_state(&bs, 300) == PM3_SUCCESS) {
                 Dbprintf("  BWM BLE............. " _YELLOW_("%s"), (bs == BWM_BLE_STATE_CONNECTED) ? "client connected" : (bs == 1) ? "advertising" : "off");
+            }
+            uint32_t heap[3] = {0};
+            uint8_t hn = 0;
+            if (bwm_esp_get_free_heap(heap, &hn, 300) == PM3_SUCCESS) {
+                if (hn == 3) {
+                    Dbprintf("  BWM free RAM........ " _YELLOW_("%u") " bytes (lowest %u, largest block %u)", heap[0], heap[1], heap[2]);
+                } else {
+                    Dbprintf("  BWM free RAM........ " _YELLOW_("%u") " bytes", heap[0]);
+                }
             }
             // Our cached copy of the ESP's LINK_STATE broadcasts (BLE or WiFi), which holds
             // off the idle power-off. Debug only: it should agree with the live line above.

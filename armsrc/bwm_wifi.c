@@ -366,6 +366,60 @@ int bwm_esp_get_ble_state(uint8_t *state, uint32_t timeout_ms) {
     return bwm_esp_u8_cmd(BWM_CMD_GET_BLE_SPP_STATUS, NULL, 0, state, timeout_ms);
 }
 
+int bwm_esp_get_free_heap(uint32_t heap[3], uint8_t *count, uint32_t timeout_ms) {
+    uint8_t resp[12] = {0};
+    uint16_t rlen = sizeof(resp);
+    *count = 0;
+    int r = bwm_cmd(BWM_CMD_GET_SYS_FREE_HEAP, NULL, 0, resp, &rlen, timeout_ms);
+    if (r != PM3_SUCCESS) {
+        return r;
+    }
+    if (rlen < 4) {
+        return PM3_EFAILED;
+    }
+    *count = (rlen >= sizeof(resp)) ? 3 : 1;
+    memcpy(heap, resp, *count * sizeof(uint32_t));
+    return PM3_SUCCESS;
+}
+
+// makers seen on Espressif modules; 0x20 is XMC there, not Micron/ST
+const char *bwm_flash_vendor(uint8_t mfr) {
+    switch (mfr) {
+        case 0x0B:
+            return "XTX";
+        case 0x20:
+            return "XMC";
+        case 0x5E:
+            return "Zbit";
+        case 0x68:
+            return "Boya";
+        case 0x85:
+            return "Puya";
+        case 0x9D:
+            return "ISSI";
+        case 0xA1:
+            return "Fudan";
+        case 0xC2:
+            return "MXIC";
+        case 0xC8:
+            return "GD";
+        case 0xEF:
+            return "Winbond";
+        default:
+            return "?";
+    }
+}
+
+int bwm_esp_get_chip_info(bwm_chip_info_t *ci, uint32_t timeout_ms) {
+    uint16_t rlen = sizeof(*ci);
+    memset(ci, 0, sizeof(*ci));
+    int r = bwm_cmd(BWM_CMD_GET_SYS_CHIP_INFO, NULL, 0, (uint8_t *)ci, &rlen, timeout_ms);
+    if (r != PM3_SUCCESS) {
+        return r;
+    }
+    return (rlen == sizeof(*ci)) ? PM3_SUCCESS : PM3_EFAILED;
+}
+
 int bwm_esp_host_value_set(uint8_t id, uint32_t value, uint32_t timeout_ms) {
     uint8_t req[5] = { id };
     memcpy(&req[1], &value, sizeof(value));
