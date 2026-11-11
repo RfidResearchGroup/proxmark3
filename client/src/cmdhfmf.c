@@ -5559,7 +5559,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
     uint16_t max_avail_blocks = ((g_conn.max_cmd_data_size - 12) / block_width) * block_width;
 
     while (bytes_read && cnt < block_cnt) {
-        if (bytes_read == block_width) {
+        if (bytes_read <= max_avail_blocks) {
             // Disable fast mode on last packet
             g_conn.block_after_ACK = false;
         }
@@ -5571,10 +5571,12 @@ int CmdHF14AMfELoad(const char *Cmd) {
         // than the previous one can't leave a tail behind that reads back as card data
         uint8_t flags = (cnt == 0) ? MFEMUL_MEMSET_CLEAR : 0;
 
-        if (mf_eml_set_mem_xt(data + offset, cnt, blocks_to_send, block_width, flags) != PM3_SUCCESS) {
+        res = mf_eml_set_mem_xt(data + offset, cnt, blocks_to_send, block_width, flags);
+        if (res != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Can't set emulator mem at block: %3d", cnt);
+            g_conn.block_after_ACK = false;
             free(data);
-            return PM3_ESOFT;
+            return res;
         }
         cnt += blocks_to_send;
         offset += chunk_size;
@@ -5586,7 +5588,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
 
     if (block_width == MFU_BLOCK_SIZE) {
-        PrintAndLogEx(HINT, "Hint: You are ready to simulate. See `" _YELLOW_("hf mfu sim -h`") "`");
+        PrintAndLogEx(HINT, "Hint: You are ready to simulate. See `" _YELLOW_("hf mfu sim -h") "`");
         // MFU / NTAG
         if ((cnt != block_cnt)) {
             PrintAndLogEx(WARNING, "Warning, Ultralight/Ntag file content, Loaded %d blocks of expected %d blocks into emulator memory", cnt, block_cnt);

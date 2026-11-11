@@ -4591,6 +4591,9 @@ static int CmdHF14AMfUeLoad(const char *Cmd) {
     snprintf(nc, nc_len, "%s --ul", Cmd);
     int res = CmdHF14AMfELoad(nc);
     free(nc);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
 
     PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfu sim -t 7`") " to simulate an Amiibo.");
     PrintAndLogEx(INFO, "Done!");

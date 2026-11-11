@@ -937,10 +937,10 @@ uint8_t FirstBlockOfSector(uint8_t sectorNo) {
 }
 
 // work with emulator memory
-void emlSetMem_xt(uint8_t *data, uint16_t blockNum, uint8_t blocksCount, uint8_t block_width) {
+int emlSetMem_xt(uint8_t *data, uint16_t blockNum, uint8_t blocksCount, uint8_t block_width) {
     uint32_t offset = blockNum * block_width;
     uint32_t len =  blocksCount * block_width;
-    emlSet(data, offset, len);
+    return emlSet(data, offset, len);
 }
 
 void emlGetMem_xt(uint8_t *data, uint16_t blockNum, uint8_t blocksCount, uint8_t block_width) {

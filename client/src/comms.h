@@ -116,6 +116,8 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
 bool WaitForResponseTimeout(uint32_t cmd, PacketResponseNG *response, size_t ms_timeout);
 bool WaitForTxIdle(uint32_t ms_timeout);
 bool WaitForResponse(uint32_t cmd, PacketResponseNG *response);
+void PrintEmulatorAllocError(int status);
+int WaitForEmulatorWrite(uint32_t cmd);
 
 int SetHfFieldTimeout(uint32_t timeout_sec, bool quiet);
 

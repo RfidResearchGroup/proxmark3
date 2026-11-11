@@ -244,12 +244,14 @@ local function LoadEmulator(uid, blocks)
         io.write( _..',')
         io.flush()
         core.clearCommandBuffer()
-        -- payload: u16 blockno, u8 blockcnt, u8 blockwidth, u8 data[]
-        -- payload: u16 blockno, u8 blockcnt, u8 blockwidth, u8 data[]
-        local eml_payload = ('%02X%02X%02X%02X'):format(_ % 256, math.floor(_ / 256) % 256, 1, 16) .. blockdata
+        -- payload: u16 blockno, u8 blockcnt, u8 blockwidth, u8 flags, u8 data[]
+        local eml_payload = ('%02X%02X%02X%02X%02X'):format(_ % 256, math.floor(_ / 256) % 256, 1, 16, 0) .. blockdata
         cmd = Command:newNG{cmd = cmds.CMD_HF_MIFARE_EML_MEMSET, data = eml_payload}
-        local err, msg = cmd:sendNG(true)
-        if err == nil then return err, msg end
+        local res, msg = cmd:sendNG(false)
+        if res == nil then return msg end
+        if res.Status ~= 0 then
+            return ('Setting emulator memory block %d failed, status %d (try "data clear" if the device memory is full)'):format(_, res.Status)
+        end
     end
     io.write('\n')
 end

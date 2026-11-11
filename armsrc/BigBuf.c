@@ -140,8 +140,13 @@ void BigBuf_Clear_ext(bool verbose) {
     }
 }
 
-void BigBuf_Clear_EM(void) {
-    memset(BigBuf_get_EM_addr(), 0, CARD_MEMORY_SIZE);
+int BigBuf_Clear_EM(void) {
+    uint8_t *mem = BigBuf_get_EM_addr();
+    if (mem == NULL) {
+        return PM3_EMALLOC;
+    }
+    memset(mem, 0, CARD_MEMORY_SIZE);
+    return PM3_SUCCESS;
 }
 
 void BigBuf_Clear_keep_EM(void) {

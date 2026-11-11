@@ -1208,6 +1208,27 @@ bool WaitForResponse(uint32_t cmd, PacketResponseNG *response) {
     return WaitForResponseTimeoutW(cmd, response, -1, true);
 }
 
+// The device allocates the emulator memory on first use, and the trace of an
+// earlier command can leave no room for it
+void PrintEmulatorAllocError(int status) {
+    if (status == PM3_EMALLOC) {
+        PrintAndLogEx(FAILED, "\nNot enough free device memory for the emulator memory");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("data clear") "` to free it, then try again");
+    }
+}
+
+// Result of an emulator memory write. The first one can wait for an FPGA
+// bitstream to load
+int WaitForEmulatorWrite(uint32_t cmd) {
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(cmd, &resp, 2500) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        return PM3_ETIMEOUT;
+    }
+    PrintEmulatorAllocError(resp.status);
+    return resp.status;
+}
+
 /**
 * Data transfer from Proxmark to client. This method times out after
 * ms_timeout milliseconds.

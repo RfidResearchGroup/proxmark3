@@ -1186,7 +1186,7 @@ int mf_eml_set_mem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtW
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_EML_MEMSET, (uint8_t *)payload, paylen);
     free(payload);
-    return PM3_SUCCESS;
+    return WaitForEmulatorWrite(CMD_HF_MIFARE_EML_MEMSET);
 }
 
 // "MAGIC" CARD
