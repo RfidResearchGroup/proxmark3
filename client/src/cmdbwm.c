@@ -969,6 +969,7 @@ static void ble_print_status(const bwm_ble_status_t *st) {
         PrintAndLogEx(INFO, "BLE................ %s " _YELLOW_("(module firmware without the on/off switch)"), ble_state_str(st->state));
     } else if (st->enabled == 0) {
         PrintAndLogEx(INFO, "BLE................ " _YELLOW_("off") " (persisted; radio silent, USB/WiFi only)");
+        PrintAndLogEx(HINT, "enable it with " _YELLOW_("hw bwm ble on"));
     } else {
         PrintAndLogEx(INFO, "BLE................ " _GREEN_("on") ", %s", ble_state_str(st->state));
     }
@@ -986,7 +987,9 @@ static void ble_print_status(const bwm_ble_status_t *st) {
         }
     } else if (st->bonding == 0) {
         PrintAndLogEx(INFO, "Pairing............ " _RED_("not required") " - anyone in range can connect and use the device");
-        PrintAndLogEx(HINT, "enable it with " _YELLOW_("hw bwm ble pairing on"));
+        if (st->enabled != 0) {
+            PrintAndLogEx(HINT, "enable it with " _YELLOW_("hw bwm ble pairing on"));
+        }
     }
     if (st->bonded_count != 0xFF) {
         PrintAndLogEx(INFO, "Bonded devices..... %u%s", st->bonded_count, (st->bonded_count == BWM_BLE_BONDED_MAX) ? " (or more)" : "");

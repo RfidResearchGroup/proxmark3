@@ -197,7 +197,7 @@ static const char *bwm_wifi_reason_str(uint8_t reason) {
         case 204:
             return "wrong password?";
         case 201:
-            return "network not found";
+            return "network not found, BWM is 2.4 GHz only";
         case 210:
             return "no network with compatible security";
         default:
