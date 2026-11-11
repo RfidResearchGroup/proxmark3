@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `lf pcf7931 reader` - prints blocks 0-7 in order and decodes PAC, password, write protection and selection; handles partial selections, new `--rfb` param (@GiacoBot)
 - Fixed `hf mf fchk` - `--emu` reports keys not transferred to emulator memory and a partial card dump into it instead of always succeeding (@matrix)
 - Fixed `hf mf chk` - `--emu` reports keys not transferred to emulator memory instead of always saying they were, with no key found it says "No keys found" instead of reporting a transfer (@matrix)
 - Fixed `hf mf staticnested` - `--emu` reports keys not transferred to emulator memory instead of always saying they were (@matrix)
