@@ -2083,6 +2083,8 @@ out:
 
 static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't find keys...
     CLIParserContext *ctx;
+    // the result of an emulator memory transfer the command was asked for
+    int eml_res = PM3_SUCCESS;
     CLIParserInit(&ctx, "hf mf nested",
                   "Execute Nested attack against MIFARE Classic card for key recovery",
                   "hf mf nested --blk 0 -a -k FFFFFFFFFFFF --tblk 4 --ta           --> Use block 0 Key A to find block 4 Key A (single sector key recovery)\n"
@@ -2287,16 +2289,20 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
                         memcpy(block + 10, foundkey, MIFARE_KEY_SIZE);
                     }
 
-                    mf_elm_set_mem(block, sectortrailer, 1);
-                    PrintAndLogEx(SUCCESS, "Key transferred to emulator memory");
+                    eml_res = mf_elm_set_mem(block, sectortrailer, 1);
+                    if (eml_res == PM3_SUCCESS) {
+                        PrintAndLogEx(SUCCESS, "Key transferred to emulator memory");
+                    } else {
+                        PrintAndLogEx(FAILED, "Key not transferred to emulator memory");
+                    }
                 }
-                return PM3_SUCCESS;
+                return eml_res;
             }
             default : {
                 PrintAndLogEx(ERR, "Unknown error\n");
             }
         }
-        return PM3_SUCCESS;
+        return isOK;
 
     } else { // ------------------------------------  multiple sectors working
 
@@ -2454,9 +2460,17 @@ jumptoend:
                     // Disable fast mode on last packet
                     g_conn.block_after_ACK = false;
                 }
-                mf_elm_set_mem(keyBlock, mfFirstBlockOfSector(i) + mfNumBlocksPerSector(i) - 1, 1);
+                eml_res = mf_elm_set_mem(keyBlock, mfFirstBlockOfSector(i) + mfNumBlocksPerSector(i) - 1, 1);
+                if (eml_res != PM3_SUCCESS) {
+                    g_conn.block_after_ACK = false;
+                    break;
+                }
             }
-            PrintAndLogEx(SUCCESS, "keys transferred to emulator memory.");
+            if (eml_res == PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, "keys transferred to emulator memory.");
+            } else {
+                PrintAndLogEx(FAILED, "keys not transferred to emulator memory");
+            }
         }
 
         // Create dump file
@@ -2475,7 +2489,7 @@ jumptoend:
 
     PrintAndLogEx(INFO, "Done!");
     PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
+    return eml_res;
 }
 
 static int CmdHF14AMfNestedStatic(const char *Cmd) {
