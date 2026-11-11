@@ -812,6 +812,7 @@ SRCS =  mifare/aiddesfire.c \
         cmdlfhitag.c \
         cmdlfhitaghts.c \
         cmdlfhitagu.c \
+        cmdlfict.c \
         cmdlfidteck.c \
         cmdlfindala.c \
         cmdlfio.c \
@@ -832,6 +833,7 @@ SRCS =  mifare/aiddesfire.c \
         cmdlftrovan.c \
         cmdlfviking.c \
         cmdlfvisa2000.c \
+        cmdlfwatchnet.c \
         cmdlfzx8211.c \
         cmdmad.c \
         cmdmain.c \

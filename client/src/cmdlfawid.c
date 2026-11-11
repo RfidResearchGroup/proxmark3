@@ -95,6 +95,12 @@ static void verify_values(uint8_t *fmtlen, uint32_t *fc, uint32_t *cn) {
                 PrintAndLogEx(INFO, "Card Number Truncated to 18-bits (AWID37): %u", *cn);
             }
             break;
+        case 40:
+            if ((*fc & 0x3F) != *fc) {
+                *fc &= 0x3F;
+                PrintAndLogEx(INFO, "Facility-Code Truncated to 6-bits (AWID40/HCC40): %u", *fc);
+            }
+            break;
         case 34:
             if ((*fc & 0xFF) != *fc) {
                 *fc &= 0xFF;
@@ -147,6 +153,146 @@ static int CmdAWIDWatch(const char *Cmd) {
 //by marshmellow
 //AWID Prox demod - FSK2a RF/50 with preamble of 00000001  (always a 96 bit data stream)
 //print full AWID Prox ID and some bit format details if found
+static int awid_decode_bits(const uint8_t *bits, size_t len) {
+    if (len < 96) {
+        PrintAndLogEx(DEBUG, "DEBUG: Error - AWID length %zu < 96", len);
+        return PM3_ESOFT;
+    }
+
+    uint8_t work[96];
+    memcpy(work, bits, sizeof(work));
+
+    if (bytebits_to_byte(work, 8) != 0x01) {
+        PrintAndLogEx(DEBUG, "DEBUG: Error - AWID preamble not found");
+        return PM3_ESOFT;
+    }
+
+    // Index map
+    // 0            10            20            30              40            50              60
+    // |            |             |             |               |             |               |
+    // 01234567 890 1 234 5 678 9 012 3 456 7 890 1 234 5 678 9 012 3 456 7 890 1 234 5 678 9 012 3 - to 96
+    // -----------------------------------------------------------------------------
+    // 00000001 000 1 110 1 101 1 011 1 101 1 010 0 000 1 000 1 010 0 001 0 110 1 100 0 000 1 000 1
+    // premable bbb o bbb o bbw o fff o fff o ffc o ccc o ccc o ccc o ccc o ccc o wxx o xxx o xxx o - to 96
+    //          |---26 bit---|    |-----117----||-------------142-------------|
+    // b = format bit len, o = odd parity of last 3 bits
+    // f = facility code, c = card number
+    // w = wiegand parity
+    // (26 bit format shown)
+
+    //get raw ID before removing parities
+    uint32_t rawHi2 = bytebits_to_byte(work, 32);
+    uint32_t rawHi = bytebits_to_byte(work + 32, 32);
+    uint32_t rawLo = bytebits_to_byte(work + 64, 32);
+
+    size_t plen = removeParity(work, 8, 4, 1, 88);
+    if (plen != 66) {
+        PrintAndLogEx(DEBUG, "DEBUG: Error - AWID at parity check-tag size does not match AWID format");
+        return PM3_ESOFT;
+    }
+
+    char binstr[68] = {0};
+    binarray_2_binstr(binstr, (char *)work, plen);
+    PrintAndLogEx(DEBUG, "no parity... %s", binstr);
+
+    // ok valid card found!
+
+    // Index map
+    // 0           10         20        30          40        50        60
+    // |           |          |         |           |         |         |
+    // 01234567 8 90123456 7890123456789012 3 456789012345678901234567890123456
+    // -----------------------------------------------------------------------------
+    // 00011010 1 01110101 0000000010001110 1 000000000000000000000000000000000
+    // bbbbbbbb w ffffffff cccccccccccccccc w xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    // |26 bit|   |-117--| |-----142------|
+    //
+    // 00110010 0 0000111110100000 00000000000100010010100010000111 1 000000000
+    // bbbbbbbb w ffffffffffffffff cccccccccccccccccccccccccccccccc w xxxxxxxxx
+    // |50 bit|   |----4000------| |-----------2248975------------|
+    // b = format bit len, o = odd parity of last 3 bits
+    // f = facility code, c = card number
+    // w = wiegand parity
+
+    uint32_t fc = 0;
+    uint32_t cardnum = 0;
+    uint32_t code1 = 0;
+    uint32_t code2 = 0;
+    uint8_t fmtLen = bytebits_to_byte(work, 8);
+
+    switch (fmtLen) {
+        case 26: {
+            fc = bytebits_to_byte(work + 9, 8);
+            cardnum = bytebits_to_byte(work + 17, 16);
+            code1 = bytebits_to_byte(work + 8, fmtLen);
+            PrintAndLogEx(SUCCESS, "AWID - len: " _GREEN_("%d") " FC: " _GREEN_("%d") " Card: " _GREEN_("%u") " - Wiegand: " _GREEN_("%x") ", Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi2, rawHi, rawLo);
+            break;
+        }
+        case 34: {
+            fc = bytebits_to_byte(work + 9, 8);
+            cardnum = bytebits_to_byte(work + 17, 24);
+            code1 = bytebits_to_byte(work + 8, (fmtLen - 32));
+            code2 = bytebits_to_byte(work + 8 + (fmtLen - 32), 32);
+            PrintAndLogEx(SUCCESS, "AWID - len: " _GREEN_("%d") " FC: " _GREEN_("%d") " Card: " _GREEN_("%u") " - Wiegand: " _GREEN_("%x%08x") ", Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+            break;
+        }
+        case 36: {
+            fc = bytebits_to_byte(work + 14, 11);
+            cardnum = bytebits_to_byte(work + 25, 18);
+            code1 = bytebits_to_byte(work + 8, (fmtLen - 32));
+            code2 = bytebits_to_byte(work + 8 + (fmtLen - 32), 32);
+            PrintAndLogEx(SUCCESS, "AWID - len: " _GREEN_("%d") " FC: " _GREEN_("%d") " Card: " _GREEN_("%u") " - Wiegand: " _GREEN_("%x%08x") ", Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+            break;
+        }
+        case 37: {
+            fc = bytebits_to_byte(work + 9, 13);
+            cardnum = bytebits_to_byte(work + 22, 18);
+            code1 = bytebits_to_byte(work + 8, (fmtLen - 32));
+            code2 = bytebits_to_byte(work + 8 + (fmtLen - 32), 32);
+            PrintAndLogEx(SUCCESS, "AWID - len: " _GREEN_("%d")" FC: " _GREEN_("%d")" Card: " _GREEN_("%u") " - Wiegand: " _GREEN_("%x%08x") ", Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+            if (bytebits_to_byte(work + 9, 7) == 40) {
+                uint32_t cansec_fc = bytebits_to_byte(work + 16, 12);
+                uint32_t cansec_cn = bytebits_to_byte(work + 28, 16);
+                PrintAndLogEx(SUCCESS, "Farpointe/Cansec 37-bit - FC: " _GREEN_("%u") " CN: " _GREEN_("%u"), cansec_fc, cansec_cn);
+            }
+            break;
+        }
+        case 40: {
+            fc = bytebits_to_byte(work + 9, 6);
+            cardnum = bytebits_to_byte(work + 15, 32);
+            code1 = bytebits_to_byte(work + 8, (fmtLen - 32));
+            code2 = bytebits_to_byte(work + 8 + (fmtLen - 32), 32);
+            PrintAndLogEx(SUCCESS, "AWID - len: " _GREEN_("%d") " FC: " _GREEN_("%d") " Card: " _GREEN_("%u") " - Wiegand: " _GREEN_("%x%08x") ", Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+            PrintAndLogEx(SUCCESS, "Farpointe HCC40 - ID without parity: " _GREEN_("%x%08x"), fc, cardnum);
+            break;
+        }
+        case 50: {
+            fc = bytebits_to_byte(work + 9, 16);
+            cardnum = bytebits_to_byte(work + 25, 32);
+            code1 = bytebits_to_byte(work + 8, (fmtLen - 32));
+            code2 = bytebits_to_byte(work + 8 + (fmtLen - 32), 32);
+            PrintAndLogEx(SUCCESS, "AWID - len: " _GREEN_("%d") " FC: " _GREEN_("%d") " Card: " _GREEN_("%u") " - Wiegand: " _GREEN_("%x%08x") ", Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+            if (fc == 4000) {
+                PrintAndLogEx(SUCCESS, "RBH - CN: " _GREEN_("%u"), cardnum);
+            }
+            break;
+        }
+        default:
+            if (fmtLen > 32) {
+                cardnum = bytebits_to_byte(work + 8 + (fmtLen - 17), 16);
+                code1 = bytebits_to_byte(work + 8, fmtLen - 32);
+                code2 = bytebits_to_byte(work + 8 + (fmtLen - 32), 32);
+                PrintAndLogEx(SUCCESS, "AWID - len: " _GREEN_("%d") " -unknown- (%u) - Wiegand: " _GREEN_("%x%08x") ", Raw: %08x%08x%08x", fmtLen, cardnum, code1, code2, rawHi2, rawHi, rawLo);
+            } else {
+                cardnum = bytebits_to_byte(work + 8 + (fmtLen - 17), 16);
+                code1 = bytebits_to_byte(work + 8, fmtLen);
+                PrintAndLogEx(SUCCESS, "AWID - len: " _GREEN_("%d") " -unknown- (%u) - Wiegand: " _GREEN_("%x") ", Raw: %08x%08x%08x", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
+            }
+            break;
+    }
+
+    return PM3_SUCCESS;
+}
+
 int demodAWID(bool verbose) {
     (void) verbose; // unused so far
     uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
@@ -186,116 +332,11 @@ int demodAWID(bool verbose) {
     setDemodBuff(bits, size, idx);
     setClockGrid(50, waveIdx + (idx * 50));
 
-
-    // Index map
-    // 0            10            20            30              40            50              60
-    // |            |             |             |               |             |               |
-    // 01234567 890 1 234 5 678 9 012 3 456 7 890 1 234 5 678 9 012 3 456 7 890 1 234 5 678 9 012 3 - to 96
-    // -----------------------------------------------------------------------------
-    // 00000001 000 1 110 1 101 1 011 1 101 1 010 0 000 1 000 1 010 0 001 0 110 1 100 0 000 1 000 1
-    // premable bbb o bbb o bbw o fff o fff o ffc o ccc o ccc o ccc o ccc o ccc o wxx o xxx o xxx o - to 96
-    //          |---26 bit---|    |-----117----||-------------142-------------|
-    // b = format bit len, o = odd parity of last 3 bits
-    // f = facility code, c = card number
-    // w = wiegand parity
-    // (26 bit format shown)
-
-    //get raw ID before removing parities
-    uint32_t rawLo = bytebits_to_byte(bits + idx + 64, 32);
-    uint32_t rawHi = bytebits_to_byte(bits + idx + 32, 32);
-    uint32_t rawHi2 = bytebits_to_byte(bits + idx, 32);
-
-    size = removeParity(bits, idx + 8, 4, 1, 88);
-    if (size != 66) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - AWID at parity check-tag size does not match AWID format");
-        free(bits);
-        return PM3_ESOFT;
-    }
-
-    char binstr[68] = {0};
-    binarray_2_binstr(binstr, (char *)bits, size);
-    PrintAndLogEx(DEBUG, "no parity... %s", binstr);
-
-    // ok valid card found!
-
-    // Index map
-    // 0           10         20        30          40        50        60
-    // |           |          |         |           |         |         |
-    // 01234567 8 90123456 7890123456789012 3 456789012345678901234567890123456
-    // -----------------------------------------------------------------------------
-    // 00011010 1 01110101 0000000010001110 1 000000000000000000000000000000000
-    // bbbbbbbb w ffffffff cccccccccccccccc w xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    // |26 bit|   |-117--| |-----142------|
-    //
-    // 00110010 0 0000111110100000 00000000000100010010100010000111 1 000000000
-    // bbbbbbbb w ffffffffffffffff cccccccccccccccccccccccccccccccc w xxxxxxxxx
-    // |50 bit|   |----4000------| |-----------2248975------------|
-    // b = format bit len, o = odd parity of last 3 bits
-    // f = facility code, c = card number
-    // w = wiegand parity
-
-    uint32_t fc = 0;
-    uint32_t cardnum = 0;
-    uint32_t code1 = 0;
-    uint32_t code2 = 0;
-    uint8_t fmtLen = bytebits_to_byte(bits, 8);
-
-    switch (fmtLen) {
-        case 26: {
-            fc = bytebits_to_byte(bits + 9, 8);
-            cardnum = bytebits_to_byte(bits + 17, 16);
-            code1 = bytebits_to_byte(bits + 8, fmtLen);
-            PrintAndLogEx(SUCCESS, "AWID - len: " _GREEN_("%d") " FC: " _GREEN_("%d") " Card: " _GREEN_("%u") " - Wiegand: " _GREEN_("%x") ", Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, rawHi2, rawHi, rawLo);
-            break;
-        }
-        case 34: {
-            fc = bytebits_to_byte(bits + 9, 8);
-            cardnum = bytebits_to_byte(bits + 17, 24);
-            code1 = bytebits_to_byte(bits + 8, (fmtLen - 32));
-            code2 = bytebits_to_byte(bits + 8 + (fmtLen - 32), 32);
-            PrintAndLogEx(SUCCESS, "AWID - len: " _GREEN_("%d") " FC: " _GREEN_("%d") " Card: " _GREEN_("%u") " - Wiegand: " _GREEN_("%x%08x") ", Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
-            break;
-        }
-        case 36: {
-            fc = bytebits_to_byte(bits + 14, 11);
-            cardnum = bytebits_to_byte(bits + 25, 18);
-            code1 = bytebits_to_byte(bits + 8, (fmtLen - 32));
-            code2 = bytebits_to_byte(bits + 8 + (fmtLen - 32), 32);
-            PrintAndLogEx(SUCCESS, "AWID - len: " _GREEN_("%d") " FC: " _GREEN_("%d") " Card: " _GREEN_("%u") " - Wiegand: " _GREEN_("%x%08x") ", Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
-            break;
-        }
-        case 37: {
-            fc = bytebits_to_byte(bits + 9, 13);
-            cardnum = bytebits_to_byte(bits + 22, 18);
-            code1 = bytebits_to_byte(bits + 8, (fmtLen - 32));
-            code2 = bytebits_to_byte(bits + 8 + (fmtLen - 32), 32);
-            PrintAndLogEx(SUCCESS, "AWID - len: " _GREEN_("%d")" FC: " _GREEN_("%d")" Card: " _GREEN_("%u") " - Wiegand: " _GREEN_("%x%08x") ", Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
-            break;
-        }
-        // case 40:
-        // break;
-        case 50: {
-            fc = bytebits_to_byte(bits + 9, 16);
-            cardnum = bytebits_to_byte(bits + 25, 32);
-            code1 = bytebits_to_byte(bits + 8, (fmtLen - 32));
-            code2 = bytebits_to_byte(bits + 8 + (fmtLen - 32), 32);
-            PrintAndLogEx(SUCCESS, "AWID - len: " _GREEN_("%d") " FC: " _GREEN_("%d") " Card: " _GREEN_("%u") " - Wiegand: " _GREEN_("%x%08x") ", Raw: %08x%08x%08x", fmtLen, fc, cardnum, code1, code2, rawHi2, rawHi, rawLo);
-            break;
-        }
-        default:
-            if (fmtLen > 32) {
-                cardnum = bytebits_to_byte(bits + 8 + (fmtLen - 17), 16);
-                code1 = bytebits_to_byte(bits + 8, fmtLen - 32);
-                code2 = bytebits_to_byte(bits + 8 + (fmtLen - 32), 32);
-                PrintAndLogEx(SUCCESS, "AWID - len: " _GREEN_("%d") " -unknown- (%u) - Wiegand: " _GREEN_("%x%08x") ", Raw: %08x%08x%08x", fmtLen, cardnum, code1, code2, rawHi2, rawHi, rawLo);
-            } else {
-                cardnum = bytebits_to_byte(bits + 8 + (fmtLen - 17), 16);
-                code1 = bytebits_to_byte(bits + 8, fmtLen);
-                PrintAndLogEx(SUCCESS, "AWID - len: " _GREEN_("%d") " -unknown- (%u) - Wiegand: " _GREEN_("%x") ", Raw: %08x%08x%08x", fmtLen, cardnum, code1, rawHi2, rawHi, rawLo);
-            }
-            break;
-    }
+    int res = awid_decode_bits(bits + idx, size);
     free(bits);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
 
     PrintAndLogEx(DEBUG, "DEBUG: AWID idx: %d, Len: %zu", idx, size);
     PrintAndLogEx(DEBUG, "DEBUG: Printing DemodBuffer:");
@@ -312,16 +353,38 @@ static int CmdAWIDDemod(const char *Cmd) {
     CLIParserInit(&ctx, "lf awid demod",
                   "Try to find AWID Prox preamble, if found decode / descramble data",
                   "lf awid demod\n"
-                  "lf awid demod --raw "
-
+                  "lf awid demod --raw 0128b12eb1811d7117e22111 -> decode raw 96-bit AWID hex"
                  );
 
     void *argtable[] = {
         arg_param_begin,
+        arg_str0("r", "raw", "<hex>", "raw hex bytes (12 bytes)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int raw_len = 0;
+    uint8_t raw[12] = {0};
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), raw, sizeof(raw), &raw_len);
     CLIParserFree(ctx);
+
+    if (res) {
+        return PM3_EINVARG;
+    }
+
+    if (raw_len > 0) {
+        if (raw_len != 12) {
+            PrintAndLogEx(FAILED, "Raw data must be 12 bytes (96-bit), got " _YELLOW_("%d"), raw_len);
+            return PM3_EINVARG;
+        }
+        uint8_t bits[96] = {0};
+        bytes_to_bytebits(raw, sizeof(raw), bits);
+        if (awid_decode_bits(bits, sizeof(bits)) != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Invalid AWID raw data");
+            return PM3_ESOFT;
+        }
+        return PM3_SUCCESS;
+    }
+
     return demodAWID(true);
 }
 
@@ -367,9 +430,9 @@ static int CmdAWIDClone(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_u64_1(NULL, "fmt", "<dec>", "format length 26|34|37|50"),
-        arg_u64_1(NULL, "fc", "<dec>", "8|16bit value facility code"),
-        arg_u64_1(NULL, "cn", "<dec>", "16|32-bit value card number"),
+        arg_u64_1(NULL, "fmt", "<dec>", "format length 26|34|37|40|50"),
+        arg_u64_1(NULL, "fc", "<dec>", "6|8|13|16bit value facility code"),
+        arg_u64_1(NULL, "cn", "<dec>", "16|18|24|32-bit value card number"),
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
         arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
         arg_param_end
@@ -458,9 +521,9 @@ static int CmdAWIDSim(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_u64_1(NULL, "fmt", "<dec>", "format length 26|32|36|40"),
-        arg_u64_1(NULL, "fc", "<dec>", "8-bit value facility code"),
-        arg_u64_1(NULL, "cn", "<dec>", "16-bit value card number"),
+        arg_u64_1(NULL, "fmt", "<dec>", "format length 26|34|37|40|50"),
+        arg_u64_1(NULL, "fc", "<dec>", "facility code"),
+        arg_u64_1(NULL, "cn", "<dec>", "card number"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -604,7 +667,6 @@ static command_t CommandTable[] = {
     {"demod",   CmdAWIDDemod,   AlwaysAvailable, "demodulate an AWID FSK tag from the GraphBuffer"},
     {"reader",  CmdAWIDReader,  IfPm3Lf,         "attempt to read and extract tag data"},
     {"sim",     CmdAWIDSim,     IfPm3Lf,         "simulate AWID tag"},
-    {"brute",   CmdAWIDBrute,   IfPm3Lf,         "bruteforce card number against reader"},
     {"watch",   CmdAWIDWatch,   IfPm3Lf,         "continuously watch for cards.  Reader mode"},
     {NULL, NULL, NULL, NULL}
 };
@@ -624,6 +686,7 @@ int CmdLFAWID(const char *Cmd) {
 int getAWIDBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *bits) {
 
     // the return bits, preamble 0000 0001
+    memset(bits, 0, 8);
     bits[7] = 1;
 
     uint8_t pre[66];
@@ -653,6 +716,13 @@ int getAWIDBits(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *bits) {
             num_to_bytebits(fc, 13, wiegand);
             num_to_bytebits(cn, 18, wiegand + 13);
             wiegand_add_parity(pre + 8, wiegand,  sizeof(wiegand));
+            break;
+        }
+        case 40: {
+            uint8_t wiegand[38];
+            num_to_bytebits(fc, 6, wiegand);
+            num_to_bytebits(cn, 32, wiegand + 6);
+            wiegand_add_parity(pre + 8, wiegand, sizeof(wiegand));
             break;
         }
         case 50: {

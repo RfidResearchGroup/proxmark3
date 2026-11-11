@@ -47,6 +47,7 @@
 #include "cmdlfhitag.h"     // for hitag menu
 #include "cmdlfhitaghts.h"  // for hitag S sub commands
 #include "cmdlfhitagu.h"    // for hitag µ sub commands
+#include "cmdlfict.h"       // for ICT menu
 #include "cmdlfidteck.h"    // for idteck menu
 #include "cmdlfio.h"        // for ioprox menu
 #include "cmdlfcotag.h"     // for COTAG menu
@@ -73,6 +74,7 @@
 #include "cmdlftrovan.h"    // for trovan menu
 #include "cmdlfviking.h"    // for viking menu
 #include "cmdlfvisa2000.h"  // for VISA2000 menu
+#include "cmdlfwatchnet.h"  // for WatchNET menu
 #include "cmdlfzx8211.h"    // for ZX8211 menu
 #include "crc.h"
 #include "pm3_cmd.h"        // for LF_CMDREAD_MAX_EXTRA_SYMBOLS
@@ -2221,6 +2223,22 @@ int CmdLFfind(const char *Cmd) {
             goto out;
         }
     }
+    if (demodWatchnet(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("WatchNET ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
+    if (demodLFICT(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ICT ID") " found!");
+        if (search_cont) {
+            found++;
+        } else {
+            goto out;
+        }
+    }
 
     // psk
     if (demodIdteck(NULL, true) == PM3_SUCCESS) {
@@ -2425,6 +2443,7 @@ static command_t CommandTable[] = {
     {"gproxii",     CmdLFGuard,         AlwaysAvailable, "{ Guardall Prox II RFIDs...  }"},
     {"hid",         CmdLFHID,           AlwaysAvailable, "{ HID Prox RFIDs...          }"},
     {"hitag",       CmdLFHitag,         AlwaysAvailable, "{ Hitag CHIPs...             }"},
+    {"ict",         CmdLFICT,           AlwaysAvailable, "{ ICT RFIDs...               }"},
     {"idteck",      CmdLFIdteck,        AlwaysAvailable, "{ Idteck RFIDs...            }"},
     {"indala",      CmdLFINDALA,        AlwaysAvailable, "{ Indala RFIDs...            }"},
     {"io",          CmdLFIO,            AlwaysAvailable, "{ ioProx RFIDs...            }"},
@@ -2445,6 +2464,7 @@ static command_t CommandTable[] = {
     {"trovan",      CmdLFTrovan,        AlwaysAvailable, "{ Trovan animal IDs...       }"},
     {"viking",      CmdLFViking,        AlwaysAvailable, "{ Viking RFIDs...            }"},
     {"visa2000",    CmdLFVisa2k,        AlwaysAvailable, "{ Visa2000 RFIDs...          }"},
+    {"watchnet",    CmdLFWatchnet,      AlwaysAvailable, "{ WatchNET RFIDs...          }"},
 //    {"zx",          CmdLFZx8211,        AlwaysAvailable, "{ ZX8211 RFIDs...            }"},
     {"-----------", CmdHelp,            AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},
     {"config",      CmdLFConfig,        IfPm3Lf,         "Get/Set config for LF sampling, bit/sample, decimation, frequency"},

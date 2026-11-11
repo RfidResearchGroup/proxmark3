@@ -72,6 +72,10 @@ static int demod_guard_raw(uint8_t *raw, uint8_t rlen) {
 
     bool unknown = false;
     switch (fmtlen) {
+        case 40:
+            FC = ((plain[3] & 0x7F) << 1) | (plain[4] >> 7);
+            Card = ((uint32_t)(plain[4] & 0x7F) << 23) | ((uint32_t)plain[5] << 15) | ((uint32_t)plain[6] << 7) | (plain[7] >> 1);
+            break;
         case 36:
             FC = ((plain[3] & 0x7F) << 7) | (plain[4] >> 1);
             Card = ((plain[4] & 1) << 19) | (plain[5] << 11) | (plain[6] << 3) | ((plain[7] & 0xE0) >> 5);
@@ -86,9 +90,9 @@ static int demod_guard_raw(uint8_t *raw, uint8_t rlen) {
     }
 
     if (unknown)
-        PrintAndLogEx(SUCCESS, "G-Prox-II - Unknown len: " _GREEN_("%u") "xor: " _GREEN_("%u")", Raw: %s", fmtlen, xorKey, sprint_hex_inrow(raw, rlen));
+        PrintAndLogEx(SUCCESS, "G-Prox-II - Unknown len: " _GREEN_("%u") " xor: " _GREEN_("%u")", Raw: %s", fmtlen, xorKey, sprint_hex_inrow(raw, rlen));
     else
-        PrintAndLogEx(SUCCESS, "G-Prox-II - Len: " _GREEN_("%u")" FC: " _GREEN_("%u") " Card: " _GREEN_("%u") "xor: " _GREEN_("%u")", Raw: %s", fmtlen, FC, Card, xorKey, sprint_hex_inrow(raw, rlen));
+        PrintAndLogEx(SUCCESS, "G-Prox-II - Len: " _GREEN_("%u")" FC: " _GREEN_("%u") " Card: " _GREEN_("%u") " xor: " _GREEN_("%u")", Raw: %s", fmtlen, FC, Card, xorKey, sprint_hex_inrow(raw, rlen));
 
     return PM3_SUCCESS;
 }
@@ -162,6 +166,10 @@ int demodGuard(bool verbose) {
     uint32_t raw3 = bytebits_to_byte(g_DemodBuffer + 64, 32);
     bool unknown = false;
     switch (fmtLen) {
+        case 40:
+            FC = ((plain[3] & 0x7F) << 1) | (plain[4] >> 7);
+            Card = ((uint32_t)(plain[4] & 0x7F) << 23) | ((uint32_t)plain[5] << 15) | ((uint32_t)plain[6] << 7) | (plain[7] >> 1);
+            break;
         case 36:
             PrintAndLogEx(DEBUG, "DEBUG: FC 1: %x", (plain[3] & 0x7F) << 7);
             PrintAndLogEx(DEBUG, "DEBUG: FC 2: %x", plain[4] >> 1);
@@ -252,9 +260,9 @@ static int CmdGuardClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf gproxii clone",
                   "Clone a Guardall tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\n"
-                  "The facility-code is 8-bit and the card number is 20-bit.  Larger values are truncated.\n"
-                  "Currently work only on 26 | 36 bit format",
+                  "Supports 26, 36, and 40 bit formats. Larger FC/CN values are truncated.",
                   "lf gproxii clone --xor 141 --fmt 26 --fc 123 --cn 1337       -> encode for T55x7 tag\n"
+                  "lf gproxii clone --xor 141 --fmt 40 --fc 123 --cn 555666777  -> encode 40-bit fmt for T55x7 tag\n"
                   "lf gproxii clone --xor 141 --fmt 26 --fc 123 --cn 1337 --q5  -> encode for Q5/T5555 tag\n"
                   "lf gproxii clone --xor 141 --fmt 26 --fc 123 --cn 1337 --em  -> encode for EM4305/4469"
                  );
@@ -263,8 +271,8 @@ static int CmdGuardClone(const char *Cmd) {
         arg_param_begin,
         arg_u64_1(NULL, "xor", "<dec>", "8-bit xor value (installation dependant)"),
         arg_u64_1(NULL, "fmt", "<dec>", "format length 26|32|36|40"),
-        arg_u64_1(NULL, "fc", "<dec>", "8-bit value facility code"),
-        arg_u64_1(NULL, "cn", "<dec>", "16-bit value card number"),
+        arg_u64_1(NULL, "fc", "<dec>", "8|14-bit value facility code"),
+        arg_u64_1(NULL, "cn", "<dec>", "16|20|30-bit value card number"),
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
         arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
         arg_param_end
@@ -286,8 +294,18 @@ static int CmdGuardClone(const char *Cmd) {
     }
 
     fmtlen &= 0x7F;
-    uint32_t facilitycode = (fc & 0x000000FF);
-    uint32_t cardnumber = (cn & 0x00FFFFFF);
+    uint32_t facilitycode = fc;
+    uint32_t cardnumber = cn;
+    if (fmtlen == 36) {
+        facilitycode &= 0x3FFF;
+        cardnumber &= 0xFFFFF;
+    } else if (fmtlen == 40) {
+        facilitycode &= 0xFF;
+        cardnumber &= 0x3FFFFFFF;
+    } else {
+        facilitycode &= 0xFF;
+        cardnumber &= 0xFFFF;
+    }
 
     //GuardProxII - compat mode, ASK/Biphase,  data rate 64, 3 data blocks
     uint8_t *bs = calloc(96, sizeof(uint8_t));
@@ -346,17 +364,17 @@ static int CmdGuardSim(const char *Cmd) {
     CLIParserInit(&ctx, "lf gproxii sim",
                   "Enables simulation of Guardall card with specified card number.\n"
                   "Simulation runs until the button is pressed or another USB command is issued.\n"
-                  "The facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.\n"
-                  "Currently work only on 26 | 36 bit format",
+                  "Supports 26, 36, and 40 bit formats. Larger FC/CN values are truncated.",
                   "lf gproxii sim --xor 141 --fmt 26 --fc 123 --cn 1337\n"
+                  "lf gproxii sim --xor 141 --fmt 40 --fc 123 --cn 555666777\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_u64_1(NULL, "xor", "<dec>", "8-bit xor value (installation dependant)"),
         arg_u64_1(NULL, "fmt", "<dec>", "format length 26|32|36|40"),
-        arg_u64_1(NULL, "fc", "<dec>", "8-bit value facility code"),
-        arg_u64_1(NULL, "cn", "<dec>", "16-bit value card number"),
+        arg_u64_1(NULL, "fc", "<dec>", "8|14-bit value facility code"),
+        arg_u64_1(NULL, "cn", "<dec>", "16|20|30-bit value card number"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -368,8 +386,18 @@ static int CmdGuardSim(const char *Cmd) {
     CLIParserFree(ctx);
 
     fmtlen &= 0x7F;
-    uint32_t facilitycode = (fc & 0x000000FF);
-    uint32_t cardnumber = (cn & 0x000FFFFF);
+    uint32_t facilitycode = fc;
+    uint32_t cardnumber = cn;
+    if (fmtlen == 36) {
+        facilitycode &= 0x3FFF;
+        cardnumber &= 0xFFFFF;
+    } else if (fmtlen == 40) {
+        facilitycode &= 0xFF;
+        cardnumber &= 0x3FFFFFFF;
+    } else {
+        facilitycode &= 0xFF;
+        cardnumber &= 0xFFFF;
+    }
 
     uint8_t bs[96];
     memset(bs, 0x00, sizeof(bs));
@@ -491,6 +519,13 @@ int getGuardBits(uint8_t xorKey, uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8
         }
         case 40: {
             rawbytes[1] = (40 << 2);
+            uint8_t wiegand[38];
+            memset(wiegand, 0x00, sizeof(wiegand));
+
+            num_to_bytebits(fc, 8, wiegand);
+            num_to_bytebits(cn, 30, wiegand + 8);
+
+            wiegand_add_parity(pre, wiegand, 38);
             break;
         }
         case 26:

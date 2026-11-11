@@ -2190,6 +2190,8 @@ bool testKnownConfigBlock(uint32_t block0) {
         case T55X7_NEDAP_128_CONFIG_BLOCK:
         case T55X7_VISA2000_CONFIG_BLOCK:
         case T55X7_SECURAKEY_CONFIG_BLOCK:
+        case T55X7_SECURAKEY_SHORT_CONFIG_BLOCK:
+        case T55X7_ICT_CONFIG_BLOCK:
         case T55X7_PAC_CONFIG_BLOCK:
         case T55X7_VERICHIP_CONFIG_BLOCK:
         case T55X7_KERI_CONFIG_BLOCK:
@@ -3541,7 +3543,7 @@ void printT5555Trace(t5555_tracedata_t data, uint8_t repeat) {
 
 static void printT5x7KnownBlock0(uint32_t b0) {
 
-    char s[40];
+    char s[80];
     memset(s, 0, sizeof(s));
 
     switch (b0) {
@@ -3559,10 +3561,13 @@ static void printT5x7KnownBlock0(uint32_t b0) {
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "FDXB ");
             break;
         case T55X7_HID_26_CONFIG_BLOCK:
-            snprintf(s + strlen(s), sizeof(s) - strlen(s), "HID 26b (ProxCard), Paradox, AWID ");
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "HID 26b (ProxCard), Paradox, AWID, WatchNET ");
             break;
         case T55X7_PYRAMID_CONFIG_BLOCK:
-            snprintf(s + strlen(s), sizeof(s) - strlen(s), "Pyramid ");
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "Pyramid, Keri NXT ");
+            break;
+        case T55X7_ICT_CONFIG_BLOCK:
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "ICT ");
             break;
         case T55X7_INDALA_64_CONFIG_BLOCK:
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "Indala 64, Motorola, Idteck");
@@ -3608,6 +3613,9 @@ static void printT5x7KnownBlock0(uint32_t b0) {
             break;
         case T55X7_SECURAKEY_CONFIG_BLOCK:
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "SecuraKey ");
+            break;
+        case T55X7_SECURAKEY_SHORT_CONFIG_BLOCK:
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "SecuraKey Short ");
             break;
         case T55X7_NEXWATCH_CONFIG_BLOCK:
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "NexWatch, Quadrakey ");
