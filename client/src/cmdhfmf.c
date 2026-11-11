@@ -1657,6 +1657,9 @@ static int FastDumpWithEcFill(uint8_t numsectors) {
     payload.sectorcnt = numsectors;
     payload.keytype = MF_KEY_A;
 
+    // a fill that fails with both keys is reported to the caller
+    int eml_res = PM3_SUCCESS;
+
     // ecfill key A
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
@@ -1686,6 +1689,7 @@ static int FastDumpWithEcFill(uint8_t numsectors) {
         if (resp.status != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "fast dump reported back failure w KEY B");
             PrintAndLogEx(FAILED, "Dump file is " _RED_("PARTIAL") " complete");
+            eml_res = resp.status;
         }
     }
 
@@ -1693,7 +1697,7 @@ static int FastDumpWithEcFill(uint8_t numsectors) {
         return PM3_EFAILED;
     }
 
-    return PM3_SUCCESS;
+    return eml_res;
 }
 
 static int CmdHF14AMfDump(const char *Cmd) {
@@ -4090,6 +4094,8 @@ out:
 
 static int CmdHF14AMfChk_fast(const char *Cmd) {
     CLIParserContext *ctx;
+    // the result of an emulator memory transfer the command was asked for
+    int eml_res = PM3_SUCCESS;
     CLIParserInit(&ctx, "hf mf fchk",
                   "This is a improved checkkeys method speedwise. It checks MIFARE Classic tags sector keys against a dictionary file with keys",
                   "hf mf fchk --mini -k FFFFFFFFFFFF              --> Key recovery against MIFARE Mini\n"
@@ -4309,12 +4315,20 @@ out:
                     // Disable fast mode on last packet
                     g_conn.block_after_ACK = false;
                 }
-                mf_elm_set_mem(block, b, 1);
+                eml_res = mf_elm_set_mem(block, b, 1);
+                if (eml_res != PM3_SUCCESS) {
+                    g_conn.block_after_ACK = false;
+                    break;
+                }
             }
-            PrintAndLogEx(SUCCESS, "Found keys have been transferred to the emulator memory");
+            if (eml_res == PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, "Found keys have been transferred to the emulator memory");
 
-            if (found_keys == (sectorsCnt << 1)) {
-                FastDumpWithEcFill(sectorsCnt);
+                if (found_keys == (sectorsCnt << 1)) {
+                    eml_res = FastDumpWithEcFill(sectorsCnt);
+                }
+            } else {
+                PrintAndLogEx(FAILED, "Found keys have not been transferred to the emulator memory");
             }
         }
 
@@ -4331,7 +4345,7 @@ out2:
     free(keyBlock);
     free(e_sector);
     PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
+    return eml_res;
 }
 
 static int CmdHF14AMfSmartBrute(const char *Cmd) {
