@@ -1477,6 +1477,71 @@ static bool Unpack_IR56(wiegand_message_t *packed, wiegand_card_t *card) {
     card->CardNumber = packed->Bot;
     return true;
 }
+
+static bool Pack_C37(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+    memset(packed, 0, sizeof(wiegand_message_t));
+
+    if (!validate_card_limit(format_idx, card)) return false;
+
+    uint32_t oem = (card->OEM == 0) ? 40 : card->OEM;
+    if (oem != 40) return false;
+
+    packed->Length = 37;
+    set_linear_field(packed, oem, 1, 7);
+    set_linear_field(packed, card->FacilityCode, 8, 12);
+    set_linear_field(packed, card->CardNumber, 20, 16);
+
+    set_bit_by_position(packed, evenparity32(get_linear_field(packed, 1, 18)), 0);
+    set_bit_by_position(packed, oddparity32(get_linear_field(packed, 18, 18)), 36);
+    if (preamble)
+        return add_HID_header(packed);
+    return true;
+}
+
+static bool Unpack_C37(wiegand_message_t *packed, wiegand_card_t *card) {
+    if (packed->Length != 37) return false;
+
+    uint32_t oem = get_linear_field(packed, 1, 7);
+    if (oem != 40) return false;
+
+    memset(card, 0, sizeof(wiegand_card_t));
+    card->OEM = oem;
+    card->FacilityCode = get_linear_field(packed, 8, 12);
+    card->CardNumber = get_linear_field(packed, 20, 16);
+    card->ParityValid =
+        (get_bit_by_position(packed, 0) == evenparity32(get_linear_field(packed, 1, 18))) &&
+        (get_bit_by_position(packed, 36) == oddparity32(get_linear_field(packed, 18, 18)));
+    return true;
+}
+
+static bool Pack_WN55(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+    memset(packed, 0, sizeof(wiegand_message_t));
+
+    if (!validate_card_limit(format_idx, card)) return false;
+
+    packed->Length = 55;
+    set_linear_field(packed, card->FacilityCode, 1, 21);
+    set_linear_field(packed, card->CardNumber, 22, 32);
+
+    // 55-bit WatchNET overlaps middle data bit 27 across both 27-bit halves
+    set_bit_by_position(packed, evenparity32(get_linear_field(packed, 1, 27)), 0);
+    set_bit_by_position(packed, oddparity32(get_linear_field(packed, 27, 27)), 54);
+    if (preamble)
+        return add_HID_header(packed);
+    return true;
+}
+
+static bool Unpack_WN55(wiegand_message_t *packed, wiegand_card_t *card) {
+    if (packed->Length != 55) return false;
+
+    memset(card, 0, sizeof(wiegand_card_t));
+    card->FacilityCode = get_linear_field(packed, 1, 21);
+    card->CardNumber = get_linear_field(packed, 22, 32);
+    card->ParityValid =
+        (get_bit_by_position(packed, 0) == evenparity32(get_linear_field(packed, 1, 27))) &&
+        (get_bit_by_position(packed, 54) == oddparity32(get_linear_field(packed, 27, 27)));
+    return true;
+}
 // ---------------------------------------------------------------------------------------------------
 
 void print_desc_wiegand(cardformat_t *fmt, wiegand_message_t *packed) {
@@ -1583,6 +1648,7 @@ static const cardformat_t FormatTable[] = {                                     
     {"P10004",    Pack_P10004,      Unpack_P10004,      "HID P10004 37-bit PCSC",            37,  {1, 1, 0,  0,     0, 0x00001FFFu, 0x000000000003FFFFu, 0x00000000u, 0x00000000u}}, // from @bthedorff; PR #1559
     {"HGen37",    Pack_HGeneric37,  Unpack_HGeneric37,  "HID Generic 37-bit",                37,  {1, 0, 0,  0,     1, 0x00000000u, 0x00000000FFFFFFFFu, 0x00000000u, 0x00000000u}}, // from cardinfo.barkweb.com.au
     {"MDI37",     Pack_MDI37,       Unpack_MDI37,       "PointGuard MDI 37-bit",             37,  {1, 1, 0,  0,     1, 0x0000000Fu, 0x000000001FFFFFFFu, 0x00000000u, 0x00000000u}}, // from cardinfo.barkweb.com.au
+    {"C37",       Pack_C37,         Unpack_C37,         "Cansec C37 37-bit",                 37,  {1, 1, 0,  1,     1, 0x00000FFFu, 0x000000000000FFFFu, 0x00000000u, 0x00000028u}},
     {"BQT38",     Pack_bqt38,       Unpack_bqt38,       "BQT 38-bit",                        38,  {1, 1, 1,  0,     1, 0x00001FFFu, 0x000000000007FFFFu, 0x0000000Fu, 0x00000000u}}, // from cardinfo.barkweb.com.au
     {"ISCS",      Pack_iscs38,      Unpack_iscs38,      "ISCS 38-bit",                       38,  {1, 1, 0,  1,     1, 0x000003FFu, 0x00000000003FFFFFu, 0x00000000u, 0x0000000Fu}}, // from cardinfo.barkweb.com.au
     {"PW39",      Pack_pw39,        Unpack_pw39,        "Pyramid 39-bit wiegand format",     39,  {1, 1, 0,  0,     1, 0x0001FFFFu, 0x00000000000FFFFFu, 0x00000000u, 0x00000000u}},  // from cardinfo.barkweb.com.au
@@ -1593,6 +1659,7 @@ static const cardformat_t FormatTable[] = {                                     
     {"Defcon32",  Pack_Defcon32,    Unpack_Defcon32,    "Custom Defcon RFCTF 42-bit",        42,  {1, 1, 1,  0,     1, 0x0000FFFFu, 0x00000000000FFFFFu, 0x0000000Fu, 0x00000000u}}, // Created by (@micsen) for the CTF
     {"H800002",   Pack_H800002,     Unpack_H800002,     "HID H800002 46-bit",                46,  {1, 1, 0,  0,     1, 0x00003FFFu, 0x000000003FFFFFFFu, 0x00000000u, 0x00000000u}},
     {"C1k48s",    Pack_C1k48s,      Unpack_C1k48s,      "HID Corporate 1000 48-bit std",     48,  {1, 1, 0,  0,     1, 0x003FFFFFu, 0x00000000007FFFFFu, 0x00000000u, 0x00000000u}}, // imported from old pack/unpack
+    {"WN55",      Pack_WN55,        Unpack_WN55,        "WatchNET 55-bit",                   55,  {1, 1, 0,  0,     1, 0x001FFFFFu, 0x00000000FFFFFFFFu, 0x00000000u, 0x00000000u}},
     {"Avig56",    Pack_Avig56,      Unpack_Avig56,      "Avigilon 56-bit",                   56,  {1, 1, 0,  0,     1, 0x000FFFFFu, 0x00000003FFFFFFFFu, 0x00000000u, 0x00000000u}},
     {"IR56",      Pack_IR56,        Unpack_IR56,        "Inner Range 56-bit",                56,  {1, 1, 0,  0,     0, 0x00FFFFFFu, 0x00000000FFFFFFFFu, 0x00000000u, 0x00000000u}},
     {NULL, NULL, NULL, NULL, 0, {0, 0, 0, 0, 0, 0, 0, 0, 0}} // Must null terminate array
