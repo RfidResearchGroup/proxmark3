@@ -5,6 +5,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 - Fixed `lf hitag hts reader` / `lf hitag htu reader` - `hitag_setup_fpga()` idled for tens of ms with the reader field already up, so a tag in public (TTF) mode was mid transmission when the first command went out and never answered (@mishamyte)
 - Fixed `lf search` / `lf t55xx p1detect` - the bare 8-bit ACL anchor matched unrelated LF signals by chance, so EM4100 reads gained a bogus `Chipset... T55xx` line and Hitag 2 / Hitag S / Hitag micro were reported as T55xx instead of their real chipset (@mishamyte)
+- Fixed `lf em 410x` / `lf search` - EM410x decode could read past the end of the demod buffer (@mishamyte)
 - Fixed `hf mf staticnested` - `--emu` reports keys not transferred to emulator memory instead of always saying they were (@matrix)
 - Fixed `hf mf eclr` - waits for the device and reports a missing emulator memory instead of always succeeding (@matrix)
 - Fixed `hf mf nested` - `--emu` reports keys not transferred to emulator memory instead of always saying they were, a failed single sector recovery no longer returns success (@matrix)
