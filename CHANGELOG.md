@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Fixed `hf mf fchk` - `--emu` reports keys not transferred to emulator memory and a partial card dump into it instead of always succeeding (@matrix)
+- Fixed `hf mf chk` - `--emu` reports keys not transferred to emulator memory instead of always saying they were, with no key found it says "No keys found" instead of reporting a transfer (@matrix)
 - Fixed `hf mf staticnested` - `--emu` reports keys not transferred to emulator memory instead of always saying they were (@matrix)
 - Fixed `hf mf eclr` - waits for the device and reports a missing emulator memory instead of always succeeding (@matrix)
 - Fixed `hf mf nested` - `--emu` reports keys not transferred to emulator memory instead of always saying they were, a failed single sector recovery no longer returns success (@matrix)

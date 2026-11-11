@@ -4562,6 +4562,8 @@ out:
 
 static int CmdHF14AMfChk(const char *Cmd) {
     CLIParserContext *ctx;
+    // the result of an emulator memory transfer the command was asked for
+    int eml_res = PM3_SUCCESS;
     CLIParserInit(&ctx, "hf mf chk",
                   "Check keys on MIFARE Classic card",
                   "hf mf chk --mini -k FFFFFFFFFFFF              --> Check all sectors, all keys against MIFARE Mini\n"
@@ -4805,7 +4807,20 @@ out:
 //    else
     printKeyTable(sectors_cnt, e_sector);
 
-    if (transferToEml) {
+    // with no key found there is nothing to transfer
+    uint8_t found_keys = 0;
+    for (int i = 0; i < sectors_cnt; ++i) {
+        if (e_sector[i].foundKey[0]) {
+            found_keys++;
+        }
+        if (e_sector[i].foundKey[1]) {
+            found_keys++;
+        }
+    }
+
+    if (transferToEml && found_keys == 0) {
+        PrintAndLogEx(WARNING, "No keys found");
+    } else if (transferToEml) {
         // fast push mode
         g_conn.block_after_ACK = true;
         uint8_t block[MFBLOCK_SIZE] = {0x00};
@@ -4826,9 +4841,17 @@ out:
                 // Disable fast mode on last packet
                 g_conn.block_after_ACK = false;
             }
-            mf_elm_set_mem(block, blockno, 1);
+            eml_res = mf_elm_set_mem(block, blockno, 1);
+            if (eml_res != PM3_SUCCESS) {
+                g_conn.block_after_ACK = false;
+                break;
+            }
         }
-        PrintAndLogEx(SUCCESS, "Found keys have been transferred to the emulator memory");
+        if (eml_res == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "Found keys have been transferred to the emulator memory");
+        } else {
+            PrintAndLogEx(FAILED, "Found keys have not been transferred to the emulator memory");
+        }
     }
 
     if (createDumpFile) {
@@ -4851,7 +4874,7 @@ out:
     }
 
     PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
+    return eml_res;
 }
 
 void showSectorTable(sector_t *k_sector, size_t k_sectors_cnt) {
