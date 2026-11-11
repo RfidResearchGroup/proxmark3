@@ -2494,6 +2494,8 @@ jumptoend:
 
 static int CmdHF14AMfNestedStatic(const char *Cmd) {
     CLIParserContext *ctx;
+    // the result of an emulator memory transfer the command was asked for
+    int eml_res = PM3_SUCCESS;
     CLIParserInit(&ctx, "hf mf staticnested",
                   "Execute static nested attack against MIFARE Classic card with static nonce for key recovery.\n"
                   "Supply a known key from one block to recover all keys",
@@ -2730,9 +2732,17 @@ jumptoend:
                 // Disable fast mode on last packet
                 g_conn.block_after_ACK = false;
             }
-            mf_elm_set_mem(keyBlock, mfFirstBlockOfSector(i) + mfNumBlocksPerSector(i) - 1, 1);
+            eml_res = mf_elm_set_mem(keyBlock, mfFirstBlockOfSector(i) + mfNumBlocksPerSector(i) - 1, 1);
+            if (eml_res != PM3_SUCCESS) {
+                g_conn.block_after_ACK = false;
+                break;
+            }
         }
-        PrintAndLogEx(SUCCESS, "keys transferred to emulator memory.");
+        if (eml_res == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "keys transferred to emulator memory.");
+        } else {
+            PrintAndLogEx(FAILED, "keys not transferred to emulator memory");
+        }
     }
 
     // Create dump file
@@ -2748,7 +2758,7 @@ jumptoend:
     }
     free(e_sector);
 
-    return PM3_SUCCESS;
+    return eml_res;
 }
 
 static int CmdHF14AMfNestedHard(const char *Cmd) {
