@@ -5129,31 +5129,43 @@ out:
     return PM3_SUCCESS;
 }
 
-// Page-1 trace data opens with allocation class ACL = 0xE0, then a manufacturer code.
-// Genuine Atmel silicon carries manufacturer 0x15 / 0x39 (the atmel / silicon preambles).
-// Cloned T5577s keep the 0xE0 ACL but use another manufacturer byte,
-// also accept a bare 8-bit ACL match
+// Page-1 trace: ACL 0xE0 then an ISO/IEC 7816-6 manufacturer code.  The 8 bit
+// ACL alone matches unrelated LF signals, so match all 16 bits.
+static const uint8_t t55xx_trace_mfc[] = {
+    0x15,   // Atmel
+    0x39,   // Silicon Craft
+    0x65,   // Tendyron, clone
+};
+
+// true if an ACL + manufacturer preamble is found with a 32 or 64 bit size.
+// Fresh size per search - preambleSearchEx() writes the period back through it.
 static bool t55xx_trace_preamble_match(void) {
-    uint8_t preamble_atmel[]   = {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1};
-    uint8_t preamble_silicon[] = {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1};
-    uint8_t preamble_acl[]     = {1, 1, 1, 0, 0, 0, 0, 0};
-    size_t startIdx = 0;
 
-    if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
-            (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-        return true;
+    for (size_t i = 0; i < ARRAYLEN(t55xx_trace_mfc); i++) {
+
+        uint8_t preamble[16] = {1, 1, 1, 0, 0, 0, 0, 0};
+        num_to_bytebits(t55xx_trace_mfc[i], 8, preamble + 8);
+
+        size_t size = g_DemodBufferLen;
+        size_t start_idx = 0;
+        if (preambleSearchEx(g_DemodBuffer, preamble, sizeof(preamble), &size, &start_idx, false) &&
+                (size == 32 || size == 64)) {
+            return true;
+        }
     }
 
-    startIdx = 0;
-    if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
-            (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-        return true;
-    }
-
-    startIdx = 0;
-    if (preambleSearchEx(g_DemodBuffer, preamble_acl, sizeof(preamble_acl), &g_DemodBufferLen, &startIdx, false) &&
-            (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-        return true;
+    // unrelated LF signals open with the 0xE0 ACL too, so this is not a clone
+    // candidate - it only shows what the 16 bit match was compared against
+    uint8_t preamble_acl[8] = {1, 1, 1, 0, 0, 0, 0, 0};
+    size_t size = g_DemodBufferLen;
+    size_t start_idx = 0;
+    if (preambleSearchEx(g_DemodBuffer, preamble_acl, sizeof(preamble_acl), &size, &start_idx, false) &&
+            (size == 32 || size == 64) && (start_idx + 16 <= g_DemodBufferLen)) {
+        PrintAndLogEx(DEBUG, "DEBUG: (t55xx) page-1 ACL at %zu period %zu, manufacturer " _YELLOW_("0x%02X")
+                      , start_idx
+                      , size
+                      , (uint8_t)bytebits_to_byte(g_DemodBuffer + start_idx + 8, 8)
+                     );
     }
 
     return false;
@@ -5330,6 +5342,10 @@ static int CmdT55xxDetectPage1(const char *Cmd) {
 
     if (downlink_mode > 3)
         downlink_mode = 0;
+
+    // sanity check.
+    if (SanityOfflineCheck(use_graphbuf) != PM3_SUCCESS)
+        return PM3_ESOFT;
 
     bool found = false;
     uint8_t found_mode = 0;
@@ -6060,7 +6076,7 @@ static command_t CommandTable[] = {
     {"deviceconfig", CmdT55xxSetDeviceConfig, IfPm3Lf,         "Set/Get T55XX device configuration"},
     {"dump",         CmdT55xxDump,            IfPm3Lf,         "Dump T55xx card Page 0 block 0-7"},
     {"info",         CmdT55xxInfo,            AlwaysAvailable, "Show T55x7 configuration data (page 0/ blk 0)"},
-    {"p1detect",     CmdT55xxDetectPage1,     IfPm3Lf,         "Try detecting if this is a t55xx tag by reading page 1"},
+    {"p1detect",     CmdT55xxDetectPage1,     AlwaysAvailable, "Try detecting if this is a t55xx tag by reading page 1"},
     {"read",         CmdT55xxReadBlock,       IfPm3Lf,         "Read T55xx block data"},
     {"resetread",    CmdResetRead,            IfPm3Lf,         "Send Reset Cmd then lf read the stream to attempt to identify the start"},
     {"restore",      CmdT55xxRestore,         IfPm3Lf,         "Restore T55xx card Page 0 / Page 1 blocks"},
