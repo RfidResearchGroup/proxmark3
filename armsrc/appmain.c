@@ -2791,8 +2791,8 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             // Not only clears the emulator memory,
             // also sets default MIFARE values for sector trailers.
-            emlClearMem();
-            reply_ng(CMD_HF_MIFARE_EML_MEMCLR, PM3_SUCCESS, NULL, 0);
+            int res = emlClearMem();
+            reply_ng(CMD_HF_MIFARE_EML_MEMCLR, res, NULL, 0);
             break;
         }
         case CMD_HF_MIFARE_EML_MEMSET: {
