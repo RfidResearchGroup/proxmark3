@@ -1194,7 +1194,7 @@ static int CmdHF15Info(const char *Cmd) {
 
     // AFI
     if (d[1] & 0x02)
-        PrintAndLogEx(SUCCESS, "AFI....... 0x%02X", d[11]);
+        PrintAndLogEx(SUCCESS, "AFI....... 0x%02X%s", d[11], (d[11] == 0x30) ? " ( Secura Key e*Tag )" : "");
     else
         PrintAndLogEx(SUCCESS, "AFI not supported");
 
@@ -1880,7 +1880,7 @@ static void print_tag_15693(iso15_tag_t *tag, bool dense_output, bool verbose) {
         PrintAndLogEx(SUCCESS, "UID....... " _GREEN_("%s"), iso15693_sprintUID(NULL, tag->uid));
         printTagInfo_15(tag->uid);
         PrintAndLogEx(SUCCESS, "DSFID..... 0x%02X", tag->dsfid);
-        PrintAndLogEx(SUCCESS, "AFI....... 0x%02X", tag->afi);
+        PrintAndLogEx(SUCCESS, "AFI....... 0x%02X%s", tag->afi, (tag->afi == 0x30) ? " ( Secura Key e*Tag )" : "");
         PrintAndLogEx(SUCCESS, "IC ref.... 0x%02X", tag->ic);
         PrintAndLogEx(SUCCESS, "Tag memory layout (vendor dependent)");
         PrintAndLogEx(SUCCESS, "    " _YELLOW_("%u") " bytes / blocks x " _YELLOW_("%u") " blocks", tag->bytesPerPage, tag->pagesCount);
