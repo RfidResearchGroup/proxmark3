@@ -5377,7 +5377,7 @@ static int CmdHF14AMfEClear(const char *Cmd) {
     CLIParserFree(ctx);
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_EML_MEMCLR, NULL, 0);
-    return PM3_SUCCESS;
+    return WaitForEmulatorWrite(CMD_HF_MIFARE_EML_MEMCLR);
 }
 
 static int CmdHF14AMfESet(const char *Cmd) {

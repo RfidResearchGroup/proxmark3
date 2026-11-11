@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mf eclr` - waits for the device and reports a missing emulator memory instead of always succeeding (@matrix)
 - Fixed `hf mf nested` - `--emu` reports keys not transferred to emulator memory instead of always saying they were, a failed single sector recovery no longer returns success (@matrix)
 - Changed PM5 bundled BWM firmware to V4 - TCP send buffer 11.5 KB, pm3 over WiFi up to ~90 KB/s (@iceman1001)
 - Fixed `hf mf eload`, `hf mfu eload` - a failed emulator memory write, for example with the device memory full, is reported instead of `Done!`, fast mode no longer stays on after the upload (@matrix)
