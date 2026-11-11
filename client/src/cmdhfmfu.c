@@ -1203,7 +1203,45 @@ static int ulaes_print_key(uint8_t *data) {
 }
 
 // Only takes 16 bytes of data.  Now key data available here
-static int ulc_print_configuration(uint8_t *data) {
+// UL-C key page write protection, from the config pages 0x28..0x2B
+typedef enum {
+    ULC_CFG_UNKNOWN = 0,
+    ULC_CFG_LOCKED,     // lock byte 3 locks the key pages
+    ULC_CFG_RELAY,      // key pages writable after authentication
+    ULC_CFG_OPEN,       // key pages 0x2C..0x2E writable without authentication
+} ulc_cfg_vuln_t;
+
+static ulc_cfg_vuln_t ulc_config_vuln(const uint8_t *data) {
+    // page 0x28 byte 1 (lock byte 3), bit 7 locks the key pages 0x2C..0x2F
+    if (data[1] & 0x80) {
+        return ULC_CFG_LOCKED;
+    }
+    // writes need authentication from page AUTH0 on
+    if (data[8] >= 0x2F) {
+        return ULC_CFG_OPEN;
+    }
+    return ULC_CFG_RELAY;
+}
+
+// eprint 2026/100 "BREAKMEIFYOUCAN!"
+static void ulc_print_vuln_hint(ulc_cfg_vuln_t v) {
+    switch (v) {
+        case ULC_CFG_RELAY:
+            PrintAndLogEx(HINT, "Hint: Key pages not locked. Relay a reader authentication, overwrite three key pages,");
+            PrintAndLogEx(HINT, "      then recover the fourth with " _YELLOW_("`hf mfu desbrute --reader`") " (eprint 2026/100)");
+            break;
+        case ULC_CFG_OPEN:
+            PrintAndLogEx(HINT, "Hint: Key pages writable without authentication. Overwrite three key pages,");
+            PrintAndLogEx(HINT, "      then recover the fourth with " _YELLOW_("`hf mfu desbrute --reader`") " (eprint 2026/100)");
+            break;
+        case ULC_CFG_UNKNOWN:
+        case ULC_CFG_LOCKED:
+        default:
+            break;
+    }
+}
+
+static ulc_cfg_vuln_t ulc_print_configuration(const uint8_t *data) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("UL-C Configuration") " --------------------------");
@@ -1234,8 +1272,28 @@ static int ulc_print_configuration(uint8_t *data) {
                   (data[12] & 1) ? "write access restricted" : _RED_("R/W access restricted")
                  );
 
-    return PM3_SUCCESS;
+    // green = exploitable, red = not
+    ulc_cfg_vuln_t v = ulc_config_vuln(data);
+    switch (v) {
+        case ULC_CFG_LOCKED:
+            PrintAndLogEx(INFO, "ULC config... " _RED_("locked"));
+            break;
+        case ULC_CFG_RELAY:
+            PrintAndLogEx(INFO, "ULC config... " _GREEN_("relay"));
+            PrintAndLogEx(INFO, "Attack....... " _GREEN_("relayed auth 75%%"));
+            break;
+        case ULC_CFG_OPEN:
+            PrintAndLogEx(INFO, "ULC config... " _GREEN_("unlocked"));
+            PrintAndLogEx(INFO, "Attack....... " _GREEN_("partial key overwrite"));
+            break;
+        case ULC_CFG_UNKNOWN:
+        default:
+            break;
+    }
+    return v;
 }
+
+static ulc_cfg_vuln_t mfu_print_dump_ulc_config(const mfu_dump_t *card, uint16_t block_cnt);
 
 static int ulaes_print_configuration(uint8_t *data, uint8_t start_page) {
 
@@ -2736,6 +2794,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
 
         // read pages 0x28, 0x29, 0x2A, 0x2B
         uint8_t ulc_conf[16] = {0x00};
+        ulc_cfg_vuln_t ulc_vuln = ULC_CFG_UNKNOWN;
         status = ul_read(0x28, ulc_conf, sizeof(ulc_conf), false);
         if (status <= 0) {
             PrintAndLogEx(ERR, "Error: tag didn't answer to page 40 read command");
@@ -2745,8 +2804,10 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         }
 
         if (status == 16) {
-            ulc_print_configuration(ulc_conf);
+            ulc_vuln = ulc_print_configuration(ulc_conf);
         } else {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "ULC config... " _YELLOW_("read protected") ", can't assess the key page lock");
             locked = true;
         }
 
@@ -2774,12 +2835,14 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 ulc_print_3deskey(ulc_deskey);
             }
 
+            ulc_print_vuln_hint(ulc_vuln);
             PrintAndLogEx(NORMAL, "");
             return PM3_SUCCESS;
 
         } else {
             // if we called info with key, just return
             if (has_auth_key) {
+                ulc_print_vuln_hint(ulc_vuln);
                 PrintAndLogEx(NORMAL, "");
                 return PM3_SUCCESS;
             }
@@ -2794,6 +2857,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 PrintAndLogEx(INFO, "n/a");
             }
 
+            ulc_print_vuln_hint(ulc_vuln);
             PrintAndLogEx(NORMAL, "");
             return PM3_SUCCESS;
         }
@@ -3647,6 +3711,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         arg_lit0(NULL, "ns", "no save to file"),
         arg_lit0("z", "dense", "dense dump output style"),
         arg_lit0(NULL, "schann", "use secure channel. Must have key"),
+        arg_lit0("v", "verbose", "verbose output, decode the UL-C config"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -3665,6 +3730,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     bool nosave = arg_get_lit(ctx, 6);
     bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 7));
     bool use_schann = arg_get_lit(ctx, 8);
+    bool verbose = arg_get_lit(ctx, 9);
     CLIParserFree(ctx);
 
     bool has_auth_key = false;
@@ -3948,8 +4014,14 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         (void)transit_mfu_parse(dump_file_data.data, pages * MFU_BLOCK_SIZE);
     }
 
+    ulc_cfg_vuln_t ulc_vuln = ULC_CFG_UNKNOWN;
+    if (verbose && (start_page == 0)) {
+        ulc_vuln = mfu_print_dump_ulc_config(&dump_file_data, pages);
+    }
+
     if (nosave) {
         PrintAndLogEx(INFO, "Called with no save option");
+        ulc_print_vuln_hint(ulc_vuln);
         PrintAndLogEx(NORMAL, "");
         return PM3_SUCCESS;
     }
@@ -3971,6 +4043,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         PrintAndLogEx(WARNING, "Partial dump created. (%d of %d blocks)", pages, card_mem_size);
     }
 
+    ulc_print_vuln_hint(ulc_vuln);
     return PM3_SUCCESS;
 }
 
@@ -8434,12 +8507,14 @@ static int CmdHF14AMfuEView(const char *Cmd) {
         arg_param_begin,
         arg_int0("e", "end", "<dec>", "index of last block"),
         arg_lit0("z", "dense", "dense dump output style"),
+        arg_lit0("v", "verbose", "verbose output, decode the UL-C config"),
         arg_param_end
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     int end = arg_get_int_def(ctx, 1, -1);
     bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 2));
+    bool verbose = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     bool override_end = (end != -1) ;
@@ -8463,10 +8538,16 @@ static int CmdHF14AMfuEView(const char *Cmd) {
 
     mfu_print_dump(dump, end, 0, dense_output);
 
+    ulc_cfg_vuln_t ulc_vuln = ULC_CFG_UNKNOWN;
+    if (verbose) {
+        ulc_vuln = mfu_print_dump_ulc_config(dump, end);
+    }
+
     if (ndef_detect_message(dump->data, end * MFU_BLOCK_SIZE)) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu ndefread")"`");
     }
 
+    ulc_print_vuln_hint(ulc_vuln);
     free(dump);
     return PM3_SUCCESS;
 }
@@ -8560,6 +8641,14 @@ static uint64_t mfu_dump_get_tagtype(const mfu_dump_t *card) {
     }
 
     return MFU_TT_UNKNOWN;
+}
+
+// UL-C config and key page lock from a dump, needs pages 0x28..0x2B
+static ulc_cfg_vuln_t mfu_print_dump_ulc_config(const mfu_dump_t *card, uint16_t block_cnt) {
+    if ((mfu_dump_get_tagtype(card) != MFU_TT_UL_C) || (block_cnt < (0x2B + 1))) {
+        return ULC_CFG_UNKNOWN;
+    }
+    return ulc_print_configuration(card->data + (0x28 * MFU_BLOCK_SIZE));
 }
 
 // `hf mfu dump` appends the authentication key to the dump when one was given.
@@ -8666,7 +8755,9 @@ static int CmdHF14AMfuView(const char *Cmd) {
     mfu_dump_t *p = (mfu_dump_t *)dump;
     mfu_print_dump(p, block_cnt, 0, dense_output);
 
+    ulc_cfg_vuln_t ulc_vuln = ULC_CFG_UNKNOWN;
     if (verbose) {
+        ulc_vuln = mfu_print_dump_ulc_config(p, block_cnt);
         mfu_print_dump_keys(p, block_cnt);
     }
 
@@ -8677,6 +8768,7 @@ static int CmdHF14AMfuView(const char *Cmd) {
 
     (void)transit_mfu_parse(p->data, block_cnt * MFU_BLOCK_SIZE);
 
+    ulc_print_vuln_hint(ulc_vuln);
     free(dump);
     return PM3_SUCCESS;
 }
