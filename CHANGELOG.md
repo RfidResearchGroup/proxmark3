@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mf nested` - `--emu` reports keys not transferred to emulator memory instead of always saying they were, a failed single sector recovery no longer returns success (@matrix)
 - Fixed `hf mf eload`, `hf mfu eload` - a failed emulator memory write, for example with the device memory full, is reported instead of `Done!`, fast mode no longer stays on after the upload (@matrix)
 - Fixed `hf_mf_tnp3_sim.lua`, `hf_mfu_amiibo_sim.lua` - a failed emulator memory write is reported, tnp3 sends the flags byte and its blocks no longer land one byte off (@matrix)
 - Fixed PM5 BWM link - BWM queries (e.g. `hw status`) no longer drop forward acks and client data over WiFi/BLE: no lost output lines, WiFi up to ~90 KB/s instead of ~20 KB/s (@iceman1001)
