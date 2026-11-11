@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Update Amiibo database (@tpglitch)
 - Changed `lf pcf7931 write` - write is verified via the tag's read after write, retried up to 3 times, failures are reported (@GiacoBot)
 - Changed `lf pcf7931 reader` - prints blocks 0-7 in order and decodes PAC, password, write protection and selection; handles partial selections, new `--rfb` param (@GiacoBot)
 - Fixed `hf mf fchk` - `--emu` reports keys not transferred to emulator memory and a partial card dump into it instead of always succeeding (@matrix)
