@@ -103,7 +103,7 @@ script run update_fpga_and_bwm
 ```
 * Run `hw status` and verify that `BWM fw version` matches this:
 ```
-[#]   BWM fw version...... V2
+[#]   BWM fw version...... V3
 ```
   * You have finished flashing the FPGA and BWM.
 

@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed PM5 bundled BWM firmware to V3 - WiFi + BLE RAM fix (issue #10), OTA at full clock (@iceman1001)
 - Changed PM5 bundled BWM firmware to V2 - power save, ESP-IDF 6.1 support, stability fixes (@iceman1001)
 - Changed `hf mfu info` - UL-C fingerprint prints PRNG, Vendor and Chip IC lines, weak PRNG and counterfeit / magic chips in green (@iceman1001)
 - Added `hf mfu info`, `hf mfu dump -v`, `hf mfu view -v`, `hf mfu eview -v` - UL-C key page lock check from the config pages, flags partial key overwrite / relayed auth attacks (BREAKMEIFYOUCAN, eprint 2026/100) (@iceman1001)
