@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 15 dump` - a dump that stops early no longer prints and saves the unread blocks as zeros; it shows the blocks it read, says how many of the total, saves nothing and returns PM3_EPARTIAL. A tag that ends before the default 128 blocks is shown at its real size (@iceman1001)
 - Fixed `hf mf brute` - Enter or a chunk timeout stops it, no division by zero on a stage under 1 s (@matrix)
 - Fixed `hf mf brute` - `--emu` checks the trailer read, `--dump` keeps the keys when the card is gone and reports a failed save (@matrix)
 - Fixed `hf mf fchk` - Enter or a timeout during a chunk stops it, `--emu` checks the trailer read (@matrix)
