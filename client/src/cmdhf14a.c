@@ -1315,6 +1315,9 @@ int CmdHF14ASniff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// ISO/IEC 14443-4 7.5.6 leaves the retransmission count to the PCD
+#define ISO14A_MAX_RETRANS 2
+
 int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, bool silentMode) {
 
     uint16_t cmdc = 0;
@@ -1333,11 +1336,19 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
         cmdc |= ISO14A_NO_DISCONNECT;
     }
 
+    // ISO/IEC 14443-4 7.5.3: the block number toggles once the PICC has answered
+    // the block, not when it is built.  Toggling here left it out of step with the
+    // card for every exchange that did not complete, and nothing but a reselect
+    // put it back
     uint8_t data[PM3_CMD_DATA_SIZE] = { 0x0a | gs_frames_num, 0x00 };
-    gs_frames_num ^= 1;
 
     int min = MIN((int)(g_conn.max_cmd_data_size - 2), (datainlen & 0x1FF));
     memcpy(&data[2], datain, min);
+
+    // R(NAK) for this block, same CID as the I-block above
+    uint8_t nak[2] = { (uint8_t)(0xBA | gs_frames_num), 0x00 };
+    uint8_t attempt = 0;
+
     SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | cmdc, data, min + 2);
 
     uint8_t *recv;
@@ -1349,10 +1360,25 @@ resend:
         int iLen = rlen_1245;
 
         if (iLen == 0) {
+            // ISO/IEC 14443-4 7.5.6: a lost answer is a transmission error, not a
+            // dead exchange.  R(NAK) asks the PICC for its last block again
+            if (attempt++ < ISO14A_MAX_RETRANS) {
+                SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT | cmdc, nak, sizeof(nak));
+                goto resend;
+            }
             if (silentMode == false) {
                 PrintAndLogEx(ERR, "No card response");
             }
             return PM3_ECARDEXCHANGE;
+        }
+
+        // R(ACK) carrying the other block number: the PICC never got our block,
+        // so it goes out once more
+        if ((recv[0] & 0xF6) == 0xA2 && (recv[0] & 0x01) != (data[0] & 0x01)) {
+            if (attempt++ < ISO14A_MAX_RETRANS) {
+                SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | cmdc, data, min + 2);
+                goto resend;
+            }
         }
 
         *dataoutlen = iLen - 2;
@@ -1391,6 +1417,9 @@ resend:
             return PM3_ELENGTH;
         }
 
+        // the PICC answered this block, so the exchange is complete
+        gs_frames_num ^= 1;
+
         memcpy(dataout, &recv[2], *dataoutlen);
 
         // CRC Check
@@ -1402,6 +1431,8 @@ resend:
         }
 
     } else {
+        // the device itself went quiet, not the card.  Asking again would only
+        // stack up another full wait
         if (silentMode == false) {
             PrintAndLogEx(ERR, "Reply timeout.");
         }
