@@ -48,6 +48,14 @@
 #define BWM_CMD_DATA_FORWARD        8089   // slave bcast: payload came from endpoint
 #define BWM_CMD_CMD_ERROR           8091   // slave bcast: command error report
 #define BWM_CMD_LINK_STATE          8092   // slave bcast: [ble u8][wifi u8], 1 = a client is connected
+// Per-host forwarding (OS only, newer ESP fw): after SET_FORWARD_TAGGED 1 the ESP
+// tags inbound data with its endpoint and sends tagged data to that endpoint only.
+#define BWM_CMD_SEND_FORWARD_DATA_TO 5001  // host cmd: [ep u8][data] -> that endpoint only
+#define BWM_CMD_SET_FORWARD_TAGGED   5002  // host cmd: u8 on/off; resp: u8 applied
+#define BWM_CMD_DATA_FORWARD_FROM    8093  // slave bcast: [ep u8][data] came from that endpoint
+#define BWM_EP_BLE                  0
+#define BWM_EP_WIFI                 1
+#define BWM_EP_ANY                  0xFF  // untagged: the ESP sends to every endpoint
 // System command: set the ESP<->AT32 UART baud (app_com_defs.h, enum @1000).
 // SET is a HOST_CMD carrying u32 LE baud; the ESP replies with a SLAVE_RESP
 // echoing this cmd (len 0) at the OLD baud, then commits to the new baud.
@@ -69,7 +77,7 @@
 #define BWM_FRAME_RX_MAX  (PM3_CMD_DATA_SIZE + 64)   // NG/OLD frame ceiling
 #endif
 #ifndef BWM_FIFO_SZ
-#define BWM_FIFO_SZ       2048            // >= one full NG frame's payload
+#define BWM_FIFO_SZ       4096            // > one full FPC NG frame (2048 + framing), power of 2
 #endif
 #endif
 
@@ -80,6 +88,16 @@ void bwm_frame_feed(uint8_t byte);
 
 uint16_t bwm_fifo_count(void);
 uint8_t bwm_fifo_pop(void);
+#ifndef AS_BOOTROM
+// One de-framed input FIFO per endpoint; bwm_fifo_count/pop() above are BWM_EP_BLE's,
+// which also takes untagged data.
+uint16_t bwm_fifo_count_ep(uint8_t ep);
+uint8_t bwm_fifo_pop_ep(uint8_t ep);
+// true when the BLE FIFO's data came untagged (reply to every endpoint)
+bool bwm_fifo_untagged(void);
+size_t bwm_frame_build_ep(uint16_t cmd, uint8_t ep, const uint8_t *payload, uint16_t len,
+                          uint8_t *out, size_t outsz);
+#endif
 
 int16_t bwm_frame_inflight(void);
 void bwm_frame_inflight_inc(void);
@@ -106,6 +124,7 @@ size_t bwm_frame_build(uint16_t cmd, const uint8_t *payload, uint16_t len,
 void bwm_fwd_on_frame_ack(void);
 void bwm_fwd_on_frame_error(void);
 void bwm_fwd_on_link_state(uint8_t ble, uint8_t wifi);
+void bwm_fwd_on_untagged_data(void);
 #endif
 
 #endif

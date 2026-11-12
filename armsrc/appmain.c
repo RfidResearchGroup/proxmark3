@@ -782,6 +782,8 @@ static void SendStatus(uint32_t wait) {
                  fc.timeouts, fc.forgotten, fc.bytes_max);
         Dbprintf("  BWM fwd now......... " _YELLOW_("%u") " frames / " _YELLOW_("%u") " B in flight",
                  fc.in_flight_frames, fc.in_flight_bytes);
+        Dbprintf("  BWM fwd routing..... " _YELLOW_("%s"), bwm_fwd_tagged() ? "per host" : "every host");
+        bwm_esp_print_runtime_stats();
     }
 #endif
 #ifdef PM5
@@ -4795,6 +4797,9 @@ void __attribute__((noreturn)) AppMain(void) {
 #endif
 #ifdef WITH_CEP
         cep_attach_poll();
+#endif
+#ifdef WITH_BWM_FORWARD
+        bwm_fwd_tag_poll();
 #endif
 
         if (*_stack_start != 0xdeadbeef) {

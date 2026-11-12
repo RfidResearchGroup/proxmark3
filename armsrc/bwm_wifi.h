@@ -90,6 +90,7 @@ int bwm_wifi_forward_status(uint8_t *state, uint32_t *ip_out);
 #define BWM_CMD_GET_VERSION_INFO   1000   // resp: running firmware version string
 #define BWM_CMD_GET_SYS_FREE_HEAP  1002   // resp: u32 free [+ u32 lowest since boot + u32 largest block]
 #define BWM_CMD_GET_SYS_CHIP_INFO  1023   // resp: bwm_chip_info_t. Newer ESP fw only
+#define BWM_CMD_GET_SYS_RUNTIME_STATS 1024 // resp: u32 uptime s, u8 reset reason, 4 x u16 uart rx errors, u8 n, n x {u8 len, name, u16 stack free}
 #define BWM_CMD_STOP_BLE_SPP       4022   // no payload: stop BLE during OTA (flash contention)
 #define BWM_CMD_START_BLE_SPP      4021   // no payload: restore BLE after OTA
 #define BWM_CMD_SET_BLE_DEVICE_NAME 4002   // req: name bytes
@@ -122,6 +123,10 @@ typedef struct {
     uint32_t flash_size;    // physical, bytes
 } PACKED bwm_chip_info_t;
 int bwm_esp_get_chip_info(bwm_chip_info_t *ci, uint32_t timeout_ms);
+// Debug: ESP uptime, reset reason and per-task free stack (hw status at debug level)
+void bwm_esp_print_runtime_stats(void);
+// Per-host forwarding on/off (BWM_CMD_SET_FORWARD_TAGGED). PM3_EFAILED: ESP fw without it.
+int bwm_esp_set_forward_tagged(bool on, uint8_t *applied);
 // JEDEC manufacturer byte -> flash maker name, "?" if unknown
 const char *bwm_flash_vendor(uint8_t mfr);
 
