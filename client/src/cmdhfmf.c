@@ -7104,6 +7104,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         arg_lit0(NULL, "dch",      "decode Card Holder information"),
         arg_str0("f",  "file",     "<fn>", "load dump file and decode MAD"),
         arg_lit0(NULL, "force",    "force decode (skip key check)"),
+        arg_lit0(NULL, "override", "override failed crc check"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -7199,31 +7200,49 @@ static int CmdHF14AMfMAD(const char *Cmd) {
 
             uint16_t aaid = 0x0004;
             if (aidlen == 2) {
+
                 aaid = (aid[0] << 8) + aid[1];
+
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(INFO, "-------------- " _CYAN_("AID 0x%04x") " ---------------", aaid);
+
+                for (size_t i = 0; i < mad_list.len; i++) {
+                    if (aaid != mad_list.entries[i].aid)
+                        continue;
+                    uint8_t sno = mad_list.entries[i].sector;
+                    size_t sec_off = mfFirstBlockOfSector(sno) * MFBLOCK_SIZE;
+                    if (sec_off + mfNumBlocksPerSector(sno) * MFBLOCK_SIZE > bytes_read)
+                        continue;
+                    for (int j = 0; j < mfNumBlocksPerSector(sno) - (verbose ? 0 : 1); j++)
+                        PrintAndLogEx(NORMAL, " [%03d] %s", mfFirstBlockOfSector(sno) + j, sprint_hex(dump + sec_off + (j * MFBLOCK_SIZE), MFBLOCK_SIZE));
+                }
             }
 
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(INFO, "-------- " _CYAN_("Card Holder Info 0x%04x") " --------", aaid);
+            if (decodeholder) {
 
-            uint8_t chdata[MIFARE_4K_MAX_BYTES] = {0};
-            int chdatalen = 0;
-            for (size_t i = 0; i < mad_list.len; i++) {
-                if (aaid != mad_list.entries[i].aid)
-                    continue;
-                uint8_t sno = mad_list.entries[i].sector;
-                size_t sec_off = mfFirstBlockOfSector(sno) * MFBLOCK_SIZE;
-                size_t data_size = (mfNumBlocksPerSector(sno) - 1) * MFBLOCK_SIZE;
-                if (sec_off + data_size > bytes_read)
-                    continue;
-                if ((size_t)chdatalen + data_size > sizeof(chdata))
-                    break;
-                memcpy(&chdata[chdatalen], dump + sec_off, data_size);
-                chdatalen += data_size;
-            }
-            if (chdatalen > 0) {
-                MADCardHolderInfoDecode(chdata, chdatalen, verbose);
-            } else {
-                PrintAndLogEx(WARNING, "no Card Holder Info data");
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(INFO, "-------- " _CYAN_("Card Holder Info 0x%04x") " --------", aaid);
+
+                uint8_t chdata[MIFARE_4K_MAX_BYTES] = {0};
+                int chdatalen = 0;
+                for (size_t i = 0; i < mad_list.len; i++) {
+                    if (aaid != mad_list.entries[i].aid)
+                        continue;
+                    uint8_t sno = mad_list.entries[i].sector;
+                    size_t sec_off = mfFirstBlockOfSector(sno) * MFBLOCK_SIZE;
+                    size_t data_size = (mfNumBlocksPerSector(sno) - 1) * MFBLOCK_SIZE;
+                    if (sec_off + data_size > bytes_read)
+                        continue;
+                    if ((size_t)chdatalen + data_size > sizeof(chdata))
+                        break;
+                    memcpy(&chdata[chdatalen], dump + sec_off, data_size);
+                    chdatalen += data_size;
+                }
+                if (chdatalen > 0) {
+                    MADCardHolderInfoDecode(chdata, chdatalen, verbose);
+                } else {
+                    PrintAndLogEx(WARNING, "no Card Holder Info data");
+                }
             }
         }
         free(dump);
@@ -7324,15 +7343,15 @@ static int CmdHF14AMfMAD(const char *Cmd) {
             for (size_t i = 0; i < mad_list.len; i++) {
                 if (aaid == mad_list.entries[i].aid) {
                     uint8_t sno = mad_list.entries[i].sector;
-                    uint8_t vsector[MFBLOCK_SIZE * 4] = {0};
+                    uint8_t vsector[MFBLOCK_SIZE * 16] = {0};
                     if (mf_read_sector(sno, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
                         PrintAndLogEx(NORMAL, "");
                         PrintAndLogEx(ERR, "error, read sector %d", sno);
                         return PM3_ESOFT;
                     }
 
-                    for (int j = 0; j < (verbose ? 4 : 3); j ++)
-                        PrintAndLogEx(NORMAL, " [%03d] %s", sno * 4 + j, sprint_hex(&vsector[j * MFBLOCK_SIZE], MFBLOCK_SIZE));
+                    for (int j = 0; j < mfNumBlocksPerSector(sno) - (verbose ? 0 : 1); j++)
+                        PrintAndLogEx(NORMAL, " [%03d] %s", mfFirstBlockOfSector(sno) + j, sprint_hex(&vsector[j * MFBLOCK_SIZE], MFBLOCK_SIZE));
                 }
             }
         }
@@ -7348,16 +7367,17 @@ static int CmdHF14AMfMAD(const char *Cmd) {
             for (size_t i = 0; i < mad_list.len; i++) {
                 if (aaid == mad_list.entries[i].aid) {
                     uint8_t sno = mad_list.entries[i].sector;
-                    uint8_t vsector[MFBLOCK_SIZE * 4] = {0};
+                    uint8_t vsector[MFBLOCK_SIZE * 16] = {0};
                     if (mf_read_sector(sno, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
                         PrintAndLogEx(NORMAL, "");
                         PrintAndLogEx(ERR, "error, read sector %d", sno);
                         return PM3_ESOFT;
                     }
 
-                    // skip ST block hence only 3 blocks copy
-                    memcpy(&data[datalen], vsector, MFBLOCK_SIZE * 3);
-                    datalen += MFBLOCK_SIZE * 3;
+                    // skip ST block
+                    size_t data_size = (mfNumBlocksPerSector(sno) - 1) * MFBLOCK_SIZE;
+                    memcpy(&data[datalen], vsector, data_size);
+                    datalen += data_size;
                 }
             }
 
