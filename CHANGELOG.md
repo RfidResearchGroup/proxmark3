@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mf rdbl`, `hf mf fchk`, `hf 14a info` and other MIFARE reader commands - the emulator memory is kept instead of being reset to zeros (@matrix)
 - Added ISO/IEC 14443-4 error recovery to the reader - a lost or damaged answer is asked for again with R(NAK) instead of failing the exchange, `hw status` reports how often that was needed (@iceman1001)
 - Fixed `hf mfdes chk` - an exchange the card never answered is no longer counted as a wrong key or as a missing application, such candidates are retried and what stays uncovered is reported instead of hiding behind "No keys found" (@iceman1001)
 - Fixed `hf mfdes detect` - an exchange the card never answered is no longer counted as a wrong key (@iceman1001)

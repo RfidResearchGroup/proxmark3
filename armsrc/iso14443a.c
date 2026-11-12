@@ -4745,8 +4745,8 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
 
-    BigBuf_free();
-    BigBuf_Clear_ext(false);
+    BigBuf_free_keep_EM();
+    BigBuf_Clear_keep_EM();
     set_tracing(true);
 
     uint8_t mf_auth[4] = { keytype, block, 0x00, 0x00 };
@@ -5075,8 +5075,8 @@ void DetectNACKbug(void) {
     // Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).
     int32_t sync_cycles = PRNG_SEQUENCE_LENGTH;
 
-    BigBuf_free();
-    BigBuf_Clear_ext(false);
+    BigBuf_free_keep_EM();
+    BigBuf_Clear_keep_EM();
     set_tracing(true);
     iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
 
@@ -5290,7 +5290,7 @@ void DetectNACKbug(void) {
     num_to_bytes(i, 2, data + 2);
     reply_ng(CMD_HF_MIFARE_NACK_DETECT, status, data, 4);
 
-    BigBuf_free();
+    BigBuf_free_keep_EM();
     hf_field_off();
     set_tracing(false);
 }
