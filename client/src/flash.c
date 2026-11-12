@@ -513,7 +513,8 @@ static int get_proxmark_state(uint32_t *state, const char *serial_port_name, boo
             // A BWM bootrom reports the baud it probed in oldarg[2]; 0 means no ESP answered.
             if (report && ((*state & DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM) == DEVICE_INFO_FLAG_UNDERSTANDS_BWM_STREAM)) {
                 if (resp.oldarg[2]) {
-                    PrintAndLogEx(INFO, "Bootloader BWM link at " _YELLOW_("%" PRIu64) " baud", resp.oldarg[2]);
+                    char baud[SPRINT_BITRATE_LEN];
+                    PrintAndLogEx(INFO, "Bootloader BWM link at " _YELLOW_("%s"), sprint_bitrate(baud, (uint32_t)resp.oldarg[2]));
                 } else {
                     PrintAndLogEx(WARNING, "Bootloader found no BWM module (no ESP answered on 921600 or 460800)");
                 }

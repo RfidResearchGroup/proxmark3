@@ -691,7 +691,8 @@ static void printConnSpeed(uint32_t wait) {
     Dbprintf("  Bytes transferred.............. %d", bytes_transferred);
     Dbprintf("  Frames sent.................... %d ( %d bytes )", frames_sent, wire_len);
     if (delta_time) {
-        Dbprintf("  Transfer Speed PM3 -> Client... " _YELLOW_("%llu") " bytes/s", 1000 * (uint64_t)bytes_transferred / delta_time);
+        char rate[SPRINT_BYTES_LEN];
+        Dbprintf("  Transfer Speed PM3 -> Client... " _YELLOW_("%s/s"), sprint_bytes(rate, (uint32_t)(1000 * (uint64_t)bytes_transferred / delta_time)));
         Dbprintf("  Frame rate..................... " _YELLOW_("%llu") " frames/s", 1000 * (uint64_t)frames_sent / delta_time);
     }
 }
@@ -722,7 +723,8 @@ static void SendStatus(uint32_t wait) {
     bwm_print_battery_status();
 #endif
 #ifdef WITH_BWM_FORWARD
-    Dbprintf("  BWM link baud....... " _YELLOW_("%u") " bps", bwm_uart_get_baud());
+    char baud[SPRINT_BITRATE_LEN];
+    Dbprintf("  BWM link baud....... " _YELLOW_("%s"), sprint_bitrate(baud, bwm_uart_get_baud()));
     {
         // Read the ESP firmware version so hw status shows what the BWM runs
         // (and lets you confirm an OTA took: the string flips after a reflash).

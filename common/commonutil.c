@@ -19,6 +19,11 @@
 #include "pm3_cmd.h"
 #include <string.h>
 #include "stdbool.h"
+#ifdef ON_DEVICE
+#include "printf.h"     // sprintf
+#else
+#include <stdio.h>
+#endif
 
 // Specific firmware versions correspond to specific main chip types.
 typedef struct {
@@ -742,4 +747,27 @@ uint16_t iso14a_air_bits_unpack(const uint8_t *in, uint16_t in_len, uint8_t *dat
         }
     }
     return n;
+}
+
+char *sprint_bytes(char *buf, uint32_t bytes) {
+    const uint32_t mb = 1024 * 1024;
+    if (bytes >= mb) {
+        sprintf(buf, "%u.%02u MB", (unsigned int)(bytes / mb), (unsigned int)((bytes % mb) * 100 / mb));
+    } else if (bytes >= 1024) {
+        sprintf(buf, "%u.%u KB", (unsigned int)(bytes / 1024), (unsigned int)((bytes % 1024) * 10 / 1024));
+    } else {
+        sprintf(buf, "%u bytes", (unsigned int)bytes);
+    }
+    return buf;
+}
+
+char *sprint_bitrate(char *buf, uint32_t bps) {
+    if (bps >= 1000000) {
+        sprintf(buf, "%u.%u Mbps", (unsigned int)(bps / 1000000), (unsigned int)((bps % 1000000) / 100000));
+    } else if (bps >= 1000) {
+        sprintf(buf, "%u.%u kbps", (unsigned int)(bps / 1000), (unsigned int)((bps % 1000) / 100));
+    } else {
+        sprintf(buf, "%u bps", (unsigned int)bps);
+    }
+    return buf;
 }
