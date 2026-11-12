@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mf brute` - options read at their own positions (`--1k` ran a Mini), `--emu` reports keys and dumps not transferred to emulator memory (@matrix)
 - Fixed `hf mf darkside` - with more candidates than fit one check, every candidate is tested and none is read past the list (@matrix)
 - Fixed `hf mf nested` - tests every key candidate, follows cards whose nonce distance varies, single sector retries (@matrix)
 - Fixed `hf mf chk`, `hf mf staticnested` and other key checks - a card that stops answering no longer locks the device (@matrix)
