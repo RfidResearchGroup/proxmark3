@@ -760,3 +760,14 @@ char *sprint_bytes(char *buf, uint32_t bytes) {
     }
     return buf;
 }
+
+char *sprint_bitrate(char *buf, uint32_t bps) {
+    if (bps >= 1000000) {
+        sprintf(buf, "%u.%u Mbps", (unsigned int)(bps / 1000000), (unsigned int)((bps % 1000000) / 100000));
+    } else if (bps >= 1000) {
+        sprintf(buf, "%u.%u kbps", (unsigned int)(bps / 1000), (unsigned int)((bps % 1000) / 100));
+    } else {
+        sprintf(buf, "%u bps", (unsigned int)bps);
+    }
+    return buf;
+}

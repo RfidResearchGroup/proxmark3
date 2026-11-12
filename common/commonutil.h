@@ -165,6 +165,9 @@ int hexstr2ByteArr(const char *hexstr, unsigned char *array, size_t asize);
 // Byte count in binary units: "512 bytes", "136.7 KB", "1.07 MB". Returns buf.
 #define SPRINT_BYTES_LEN    16
 char *sprint_bytes(char *buf, uint32_t bytes);
+// Line rate in decimal units: "9600 bps", "921.6 kbps", "1.5 Mbps". Returns buf.
+#define SPRINT_BITRATE_LEN  16
+char *sprint_bitrate(char *buf, uint32_t bps);
 
 uint16_t iso14a_air_bits_pack(const uint8_t *data, const uint8_t *par, uint16_t n, uint8_t *out);
 uint16_t iso14a_air_bits_unpack(const uint8_t *in, uint16_t in_len, uint8_t *data, uint8_t *par);

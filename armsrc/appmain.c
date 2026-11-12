@@ -723,7 +723,8 @@ static void SendStatus(uint32_t wait) {
     bwm_print_battery_status();
 #endif
 #ifdef WITH_BWM_FORWARD
-    Dbprintf("  BWM link baud....... " _YELLOW_("%u") " bps", bwm_uart_get_baud());
+    char baud[SPRINT_BITRATE_LEN];
+    Dbprintf("  BWM link baud....... " _YELLOW_("%s"), sprint_bitrate(baud, bwm_uart_get_baud()));
     {
         // Read the ESP firmware version so hw status shows what the BWM runs
         // (and lets you confirm an OTA took: the string flips after a reflash).
