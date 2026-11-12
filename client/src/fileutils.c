@@ -569,9 +569,13 @@ int saveFileEx(const char *preferredName, const char *suffix, const void *data, 
         free(fileName);
         return PM3_EFILE;
     }
-    fwrite(data, 1, datalen, f);
-    fflush(f);
-    fclose(f);
+    size_t written = fwrite(data, 1, datalen, f);
+    // fclose() flushes, a full disk shows up there
+    if (fclose(f) != 0 || written != datalen) {
+        PrintAndLogEx(FAILED, "error, can't save the file `" _YELLOW_("%s") "`", fileName);
+        free(fileName);
+        return PM3_EFILE;
+    }
     PrintAndLogEx(SUCCESS, "Saved " _YELLOW_("%zu") " bytes to binary file `" _YELLOW_("%s") "`", datalen, fileName);
     free(fileName);
     return PM3_SUCCESS;
@@ -4876,8 +4880,7 @@ int pm3_save_dump_json(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) 
         return PM3_EINVARG;
     }
 
-    saveFileJSON(fn, jsft, d, n, NULL);
-    return PM3_SUCCESS;
+    return saveFileJSON(fn, jsft, d, n, NULL);
 }
 
 int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
@@ -4889,9 +4892,9 @@ int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
         return PM3_EINVARG;
     }
 
-    saveFile(fn, ".bin", d, n);
-    saveFileJSON(fn, jsft, d, n, NULL);
-    return PM3_SUCCESS;
+    int res = saveFile(fn, ".bin", d, n);
+    int res_json = saveFileJSON(fn, jsft, d, n, NULL);
+    return (res != PM3_SUCCESS) ? res : res_json;
 }
 
 int pm3_save_dump_cb(const char *fn, uint8_t *d, size_t n, JSONFileType jsft, void (*callback)(json_t *)) {
@@ -4903,9 +4906,9 @@ int pm3_save_dump_cb(const char *fn, uint8_t *d, size_t n, JSONFileType jsft, vo
         return PM3_EINVARG;
     }
 
-    saveFile(fn, ".bin", d, n);
-    saveFileJSON(fn, jsft, d, n, callback);
-    return PM3_SUCCESS;
+    int res = saveFile(fn, ".bin", d, n);
+    int res_json = saveFileJSON(fn, jsft, d, n, callback);
+    return (res != PM3_SUCCESS) ? res : res_json;
 }
 
 int pm3_save_mf_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
