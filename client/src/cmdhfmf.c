@@ -4499,11 +4499,24 @@ static int CmdHF14AMfSmartBrute(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
+    // the key file is named from the card that is here now
+    char *fptr = NULL;
+    if (createDumpFile) {
+        fptr = GenerateFilename("hf-mf-", "-key.bin");
+        if (fptr == NULL) {
+            free(keyBlock);
+            free(e_sector);
+            return PM3_ESOFT;
+        }
+    }
+
     // initialize bruteforce engine
     generator_context_t bctx;
     bf_generator_init(&bctx, BF_MODE_SMART, BF_KEY_SIZE_48);
 
     int i = 0, ret;
+    // a chunk without answer or a key file not saved
+    int brute_res = PM3_SUCCESS;
     int smart_mode_stage = -1;
     uint64_t generator_key;
 
@@ -4517,6 +4530,16 @@ static int CmdHF14AMfSmartBrute(const char *Cmd) {
     bool firstChunk = true, lastChunk = false;
 
     while (!lastChunk) {
+
+        if (kbd_enter_pressed()) {
+            clearCommandBuffer();
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);   // field is still ON if not on last chunk
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(WARNING, "\naborted via keyboard!");
+            goto out;
+        }
+
         keycnt = 0;
 
         // generate block of keys from generator
@@ -4528,6 +4551,7 @@ static int CmdHF14AMfSmartBrute(const char *Cmd) {
 
             if (ret == BF_GENERATOR_ERROR) {
                 PrintAndLogEx(ERR, "Internal bruteforce generator error");
+                free(fptr);
                 free(keyBlock);
                 free(e_sector);
                 return PM3_EFAILED;
@@ -4548,7 +4572,8 @@ static int CmdHF14AMfSmartBrute(const char *Cmd) {
                     smart_mode_stage = bctx.smart_mode_stage;
                     PrintAndLogEx(INFO, "Running bruteforce stage %d", smart_mode_stage);
 
-                    if (keys_checked) {
+                    // keys per whole second,  a stage can take less
+                    if (keys_checked && ((msclock() - t1) >= 1000)) {
 
                         PrintAndLogEx(INFO, "Current cracking speed (keys/s): %" PRIu64,
                                       keys_checked / ((msclock() - t1) / 1000)
@@ -4570,8 +4595,19 @@ static int CmdHF14AMfSmartBrute(const char *Cmd) {
         if (firstChunk)
             firstChunk = false;
 
-        if (ret == PM3_SUCCESS || ret == 2)
+        // all keys
+        if (ret == PM3_SUCCESS)
             goto out;
+
+        // aborted or no answer,  the field is still ON if not on last chunk
+        if ((ret == PM3_EOPABORTED) || (ret == PM3_ETIMEOUT)) {
+            clearCommandBuffer();
+            SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);
+            if (ret == PM3_ETIMEOUT) {
+                brute_res = ret;
+            }
+            goto out;
+        }
 
     }
 
@@ -4603,7 +4639,11 @@ out:
             uint8_t block[MFBLOCK_SIZE] = {0x00};
             for (i = 0; i < sectorsCnt; ++i) {
                 uint8_t b = mfFirstBlockOfSector(i) + mfNumBlocksPerSector(i) - 1;
-                mf_eml_get_mem(block, b, 1);
+                eml_res = mf_eml_get_mem(block, b, 1);
+                if (eml_res != PM3_SUCCESS) {
+                    g_conn.block_after_ACK = false;
+                    break;
+                }
 
                 if (e_sector[i].foundKey[0])
                     num_to_bytes(e_sector[i].Key[0], MIFARE_KEY_SIZE, block);
@@ -4634,19 +4674,20 @@ out:
 
         if (createDumpFile) {
 
-            char *fptr = GenerateFilename("hf-mf-", "-key.bin");
-            if (createMfcKeyDump(fptr, sectorsCnt, e_sector) != PM3_SUCCESS) {
+            int dump_res = createMfcKeyDump(fptr, sectorsCnt, e_sector);
+            if (dump_res != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "Failed to save keys to file");
+                brute_res = dump_res;
             }
-            free(fptr);
 
         }
     }
 
+    free(fptr);
     free(keyBlock);
     free(e_sector);
     PrintAndLogEx(NORMAL, "");
-    return eml_res;
+    return (eml_res != PM3_SUCCESS) ? eml_res : brute_res;
 }
 
 static int CmdHF14AMfChk(const char *Cmd) {
