@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed PM5 HF reader losing frames in both directions - the USB start of frame interrupt (1 kHz, unused) preempted the 14443-A reader loops long enough to overrun the single word FPGA SPI link; `hf mf autopwn`/`hardnested` nonce acquisition went from ~330 errors per run to none, `hf mfp chk` from 0-1 of 15 keys to 15, DESFire retransmissions from ~65 to ~4 per `hf mfdes chk` (@iceman1001)
 - Changed PM5 bundled BWM firmware to V5 - per-host forwarding, 1.5 Mbaud link, UART FIFO overflow fix (@iceman1001)
 - Changed PM5 BWM link - UART to the BWM at 1.5 Mbaud once the module supports it (BWM fw V5+): ~140 KB/s over WiFi, ~100 KB/s over BLE, was ~90 / ~80 KB/s (@iceman1001)
 - Changed PM5 BWM link - replies go back to the BLE or WiFi host that sent the command (per-host forwarding, needs BWM fw V5+); 2048-byte commands over BLE/WiFi no longer dropped; `hw status` at debug level shows the BWM uptime, UART errors and task stacks (@iceman1001)
