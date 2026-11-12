@@ -436,8 +436,8 @@ static int CmdHIDClone(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)cli.format, sizeof(cli.format), &cli.format_len);
     cli.card.FacilityCode = arg_get_u32_def(ctx, 2, 0);
     cli.card.CardNumber = arg_get_u64_def(ctx, 3, 0);
-    cli.card.IssueLevel = arg_get_u32_def(ctx, 4, 0);
-    cli.card.OEM = arg_get_u32_def(ctx, 5, 0);
+    cli.card.IssueLevel = arg_get_int_def(ctx, 4, 0);
+    cli.card.OEM = arg_get_int_def(ctx, 5, 0);
     int res = CLIParamHexToBuf(arg_get_str(ctx, 6), cli.raw, sizeof(cli.raw), &cli.raw_len);
 
     bool q5 = arg_get_lit(ctx, 7);

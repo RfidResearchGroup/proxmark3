@@ -1290,13 +1290,13 @@ static int CmdHF_ntag424_write(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    int l_fileno = arg_get_int(ctx, 1);
+    int l_fileno = arg_get_u32(ctx, 1);
 
     int keyno = 0;
     uint8_t key[16] = {0};
     bool auth = (ntag424_cli_get_auth_information(ctx, 2, 3, &keyno, key) == PM3_SUCCESS);
 
-    uint32_t offset = arg_get_u32_def(ctx, 4, 0);
+    uint32_t offset = arg_get_int_def(ctx, 4, 0);
 
     uint8_t data[512] = {0};
     int datalen = 512;

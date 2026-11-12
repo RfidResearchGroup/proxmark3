@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mf darkside/nested/staticnested/hardnested/autopwn/sim`, `hf mfu incr`, `hf ntag424 write`, `lf hid clone`, `lf indala demod/reader` and `msleep` - integer options were read as 64 bit values, a heap over-read (@matrix)
+- Fixed `hf ntag424 write` and `hw readmem` - `--fileno` and `-c` were read from the first 4 bytes of a 64 bit value, the high half on big-endian hosts (@matrix)
 - Added AIDs `A0000003820013000101` and `A0000003820017000101` (HID configuration cards) to aidlist.json (@iceman1001)
 - Changed `hf ntag424 getfs` - without `--fileno` it lists the settings of every file on the card; NTAG 424 has no GetFileIDs, so file numbers 0-31 are probed and a number the card never answers makes the list incomplete (PM3_EPARTIAL) (@iceman1001)
 

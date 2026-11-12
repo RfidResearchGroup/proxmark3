@@ -1321,7 +1321,7 @@ static int CmdHF14AMfDarkside(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    uint8_t blockno = arg_get_u32_def(ctx, 1, 0) & 0xFF;
+    uint8_t blockno = arg_get_int_def(ctx, 1, 0) & 0xFF;
     uint8_t key_type = MF_KEY_A;
 
     if (arg_get_lit(ctx, 2)) {
@@ -2132,7 +2132,7 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
     bool m2 = arg_get_lit(ctx, 4);
     bool m4 = arg_get_lit(ctx, 5);
 
-    uint8_t blockNo = arg_get_u32_def(ctx, 6, 0);
+    uint8_t blockNo = arg_get_int_def(ctx, 6, 0);
 
     uint8_t keyType = MF_KEY_A;
 
@@ -2541,7 +2541,7 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
     bool m2 = arg_get_lit(ctx, 4);
     bool m4 = arg_get_lit(ctx, 5);
 
-    uint8_t blockNo = arg_get_u32_def(ctx, 6, 0);
+    uint8_t blockNo = arg_get_int_def(ctx, 6, 0);
 
     uint8_t keyType = MF_KEY_A;
 
@@ -2837,7 +2837,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
     uint8_t key[6] = {0};
     CLIGetHexWithReturn(ctx, 1, key, &keylen);
 
-    uint8_t blockno = arg_get_u32_def(ctx, 2, 0);
+    uint8_t blockno = arg_get_int_def(ctx, 2, 0);
 
     uint8_t keytype = MF_KEY_A;
     if (arg_get_lit(ctx, 3) && arg_get_lit(ctx, 4)) {
@@ -2848,7 +2848,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
         keytype = MF_KEY_B;
     }
 
-    uint8_t trg_blockno = arg_get_u32_def(ctx, 5, 0);
+    uint8_t trg_blockno = arg_get_int_def(ctx, 5, 0);
 
     uint8_t trg_keytype = MF_KEY_A;
     if (arg_get_lit(ctx, 6) && arg_get_lit(ctx, 7)) {
@@ -3093,7 +3093,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    uint8_t sectorno = arg_get_u32_def(ctx, 2, 0);
+    uint8_t sectorno = arg_get_int_def(ctx, 2, 0);
 
     uint8_t keytype = MF_KEY_A;
     if (arg_get_lit(ctx, 3) && arg_get_lit(ctx, 4)) {
@@ -5134,7 +5134,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
     uint8_t sak[1] = {0};
     CLIGetHexWithReturn(ctx, 7, sak, &saklen);
 
-    uint8_t exitAfterNReads = arg_get_u32_def(ctx, 8, 0);
+    uint8_t exitAfterNReads = arg_get_int_def(ctx, 8, 0);
 
     if (arg_get_lit(ctx, 9)) {
         flags |= FLAG_INTERACTIVE;

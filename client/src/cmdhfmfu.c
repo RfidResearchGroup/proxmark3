@@ -9294,7 +9294,7 @@ static int CmdHF14AMfUIncr(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     uint8_t counter = arg_get_int_def(ctx, 1, 3);
-    uint32_t value = arg_get_u32_def(ctx, 2, 16777216);
+    uint32_t value = arg_get_int_def(ctx, 2, 16777216);
 
     int ak_len = 0;
     uint8_t authenticationkey[16] = {0x00};

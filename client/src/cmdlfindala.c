@@ -400,8 +400,8 @@ static int CmdIndalaDemod(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    uint32_t clk = arg_get_u32_def(ctx, 1, 32);
-    uint32_t max_err = arg_get_u32_def(ctx, 2, 100);
+    uint32_t clk = arg_get_int_def(ctx, 1, 32);
+    uint32_t max_err = arg_get_int_def(ctx, 2, 100);
     bool invert = arg_get_lit(ctx, 3);
     int raw_len = 0;
     uint8_t raw[28] = {0};
@@ -673,8 +673,8 @@ static int CmdIndalaReader(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    uint32_t clk = arg_get_u32_def(ctx, 1, 32);
-    uint32_t max_err = arg_get_u32_def(ctx, 2, 100);
+    uint32_t clk = arg_get_int_def(ctx, 1, 32);
+    uint32_t max_err = arg_get_int_def(ctx, 2, 100);
     bool invert = arg_get_lit(ctx, 3);
     bool cm = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);

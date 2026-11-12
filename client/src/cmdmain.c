@@ -275,7 +275,7 @@ static int CmdMsleep(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    uint32_t ms = arg_get_u32_def(ctx, 1, 0);
+    uint32_t ms = arg_get_int_def(ctx, 1, 0);
     CLIParserFree(ctx);
 
     if (ms == 0) {

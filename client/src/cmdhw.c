@@ -713,7 +713,7 @@ static int CmdReadmem(const char *Cmd) {
 
     uint32_t address = arg_get_u32_def(ctx, 1, 0);
     uint32_t len = arg_get_u32_def(ctx, 2, default_len);
-    int breaks = arg_get_int_def(ctx, 4, 32);
+    int breaks = arg_get_u32_def(ctx, 4, 32);
     bool raw = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
