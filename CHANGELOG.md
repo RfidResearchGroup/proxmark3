@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `lf hitag hts reader` / `lf hitag htu reader` - `hitag_setup_fpga()` idled for tens of ms with the reader field already up, so a tag in public (TTF) mode was mid transmission when the first command went out and never answered (@mishamyte)
+- Fixed `lf search` / `lf t55xx p1detect` - the bare 8-bit ACL anchor matched unrelated LF signals by chance, so EM4100 reads gained a bogus `Chipset... T55xx` line and Hitag 2 / Hitag S / Hitag micro were reported as T55xx instead of their real chipset (@mishamyte)
+- Fixed `lf em 410x` / `lf search` - EM410x decode could read past the end of the demod buffer (@mishamyte)
 - Changed PM5 BWM link - replies go back to the BLE or WiFi host that sent the command (per-host forwarding, needs BWM fw V5+); 2048-byte commands over BLE/WiFi no longer dropped; `hw status` at debug level shows the BWM uptime, UART errors and task stacks (@iceman1001)
 - Fixed `lf idteck reader` - reads wherever the first frame starts in the sample (@mfcarroll)
 - Fixed `hf mfp`, `hf mfdes` native command set - the ISO 14443-4 block number no longer goes out of step with the card when a frame is lost, and a lost frame is asked for again instead of failing the command; on a lossy link `hf mfp chk` found 0-1 of 15 AES keys before, now 15 (@iceman1001)

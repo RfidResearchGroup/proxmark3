@@ -271,7 +271,7 @@ size_t removeParity(uint8_t *bits, size_t startIdx, uint8_t pLen, uint8_t pType,
     return bitCnt;
 }
 
-static size_t removeEm410xParity(uint8_t *bits, size_t startIdx, size_t *size, bool *validShort, bool *validShortExtended, bool *validLong) {
+static size_t removeEm410xParity(uint8_t *bits, size_t startIdx, size_t fmt, size_t buflen, bool *validShort, bool *validShortExtended, bool *validLong) {
     uint32_t parityWd = 0;
     size_t bitCnt = 0;
     bool validColParity = false;
@@ -282,7 +282,7 @@ static size_t removeEm410xParity(uint8_t *bits, size_t startIdx, size_t *size, b
     *validLong = false;
 
     uint8_t blen = 55;
-    switch (*size) {
+    switch (fmt) {
         case 128:
             blen = 110;
             break;
@@ -292,6 +292,12 @@ static size_t removeEm410xParity(uint8_t *bits, size_t startIdx, size_t *size, b
         default:
             blen = 55;
             break;
+    }
+
+    // fmt selects the format, it does not bound the reads below
+    if (startIdx + blen > buflen) {
+        if (g_debugMode >= 1) prnt("DEBUG: (removeEm410xParity) need %u bits from %zu, buffer holds %zu", blen, startIdx, buflen);
+        return 0;
     }
 
     uint16_t parityCol[4] = { 0, 0, 0, 0 };
@@ -2284,17 +2290,24 @@ int Em410xDecode(uint8_t *bits, size_t *size, size_t *start_idx, uint32_t *hi, u
     if (bits[1] > 1) return -1;
     if (*size < 64) return -2;
 
+    // *size is the buffer length on entry and the decoded length on exit, and it
+    // gets reused in between - keep the one value that bounds the buffer
+    const size_t buflen = *size;
+
     *start_idx = 0;
 
     bool adjust = false;
-    if (*size < 128) {
+    if (buflen < 128) {
         adjust = true;
     }
 
     // preamble 0111111111
     // include 0 in front to help get start pos
     uint8_t preamble[] = {0, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-    if (!preambleSearch(bits, preamble, sizeof(preamble), size, start_idx))
+
+    // preambleSearch() reports the preamble repeat period back through this
+    size_t period = buflen;
+    if (!preambleSearch(bits, preamble, sizeof(preamble), &period, start_idx))
         return -4;
 
     bool validShort = false;
@@ -2304,7 +2317,7 @@ int Em410xDecode(uint8_t *bits, size_t *size, size_t *start_idx, uint32_t *hi, u
     // detect sledge of 0x05's
     int fix = -1;
     uint8_t fives[] = {0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
-    for (size_t x = 0; x < *size - sizeof(fives); x += 1) {
+    for (size_t x = 0; x + sizeof(fives) < period; x += 1) {
         if (memcmp(bits + x, fives, sizeof(fives)) == 0) {
             // save first occasion
             if (fix == -1) {
@@ -2319,8 +2332,9 @@ int Em410xDecode(uint8_t *bits, size_t *size, size_t *start_idx, uint32_t *hi, u
         sidx--;
     }
     // not 128 or 55..
+    size_t fmt = period;
     if (fix != -1) {
-        *size = 80;
+        fmt = 80;
     }
 
 #ifndef ON_DEVICE
@@ -2329,7 +2343,7 @@ int Em410xDecode(uint8_t *bits, size_t *size, size_t *start_idx, uint32_t *hi, u
 
 
     // HACK
-    *size = removeEm410xParity(bits, sidx, size, &validShort, &validShortExtended, &validLong);
+    *size = removeEm410xParity(bits, sidx, fmt, buflen, &validShort, &validShortExtended, &validLong);
 
     if (validShort) {
         // std em410x format

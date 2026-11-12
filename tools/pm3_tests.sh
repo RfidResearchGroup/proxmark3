@@ -772,6 +772,8 @@ while true; do
       if ! CheckExecute "lf t55xx cfg watchnet"             "$CLIENTBIN -c 'lf t55xx info -c 00107060'" "WatchNET"; then break; fi
       if ! CheckExecute "lf t55xx cfg keri nxt"             "$CLIENTBIN -c 'lf t55xx info -c 00107080'" "Keri NXT"; then break; fi
       if ! CheckExecute "lf t55xx cfg ict"                  "$CLIENTBIN -c 'lf t55xx info -c 001070E0'" "Config block match\\.\\.\\. ICT"; then break; fi
+      if ! CheckExecute "lf T55 p1detect test"              "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_page1_trace.pm3; lf t55xx p1detect -1'" "T55xx chip found"; then break; fi
+      if ! CheckExecute "lf T55 p1detect reject hitag s"    "if ! $CLIENTBIN -c 'data load -f traces/lf_hitag_s_page1.pm3; lf t55xx p1detect -1' 2>&1 | grep -q 'T55xx chip found'; then echo OK; fi" "OK"; then break; fi
 
       echo -e "\n${C_BLUE}Testing HF:${C_NC}"
       if ! CheckExecute "hf mf offline text"               "$CLIENTBIN -c 'hf mf'" "content from tag dump file"; then break; fi
