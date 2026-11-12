@@ -46,6 +46,8 @@ static uint16_t mfp_card_adresses[] = {0x9000, 0x9001, 0x9002, 0x9003, 0x9004, 0
 
 #define MFP_KEY_FILE_SIZE  14 + (2 * 64 * (AES_KEY_LEN + 1))
 #define MFP_CHK_KEY_TRIES  (2)
+// candidates in a row the card gives no answer to before a key slot is given up
+#define MFP_CHK_MAX_NOVERDICT  (3)
 
 static int CmdHelp(const char *Cmd);
 
@@ -1515,9 +1517,10 @@ static int CmdHFMFPChConf(const char *Cmd) {
 //   '+'  key found for a sector
 //   'R'  retry after transient communication error
 //   'E'  exchange error, aborts the check
+// `untested` counts the candidates the card never gave a verdict on
 static int plus_key_check(uint8_t start_sector, uint8_t end_sector, uint8_t startKeyAB, uint8_t endKeyAB,
                           uint8_t *keys, size_t keycount, uint8_t foundKeys[2][64][AES_KEY_LEN + 1],
-                          bool verbose, bool newline) {
+                          bool verbose, bool newline, uint32_t *untested) {
 
     if (newline) {
         PrintAndLogEx(INFO, "." NOLF);
@@ -1536,6 +1539,7 @@ static int plus_key_check(uint8_t start_sector, uint8_t end_sector, uint8_t star
 
             int res;
             bool selectCard = true;
+            uint8_t noverdict = 0;
 
             // reset current key pointer after each loop
             uint8_t *currkey = keys;
@@ -1596,7 +1600,7 @@ static int plus_key_check(uint8_t start_sector, uint8_t end_sector, uint8_t star
 
                     // recursive test of a successful key
                     if (keycount > 1) {
-                        plus_key_check(start_sector, end_sector, startKeyAB, endKeyAB, currkey, 1, foundKeys, verbose, false);
+                        plus_key_check(start_sector, end_sector, startKeyAB, endKeyAB, currkey, 1, foundKeys, verbose, false, untested);
                     }
 
                     // break out from keylist check loop,
@@ -1608,21 +1612,31 @@ static int plus_key_check(uint8_t start_sector, uint8_t end_sector, uint8_t star
                 }
 
                 // RES can be:
-                // PM3_ERFTRANS     -7
-                // PM3_EWRONGANSWER -16
+                // PM3_ERFTRANS     -7   the exchange failed, no verdict on this key
+                // PM3_EWRONGANSWER -16  the card refused it
                 if (res == PM3_ERFTRANS) {
 
                     if (verbose) {
-                        PrintAndLogEx(ERR, "\nExchange error. Aborted.");
+                        PrintAndLogEx(ERR, "\nExchange error, key not tested");
                     } else {
                         PrintAndLogEx(NORMAL, "E" NOLF);
                     }
 
+                    // one failed exchange is no reason to drop every sector after it
+                    (*untested)++;
                     DropField();
-                    return PM3_ECARDEXCHANGE;
-                }
+                    selectCard = true;
 
-                selectCard = false;
+                    if (++noverdict >= MFP_CHK_MAX_NOVERDICT) {
+                        // the rest of the list is never tried against this key slot
+                        *untested += keycount - i - 1;
+                        break;
+                    }
+
+                } else {
+                    noverdict = 0;
+                    selectCard = false;
+                }
 
                 // set pointer to next key
                 currkey += AES_KEY_LEN;
@@ -1826,7 +1840,8 @@ static int CmdHFMFPChk(const char *Cmd) {
     // time
     uint64_t t1 = msclock();
 
-    res = plus_key_check(startSector, endSector, startKeyAB, endKeyAB, key_block, keycnt, foundKeys, verbose, true);
+    uint32_t untested = 0;
+    res = plus_key_check(startSector, endSector, startKeyAB, endKeyAB, key_block, keycnt, foundKeys, verbose, true, &untested);
     if (res == PM3_EOPABORTED) {
         t1 = msclock() - t1;
         PrintAndLogEx(INFO, "\ntime in checkkeys " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
@@ -1837,7 +1852,7 @@ static int CmdHFMFPChk(const char *Cmd) {
     PrintAndLogEx(INFO, "Start check for pattern based keys...");
     while (keyListLen) {
 
-        res = plus_key_check(startSector, endSector, startKeyAB, endKeyAB, (uint8_t *)keyList, keyListLen, foundKeys, verbose, true);
+        res = plus_key_check(startSector, endSector, startKeyAB, endKeyAB, (uint8_t *)keyList, keyListLen, foundKeys, verbose, true, &untested);
         if (res == PM3_EOPABORTED) {
             break;
         }
@@ -1897,6 +1912,14 @@ static int CmdHFMFPChk(const char *Cmd) {
     }
     PrintAndLogEx(NORMAL, "");
 
+    // a key the card never answered is not a tested key
+    if (untested) {
+        PrintAndLogEx(WARNING, "Search was " _YELLOW_("not exhaustive") ", %u candidate%s got no verdict from the card",
+                      untested, (untested == 1) ? "" : "s");
+        PrintAndLogEx(HINT, "Hint: reposition the card and run the check again");
+        PrintAndLogEx(NORMAL, "");
+    }
+
     // save keys to json
     if (create_dumpfile && printedHeader) {
 
@@ -1938,7 +1961,9 @@ static int CmdHFMFPChk(const char *Cmd) {
         PrintAndLogEx(HINT, "Hint: NDEF key detected. Try " _YELLOW_("`hf mfp ndefread -h`") " for more details");
     }
     PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
+
+    // an incomplete search must not look like a completed one to a script
+    return (untested) ? PM3_EPARTIAL : PM3_SUCCESS;
 }
 
 static int mfp_load_keys_from_json(const char *filename, uint8_t foundKeys[2][64][AES_KEY_LEN + 1], bool verbose) {

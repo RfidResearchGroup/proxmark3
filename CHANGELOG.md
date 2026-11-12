@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mfp chk` - a failed exchange no longer abandons every remaining sector with a success exit code; the key is counted as untested and the search goes on, a key slot is given up after 3 unanswered keys, and an incomplete search says so and returns PM3_EPARTIAL (@iceman1001)
 - Fixed `hf mf autopwn` - reports failed emulator memory transfers, fills and file saves, keeps the trailers' access bits (@matrix)
 - Fixed `hf mf autopwn` - a failed attack keeps the keys found so far, the dump is saved without the card, Mini dump size (@matrix)
 - Fixed `hf mf autopwn` - Enter stops the dictionary, `-k` buffer overflow, memory leaks (@matrix)
