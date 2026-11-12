@@ -128,6 +128,12 @@ static int mad_resolve_card(int keylen, int madkeylen, mad_card_type_t *out, boo
 
 // --- Shared read/write/verify implementation ---
 
+// an example line, for the command it is shown with
+static void mad_example(char *buf, size_t size, const char *cmd_name, const char *args) {
+    size_t len = strlen(buf);
+    snprintf(buf + len, size - len, "%s%s %s", (len) ? "\n" : "", cmd_name, args);
+}
+
 static int mad_cmd_read(const char *Cmd, const char *cmd_name, bool force_classic, bool force_plus) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, cmd_name,
@@ -213,12 +219,18 @@ static int mad_cmd_read(const char *Cmd, const char *cmd_name, bool force_classi
 }
 
 static int mad_cmd_write(const char *Cmd, const char *cmd_name, bool force_classic, bool force_plus) {
+    // the examples of the card types the command takes
+    char examples[512] = {0};
+    mad_example(examples, sizeof(examples), cmd_name, "--aid e103 -d 0102030405060708 -> write data");
+    mad_example(examples, sizeof(examples), cmd_name, "--aid e103 -f mydata.bin -> write from file");
+    if (force_plus == false) {
+        mad_example(examples, sizeof(examples), cmd_name, "--aid e103 -k ffffffffffff -d 0102030405 -> Classic, custom key");
+    }
+
     CLIParserContext *ctx;
     CLIParserInit(&ctx, cmd_name,
                   "Write application data to sectors matching a MAD AID",
-                  "mad write --aid e103 -d 0102030405060708 -> write data\n"
-                  "mad write --aid e103 -f mydata.bin -> write from file\n"
-                  "mad write --aid e103 -k ffffffffffff -d 0102030405 -> Classic, custom key");
+                  examples);
 
     void *argtable[] = {
         arg_param_begin,
@@ -237,11 +249,11 @@ static int mad_cmd_write(const char *Cmd, const char *cmd_name, bool force_class
 
     uint8_t aid[2] = {0};
     int aidlen = 0;
-    CLIGetHexWithReturn(ctx, 2, aid, &aidlen);
+    CLIGetHexWithReturn(ctx, 1, aid, &aidlen);
 
     uint8_t userkey[AES_KEY_LEN] = {0};
     int keylen = 0;
-    CLIGetHexWithReturn(ctx, 3, userkey, &keylen);
+    CLIGetHexWithReturn(ctx, 2, userkey, &keylen);
 
     bool keyB = arg_get_lit(ctx, 3);
 
@@ -262,6 +274,11 @@ static int mad_cmd_write(const char *Cmd, const char *cmd_name, bool force_class
 
     bool verbose = arg_get_lit(ctx, 9);
     CLIParserFree(ctx);
+
+    if (aidlen != 2) {
+        PrintAndLogEx(WARNING, "AID must be 4 hex digits. Got %d", aidlen * 2);
+        return PM3_EINVARG;
+    }
 
     uint8_t *wdata = hexdata;
     size_t wdata_len = hexdatalen;
@@ -288,6 +305,20 @@ static int mad_cmd_write(const char *Cmd, const char *cmd_name, bool force_class
     if (res != PM3_SUCCESS) {
         free(dump);
         return res;
+    }
+
+    // keys are 6 bytes on MIFARE Classic, 16 on MIFARE Plus
+    int key_size = (card_type == MAD_CARD_CLASSIC) ? MIFARE_KEY_SIZE : AES_KEY_LEN;
+    if (keylen && keylen != key_size) {
+        PrintAndLogEx(WARNING, "Key must be %d hex digits. Got %d", key_size * 2, keylen * 2);
+        free(dump);
+        return PM3_EINVARG;
+    }
+
+    if (madkeylen && madkeylen != key_size) {
+        PrintAndLogEx(WARNING, "MAD key must be %d hex digits. Got %d", key_size * 2, madkeylen * 2);
+        free(dump);
+        return PM3_EINVARG;
     }
 
     if (verbose) {
