@@ -190,9 +190,9 @@ int mf_dark_side(uint8_t blockno, uint8_t key_type, uint64_t *key) {
             register uint8_t j;
             for (j = 0; j < size; j++) {
                 if (par_list == 0) {
-                    num_to_bytes(last_keylist[i * max_keys + j], MIFARE_KEY_SIZE, keyBlock + (j * MIFARE_KEY_SIZE));
+                    num_to_bytes(last_keylist[i + j], MIFARE_KEY_SIZE, keyBlock + (j * MIFARE_KEY_SIZE));
                 } else {
-                    num_to_bytes(keylist[i * max_keys + j], MIFARE_KEY_SIZE, keyBlock + (j * MIFARE_KEY_SIZE));
+                    num_to_bytes(keylist[i + j], MIFARE_KEY_SIZE, keyBlock + (j * MIFARE_KEY_SIZE));
                 }
             }
 
