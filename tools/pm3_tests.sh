@@ -778,9 +778,15 @@ while true; do
       if ! CheckExecute "lf T55 detect fsk2a rf50"          "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_fsk2a_rf50.pm3; lf t55xx detect -1; lf t55xx info -1'" "001070E0 - "; then break; fi
       if ! CheckExecute "lf T55 detect fsk2a rf50 st"       "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_fsk2a_rf50_st.pm3; lf t55xx detect -1; lf t55xx info -1'" "001070E8 - "; then break; fi
       if ! CheckExecute "lf T55 detect noralsy clone st"    "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_noralsy_st.pm3; lf t55xx detect -1; lf t55xx info -1'" "00088068 - "; then break; fi
-      # the Seq. terminator line detect prints. Ask hits take it from DetectST
+      # the Seq. terminator line detect prints. Ask hits take it from DetectST, fsk hits from a copy of block 0 33 to 36 bits away
       if ! CheckExecute "lf T55 detect ask st flag no"      "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_ask_rf32.pm3; lf t55xx detect -1'" "Seq\. terminator\.\.\. No"; then break; fi
       if ! CheckExecute "lf T55 detect ask st flag yes"     "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_ask_rf32_st.pm3; lf t55xx detect -1'" "Seq\. terminator\.\.\. Yes"; then break; fi
+      if ! CheckExecute "lf T55 detect fsk st flag no"      "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_fsk2a_rf50.pm3; lf t55xx detect -1'" "Seq\. terminator\.\.\. No"; then break; fi
+      if ! CheckExecute "lf T55 detect fsk st flag yes"     "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_fsk2a_rf50_st.pm3; lf t55xx detect -1'" "Seq\. terminator\.\.\. Yes"; then break; fi
+      # short fsk st captures. At 5100 samples the copy sits before the word detect picks.
+      # 3050 samples from sample 2000 leave no room on either side, and lengths from 2800 to 3350 give the same answer
+      if ! CheckExecute "lf T55 detect fsk st flag behind"  "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_fsk2a_rf50_st.pm3; data rtrim -i 5100; lf t55xx detect -1'" "Seq\. terminator\.\.\. Yes"; then break; fi
+      if ! CheckExecute "lf T55 detect fsk st flag no room" "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_fsk2a_rf50_st.pm3; data ltrim -i 2000; data rtrim -i 3050; lf t55xx detect -1'" "Seq\. terminator\.\.\. Yes"; then break; fi
 
       echo -e "\n${C_BLUE}Testing HF:${C_NC}"
       if ! CheckExecute "hf mf offline text"               "$CLIENTBIN -c 'hf mf'" "content from tag dump file"; then break; fi

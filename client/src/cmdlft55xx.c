@@ -1454,6 +1454,27 @@ static bool block0_stride_not_disproved_st(uint8_t offset, bool q5) {
     return block0_st_copy(offset, 1) != 0;
 }
 
+// fsk has no DetectST. Reports ST if the word has its ST bit set and a copy sits 33 to 36 bits before or after it.
+// test() often picks the second copy, so both sides count. If neither side has room, the ST bit decides. Not on a Q5.
+static bool block0_fsk_st_seen(uint8_t offset, bool q5) {
+
+    if (q5) {
+        return false;
+    }
+
+    const uint32_t word = PackBits(offset, 32, g_DemodBuffer);
+    if ((word & T55x7_ST_TERMINATOR) == 0) {
+        return false;
+    }
+
+    const int ahead = block0_st_copy(offset, 1);
+    const int behind = block0_st_copy(offset, -1);
+    if (ahead == 1 || behind == 1) {
+        return true;
+    }
+    return (ahead == -1 && behind == -1);
+}
+
 static void t55xx_psk_coherent(int fitclk, uint8_t clk, t55xx_conf_block_t *tests, uint8_t *hits, uint8_t downlink_mode) {
 
     static const int subcarriers[] = { 2, 4, 8 };
@@ -1711,7 +1732,7 @@ static bool t55xx_fallback_try(pm3_mod_t mod, pm3_enc_t enc, int fc_hi, int fc_l
                         tests[*hits].bitrate = bitRate;
                         tests[*hits].inverted = (inv != 0);
                         t55xx_record_hit(&tests[*hits]);
-                        tests[*hits].ST = false;
+                        tests[*hits].ST = block0_fsk_st_seen(tests[*hits].offset, tests[*hits].Q5);
                         tests[*hits].downlink_mode = downlink_mode;
                         (*hits)++;
                         return true;
@@ -2015,7 +2036,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
             tests[hits].bitrate = bitRate;
             tests[hits].inverted = false;
             t55xx_record_hit(&tests[hits]);
-            tests[hits].ST = false;
+            tests[hits].ST = block0_fsk_st_seen(tests[hits].offset, tests[hits].Q5);
             tests[hits].downlink_mode = downlink_mode;
             ++hits;
         }
@@ -2028,7 +2049,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
             tests[hits].bitrate = bitRate;
             tests[hits].inverted = true;
             t55xx_record_hit(&tests[hits]);
-            tests[hits].ST = false;
+            tests[hits].ST = block0_fsk_st_seen(tests[hits].offset, tests[hits].Q5);
             tests[hits].downlink_mode = downlink_mode;
             ++hits;
         }
