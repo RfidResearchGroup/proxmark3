@@ -462,6 +462,18 @@ int mf_read_uid(uint8_t *uid, int *uidlen, int *nxptype) {
     return PM3_SUCCESS;
 }
 
+static char *GenerateFilenameByUID(const char *prefix, const char *suffix, const uint8_t *uid, int uidlen) {
+    char *fptr = calloc(sizeof(char) * (strlen(prefix) + strlen(suffix)) + uidlen * 2 + 1,  sizeof(uint8_t));
+    if (fptr == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return NULL;
+    }
+
+    strcpy(fptr, prefix);
+    FillFileNameByUID(fptr, uid, suffix, uidlen);
+    return fptr;
+}
+
 static char *GenerateFilename(const char *prefix, const char *suffix) {
     if (IfPm3Iso14443a() == false) {
         return NULL;
@@ -469,22 +481,13 @@ static char *GenerateFilename(const char *prefix, const char *suffix) {
 
     uint8_t uid[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     int uidlen = 0;
-    char *fptr = calloc(sizeof(char) * (strlen(prefix) + strlen(suffix)) + sizeof(uid) * 2 + 1,  sizeof(uint8_t));
-    if (fptr == NULL) {
-        PrintAndLogEx(WARNING, "Failed to allocate memory");
-        return NULL;
-    }
-
     int res = mf_read_uid(uid, &uidlen, NULL);
     if (res != PM3_SUCCESS || !uidlen) {
         PrintAndLogEx(WARNING, "No tag found.");
-        free(fptr);
         return NULL;
     }
 
-    strcpy(fptr, prefix);
-    FillFileNameByUID(fptr, uid, suffix, uidlen);
-    return fptr;
+    return GenerateFilenameByUID(prefix, suffix, uid, uidlen);
 }
 
 // allocates `items` table entries, storing pointer to `*src`
@@ -3083,8 +3086,12 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int in_keys_len = 0;
-    uint8_t in_keys[100 * MIFARE_KEY_SIZE] = {0};
-    CLIGetHexWithReturn(ctx, 1, in_keys, &in_keys_len);
+    // 100 user keys, then the 8 keys added once the card is known
+    uint8_t in_keys[(100 + 8) * MIFARE_KEY_SIZE] = {0};
+    if (CLIParamHexToBuf(arg_get_str(ctx, 1), in_keys, 100 * MIFARE_KEY_SIZE, &in_keys_len)) {
+        CLIParserFree(ctx);
+        return PM3_ESOFT;
+    }
 
     uint8_t sectorno = arg_get_u32_def(ctx, 2, 0);
 
@@ -3306,6 +3313,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     if (!isMifarePlus && isMifareMini && sector_cnt != MIFARE_MINI_MAXSECTOR) {
         PrintAndLogEx(WARNING, "MIFARE Mini S20 card detected. Changing sector count to %u", MIFARE_MINI_MAXSECTOR);
         sector_cnt = MIFARE_MINI_MAXSECTOR;
+        block_cnt = MIFARE_MINI_MAXBLOCK;
     }
 
     bool known_key = (in_keys_len > 5);
@@ -3315,7 +3323,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     }
 
     // Add KDF keys...
-    uint16_t key1_offset = in_keys_len;
+    uint16_t key1_offset = in_keys_len - (in_keys_len % MIFARE_KEY_SIZE);
     uint64_t key1 = 0;
 
     // iceman: todo, need to add all generated keys
@@ -3342,7 +3350,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     memcpy(in_keys + key1_offset + (keyn++ * MIFARE_KEY_SIZE), g_mifare_mad_key, MIFARE_KEY_SIZE);
     memcpy(in_keys + key1_offset + (keyn++ * MIFARE_KEY_SIZE), g_mifare_mad_key_b, MIFARE_KEY_SIZE);
 
-    in_keys_len += (MIFARE_KEY_SIZE * keyn);
+    in_keys_len = key1_offset + (MIFARE_KEY_SIZE * keyn);
 
     // detect MFC EV1 Signature
     bool is_ev1 = detect_mfc_ev1_signature();
@@ -3394,7 +3402,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     } else {
         snprintf(suffix, sizeof(suffix), "-key.bin");
     }
-    char *fptr = GenerateFilename("hf-mf-", suffix);
+    char *fptr = GenerateFilenameByUID("hf-mf-", suffix, card.uid, card.uidlen);
 
     // check if tag doesn't have static nonce
     int has_staticnonce = detect_classic_static_nonce();
@@ -3471,6 +3479,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
     // Start the timer
     uint64_t t1 = msclock();
+    int autopwn_res = PM3_SUCCESS;
 
     // If we use the dictionary in flash memory, we don't want to load keys
     // from hard drive dictionary as it could exceed BigBuf capacity
@@ -3481,6 +3490,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     int ret = mf_load_keys(&keyBlock, &key_cnt, in_keys, in_keys_len, filename, fnlen, true);
     if (ret != PM3_SUCCESS) {
         free(e_sector);
+        free(fptr);
         return ret;
     }
 
@@ -3549,7 +3559,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                         firstChunk = false;
                     }
                     // all keys,  aborted
-                    if (res == PM3_SUCCESS) {
+                    if ((res == PM3_SUCCESS) || (res == PM3_EOPABORTED) || (res == PM3_ETIMEOUT)) {
                         i = key_cnt;
                         strategy = 3;
                         break; // Exit the loop
@@ -3588,6 +3598,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     }
 
     if (num_found_keys == sector_cnt * 2) {
+        free(keyBlock);
         goto all_found;
     }
 
@@ -3808,19 +3819,8 @@ tryNested:
                         switch (isOK) {
                             case PM3_ETIMEOUT: {
                                 PrintAndLogEx(ERR, "\nError: No response from Proxmark3.");
-
-                                uint8_t havekeys = mfc_found_key_count(e_sector, sector_cnt);
-                                if (havekeys) {
-                                    PrintAndLogEx(INFO, "Keeping the " _YELLOW_("%u") " key%s recovered so far",
-                                                  havekeys,
-                                                  (havekeys == 1) ? "" : "s"
-                                                 );
-                                    goto all_found;
-                                }
-
-                                free(e_sector);
-                                free(fptr);
-                                return isOK;
+                                autopwn_res = isOK;
+                                goto attack_failed;
                             }
                             case PM3_EWRONGANSWER: {
                                 // the tag NAKed the nested auth for this block.  it is a
@@ -3873,9 +3873,8 @@ tryNested:
                             }
                             default: {
                                 PrintAndLogEx(ERR, "Unknown error\n");
-                                free(e_sector);
-                                free(fptr);
-                                return isOK;
+                                autopwn_res = isOK;
+                                goto attack_failed;
                             }
                         }
 
@@ -3884,13 +3883,8 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
 
                         // skip this
                         if (isMifarePlus) {
-
-                            // Show the results to the user
-                            printKeyTable(sector_cnt, e_sector);
-                            PrintAndLogEx(NORMAL, "");
-                            free(e_sector);
-                            free(fptr);
-                            return PM3_ESOFT;
+                            autopwn_res = PM3_ESOFT;
+                            goto attack_failed;
                         }
 
                         PrintAndLogEx(NORMAL, "");
@@ -3913,7 +3907,9 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
                                 }
                                 case PM3_EOPABORTED: {
                                     PrintAndLogEx(NORMAL, "\nButton pressed, user aborted");
-                                    break;
+                                    free(e_sector);
+                                    free(fptr);
+                                    return isOK;
                                 }
                                 case PM3_ESTATIC_NONCE: {
                                     e_sector[current_sector_i].Key[current_key_type_i] = 0xffffffffffff;
@@ -3931,9 +3927,8 @@ tryHardnested: // If the nested attack fails then we try the hardnested attack
                                     break;
                                 }
                             }
-                            free(e_sector);
-                            free(fptr);
-                            return PM3_ESOFT;
+                            autopwn_res = isOK;
+                            goto attack_failed;
                         }
 
                         // Copy the found key to the tmp_key variale (for the following print statement, and the mfCheckKeys above)
@@ -3959,9 +3954,8 @@ tryStaticnested:
                             switch (isOK) {
                                 case PM3_ETIMEOUT: {
                                     PrintAndLogEx(ERR, "\nError: No response from Proxmark3");
-                                    free(e_sector);
-                                    free(fptr);
-                                    return isOK;
+                                    autopwn_res = isOK;
+                                    goto attack_failed;
                                 }
                                 case PM3_EOPABORTED: {
                                     PrintAndLogEx(WARNING, "\nButton pressed, user aborted");
@@ -3971,9 +3965,8 @@ tryStaticnested:
                                 }
                                 case PM3_ECARDEXCHANGE: {
                                     PrintAndLogEx(FAILED, "\nCard stopped answering");
-                                    free(e_sector);
-                                    free(fptr);
-                                    return isOK;
+                                    autopwn_res = isOK;
+                                    goto attack_failed;
                                 }
                                 case PM3_ESOFT: {
                                     PrintAndLogEx(WARNING, "No key found, next try...");
@@ -4006,6 +3999,21 @@ tryStaticnested:
         }
     }
 
+    goto all_found;
+
+attack_failed:
+    // a failed attack keeps the keys recovered so far
+    num_found_keys = mfc_found_key_count(e_sector, sector_cnt);
+    if (num_found_keys == 0) {
+        free(e_sector);
+        free(fptr);
+        return autopwn_res;
+    }
+    PrintAndLogEx(INFO, "Keeping the " _YELLOW_("%u") " key%s recovered so far",
+                  num_found_keys,
+                  (num_found_keys == 1) ? "" : "s"
+                 );
+
 all_found:
 
     // Show the results to the user
@@ -4015,21 +4023,34 @@ all_found:
 
         // Dump the keys
         PrintAndLogEx(NORMAL, "");
-        if (createMfcKeyDump(fptr, sector_cnt, e_sector) != PM3_SUCCESS) {
+        res = createMfcKeyDump(fptr, sector_cnt, e_sector);
+        if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Failed to save keys to file");
+            autopwn_res = res;
         }
     }
 
     // clear emulator mem
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_EML_MEMCLR, NULL, 0);
+    // the dump below goes through emulator memory
+    res = WaitForEmulatorWrite(CMD_HF_MIFARE_EML_MEMCLR);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Dump to emulator memory skipped");
+        free(fptr);
+        autopwn_res = res;
+        goto out;
+    }
 
     PrintAndLogEx(INFO, "Transferring keys to simulator memory " NOLF);
 
-    bool transfer_status = true;
     for (current_sector_i = 0; current_sector_i < sector_cnt; current_sector_i++) {
 
-        mf_eml_get_mem(block, current_sector_i, 1);
+        // the sector trailer, the keys go in there
+        res = mf_eml_get_mem(block, mfFirstBlockOfSector(current_sector_i) + mfNumBlocksPerSector(current_sector_i) - 1, 1);
+        if (res != PM3_SUCCESS) {
+            break;
+        }
 
         if (e_sector[current_sector_i].foundKey[0]) {
             num_to_bytes(e_sector[current_sector_i].Key[0], MIFARE_KEY_SIZE, block);
@@ -4039,18 +4060,33 @@ all_found:
             num_to_bytes(e_sector[current_sector_i].Key[1], MIFARE_KEY_SIZE, block + 10);
         }
 
-        transfer_status |= mf_elm_set_mem(block, mfFirstBlockOfSector(current_sector_i) + mfNumBlocksPerSector(current_sector_i) - 1, 1);
+        res = mf_elm_set_mem(block, mfFirstBlockOfSector(current_sector_i) + mfNumBlocksPerSector(current_sector_i) - 1, 1);
+        if (res != PM3_SUCCESS) {
+            break;
+        }
     }
-    PrintAndLogEx(NORMAL, "( %s )", (transfer_status) ? _GREEN_("ok") : _RED_("fail"));
+    PrintAndLogEx(NORMAL, "( %s )", (res == PM3_SUCCESS) ? _GREEN_("ok") : _RED_("fail"));
+
+    // the dump reads the card with the keys just transferred
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Dump to emulator memory skipped");
+        free(fptr);
+        autopwn_res = res;
+        goto out;
+    }
 
     PrintAndLogEx(INFO, "Dumping card content to emulator memory (Cmd Error: 04 can occur)");
 
     // use ecfill trick
-    FastDumpWithEcFill(sector_cnt);
+    res = FastDumpWithEcFill(sector_cnt);
+    if (res != PM3_SUCCESS) {
+        autopwn_res = res;
+    }
 
     if (no_save) {
         PrintAndLogEx(INFO, "Called with no save option");
         PrintAndLogEx(NORMAL, "");
+        free(fptr);
         goto out;
     }
 
@@ -4080,7 +4116,7 @@ all_found:
         snprintf(suffix, sizeof(suffix), "-dump");
     }
 
-    fptr = GenerateFilename("hf-mf-", suffix);
+    fptr = GenerateFilenameByUID("hf-mf-", suffix, card.uid, card.uidlen);
     if (fptr == NULL) {
         free(dump);
         free(e_sector);
@@ -4091,7 +4127,10 @@ all_found:
     strncpy(outfilename, fptr, sizeof(outfilename) - 1);
     free(fptr);
 
-    pm3_save_mf_dump(outfilename, dump, bytes, jsfCardMemory);
+    res = pm3_save_mf_dump(outfilename, dump, bytes, jsfCardMemory);
+    if (res != PM3_SUCCESS) {
+        autopwn_res = res;
+    }
 
     (void)transit_mfc_parse(dump, bytes);
     free(dump);
@@ -4103,7 +4142,7 @@ out:
 
     DropField();
     free(e_sector);
-    return PM3_SUCCESS;
+    return autopwn_res;
 }
 
 static int CmdHF14AMfChk_fast(const char *Cmd) {
