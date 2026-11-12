@@ -67,6 +67,8 @@
 #define MAX_KEYS_LIST_LEN  1024
 // how many errors in a row from the card before we give up on a key number
 #define MFDES_CHK_MAX_ERRORS 10
+// extra tries for a candidate the PICC gave no verdict on
+#define MFDES_CHK_MAX_RETRY  2
 // bundled dictionary used when no -f is given
 #define MFDES_DEFAULT_DICT "mfdes_default_keys"
 #define MFDES_BRUTEAID_RESELECT_ATTEMPTS 5
@@ -1395,8 +1397,56 @@ static void DesChkPrependKey(uint8_t *keyList, size_t stride, uint32_t *keyListL
     *keyListLen = len + 1;
 }
 
+// What a dictionary check could not cover.  Either one makes the search
+// non-exhaustive, so "No keys found" alone would be a misleading result.
+typedef struct {
+    uint32_t untested;      // candidate authentications the PICC gave no verdict on
+    uint32_t skippedaid;    // applications that could not be selected at all
+} desfire_chk_gaps_t;
+
+// Select `aid`, retrying while the exchange fails on the link.  PM3_EAPDU_FAIL
+// is the PICC itself answering, so that one is final:  the application really
+// isn't there.  Anything else is a lost exchange and worth another try.
+static int DesChkSelectAID(DesfireContext_t *dctx, uint32_t aid) {
+
+    int res = PM3_ESOFT;
+
+    for (uint8_t attempt = 0; attempt <= MFDES_CHK_MAX_RETRY; attempt++) {
+
+        res = DesfireSelectAIDHex(dctx, aid, false, 0);
+        if (res == PM3_SUCCESS || res == PM3_EAPDU_FAIL) {
+            break;
+        }
+
+        DropField();
+    }
+
+    return res;
+}
+
+// Did the PICC rule on this candidate key?  Only AUTHENTICATION_ERROR is it
+// refusing the key.  No status byte at all, no answer content or an aborted
+// exchange means the key was never evaluated, and leaves the PICC waiting for
+// the second auth frame with a 14443-4 block number that no longer matches
+// ours.  Only a reselect clears both.
+static bool DesChkNoVerdict(int res, uint8_t respcode) {
+
+    if (res == DESFIRE_AUTH_NO_ANSWER ||
+            res == DESFIRE_AUTH_NO_DATA1 ||
+            res == DESFIRE_AUTH_NO_DATA2) {
+        return true;
+    }
+
+    if (res == DESFIRE_AUTH_TX1_FAIL) {
+        return (respcode == MFDES_E_COMMAND_ABORTED);
+    }
+
+    return (res == DESFIRE_AUTH_TX2_FAIL && respcode != MFDES_E_AUTHENTICATION_ERROR);
+}
+
 // Try every key in `keyList` against every key number the `usedkeys` map marks as
-// in use on the currently selected application.  Found keys are stored in `found`.
+// in use on the currently selected application.  Found keys are stored in `found`,
+// and `gaps` collects what could not be covered.
 // Returns PM3_SUCCESS, or an error when the application can no longer be selected.
 static int AuthCheckDesfireKeyType(DesfireContext_t *dctx,
                                    DesfireSecureChannel secureChannel,
@@ -1406,7 +1456,8 @@ static int AuthCheckDesfireKeyType(DesfireContext_t *dctx,
                                    const uint8_t *keyList, size_t keyListStride, uint32_t keyListLen,
                                    const int *usedkeys,
                                    desfire_app_keys_t *found,
-                                   bool *result) {
+                                   bool *result,
+                                   desfire_chk_gaps_t *gaps) {
 
     size_t keylen = desfire_get_key_length(keytype);
 
@@ -1422,9 +1473,37 @@ static int AuthCheckDesfireKeyType(DesfireContext_t *dctx,
 
             const uint8_t *key = &keyList[curkey * keyListStride];
 
-            DesfireSetKeyNoClear(dctx, keyno, keytype, (uint8_t *)key);
+            int res = 0;
+            bool noverdict = false;
 
-            int res = DesfireAuthenticate(dctx, secureChannel, false);
+            for (uint8_t attempt = 0; ; attempt++) {
+
+                DesfireSetKeyNoClear(dctx, keyno, keytype, (uint8_t *)key);
+
+                res = DesfireAuthenticate(dctx, secureChannel, false);
+                if (res == PM3_SUCCESS) {
+                    break;
+                }
+
+                noverdict = DesChkNoVerdict(res, dctx->lastRespCode);
+
+                // the card gave up before the crypto stage, so the channel is
+                // gone and the application has to be selected again
+                if (DESFIRE_AUTH_PRE_CRYPTO(res) || noverdict) {
+                    DropField();
+                    int selres = DesChkSelectAID(dctx, curaid);
+                    if (selres != PM3_SUCCESS) {
+                        // whatever is left of this application goes unchecked
+                        gaps->skippedaid++;
+                        return selres;
+                    }
+                }
+
+                if (noverdict == false || attempt >= MFDES_CHK_MAX_RETRY) {
+                    break;
+                }
+            }
+
             if (res == PM3_SUCCESS) {
                 // the AID is already on the "Checking aid" line above
                 PrintAndLogEx(SUCCESS, "Found " _GREEN_("%s") " Key %02u... " _GREEN_("%s"),
@@ -1440,37 +1519,40 @@ static int AuthCheckDesfireKeyType(DesfireContext_t *dctx,
                 break;
             }
 
-            // anything below 7 means the card gave up before the crypto stage,
-            // the channel is gone and the application has to be selected again
-            if (res < 7) {
-                DropField();
-                int selres = DesfireSelectAIDHex(dctx, curaid, false, 0);
-                if (selres != PM3_SUCCESS) {
-                    return selres;
+            // the retries are spent and the card still gave no verdict, so this
+            // candidate stays unchecked and the search is not exhaustive
+            if (noverdict) {
+                gaps->untested++;
+                if (g_debugMode) {
+                    PrintAndLogEx(DEBUG, "AID 0x%06X, %s key %02u... no verdict on %s, [%d] %s",
+                                  curaid, keytypestr, keyno, sprint_hex_inrow(key, keylen),
+                                  res, DesfireAuthErrorToStr(res));
                 }
             }
 
-            // 4  - answer length doesn't match the algo
-            // 50 - PICC didn't answer AES,  51 - PICC didn't answer LRP
             // the application doesn't use this key type, skip the rest of it
-            if (res == 4 || res == 50 || res == 51) {
+            if (res == DESFIRE_AUTH_RNDB_LEN ||
+                    res == DESFIRE_AUTH_NO_AES ||
+                    res == DESFIRE_AUTH_NO_LRP) {
                 return PM3_SUCCESS;
             }
 
-            // 3 - invalid key number.  Every key fails the same way, but the
+            // invalid key number.  Every key fails the same way, but the
             // remaining key numbers are still worth checking
-            if (res == 3) {
+            if (res == DESFIRE_AUTH_NO_FRAME) {
                 break;
             }
 
-            // 1, 2, 5, 6 - transmit or local crypto error.  Carry on with the next
-            // key and only give up on this key number after a run of them
-            if (res < 7) {
+            // a transmit or local crypto error.  Carry on with the next key and
+            // only give up on this key number after a run of them
+            if (DESFIRE_AUTH_PRE_CRYPTO(res) || noverdict) {
                 errcount++;
                 if (errcount > MFDES_CHK_MAX_ERRORS) {
                     if (g_debugMode) {
                         PrintAndLogEx(DEBUG, "AID 0x%06X, %s key %02u... too many errors from card, skipping", curaid, keytypestr, keyno);
                     }
+                    // the rest of the list is never tried against this key number
+                    gaps->untested += keyListLen - curkey - 1;
                     break;
                 }
             } else {
@@ -1491,13 +1573,22 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
                             bool autoschann,
                             desfire_app_keys_t *found,
                             bool *result,
+                            desfire_chk_gaps_t *gaps,
                             bool verbose) {
 
     uint32_t curaid = (aid[0] & 0xFF) + ((aid[1] & 0xFF) << 8) + ((aid[2] & 0xFF) << 16);
 
-    int res = DesfireSelectAIDHex(dctx, curaid, false, 0);
+    int res = DesChkSelectAID(dctx, curaid);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "AID 0x%06X does not exist.", curaid);
+
+        // only the PICC answering is proof that the application isn't there
+        if (res == PM3_EAPDU_FAIL) {
+            PrintAndLogEx(ERR, "AID 0x%06X does not exist.", curaid);
+        } else {
+            PrintAndLogEx(ERR, "AID 0x%06X, can't select it, keys " _YELLOW_("not checked"), curaid);
+            gaps->skippedaid++;
+        }
+
         DropField();
         return PM3_ESOFT;
     }
@@ -1542,7 +1633,8 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
         DesfireCheckAuthCommands(ISW6bAID, curaid, NULL, 0, &authCmdCheck);
 
         if (authCmdCheck.checked == false) {
-            PrintAndLogEx(ERR, "AID 0x%06X, could not get key settings", curaid);
+            PrintAndLogEx(ERR, "AID 0x%06X, could not get key settings, keys " _YELLOW_("not checked"), curaid);
+            gaps->skippedaid++;
             DropField();
             return PM3_ESOFT;
         }
@@ -1574,9 +1666,10 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
         }
 
         // the probe dropped the field behind us
-        res = DesfireSelectAIDHex(dctx, curaid, false, 0);
+        res = DesChkSelectAID(dctx, curaid);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "AID 0x%06X, can't re-select after the auth command probe", curaid);
+            PrintAndLogEx(ERR, "AID 0x%06X, can't re-select after the auth command probe, keys " _YELLOW_("not checked"), curaid);
+            gaps->skippedaid++;
             DropField();
             return PM3_ESOFT;
         }
@@ -1627,9 +1720,10 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
         uselrp = DesfireCheckAuthCmd(ISW6bAID, curaid, 0, MFDES_AUTHENTICATE_EV2F, true);
 
         // the probe dropped the field behind us
-        res = DesfireSelectAIDHex(dctx, curaid, false, 0);
+        res = DesChkSelectAID(dctx, curaid);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "AID 0x%06X, can't re-select after the LRP probe", curaid);
+            PrintAndLogEx(ERR, "AID 0x%06X, can't re-select after the LRP probe, keys " _YELLOW_("not checked"), curaid);
+            gaps->skippedaid++;
             DropField();
             return PM3_ESOFT;
         }
@@ -1678,7 +1772,7 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
 
         res = AuthCheckDesfireKeyType(dctx, secureChannel, curaid, checks[i].keytype, checks[i].name,
                                       checks[i].list, checks[i].stride, checks[i].len,
-                                      usedkeys, found, result);
+                                      usedkeys, found, result, gaps);
         if (res != PM3_SUCCESS) {
             DropField();
             return res;
@@ -1855,6 +1949,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
     }
 
     bool result = false;
+    desfire_chk_gaps_t gaps = {0};
     uint8_t app_ids[DESFIRE_MAX_APP_COUNT * 3] = {0};
     size_t app_ids_len = 0;
 
@@ -2064,6 +2159,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
                                        autoschann,
                                        found,
                                        &foundKeyThisRound,
+                                       &gaps,
                                        verbose
                                       );
 
@@ -2082,6 +2178,25 @@ static int CmdHF14aDesChk(const char *Cmd) {
     }
     if (result == false) {
         PrintAndLogEx(WARNING, "No keys found");
+    }
+
+    // neither a candidate the PICC never ruled on nor an application that could
+    // not be selected is a tested candidate
+    if (gaps.untested || gaps.skippedaid) {
+
+        PrintAndLogEx(WARNING, "Search was " _YELLOW_("not exhaustive"));
+
+        if (gaps.untested) {
+            PrintAndLogEx(WARNING, "    %u candidate%s got no verdict from the card",
+                          gaps.untested, (gaps.untested == 1) ? "" : "s");
+        }
+
+        if (gaps.skippedaid) {
+            PrintAndLogEx(WARNING, "    %u application%s could not be selected",
+                          gaps.skippedaid, (gaps.skippedaid == 1) ? "" : "s");
+        }
+
+        PrintAndLogEx(HINT, "Hint: reposition the card and run the check again");
     }
 
     // save keys to json
@@ -2107,7 +2222,9 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     free(dump);
     DropField();
-    return PM3_SUCCESS;
+
+    // an incomplete search must not look like a completed one to a script
+    return (gaps.untested || gaps.skippedaid) ? PM3_EPARTIAL : PM3_SUCCESS;
 }
 
 static int CmdHF14ADesList(const char *Cmd) {
@@ -2123,13 +2240,15 @@ static int DesfireAuthCheck(DesfireContext_t *dctx, DesfireISOSelectWay way, uin
         return PM3_SUCCESS;
     }
 
-    //  4 - the challenge the PICC sent is the wrong length for this algo
-    // 50 - PICC didn't answer AES,  51 - PICC didn't answer LRP
-    // the application holds no key of this type, so every key in the list fails
-    // the same way and there is nothing to learn from trying the rest
-    bool wrongalgo = (res == 4 || res == 50 || res == 51);
+    // the challenge was the wrong length for this algo, or the PICC didn't
+    // answer AES / LRP at all:  the application holds no key of this type, so
+    // every key in the list fails the same way and there is nothing to learn
+    // from trying the rest
+    bool wrongalgo = (res == DESFIRE_AUTH_RNDB_LEN ||
+                      res == DESFIRE_AUTH_NO_AES ||
+                      res == DESFIRE_AUTH_NO_LRP);
 
-    if (res < 7) {
+    if (DESFIRE_AUTH_PRE_CRYPTO(res) || DesChkNoVerdict(res, dctx->lastRespCode)) {
         DropField();
         if (DesfireSelect(dctx, way, appID, NULL) != PM3_SUCCESS) {
             return -10;

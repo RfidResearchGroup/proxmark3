@@ -187,6 +187,7 @@ uint32_t iso14a_last_rx_start(void);
 
 void iso14443a_setup(uint8_t fpga_minor_mode);
 int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, uint16_t data_len, uint8_t *res);
+void iso14_get_retrans(uint32_t *retrans, uint32_t *lost);
 int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats);
 int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr,
                             bool anticollision, uint8_t num_cascades, bool no_rats,

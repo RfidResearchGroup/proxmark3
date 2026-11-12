@@ -992,7 +992,7 @@ int mf_static_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trg
                           sprint_hex_inrow(resultKey, MIFARE_KEY_SIZE)
                          );
             return PM3_SUCCESS;
-        } else if (res == PM3_ETIMEOUT || res == PM3_EOPABORTED) {
+        } else if (res == PM3_ETIMEOUT || res == PM3_EOPABORTED || res == PM3_ECARDEXCHANGE) {
             PrintAndLogEx(NORMAL, "");
             free(mem);
             return res;

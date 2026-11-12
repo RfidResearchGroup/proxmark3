@@ -2658,6 +2658,9 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
                     case PM3_EOPABORTED :
                         PrintAndLogEx(WARNING, "aborted via keyboard.");
                         break;
+                    case PM3_ECARDEXCHANGE :
+                        PrintAndLogEx(FAILED, "Card stopped answering");
+                        break;
                     case PM3_ESOFT :
                         // No any key found?
                         // Try to force decryption using measured nonce instead of automatic detection (some card types may misjudge)
@@ -3962,6 +3965,12 @@ tryStaticnested:
                                 }
                                 case PM3_EOPABORTED: {
                                     PrintAndLogEx(WARNING, "\nButton pressed, user aborted");
+                                    free(e_sector);
+                                    free(fptr);
+                                    return isOK;
+                                }
+                                case PM3_ECARDEXCHANGE: {
+                                    PrintAndLogEx(FAILED, "\nCard stopped answering");
                                     free(e_sector);
                                     free(fptr);
                                     return isOK;
