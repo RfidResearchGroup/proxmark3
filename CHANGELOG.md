@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added ISO/IEC 14443-4 error recovery to the reader - a lost or damaged answer is asked for again with R(NAK) instead of failing the exchange, `hw status` reports how often that was needed (@iceman1001)
+- Fixed `hf mfdes chk` - an exchange the card never answered is no longer counted as a wrong key or as a missing application, such candidates are retried and what stays uncovered is reported instead of hiding behind "No keys found" (@iceman1001)
+- Fixed `hf mfdes detect` - an exchange the card never answered is no longer counted as a wrong key (@iceman1001)
 - Update Amiibo database (@tpglitch)
 - Changed `lf pcf7931 write` - write is verified via the tag's read after write, retried up to 3 times, failures are reported (@GiacoBot)
 - Changed `lf pcf7931 reader` - prints blocks 0-7 in order and decodes PAC, password, write protection and selection; handles partial selections, new `--rfb` param (@GiacoBot)

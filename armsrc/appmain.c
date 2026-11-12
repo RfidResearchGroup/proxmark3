@@ -803,6 +803,12 @@ static void SendStatus(uint32_t wait) {
     Dbprintf("  ToSendMax........... %d", ts->max);
     Dbprintf("  ToSend BUFFERSIZE... %d", TOSEND_BUFFER_SIZE);
 
+#ifdef WITH_ISO14443a
+    uint32_t retrans = 0, retrans_lost = 0;
+    iso14_get_retrans(&retrans, &retrans_lost);
+    Dbprintf("  14443-4 retrans..... %u asked, %u still lost", retrans, retrans_lost);
+#endif
+
 #ifdef CHIP_AT91SAM7S
 
     while ((AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINRDY) == 0);       // Wait for MAINF value to become available...
