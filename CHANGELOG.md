@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf legic clone` - the client read `--mcc` as a string into a 1-byte buffer (refused, or a stack overflow), printed the wrong message for a missing `--mcc` or `-o`, and ignored `--mcc` and `-o` with `--write` (@matrix)
+- Fixed `hf legic migrate` - it refused every run without `--dcf`, and took a `--dcf` longer than two bytes after a parse error (@matrix)
+- Fixed `hf legic wrbl` - it took a `--fill` longer than one byte after a parse error (@matrix)
 - Added AIDs `A0000003820013000101` and `A0000003820017000101` (HID configuration cards) to aidlist.json (@iceman1001)
 - Changed `hf ntag424 getfs` - without `--fileno` it lists the settings of every file on the card; NTAG 424 has no GetFileIDs, so file numbers 0-31 are probed and a number the card never answers makes the list incomplete (PM3_EPARTIAL) (@iceman1001)
 
