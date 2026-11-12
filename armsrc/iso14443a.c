@@ -4214,6 +4214,82 @@ b8 b7 b6 b5 b4 b3 b2 b1
 b5,b6 = 00 - DESELECT
         11 - WTX
 */
+// ISO/IEC 14443-4 7.5.6 leaves the retransmission count to the PCD.  Two extra
+// tries cover a lost frame without stretching a dead link into seconds.
+#define ISO14_MAX_RETRANS   2
+
+// how often a frame had to be asked for again, and how often that did not
+// help.  `hw status` reports both:  recovered losses are otherwise invisible
+static uint32_t iso14_retrans;
+static uint32_t iso14_retrans_lost;
+
+void iso14_get_retrans(uint32_t *retrans, uint32_t *lost) {
+    *retrans = iso14_retrans;
+    *lost = iso14_retrans_lost;
+}
+
+// Did a 14443-4 block survive the air?  PCB + CRC is the shortest legal one.
+static bool iso14_block_valid(const uint8_t *data, uint16_t len) {
+    return (len >= 3 && CheckCrc14A(data, len));
+}
+
+// Is this block an answer to the block we just sent?  The PICC echoes our
+// block number, so a mismatch is a frame from another step of the exchange and
+// must not be handed to the caller as data.  S-blocks carry no block number.
+static bool iso14_answer_valid(const uint8_t *data, uint16_t len) {
+
+    if (iso14_block_valid(data, len) == false) {
+        return false;
+    }
+
+    if ((data[0] & 0xC0) == 0xC0) { // S-block, e.g. WTX
+        return true;
+    }
+
+    if ((data[0] & 0xD0) == 0x90) { // R(NAK), never an answer
+        return false;
+    }
+
+    return ((data[0] & 0x01) == iso14_pcb_blocknum);
+}
+
+// ISO/IEC 14443-4 7.5.6 error recovery.  A lost or damaged answer is a
+// transmission error, not a dead link.  R(NAK) asks the PICC to send its last
+// block again, which costs nothing when the loss was ours to begin with;  if
+// that brings back no usable answer the PICC never got `block`, so repeat it.
+// Returns the answer length, 0 when the link stays silent, -3 on user abort.
+static int iso14_recover(const uint8_t *block, uint16_t block_len, uint8_t *data, uint16_t data_len) {
+
+    for (uint8_t i = 0; i < ISO14_MAX_RETRANS; i++) {
+
+        if (BUTTON_PRESS() || data_available()) {
+            return -3;
+        }
+
+        iso14_retrans++;
+
+        uint8_t nak[3] = {0x00, 0x00, 0x00};
+        nak[0] = 0xB2 | iso14_pcb_blocknum; // r-block + NAK
+        AddCrc14A(nak, 1);
+        ReaderTransmit(nak, sizeof(nak), NULL);
+
+        uint16_t len = ReaderReceive(data, data_len, parity_array);
+        if (iso14_answer_valid(data, len)) {
+            return len;
+        }
+
+        ReaderTransmit(block, block_len, NULL);
+
+        len = ReaderReceive(data, data_len, parity_array);
+        if (iso14_answer_valid(data, len)) {
+            return len;
+        }
+    }
+
+    iso14_retrans_lost++;
+    return 0;
+}
+
 int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, uint16_t data_len, uint8_t *res) {
     // PCB(1) + APDU + CRC(2) has to fit inside one ISO14443 frame, which is
     // also the limit ReaderTransmit() can encode into the tosend buffer.
@@ -4222,6 +4298,7 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
     }
 
     uint8_t real_cmd[MAX_FRAME_SIZE] = {0};
+    uint16_t real_cmd_len = cmd_len + 3;
 
     if (cmd_len) {
         // ISO 14443 APDU frame: PCB [CID] [NAD] APDU CRC PCB=0x02
@@ -4239,26 +4316,31 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
     }
     AddCrc14A(real_cmd, cmd_len + 1);
 
-    ReaderTransmit(real_cmd, cmd_len + 3, NULL);
+    ReaderTransmit(real_cmd, real_cmd_len, NULL);
 
     // tearoff occurred
     if (tearoff_hook() == PM3_ETEAROFF) {
         return -1;
     }
 
-    size_t len = ReaderReceive(data, data_len, parity_array);
     uint8_t *data_bytes = (uint8_t *) data;
+    uint16_t len = ReaderReceive(data, data_len, parity_array);
 
-    if (len == 0) {
-        return 0; // DATA LINK ERROR
+    if (iso14_block_valid(data_bytes, len) == false) {
+        int rc = iso14_recover(real_cmd, real_cmd_len, data_bytes, data_len);
+        if (rc <= 0) {
+            return rc; // 0 - DATA LINK ERROR, -3 - aborted
+        }
+        len = rc;
     }
 
     uint32_t save_iso14a_timeout = iso14a_get_timeout();
 
     // S-Block WTX
-    while (len && ((data_bytes[0] & 0xF2) == 0xF2)) {
+    while ((data_bytes[0] & 0xF2) == 0xF2) {
 
         if (BUTTON_PRESS() || data_available()) {
+            iso14a_set_timeout(save_iso14a_timeout);
             return -3;
         }
 
@@ -4281,15 +4363,25 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
         // retrieve the result again (with increased timeout)
         len = ReaderReceive(data_bytes, data_len, parity_array);
 
+        if (iso14_block_valid(data_bytes, len) == false) {
+            int rc = iso14_recover(real_cmd, real_cmd_len, data_bytes, data_len);
+            if (rc <= 0) {
+                iso14a_set_timeout(save_iso14a_timeout);
+                return rc; // 0 - DATA LINK ERROR, -3 - aborted
+            }
+            len = rc;
+        }
     }
 
     iso14a_set_timeout(save_iso14a_timeout);
 
+    // the CRC was checked on the way in, so a damaged frame can no longer
+    // toggle the block number
+
     // if we received an I- or R(ACK)-Block with a block number equal to the
     // current block number, toggle the current block number
-    if (len >= 3 // PCB+CRC = 3 bytes
-            && ((data_bytes[0] & 0xC0) == 0 // I-Block
-                || (data_bytes[0] & 0xD0) == 0x80) // R-Block with ACK bit set to 0
+    if (((data_bytes[0] & 0xC0) == 0 // I-Block
+            || (data_bytes[0] & 0xD0) == 0x80) // R-Block with ACK bit set to 0
             && (data_bytes[0] & 0x01) == iso14_pcb_blocknum) { // equal block numbers
         iso14_pcb_blocknum ^= 1;
     }
@@ -4299,16 +4391,10 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
         *res = data_bytes[0];
     }
 
-    if (len >= 3 && !CheckCrc14A(data_bytes, len)) {
-        return -1;
-    }
-
-    if (len) {
-        // cut frame byte
-        len -= 1;
-        for (int i = 0; i < len; i++) {
-            data_bytes[i] = data_bytes[i + 1];
-        }
+    // cut frame byte
+    len -= 1;
+    for (uint16_t i = 0; i < len; i++) {
+        data_bytes[i] = data_bytes[i + 1];
     }
 
     return len;
@@ -4430,14 +4516,18 @@ void ReaderIso14443a(PacketCommandNG *c) {
         FpgaDisableTracing();
 
         uint8_t res = 0;
-        arg0 = iso14_apdu(
-                   cmd,
-                   len,
-                   ((param & ISO14A_SEND_CHAINING) == ISO14A_SEND_CHAINING),
-                   buf,
-                   ISO14A_RESP_MAXLEN,
-                   &res
-               );
+        int apdu_len = iso14_apdu(
+                           cmd,
+                           len,
+                           ((param & ISO14A_SEND_CHAINING) == ISO14A_SEND_CHAINING),
+                           buf,
+                           ISO14A_RESP_MAXLEN,
+                           &res
+                       );
+
+        // an error carries no data.  Letting it through as a length would
+        // reply with a bogus frame size
+        arg0 = (apdu_len > 0) ? apdu_len : 0;
 
         response->len = arg0;
         response->sel = res;
@@ -4655,8 +4745,8 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
 
-    BigBuf_free();
-    BigBuf_Clear_ext(false);
+    BigBuf_free_keep_EM();
+    BigBuf_Clear_keep_EM();
     set_tracing(true);
 
     uint8_t mf_auth[4] = { keytype, block, 0x00, 0x00 };
@@ -4985,8 +5075,8 @@ void DetectNACKbug(void) {
     // Mifare Classic's random generator repeats every 2^16 cycles (and so do the nonces).
     int32_t sync_cycles = PRNG_SEQUENCE_LENGTH;
 
-    BigBuf_free();
-    BigBuf_Clear_ext(false);
+    BigBuf_free_keep_EM();
+    BigBuf_Clear_keep_EM();
     set_tracing(true);
     iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
 
@@ -5200,7 +5290,7 @@ void DetectNACKbug(void) {
     num_to_bytes(i, 2, data + 2);
     reply_ng(CMD_HF_MIFARE_NACK_DETECT, status, data, 4);
 
-    BigBuf_free();
+    BigBuf_free_keep_EM();
     hf_field_off();
     set_tracing(false);
 }
