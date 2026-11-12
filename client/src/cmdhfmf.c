@@ -4251,6 +4251,17 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
+    // the key file is named from the card that is here now
+    char *fptr = NULL;
+    if (createDumpFile) {
+        fptr = GenerateFilename("hf-mf-", "-key.bin");
+        if (fptr == NULL) {
+            free(keyBlock);
+            free(e_sector);
+            return PM3_ESOFT;
+        }
+    }
+
     uint32_t maxkeys = (g_conn.max_cmd_data_size - sizeof(mf_chkkeys_fast_t)) / 6;
     if (maxkeys > 255) {
         maxkeys = 255;
@@ -4298,9 +4309,19 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
                 if (firstChunk)
                     firstChunk = false;
 
-                // all keys,  aborted
-                if (res == PM3_SUCCESS || res == 2) {
+                // all keys
+                if (res == PM3_SUCCESS) {
                     PrintAndLogEx(NORMAL, "");
+                    goto out;
+                }
+
+                // aborted or no answer,  the field is still ON if not on last chunk
+                if ((res == PM3_EOPABORTED) || (res == PM3_ETIMEOUT)) {
+                    clearCommandBuffer();
+                    SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);
+                    if (res == PM3_ETIMEOUT) {
+                        ret = res;
+                    }
                     goto out;
                 }
                 PrintAndLogEx(INPLACE, "Testing %5i/%5i ( " _YELLOW_("%02.1f %%") " )", i, keycnt, (float)i * 100 / keycnt);
@@ -4322,7 +4343,7 @@ out:
     t1 = msclock() - t1;
     PrintAndLogEx(INFO, "Time in checkkeys (fast) " _YELLOW_("%.1fs") "\n", (float)(t1 / 1000.0));
 
-    if (blockn != -1) {
+    if ((blockn != -1) && (transferToEml == false) && (createDumpFile == false)) {
         goto out2;
     }
 
@@ -4356,7 +4377,11 @@ out:
             uint8_t block[MFBLOCK_SIZE] = {0x00};
             for (i = 0; i < sectorsCnt; ++i) {
                 uint8_t b = mfFirstBlockOfSector(i) + mfNumBlocksPerSector(i) - 1;
-                mf_eml_get_mem(block, b, 1);
+                eml_res = mf_eml_get_mem(block, b, 1);
+                if (eml_res != PM3_SUCCESS) {
+                    g_conn.block_after_ACK = false;
+                    break;
+                }
 
                 if (e_sector[i].foundKey[0])
                     num_to_bytes(e_sector[i].Key[0], MIFARE_KEY_SIZE, block);
@@ -4387,18 +4412,19 @@ out:
 
         if (createDumpFile) {
 
-            char *fptr = GenerateFilename("hf-mf-", "-key.bin");
-            if (createMfcKeyDump(fptr, sectorsCnt, e_sector) != PM3_SUCCESS) {
+            int dump_res = createMfcKeyDump(fptr, sectorsCnt, e_sector);
+            if (dump_res != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "Failed to save keys to file");
+                ret = dump_res;
             }
-            free(fptr);
         }
     }
 out2:
+    free(fptr);
     free(keyBlock);
     free(e_sector);
     PrintAndLogEx(NORMAL, "");
-    return eml_res;
+    return (eml_res != PM3_SUCCESS) ? eml_res : ret;
 }
 
 static int CmdHF14AMfSmartBrute(const char *Cmd) {
