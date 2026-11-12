@@ -10539,7 +10539,7 @@ static int CmdHF14ADesIntAuth(const char *Cmd) {
     // Parse public key input (flexible: hex, PEM, DER, file path)
     char pubkey_input[DUOX_MAX_KEY_INPUT] = {0};
     int pubkey_input_len = 0;
-    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)pubkey_input, sizeof(pubkey_input) - 1, &pubkey_input_len);
+    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)pubkey_input, sizeof(pubkey_input), &pubkey_input_len);
 
     bool pubkey_provided = (pubkey_input_len > 0);
 
@@ -10660,7 +10660,7 @@ static int CmdHF14ADesVdeSign(const char *Cmd) {
 
     char pubkey_input[DUOX_MAX_KEY_INPUT] = {0};
     int pubkey_input_len = 0;
-    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)pubkey_input, sizeof(pubkey_input) - 1, &pubkey_input_len);
+    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)pubkey_input, sizeof(pubkey_input), &pubkey_input_len);
     bool pubkey_provided = (pubkey_input_len > 0);
 
     mfd_app_select app_select = MfdSelectionInitDFName(kDuoxVDEDefaultDFName, ARRAYLEN(kDuoxVDEDefaultDFName));

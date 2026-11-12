@@ -68,7 +68,7 @@ static int CmdBwmAutoOff(const char *Cmd) {
     int idle = arg_get_int_def(ctx, 1, -1);
     uint8_t ubuf[8] = {0};
     int ulen = 0;
-    int ures = CLIParamStrToBuf(arg_get_str(ctx, 2), ubuf, sizeof(ubuf) - 1, &ulen);
+    int ures = CLIParamStrToBuf(arg_get_str(ctx, 2), ubuf, sizeof(ubuf), &ulen);
     CLIParserFree(ctx);
     if (ures) {
         PrintAndLogEx(WARNING, "--unplug takes " _YELLOW_("on") " or " _YELLOW_("off"));
@@ -245,17 +245,17 @@ static int CmdBWMWifi(const char *Cmd) {
 
     uint8_t ssid[64] = {0};
     int ssid_len = 0;
-    CLIParamStrToBuf(arg_get_str(ctx, 1), ssid, sizeof(ssid) - 1, &ssid_len);
+    CLIParamStrToBuf(arg_get_str(ctx, 1), ssid, sizeof(ssid), &ssid_len);
 
     uint8_t pwd[64] = {0};
     int pwd_len = 0;
-    CLIParamStrToBuf(arg_get_str(ctx, 2), pwd, sizeof(pwd) - 1, &pwd_len);
+    CLIParamStrToBuf(arg_get_str(ctx, 2), pwd, sizeof(pwd), &pwd_len);
 
     int port = arg_get_int_def(ctx, 3, 18888);
 
     uint8_t host[33] = {0};
     int host_len = 0;
-    CLIParamStrToBuf(arg_get_str(ctx, 4), host, sizeof(host) - 1, &host_len);
+    CLIParamStrToBuf(arg_get_str(ctx, 4), host, sizeof(host), &host_len);
     if (host_len == 0) {
         strcpy((char *)host, "Proxmark5");
         host_len = 9;
@@ -1113,7 +1113,7 @@ static int CmdBwmBlePairing(const char *Cmd) {
     CLIExecWithReturn(ctx, rest, argtable, true);
     uint8_t key[8] = {0};
     int keylen = 0;
-    int kres = CLIParamStrToBuf(arg_get_str(ctx, 1), key, sizeof(key) - 1, &keylen);
+    int kres = CLIParamStrToBuf(arg_get_str(ctx, 1), key, sizeof(key), &keylen);
     CLIParserFree(ctx);
     if (kres) {
         PrintAndLogEx(WARNING, "the passkey must be exactly 6 digits");

@@ -2914,7 +2914,7 @@ static int CmdHFeMRTDDump(const char *Cmd) {
     bool error = false;
     int slen = 0;
     // Go through all args, if even one isn't supplied, mark BAC as unavailable
-    if (CLIParamStrToBuf(arg_get_str(ctx, 1), docnum, 9, &slen) != 0 || slen == 0) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 1), docnum, sizeof(docnum), &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
         strn_upper((char *)docnum, slen);
@@ -2924,7 +2924,7 @@ static int CmdHFeMRTDDump(const char *Cmd) {
         }
     }
 
-    if (CLIParamStrToBuf(arg_get_str(ctx, 2), dob, 6, &slen) != 0 || slen == 0) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 2), dob, sizeof(dob), &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
         if (!validate_date(dob, slen)) {
@@ -2934,7 +2934,7 @@ static int CmdHFeMRTDDump(const char *Cmd) {
         }
     }
 
-    if (CLIParamStrToBuf(arg_get_str(ctx, 3), expiry, 6, &slen) != 0 || slen == 0) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 3), expiry, sizeof(expiry), &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
         if (!validate_date(expiry, slen)) {
@@ -2944,7 +2944,7 @@ static int CmdHFeMRTDDump(const char *Cmd) {
         }
     }
 
-    if (CLIParamStrToBuf(arg_get_str(ctx, 4), mrz, 44, &slen) == 0 && slen != 0) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 4), mrz, sizeof(mrz), &slen) == 0 && slen != 0) {
         if (slen != 44) {
             PrintAndLogEx(ERR, "MRZ length is incorrect, it should be 44, not %i", slen);
             error = true;
@@ -2970,7 +2970,7 @@ static int CmdHFeMRTDDump(const char *Cmd) {
 
     uint8_t can[15] = { 0x00 };
     bool CAN = false;
-    if (CLIParamStrToBuf(arg_get_str(ctx, 5), can, sizeof(can) - 1, &slen) == 0 && slen != 0) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 5), can, sizeof(can), &slen) == 0 && slen != 0) {
         CAN = true;
         if (emrtd_validate_can((const char *)can, slen) == false) {
             error = true;
@@ -3048,7 +3048,7 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
     bool error = false;
     int slen = 0;
     // Go through all args, if even one isn't supplied, mark BAC as unavailable
-    if (CLIParamStrToBuf(arg_get_str(ctx, 1), docnum, 9, &slen) != 0 || slen == 0) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 1), docnum, sizeof(docnum), &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
         strn_upper((char *)docnum, slen);
@@ -3057,7 +3057,7 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
         }
     }
 
-    if (CLIParamStrToBuf(arg_get_str(ctx, 2), dob, 6, &slen) != 0 || slen == 0) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 2), dob, sizeof(dob), &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
         if (!validate_date(dob, slen)) {
@@ -3067,7 +3067,7 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
         }
     }
 
-    if (CLIParamStrToBuf(arg_get_str(ctx, 3), expiry, 6, &slen) != 0 || slen == 0) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 3), expiry, sizeof(expiry), &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
         if (!validate_date(expiry, slen)) {
@@ -3077,7 +3077,7 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
         }
     }
 
-    if (CLIParamStrToBuf(arg_get_str(ctx, 4), mrz, 44, &slen) == 0 && slen != 0) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 4), mrz, sizeof(mrz), &slen) == 0 && slen != 0) {
         if (slen != 44) {
             PrintAndLogEx(ERR, "MRZ length is incorrect, it should be 44, not %i", slen);
             error = true;
@@ -3102,7 +3102,7 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
     }
     uint8_t can[15] = { 0x00 };
     bool CAN = false;
-    if (CLIParamStrToBuf(arg_get_str(ctx, 5), can, sizeof(can) - 1, &slen) == 0 && slen != 0) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 5), can, sizeof(can), &slen) == 0 && slen != 0) {
         CAN = true;
         if (emrtd_validate_can((const char *)can, slen) == false) {
             error = true;
