@@ -2450,6 +2450,7 @@ static int CmdHF15Dump(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Reading memory");
 
     int blocknum = 0;
+    bool end_of_memory = false;
 
     for (int retry = 0; (retry < 2 && blocknum < tag->pagesCount); retry++) {
         if (used_uid) {
@@ -2483,6 +2484,7 @@ static int CmdHF15Dump(const char *Cmd) {
 
                 // heuristic determine end of available memory
                 if (d[1] == 0x0F || d[1] == 0x10) {
+                    end_of_memory = true;
                     break;
                 }
 
@@ -2508,6 +2510,19 @@ static int CmdHF15Dump(const char *Cmd) {
 
     // done reading tag memory
 
+    // The tag has no more blocks than this, the rest of the default range doesn't exist
+    if (end_of_memory) {
+        tag->pagesCount = blocknum;
+    }
+
+    // Anything else that ended the loop early left the remaining blocks unread.  They
+    // must not be shown as data, nor saved as a dump
+    bool incomplete = (blocknum < tag->pagesCount);
+    uint32_t expected = tag->pagesCount;
+    if (incomplete) {
+        tag->pagesCount = blocknum;
+    }
+
     if (tag->bytesPerPage != blocksize) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, _YELLOW_("%u") " bytes block length detected, called with " _YELLOW_("%d"), tag->bytesPerPage, blocksize);
@@ -2515,6 +2530,14 @@ static int CmdHF15Dump(const char *Cmd) {
     }
 
     print_tag_15693(tag, dense_output, verbose);
+
+    if (incomplete) {
+        PrintAndLogEx(WARNING, "Dump " _RED_("incomplete") ", read %d of %u blocks, not saved", blocknum, expected);
+        PrintAndLogEx(HINT, "Hint: reposition the card and run the dump again");
+        PrintAndLogEx(NORMAL, "");
+        free(tag);
+        return PM3_EPARTIAL;
+    }
 
     if (no_save) {
         PrintAndLogEx(INFO, "Called with no save option");

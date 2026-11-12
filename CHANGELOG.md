@@ -3,13 +3,15 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+
 - Fixed `hf mfu chk` - Enter or a timeout during a chunk stops it (@matrix)
 - Fixed `hf mfu chk` - no "-nan" speed when no chunk ran, the progress line counts the keys tested (@matrix)
+- Fixed `hf 15 dump` - a dump that stops early no longer prints and saves the unread blocks as zeros; it shows the blocks it read, says how many of the total, saves nothing and returns PM3_EPARTIAL (@iceman1001)
 - Fixed `hf mf brute` - Enter or a chunk timeout stops it, no division by zero on a stage under 1 s (@matrix)
 - Fixed `hf mf brute` - `--emu` checks the trailer read, `--dump` keeps the keys when the card is gone and reports a failed save (@matrix)
 - Fixed `hf mf fchk` - Enter or a timeout during a chunk stops it, `--emu` checks the trailer read (@matrix)
 - Fixed `hf mf fchk` - `--dump` keeps the keys when the card is gone and reports a failed save, `--blk` no longer ignores `--emu` and `--dump` (@matrix)
-- Fixed `hf mfp chk` - a failed exchange no longer abandons every remaining sector with a success exit code; the key is counted as untested and the search goes on, a key slot is given up after 3 unanswered keys, and an incomplete search says so and returns PM3_EPARTIAL (@iceman1001)
+- Fixed `hf mfp chk` - a failed exchange no longer abandons every remaining sector with a success exit code (@iceman1001)
 - Fixed `hf mf autopwn` - reports failed emulator memory transfers, fills and file saves, keeps the trailers' access bits (@matrix)
 - Fixed `hf mf autopwn` - a failed attack keeps the keys found so far, the dump is saved without the card, Mini dump size (@matrix)
 - Fixed `hf mf autopwn` - Enter stops the dictionary, `-k` buffer overflow, memory leaks (@matrix)
