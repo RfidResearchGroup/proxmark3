@@ -27,6 +27,13 @@
 #define BWM_UART_BAUD_TARGET   921600
 #endif
 
+// Faster rate, only once the ESP accepted per-host forwarding (its fw drains the RX
+// FIFO early enough for it and falls back to 921600 on its own when a host such as
+// the bootrom talks slower). 0 disables. ESP side: 26 MHz XTAL / 17.3 = 1.5018 Mbaud.
+#ifndef BWM_UART_BAUD_FAST
+#define BWM_UART_BAUD_FAST     1500000
+#endif
+
 void bwm_uart_init(void);
 
 // Re-init UART4 + RX DMA at a new baud (used by the runtime baud negotiation).

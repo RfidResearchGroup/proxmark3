@@ -101,4 +101,8 @@ void bwm_fwd_link_seed_ble(bool connected);
 // could not be verified. Call once after bwm_uart_init().
 bool bwm_fwd_negotiate_baud(uint32_t target);
 
+// Before an AT32 reset: bring the ESP back to BWM_UART_BAUD_TARGET, which the
+// bootrom and older OS builds can find (the ESP keeps its baud across our reset).
+void bwm_fwd_prepare_reset(void);
+
 #endif // __BWM_FORWARD_H

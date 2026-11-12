@@ -111,6 +111,7 @@ typedef enum { TAG_PENDING = 0, TAG_ON, TAG_REFUSED, TAG_IDLE } bwm_tag_state_t;
 static bwm_tag_state_t s_tag_state = TAG_PENDING;
 static uint8_t s_tag_tries = 0;
 static uint32_t s_tag_last = 0;          // tick of the last failed try
+static bool s_fast_tried = false;         // BWM_UART_BAUD_FAST attempted
 static uint8_t s_rx_ep = BWM_EP_BLE;      // endpoint bwm_read_ng() reads
 static uint8_t s_reply_ep = BWM_EP_ANY;   // endpoint replies go to
 
@@ -136,6 +137,13 @@ void bwm_fwd_tag_poll(void) {
     int r = bwm_esp_set_forward_tagged(true, &applied);
     if (r == PM3_SUCCESS && applied) {
         s_tag_state = TAG_ON;
+        if ((BWM_UART_BAUD_FAST != 0) && (s_fast_tried == false) && (bwm_uart_get_baud() < BWM_UART_BAUD_FAST)) {
+            s_fast_tried = true;
+            (void)bwm_fwd_negotiate_baud(BWM_UART_BAUD_FAST);
+            // a baud set clears tagging on the ESP, ask again on the next pass
+            s_tag_state = TAG_PENDING;
+            s_tag_tries = 0;
+        }
     } else if (r == PM3_EFAILED) {
         s_tag_state = TAG_REFUSED;          // ESP fw without per-host forwarding
     } else if (++s_tag_tries >= BWM_TAG_TRIES) {
@@ -341,6 +349,12 @@ static bool bwm_probe_at(uint32_t baud, int tries) {
 static void bwm_link_reset(void) {
     bwm_frame_reset();
     fc_reset();
+}
+
+void bwm_fwd_prepare_reset(void) {
+    if (bwm_uart_get_baud() > BWM_UART_BAUD_TARGET) {
+        (void)bwm_fwd_negotiate_baud(BWM_UART_BAUD_TARGET);
+    }
 }
 
 bool bwm_fwd_negotiate_baud(uint32_t target) {

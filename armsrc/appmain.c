@@ -4170,6 +4170,9 @@ static void PacketReceived(PacketCommandNG *packet) {
 #endif
         case CMD_FINISH_WRITE:
         case CMD_HARDWARE_RESET: {
+#ifdef WITH_BWM_FORWARD
+            bwm_fwd_prepare_reset();
+#endif
             usb_disable();
 
             // (iceman) why this wait?
@@ -4183,6 +4186,9 @@ static void PacketReceived(PacketCommandNG *packet) {
             if (g_common_area.flags.bootrom_present) {
                 g_common_area.command = COMMON_AREA_COMMAND_ENTER_FLASH_MODE;
             }
+#ifdef WITH_BWM_FORWARD
+            bwm_fwd_prepare_reset();
+#endif
             usb_disable();
             ResetChip();
             // We're going to flash, and the bootrom will take control.
