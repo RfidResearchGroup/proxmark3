@@ -4914,7 +4914,7 @@ int pm3_save_mf_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
         PrintAndLogEx(INFO, "No data to save, skipping...");
         return PM3_EINVARG;
     }
-    saveFileEx(fn, ".bin", d, n, spDump);
+    int res = saveFileEx(fn, ".bin", d, n, spDump);
 
     iso14a_mf_extdump_t jd = {0};
     jd.card_info.ats_len = 0;
@@ -4937,8 +4937,8 @@ int pm3_save_mf_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
     }
     jd.dump = d;
     jd.dumplen = n;
-    saveFileJSON(fn, jsfMfc_v2, (uint8_t *)&jd, sizeof(jd), NULL);
-    return PM3_SUCCESS;
+    int res_json = saveFileJSON(fn, jsfMfc_v2, (uint8_t *)&jd, sizeof(jd), NULL);
+    return (res != PM3_SUCCESS) ? res : res_json;
 }
 
 int pm3_save_fm11rf08s_nonces(const char *fn, iso14a_fm11rf08s_nonces_with_data_t *d, bool with_data) {
