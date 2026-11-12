@@ -44,6 +44,15 @@ static bool test_CAD(void) {
         return false;
     }
 
+    // Adding both entries to an empty CAD gives blocks 0-2 of the example, CRC included
+    uint8_t built[0x30] = {0};
+    if (gallagher_add_cad_entry(built, 0xC, 0x1337, 0x0F) != PM3_SUCCESS ||
+            gallagher_add_cad_entry(built, 0xD, 0x1338, 0x0D) != PM3_SUCCESS ||
+            memcmp(built, cad, sizeof(built)) != 0) {
+        PrintAndLogEx(INFO, "Gallagher CAD test 4 failed: got %s", sprint_hex(built, sizeof(built)));
+        return false;
+    }
+
     return true;
 }
 

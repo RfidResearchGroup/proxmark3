@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf gallagher clone` - the client took the value of `-n`, `--sector` and `--cadsector` from the next option, crashed with `-n` and could read past a heap buffer (@matrix)
+- Fixed `hf gallagher clone -c` - the MES had the UID unreversed, a blank card got no readable MAD, a Gallagher MAD was not updated, sectors 17-31 were left out of MAD2 and no CAD was written (@matrix)
 - Added AIDs `A0000003820013000101` and `A0000003820017000101` (HID configuration cards) to aidlist.json (@iceman1001)
 - Changed `hf ntag424 getfs` - without `--fileno` it lists the settings of every file on the card; NTAG 424 has no GetFileIDs, so file numbers 0-31 are probed and a number the card never answers makes the list incomplete (PM3_EPARTIAL) (@iceman1001)
 

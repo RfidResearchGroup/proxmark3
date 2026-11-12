@@ -17,6 +17,7 @@
 //-----------------------------------------------------------------------------
 #include "gallaghercore.h"
 #include "aes.h"
+#include "crc.h"
 #include "common.h"
 #include "ui.h"
 #include <string.h>
@@ -113,6 +114,47 @@ int gallagher_parse_cad(uint8_t *cad, uint8_t region, uint16_t facility) {
         }
     }
     return -1;
+}
+
+// Set the CAD entry of a site in blocks 0-2 of a CAD sector, the next free one for a new site.
+// A CAD that fails its CRC or its 0x00 0x01 header starts empty.
+int gallagher_add_cad_entry(uint8_t *cad, uint8_t region, uint16_t facility, uint8_t sector) {
+    uint16_t crc = CRC16Cardx(cad + 2, 0x2E);
+    if (cad[0] != (crc >> 8) || cad[1] != (crc & 0xFF) || cad[2] != 0x00 || cad[3] != 0x01) {
+        memset(cad, 0, 0x30);
+        cad[3] = 0x01;
+    }
+
+    for (int i = 0; i < 12; i++) {
+        uint8_t *p = cad + 4 + (i / 2) * 7;
+        bool even = ((i % 2) == 0);
+        uint8_t rc = even ? (p[0] >> 4) : (p[3] & 0x0F);
+        uint16_t fc = even ? (((p[0] & 0x0F) << 12) | (p[1] << 4) | (p[2] >> 4)) : ((p[4] << 8) | p[5]);
+        uint8_t s = even ? (((p[2] & 0x0F) << 4) | (p[3] >> 4)) : p[6];
+
+        // sector 0 ends the list
+        if (s != 0 && (rc != region || fc != facility)) {
+            continue;
+        }
+
+        if (even) {
+            p[0] = ((region & 0x0F) << 4) | (facility >> 12);
+            p[1] = (facility >> 4) & 0xFF;
+            p[2] = ((facility & 0x0F) << 4) | (sector >> 4);
+            p[3] = (p[3] & 0x0F) | ((sector & 0x0F) << 4);
+        } else {
+            p[3] = (p[3] & 0xF0) | (region & 0x0F);
+            p[4] = facility >> 8;
+            p[5] = facility & 0xFF;
+            p[6] = sector;
+        }
+
+        crc = CRC16Cardx(cad + 2, 0x2E);
+        cad[0] = crc >> 8;
+        cad[1] = crc & 0xFF;
+        return PM3_SUCCESS;
+    }
+    return PM3_EOVFLOW;
 }
 
 
