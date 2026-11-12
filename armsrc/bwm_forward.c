@@ -268,33 +268,22 @@ uint32_t bwm_read_ng(uint8_t *data, size_t len) {
         return 0;
     }
 
-    // Same bounded-retry budget shape as bwm_uart_read(); USART_SLOW_LINK (set
-    // for the BWM/BLE link) widens it so a slow round-trip doesn't time out.
-    uint32_t tryconstant = 0;
-#ifdef USART_SLOW_LINK
-    tryconstant = 50000;
-#endif
-    uint32_t maxtry = 10 * (3000000 / BWM_UART_BAUD) + tryconstant;
-
+    // Give up after BWM_RX_GAP_MS without a new byte. BLE delivers a frame one
+    // write (<= MTU-3 bytes) per connection event, so its pieces come tens of ms apart.
     uint32_t out = 0;
-    uint32_t try = 0;
+    uint32_t last = GetTickCount();
     while (out < len) {
         while (out < len && bwm_fifo_count_ep(s_rx_ep) > 0) {
             data[out++] = bwm_fifo_pop_ep(s_rx_ep);
-            try = 0;
+            last = GetTickCount();
         }
         if (out >= len) {
             break;
         }
-        uint16_t before = bwm_fifo_count_ep(s_rx_ep);
         bwm_pump();
-        if (bwm_fifo_count_ep(s_rx_ep) != before) {
-            try = 0;
-            continue;
+        if ((bwm_fifo_count_ep(s_rx_ep) == 0) && (GetTickCountDelta(last) > BWM_RX_GAP_MS)) {
+            break;
         }
-        if (try++ >= maxtry) {
-                break;
-            }
     }
     return out;
 }
