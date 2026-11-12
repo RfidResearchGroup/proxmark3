@@ -7126,6 +7126,16 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 7), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
+    if (keylen && keylen != 6) {
+        PrintAndLogEx(WARNING, "Key must be 12 hex digits. Got %d", keylen * 2);
+        return PM3_EINVARG;
+    }
+
+    if (aidlen && aidlen != 2) {
+        PrintAndLogEx(WARNING, "AID must be 4 hex digits. Got %d", aidlen * 2);
+        return PM3_EINVARG;
+    }
+
     if (fnlen > 0) {
 
         // read dump file
