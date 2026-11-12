@@ -483,6 +483,37 @@ static int ntag424_get_file_settings(uint8_t fileno, ntag424_file_settings_t *se
     return PM3_SUCCESS;
 }
 
+// GetFileSettings without the error report.  NTAG 424 has no GetFileIDs, so a
+// file list comes from asking for every number, and "no such file" is then the
+// expected answer for most of them.  `sw` gets the card's status; the return is
+// PM3_SUCCESS whenever the card answered at all, whatever the status.
+static int ntag424_probe_file_settings(uint8_t fileno, ntag424_file_settings_t *settings_out, uint16_t *sw) {
+
+    uint8_t cmd[] = { 0x90, NTAG424_CMD_GET_FILE_SETTINGS, 0x00, 0x00, 0x01, fileno, 0x00 };
+    uint8_t response[sizeof(ntag424_file_settings_t) + 2] = {0};
+    int response_length = 0;
+
+    *sw = 0;
+
+    int res = ExchangeAPDU14a(cmd, sizeof(cmd), false, true, response, sizeof(response), &response_length);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    if (response_length < 2) {
+        return PM3_ECARDEXCHANGE;
+    }
+
+    *sw = (response[response_length - 2] << 8) | response[response_length - 1];
+
+    if (*sw == 0x9100 && settings_out) {
+        memset(settings_out, 0, sizeof(ntag424_file_settings_t));
+        memcpy(settings_out, response, MIN((size_t)(response_length - 2), sizeof(ntag424_file_settings_t)));
+    }
+
+    return PM3_SUCCESS;
+}
+
 // Build the file settings command buffer dynamically.
 // This correctly handles conditional SDM offset fields per AN12196 specification.
 // Returns the number of bytes written to cmd_buffer (excluding fileno byte).
@@ -1323,16 +1354,18 @@ static int CmdHF_ntag424_write(const char *Cmd) {
 static int CmdHF_ntag424_getfilesettings(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf ntag424 getfs",
-                  "Read and print file settings for file",
+                  "Read and print file settings for a file, or for every file on the card",
+                  "hf ntag424 getfs              -> list all files\n"
                   "hf ntag424 getfs --fileno 2");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int1(NULL,  "fileno", "<dec>", "File number"),
+        arg_int0(NULL,  "fileno", "<dec>", "File number (def: all files)"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int l_fileno = arg_get_int(ctx, 1);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool list_all = (arg_get_int_def(ctx, 1, -1) == -1);
+    int l_fileno = arg_get_int_def(ctx, 1, 0);
 
     CLIParserFree(ctx);
 
@@ -1347,13 +1380,59 @@ static int CmdHF_ntag424_getfilesettings(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    ntag424_file_settings_t settings = {0};
-    int res = ntag424_get_file_settings(l_fileno, &settings);
-    DropField();
-    if (res == PM3_SUCCESS) {
-        ntag424_print_file_settings(l_fileno, &settings);
+    if (list_all == false) {
+        ntag424_file_settings_t settings = {0};
+        int res = ntag424_get_file_settings(l_fileno, &settings);
+        DropField();
+        if (res == PM3_SUCCESS) {
+            ntag424_print_file_settings(l_fileno, &settings);
+        }
+        return res;
     }
-    return res;
+
+    // file numbers are five bits wide
+    uint8_t found[32] = {0};
+    uint8_t nfound = 0;
+    uint8_t unknown = 0;
+
+    for (uint8_t fileno = 0; fileno < 32; fileno++) {
+
+        ntag424_file_settings_t settings = {0};
+        uint16_t sw = 0;
+
+        if (ntag424_probe_file_settings(fileno, &settings, &sw) != PM3_SUCCESS) {
+            // no answer, so nothing is known about this number
+            unknown++;
+            continue;
+        }
+
+        if (sw == 0x9100) {
+            ntag424_print_file_settings(fileno, &settings);
+            found[nfound++] = fileno;
+        } else if (sw != 0x91F0) {
+            PrintAndLogEx(WARNING, "File %u... card answered %04X (%s)", fileno, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xFF));
+        }
+    }
+    DropField();
+
+    PrintAndLogEx(NORMAL, "");
+    if (nfound) {
+        char list[32 * 4] = {0};
+        size_t pos = 0;
+        for (uint8_t i = 0; i < nfound; i++) {
+            pos += snprintf(list + pos, sizeof(list) - pos, "%s%u", (i) ? ", " : "", found[i]);
+        }
+        PrintAndLogEx(SUCCESS, "Found " _GREEN_("%u") " file%s: %s", nfound, (nfound == 1) ? "" : "s", list);
+    } else {
+        PrintAndLogEx(INFO, "No files found");
+    }
+
+    // a number the card never answered for is not a number it doesn't have
+    if (unknown) {
+        PrintAndLogEx(WARNING, "List " _YELLOW_("incomplete") ", %u file number%s got no answer from the card", unknown, (unknown == 1) ? "" : "s");
+        return PM3_EPARTIAL;
+    }
+    return PM3_SUCCESS;
 }
 
 static int CmdHF_ntag424_changefilesettings(const char *Cmd) {
