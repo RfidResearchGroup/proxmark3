@@ -162,6 +162,10 @@ size_t concatbits(uint8_t *dest, int dest_offset, const uint8_t *src, int src_of
 int char2int(char c);
 int hexstr2ByteArr(const char *hexstr, unsigned char *array, size_t asize);
 
+// Byte count in binary units: "512 bytes", "136.7 KB", "1.07 MB". Returns buf.
+#define SPRINT_BYTES_LEN    16
+char *sprint_bytes(char *buf, uint32_t bytes);
+
 uint16_t iso14a_air_bits_pack(const uint8_t *data, const uint8_t *par, uint16_t n, uint8_t *out);
 uint16_t iso14a_air_bits_unpack(const uint8_t *in, uint16_t in_len, uint8_t *data, uint8_t *par);
 #endif

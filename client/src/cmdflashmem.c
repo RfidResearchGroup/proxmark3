@@ -214,7 +214,8 @@ static void pm3_print_flash_memory_info(spi_flash_t *spi, rdv40_validation_t *me
         PrintAndLogEx(INFO, "JEDEC Mfr ID / Dev ID... " _YELLOW_("%02X") " / "_YELLOW_("%04X"), spi->manufacturer_id, spi->jedec_id);
     }
 
-    PrintAndLogEx(INFO, "Memory size............. " _YELLOW_("%d Kb") " ( %d * 64 Kb )", spi->pages64k * 64, spi->pages64k);
+    char size[SPRINT_BYTES_LEN];
+    PrintAndLogEx(INFO, "Memory size............. " _YELLOW_("%s") " ( %d * 64 KB )", sprint_bytes(size, spi->pages64k * 64 * 1024), spi->pages64k);
     PrintAndLogEx(NORMAL, "");
 
     // Print Signature Header
