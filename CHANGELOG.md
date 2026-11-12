@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mfu chk` - Enter or a timeout during a chunk stops it (@matrix)
+- Fixed `hf mfu chk` - no "-nan" speed when no chunk ran, the progress line counts the keys tested (@matrix)
 - Fixed `hf mf brute` - Enter or a chunk timeout stops it, no division by zero on a stage under 1 s (@matrix)
 - Fixed `hf mf brute` - `--emu` checks the trailer read, `--dump` keeps the keys when the card is gone and reports a failed save (@matrix)
 - Fixed `hf mf fchk` - Enter or a timeout during a chunk stops it, `--emu` checks the trailer read (@matrix)

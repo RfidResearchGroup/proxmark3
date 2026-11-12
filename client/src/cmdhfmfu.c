@@ -5024,23 +5024,37 @@ static int mfu_auth_chk(uint8_t key_index, const char *filename, int fnlen, int 
             int res = mfu_3pass_check_keys(key_index, firstChunk, lastChunk, nkeys, segment, ref_key, xor_ref_key, keyBlock + (i * keysize), false, true, &auths, &ms, check_answer, use_fastread0);
             firstChunk = false;
 
-            // all keys,  aborted
-            if (res == PM3_SUCCESS || res == 2) {
+            // all keys
+            if (res == PM3_SUCCESS) {
                 PrintAndLogEx(NORMAL, "");
                 goto out;
             }
-            PrintAndLogEx(INPLACE, "Testing %5u/%5u ( " _YELLOW_("%02.1f %%") " )", i, keycnt, (float)i * 100 / keycnt);
+
+            // aborted or no answer,  the field is still ON if not on last chunk
+            if ((res == PM3_EOPABORTED) || (res == PM3_ETIMEOUT)) {
+                clearCommandBuffer();
+                SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);
+                if (res == PM3_ETIMEOUT) {
+                    ret = res;
+                }
+                PrintAndLogEx(NORMAL, "");
+                goto out;
+            }
+            PrintAndLogEx(INPLACE, "Testing %5u/%5u ( " _YELLOW_("%02.1f %%") " )", i + nkeys, keycnt, (float)(i + nkeys) * 100 / keycnt);
         } // end chunks of keys
     }
     PrintAndLogEx(NORMAL, "");
 out:
     PrintAndLogEx(INFO, "Time spent " _YELLOW_("%.1fs"), (float)(ms / 1000.0));
     PrintAndLogEx(INFO, "Authentication attempts: %u", auths);
-    PrintAndLogEx(INFO, "Speed: %.1f auths/s", (float)(auths * 1000.0 / ms));
+    // ms is 0 until a chunk answers
+    if (ms) {
+        PrintAndLogEx(INFO, "Speed: %.1f auths/s", (float)(auths * 1000.0 / ms));
+    }
 
     free(keyBlock);
     PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
+    return ret;
 }
 
 static int CmdHF14AMfUAuthChk(const char *Cmd) {
