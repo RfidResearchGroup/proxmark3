@@ -2577,6 +2577,9 @@ OUT:
     g_dbglevel = oldbg;
 }
 
+// selections in a row MifareChkKeys() may lose before it gives up on the card
+#define CHK_SELECT_RETRIES 10
+
 void MifareChkKeys(uint8_t *datain, uint8_t reserved_mem) {
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -2627,16 +2630,33 @@ void MifareChkKeys(uint8_t *datain, uint8_t reserved_mem) {
 
     set_tracing(false);
 
+    // a card that stops answering ends the check instead of holding the device in the retry
+    int16_t status = PM3_SUCCESS;
+    uint8_t select_fails = 0;
+
     for (uint16_t i = 0; i < key_count; i++) {
 
+        // Allow button press / usb cmd to interrupt device
+        if (BUTTON_PRESS() || data_available()) {
+            status = PM3_EOPABORTED;
+            break;
+        }
+
+        WDT_HIT();
+
+        // 0 is no card, 3 an ATQA without anticollision bits: both leave nothing selected
+        int sel;
         // Iceman: use piwi's faster nonce collecting part in hardnested.
         if (have_uid == false) { // need a full select cycle to get the uid first
             iso14a_card_select_t card_info;
-            if (iso14443a_select_card(uid, &card_info, &cuid, true, 0, true) == false) {
+            sel = iso14443a_select_card(uid, &card_info, &cuid, true, 0, true);
+            if (sel != 1 && sel != 2) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("ChkKeys: Can't select card (ALL)");
-                if (i) {
-                    --i; // try same key once again
+                if (++select_fails > CHK_SELECT_RETRIES) {
+                    status = PM3_ECARDEXCHANGE;
+                    break;
                 }
+                --i; // try same key once again, 0 wraps and the loop brings it back
                 continue;
             }
             switch (card_info.uidlen) {
@@ -2654,14 +2674,18 @@ void MifareChkKeys(uint8_t *datain, uint8_t reserved_mem) {
             }
             have_uid = true;
         } else { // no need for anticollision. We can directly select the card
-            if (iso14443a_select_card(uid, NULL, NULL, false, cascade_levels, true) == false) {
+            sel = iso14443a_select_card(uid, NULL, NULL, false, cascade_levels, true);
+            if (sel != 1 && sel != 2) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("ChkKeys: Can't select card (UID)");
-                if (i) {
-                    --i; // try same key once again
+                if (++select_fails > CHK_SELECT_RETRIES) {
+                    status = PM3_ECARDEXCHANGE;
+                    break;
                 }
+                --i; // try same key once again, 0 wraps and the loop brings it back
                 continue;
             }
         }
+        select_fails = 0;
 
         key = bytes_to_num(datain + i * 6, 6);
         if (mifare_classic_auth(pcs, cuid, blockNo, keyType, key, AUTH_FIRST)) {
@@ -2677,7 +2701,7 @@ void MifareChkKeys(uint8_t *datain, uint8_t reserved_mem) {
     LED_B_ON();
     crypto1_deinit(pcs);
 
-    reply_ng(CMD_HF_MIFARE_CHKKEYS, PM3_SUCCESS, (uint8_t *)&keyresult, sizeof(keyresult));
+    reply_ng(CMD_HF_MIFARE_CHKKEYS, status, (uint8_t *)&keyresult, sizeof(keyresult));
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     set_tracing(false);

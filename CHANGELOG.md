@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mf chk`, `hf mf staticnested` and other key checks - a card that stops answering no longer locks the device (@matrix)
+- Changed `hf mf staticnested` and `hf mf autopwn` - say "Card stopped answering" when the card is lost (@matrix)
 - Update Amiibo database (@tpglitch)
 - Changed `lf pcf7931 write` - write is verified via the tag's read after write, retried up to 3 times, failures are reported (@GiacoBot)
 - Changed `lf pcf7931 reader` - prints blocks 0-7 in order and decodes PAC, password, write protection and selection; handles partial selections, new `--rfb` param (@GiacoBot)
