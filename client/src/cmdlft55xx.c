@@ -1791,11 +1791,11 @@ static bool t55xx_fallback_try(pm3_mod_t mod, pm3_enc_t enc, int fc_hi, int fc_l
         return false;
     }
 
-    tests[*hits].ST = true;
     bool st_cut = false;
     if ((ASKDemod_ext(fitclk, 0, PM3_T55_FALLBACK_MAXERR, 0, false, false, false, 1, &st_cut) == PM3_SUCCESS)
             && test_ask(st_cut, &tests[*hits].offset, &bitRate, clk, &tests[*hits].Q5)) {
 
+        tests[*hits].ST = st_cut;
         tests[*hits].modulation = DEMOD_ASK;
         tests[*hits].bitrate = bitRate;
         tests[*hits].inverted = false;
@@ -1805,11 +1805,11 @@ static bool t55xx_fallback_try(pm3_mod_t mod, pm3_enc_t enc, int fc_hi, int fc_l
         return true;
     }
 
-    tests[*hits].ST = true;
     st_cut = false;
     if ((ASKDemod_ext(fitclk, 1, PM3_T55_FALLBACK_MAXERR, 0, false, false, false, 1, &st_cut) == PM3_SUCCESS)
             && test_ask(st_cut, &tests[*hits].offset, &bitRate, clk, &tests[*hits].Q5)) {
 
+        tests[*hits].ST = st_cut;
         tests[*hits].modulation = DEMOD_ASK;
         tests[*hits].bitrate = bitRate;
         tests[*hits].inverted = true;
@@ -2035,14 +2035,14 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
     } else {
         clk = GetAskClock("", false);
         if (clk > 0) {
-            tests[hits].ST = true;
             // "0 0 1 " == clock auto, invert false, maxError 1.
             // false = no verbose
             // false = no emSearch
             // 1 = Ask/Man
-            // st = true
+            // st_cut = set if DetectST cut out sequence terminators
             bool st_cut = false;
             if ((ASKDemod_ext(0, 0, 1, 0, false, false, false, 1, &st_cut) == PM3_SUCCESS) && test_ask(st_cut, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+                tests[hits].ST = st_cut;
                 tests[hits].modulation = DEMOD_ASK;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = false;
@@ -2050,14 +2050,14 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 tests[hits].downlink_mode = downlink_mode;
                 ++hits;
             }
-            tests[hits].ST = true;
             // "0 0 1 " == clock auto, invert true, maxError 1.
             // false = no verbose
             // false = no emSearch
             // 1 = Ask/Man
-            // st = true
+            // st_cut = set if DetectST cut out sequence terminators
             st_cut = false;
             if ((ASKDemod_ext(0, 1, 1, 0, false, false, false, 1, &st_cut) == PM3_SUCCESS) && test_ask(st_cut, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+                tests[hits].ST = st_cut;
                 tests[hits].modulation = DEMOD_ASK;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = true;

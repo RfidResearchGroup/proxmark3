@@ -778,6 +778,9 @@ while true; do
       if ! CheckExecute "lf T55 detect fsk2a rf50"          "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_fsk2a_rf50.pm3; lf t55xx detect -1; lf t55xx info -1'" "001070E0 - "; then break; fi
       if ! CheckExecute "lf T55 detect fsk2a rf50 st"       "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_fsk2a_rf50_st.pm3; lf t55xx detect -1; lf t55xx info -1'" "001070E8 - "; then break; fi
       if ! CheckExecute "lf T55 detect noralsy clone st"    "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_noralsy_st.pm3; lf t55xx detect -1; lf t55xx info -1'" "00088068 - "; then break; fi
+      # the Seq. terminator line detect prints. Ask hits take it from DetectST
+      if ! CheckExecute "lf T55 detect ask st flag no"      "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_ask_rf32.pm3; lf t55xx detect -1'" "Seq\. terminator\.\.\. No"; then break; fi
+      if ! CheckExecute "lf T55 detect ask st flag yes"     "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_ask_rf32_st.pm3; lf t55xx detect -1'" "Seq\. terminator\.\.\. Yes"; then break; fi
 
       echo -e "\n${C_BLUE}Testing HF:${C_NC}"
       if ! CheckExecute "hf mf offline text"               "$CLIENTBIN -c 'hf mf'" "content from tag dump file"; then break; fi
