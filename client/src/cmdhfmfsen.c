@@ -862,7 +862,7 @@ static int fm11_collect_nonces_from_default_key_fallback(const fm11_keylist_t *d
                 }
                 PrintAndLogEx(WARNING, "Initial key did not collect nonce evidence, continuing dictionary search");
             }
-            if (res == PM3_ETIMEOUT || res == PM3_EOPABORTED) {
+            if (res == PM3_ETIMEOUT || res == PM3_EOPABORTED || res == PM3_ECARDEXCHANGE) {
                 retval = res;
                 break;
             }
@@ -2384,7 +2384,7 @@ normal_out:
                 fm11_print_key_hit_row(nonce_count, sec32, kt, keys_found[sec32][kt], found_key);
                 break;
             }
-            if (res == PM3_ETIMEOUT || res == PM3_EOPABORTED) {
+            if (res == PM3_ETIMEOUT || res == PM3_EOPABORTED || res == PM3_ECARDEXCHANGE) {
                 retval = res;
                 break;
             }
@@ -2663,7 +2663,7 @@ static int fm11_verify_candidates(uint8_t real_sec, uint8_t key_type, const fm11
                           real_sec, key_type ? 'B' : 'A');
             return PM3_ESOFT;
         }
-        if (res == PM3_EOPABORTED) {
+        if (res == PM3_EOPABORTED || res == PM3_ECARDEXCHANGE) {
             fm11_sen_clear_inplace();
             return res;
         }
@@ -3432,7 +3432,7 @@ int HFMFSENRecover(bool keep_nonces, bool no_oob, bool reader_mode, bool offline
             }
             total_candidates = fm11_count_unfound_candidates(candidates, found_key);
 
-        } else if (res == PM3_ETIMEOUT || res == PM3_EOPABORTED) {
+        } else if (res == PM3_ETIMEOUT || res == PM3_EOPABORTED || res == PM3_ECARDEXCHANGE) {
             retval = res;
             goto out;
         } else {

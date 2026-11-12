@@ -2252,6 +2252,11 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
 
         uint8_t foundkey[MIFARE_KEY_SIZE] = {0};
         int16_t isOK = mf_nested(blockNo, keyType, key, trgBlockNo, trgKeyType, foundkey, !ignore_static_encrypted);
+        // a run that picked a wrong nonce finds no key, try again as autopwn does
+        for (int retries = 1; isOK == PM3_ESOFT && retries <= MIFARE_SECTOR_RETRY; retries++) {
+            PrintAndLogEx(FAILED, "Nested attack failed, trying again (%i/%i)", retries, MIFARE_SECTOR_RETRY);
+            isOK = mf_nested(blockNo, keyType, key, trgBlockNo, trgKeyType, foundkey, false);
+        }
         switch (isOK) {
             case PM3_ETIMEOUT:
                 PrintAndLogEx(ERR, "command execution time out\n");
@@ -2652,6 +2657,9 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
                         break;
                     case PM3_EOPABORTED :
                         PrintAndLogEx(WARNING, "aborted via keyboard.");
+                        break;
+                    case PM3_ECARDEXCHANGE :
+                        PrintAndLogEx(FAILED, "Card stopped answering");
                         break;
                     case PM3_ESOFT :
                         // No any key found?
@@ -3961,6 +3969,12 @@ tryStaticnested:
                                     free(fptr);
                                     return isOK;
                                 }
+                                case PM3_ECARDEXCHANGE: {
+                                    PrintAndLogEx(FAILED, "\nCard stopped answering");
+                                    free(e_sector);
+                                    free(fptr);
+                                    return isOK;
+                                }
                                 case PM3_ESOFT: {
                                     PrintAndLogEx(WARNING, "No key found, next try...");
                                     force_detect_dist = 1;
@@ -4350,6 +4364,8 @@ out2:
 
 static int CmdHF14AMfSmartBrute(const char *Cmd) {
     CLIParserContext *ctx;
+    // the result of an emulator memory transfer the command was asked for
+    int eml_res = PM3_SUCCESS;
     CLIParserInit(&ctx, "hf mf brute",
                   "This is a smart bruteforce, exploiting common patterns, bugs and bad designs in key generators.",
                   "hf mf brute --mini           --> Key recovery against MIFARE Mini\n"
@@ -4372,13 +4388,13 @@ static int CmdHF14AMfSmartBrute(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
 
-    bool m0 = arg_get_lit(ctx, 2);
-    bool m1 = arg_get_lit(ctx, 3);
-    bool m2 = arg_get_lit(ctx, 4);
-    bool m4 = arg_get_lit(ctx, 5);
+    bool m0 = arg_get_lit(ctx, 1);
+    bool m1 = arg_get_lit(ctx, 2);
+    bool m2 = arg_get_lit(ctx, 3);
+    bool m4 = arg_get_lit(ctx, 4);
 
-    bool transferToEml = arg_get_lit(ctx, 6);
-    bool createDumpFile = arg_get_lit(ctx, 7);
+    bool transferToEml = arg_get_lit(ctx, 5);
+    bool createDumpFile = arg_get_lit(ctx, 6);
 
     CLIParserFree(ctx);
 
@@ -4534,12 +4550,20 @@ out:
                     // Disable fast mode on last packet
                     g_conn.block_after_ACK = false;
                 }
-                mf_elm_set_mem(block, b, 1);
+                eml_res = mf_elm_set_mem(block, b, 1);
+                if (eml_res != PM3_SUCCESS) {
+                    g_conn.block_after_ACK = false;
+                    break;
+                }
             }
-            PrintAndLogEx(SUCCESS, "Found keys have been transferred to the emulator memory");
+            if (eml_res == PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, "Found keys have been transferred to the emulator memory");
 
-            if (found_keys == (sectorsCnt << 1)) {
-                FastDumpWithEcFill(sectorsCnt);
+                if (found_keys == (sectorsCnt << 1)) {
+                    eml_res = FastDumpWithEcFill(sectorsCnt);
+                }
+            } else {
+                PrintAndLogEx(FAILED, "Found keys have not been transferred to the emulator memory");
             }
         }
 
@@ -4557,7 +4581,7 @@ out:
     free(keyBlock);
     free(e_sector);
     PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
+    return eml_res;
 }
 
 static int CmdHF14AMfChk(const char *Cmd) {

@@ -782,6 +782,8 @@ static void SendStatus(uint32_t wait) {
                  fc.timeouts, fc.forgotten, fc.bytes_max);
         Dbprintf("  BWM fwd now......... " _YELLOW_("%u") " frames / " _YELLOW_("%u") " B in flight",
                  fc.in_flight_frames, fc.in_flight_bytes);
+        Dbprintf("  BWM fwd routing..... " _YELLOW_("%s"), bwm_fwd_tagged() ? "per host" : "every host");
+        bwm_esp_print_runtime_stats();
     }
 #endif
 #ifdef PM5
@@ -802,6 +804,12 @@ static void SendStatus(uint32_t wait) {
     tosend_t *ts = get_tosend();
     Dbprintf("  ToSendMax........... %d", ts->max);
     Dbprintf("  ToSend BUFFERSIZE... %d", TOSEND_BUFFER_SIZE);
+
+#ifdef WITH_ISO14443a
+    uint32_t retrans = 0, retrans_lost = 0;
+    iso14_get_retrans(&retrans, &retrans_lost);
+    Dbprintf("  14443-4 retrans..... %u asked, %u still lost", retrans, retrans_lost);
+#endif
 
 #ifdef CHIP_AT91SAM7S
 
@@ -4789,6 +4797,9 @@ void __attribute__((noreturn)) AppMain(void) {
 #endif
 #ifdef WITH_CEP
         cep_attach_poll();
+#endif
+#ifdef WITH_BWM_FORWARD
+        bwm_fwd_tag_poll();
 #endif
 
         if (*_stack_start != 0xdeadbeef) {

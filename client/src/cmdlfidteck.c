@@ -312,7 +312,9 @@ static int CmdIdteckReader(const char *Cmd) {
     }
 
     do {
-        lf_read(false, 5000);
+        // detectIdteck() needs two preambles 64 bits apart. 10000 samples (about 312 bits at RF/32)
+        // holds two preambles wherever the first frame starts.
+        lf_read(false, 10000);
         demodIdteck(NULL, !cm);
     } while (cm && (kbd_enter_pressed() == false));
 

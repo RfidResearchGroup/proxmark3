@@ -62,8 +62,15 @@ int bwm_fwd_writebuffer_sync(const uint8_t *data, size_t len);
 // Drop-in for usart_read_ng() as the receive_ng() read callback.
 uint32_t bwm_read_ng(uint8_t *data, size_t len);
 
-// >0 when raw bytes are waiting on the FPC USART (gate for receive_ng()).
+// >0 when de-framed bytes are waiting (gate for receive_ng()). With per-host
+// forwarding it picks the endpoint bwm_read_ng() then reads a frame from.
 uint16_t bwm_fwd_rxdata_available(void);
+// receive_ng() took a command from the BWM: replies go to its endpoint.
+void bwm_fwd_latch_reply_ep(void);
+// Main loop: switch the ESP to per-host forwarding (tagged) when due.
+void bwm_fwd_tag_poll(void);
+// true while the ESP tags forward data per endpoint
+bool bwm_fwd_tagged(void);
 // Run waiting RX bytes through the app_com parser (acks, forward data, replies).
 void bwm_fwd_pump(void);
 

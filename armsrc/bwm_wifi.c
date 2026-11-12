@@ -8,6 +8,7 @@
 #include "ticks_apis.h"      // GetTickCount / GetTickCountDelta
 #include "dbprint.h"
 #include "string.h"
+#include "commonutil.h"   // ARRAYLEN
 
 // app_com CRC-16/CCITT-FALSE (same as bwm_forward)
 static uint16_t wifi_crc16(const uint8_t *d, size_t n, uint16_t crc) {
@@ -317,6 +318,78 @@ const char *bwm_flash_vendor(uint8_t mfr) {
         default:
             return "?";
     }
+}
+
+static const char *esp_reset_str(uint8_t r) {
+    // esp_reset_reason_t
+    static const char *const names[] = {
+        "unknown", "power-on", "external", "software", "panic", "int watchdog", "task watchdog",
+        "watchdog", "deep sleep", "brownout", "sdio", "usb", "jtag", "efuse", "power glitch", "cpu lockup"
+    };
+    return (r < ARRAYLEN(names)) ? names[r] : "?";
+}
+
+void bwm_esp_print_runtime_stats(void) {
+    uint8_t resp[512];
+    uint16_t rlen = sizeof(resp);
+    if ((bwm_cmd(BWM_CMD_GET_SYS_RUNTIME_STATS, NULL, 0, resp, &rlen, 300) != PM3_SUCCESS) || (rlen < 14)) {
+        return;
+    }
+    uint32_t up = (uint32_t)resp[0] | ((uint32_t)resp[1] << 8) | ((uint32_t)resp[2] << 16) | ((uint32_t)resp[3] << 24);
+    // ESP32-C2: a software restart reads as watchdog, the uptime is what tells
+    Dbprintf("  BWM uptime.......... " _YELLOW_("%u") " s, last reset: %s", up, esp_reset_str(resp[4]));
+    uint16_t err[4];
+    for (int e = 0; e < 4; e++) {
+        err[e] = (uint16_t)(resp[5 + 2 * e] | (resp[6 + 2 * e] << 8));
+    }
+    Dbprintf("  BWM uart rx errors.. fifo overflow " _YELLOW_("%u") ", ring full " _YELLOW_("%u") ", crc " _YELLOW_("%u") ", timeout " _YELLOW_("%u"),
+             err[0], err[1], err[2], err[3]);
+
+    // three tasks per line
+    char name[3][17];
+    uint16_t free_b[3];
+    uint8_t k = 0;
+    bool first = true;
+    uint8_t count = resp[13];
+    uint16_t i = 14;
+    for (uint8_t t = 0; t < count; t++) {
+        if (i >= rlen) {
+            break;
+        }
+        uint8_t len = resp[i++];
+        if ((i + len + 2) > rlen) {
+            break;
+        }
+        memset(name[k], 0, sizeof(name[k]));
+        memcpy(name[k], &resp[i], MIN(len, (uint8_t)16));
+        i += len;
+        free_b[k] = (uint16_t)(resp[i] | (resp[i + 1] << 8));
+        i += 2;
+        k++;
+        if ((k == 3) || (t + 1 == count)) {
+            const char *lead = first ? "BWM stack free......" : "                    ";
+            if (k == 3) {
+                Dbprintf("  %s %s " _YELLOW_("%u") ", %s " _YELLOW_("%u") ", %s " _YELLOW_("%u"), lead, name[0], free_b[0], name[1], free_b[1], name[2], free_b[2]);
+            } else if (k == 2) {
+                Dbprintf("  %s %s " _YELLOW_("%u") ", %s " _YELLOW_("%u"), lead, name[0], free_b[0], name[1], free_b[1]);
+            } else {
+                Dbprintf("  %s %s " _YELLOW_("%u"), lead, name[0], free_b[0]);
+            }
+            first = false;
+            k = 0;
+        }
+    }
+}
+
+int bwm_esp_set_forward_tagged(bool on, uint8_t *applied) {
+    uint8_t req = on ? 1 : 0;
+    uint8_t resp = 0;
+    uint16_t rlen = sizeof(resp);
+    int r = bwm_cmd(BWM_CMD_SET_FORWARD_TAGGED, &req, 1, &resp, &rlen, 300);
+    if (applied) {
+        *applied = ((r == PM3_SUCCESS) && (rlen == 1)) ? resp : 0;
+    }
+    return r;
 }
 
 int bwm_esp_get_chip_info(bwm_chip_info_t *ci, uint32_t timeout_ms) {
