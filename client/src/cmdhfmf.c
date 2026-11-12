@@ -2252,6 +2252,11 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
 
         uint8_t foundkey[MIFARE_KEY_SIZE] = {0};
         int16_t isOK = mf_nested(blockNo, keyType, key, trgBlockNo, trgKeyType, foundkey, !ignore_static_encrypted);
+        // a run that picked a wrong nonce finds no key, try again as autopwn does
+        for (int retries = 1; isOK == PM3_ESOFT && retries <= MIFARE_SECTOR_RETRY; retries++) {
+            PrintAndLogEx(FAILED, "Nested attack failed, trying again (%i/%i)", retries, MIFARE_SECTOR_RETRY);
+            isOK = mf_nested(blockNo, keyType, key, trgBlockNo, trgKeyType, foundkey, false);
+        }
         switch (isOK) {
             case PM3_ETIMEOUT:
                 PrintAndLogEx(ERR, "command execution time out\n");
@@ -2652,6 +2657,9 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
                         break;
                     case PM3_EOPABORTED :
                         PrintAndLogEx(WARNING, "aborted via keyboard.");
+                        break;
+                    case PM3_ECARDEXCHANGE :
+                        PrintAndLogEx(FAILED, "Card stopped answering");
                         break;
                     case PM3_ESOFT :
                         // No any key found?
@@ -3957,6 +3965,12 @@ tryStaticnested:
                                 }
                                 case PM3_EOPABORTED: {
                                     PrintAndLogEx(WARNING, "\nButton pressed, user aborted");
+                                    free(e_sector);
+                                    free(fptr);
+                                    return isOK;
+                                }
+                                case PM3_ECARDEXCHANGE: {
+                                    PrintAndLogEx(FAILED, "\nCard stopped answering");
                                     free(e_sector);
                                     free(fptr);
                                     return isOK;
