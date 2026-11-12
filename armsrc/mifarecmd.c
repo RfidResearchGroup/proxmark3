@@ -1701,8 +1701,9 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
 
         if (g_dbglevel >= DBG_DEBUG) Dbprintf("rtr=%d isOK=%d min=%d max=%d avg=%d, delta_time=%d", rtr, isOK, dmin, dmax, davg, delta_time);
 
-        dmin = davg - 2;
-        dmax = davg + 2;
+        // the nonce distance of some cards spreads wider than davg +-2, search the measured range too
+        dmin = MIN(dmin, davg - 2);
+        dmax = MAX(dmax, davg + 2);
 
         LED_B_OFF();
     }

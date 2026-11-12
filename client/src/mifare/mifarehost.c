@@ -710,7 +710,7 @@ int mf_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo
 
         register uint8_t j;
         for (j = 0; j < size; j++) {
-            crypto1_get_lfsr(statelists[0].head.slhead + i, &key64);
+            crypto1_get_lfsr(statelists[0].head.slhead + i + j, &key64);
             num_to_bytes(key64, MIFARE_KEY_SIZE, keyBlock + j * MIFARE_KEY_SIZE);
         }
 
