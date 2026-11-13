@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 15 info` - no answer to EAS ALARM, as sent by the SLIX tested with the EAS mode disabled, is reported as EAS not active instead of ending with an error (@matrix)
+- Fixed `hf 15` - a tag error was reported with the flags byte instead of the error code (@matrix)
+- Fixed `hf 15 info` - a tag error answered with code 0F or 10, e.g. by a SLIX to `-o`, printed nothing (@matrix)
+- Fixed `hf 15 info` - the NXP and ST requests after the system info ignored `-2`: the ST signature was always read in 1 out of 256, the NXP requests always sent in 1 out of 4 (@matrix)
+- Fixed `hf 15 info` - a UID given with `-u` was sent in the wrong byte order, so no tag answered, and a `-u` of the wrong length is refused instead of scanning for any tag (@matrix)
 - Fixed `tools/external_sam_read.py iclass` - the faked answer to the e-purse update is the new value with its halves swapped, as a card answers (@matrix)
 - Changed `hf mf sen` - default key prioritisation indexed the candidate list instead of rescanning it for each of the ~85k dictionary keys (@iceman1001)
 - Changed `hf mf sen` - the default-key dictionary check no longer mallocs a cipher state per key and gives up on the first wrong keystream byte, ~6x faster for that phase (@iceman1001)
