@@ -625,9 +625,9 @@ while true; do
       if ! CheckExecute "lf IDTECK reject test"      "if ! $CLIENTBIN -c 'lf idteck demod --raw DEADBEEFDEADBEEF' 2>&1 | grep -q 'IDTECK Tag Found'; then echo OK; fi" "OK"; then break; fi
       if ! CheckExecute "lf IDTECK no wiegand test"  "if ! $CLIENTBIN -c 'lf idteck demod --raw 4944544B351FBE4B' 2>&1 | grep -q 'H10301'; then echo OK; fi" "OK"; then break; fi
       if ! CheckExecute "lf INDALA test"             "$CLIENTBIN -c 'data load -f traces/lf_Indala-504278295.pm3;lf search -1'" "Indala ID found"; then break; fi
-      if ! CheckExecute "lf INDALA weak test"        "$CLIENTBIN -c 'data load -f traces/lf_Indala-a0000000e6bd0e92-weak.pm3;lf search -1'" "Raw: a0000000e6bd0e92"; then break; fi
-      if ! CheckExecute "lf INDALA weak test 2"      "$CLIENTBIN -c 'data load -f traces/lf_Indala-a0000000e6bd0e92-weak.pm3; lf indala demod'" \
-                                                              "Indala \(len 64\)  Raw: a0000000e6bd0e92"; then break; fi
+      if ! CheckExecute "lf INDALA weak test"        "$CLIENTBIN -c 'data load -f traces/lf_Indala-a00000008f49d2a1-weak.pm3;lf search -1'" "Raw: a00000008f49d2a1"; then break; fi
+      if ! CheckExecute "lf INDALA weak test 2"      "$CLIENTBIN -c 'data load -f traces/lf_Indala-a00000008f49d2a1-weak.pm3; lf indala demod'" \
+                                                              "Indala \(len 64\)  Raw: a00000008f49d2a1"; then break; fi
       if ! CheckExecute "lf PSK reject test"         "$CLIENTBIN -c 'data load -f traces/lf_NRZ_RF64_fc2-ripple_synthetic.pm3;lf search -1'" "No known 125/134 kHz tags found"; then break; fi
       if ! CheckExecute "lf KERI test"               "$CLIENTBIN -c 'data load -f traces/lf_Keri.pm3;lf search -1'" "Pyramid ID found"; then break; fi
       if ! CheckExecute "lf NEXWATCH test"           "$CLIENTBIN -c 'data load -f traces/lf_NEXWATCH_Quadrakey-521512301.pm3;lf search -1 '" "NexWatch ID found"; then break; fi
@@ -772,6 +772,21 @@ while true; do
       if ! CheckExecute "lf t55xx cfg watchnet"             "$CLIENTBIN -c 'lf t55xx info -c 00107060'" "WatchNET"; then break; fi
       if ! CheckExecute "lf t55xx cfg keri nxt"             "$CLIENTBIN -c 'lf t55xx info -c 00107080'" "Keri NXT"; then break; fi
       if ! CheckExecute "lf t55xx cfg ict"                  "$CLIENTBIN -c 'lf t55xx info -c 001070E0'" "Config block match\\.\\.\\. ICT"; then break; fi
+      # block 0 reads saved after 'lf t55xx detect --r0'. info -1 decodes block 0 with the config detect found
+      if ! CheckExecute "lf T55 detect ask rf32"            "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_ask_rf32.pm3; lf t55xx detect -1; lf t55xx info -1'" "000880E0 - "; then break; fi
+      if ! CheckExecute "lf T55 detect ask rf32 st"         "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_ask_rf32_st.pm3; lf t55xx detect -1; lf t55xx info -1'" "000880E8 - "; then break; fi
+      if ! CheckExecute "lf T55 detect fsk2a rf50"          "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_fsk2a_rf50.pm3; lf t55xx detect -1; lf t55xx info -1'" "001070E0 - "; then break; fi
+      if ! CheckExecute "lf T55 detect fsk2a rf50 st"       "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_fsk2a_rf50_st.pm3; lf t55xx detect -1; lf t55xx info -1'" "001070E8 - "; then break; fi
+      if ! CheckExecute "lf T55 detect noralsy clone st"    "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_noralsy_st.pm3; lf t55xx detect -1; lf t55xx info -1'" "00088068 - "; then break; fi
+      # the Seq. terminator line detect prints. Ask hits take it from DetectST, fsk hits from a copy of block 0 33 to 36 bits away
+      if ! CheckExecute "lf T55 detect ask st flag no"      "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_ask_rf32.pm3; lf t55xx detect -1'" "Seq\. terminator\.\.\. No"; then break; fi
+      if ! CheckExecute "lf T55 detect ask st flag yes"     "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_ask_rf32_st.pm3; lf t55xx detect -1'" "Seq\. terminator\.\.\. Yes"; then break; fi
+      if ! CheckExecute "lf T55 detect fsk st flag no"      "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_fsk2a_rf50.pm3; lf t55xx detect -1'" "Seq\. terminator\.\.\. No"; then break; fi
+      if ! CheckExecute "lf T55 detect fsk st flag yes"     "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_fsk2a_rf50_st.pm3; lf t55xx detect -1'" "Seq\. terminator\.\.\. Yes"; then break; fi
+      # short fsk st captures. At 5100 samples the copy sits before the word detect picks.
+      # 3050 samples from sample 2000 leave no room on either side, and lengths from 2800 to 3350 give the same answer
+      if ! CheckExecute "lf T55 detect fsk st flag behind"  "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_fsk2a_rf50_st.pm3; data rtrim -i 5100; lf t55xx detect -1'" "Seq\. terminator\.\.\. Yes"; then break; fi
+      if ! CheckExecute "lf T55 detect fsk st flag no room" "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_fsk2a_rf50_st.pm3; data ltrim -i 2000; data rtrim -i 3050; lf t55xx detect -1'" "Seq\. terminator\.\.\. Yes"; then break; fi
 
       echo -e "\n${C_BLUE}Testing HF:${C_NC}"
       if ! CheckExecute "hf mf offline text"               "$CLIENTBIN -c 'hf mf'" "content from tag dump file"; then break; fi

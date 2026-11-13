@@ -1350,6 +1350,9 @@ bool t55xxTryDetectModulation(uint8_t downlink_mode, bool print_config) {
 // every correct detection recovered at least 98.8% of g_GraphTraceLen / clk bits
 #define T55XX_MIN_DEMOD_YIELD_PCT 80
 
+// true while test() checks an ask demodulation that DetectST cut sequence terminators out of
+static bool s_demod_st_cut = false;
+
 static bool t55xx_demod_yield_ok(uint8_t clk) {
 
     // what actually produced the bits, which is not always what was asked for
@@ -1359,7 +1362,13 @@ static bool t55xx_demod_yield_ok(uint8_t clk) {
         return true;
     }
 
-    const size_t expected = g_GraphTraceLen / used;
+    size_t expected = g_GraphTraceLen / used;
+
+    // On a one-block read, DetectST drops the bits before the first terminator (0 to 36), then 4 of every 36.
+    // The expected count leaves out all 36 leading bits, then 4 of every 36.
+    if (s_demod_st_cut && expected > 36) {
+        expected = (expected - 36) * 32 / 36;
+    }
 
     // too short to say anything either way
     if (expected < 32) {
@@ -1399,6 +1408,71 @@ static bool block0_stride_not_disproved(uint8_t offset) {
 static uint8_t t55xx_observed_psk_carrier(void) {
     const int fc = GetPskCarrier(false);
     return (fc == 2 || fc == 4 || fc == 8) ? (uint8_t)fc : 0;
+}
+
+// Searches for a copy of the word at offset, 33 to 36 bits after it (dir 1) or before it (dir -1).
+// Returns 1 if it finds one, -1 if the search runs off the buffer first, and 0 otherwise.
+// A copy past bit 255 counts as none, because PackBits takes a uint8_t start.
+static int block0_st_copy(uint8_t offset, int dir) {
+
+    const uint32_t word = PackBits(offset, 32, g_DemodBuffer);
+    for (int stride = 33; stride <= 36; stride++) {
+        const int at = offset + (dir * stride);
+        if (at < 0 || (size_t)at + 32 > g_DemodBufferLen) {
+            return -1;
+        }
+        if (at > 255) {
+            return 0;
+        }
+        if (word == PackBits((uint8_t)at, 32, g_DemodBuffer)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// Like block0_stride_not_disproved, but a T5577 word with its ST bit set may also repeat 33 to 36 bits on.
+// A terminator adds up to four bit periods between copies of block 0, and fsk demodulates it to about two bits.
+// Only the strict fsk pass calls this.
+static bool block0_stride_not_disproved_st(uint8_t offset, bool q5) {
+
+    if (block0_stride_not_disproved(offset)) {
+        return true;
+    }
+
+    // A Q5 word keeps the 32 bit check. Its ST bit is T5555_ST_TERMINATOR, and no Q5 was measured at the wider stride.
+    if (q5) {
+        return false;
+    }
+
+    const uint32_t word = PackBits(offset, 32, g_DemodBuffer);
+    if ((word & T55x7_ST_TERMINATOR) == 0) {
+        return false;
+    }
+
+    // A copy past the end of the buffer cannot disprove the word, as in block0_stride_not_disproved.
+    return block0_st_copy(offset, 1) != 0;
+}
+
+// fsk has no DetectST. Reports ST if the word has its ST bit set and a copy sits 33 to 36 bits before or after it.
+// test() often picks the second copy, so both sides count. If neither side has room, the ST bit decides. Not on a Q5.
+static bool block0_fsk_st_seen(uint8_t offset, bool q5) {
+
+    if (q5) {
+        return false;
+    }
+
+    const uint32_t word = PackBits(offset, 32, g_DemodBuffer);
+    if ((word & T55x7_ST_TERMINATOR) == 0) {
+        return false;
+    }
+
+    const int ahead = block0_st_copy(offset, 1);
+    const int behind = block0_st_copy(offset, -1);
+    if (ahead == 1 || behind == 1) {
+        return true;
+    }
+    return (ahead == -1 && behind == -1);
 }
 
 static void t55xx_psk_coherent(int fitclk, uint8_t clk, t55xx_conf_block_t *tests, uint8_t *hits, uint8_t downlink_mode) {
@@ -1570,6 +1644,8 @@ static void t55xx_ask_coherent(int fitclk, uint8_t clk, t55xx_conf_block_t *test
             }
 
             // sweeping the bit rates means a wrong one can fit first, so hold a block read to the 32 bit stride
+            // This detector decodes an ST word with the wrong polarity and no ST, and the 32 bit stride rejects it.
+            // The fallback's ask attempts decode that word correctly. Keep the 32 bit stride here.
             if (s_block_read_capture && block0_stride_not_disproved(tests[*hits].offset) == false) {
                 continue;
             }
@@ -1587,6 +1663,13 @@ static void t55xx_ask_coherent(int fitclk, uint8_t clk, t55xx_conf_block_t *test
     free(sig);
     free(raw);
     free(work);
+}
+
+static bool test_ask(bool st_cut, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5) {
+    s_demod_st_cut = st_cut;
+    const bool ok = test(DEMOD_ASK, offset, fndBitRate, clk, Q5);
+    s_demod_st_cut = false;
+    return ok;
 }
 
 static bool t55xx_fallback_try(pm3_mod_t mod, pm3_enc_t enc, int fc_hi, int fc_lo, int fitclk,
@@ -1634,7 +1717,7 @@ static bool t55xx_fallback_try(pm3_mod_t mod, pm3_enc_t enc, int fc_hi, int fc_l
                             continue;
                         }
 
-                        if (strict && block0_stride_not_disproved(tests[*hits].offset) == false) {
+                        if (strict && block0_stride_not_disproved_st(tests[*hits].offset, tests[*hits].Q5) == false) {
                             continue;
                         }
 
@@ -1649,7 +1732,7 @@ static bool t55xx_fallback_try(pm3_mod_t mod, pm3_enc_t enc, int fc_hi, int fc_l
                         tests[*hits].bitrate = bitRate;
                         tests[*hits].inverted = (inv != 0);
                         t55xx_record_hit(&tests[*hits]);
-                        tests[*hits].ST = false;
+                        tests[*hits].ST = block0_fsk_st_seen(tests[*hits].offset, tests[*hits].Q5);
                         tests[*hits].downlink_mode = downlink_mode;
                         (*hits)++;
                         return true;
@@ -1729,10 +1812,11 @@ static bool t55xx_fallback_try(pm3_mod_t mod, pm3_enc_t enc, int fc_hi, int fc_l
         return false;
     }
 
-    tests[*hits].ST = true;
-    if ((ASKDemod_ext(fitclk, 0, PM3_T55_FALLBACK_MAXERR, 0, false, false, false, 1, &tests[*hits].ST) == PM3_SUCCESS)
-            && test(DEMOD_ASK, &tests[*hits].offset, &bitRate, clk, &tests[*hits].Q5)) {
+    bool st_cut = false;
+    if ((ASKDemod_ext(fitclk, 0, PM3_T55_FALLBACK_MAXERR, 0, false, false, false, 1, &st_cut) == PM3_SUCCESS)
+            && test_ask(st_cut, &tests[*hits].offset, &bitRate, clk, &tests[*hits].Q5)) {
 
+        tests[*hits].ST = st_cut;
         tests[*hits].modulation = DEMOD_ASK;
         tests[*hits].bitrate = bitRate;
         tests[*hits].inverted = false;
@@ -1742,10 +1826,11 @@ static bool t55xx_fallback_try(pm3_mod_t mod, pm3_enc_t enc, int fc_hi, int fc_l
         return true;
     }
 
-    tests[*hits].ST = true;
-    if ((ASKDemod_ext(fitclk, 1, PM3_T55_FALLBACK_MAXERR, 0, false, false, false, 1, &tests[*hits].ST) == PM3_SUCCESS)
-            && test(DEMOD_ASK, &tests[*hits].offset, &bitRate, clk, &tests[*hits].Q5)) {
+    st_cut = false;
+    if ((ASKDemod_ext(fitclk, 1, PM3_T55_FALLBACK_MAXERR, 0, false, false, false, 1, &st_cut) == PM3_SUCCESS)
+            && test_ask(st_cut, &tests[*hits].offset, &bitRate, clk, &tests[*hits].Q5)) {
 
+        tests[*hits].ST = st_cut;
         tests[*hits].modulation = DEMOD_ASK;
         tests[*hits].bitrate = bitRate;
         tests[*hits].inverted = true;
@@ -1951,7 +2036,7 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
             tests[hits].bitrate = bitRate;
             tests[hits].inverted = false;
             t55xx_record_hit(&tests[hits]);
-            tests[hits].ST = false;
+            tests[hits].ST = block0_fsk_st_seen(tests[hits].offset, tests[hits].Q5);
             tests[hits].downlink_mode = downlink_mode;
             ++hits;
         }
@@ -1964,20 +2049,21 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
             tests[hits].bitrate = bitRate;
             tests[hits].inverted = true;
             t55xx_record_hit(&tests[hits]);
-            tests[hits].ST = false;
+            tests[hits].ST = block0_fsk_st_seen(tests[hits].offset, tests[hits].Q5);
             tests[hits].downlink_mode = downlink_mode;
             ++hits;
         }
     } else {
         clk = GetAskClock("", false);
         if (clk > 0) {
-            tests[hits].ST = true;
             // "0 0 1 " == clock auto, invert false, maxError 1.
             // false = no verbose
             // false = no emSearch
             // 1 = Ask/Man
-            // st = true
-            if ((ASKDemod_ext(0, 0, 1, 0, false, false, false, 1, &tests[hits].ST) == PM3_SUCCESS) && test(DEMOD_ASK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+            // st_cut = set if DetectST cut out sequence terminators
+            bool st_cut = false;
+            if ((ASKDemod_ext(0, 0, 1, 0, false, false, false, 1, &st_cut) == PM3_SUCCESS) && test_ask(st_cut, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+                tests[hits].ST = st_cut;
                 tests[hits].modulation = DEMOD_ASK;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = false;
@@ -1985,13 +2071,14 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 tests[hits].downlink_mode = downlink_mode;
                 ++hits;
             }
-            tests[hits].ST = true;
             // "0 0 1 " == clock auto, invert true, maxError 1.
             // false = no verbose
             // false = no emSearch
             // 1 = Ask/Man
-            // st = true
-            if ((ASKDemod_ext(0, 1, 1, 0, false, false, false, 1, &tests[hits].ST) == PM3_SUCCESS) && test(DEMOD_ASK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+            // st_cut = set if DetectST cut out sequence terminators
+            st_cut = false;
+            if ((ASKDemod_ext(0, 1, 1, 0, false, false, false, 1, &st_cut) == PM3_SUCCESS) && test_ask(st_cut, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+                tests[hits].ST = st_cut;
                 tests[hits].modulation = DEMOD_ASK;
                 tests[hits].bitrate = bitRate;
                 tests[hits].inverted = true;

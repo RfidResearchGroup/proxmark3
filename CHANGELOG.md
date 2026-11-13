@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `lf t55xx detect` - finds ASK and FSK configurations that have the sequence terminator set, and reports whether it is set (@mfcarroll)
 - Fixed `CLIParamStrToBuf()` - a string option that filled its buffer had its terminator written one byte past it and is now refused as too long (@matrix)
 - Fixed `hf legic clone` - the client read `--mcc` as a string into a 1-byte buffer (refused, or a stack overflow), printed the wrong message for a missing `--mcc` or `-o`, and ignored `--mcc` and `-o` with `--write` (@matrix)
 - Fixed `hf legic migrate` - it refused every run without `--dcf`, and took a `--dcf` longer than two bytes after a parse error (@matrix)
