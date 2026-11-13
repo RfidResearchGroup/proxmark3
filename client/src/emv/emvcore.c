@@ -580,9 +580,9 @@ int EMVSearchPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFi
         if ((res < 0) && (channel == CC_CONTACT)) {
             smart_card_atr_t atr;
             if (smart_select(false, &atr)) {
-                PrintAndLogEx(HINT, "Hint: card answered its ATR but not the APDU - is this an EMV card? try `" _YELLOW_("smart info") "`");
+                PrintAndLogEx(HINT, "Hint: Is this an EMV card? Try `" _YELLOW_("smart info") "`");
             } else {
-                PrintAndLogEx(HINT, "Hint: no answer at all - is a card in the slot? try `" _YELLOW_("smart info") "`");
+                PrintAndLogEx(HINT, "Hint: Is a card in the slot? Try `" _YELLOW_("smart info") "`");
             }
         }
     }

@@ -653,7 +653,7 @@ void desfire_em_print(const uint8_t *img, size_t imglen) {
 
     if (hdr->magic != DESFIRE_EM_MAGIC) {
         PrintAndLogEx(WARNING, "No DESFire card image here, magic is " _YELLOW_("%08X"), hdr->magic);
-        PrintAndLogEx(HINT, "Hint: load one with " _YELLOW_("`hf mfdes eload -f <fn>`"));
+        PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mfdes eload -f <fn>") "`");
         return;
     }
 

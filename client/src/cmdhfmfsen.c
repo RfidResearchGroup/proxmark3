@@ -2796,7 +2796,7 @@ static int fm11_select_mifare_classic(iso14a_card_select_t *card_out) {
     uint64_t tagT = GetHF14AMfU_Type();
     if (tagT != MFU_TT_UL_ERROR) {
         PrintAndLogEx(ERR, "Detected a MIFARE Ultralight/C/NTAG Compatible card.");
-        PrintAndLogEx(ERR, "This command targets " _YELLOW_("MIFARE Classic"));
+        PrintAndLogEx(HINT, "This command targets " _YELLOW_("MIFARE Classic"));
         return PM3_ESOFT;
     }
 
@@ -2813,7 +2813,7 @@ static int fm11_select_mifare_classic(iso14a_card_select_t *card_out) {
     uint64_t select_status = sel_2763;
     if (select_status == 0) {
         PrintAndLogEx(FAILED, "No tag detected or other tag communication error");
-        PrintAndLogEx(HINT, "Hint: Try some distance or position of the card");
+        PrintAndLogEx(HINT, "Hint: Reposition tag and try again");
         return PM3_ECARDEXCHANGE;
     }
 
@@ -2934,7 +2934,7 @@ int HFMFSENRecover(bool keep_nonces, bool no_oob, bool reader_mode, bool offline
         if (retval != PM3_SUCCESS) {
             DropField();
             PrintAndLogEx(WARNING, "Unable to collect FM11RF08S nonce evidence with the default-key dictionary");
-            PrintAndLogEx(HINT, "Hint: provide nonce evidence with `hf mf isen --collect_fm11rf08s_without_backdoor` and a known key");
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mf isen --collect_fm11rf08s_without_backdoor") "` and a known key");
             fm11_keylist_free(&default_keys);
             return retval;
         }
