@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed the ISO15693 reader - a tag answer was lost when a noise step came right before its SOF, e.g. `hf 15 dump` ended with `Dump incomplete` (@matrix)
+- Fixed the ISO15693 tag answer decoders - an answer longer than the buffer wrote one byte past it (@matrix)
 - Fixed `hf mf ndefread` - on sectors 32-39 of a 4K card it overflowed a stack buffer and decoded 3 of their 15 data blocks (@matrix)
 - Fixed `hf mf ndefread` - it told the user to retry with `-k` but read the MAD only with the MAD key, a `-k` or `--aid` of the wrong length was ignored (@matrix)
 - Changed `tools/external_sam_read.py` - added `mfc` for a HID MIFARE Classic credential, as `hf mf sam`, and `desfire` for a HID DESFire one, as `hf mfdes sam` (@matrix)
