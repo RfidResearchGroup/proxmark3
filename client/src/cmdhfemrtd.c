@@ -1438,7 +1438,7 @@ static void emrtd_check_cam(emrtd_session_t *ssn) {
 
         const char *mode = NULL;
         if (emrtd_pace_cam_verify(ssn, pk_icc, pk_icclen, &mode) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "Chip Authentication.. " _GREEN_("verified") " ( the chip is genuine, not a clone )");
+            PrintAndLogEx(SUCCESS, "Chip Authentication.. " _GREEN_("verified") " ( the chip is genuine )");
             PrintAndLogEx(INFO, "CAM encoding...... %s", mode);
             return;
         }
@@ -1450,9 +1450,6 @@ static void emrtd_check_cam(emrtd_session_t *ssn) {
     }
 
     PrintAndLogEx(WARNING, "Chip Authentication.. " _YELLOW_("not verified") " ( we cannot check this document's CAM proof )");
-    PrintAndLogEx(HINT, "Hint: the secure channel is valid and every file is authentic. Only the anti-clone");
-    PrintAndLogEx(HINT, "Hint: proof is unchecked, which is a known gap, not a sign of a bad document");
-    PrintAndLogEx(HINT, "Hint: if you want to help close it, please report everything below");
     emrtd_pace_cam_dump(ssn, pk_icc, pk_icclen);
 }
 
@@ -2929,7 +2926,7 @@ static int CmdHFeMRTDDump(const char *Cmd) {
     } else {
         if (!validate_date(dob, slen)) {
             PrintAndLogEx(ERR, "Date of birth date format is incorrect, cannot continue.");
-            PrintAndLogEx(HINT, "Hint: Use the format YYMMDD.");
+            PrintAndLogEx(HINT, "Hint: Use the format " _YELLOW_("YYMMDD"));
             error = true;
         }
     }
@@ -2939,7 +2936,7 @@ static int CmdHFeMRTDDump(const char *Cmd) {
     } else {
         if (!validate_date(expiry, slen)) {
             PrintAndLogEx(ERR, "Expiry date format is incorrect, cannot continue.");
-            PrintAndLogEx(HINT, "Hint: Use the format YYMMDD.");
+            PrintAndLogEx(HINT, "Hint: Use the format " _YELLOW_("YYMMDD"));
             error = true;
         }
     }
@@ -2957,12 +2954,12 @@ static int CmdHFeMRTDDump(const char *Cmd) {
             // TODO check MRZ checksums?
             if (!validate_date(dob, 6)) {
                 PrintAndLogEx(ERR, "Date of birth date format is incorrect, cannot continue.");
-                PrintAndLogEx(HINT, "Hint: Use the format YYMMDD.");
+                PrintAndLogEx(HINT, "Hint: Use the format " _YELLOW_("YYMMDD"));
                 error = true;
             }
             if (!validate_date(expiry, 6)) {
                 PrintAndLogEx(ERR, "Expiry date format is incorrect, cannot continue.");
-                PrintAndLogEx(HINT, "Hint: Use the format YYMMDD.");
+                PrintAndLogEx(HINT, "Hint: Use the format " _YELLOW_("YYMMDD"));
                 error = true;
             }
         }
@@ -3062,7 +3059,7 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
     } else {
         if (!validate_date(dob, slen)) {
             PrintAndLogEx(ERR, "Date of birth date format is incorrect, cannot continue.");
-            PrintAndLogEx(HINT, "Hint: Use the format YYMMDD.");
+            PrintAndLogEx(HINT, "Hint: Use the format " _YELLOW_("YYMMDD"));
             error = true;
         }
     }
@@ -3072,7 +3069,7 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
     } else {
         if (!validate_date(expiry, slen)) {
             PrintAndLogEx(ERR, "Expiry date format is incorrect, cannot continue.");
-            PrintAndLogEx(HINT, "Hint: Use the format YYMMDD.");
+            PrintAndLogEx(HINT, "Hint: Use the format " _YELLOW_("YYMMDD"));
             error = true;
         }
     }
@@ -3090,12 +3087,12 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
             // TODO check MRZ checksums?
             if (!validate_date(dob, 6)) {
                 PrintAndLogEx(ERR, "Date of birth date format is incorrect, cannot continue.");
-                PrintAndLogEx(HINT, "Hint: Use the format YYMMDD.");
+                PrintAndLogEx(HINT, "Hint: Use the format " _YELLOW_("YYMMDD"));
                 error = true;
             }
             if (!validate_date(expiry, 6)) {
                 PrintAndLogEx(ERR, "Expiry date format is incorrect, cannot continue.");
-                PrintAndLogEx(HINT, "Hint: Use the format YYMMDD.");
+                PrintAndLogEx(HINT, "Hint: Use the format " _YELLOW_("YYMMDD"));
                 error = true;
             }
         }

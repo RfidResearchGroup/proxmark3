@@ -2836,7 +2836,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         status = ul_read(0x28, ulc_conf, sizeof(ulc_conf), false);
         if (status <= 0) {
             PrintAndLogEx(ERR, "Error: tag didn't answer to page 40 read command");
-            PrintAndLogEx(HINT, "Hint: Tag config may be set to read-protect those pages, try dumping");
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu dump") "`");
             DropField();
             return PM3_ESOFT;
         }
@@ -3154,11 +3154,11 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             }
             if (len < 1) {
                 PrintAndLogEx(WARNING, _YELLOW_("password not known"));
-                PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfu pwdgen`") " to get see known pwd gen algo suggestions");
+                PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu pwdgen") "` for suggestions");
             }
         } else {
             if (locked) {
-                PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfu pwdgen`") " to get see known pwd gen algo suggestions");
+                PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu pwdgen") "` for suggestions");
             }
         }
     }
@@ -3170,11 +3170,11 @@ out:
 
     if (locked) {
         PrintAndLogEx(INFO, "\nTag appears to be locked, try using a key to get more info");
-        PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfu pwdgen`") " to get see known pwd gen algo suggestions");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu pwdgen") "` for suggestions");
     }
 
     if (tagtype & (MFU_TT_MAGIC_1A | MFU_TT_MAGIC_1B | MFU_TT_MAGIC_2)) {
-        PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`script run hf_mfu_setuid -h`") " to set UID");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("script run hf_mfu_setuid -h") "` to set UID");
     }
 
     PrintAndLogEx(NORMAL, "");
@@ -4595,7 +4595,7 @@ static int CmdHF14AMfUeLoad(const char *Cmd) {
         return res;
     }
 
-    PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfu sim -t 7`") " to simulate an Amiibo.");
+    PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mfu sim -t 7") "` to simulate an Amiibo.");
     PrintAndLogEx(INFO, "Done!");
     return res;
 }
@@ -7470,7 +7470,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
         int cnt_val = 0;
         uint8_t tear = 0;
         if (mfu_cnt_preflight(cnt_no, &cnt_val, &tear) != PM3_SUCCESS) {
-            PrintAndLogEx(HINT, "Try `hf mfu countertear -f` if this is a false negative");
+            PrintAndLogEx(HINT, "HInt: Try `" _YELLOW_("hf mfu countertear -f") "`");
             retval = PM3_ESOFT;
             goto exit;
         }
@@ -7482,7 +7482,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
         if (res == PM3_EOPABORTED) {
             if (delay_bd > -1) {
                 PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(NORMAL, "[x] Interrupted by user.");
+                PrintAndLogEx(NORMAL, "Aboarted by user");
             }
             // script: stops with no working delay leave silently
             goto exit;
@@ -8041,7 +8041,7 @@ int CmdHF14MfuNDEFWrite(const char *Cmd) {
     if (ndef_print_CC(data + 12) == PM3_ESOFT) {
         DropField();
         PrintAndLogEx(ERR, "Error: tag didnt contain a NDEF Container");
-        PrintAndLogEx(HINT, "Hint: the tag needs to be NDEF formatted first");
+        PrintAndLogEx(HINT, "Hint: Tag needs to be NDEF formatted first");
         return PM3_ESOFT;
     }
 
@@ -8284,9 +8284,8 @@ int CmdHF14MfuNDEFFormat(const char *Cmd) {
     if (fmt == NULL) {
         if (cc_len == 0) {
             PrintAndLogEx(FAILED, "Don't know the Capability Container for this tag type");
-            PrintAndLogEx(INFO, "Block 3 is One Time Programmable, a wrong value can not be undone,");
-            PrintAndLogEx(INFO, "so this command will not guess one.");
-            PrintAndLogEx(HINT, "Hint: supply it yourself with `" _YELLOW_("hf mfu ndefformat -d <hex> --force") "`");
+            PrintAndLogEx(INFO, "Block 3 is One Time Programmable, a wrong value can not be undone");
+            PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mfu ndefformat -d <hex> --force") "`");
             return PM3_ENOTIMPL;
         }
         if (force == false) {
@@ -8320,7 +8319,7 @@ int CmdHF14MfuNDEFFormat(const char *Cmd) {
             PrintAndLogEx(INFO, "    requested... %d bytes ( MLEN %02X )", cc_override[2] * 8, cc_override[2]);
             PrintAndLogEx(INFO, "    tag holds... %d bytes ( MLEN %02X )", fmt->page[0][2] * 8, fmt->page[0][2]);
             PrintAndLogEx(INFO, "Block 3 is One Time Programmable, this can not be undone.");
-            PrintAndLogEx(HINT, "Hint: add `" _YELLOW_("--force") "` if you really mean it");
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("--force") "` if you really mean it");
             return PM3_EINVARG;
         }
 
@@ -8504,7 +8503,7 @@ int CmdHF14MfuNDEFFormat(const char *Cmd) {
         PrintAndLogEx(FAILED, "Capability Container did not take");
         PrintAndLogEx(INFO, "    wanted...... " _GREEN_("%s"), sprint_hex_inrow(pages[0], MFU_BLOCK_SIZE));
         PrintAndLogEx(INFO, "    on tag now.. " _RED_("%s"), sprint_hex_inrow(verify, MFU_BLOCK_SIZE));
-        PrintAndLogEx(HINT, "Hint: block 3 is OTP, check whether its block locking bit is set");
+        PrintAndLogEx(HINT, "Hint: Block 3 is OTP, check whether its block locking bit is set");
         return PM3_ESOFT;
     }
 
@@ -8513,7 +8512,7 @@ int CmdHF14MfuNDEFFormat(const char *Cmd) {
         // one sprint_hex_inrow() call per line: it returns a shared static buffer
         PrintAndLogEx(INFO, "    wanted...... " _GREEN_("%s"), sprint_hex_inrow(pages[1], 2 * MFU_BLOCK_SIZE));
         PrintAndLogEx(INFO, "    on tag now.. " _RED_("%s"), sprint_hex_inrow(verify + MFU_BLOCK_SIZE, 2 * MFU_BLOCK_SIZE));
-        PrintAndLogEx(HINT, "Hint: these blocks are ordinary user memory, check the lock bytes");
+        PrintAndLogEx(HINT, "Hint: Check the lock bytes");
         return PM3_ESOFT;
     }
 

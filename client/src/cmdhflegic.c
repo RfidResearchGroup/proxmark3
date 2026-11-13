@@ -272,9 +272,9 @@ static int CmdLegicMigrate(const char *Cmd) {
 
     int dcf_len = 0;
     uint8_t dcf[2] = {0};
-    if (arg_get_str(ctx, 3) != NULL) {
-        CLIParamHexToBuf(arg_get_str(ctx, 3), dcf, sizeof(dcf), &dcf_len);
-        if (dcf_len != 2) {
+    if (arg_get_str(ctx, 3)->count > 0) {
+        int dcf_res = CLIParamHexToBuf(arg_get_str(ctx, 3), dcf, sizeof(dcf), &dcf_len);
+        if ((dcf_res != PM3_SUCCESS) || (dcf_len != 2)) {
             PrintAndLogEx(WARNING, "DCF must be exactly two bytes");
             CLIParserFree(ctx);
             return PM3_EINVARG;
@@ -947,8 +947,8 @@ static int CmdLegicWrbl(const char *Cmd) {
     uint8_t fill_buf[1] = {0};
     bool has_fill = false;
     if (arg_get_str(ctx, 3)->count > 0) {
-        CLIParamHexToBuf(arg_get_str(ctx, 3), fill_buf, sizeof(fill_buf), &fill_len);
-        has_fill = (fill_len == 1);
+        int fill_res = CLIParamHexToBuf(arg_get_str(ctx, 3), fill_buf, sizeof(fill_buf), &fill_len);
+        has_fill = (fill_res == PM3_SUCCESS) && (fill_len == 1);
         if (!has_fill) {
             PrintAndLogEx(WARNING, "Repeat byte must be exactly one byte");
             CLIParserFree(ctx);
@@ -1402,7 +1402,7 @@ static int CmdLegicClone(const char *Cmd) {
                   "Rewrite a LEGIC dump for a new target tag or MCC.\n"
                   "Use --mcc to rewrite only the dump obfuscation, or --write to clone to the current tag.\n"
                   "Use --kgh with --write to recalculate UID-bound KGH payload CRCs.",
-                  "hf legic clone -f src.bin -c 39 -o clone.bin\n"
+                  "hf legic clone -f src.bin --mcc 39 -o clone.bin\n"
                   "hf legic clone -f src.bin --write\n"
                   "hf legic clone -f src.bin --write --kgh\n"
                   "hf legic clone -f src.bin --write --kgh -o clone.bin");
@@ -1427,7 +1427,7 @@ static int CmdLegicClone(const char *Cmd) {
 
     int outlen = 0;
     char outfilename[FILE_PATH_SIZE] = {0};
-    if (!write_to_tag && arg_get_str(ctx, 3) != NULL) {
+    if (arg_get_str(ctx, 3)->count > 0) {
         CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)outfilename, FILE_PATH_SIZE, &outlen);
         if (outlen < 1) {
             PrintAndLogEx(WARNING, "Output filename is invalid");
@@ -1440,10 +1440,9 @@ static int CmdLegicClone(const char *Cmd) {
     uint8_t mcc_buf[1] = {0};
     bool has_mcc = false;
 
-    if (write_to_tag == false && arg_get_str(ctx, 2) != NULL) {
-
-        CLIParamStrToBuf(arg_get_str(ctx, 2), mcc_buf, sizeof(mcc_buf), &mcc_len);
-        has_mcc = (mcc_len == 1);
+    if (arg_get_str(ctx, 2)->count > 0) {
+        int mcc_res = CLIParamHexToBuf(arg_get_str(ctx, 2), mcc_buf, sizeof(mcc_buf), &mcc_len);
+        has_mcc = (mcc_res == PM3_SUCCESS) && (mcc_len == 1);
         if (has_mcc == false) {
             PrintAndLogEx(WARNING, "Target MCC must be exactly one byte");
             CLIParserFree(ctx);
@@ -1607,7 +1606,7 @@ static int CmdLegicELoad(const char *Cmd) {
 
     free(dump);
 
-    PrintAndLogEx(HINT, "Hint: You are ready to simulate. See `" _YELLOW_("hf legic sim -h") "`");
+    PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf legic sim -h") "`");
     PrintAndLogEx(SUCCESS, "Done!");
     return PM3_SUCCESS;
 }
@@ -1761,7 +1760,7 @@ static int CmdLegicEInfo(const char *Cmd) {
     CLIParserInit(&ctx, "hf legic einfo",
                   "It decodes and displays emulator memory",
                   "hf legic einfo\n"
-                  "hf legic eview --22\n"
+                  "hf legic einfo --22\n"
                  );
     void *argtable[] = {
         arg_param_begin,

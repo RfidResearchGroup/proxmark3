@@ -79,7 +79,7 @@ static int io_decode_bits(const uint8_t *bits, size_t len) {
     memcpy(work, bits, sizeof(work));
 
     if (bytebits_to_byte(work, 9) != 0 || bytebits_to_byte(work + 9, 8) != 0xF0 ||
-        !work[17] || !work[26] || !work[35] || !work[44] || !work[53] || !work[62] || !work[63]) {
+            !work[17] || !work[26] || !work[35] || !work[44] || !work[53] || !work[62] || !work[63]) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox frame markers invalid");
         return PM3_ESOFT;
     }

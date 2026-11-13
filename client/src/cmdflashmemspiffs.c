@@ -476,7 +476,8 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
             free(dump);
             return PM3_EMALLOC;
         }
-        PrintAndLogEx(HINT, "Hint: Use 'trace list -1 -t ...' to view, 'trace save -f ...' to save");
+        PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("trace list -1 -t ...") "` to view");
+        PrintAndLogEx(HINT, "Hint: Use `"_YELLOW_("trace save -f ...") "` to save");
     }
 
 
