@@ -4494,7 +4494,7 @@ static int CmdFFT(const char *Cmd) {
     int size = arg_get_int_def(ctx, 2, 0);
 
     char win_str[16] = {0};
-    int win_len = sizeof(win_str) - 1;
+    int win_len = sizeof(win_str);
     CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)win_str, win_len, &win_len);
 
     bool use_db = arg_get_lit(ctx, 4);
@@ -5056,7 +5056,7 @@ static int CmdSpectrum(const char *Cmd) {
     int size = arg_get_int_def(ctx, 2, 0);
 
     char win_str[16] = {0};
-    int win_len = sizeof(win_str) - 1;
+    int win_len = sizeof(win_str);
     CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)win_str, win_len, &win_len);
 
     int top = arg_get_int_def(ctx, 4, 5);
@@ -5255,7 +5255,7 @@ static int CmdFitScore(const char *Cmd) {
     int size = arg_get_int_def(ctx, 2, 0);
 
     char mod_str[8] = {0};
-    int mod_len = sizeof(mod_str) - 1;
+    int mod_len = sizeof(mod_str);
     CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)mod_str, mod_len, &mod_len);
 
     int clk_only = arg_get_int_def(ctx, 4, 0);
@@ -5455,11 +5455,11 @@ static int CmdGenSignal(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     char mod_str[8] = {0};
-    int mod_len = sizeof(mod_str) - 1;
+    int mod_len = sizeof(mod_str);
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)mod_str, mod_len, &mod_len);
 
     char enc_str[16] = {0};
-    int enc_len = sizeof(enc_str) - 1;
+    int enc_len = sizeof(enc_str);
     CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)enc_str, enc_len, &enc_len);
 
     pm3_gen_opts_t opts = {0};

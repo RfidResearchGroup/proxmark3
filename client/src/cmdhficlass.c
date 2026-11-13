@@ -1053,7 +1053,7 @@ static int CmdHFiClassSniff(const char *Cmd) {
     PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass list") "` to view captured tracelog");
     PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("trace save -f hf_iclass_mytrace") "` to save tracelog for later analysing");
     if (jam_epurse_update) {
-        PrintAndLogEx(HINT, "Hint: Verify if the jam worked by comparing value in trace and block 2");
+        PrintAndLogEx(HINT, "Hint: Verify jamming worked by comparing value in trace and block 2");
     }
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
@@ -1990,7 +1990,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
     iclass_upload_emul(dump, bytes_read, 0, &bytes_sent);
     free(dump);
     PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%d") " bytes to emulator memory", bytes_sent);
-    PrintAndLogEx(HINT, "Hint: You are ready to simulate. See `" _YELLOW_("hf iclass sim -h") "`");
+    PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf iclass sim -h") "`");
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
@@ -4414,8 +4414,8 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
                 if (blockno == 2) {
                     if (memcmp(data_read, ff_data, 8) == 0 && memcmp(data_read_orig, ff_data, 8) != 0) {
                         PrintAndLogEx(SUCCESS, "E-purse has been teared ( %s )", _GREEN_("ok"));
-                        PrintAndLogEx(HINT, "Hint: Try `hf iclass creditepurse -d FEFFFEFF --ki 1`");
-                        PrintAndLogEx(HINT, "Hint: Try `hf iclass wrbl -d 'FFFFFFFF FFFF FEFF' --blk 2 --ki 1 --credit`");
+                        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass creditepurse -d FEFFFEFF --ki 1") "`");
+                        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass wrbl -d 'FFFFFFFF FFFF FEFF' --blk 2 --ki 1 --credit") "`");
                         isok = PM3_SUCCESS;
                         goto_out = true;
                     }
@@ -4720,7 +4720,7 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     uint8_t pagemap = get_pagemap(hdr);
     if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
         PrintAndLogEx(INFO, "Card already in non-secure page mode");
-        PrintAndLogEx(HINT, "try `" _YELLOW_("hf iclass dump") "` - to extract all memory");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass dump") "` to extract all memory");
         DropField();
         return PM3_SUCCESS;
     }
@@ -6609,7 +6609,7 @@ static int CmdHFiClassLegBrute_MT(uint8_t epurse[8], uint8_t macs[8], uint8_t ma
     if (aborted) {
         uint64_t resume_millions = aborted_at / 1000000;
         PrintAndLogEx(WARNING, "\naborted via keyboard!");
-        PrintAndLogEx(HINT, "Hint: resume with " _YELLOW_("--index %" PRIu64 " --threads %d"), resume_millions, thread_count);
+        PrintAndLogEx(HINT, "Hint: Resume with " _YELLOW_("--index %" PRIu64 " --threads %d"), resume_millions, thread_count);
         return PM3_EOPABORTED;
     }
 
@@ -6891,9 +6891,9 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
     iclass_recover(macs, index, loop, no_first_auth, debug, test, fast, short_delay, allnight);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(WARNING, _YELLOW_("If the process completed successfully"));
-    PrintAndLogEx(HINT, "Hint-1: run `" _YELLOW_("hf iclass legbrute -h") "` with the partial key found");
-    PrintAndLogEx(HINT, "Hint-2: alternatively run hashcat `" _YELLOW_("./hashcat -a 3 -m 64000 hash.txt ?b?b?b?b?b") "` with the partial key found");
-    PrintAndLogEx(HINT, "hash.txt format would be: `" _YELLOW_("$iclass_leg$partial_key$ccnr1$mac1$ccnr2$mac2") "`");
+    PrintAndLogEx(HINT, "Hint-1: Run `" _YELLOW_("hf iclass legbrute -h") "` with the partial key found");
+    PrintAndLogEx(HINT, "Hint-2: Alt run hashcat `" _YELLOW_("./hashcat -a 3 -m 64000 hash.txt ?b?b?b?b?b") "` with the partial key found");
+    PrintAndLogEx(HINT, "        hash.txt format: `" _YELLOW_("$iclass_leg$partial_key$ccnr1$mac1$ccnr2$mac2") "`");
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 
@@ -7841,7 +7841,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
         uint16_t byte_sent = 0;
         iclass_upload_emul(credential, sizeof(credential), 6 * PICOPASS_BLOCK_SIZE, &byte_sent);
         PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%d") " bytes to emulator memory", byte_sent);
-        PrintAndLogEx(HINT, "Hint: You are now ready to simulate. See `" _YELLOW_("hf iclass sim -h") "`");
+        PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf iclass sim -h") "`");
     } else {
         for (uint8_t i = 0; i < 4; i++) {
             isok = iclass_write_block(6 + i, credential + (i * 8), NULL, key, use_credit_key, elite, rawkey, false, false, auth, shallow_mod);

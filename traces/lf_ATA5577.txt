@@ -119,3 +119,27 @@ data save f lf_ATA5577_viking
 lf visa2000 clone 112233
 lf read s 10000
 data save f lf_ATA5577_visa2000
+
+
+These lf_ATA5577_blk0_* traces hold the buffer 'lf t55xx detect --r0' leaves after reading block 0, for 'lf t55xx detect -1'.
+For the first four, blocks 1-7 held DEADBEEF 12345678 11112222 33334444 55556666 77778888 9999AAAA, written before block 0:
+
+lf t55xx write -b 0 -d 000880E0
+lf t55xx detect --r0
+data save -f lf_ATA5577_blk0_ask_rf32
+
+lf t55xx write -b 0 -d 000880E8
+lf t55xx detect --r0
+data save -f lf_ATA5577_blk0_ask_rf32_st
+
+lf t55xx write -b 0 -d 001070E0
+lf t55xx detect --r0
+data save -f lf_ATA5577_blk0_fsk2a_rf50
+
+lf t55xx write -b 0 -d 001070E8
+lf t55xx detect --r0
+data save -f lf_ATA5577_blk0_fsk2a_rf50_st
+
+lf noralsy clone --cn 112233 --y 2000
+lf t55xx detect --r0
+data save -f lf_ATA5577_blk0_noralsy_st

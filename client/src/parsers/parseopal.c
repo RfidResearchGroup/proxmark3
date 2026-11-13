@@ -153,7 +153,7 @@ int opal_parser_parse(const desfire_dump_t *dump) {
 
     const desfire_dump_file_t *f = opal_find_file(app, OPAL_FID_CARD);
     if (f == NULL || f->read_ok == false || f->data == NULL || f->datalen < OPAL_CARD_LEN) {
-        PrintAndLogEx(HINT, "Hint: file %02X is free to read, try `" _YELLOW_("hf mfdes dump --no-auth") "`", OPAL_FID_CARD);
+        PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mfdes dump --no-auth") "`");
         return PM3_SUCCESS;
     }
 
