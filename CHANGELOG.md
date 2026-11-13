@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf gallagher reader -c` - it read sector N * 4 instead of the sectors the MAD lists with AID 0x4812, missed the credential `hf gallagher clone -c` writes and could overflow a stack buffer on a 4K card (@matrix)
+- Fixed `hf gallagher reader` - with `-@` it stopped after one read, with `-c` it checked the MES block with a zeroed site key and no CSN and returned success without a card (@matrix)
 - Fixed `hf 15 sniff` and `hf iclass sniff` - the sniffer could not keep up with the samples and lost most tag answers, it now runs from RAM (@matrix)
 - Fixed `lf t55xx detect` - finds ASK and FSK configurations that have the sequence terminator set, and reports whether it is set (@mfcarroll)
 - Fixed `CLIParamStrToBuf()` - a string option that filled its buffer had its terminator written one byte past it and is now refused as too long (@matrix)
