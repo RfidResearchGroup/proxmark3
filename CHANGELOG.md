@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mf mad` - with `-f` and `--aid` it decoded card holder info instead of printing the AID's sectors, `--override` was refused and a `-k` or `--aid` of the wrong length ignored (@matrix)
 - Fixed `hf mf mad` - on sectors 32-39 of a 4K card it overflowed a stack buffer, printed only their first blocks (numbered wrong from sector 33) and decoded 3 of their 15 data blocks with `--dch` (@matrix)
 - Fixed `hf 15 sniff` and `hf iclass sniff` - the sniffer could not keep up with the samples and lost most tag answers, it now runs from RAM (@matrix)
 - Fixed `lf t55xx detect` - finds ASK and FSK configurations that have the sequence terminator set, and reports whether it is set (@mfcarroll)
