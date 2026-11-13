@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `tools/external_sam_read.py iclass` - the faked answer to the e-purse update is the new value with its halves swapped, as a card answers (@matrix)
 - Changed `hf mf sen` - default key prioritisation indexed the candidate list instead of rescanning it for each of the ~85k dictionary keys (@iceman1001)
 - Changed `hf mf sen` - the default-key dictionary check no longer mallocs a cipher state per key and gives up on the first wrong keystream byte, ~6x faster for that phase (@iceman1001)
 - Changed `hf mf nested` and `hf mf staticnested` - key recovery now uses both nonces in one `lfsr_recovery32_dual` pass, ~4 ms instead of ~390 ms per key (@iceman1001)
