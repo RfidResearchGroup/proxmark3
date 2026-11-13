@@ -1167,7 +1167,7 @@ static int hfgal_read_site_specific_sector(uint8_t sector_num, GallagherCredenti
                     cred.region_code == MES_cred.region_code) {
                 PrintAndLogEx(INFO, "MIFARE Enhanced Security block matches Site Specific block\nSite Key is correct");
             } else {
-                PrintAndLogEx(WARNING, "MIFARE Enhanced Security block does not match Site Specific block: wrong Site Key or UID");
+                PrintAndLogEx(INFO, "MIFARE Enhanced Security block does not match Site Specific block: wrong Site Key or UID");
             }
         } else {
             PrintAndLogEx(INFO, "No Site Key or CSN provided, cannot verify MIFARE Enhanced Security block");
