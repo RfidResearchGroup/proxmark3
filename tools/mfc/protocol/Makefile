@@ -5,6 +5,10 @@ MYINCLUDES = -I$(ROOTPATH)/include -I$(ROOTPATH)/common
 MYCFLAGS = -O3 -Wno-inline
 MYDEFS =
 MYLDLIBS =
+# crapto1.c needs pthread support
+ifneq ($(SKIPPTHREAD),1)
+MYLDLIBS += -lpthread
+endif
 
 BINS = mfc-protocol-demo
 INSTALLTOOLS = $(BINS)
