@@ -306,14 +306,60 @@ static void init_bunzip2(bz_stream *compressed_stream, char *input_buffer, uint3
 
 }
 
+#define STATE_FILE_NAME_LEN MAX(sizeof(STATE_FILE_TEMPLATE_RAW), MAX(sizeof(STATE_FILE_TEMPLATE_LZ4), sizeof(STATE_FILE_TEMPLATE_BZ2)))
+
+// directory holding the bitflip state tables, kept after the first hit
+static char *state_files_dir = NULL;
+
+/** find_state_file
+ * locate one bitflip state table. All ~2000 of them sit in the same directory, and
+ * searching the configured default paths for every one of them costs seconds when
+ * those paths are on a network or Windows mount, so only the first file is searched.
+ */
+static int find_state_file(char **foundpath, const char *template, odd_even_t odd_even, uint16_t bitflip) {
+    char state_file_name[STATE_FILE_NAME_LEN];
+    snprintf(state_file_name, sizeof(state_file_name), template, odd_even, bitflip);
+
+    if (state_files_dir != NULL) {
+        size_t pathsize = strlen(state_files_dir) + strlen(state_file_name) + 1;
+        char *path = calloc(pathsize, sizeof(char));
+        if (path == NULL) {
+            return PM3_EMALLOC;
+        }
+        snprintf(path, pathsize, "%s%s", state_files_dir, state_file_name);
+        if (fileExists(path)) {
+            *foundpath = path;
+            return PM3_SUCCESS;
+        }
+        free(path);
+        return PM3_EFILE;
+    }
+
+    char state_files_path[strlen(STATE_FILES_DIRECTORY) + sizeof(state_file_name) + 1];
+    strncpy(state_files_path, STATE_FILES_DIRECTORY, sizeof(state_files_path) - 1);
+    strncat(state_files_path, state_file_name, sizeof(state_files_path) - (strlen(STATE_FILES_DIRECTORY) + 1));
+    if (searchFile(foundpath, RESOURCES_SUBDIR, state_files_path, "", true) != PM3_SUCCESS) {
+        return PM3_EFILE;
+    }
+
+    char *sep = strrchr(*foundpath, PATHSEP[0]);
+    if (sep != NULL) {
+        size_t dirlen = sep - *foundpath + 1;
+        state_files_dir = calloc(dirlen + 1, sizeof(char));
+        if (state_files_dir != NULL) {
+            memcpy(state_files_dir, *foundpath, dirlen);
+        }
+    }
+    return PM3_SUCCESS;
+}
+
 static void init_bitflip_bitarrays(void) {
 #if defined (DEBUG_REDUCTION)
     uint8_t line = 0;
 #endif
     uint64_t init_bitflip_bitarrays_starttime = msclock();
 
-    char state_file_name[MAX(sizeof(STATE_FILE_TEMPLATE_RAW), MAX(sizeof(STATE_FILE_TEMPLATE_LZ4), sizeof(STATE_FILE_TEMPLATE_BZ2)))];
-    char state_files_path[strlen(get_my_executable_directory()) + strlen(STATE_FILES_DIRECTORY) + sizeof(state_file_name)];
+    char state_file_name[FILE_PATH_SIZE] = {0};
     uint16_t nraw = 0, nlz4 = 0, nbz2 = 0;
     for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
         num_effective_bitflips[odd_even] = 0;
@@ -325,29 +371,17 @@ static void init_bitflip_bitarrays(void) {
             bitflip_bitarrays[odd_even][bitflip] = NULL;
             count_bitflip_bitarrays[odd_even][bitflip] = 1 << 24;
 
-            char *path;
-            snprintf(state_file_name, sizeof(state_file_name), STATE_FILE_TEMPLATE_RAW, odd_even, bitflip);
-            strncpy(state_files_path, STATE_FILES_DIRECTORY, sizeof(state_files_path) - 1);
-            strncat(state_files_path, state_file_name, sizeof(state_files_path) - (strlen(STATE_FILES_DIRECTORY) + 1));
-            if (searchFile(&path, RESOURCES_SUBDIR, state_files_path, "", true) == PM3_SUCCESS) {
+            char *path = NULL;
+            if (find_state_file(&path, STATE_FILE_TEMPLATE_RAW, odd_even, bitflip) == PM3_SUCCESS) {
                 open_uncompressed = true;
+            } else if (find_state_file(&path, STATE_FILE_TEMPLATE_LZ4, odd_even, bitflip) == PM3_SUCCESS) {
+                open_lz4compressed = true;
+            } else if (find_state_file(&path, STATE_FILE_TEMPLATE_BZ2, odd_even, bitflip) == PM3_SUCCESS) {
+                open_bz2compressed = true;
             } else {
-                snprintf(state_file_name, sizeof(state_file_name), STATE_FILE_TEMPLATE_LZ4, odd_even, bitflip);
-                strncpy(state_files_path, STATE_FILES_DIRECTORY, sizeof(state_files_path) - 1);
-                strncat(state_files_path, state_file_name, sizeof(state_files_path) - (strlen(STATE_FILES_DIRECTORY) + 1));
-                if (searchFile(&path, RESOURCES_SUBDIR, state_files_path, "", true) == PM3_SUCCESS) {
-                    open_lz4compressed = true;
-                } else {
-                    snprintf(state_file_name, sizeof(state_file_name), STATE_FILE_TEMPLATE_BZ2, odd_even, bitflip);
-                    strncpy(state_files_path, STATE_FILES_DIRECTORY, sizeof(state_files_path) - 1);
-                    strncat(state_files_path, state_file_name, sizeof(state_files_path) - (strlen(STATE_FILES_DIRECTORY) + 1));
-                    if (searchFile(&path, RESOURCES_SUBDIR, state_files_path, "", true) == PM3_SUCCESS) {
-                        open_bz2compressed = true;
-                    } else {
-                        continue;
-                    }
-                }
+                continue;
             }
+            snprintf(state_file_name, sizeof(state_file_name), "%s", path);
 
             FILE *statesfile = fopen(path, "rb");
             free(path);
@@ -590,6 +624,9 @@ static void init_bitflip_bitarrays(void) {
 }
 
 static void free_bitflip_bitarrays(void) {
+    free(state_files_dir);
+    state_files_dir = NULL;
+
     for (int16_t bitflip = 0x3ff; bitflip > 0x000; bitflip--) {
         free_bitarray(bitflip_bitarrays[ODD_STATE][bitflip]);
     }
