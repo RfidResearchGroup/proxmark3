@@ -505,7 +505,12 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
 
         case STATE_TAG_SOF_HIGH: {
             // waiting for 10 times high. Take average over the last 8
-            if (amplitude > tag->threshold_sof) {
+            if (tag->threshold_sof < NOISE_THRESHOLD && amplitude > 4 * tag->threshold_sof) {
+                // the edge taken was noise-sized and this one is far above it: the SOF starts here
+                tag->posCount = 1;
+                tag->threshold_sof = amplitude / 2;
+                tag->threshold_half = 0;
+            } else if (amplitude > tag->threshold_sof) {
                 tag->posCount++;
                 if (tag->posCount > 2) {
                     tag->threshold_half += amplitude; // keep track of average high value
@@ -516,7 +521,8 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
                 }
             } else { // high phase was too short
                 tag->signal_activity = true; // signal detected but SOF failed (possible collision)
-                tag->posCount = 1;
+                // noise: the low phase it started from still counts
+                tag->posCount = 11;
                 tag->previous_amplitude = amplitude;
                 tag->state = STATE_TAG_SOF_LOW;
             }
@@ -581,14 +587,14 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
                         tag->shiftReg |= 0x80;
                         tag->bitCount++;
                         if (tag->bitCount == 8) {
-                            tag->output[tag->len] = tag->shiftReg & 0xFF;
-                            tag->len++;
-
-                            if (tag->len > tag->max_len) {
-                                // buffer overflow, give up
+                            if (tag->len >= tag->max_len) {
+                                // buffer overflow, give up: a len past max_len tells the caller
+                                tag->len = tag->max_len + 1;
                                 LED_C_OFF();
                                 return true;
                             }
+                            tag->output[tag->len] = tag->shiftReg & 0xFF;
+                            tag->len++;
                             tag->bitCount = 0;
                             tag->shiftReg = 0;
                         }
@@ -606,16 +612,14 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
                         tag->bitCount++;
 
                         if (tag->bitCount == 8) {
+                            if (tag->len >= tag->max_len) {
+                                // buffer overflow, give up: a len past max_len tells the caller
+                                tag->len = tag->max_len + 1;
+                                LED_C_OFF();
+                                return true;
+                            }
                             tag->output[tag->len] = (tag->shiftReg & 0xFF);
                             tag->len++;
-
-                            if (tag->len > tag->max_len) {
-                                // buffer overflow, give up
-                                tag->posCount = 0;
-                                tag->previous_amplitude = amplitude;
-                                tag->state = STATE_TAG_SOF_LOW;
-                                LED_C_OFF();
-                            }
                             tag->bitCount = 0;
                             tag->shiftReg = 0;
                         }
@@ -860,12 +864,13 @@ static int RAMFUNC Handle15693FSKSamplesFromTag(uint8_t freq, DecodeTagFSK_t *De
                     DecodeTag->shiftReg |= 0x80;
                     DecodeTag->bitCount++;
                     if (DecodeTag->bitCount == 8) {
-                        DecodeTag->output[DecodeTag->len++] = DecodeTag->shiftReg;
-                        if (DecodeTag->len > DecodeTag->max_len) {
-                            // buffer overflow, give up
+                        if (DecodeTag->len >= DecodeTag->max_len) {
+                            // buffer overflow, give up: a len past max_len tells the caller
+                            DecodeTag->len = DecodeTag->max_len + 1;
                             LED_C_OFF();
                             return true;
                         }
+                        DecodeTag->output[DecodeTag->len++] = DecodeTag->shiftReg;
                         DecodeTag->bitCount = 0;
                         DecodeTag->shiftReg = 0;
                     }
@@ -884,12 +889,13 @@ static int RAMFUNC Handle15693FSKSamplesFromTag(uint8_t freq, DecodeTagFSK_t *De
                 DecodeTag->shiftReg |= 0x80;
                 DecodeTag->bitCount++;
                 if (DecodeTag->bitCount == 8) {
-                    DecodeTag->output[DecodeTag->len++] = DecodeTag->shiftReg;
-                    if (DecodeTag->len > DecodeTag->max_len) {
-                        // buffer overflow, give up
+                    if (DecodeTag->len >= DecodeTag->max_len) {
+                        // buffer overflow, give up: a len past max_len tells the caller
+                        DecodeTag->len = DecodeTag->max_len + 1;
                         LED_C_OFF();
                         return true;
                     }
+                    DecodeTag->output[DecodeTag->len++] = DecodeTag->shiftReg;
                     DecodeTag->bitCount = 0;
                     DecodeTag->shiftReg = 0;
                 }
@@ -931,12 +937,13 @@ static int RAMFUNC Handle15693FSKSamplesFromTag(uint8_t freq, DecodeTagFSK_t *De
                     DecodeTag->shiftReg >>= 1;
                     DecodeTag->bitCount++;
                     if (DecodeTag->bitCount == 8) {
-                        DecodeTag->output[DecodeTag->len++] = DecodeTag->shiftReg;
-                        if (DecodeTag->len > DecodeTag->max_len) {
-                            // buffer overflow, give up
+                        if (DecodeTag->len >= DecodeTag->max_len) {
+                            // buffer overflow, give up: a len past max_len tells the caller
+                            DecodeTag->len = DecodeTag->max_len + 1;
                             LED_C_OFF();
                             return true;
                         }
+                        DecodeTag->output[DecodeTag->len++] = DecodeTag->shiftReg;
                         DecodeTag->bitCount = 0;
                         DecodeTag->shiftReg = 0;
                     }
@@ -954,12 +961,13 @@ static int RAMFUNC Handle15693FSKSamplesFromTag(uint8_t freq, DecodeTagFSK_t *De
                 DecodeTag->shiftReg >>= 1;
                 DecodeTag->bitCount++;
                 if (DecodeTag->bitCount == 8) {
-                    DecodeTag->output[DecodeTag->len++] = DecodeTag->shiftReg;
-                    if (DecodeTag->len > DecodeTag->max_len) {
-                        // buffer overflow, give up
+                    if (DecodeTag->len >= DecodeTag->max_len) {
+                        // buffer overflow, give up: a len past max_len tells the caller
+                        DecodeTag->len = DecodeTag->max_len + 1;
                         LED_C_OFF();
                         return true;
                     }
+                    DecodeTag->output[DecodeTag->len++] = DecodeTag->shiftReg;
                     DecodeTag->bitCount = 0;
                     DecodeTag->shiftReg = 0;
                 }
@@ -1846,13 +1854,15 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
                         eof_time -= (8 * 16); // needed 8 additional samples to confirm single SOF (iCLASS)
                     }
 
+                    // a len past max_len marks an overflow, the buffer holds max_len bytes
+                    uint16_t len = MIN(dtag.len, dtag.max_len);
                     uint32_t sof_time = eof_time
-                                        - dtag.len * 1024 // time for byte transfers (4096/fc / 4)
+                                        - len * 1024      // time for byte transfers (4096/fc / 4)
                                         - 512             // time for SOF transfer (2048/fc / 4)
                                         - (dtag.lastBit != SOF_PART2 ? 512 : 0); // time for EOF transfer (2048/fc / 4)
 
                     // sof/eof_times * 4 here to bring from ssp_clk freq to RF carrier freq
-                    LogTrace_ISO15693(dtag.output, dtag.len, (sof_time * 4), (eof_time * 4), NULL, false);
+                    LogTrace_ISO15693(dtag.output, len, (sof_time * 4), (eof_time * 4), NULL, false);
 
                     // And ready to receive another response.
                     DecodeTagReset(&dtag);
@@ -1879,13 +1889,15 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
                             eof_time -= (8 * 16); // needed 8 additional samples to confirm single SOF (iCLASS)
                         }
 
+                        // a len past max_len marks an overflow, the buffer holds max_len bytes
+                        uint16_t len = MIN(dtagfsk.len, dtagfsk.max_len);
                         uint32_t sof_time = eof_time
-                                            - dtagfsk.len * 1016 // time for byte transfers (4064/fc / 4) - FSK is slightly different
+                                            - len * 1016         // time for byte transfers (4064/fc / 4) - FSK is slightly different
                                             - 512                // time for SOF transfer (2048/fc / 4)
                                             - (dtagfsk.lastBit != SOF ? 512 : 0); // time for EOF transfer (2048/fc / 4)
 
                         // sof/eof_times * 4 here to bring from ssp_clk freq to RF carrier freq
-                        LogTrace_ISO15693(dtagfsk.output, dtagfsk.len, (sof_time * 4), (eof_time * 4), NULL, false);
+                        LogTrace_ISO15693(dtagfsk.output, len, (sof_time * 4), (eof_time * 4), NULL, false);
                     }
 
                     DecodeTagFSKReset(&dtagfsk);
