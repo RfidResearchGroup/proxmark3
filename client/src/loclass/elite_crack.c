@@ -783,7 +783,7 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
 
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "loclass key recovery( %s )", _RED_("fail"));
-        PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass sim -t 2") "` again and collect new data");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass sim -t 2") "` again and collect new data");
         PrintAndLogEx(NORMAL, "");
         return PM3_ESOFT;
     }

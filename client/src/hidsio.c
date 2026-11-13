@@ -694,7 +694,7 @@ int hid_sam_iso14a_cmd(const char *Cmd, const char *name, uint16_t pm3_cmd, hid_
         }
         default: {
             PrintAndLogEx(WARNING, "SAM select failed");
-            PrintAndLogEx(HINT, "Hint: is a HID SAM in the slot? try `" _YELLOW_("smart info") "`");
+            PrintAndLogEx(HINT, "Hint: is a HID SAM in the slot? Try `" _YELLOW_("smart info") "`");
             return resp.status;
         }
     }

@@ -219,7 +219,7 @@ int gp_crs_list(Iso7816CommandChannel channel, const uint8_t *aid, size_t aid_le
 
     if (sw != ISO7816_OK) {
         PrintAndLogEx(FAILED, "CRS application not found ( %04X - %s )", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xFF));
-        PrintAndLogEx(HINT, "Hint: phones usually expose the CRS only to the host, not over NFC");
+        PrintAndLogEx(HINT, "Hint: Phones usually expose the CRS only to the host, not over NFC");
         DropFieldEx(channel);
         return PM3_ESOFT;
     }
@@ -636,7 +636,7 @@ static int CmdHFGPAids(const char *Cmd) {
         arg_param_begin,
         arg_str0(NULL, "prefix", "<hex>", "AID prefix to enumerate"),
         arg_lit0(NULL, "quick", "Skip the registered RID sweep"),
-        arg_lit0("w", "wired", "Send data via contact (iso7816) interface. (def: Contactless interface)"),
+        arg_lit0("w", "wired", "Send data via contact (iso7816) interface. (def: Contactless)"),
         arg_lit0("a", "apdu", "Show APDU requests and responses"),
         arg_lit0("v", "verbose", "Verbose output"),
         arg_param_end
@@ -1087,8 +1087,8 @@ int gp_info(Iso7816CommandChannel channel, bool verbose) {
     DropFieldEx(channel);
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(HINT, "Hint: listing applets needs the ISD keys. Failed EXTERNAL AUTHENTICATE");
-    PrintAndLogEx(HINT, "      attempts count against a small limit, then the card locks for good");
+    PrintAndLogEx(HINT, "Hint: Listing applets needs the ISD keys. Failed EXTERNAL AUTHENTICATE attempts");
+    PrintAndLogEx(HINT, "      count against a small limit, then the card locks for good");
     return PM3_SUCCESS;
 }
 
@@ -1104,7 +1104,7 @@ static int CmdHFGPInfo(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("w", "wired", "Send data via contact (iso7816) interface. (def: Contactless interface)"),
+        arg_lit0("w", "wired", "Send data via contact (iso7816) interface. (def: Contactless)"),
         arg_lit0("a", "apdu", "Show APDU requests and responses"),
         arg_lit0("v", "verbose", "Verbose output"),
         arg_param_end
@@ -1134,7 +1134,7 @@ static int CmdHFGPCrs(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0(NULL, "aid", "<hex>", "AID or partial AID to search for (def: all)"),
-        arg_lit0("w", "wired", "Send data via contact (iso7816) interface. (def: Contactless interface)"),
+        arg_lit0("w", "wired", "Send data via contact (iso7816) interface. (def: Contactless)"),
         arg_lit0("a", "apdu", "Show APDU requests and responses"),
         arg_lit0("v", "verbose", "Verbose output"),
         arg_param_end

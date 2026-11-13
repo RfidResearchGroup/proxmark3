@@ -3690,17 +3690,6 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     if (isFUDAN) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf fudan dump") "`");
-        /*
-        PrintAndLogEx(HINT, "  hf 14a raw -a -b 7 -k 26");
-        PrintAndLogEx(HINT, "  hf 14a raw -k -c 3000");
-        PrintAndLogEx(HINT, "  hf 14a raw -k -c 3001");
-        PrintAndLogEx(HINT, "  hf 14a raw -k -c 3002");
-        PrintAndLogEx(HINT, "  hf 14a raw -k -c 3003");
-        PrintAndLogEx(HINT, "  hf 14a raw -k -c 3004");
-        PrintAndLogEx(HINT, "  hf 14a raw -k -c 3005");
-        PrintAndLogEx(HINT, "  hf 14a raw -k -c 3006");
-        PrintAndLogEx(HINT, "  hf 14a raw -c 3007");
-        */
     }
 
     if (isNTAG424) {
@@ -3713,7 +3702,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     }
 
     if (isGoodisplay) {
-        PrintAndLogEx(HINT, "Hint: Possible Goodisplay NFC e-paper, try `" _YELLOW_("hf goodisplay load -h") "`");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf goodisplay load -h") "`");
     }
 #else
     // e-paper commands need libgd

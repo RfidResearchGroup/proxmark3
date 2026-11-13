@@ -4,9 +4,18 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Fixed `lf t55xx detect` - finds ASK and FSK configurations that have the sequence terminator set, and reports whether it is set (@mfcarroll)
+- Fixed `CLIParamStrToBuf()` - a string option that filled its buffer had its terminator written one byte past it and is now refused as too long (@matrix)
+- Fixed `hf legic clone` - the client read `--mcc` as a string into a 1-byte buffer (refused, or a stack overflow), printed the wrong message for a missing `--mcc` or `-o`, and ignored `--mcc` and `-o` with `--write` (@matrix)
+- Fixed `hf legic migrate` - it refused every run without `--dcf`, and took a `--dcf` longer than two bytes after a parse error (@matrix)
+- Fixed `hf legic wrbl` - it took a `--fill` longer than one byte after a parse error (@matrix)
+- Fixed `pm3_save_dump` - it returned success for a dump file it could not write, and `saveFileEx` printed "Saved" after a failed write (@matrix)
+- Fixed `hf gallagher test` - the known vector and MES tests failed, it printed no overall result and `make check` did not run it (@matrix)
+- Fixed `hf mf sen` - Enter or a timeout no longer leaves the field on, Enter is reported and also stops a single-key check (@matrix)
+- Fixed `hf mf sen` - `--parity-mask` accepts its values, `--max-online-candidates` keeps the keys found (@matrix)
+- Fixed `hf mf sen` and `hf mf isen` - a failed nonce file save is no longer reported as success (@matrix)
+- Fixed `hf mf sen` - the dictionary fallback no longer says no key authenticated when one did (@matrix)
 - Added AIDs `A0000003820013000101` and `A0000003820017000101` (HID configuration cards) to aidlist.json (@iceman1001)
 - Changed `hf ntag424 getfs` - without `--fileno` it lists the settings of every file on the card; NTAG 424 has no GetFileIDs, so file numbers 0-31 are probed and a number the card never answers makes the list incomplete (PM3_EPARTIAL) (@iceman1001)
-
 - Fixed `hf mfu chk` - Enter or a timeout during a chunk stops it (@matrix)
 - Fixed `hf mfu chk` - no "-nan" speed when no chunk ran, the progress line counts the keys tested (@matrix)
 - Fixed `hf 15 dump` - a dump that stops early no longer prints and saves the unread blocks as zeros; it shows the blocks it read, says how many of the total, saves nothing and returns PM3_EPARTIAL (@iceman1001)
