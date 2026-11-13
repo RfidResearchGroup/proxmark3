@@ -3583,7 +3583,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
     // Nothing above claimed this file. Falling through to `out` used to return
     // PM3_SUCCESS with datalen 0, which reads to the caller as "loaded, empty".
     PrintAndLogEx(ERR, "loadFileJSONex: unsupported FileType `" _YELLOW_("%s") "`", ctype);
-    PrintAndLogEx(HINT, "Hint: the file may have been written by a newer client version");
+    PrintAndLogEx(HINT, "Hint: File may have been written by a newer client version");
     retval = PM3_EFILE;
 
 out:
@@ -4256,7 +4256,7 @@ int convert_15_dump_format(uint8_t **dump, size_t *dumplen, bool verbose) {
 
     if (n == ARRAYLEN(g_iso15_layouts)) {
         PrintAndLogEx(FAILED, "Unsupported ISO15693 dump length ( %zu bytes )", *dumplen);
-        PrintAndLogEx(HINT, "Hint: known lengths are 2139, %d, 2236, 2331 and %d bytes"
+        PrintAndLogEx(HINT, "Hint: Known lengths are 2139, %d, 2236, 2331 and %d bytes"
                       , ISO15_V4_DUMP_LENGTH
                       , ISO15_V5_DUMP_LENGTH
                      );
@@ -4759,7 +4759,7 @@ static int load_dump_check_len(const char *fn, void **pdump, size_t *dumplen, si
                   , *dumplen
                   , maxdumplen
                  );
-    PrintAndLogEx(HINT, "Hint: the file may come from a different client version, or not be a dump of this tag type");
+    PrintAndLogEx(HINT, "Hint: File may come from a different client version, or not be a dump of this tag type");
 
     free(*pdump);
     *pdump = NULL;
@@ -4949,9 +4949,7 @@ int pm3_save_fm11rf08s_nonces(const char *fn, iso14a_fm11rf08s_nonces_with_data_
     }
 
     if (with_data) {
-        saveFileJSON(fn, jsfFM11RF08SNoncesWithData, (uint8_t *)d, sizeof(*d), NULL);
-    } else {
-        saveFileJSON(fn, jsfFM11RF08SNonces, (uint8_t *)d, sizeof(*d), NULL);
+        return saveFileJSON(fn, jsfFM11RF08SNoncesWithData, (uint8_t *)d, sizeof(*d), NULL);
     }
-    return PM3_SUCCESS;
+    return saveFileJSON(fn, jsfFM11RF08SNonces, (uint8_t *)d, sizeof(*d), NULL);
 }
