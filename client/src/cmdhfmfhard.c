@@ -643,24 +643,36 @@ static uint32_t *part_sum_a8_bitarrays[2][NUM_PART_SUMS];
 static uint32_t *sum_a0_bitarrays[2][NUM_SUMS];
 
 static uint16_t PartialSumProperty(uint32_t state, odd_even_t odd_even) {
-    uint16_t sum = 0;
-    for (uint16_t j = 0; j < 16; j++) {
-        uint32_t st = state;
-        uint16_t part_sum = 0;
-        if (odd_even == ODD_STATE) {
-            part_sum ^= filter(st);
-            for (uint16_t i = 0; i < 4; i++) {
-                st = (st << 1) | ((j >> (3 - i)) & 0x01) ;
-                part_sum ^= filter(st);
-            }
-            part_sum ^= 1; // XOR 1 cancelled out for the other 8 bits
-        } else {
-            for (uint16_t i = 0; i < 4; i++) {
-                st = (st << 1) | ((j >> (3 - i)) & 0x01) ;
-                part_sum ^= filter(st);
-            }
+    // the 16 four bit suffixes share prefixes, so walk them as a tree:
+    // 31 filter() calls instead of one chain of 5 per suffix
+    uint32_t st[16];
+    uint16_t ps[16];
+    st[0] = state;
+    ps[0] = (odd_even == ODD_STATE) ? filter(state) : 0;
+
+    uint16_t n = 1;
+    for (uint16_t level = 0; level < 4; level++) {
+        for (uint16_t k = n; k > 0; k--) {
+            uint32_t s0 = st[k - 1] << 1;
+            uint32_t s1 = s0 | 1;
+            uint16_t p = ps[k - 1];
+            st[2 * (k - 1)] = s0;
+            ps[2 * (k - 1)] = p ^ filter(s0);
+            st[2 * (k - 1) + 1] = s1;
+            ps[2 * (k - 1) + 1] = p ^ filter(s1);
         }
-        sum += part_sum;
+        n *= 2;
+    }
+
+    uint16_t sum = 0;
+    if (odd_even == ODD_STATE) {
+        for (uint16_t k = 0; k < 16; k++) {
+            sum += ps[k] ^ 1;   // XOR 1 cancelled out for the other 8 bits
+        }
+    } else {
+        for (uint16_t k = 0; k < 16; k++) {
+            sum += ps[k];
+        }
     }
     return sum;
 }
@@ -973,22 +985,38 @@ static void init_allbitflips_array(void) {
     }
 }
 
+static void *update_allbitflips_thread(void *args) {
+    odd_even_t odd_even = *(odd_even_t *)args;
+    for (uint16_t i = 0; i < 256; i++) {
+        if (nonces[i].all_bitflips_dirty[odd_even]) {
+
+            uint32_t old_count = num_all_bitflips_bitarray[odd_even];
+
+            num_all_bitflips_bitarray[odd_even] = count_bitarray_low20_AND(all_bitflips_bitarray[odd_even], nonces[i].states_bitarray[odd_even]);
+            nonces[i].all_bitflips_dirty[odd_even] = false;
+
+            if (num_all_bitflips_bitarray[odd_even] != old_count) {
+                all_bitflips_bitarray_dirty[odd_even] = true;
+            }
+        }
+    }
+    return NULL;
+}
+
 static void update_allbitflips_array(void) {
     if (hardnested_stage & CHECK_2ND_BYTES) {
-        for (uint16_t i = 0; i < 256; i++) {
-            for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
-                if (nonces[i].all_bitflips_dirty[odd_even]) {
+        // the even and odd halves share nothing, and each is a 256 pass
+        // accumulating AND over 2 MB arrays, so run them side by side
+        odd_even_t odd_even[2] = { EVEN_STATE, ODD_STATE };
+        pthread_t thread_id;
+        bool started = (pthread_create(&thread_id, NULL, update_allbitflips_thread, &odd_even[ODD_STATE]) == 0);
 
-                    uint32_t old_count = num_all_bitflips_bitarray[odd_even];
+        update_allbitflips_thread(&odd_even[EVEN_STATE]);
 
-                    num_all_bitflips_bitarray[odd_even] = count_bitarray_low20_AND(all_bitflips_bitarray[odd_even], nonces[i].states_bitarray[odd_even]);
-                    nonces[i].all_bitflips_dirty[odd_even] = false;
-
-                    if (num_all_bitflips_bitarray[odd_even] != old_count) {
-                        all_bitflips_bitarray_dirty[odd_even] = true;
-                    }
-                }
-            }
+        if (started) {
+            pthread_join(thread_id, NULL);
+        } else {
+            update_allbitflips_thread(&odd_even[ODD_STATE]);
         }
     }
 }
