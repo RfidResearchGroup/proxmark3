@@ -963,12 +963,12 @@ static int NxpSysInfo(uint8_t *uid) {
 
     // DSFID lock bit
     PrintAndLogEx(INFO, "    DSFID.......... %s"
-                  , (d[3] & 0x03) ? _RED_("locked") : _GREEN_("unlocked")
+                  , (d[3] & 0x04) ? _RED_("locked") : _GREEN_("unlocked")
                  );
 
     // Password protection pointer address and access conditions lock bit
     PrintAndLogEx(INFO, "    Password protection configuration... %s"
-                  , (d[3] & 0x04) ? _RED_("locked") : _GREEN_("unlocked")
+                  , (d[3] & 0x08) ? _RED_("locked") : _GREEN_("unlocked")
                  );
 
     PrintAndLogEx(INFO, "");
@@ -1042,16 +1042,31 @@ static int StCheckSig(uint8_t *uid) {
             return PM3_ETIMEOUT;
         }
 
-        ISO15_ERROR_HANDLING_RESPONSE
         uint8_t *d = resp.data.asBytes;
-        ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length)
+        int res = PM3_SUCCESS;
+        if (resp.status == PM3_ETEAROFF) {
+            res = resp.status;
+        } else if (resp.length < 2) {
+            PrintAndLogEx(ERR, "iso15693 command failed");
+            res = PM3_EWRONGANSWER;
+        } else {
+            res = iso15_error_handling_card_response(d, resp.length);
+        }
+
+        if (res != PM3_SUCCESS) {
+            free(packet);
+            DropField();
+            // error 0F/10 on a signature block: no signature to check
+            return (res == PM3_EOUTOFBOUND) ? PM3_SUCCESS : res;
+        }
 
         if (i == 0) {
 
             if (memcmp(d + 1, "K04S", 4) != 0) {
                 // No signature
                 free(packet);
-                return PM3_ESOFT;
+                DropField();
+                return PM3_SUCCESS;
             }
 
         } else {
@@ -1063,7 +1078,7 @@ static int StCheckSig(uint8_t *uid) {
     free(packet);
     DropField();
 
-    uint8_t signature[16];
+    uint8_t signature[32];
     size_t signature_len = 0;
     hexstr_to_byte_array(signature_hex, signature, &signature_len);
 
@@ -1186,6 +1201,11 @@ static int CmdHF15Info(const char *Cmd) {
     printTagInfo_15(d + 2);
     PrintAndLogEx(SUCCESS, "SYSINFO... %s", sprint_hex(d, resp.length - 2));
 
+    // optional fields follow the UID in flag order, only when their flag is set
+    uint8_t afi_pos = 10 + (d[1] & 0x01);
+    uint8_t mem_pos = afi_pos + ((d[1] & 0x02) ? 1 : 0);
+    uint8_t icref_pos = mem_pos + ((d[1] & 0x04) ? 2 : 0);
+
     // DSFID
     if (d[1] & 0x01)
         PrintAndLogEx(SUCCESS, "DSFID..... 0x%02X", d[10]);
@@ -1194,21 +1214,21 @@ static int CmdHF15Info(const char *Cmd) {
 
     // AFI
     if (d[1] & 0x02)
-        PrintAndLogEx(SUCCESS, "AFI....... 0x%02X%s", d[11], (d[11] == 0x30) ? " ( Secura Key e*Tag )" : "");
+        PrintAndLogEx(SUCCESS, "AFI....... 0x%02X%s", d[afi_pos], (d[afi_pos] == 0x30) ? " ( Secura Key e*Tag )" : "");
     else
         PrintAndLogEx(SUCCESS, "AFI not supported");
 
     // IC reference
     if (d[1] & 0x08)
-        PrintAndLogEx(SUCCESS, "IC ref.... 0x%02X", d[14]);
+        PrintAndLogEx(SUCCESS, "IC ref.... 0x%02X", d[icref_pos]);
     else
         PrintAndLogEx(SUCCESS, "IC ref not supported");
 
     // memory
     if (d[1] & 0x04) {
         PrintAndLogEx(SUCCESS, "Tag memory layout (vendor dependent)");
-        uint8_t blocks = d[12] + 1;
-        uint8_t size = (d[13] & 0x1F);
+        uint16_t blocks = d[mem_pos] + 1;
+        uint8_t size = (d[mem_pos + 1] & 0x1F);
         PrintAndLogEx(SUCCESS, "    " _YELLOW_("%u") " ( or " _YELLOW_("%u") " ) bytes/blocks x " _YELLOW_("%u") " blocks", size + 1, size, blocks);
         PrintAndLogEx(SUCCESS, "    " _YELLOW_("%u") " total bytes", ((size + 1) * blocks));
     } else {

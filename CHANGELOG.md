@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 15 info` - AFI, memory size and IC reference are read after the fields the tag really sent (a tag without DSFID or AFI showed wrong values), and a 256-block tag no longer shows 0 blocks (@matrix)
+- Fixed `hf 15 info` - the DSFID and password protection lock bits of NXP tags were read from the wrong bits (@matrix)
+- Fixed `hf 15 info` - on ST25TV512C/02KC the signature overflowed a stack buffer, a tag error leaked the read request, an early return left the field on, and a missing signature ended the command with an error (@matrix)
 - Fixed `tools/external_sam_read.py iclass` - the faked answer to the e-purse update is the new value with its halves swapped, as a card answers (@matrix)
 - Changed `hf mf sen` - default key prioritisation indexed the candidate list instead of rescanning it for each of the ~85k dictionary keys (@iceman1001)
 - Changed `hf mf sen` - the default-key dictionary check no longer mallocs a cipher state per key and gives up on the first wrong keystream byte, ~6x faster for that phase (@iceman1001)
