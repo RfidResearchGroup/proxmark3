@@ -1865,7 +1865,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
     bool m4 = arg_get_lit(ctx, 4);
 
     int uidlen = 0;
-    char uid[20] = {0};
+    char uid[21] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t *)uid, sizeof(uid), &uidlen);
 
     int datafnlen = 0;
@@ -2864,7 +2864,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 8, trg_key, &trg_keylen);
 
     int uidlen = 0;
-    char uid[14] = {0};
+    char uid[15] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 9), (uint8_t *)uid, sizeof(uid), &uidlen);
 
     int fnlen = 0;
@@ -2962,7 +2962,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
             // check if tag doesn't have static nonce
             if (detect_classic_static_nonce() == NONCE_STATIC) {
                 PrintAndLogEx(WARNING, "Static nonce detected. Quitting...");
-                PrintAndLogEx(HINT, "Hint: Try use `" _YELLOW_("hf mf staticnested") "`");
+                PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mf staticnested") "`");
                 return PM3_EOPABORTED;
             }
 
@@ -5779,14 +5779,14 @@ int CmdHF14AMfELoad(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
 
     if (block_width == MFU_BLOCK_SIZE) {
-        PrintAndLogEx(HINT, "Hint: You are ready to simulate. See `" _YELLOW_("hf mfu sim -h") "`");
+        PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mfu sim -h") "`");
         // MFU / NTAG
         if ((cnt != block_cnt)) {
             PrintAndLogEx(WARNING, "Warning, Ultralight/Ntag file content, Loaded %d blocks of expected %d blocks into emulator memory", cnt, block_cnt);
             return PM3_SUCCESS;
         }
     } else {
-        PrintAndLogEx(HINT, "Hint: You are ready to simulate. See `" _YELLOW_("hf mf sim -h") "`");
+        PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf sim -h") "`");
         // MFC
         if ((cnt != block_cnt)) {
             PrintAndLogEx(WARNING, "Error, file content, Only loaded %d blocks, must be %d blocks into emulator memory", cnt, block_cnt);
@@ -6746,7 +6746,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
 
         if (mf_chinese_get_block(i, dump + (i * MFBLOCK_SIZE), flags)) {
             PrintAndLogEx(WARNING, "Can't get magic card block: %d", i);
-            PrintAndLogEx(HINT, "Hint: Verify your card size and try again or try another tag position");
+            PrintAndLogEx(HINT, "Hint: Verify your card size and try again or reposition tag");
             free(dump);
             return PM3_ESOFT;
         }
@@ -6896,7 +6896,7 @@ static int CmdHF14AMfCView(const char *Cmd) {
 
         if (mf_chinese_get_block(i, dump + (i * MFBLOCK_SIZE), flags)) {
             PrintAndLogEx(WARNING, "Can't get magic card block: " _YELLOW_("%u"), i);
-            PrintAndLogEx(HINT, "Hint: Verify your card size and try again or try another tag position");
+            PrintAndLogEx(HINT, "Hint: Verify your card size and try again or reposition tag");
             free(dump);
             return PM3_ESOFT;
         }
@@ -7824,7 +7824,6 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
     int res = mf_check_keys(0, MF_KEY_A, true, 1, (uint8_t *)g_mifare_mad_key, &key64);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "Sector 0 failed to authenticate with MAD default key");
-        PrintAndLogEx(HINT, "Hint: Verify that the tag NDEF formatted");
         return res;
     }
 
@@ -8414,7 +8413,7 @@ static int mfc_supercard_gen2_set_uid(const uint8_t *uid, uint8_t uidlen) {
                 PrintAndLogEx(FAILED, "Card stopped answering at knock command " _YELLOW_("%u") " of %zu", i + 1, ARRAYLEN(knock));
             } else {
                 PrintAndLogEx(FAILED, "Card rejected knock command " _YELLOW_("%u") " of %zu", i + 1, ARRAYLEN(knock));
-                PrintAndLogEx(HINT, "Hint: Are you sure your card is a super card generation 2?");
+                PrintAndLogEx(HINT, "Hint: Are you sure your card is a super card gen 2?");
             }
             DropField();
             return res;
@@ -8429,7 +8428,7 @@ static int mfc_supercard_gen2_set_uid(const uint8_t *uid, uint8_t uidlen) {
         if (res != PM3_SUCCESS) {
             if (res == PM3_ECARDEXCHANGE) {
                 PrintAndLogEx(FAILED, "Card stopped answering at UID byte " _YELLOW_("%u") " of %u, the write is incomplete", i + 1, SUPER_GEN2_UID_LEN);
-                PrintAndLogEx(HINT, "Hint: hold the card still on the antenna and run the command again");
+                PrintAndLogEx(HINT, "Hint: Try running the command again");
             } else {
                 PrintAndLogEx(FAILED, "Card rejected UID byte " _YELLOW_("%u") " of %u", i + 1, SUPER_GEN2_UID_LEN);
             }
@@ -8458,8 +8457,7 @@ static int mfc_supercard_gen2_set_uid(const uint8_t *uid, uint8_t uidlen) {
 
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "Card did not answer after the commit, can't verify the new UID");
-        PrintAndLogEx(WARNING, "The write may still have succeeded, the card ignores activation while writing");
-        PrintAndLogEx(HINT, "Hint: keep the card on the antenna and run `hf 14a info`");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 14a info") "`");
         return PM3_EPARTIAL;
     }
 
@@ -10238,12 +10236,11 @@ static int gdm_resolve_for_write(bool gdm, bool gen1a, bool wupa,
             memset(w.key, 0, sizeof(w.key));
             if (gdm_try_read(MIFARE_MAGIC_GDM_READ_CFG, 0, &w, buf) == PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "This card only responds to WUPA magic auth; " _YELLOW_("%s") " needs a gen1a/gdm backdoor", cmd_name);
-                PrintAndLogEx(HINT, "Hint: enable one first:  " _YELLOW_("hf mf gdmsetcfg --wakestyle gen1a --wupa -k <key>"));
+                PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf gdmsetcfg --wakestyle gen1a --wupa -k <key>") "`");
                 return PM3_EFAILED;
             }
         }
         PrintAndLogEx(FAILED, "Could not find a working wakeup for " _YELLOW_("%s"), cmd_name);
-        PrintAndLogEx(HINT, "Hint: tried gen1a/gdm/wupa; card may be sealed or use a non-default magic auth key");
         return PM3_EFAILED;
     }
 
@@ -10310,7 +10307,7 @@ static int CmdHF14AGen4_GDM_Cfg(const char *Cmd) {
     if (idx < 0) {
         PrintAndLogEx(FAILED, "Failed to read config block");
         if (n_attempts > 1) {
-            PrintAndLogEx(HINT, "Hint: tried WUPA/gen1a/gdm wakeups; card may be sealed or use a non-default magic auth key");
+            PrintAndLogEx(HINT, "Hint: Tried WUPA/gen1a/gdm wakeups; card may be sealed or use a non-default magic auth key");
         }
         return PM3_EFAILED;
     }
@@ -10510,9 +10507,8 @@ static int CmdHF14AGen4_GDM_SetCfg(const char *Cmd) {
 #undef APPLY_CONFIG_FLAG
 
     if (cl2_flag == 1) {
-        PrintAndLogEx(WARNING, "CL2 (7-byte UID) perso enabled via config flag only - this does NOT set a valid 7-byte UID");
-        PrintAndLogEx(HINT, "Hint: run `hf mf gdmsetuid -u <7-byte hex>` to write valid perso data,");
-        PrintAndLogEx(HINT, "      otherwise the card presents ATQA 0000 and becomes unselectable (including --wupa)");
+        PrintAndLogEx(WARNING, "CL2 (7b UID) perso enabled via config flag only. This does NOT set a valid 7-byte UID");
+        PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf gdmsetuid -u <7b>") "`");
     }
 
     if (!changed) {
@@ -11158,7 +11154,7 @@ static int CmdHF14AGen4_GDM_Wipe(const char *Cmd) {
     }
     if (gw.wakeup_type == MF_WAKE_WUPA) {
         PrintAndLogEx(WARNING, "hf mf gdmwipe needs a gen1a/gdm backdoor; WUPA magic auth is insufficient");
-        PrintAndLogEx(HINT, "Hint: enable one first:  " _YELLOW_("hf mf gdmsetcfg --wakestyle gen1a --wupa -k <key>"));
+        PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf gdmsetcfg --wakestyle gen1a --wupa -k <key>") "`");
         return PM3_EFAILED;
     }
     uint8_t wakeup_type = gw.wakeup_type;
@@ -11230,7 +11226,7 @@ static int CmdHF14AGen4_GDM_Wipe(const char *Cmd) {
 
     if (failed_blocks != 0) {
         PrintAndLogEx(FAILED, "Wipe incomplete - " _RED_("%d") " of %d pre-commit block writes failed", failed_blocks, total_blocks);
-        PrintAndLogEx(HINT, "Hint: config and active UID mode were left unchanged");
+        PrintAndLogEx(HINT, "Hint: Config and active UID mode were left unchanged");
         return PM3_EPARTIAL;
     }
 
@@ -11242,7 +11238,7 @@ static int CmdHF14AGen4_GDM_Wipe(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Clean config written");
 
     if (gdm_wipe_verify_uid(block0_data) != PM3_SUCCESS) {
-        PrintAndLogEx(HINT, "Hint: the magic wakeup remains enabled for recovery");
+        PrintAndLogEx(HINT, "Hint: Magic wakeup remains enabled for recovery");
         return PM3_EPARTIAL;
     }
 

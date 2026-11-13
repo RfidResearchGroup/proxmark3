@@ -101,8 +101,7 @@ int myki_parser_parse(const desfire_dump_t *dump) {
 
     const desfire_dump_file_t *f = myki_find_file(myki_find_app(dump, MYKI_AID_1), MYKI_FID_SERIAL);
     if (f == NULL || f->read_ok == false || f->data == NULL || f->datalen < 8) {
-        PrintAndLogEx(HINT, "Hint: file %02X of %06X is free to read, try `" _YELLOW_("hf mfdes dump --no-auth") "`",
-                      MYKI_FID_SERIAL, MYKI_AID_1);
+        PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mfdes dump --no-auth") "`");
         return PM3_SUCCESS;
     }
 

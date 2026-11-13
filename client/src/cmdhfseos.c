@@ -859,7 +859,7 @@ out:
     PrintAndLogEx(ERR, _RED_("MAC Verification Failed"));
     if (seos_privacy_key_empty(key_index)) {
         PrintAndLogEx(ERR, _YELLOW_("Privacy key slot %d is empty"), key_index);
-        PrintAndLogEx(HINT, "Hint: Load one with `" _YELLOW_("hf seos managekeys --ki %d --privacy <hex>") "`", key_index);
+        PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf seos managekeys --ki %d --privacy <hex>") "`", key_index);
     } else {
         PrintAndLogEx(ERR, _YELLOW_("Likely wrong Priv Mac Key"));
     }
