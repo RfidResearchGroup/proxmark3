@@ -4071,7 +4071,6 @@ static int CmdT55xxRestore(const char *Cmd) {
         }
     } else {
         PrintAndLogEx(WARNING, "Warning: the dump file contains a all zero config block.");
-        PrintAndLogEx(HINT, "Make sure you dumped the card correct");
     }
     free(dump);
     PrintAndLogEx(INFO, "Done!");
