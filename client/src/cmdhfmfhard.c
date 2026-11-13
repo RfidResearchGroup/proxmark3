@@ -677,16 +677,6 @@ static void init_part_sum_bitarrays(void) {
         }
     }
     for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
-        //PrintAndLogEx(INFO, "(%d, %" PRIu16 ")...", odd_even, part_sum_a0);
-        for (uint32_t state = 0; state < (1 << 20); state++) {
-            uint16_t part_sum_a0 = PartialSumProperty(state, odd_even) / 2;
-            for (uint16_t low_bits = 0; low_bits < 1 << 4; low_bits++) {
-                set_bit24(part_sum_a0_bitarrays[odd_even][part_sum_a0], state << 4 | low_bits);
-            }
-        }
-    }
-
-    for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
         for (uint16_t part_sum_a8 = 0; part_sum_a8 < NUM_PART_SUMS; part_sum_a8++) {
             part_sum_a8_bitarrays[odd_even][part_sum_a8] = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * (1 << 19));
             if (part_sum_a8_bitarrays[odd_even][part_sum_a8] == NULL) {
@@ -696,12 +686,21 @@ static void init_part_sum_bitarrays(void) {
             clear_bitarray24(part_sum_a8_bitarrays[odd_even][part_sum_a8]);
         }
     }
+
+    // one pass for both sums: PartialSumProperty() is the expensive part here.
+    // a0 sets the 16 states state << 4 | 0..f, which is exactly one half word.
+    // a8 sets state | 0..f << 20, the same pattern once per 2^20 bits, so fill
+    // the lowest block and copy it up.
     for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
-        //PrintAndLogEx(INFO, "(%d, %" PRIu16 ")...", odd_even, part_sum_a8);
         for (uint32_t state = 0; state < (1 << 20); state++) {
-            uint16_t part_sum_a8 = PartialSumProperty(state, odd_even) / 2;
-            for (uint16_t high_bits = 0; high_bits < 1 << 4; high_bits++) {
-                set_bit24(part_sum_a8_bitarrays[odd_even][part_sum_a8], state | high_bits << 20);
+            uint16_t part_sum = PartialSumProperty(state, odd_even) / 2;
+            part_sum_a0_bitarrays[odd_even][part_sum][state >> 1] |= (state & 1) ? 0x0000ffff : 0xffff0000;
+            set_bit24(part_sum_a8_bitarrays[odd_even][part_sum], state);
+        }
+        for (uint16_t part_sum = 0; part_sum < NUM_PART_SUMS; part_sum++) {
+            uint32_t *bitarray = part_sum_a8_bitarrays[odd_even][part_sum];
+            for (uint32_t high_bits = 1; high_bits < 1 << 4; high_bits++) {
+                memcpy(bitarray + (high_bits << 15), bitarray, (1 << 15) * sizeof(uint32_t));
             }
         }
     }
