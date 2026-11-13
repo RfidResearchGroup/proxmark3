@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `--ncpu` - it refused the machine's own core count, so all cores could never be requested explicitly (@iceman1001)
 - Changed `hf mf hardnested` - the partial sum state tables are built in one pass with whole words instead of 67 million single bit writes, cutting about 2 seconds off every run (@iceman1001)
 - Fixed `hf mf hardnested` - it searched every configured default path for each of the ~2000 bitflip state tables, which took 30+ seconds when those paths are on a network or Windows mount; the table directory is now resolved once (@iceman1001)
 - Fixed `tools/external_sam_read.py iclass` - the faked answer to the e-purse update is the new value with its halves swapped, as a card answers (@matrix)
