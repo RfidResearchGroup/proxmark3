@@ -1573,8 +1573,40 @@ static int fm11_prioritize_defaults(fm11_keylist_t *list, const fm11_keylist_t *
     if (defaults == NULL || defaults->count == 0) {
         return PM3_SUCCESS;
     }
+    // index the candidates, else every one of the ~85k dictionary keys scans the whole list
+    uint32_t cap = 1;
+    while (cap < list->count * 2) {
+        cap <<= 1;
+    }
+    uint64_t *seen = calloc(cap, sizeof(uint64_t));     // key + 1, 0 is empty
+    if (seen != NULL) {
+        for (uint32_t i = 0; i < list->count; i++) {
+            uint64_t k = list->data[i].key & 0xFFFFFFFFFFFFULL;
+            uint32_t h = (uint32_t)((k * 0x9E3779B97F4A7C15ULL) >> 45) & (cap - 1);
+            while (seen[h] != 0 && seen[h] != k + 1) {
+                h = (h + 1) & (cap - 1);
+            }
+            seen[h] = k + 1;
+        }
+    }
+
     uint32_t dst = 0;
     for (uint32_t d = 0; d < defaults->count; d++) {
+        if (seen != NULL) {
+            uint64_t k = defaults->data[d].key & 0xFFFFFFFFFFFFULL;
+            uint32_t h = (uint32_t)((k * 0x9E3779B97F4A7C15ULL) >> 45) & (cap - 1);
+            bool present = false;
+            while (seen[h] != 0) {
+                if (seen[h] == k + 1) {
+                    present = true;
+                    break;
+                }
+                h = (h + 1) & (cap - 1);
+            }
+            if (present == false) {
+                continue;
+            }
+        }
         for (uint32_t i = dst; i < list->count; i++) {
             if (list->data[i].key == defaults->data[d].key) {
                 fm11_candidate_t tmp = list->data[dst];
@@ -1584,6 +1616,7 @@ static int fm11_prioritize_defaults(fm11_keylist_t *list, const fm11_keylist_t *
             }
         }
     }
+    free(seen);
     return PM3_SUCCESS;
 }
 

@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf mf sen` - default key prioritisation indexed the candidate list instead of rescanning it for each of the ~85k dictionary keys (@iceman1001)
 - Changed `hf mf sen` - the default-key dictionary check no longer mallocs a cipher state per key and gives up on the first wrong keystream byte, ~6x faster for that phase (@iceman1001)
 - Changed `hf mf nested` and `hf mf staticnested` - key recovery now uses both nonces in one `lfsr_recovery32_dual` pass, ~4 ms instead of ~390 ms per key (@iceman1001)
 - Changed `lfsr_recovery32` - bit sliced first pass, branch free table extension and a cheaper bucket intersect, ~165 ms instead of ~270 ms per call and less memory, which speeds up `hf mf sen`, mfkey32/64 and the nested tools (@iceman1001)
