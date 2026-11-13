@@ -7538,14 +7538,15 @@ int CmdHFMFNDEFRead(const char *Cmd) {
     for (size_t i = 0; i < mad_list.len; i++) {
         if (ndef_aid == mad_list.entries[i].aid) {
             uint8_t sno = mad_list.entries[i].sector;
-            uint8_t vsector[MFBLOCK_SIZE * 4] = {0};
+            uint8_t vsector[MFBLOCK_SIZE * 16] = {0};
             if (mf_read_sector(sno, keyB ? MF_KEY_B : MF_KEY_A, ndefkey, vsector)) {
                 PrintAndLogEx(ERR, "error, reading sector %d ", sno);
                 return PM3_ESOFT;
             }
 
-            memcpy(&data[datalen], vsector, MFBLOCK_SIZE * 3);
-            datalen += MFBLOCK_SIZE * 3;
+            size_t data_size = (mfNumBlocksPerSector(sno) - 1) * MFBLOCK_SIZE;
+            memcpy(&data[datalen], vsector, data_size);
+            datalen += data_size;
 
             PrintAndLogEx(INPLACE, "%zu", i);
         }
