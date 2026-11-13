@@ -2197,16 +2197,20 @@ static bool fm11_key_matches_nonce(uint32_t uid,
                          ((((par_err >> 1) & 1) ^ oddparity8((nt_enc >>  8) & 0xFF)) << 1) |
                          ((((par_err >> 0) & 1) ^ oddparity8((nt_enc >>  0) & 0xFF)) << 0);
 
-    struct Crypto1State *s = crypto1_create(key & 0xFFFFFFFFFFFFULL);
-    if (s == NULL) {
-        return false;
+    // on the stack and a byte at a time: nearly every dictionary key dies on the first byte
+    struct Crypto1State s;
+    crypto1_init(&s, key & 0xFFFFFFFFFFFFULL);
+
+    uint32_t in = nt ^ uid;
+    for (int8_t byte_i = 3; byte_i >= 0; byte_i--) {
+        uint8_t shift = byte_i * 8;
+        uint8_t ks = crypto1_byte(&s, (in >> shift) & 0xFF, 0);
+        if ((uint8_t)(((nt >> shift) & 0xFF) ^ ks) != ((nt_enc >> shift) & 0xFF)) {
+            return false;
+        }
     }
-    uint32_t ks1 = crypto1_word(s, nt ^ uid, 0);
-    uint32_t ks2 = crypto1_word(s, 0, 0);
-    if ((nt ^ ks1) != nt_enc) {
-        crypto1_destroy(s);
-        return false;
-    }
+
+    uint32_t ks2 = crypto1_word(&s, 0, 0);
 
     for (uint8_t byte_i = 0; byte_i < 4; byte_i++) {
         if (parity_mask & (1U << byte_i)) {
@@ -2214,13 +2218,11 @@ static bool fm11_key_matches_nonce(uint32_t uid,
             uint8_t observed_dec = ((nt_par_enc >> byte_i) & 1) ^ ks_par;
             uint8_t nt_byte = (nt >> (byte_i * 8)) & 0xFF;
             if (observed_dec != oddparity8(nt_byte)) {
-                crypto1_destroy(s);
                 return false;
             }
         }
     }
 
-    crypto1_destroy(s);
     return true;
 }
 
