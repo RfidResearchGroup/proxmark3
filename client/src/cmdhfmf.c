@@ -7422,7 +7422,8 @@ int CmdHFMFNDEFRead(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf ndefread",
-                  "Prints NFC Data Exchange Format (NDEF)",
+                  "Prints NFC Data Exchange Format (NDEF)\n"
+                  "If the default MAD key fails, the MAD is read with the custom key (-k)",
                   "hf mf ndefread -> shows NDEF parsed data\n"
                   "hf mf ndefread -vv -> shows NDEF parsed and raw data\n"
                   "hf mf ndefread -f myfilename                   -> save raw NDEF to file\n"
@@ -7460,6 +7461,16 @@ int CmdHFMFNDEFRead(const char *Cmd) {
     bool override = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
+    if (keylen && keylen != 6) {
+        PrintAndLogEx(WARNING, "Key must be 12 hex digits. Got %d", keylen * 2);
+        return PM3_EINVARG;
+    }
+
+    if (aidlen && aidlen != 2) {
+        PrintAndLogEx(WARNING, "AID must be 4 hex digits. Got %d", aidlen * 2);
+        return PM3_EINVARG;
+    }
+
     uint16_t ndef_aid = NDEF_MFC_AID;
     if (aidlen == 2) {
         ndef_aid = (aid[0] << 8) + aid[1];
@@ -7481,9 +7492,15 @@ int CmdHFMFNDEFRead(const char *Cmd) {
     }
 
     if (mf_read_sector(MF_MAD1_SECTOR, MF_KEY_A, g_mifare_mad_key, (uint8_t *)&sector0)) {
-        PrintAndLogEx(ERR, "error, read sector 0. card doesn't have MAD or doesn't have MAD on default keys");
-        PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mf ndefread -k `") " with your custom key");
-        return PM3_ESOFT;
+        if (keylen == 0) {
+            PrintAndLogEx(ERR, "error, read sector 0. card doesn't have MAD or doesn't have MAD on default keys");
+            PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mf ndefread -k `") " with your custom key");
+            return PM3_ESOFT;
+        }
+        if (mf_read_sector(MF_MAD1_SECTOR, MF_KEY_A, key, (uint8_t *)&sector0)) {
+            PrintAndLogEx(ERR, "error, read sector 0. card doesn't have MAD or the custom key is wrong");
+            return PM3_ESOFT;
+        }
     }
 
     if (verbose) {
@@ -7491,7 +7508,8 @@ int CmdHFMFNDEFRead(const char *Cmd) {
     }
 
     const mad2_sector_t *pmad2 = NULL;
-    if (mf_read_sector(MF_MAD2_SECTOR, MF_KEY_A, g_mifare_mad_key, (uint8_t *)&mad2_sector) == PM3_SUCCESS) {
+    if (mf_read_sector(MF_MAD2_SECTOR, MF_KEY_A, g_mifare_mad_key, (uint8_t *)&mad2_sector) == PM3_SUCCESS ||
+            (keylen && mf_read_sector(MF_MAD2_SECTOR, MF_KEY_A, key, (uint8_t *)&mad2_sector) == PM3_SUCCESS)) {
         pmad2 = &mad2_sector;
     } else if (verbose) {
         PrintAndLogEx(ERR, "error, read sector 0x10. card doesn't have MAD 2 or doesn't have MAD 2 on default keys");
