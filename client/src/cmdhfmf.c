@@ -1865,7 +1865,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
     bool m4 = arg_get_lit(ctx, 4);
 
     int uidlen = 0;
-    char uid[20] = {0};
+    char uid[21] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t *)uid, sizeof(uid), &uidlen);
 
     int datafnlen = 0;
@@ -2864,7 +2864,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 8, trg_key, &trg_keylen);
 
     int uidlen = 0;
-    char uid[14] = {0};
+    char uid[15] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 9), (uint8_t *)uid, sizeof(uid), &uidlen);
 
     int fnlen = 0;
