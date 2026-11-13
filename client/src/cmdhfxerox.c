@@ -773,82 +773,102 @@ static int read_xerox_block(iso14b_card_select_t *card, uint8_t blockno, uint8_t
 }
 
 static int write_xerox_block(iso14b_card_select_t *card, uint8_t blockno, uint8_t *data) {
-    // printf("Block %u data: ", blockno);
-    // for (int i = 0; i < XEROX_BLOCK_SIZE; i++) {
-    //    printf("%02X ", data[i]);
-    //}
-    //printf("\n");
-    return 0;
-
     if (card == NULL || data == NULL) {
         return PM3_EINVARG;
     }
-    
-    // Command structure: 0x02 + write_cmd + UID + blockno + data (4 bytes)
+
     uint8_t approx_len = (2 + card->uidlen + 1 + 4);
     iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + approx_len);
-    
+
     if (packet == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
-    
-    // Set up the write command
+
     packet->flags = (ISO14B_APPEND_CRC | ISO14B_RAW);
     packet->raw[packet->rawlen++] = 0x02;
-    packet->raw[packet->rawlen++] = ISO14443B_XEROX_WRITE_BLK;  // 0x31
-    
-    // UID
+    packet->raw[packet->rawlen++] = ISO14443B_XEROX_WRITE_BLK;
+
     memcpy(packet->raw + packet->rawlen, card->uid, card->uidlen);
     packet->rawlen += card->uidlen;
-    
-    // Block to write
+
     packet->raw[packet->rawlen++] = blockno;
-    
-    // Data to write (4 bytes)
+
     memcpy(packet->raw + packet->rawlen, data, 4);
     packet->rawlen += 4;
-    
+
     int res = PM3_ESOFT;
-    
-    // Write loop with retry
-    for (int retry = 0; retry < 2; retry++) {
+
+    for (int retry = 0; retry < 3; retry++) {
+
         clearCommandBuffer();
         SendCommandNG(CMD_HF_ISO14443B_COMMAND, (uint8_t *)packet, sizeof(iso14b_raw_cmd_t) + packet->rawlen);
-        
+
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, 2000) == false) {
+            PrintAndLogEx(WARNING, "Write block 0x%02X timeout (attempt %d)", blockno, retry + 1);
+            res = PM3_ETIMEOUT;
             continue;
         }
-        
+
         if (resp.status != PM3_SUCCESS) {
-            PrintAndLogEx(FAILED, "Write failed, trying one more time");
+            PrintAndLogEx(WARNING, "Write block 0x%02X transport error (attempt %d), re-selecting",
+                          blockno, retry + 1);
+            res = resp.status;
+            if (xerox_select_card(card, false) != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "Re-select failed (attempt %d)", retry + 1);
+            }
             continue;
         }
-        
+
         if (resp.length < 3) {
-            PrintAndLogEx(FAILED, "Response too short, trying one more time");
+            PrintAndLogEx(WARNING, "Write block 0x%02X short response (attempt %d), len=%u",
+                          blockno, retry + 1, resp.length);
+            res = PM3_ESOFT;
             continue;
         }
-        
+
         uint8_t *d = resp.data.asBytes;
-        
-        if (check_crc(CRC_14443_B, d, resp.length - 2) == false) {
-            PrintAndLogEx(FAILED, "Write CRC " _RED_("fail") ", trying one more time");
+
+        if (check_crc(CRC_14443_B, d, resp.length) == false) {
+            PrintAndLogEx(WARNING, "Write block 0x%02X response CRC fail (attempt %d), len=%u raw=%s",
+                          blockno, retry + 1, resp.length,
+                          sprint_hex(d, resp.length));
+            res = PM3_ECRC;
             continue;
         }
-        
+
         if (d[0] != 0x02 || d[1] != 0x00) {
-            PrintAndLogEx(FAILED, "Tag returned error: %02x %02x", d[0], d[1]);
+            PrintAndLogEx(WARNING, "Write block 0x%02X NACKed: %02X %02X (attempt %d)",
+                          blockno, d[0], d[1], retry + 1);
             res = PM3_ERFTRANS;
-            break;
+            continue;
         }
-        
-        PrintAndLogEx(SUCCESS, "Successfully wrote block %d", blockno);
-        res = PM3_SUCCESS;
-        break;
+
+        // Read back and verify
+        uint8_t readback[XEROX_BLOCK_SIZE] = {0};
+        int rres = read_xerox_block(card, blockno, readback);
+        if (rres != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Write block 0x%02X readback failed (attempt %d)",
+                          blockno, retry + 1);
+            res = rres;
+            continue;
+        }
+
+        if (memcmp(readback, data, XEROX_BLOCK_SIZE) != 0) {
+            // Print each on its own line to avoid sprint_hex static-buffer aliasing
+            PrintAndLogEx(WARNING, "Write block 0x%02X verify mismatch (attempt %d)", blockno, retry + 1);
+            PrintAndLogEx(WARNING, "  wrote: %s", sprint_hex(data, XEROX_BLOCK_SIZE));
+            PrintAndLogEx(WARNING, "  read : %s", sprint_hex(readback, XEROX_BLOCK_SIZE));
+            res = PM3_ESOFT;
+            continue;
+        }
+
+        free(packet);
+        return PM3_SUCCESS;
     }
-    
+
+    PrintAndLogEx(FAILED, "Write block 0x%02X failed after retries", blockno);
     free(packet);
     return res;
 }
