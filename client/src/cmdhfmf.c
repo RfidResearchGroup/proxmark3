@@ -7324,15 +7324,15 @@ static int CmdHF14AMfMAD(const char *Cmd) {
             for (size_t i = 0; i < mad_list.len; i++) {
                 if (aaid == mad_list.entries[i].aid) {
                     uint8_t sno = mad_list.entries[i].sector;
-                    uint8_t vsector[MFBLOCK_SIZE * 4] = {0};
+                    uint8_t vsector[MFBLOCK_SIZE * 16] = {0};
                     if (mf_read_sector(sno, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
                         PrintAndLogEx(NORMAL, "");
                         PrintAndLogEx(ERR, "error, read sector %d", sno);
                         return PM3_ESOFT;
                     }
 
-                    for (int j = 0; j < (verbose ? 4 : 3); j ++)
-                        PrintAndLogEx(NORMAL, " [%03d] %s", sno * 4 + j, sprint_hex(&vsector[j * MFBLOCK_SIZE], MFBLOCK_SIZE));
+                    for (int j = 0; j < mfNumBlocksPerSector(sno) - (verbose ? 0 : 1); j++)
+                        PrintAndLogEx(NORMAL, " [%03d] %s", mfFirstBlockOfSector(sno) + j, sprint_hex(&vsector[j * MFBLOCK_SIZE], MFBLOCK_SIZE));
                 }
             }
         }
@@ -7348,16 +7348,17 @@ static int CmdHF14AMfMAD(const char *Cmd) {
             for (size_t i = 0; i < mad_list.len; i++) {
                 if (aaid == mad_list.entries[i].aid) {
                     uint8_t sno = mad_list.entries[i].sector;
-                    uint8_t vsector[MFBLOCK_SIZE * 4] = {0};
+                    uint8_t vsector[MFBLOCK_SIZE * 16] = {0};
                     if (mf_read_sector(sno, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
                         PrintAndLogEx(NORMAL, "");
                         PrintAndLogEx(ERR, "error, read sector %d", sno);
                         return PM3_ESOFT;
                     }
 
-                    // skip ST block hence only 3 blocks copy
-                    memcpy(&data[datalen], vsector, MFBLOCK_SIZE * 3);
-                    datalen += MFBLOCK_SIZE * 3;
+                    // skip ST block
+                    size_t data_size = (mfNumBlocksPerSector(sno) - 1) * MFBLOCK_SIZE;
+                    memcpy(&data[datalen], vsector, data_size);
+                    datalen += data_size;
                 }
             }
 
