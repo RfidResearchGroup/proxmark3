@@ -4,6 +4,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Fixed `hf mf ndefread` - on sectors 32-39 of a 4K card it overflowed a stack buffer and decoded 3 of their 15 data blocks (@matrix)
+- Fixed `hf mf ndefread` - it told the user to retry with `-k` but read the MAD only with the MAD key, a `-k` or `--aid` of the wrong length was ignored (@matrix)
+- Changed `tools/external_sam_read.py` - added `mfc` for a HID MIFARE Classic credential, as `hf mf sam`, and `desfire` for a HID DESFire one, as `hf mfdes sam` (@matrix)
 - Fixed `hf mf mad` - with `-f` and `--aid` it decoded card holder info instead of printing the AID's sectors, `--override` was refused and a `-k` or `--aid` of the wrong length ignored (@matrix)
 - Fixed `hf mf mad` - on sectors 32-39 of a 4K card it overflowed a stack buffer, printed only their first blocks (numbered wrong from sector 33) and decoded 3 of their 15 data blocks with `--dch` (@matrix)
 - Fixed `hf 15 sniff` and `hf iclass sniff` - the sniffer could not keep up with the samples and lost most tag answers, it now runs from RAM (@matrix)
