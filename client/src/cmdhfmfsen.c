@@ -1573,8 +1573,40 @@ static int fm11_prioritize_defaults(fm11_keylist_t *list, const fm11_keylist_t *
     if (defaults == NULL || defaults->count == 0) {
         return PM3_SUCCESS;
     }
+    // index the candidates, else every one of the ~85k dictionary keys scans the whole list
+    uint32_t cap = 1;
+    while (cap < list->count * 2) {
+        cap <<= 1;
+    }
+    uint64_t *seen = calloc(cap, sizeof(uint64_t));     // key + 1, 0 is empty
+    if (seen != NULL) {
+        for (uint32_t i = 0; i < list->count; i++) {
+            uint64_t k = list->data[i].key & 0xFFFFFFFFFFFFULL;
+            uint32_t h = (uint32_t)((k * 0x9E3779B97F4A7C15ULL) >> 45) & (cap - 1);
+            while (seen[h] != 0 && seen[h] != k + 1) {
+                h = (h + 1) & (cap - 1);
+            }
+            seen[h] = k + 1;
+        }
+    }
+
     uint32_t dst = 0;
     for (uint32_t d = 0; d < defaults->count; d++) {
+        if (seen != NULL) {
+            uint64_t k = defaults->data[d].key & 0xFFFFFFFFFFFFULL;
+            uint32_t h = (uint32_t)((k * 0x9E3779B97F4A7C15ULL) >> 45) & (cap - 1);
+            bool present = false;
+            while (seen[h] != 0) {
+                if (seen[h] == k + 1) {
+                    present = true;
+                    break;
+                }
+                h = (h + 1) & (cap - 1);
+            }
+            if (present == false) {
+                continue;
+            }
+        }
         for (uint32_t i = dst; i < list->count; i++) {
             if (list->data[i].key == defaults->data[d].key) {
                 fm11_candidate_t tmp = list->data[dst];
@@ -1584,6 +1616,7 @@ static int fm11_prioritize_defaults(fm11_keylist_t *list, const fm11_keylist_t *
             }
         }
     }
+    free(seen);
     return PM3_SUCCESS;
 }
 
@@ -2197,16 +2230,20 @@ static bool fm11_key_matches_nonce(uint32_t uid,
                          ((((par_err >> 1) & 1) ^ oddparity8((nt_enc >>  8) & 0xFF)) << 1) |
                          ((((par_err >> 0) & 1) ^ oddparity8((nt_enc >>  0) & 0xFF)) << 0);
 
-    struct Crypto1State *s = crypto1_create(key & 0xFFFFFFFFFFFFULL);
-    if (s == NULL) {
-        return false;
+    // on the stack and a byte at a time: nearly every dictionary key dies on the first byte
+    struct Crypto1State s;
+    crypto1_init(&s, key & 0xFFFFFFFFFFFFULL);
+
+    uint32_t in = nt ^ uid;
+    for (int8_t byte_i = 3; byte_i >= 0; byte_i--) {
+        uint8_t shift = byte_i * 8;
+        uint8_t ks = crypto1_byte(&s, (in >> shift) & 0xFF, 0);
+        if ((uint8_t)(((nt >> shift) & 0xFF) ^ ks) != ((nt_enc >> shift) & 0xFF)) {
+            return false;
+        }
     }
-    uint32_t ks1 = crypto1_word(s, nt ^ uid, 0);
-    uint32_t ks2 = crypto1_word(s, 0, 0);
-    if ((nt ^ ks1) != nt_enc) {
-        crypto1_destroy(s);
-        return false;
-    }
+
+    uint32_t ks2 = crypto1_word(&s, 0, 0);
 
     for (uint8_t byte_i = 0; byte_i < 4; byte_i++) {
         if (parity_mask & (1U << byte_i)) {
@@ -2214,13 +2251,11 @@ static bool fm11_key_matches_nonce(uint32_t uid,
             uint8_t observed_dec = ((nt_par_enc >> byte_i) & 1) ^ ks_par;
             uint8_t nt_byte = (nt >> (byte_i * 8)) & 0xFF;
             if (observed_dec != oddparity8(nt_byte)) {
-                crypto1_destroy(s);
                 return false;
             }
         }
     }
 
-    crypto1_destroy(s);
     return true;
 }
 

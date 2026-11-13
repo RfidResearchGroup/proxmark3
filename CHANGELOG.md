@@ -4,6 +4,10 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Fixed `tools/external_sam_read.py iclass` - the faked answer to the e-purse update is the new value with its halves swapped, as a card answers (@matrix)
+- Changed `hf mf sen` - default key prioritisation indexed the candidate list instead of rescanning it for each of the ~85k dictionary keys (@iceman1001)
+- Changed `hf mf sen` - the default-key dictionary check no longer mallocs a cipher state per key and gives up on the first wrong keystream byte, ~6x faster for that phase (@iceman1001)
+- Changed `hf mf nested` and `hf mf staticnested` - key recovery now uses both nonces in one `lfsr_recovery32_dual` pass, ~4 ms instead of ~390 ms per key (@iceman1001)
+- Changed `lfsr_recovery32` - bit sliced first pass, branch free table extension and a cheaper bucket intersect, ~165 ms instead of ~270 ms per call and less memory, which speeds up `hf mf sen`, mfkey32/64 and the nested tools (@iceman1001)
 - Fixed the ISO15693 reader - a tag answer was lost when a noise step came right before its SOF, e.g. `hf 15 dump` ended with `Dump incomplete` (@matrix)
 - Fixed the ISO15693 tag answer decoders - an answer longer than the buffer wrote one byte past it (@matrix)
 - Fixed `hf mf ndefread` - on sectors 32-39 of a 4K card it overflowed a stack buffer and decoded 3 of their 15 data blocks (@matrix)
