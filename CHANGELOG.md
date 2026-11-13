@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `tools/external_sam_read.py iclass` - the faked answer to the e-purse update is the new value with its halves swapped, as a card answers (@matrix)
 - Fixed the ISO15693 reader - a tag answer was lost when a noise step came right before its SOF, e.g. `hf 15 dump` ended with `Dump incomplete` (@matrix)
 - Fixed the ISO15693 tag answer decoders - an answer longer than the buffer wrote one byte past it (@matrix)
 - Fixed `hf mf ndefread` - on sectors 32-39 of a 4K card it overflowed a stack buffer and decoded 3 of their 15 data blocks (@matrix)

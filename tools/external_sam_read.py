@@ -544,7 +544,7 @@ class LegacyReaderSam:
             # Match `hf iclass sam -p`: never allow a read to decrement/update
             # the e-purse.  The SAM expects a synthetic read-back + iCLASS CRC.
             if len(data) >= 10 and data[:2] == b"\x87\x02":
-                reply = data[6:10] + data[:4]
+                reply = data[6:10] + data[2:6]
                 reply += iclass_crc(reply)
             else:
                 reply = self.hf.transceive_iclass(data)
