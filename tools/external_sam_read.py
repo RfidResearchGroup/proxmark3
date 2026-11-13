@@ -3,9 +3,9 @@
 
 Cross-platform (Windows, Linux, macOS)
 It performs the same legacy Reader-SAM PACS extraction used by ``hf iclass
-sam`` and ``hf seos sam``, but moves the SAM from the Proxmark SIM slot to a
-PC/SC reader such as an ACR39.  The Proxmark is used only as the HF
-antenna/reader.
+sam``, ``hf seos sam``, ``hf mfdes sam`` and ``hf mf sam``, but moves the SAM
+from the Proxmark SIM slot to a PC/SC reader such as an ACR39.  The Proxmark is
+used only as the HF antenna/reader.
 
 Requires Python 3.10+, pyserial and pyscard:
 ``python -m pip install -r pyserial pyscard``
@@ -14,6 +14,8 @@ Examples:
   python proxmark_reader_pyscard.py --list
   python proxmark_reader_pyscard.py iclass --sam ACR39
   python proxmark_reader_pyscard.py seos --pm3 /dev/ttyACM0 --sam ACR39 -v
+  python proxmark_reader_pyscard.py desfire --sam ACR39
+  python proxmark_reader_pyscard.py mfc --sam ACR39
   python proxmark_reader_pyscard.py --decode 0632829cc0
 """
 
@@ -172,7 +174,18 @@ ISO14A_NO_DISCONNECT = 1 << 1
 ISO14A_APDU = 1 << 2
 ISO14A_RAW = 1 << 3
 ISO14A_APPEND_CRC = 1 << 5
+ISO14A_NO_RATS = 1 << 9
 ISO14A_CLEARTRACE = 1 << 17
+ISO14A_NO_PARITY = 1 << 18
+
+# Reader-SAM nfcSend formats of a MIFARE Classic card and RF status values,
+# as in armsrc/sam_mfc.c and armsrc/sam_common.h.
+MFC_FORMAT_PLAIN = b"\x00\xc0\x00"
+MFC_FORMATS_BITS = (b"\x00\x00\x40", b"\x00\x00\x24", b"\x00\x00\x44")
+SAM_RF_STATUS_OK = 0x0000
+SAM_RF_STATUS_PROTOCOL = 0x0004
+SAM_RF_STATUS_TIMEOUT = 0x0020
+SAM_NFC_RX_MAX = 117  # the nfcRx must stay within short form ASN.1 lengths
 
 
 @dataclass
@@ -193,14 +206,14 @@ class HfReader:
         self.pm3 = pm3
 
     def _reader14a(self, flags: int, data: bytes = b"",
-                   timeout: float = 5) -> tuple[int, int, bytes]:
+                   timeout: float = 5, lenbits: int = 0) -> tuple[int, int, bytes]:
         """Send an iso14a_raw_cmd_t and unpack the iso14a_raw_resp_t reply.
 
         Returns (length, sel, payload). `sel` is the select status on a CONNECT,
         `length` the number of payload bytes otherwise.
         """
         # iso14a_raw_cmd_t: u32 flags, u32 timeout, u32 wait_us, u16 len, u16 lenbits
-        req = struct.pack("<IIIHH", flags, 0, 0, len(data), 0) + data
+        req = struct.pack("<IIIHH", flags, 0, 0, len(data), lenbits) + data
         self.pm3.send_ng(CMD_HF_ISO14443A_READER, req)
         reply = self.pm3.wait(CMD_HF_ISO14443A_READER, timeout)
         # iso14a_raw_resp_t: u16 len, u8 sel, u8 rfu, u8 data[]
@@ -212,7 +225,7 @@ class HfReader:
     def select_seos(self) -> Card14a:
         _len, sel, data = self._reader14a(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT)
         if sel == 0 or len(data) < 15:
-            raise ReaderError("no ISO14443-A / SEOS card in the Proxmark field")
+            raise ReaderError("no ISO14443-A / SEOS or DESFire card in the Proxmark field")
         uid_len = data[10]
         if uid_len not in (4, 7, 10) or len(data) < 15 + data[14]:
             raise ReaderError("invalid ISO14443-A selection response")
@@ -226,6 +239,38 @@ class HfReader:
         if length <= 2 or len(data) < length:
             return b""
         return bytes(data[:length - 2])  # PM3 payload includes the T=CL CRC.
+
+    def select_mfc(self) -> Card14a:
+        _len, sel, data = self._reader14a(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_DISCONNECT
+                                          | ISO14A_NO_RATS)
+        if sel == 0 or len(data) < 15:
+            raise ReaderError("no ISO14443-A / MIFARE Classic card in the Proxmark field")
+        uid_len = data[10]
+        if uid_len not in (4, 7, 10):
+            raise ReaderError("invalid ISO14443-A selection response")
+        return Card14a(bytes(data[:uid_len]), bytes(data[11:13]), data[13])
+
+    def transceive_mfc(self, frame: bytes, frame_format: bytes) -> tuple[bytes, int]:
+        """Relay one Reader-SAM MIFARE Classic frame; returns (answer, RF status).
+
+        Plain: bytes as they are, the Proxmark adds the parity, a CRC is
+        already in the data.  Bits: the air order stream, 8 data bits LSB first
+        and the SAM's own parity bit per byte, sent and received unchanged.
+        """
+        if frame_format == MFC_FORMAT_PLAIN and frame:
+            length, _sel, data = self._reader14a(ISO14A_RAW | ISO14A_NO_DISCONNECT, frame, 10)
+            answer = bytes(data[:length])
+        elif frame_format in MFC_FORMATS_BITS and len(frame) > 1:
+            length, _sel, data = self._reader14a(ISO14A_RAW | ISO14A_NO_PARITY | ISO14A_NO_DISCONNECT,
+                                                 frame, 10, len(frame) * 8 // 9 * 9)
+            answer = mfc_air_bits_answer(bytes(data[:length]))
+        else:
+            return b"", SAM_RF_STATUS_PROTOCOL
+        if not answer:
+            return b"", SAM_RF_STATUS_TIMEOUT
+        if len(answer) > SAM_NFC_RX_MAX:
+            return b"", SAM_RF_STATUS_PROTOCOL
+        return answer, SAM_RF_STATUS_OK
 
     def _iclass_raw(self, flags: int, frame: bytes = b"", timeout: float = 5) -> Pm3Response:
         self.pm3.send_ng(CMD_HF_ICLASS_RAW, struct.pack("<BH", flags, len(frame)) + frame)
@@ -366,14 +411,31 @@ def wrap(tag: int, value: bytes) -> bytes:
     return bytes((tag,)) + enc_len(len(value)) + value
 
 
-def parse_card_api(body: bytes) -> tuple[str, bytes, Optional[int]]:
-    """Classify an A1 Reader-SAM card request as scan, transceive, or RF state."""
+def mfc_air_bits_answer(stream: bytes) -> bytes:
+    """A card answer received without parity handling, as the Reader SAM takes it.
+
+    The Proxmark returns the air order stream 8 bits per byte, LSB first; the
+    SAM expects it zero padded to n + n / 8 + 1 bytes for n data bytes (Seader).
+    An answer shorter than a byte with its parity (ACK, NAK) counts as one.
+    """
+    if not stream:
+        return b""
+    count = max(len(stream) * 8 // 9, 1)
+    bits = int.from_bytes(stream, "little") & ((1 << (count * 9)) - 1)
+    return bits.to_bytes(count + count // 8 + 1, "little")
+
+
+def parse_card_api(body: bytes) -> tuple[str, bytes, Optional[int], bytes]:
+    """Classify an A1 Reader-SAM card request as scan, transceive, or RF state.
+
+    The last item is the 3 byte nfcSend format of a transceive, empty if absent.
+    """
     tag, outer, _ = tlv(body)
     if tag != 0xA1 or not outer:
         raise ReaderError(f"not a Reader-SAM card API request: {body.hex()}")
     inner_tag, inner, _ = tlv(outer)
     if inner_tag in (0x82, 0x83):
-        return ("rf", b"", inner_tag)
+        return ("rf", b"", inner_tag, b"")
     fields = []
     offset = 0
     while offset < len(inner):
@@ -382,9 +444,11 @@ def parse_card_api(body: bytes) -> tuple[str, bytes, Optional[int]]:
     if not fields or fields[0][0] != 0x80:
         raise ReaderError(f"unrecognised Reader-SAM card request: {body.hex()}")
     if inner_tag == 0xA0:
-        return ("scan", fields[0][1], None)
+        return ("scan", fields[0][1], None, b"")
     if inner_tag == 0xA1:
-        return ("transceive", fields[0][1], None)
+        frame_format = next((value for field_tag, value in fields
+                             if field_tag == 0x85 and len(value) == 3), b"")
+        return ("transceive", fields[0][1], None, frame_format)
     raise ReaderError(f"unrecognised Reader-SAM card request: {body.hex()}")
 
 
@@ -399,9 +463,10 @@ def card_info_response(route: Route, protocol: int, ident: bytes,
     return wrap(0xBD, wrap(0xA0, selected))
 
 
-def card_response(data: bytes) -> bytes:
-    # Exact legacy shape: BD { A0 { A0 { 80 <card response>, 81 00 00 } } }.
-    inner = wrap(0x80, data) + b"\x81\x02\x00\x00"
+def card_response(data: bytes, rf_status: int = SAM_RF_STATUS_OK) -> bytes:
+    # Exact legacy shape: BD { A0 { A0 { 80 <card response>, 81 <RF status> } } },
+    # without the 80 node when the card gave no answer.
+    inner = (wrap(0x80, data) if data else b"") + wrap(0x81, rf_status.to_bytes(2, "big"))
     return wrap(0xBD, wrap(0xA0, wrap(0xA0, inner)))
 
 
@@ -447,14 +512,16 @@ class LegacyReaderSam:
         else:
             assert self.card14 is not None
             details = wrap(0x80, b"\x00\x02") + wrap(0x81, self.card14.uid)
-            details += wrap(0x82, self.card14.atqa) + wrap(0x83, bytes((self.card14.sak,)))
+            if self.card_kind != "mfc":  # `hf mf sam` gives UID and SAK only
+                details += wrap(0x82, self.card14.atqa)
+            details += wrap(0x83, bytes((self.card14.sak,)))
             payload = wrap(0xA0, wrap(0xAD, wrap(0xA0, details)))
         _route, body = self.exchange(Route(HOST, SAM, HOST), payload)
         if not body.startswith(b"\xbd"):
             raise ReaderError(f"Reader SAM rejected card selection: {body.hex()}")
 
     def _handle_card_request(self, route: Route, body: bytes) -> tuple[Route, bytes]:
-        action, data, rf_tag = parse_card_api(body)
+        action, data, rf_tag, frame_format = parse_card_api(body)
         if action == "rf":
             if rf_tag == 0x82:
                 self.hf.pm3.drop_field()
@@ -469,6 +536,10 @@ class LegacyReaderSam:
                 assert self.card14 is not None
                 payload = card_info_response(route, 2, self.card14.uid, self.card14.atqa, self.card14.sak)
             return self.exchange(route.hf_reply(), payload)
+        if self.card_kind == "mfc":
+            # The SAM runs Crypto1 itself and is told when the card stays silent.
+            reply, rf_status = self.hf.transceive_mfc(data, frame_format)
+            return self.exchange(route.hf_reply(), card_response(reply, rf_status))
         if self.card_kind == "iclass":
             # Match `hf iclass sam -p`: never allow a read to decrement/update
             # the e-purse.  The SAM expects a synthetic read-back + iCLASS CRC.
@@ -487,6 +558,8 @@ class LegacyReaderSam:
         self.card_kind = kind
         if kind == "iclass":
             self.card_iclass = self.hf.select_iclass()
+        elif kind == "mfc":
+            self.card14 = self.hf.select_mfc()
         else:
             self.card14 = self.hf.select_seos()
         self._set_detected_card()
@@ -632,8 +705,8 @@ def render_pacs(pacs: bytes) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="External Reader-SAM PACS reader proof of concept")
-    parser.add_argument("card", nargs="?", choices=("iclass", "seos"),
-                        help="card family to read")
+    parser.add_argument("card", nargs="?", choices=("iclass", "seos", "desfire", "mfc"),
+                        help="card family to read; seos and desfire share the ISO14443-4 relay")
     parser.add_argument("--pm3", help="Proxmark USB serial port (auto-detected if omitted)")
     parser.add_argument("--sam", default="ACR39", help="PC/SC reader-name substring (default: ACR39)")
     parser.add_argument("--list", action="store_true", help="list PC/SC readers and exit")
@@ -663,7 +736,7 @@ def main() -> int:
         finally:
             pcsc.close()
     if not args.card:
-        parser.error("choose a card family: iclass or seos")
+        parser.error("choose a card family: iclass, seos, desfire or mfc")
 
     pm3: Optional[Proxmark] = None
     try:

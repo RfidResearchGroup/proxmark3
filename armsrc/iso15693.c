@@ -531,7 +531,8 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
 
         case STATE_TAG_SOF_HIGH_END: {
             // check for falling edge
-            if (tag->posCount == (recv_speed ? 13 : 52) && amplitude < tag->threshold_sof) {
+            // the bits start at the first low sample: a slow rising edge leaves the high phase a sample short
+            if (tag->posCount >= (recv_speed ? 11 : 44) && amplitude < tag->threshold_sof) {
                 tag->lastBit = SOF_PART1;  // detected 1st part of SOF (12 samples low and 12 samples high)
                 tag->shiftReg = 0;
                 tag->bitCount = 0;
@@ -1704,7 +1705,8 @@ void AcquireRawAdcSamplesIso15693(void) {
     LEDsoff();
 }
 
-void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool iclass) {
+// RAMFUNC and the carrier shortcut below keep up with the 211.9k samples/s the FPGA sends (from flash: 77%)
+void RAMFUNC SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool iclass) {
 
     LEDsoff();
     LED_A_ON();
@@ -1809,8 +1811,13 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
         if (tag_is_active == false) {
 
             int extra_8s = 1;
-            if (Handle15693SampleFromReader((sniffdata & 0x02) >> 1, &dreader) ||
-                    (++extra_8s && Handle15693SampleFromReader(sniffdata & 0x01, &dreader))) {
+            if ((sniffdata & 0x03) == 0x03 && dreader.state <= STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF) {
+                // unmodulated carrier while waiting for a SOF, the usual pair of samples: two
+                // samples of 1 only move UNSYNCD to AWAIT_1ST_FALLING_EDGE_OF_SOF
+                dreader.state = STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF;
+                reader_is_active = false;
+            } else if (Handle15693SampleFromReader((sniffdata & 0x02) >> 1, &dreader) ||
+                       (++extra_8s && Handle15693SampleFromReader(sniffdata & 0x01, &dreader))) {
 
                 if (dreader.byteCount > 0) {
                     // sof/eof_times are in ssp_clk, which is 13.56MHz / 4

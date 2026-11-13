@@ -1915,8 +1915,10 @@ static int CmdHFMFPChk(const char *Cmd) {
     // a key the card never answered is not a tested key
     if (untested) {
         PrintAndLogEx(WARNING, "Search was " _YELLOW_("not exhaustive") ", %u candidate%s got no verdict from the card",
-                      untested, (untested == 1) ? "" : "s");
-        PrintAndLogEx(HINT, "Hint: reposition the card and run the check again");
+                      untested,
+                      (untested == 1) ? "" : "s"
+                     );
+        PrintAndLogEx(HINT, "Hint: Reposition tag and run the check again");
         PrintAndLogEx(NORMAL, "");
     }
 
@@ -2580,8 +2582,9 @@ chunkCycleClean2:
     pm3_save_mf_dump(data_fn, carddata, dumpsize, jsfCardMemory);
 
     if (sectorsRead != numSectors) {
-        PrintAndLogEx(HINT, "Partial dump: %d of %d sectors read", sectorsRead, numSectors);
-        PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfp chk --dump`") " and/or " _YELLOW_("`hf mf chk`") " to find more keys");
+        PrintAndLogEx(INFO, "Partial dump: "_YELLOW_("%d") " of " _YELLOW_("%d") " sectors read", sectorsRead, numSectors);
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfp chk --dump") "`");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mf chk") "` to find more keys");
     }
 
     PrintAndLogEx(INFO, "\ntime in dump " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);

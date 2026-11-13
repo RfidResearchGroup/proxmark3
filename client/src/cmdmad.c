@@ -493,7 +493,7 @@ static int CmdMADDecode(const char *Cmd) {
     if (s16n >= (int)sizeof(mad2_sector_t)) {
         MAD2DecodeAndPrint((const mad2_sector_t *)s16, swapmad, verbose);
     } else if (haveMAD2 && s16n == 0) {
-        PrintAndLogEx(HINT, "MAD1 indicates v2, use --mad2 to provide sector 16 data");
+        PrintAndLogEx(HINT, "MAD1 indicates v2, use `" _YELLOW_("--mad2") "` to provide sector 16 data");
     }
 
     return PM3_SUCCESS;
