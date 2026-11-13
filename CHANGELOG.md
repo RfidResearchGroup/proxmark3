@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf gallagher test` - the known vector and MES tests failed, it printed no overall result and `make check` did not run it (@matrix)
 - Fixed `hf mf sen` - Enter or a timeout no longer leaves the field on, Enter is reported and also stops a single-key check (@matrix)
 - Fixed `hf mf sen` - `--parity-mask` accepts its values, `--max-online-candidates` keeps the keys found (@matrix)
 - Fixed `hf mf sen` and `hf mf isen` - a failed nonce file save is no longer reported as success (@matrix)
