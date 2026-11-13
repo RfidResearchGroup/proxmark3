@@ -7392,7 +7392,8 @@ int CmdHFMFNDEFRead(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf ndefread",
-                  "Prints NFC Data Exchange Format (NDEF)",
+                  "Prints NFC Data Exchange Format (NDEF)\n"
+                  "If the default MAD key fails, the MAD is read with the custom key (-k)",
                   "hf mf ndefread -> shows NDEF parsed data\n"
                   "hf mf ndefread -vv -> shows NDEF parsed and raw data\n"
                   "hf mf ndefread -f myfilename                   -> save raw NDEF to file\n"
@@ -7403,7 +7404,7 @@ int CmdHFMFNDEFRead(const char *Cmd) {
         arg_param_begin,
         arg_litn("v",  "verbose",  0, 2, "Verbose output"),
         arg_str0(NULL, "aid",      "<aid>", "replace default aid for NDEF"),
-        arg_str0("k",  "key",      "<key>", "replace default key for NDEF, also tried on the MAD sectors"),
+        arg_str0("k",  "key",      "<key>", "replace default key for NDEF"),
         arg_lit0("b",  "keyb",     "use key B for access sectors (by default: key A)"),
         arg_str0("f", "file", "<fn>", "save raw NDEF to file"),
         arg_lit0(NULL, "override", "override failed crc check"),
