@@ -40,6 +40,11 @@ TARGETS := bootrom armsrc recovery $(HOST_TARGETS)
 all clean install uninstall check: %:
 	+$(foreach target,$(TARGETS),$(call submake,$(target),$*))
 
+# client runtime leftovers, written to the directory the client was started in
+clean: clean-runtime
+clean-runtime:
+	$(Q)$(RM) hardnested_stats.txt
+
 host: host/all
 host/all host/clean host/install host/uninstall host/check: %:
 	+$(foreach target,$(HOST_TARGETS),$(call submake,$(target),$(notdir $*)))
@@ -201,7 +206,7 @@ ePassport/%: FORCE
 
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
-.PHONY: all host clean install uninstall help _test bootrom fullimage recovery client mfc_card_only mfc_card_reader mfulc_des_brute mfd_aes_brute hitag2crack ePassport style miscchecks release FORCE udev accessrights cleanifplatformchanged
+.PHONY: all host clean install uninstall help _test bootrom fullimage recovery client mfc_card_only mfc_card_reader mfulc_des_brute mfd_aes_brute hitag2crack ePassport style miscchecks release FORCE udev accessrights cleanifplatformchanged clean-runtime
 
 help:
 	@echo "Multi-OS Makefile"
