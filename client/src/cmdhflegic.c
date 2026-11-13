@@ -1606,7 +1606,7 @@ static int CmdLegicELoad(const char *Cmd) {
 
     free(dump);
 
-    PrintAndLogEx(HINT, "Hint: You are ready to simulate. See `" _YELLOW_("hf legic sim -h") "`");
+    PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf legic sim -h") "`");
     PrintAndLogEx(SUCCESS, "Done!");
     return PM3_SUCCESS;
 }

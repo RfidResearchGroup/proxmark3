@@ -638,7 +638,7 @@ static int CmdHF15Demod(const char *Cmd) {
 
     if (g_GraphTraceLen < 1000) {
         PrintAndLogEx(FAILED, "Too few samples in GraphBuffer");
-        PrintAndLogEx(HINT, "Hint: Run `" _YELLOW_("hf 15 samples") "` to collect and download data");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 15 samples") "` to collect and download data");
         return PM3_ESOFT;
     }
 
@@ -1245,7 +1245,7 @@ static int CmdHF15Info(const char *Cmd) {
         } else if (d[7] == 0x01 && nxp_version == 0x18) { // If it is an NTAG 5 / ICODE DNA
             PrintAndLogEx(DEBUG, "NTAG 5 / ICODE DNA Detected, getting NXP System Info");
             int res = NxpSysInfo(uid);
-            PrintAndLogEx(HINT, "Hint: NTAG 5 link sensor implant? Try `" _YELLOW_("hf 15 implant") "`");
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 15 implant") "`");
             return res;
         } else if (d[7] == 0x01 && ((d[6] & 0x78) == 0x20)) { // If it is an NTAG ICODE 3
             PrintAndLogEx(DEBUG, "ICODE 3 Detected, getting NXP System Info");
@@ -1764,7 +1764,7 @@ static int CmdHF15ELoad(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%zu") " bytes to emulator memory", offset);
 
-    PrintAndLogEx(HINT, "Hint: You are ready to simulate. See `" _YELLOW_("hf 15 sim -h") "`");
+    PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf 15 sim -h") "`");
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
@@ -2533,7 +2533,7 @@ static int CmdHF15Dump(const char *Cmd) {
 
     if (incomplete) {
         PrintAndLogEx(WARNING, "Dump " _RED_("incomplete") ", read %d of %u blocks, not saved", blocknum, expected);
-        PrintAndLogEx(HINT, "Hint: reposition the card and run the dump again");
+        PrintAndLogEx(HINT, "Hint: Reposition the card and try again");
         PrintAndLogEx(NORMAL, "");
         free(tag);
         return PM3_EPARTIAL;
@@ -3444,12 +3444,10 @@ static int CmdHF15CSetUID(const char *Cmd) {
             case PM3_EWRONGANSWER:
                 if (use_v3) {
                     PrintAndLogEx(FAILED, "tag is not an un-finalized magic " _YELLOW_("V3") " tag");
-                    PrintAndLogEx(HINT, "Hint: signature in blocks 0x14/0x15 not found");
-                    PrintAndLogEx(HINT, "already finalized or not a V3 tag");
+                    PrintAndLogEx(HINT, "Hint: Signature in not found. Tag might be finalized or not a V3 tag");
                 } else {
                     PrintAndLogEx(FAILED, "tag doesn't look like a blank/magic " _YELLOW_("Gen1") " tag ( " _RED_("fail") " )");
-                    PrintAndLogEx(HINT, "Hint: block 0x38/0x39/0x3E/0x3F must be unreadable or blank");
-                    PrintAndLogEx(HINT, "refusing to risk overwriting a normal tag");
+                    PrintAndLogEx(HINT, "Hint: Blocks 0x38/0x39/0x3E/0x3F must be unreadable or blank");
                 }
                 return PM3_ESOFT;
 
@@ -3530,8 +3528,7 @@ static int CmdHF15CFinalize(const char *Cmd) {
 
     if (resp.status == PM3_EWRONGANSWER) {
         PrintAndLogEx(FAILED, "tag is not an un-finalized magic " _YELLOW_("V3") " tag");
-        PrintAndLogEx(HINT, "Hint: signature in blocks 0x14/0x15 not found");
-        PrintAndLogEx(HINT, "already finalized or not a V3 tag");
+        PrintAndLogEx(HINT, "Hint: Signature not found. Tag might be finalized or not a V3 tag");
         return PM3_ESOFT;
     }
 
@@ -3542,7 +3539,6 @@ static int CmdHF15CFinalize(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "Finalize ( " _GREEN_("ok") " )");
-    PrintAndLogEx(HINT, "Hint: UID is now locked; the tag behaves like a normal ISO15693 tag");
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
