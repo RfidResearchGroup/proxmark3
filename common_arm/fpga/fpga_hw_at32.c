@@ -291,11 +291,16 @@ static void fpga_read_usercode(void) {
     gowin_jtag_deinit();
 }
 
+bool Fpga_get_usercode(uint32_t *usercode) {
+    *usercode = fpga_usercode;
+    return fpga_usercode_valid;
+}
+
 void Fpga_print_status(void) {
     DbpString(_CYAN_("Current FPGA image"));
     Dbprintf("  mode.................... All-In-One");
     if (fpga_usercode_valid) {
-        Dbprintf("  usercode................ 0x%08X", fpga_usercode);
+        Dbprintf("  usercode................ 0x%08X", (unsigned int)fpga_usercode);
     } else {
         Dbprintf("  usercode................ unknown");
     }
