@@ -69,7 +69,9 @@ power-save counters.
 
 ### `hw bwm setcap` — set fuel-gauge design capacity
 
-Program the BQ27427 **Design Capacity** for the fitted cell.
+Program the BQ27427 **Design Capacity** for the fitted cell and select its 4.2 V
+chemistry profile (chem ID 1202, the gauge ships on the 4.35 V one). The firmware
+re-applies both at boot after a gauge reset, keeping a capacity set here.
 
 | Argument      | Description                            |
 | ------------- | -------------------------------------- |
@@ -109,19 +111,19 @@ Lowering it below 4.2 V reduces top-of-charge stress and extends cell life.
 
 | Argument    | Description                                                  |
 | ----------- | ----------------------------------------------------------- |
-| `--mv <mV>` | Charge voltage in mV (default `4100`, clamped `3600`..`4200`) |
+| `--mv <mV>` | Charge voltage in mV (default `4200`, clamped `3600`..`4200`) |
 
 ```
-hw bwm vchg            # set the default 4100 mV target (-> 4.095 V)
-hw bwm vchg --mv 4200  # set 4200 mV
+hw bwm vchg            # set the default 4200 mV target
+hw bwm vchg --mv 4100  # set 4100 mV (-> 4.095 V)
 ```
 
 The value snaps to the nearest 15 mV hardware step, and the command reports the
 voltage actually applied (e.g. `4100` → `4.095 V`; `4110` would be the next step).
 
 > [!NOTE]
-> The firmware applies the `4100` mV default (4.095 V) at **every boot** — the
-> AW32001E's own power-on default is 4.2 V. It is a runtime register write, but
+> The firmware applies the `4200` mV default at **every boot**, the full charge of
+> the fitted 3.7 V / 4.2 V cell. It is a runtime register write, but
 > because the boot config disables the charger watchdog the value then holds until
 > the next power cycle (which re-applies it), so you don't need to re-run it per
 > charge.

@@ -443,17 +443,17 @@ static int CmdBwmVchg(const char *Cmd) {
                   "Lowering it below 4.2 V reduces top-of-charge stress and extends cell life.\n"
                   "Snaps to the nearest 15 mV step; clamped to 3600..4200 mV. \n"
                   "This is a runtime register write (reverts on the charger watchdog / POR);\n"
-                  "the firmware re-applies the " _YELLOW_("4100 mV") " default at every boot.",
-                  "hw bwm vchg              --> set charge voltage to default 4100 mV (->4.095 V)\n"
-                  "hw bwm vchg --mv 4200    --> set charge voltage to 4200 mV");
+                  "the firmware re-applies the " _YELLOW_("4200 mV") " default at every boot.",
+                  "hw bwm vchg              --> set charge voltage to default 4200 mV\n"
+                  "hw bwm vchg --mv 4100    --> set charge voltage to 4100 mV (->4.095 V)");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0(NULL, "mv", "<mV>", "charge voltage in mV (default 4100, clamped 3600..4200)"),
+        arg_int0(NULL, "mv", "<mV>", "charge voltage in mV (default 4200, clamped 3600..4200)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    int mv = arg_get_int_def(ctx, 1, 4100);
+    int mv = arg_get_int_def(ctx, 1, 4200);
     CLIParserFree(ctx);
 
     if (mv < 3600 || mv > 4200) {
@@ -484,7 +484,9 @@ static int CmdBwmVchg(const char *Cmd) {
 static int CmdBwmSetCap(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw bwm setcap",
-                  "Program the BWM fuel gauge (BQ27427) Design Capacity for the fitted cell.\n"
+                  "Program the BWM fuel gauge (BQ27427) Design Capacity for the fitted cell and\n"
+                  "select its 4.2 V chemistry profile (the firmware also does this at boot after\n"
+                  "a gauge reset).\n"
                   "Run ONCE after fitting or replacing the battery. This triggers a gauge\n"
                   "config-update; do not run it repeatedly, as that disrupts the Impedance\n"
                   "Track learning cycle. PM5 only.",
@@ -1354,7 +1356,7 @@ static command_t BwmCommandTable[] = {
     {"powersave", CmdBwmPowerSave, IfBwm, "Show/set the BWM power-save switch (DFS, light sleep, slow adv)"},
     {"setcap",   CmdBwmSetCap,  IfBwm, "Set fuel-gauge design capacity (run once after battery change)"},
     {"upgrade",  CmdBWMUpgrade, IfBwm, "Reflash BWM (ESP32) firmware over the BWM link, no header"},
-    {"vchg",     CmdBwmVchg,    IfBwm, "Set charger charge-voltage target (default 4100 mV)"},
+    {"vchg",     CmdBwmVchg,    IfBwm, "Set charger charge-voltage target (default 4200 mV)"},
     {"wifi",     CmdBWMWifi,    IfBwm, "Bring up WiFi (STA + TCP server) for a tcp: connection"},
     {"wifipower", CmdBwmWifiPower, IfBwm, "WiFi fully off, or the modem power-save type (none/min/max)"},
     {NULL, NULL, NULL, NULL}

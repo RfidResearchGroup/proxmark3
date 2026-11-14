@@ -64,6 +64,9 @@
 #define BWM_GAUGE_FCC        0x0E   // mAh, FullChargeCapacity (health: FCC/design cap)
 #define BWM_GAUGE_CURRENT    0x10   // signed mA
 #define BWM_GAUGE_SOC        0x1C   // %
+#define BQ_CTRL_CHEM_ID      0x0008   // Control() subcommands (SLUUCD5)
+#define BQ_CTRL_CHEM_B       0x0031   // select chem ID 1202
+#define BQ_CHEM_ID_4V2       0x1202   // 4.2 V profile
 
 #endif // WITH_BWM_CHARGERKICK || WITH_BWM_STATUS
 
@@ -117,6 +120,7 @@ static bool bwm_gauge_read16(uint8_t cmd, uint16_t *out) {
     return true;
 }
 
+static bool bq_read_control(uint16_t sub, uint16_t *val);   // fwd decl
 static bool bq_read_design_cap(uint16_t *cap);   // fwd decl (defined with the provisioning code below)
 
 // Reads the BWM charger + fuel gauge and prints a battery section. Called from
@@ -280,7 +284,10 @@ void bwm_print_battery_status(void) {
         }
 
         if (g_dbglevel >= DBG_DEBUG) {
-            Dbprintf("  Gauge............... %u mV, %d mA, design %u mAh", info.voltage_mv, info.current_ma, info.design_cap_mah);
+            uint16_t chem = 0;
+            bq_read_control(BQ_CTRL_CHEM_ID, &chem);
+            Dbprintf("  Gauge............... %u mV, %d mA, design %u mAh, chem %04x%s", info.voltage_mv, info.current_ma, info.design_cap_mah,
+                     chem, (chem == BQ_CHEM_ID_4V2) ? " (4.2 V)" : _RED_(" (not the 4.2 V profile)"));
         }
     } else {
         Dbprintf("  Fuel gauge.......... " _RED_("not responding") " (BQ27427 absent or I2C down)");
@@ -384,6 +391,15 @@ static bool bq_select_state_block(void) {
     WaitMS(5);
     return true;
 }
+// Control() subcommand that returns a word, e.g. CHEM_ID
+static bool bq_read_control(uint16_t sub, uint16_t *val) {
+    if (bq_control(sub) == false) return false;
+    WaitMS(2);
+    uint8_t d[2] = {0};
+    if (I2C_BufferReadRaw(d, 2, 0x00, BWM_GAUGE_ADDR) <= 0) return false;
+    *val = (uint16_t)(d[0] | (d[1] << 8));
+    return true;
+}
 static bool bq_read_design_cap(uint16_t *cap) {
     if (!bq_select_state_block()) return false;
     uint8_t d[2] = {0};
@@ -437,12 +453,15 @@ uint16_t bwm_charger_set_vchg(uint16_t mv) {
     return (uint16_t)(BWM_CHG_VCHG_BASE_MV + code * BWM_CHG_VCHG_STEP_MV);
 }
 
-// Program Design Capacity (and matching Design Energy). Idempotent: returns true
-// without a config-update cycle if the value is already correct.
+// Program Design Capacity (and matching Design Energy) and select the 4.2 V
+// chemistry profile. Idempotent: returns true without a config-update cycle if
+// both are already correct.
 bool bwm_gauge_provision_capacity(uint16_t cap_mah) {
 
-    uint16_t cur = 0;
-    if (bq_read_design_cap(&cur) && cur == cap_mah) {
+    uint16_t cur = 0, chem = 0;
+    bool cap_ok = bq_read_design_cap(&cur) && (cur == cap_mah);
+    bool chem_ok = bq_read_control(BQ_CTRL_CHEM_ID, &chem) && (chem == BQ_CHEM_ID_4V2);
+    if (cap_ok && chem_ok) {
         return true;    // already correct - do NOT run another CFGUPDATE cycle
     }
     uint16_t energy_mwh = (uint16_t)(((uint32_t)cap_mah * 37) / 10);   // ~3.7 V nominal
@@ -462,6 +481,11 @@ bool bwm_gauge_provision_capacity(uint16_t cap_mah) {
     } while (((flags & 0x0010) == 0) && (++tries < 40));   // wait for CFGUPDATE (Flags bit 4), ~2 s
 
     if ((flags & 0x0010) == 0) {
+        return false;
+    }
+
+    // ROM default is the 4.35 V profile (3230); the fitted cell charges to 4.2 V
+    if ((chem_ok == false) && (bq_control(BQ_CTRL_CHEM_B) == false)) {
         return false;
     }
 
@@ -487,7 +511,32 @@ bool bwm_gauge_provision_capacity(uint16_t cap_mah) {
     tries = 0;
     do { WaitMS(50); if (!bq_flags(&flags)) return false; }
     while (((flags & 0x0010) != 0) && (++tries < 40));
-    return ((flags & 0x0010) == 0);
+    if ((flags & 0x0010) != 0) {
+        return false;
+    }
+
+    return bq_read_design_cap(&cur) && (cur == cap_mah) &&
+           bq_read_control(BQ_CTRL_CHEM_ID, &chem) && (chem == BQ_CHEM_ID_4V2);
+}
+
+// The gauge keeps its setup in RAM: after a gauge reset (Flags ITPOR) it is back
+// on ROM defaults. Re-apply it then, or when the 4.2 V profile is missing.
+// A capacity set with `hw bwm setcap` is kept unless the reset wiped it.
+static void bwm_gauge_boot_check(void) {
+    uint16_t flags = 0, chem = 0, cap = 0;
+    if ((bq_flags(&flags) == false) || (bq_read_control(BQ_CTRL_CHEM_ID, &chem) == false)) {
+        return;
+    }
+
+    bool gauge_reset = ((flags & 0x0020) != 0);   // ITPOR
+    if ((gauge_reset == false) && (chem == BQ_CHEM_ID_4V2)) {
+        return;
+    }
+
+    if (gauge_reset || (bq_read_design_cap(&cap) == false) || (cap == 0)) {
+        cap = BWM_DEFAULT_DESIGN_CAP_MAH;
+    }
+    bwm_gauge_provision_capacity(cap);
 }
 
 // Enable battery charging on the BWM by replicating the charger register writes
@@ -529,8 +578,10 @@ void bwm_detect_and_init(void) {
     w = 0x6B;
     I2C_BufferWrite(&w, 1, 0x0B, BWM_CHG_ADDR); // pre-charge 11 mA
 
-    // Pin the charge-voltage target (chip POR is 4.2V); default 4100 -> 4.095V.
+    // Pin the charge-voltage target (chip POR is 4.2V).
     bwm_charger_set_vchg(BWM_DEFAULT_VCHG_MV);
+
+    bwm_gauge_boot_check();
 }
 #endif // WITH_BWM_STATUS
 
