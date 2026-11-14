@@ -261,6 +261,7 @@ pkg_for() {
             pkgconfig)    echo "pkg-config" ;;
             git)          echo "git ca-certificates" ;;
             cmake)        echo "cmake" ;;
+            clang)        echo "clang" ;;
             armgcc)       echo "gcc-arm-none-eabi" ;;
             armlibc)      echo "libnewlib-dev" ;;
             readline)     echo "libreadline-dev" ;;
@@ -285,6 +286,7 @@ pkg_for() {
             pkgconfig)    echo "pkgconf" ;;
             git)          echo "git" ;;
             cmake)        echo "cmake" ;;
+            clang)        echo "clang" ;;
             armgcc)       echo "arm-none-eabi-gcc" ;;
             armlibc)      echo "arm-none-eabi-newlib" ;;
             readline)     echo "readline" ;;
@@ -310,6 +312,7 @@ pkg_for() {
             pkgconfig)    echo "pkgconf-pkg-config" ;;
             git)          echo "git" ;;
             cmake)        echo "cmake" ;;
+            clang)        echo "clang" ;;
             armgcc)       echo "arm-none-eabi-gcc-cs" ;;
             armlibc)      echo "arm-none-eabi-newlib" ;;
             readline)     echo "readline-devel" ;;
@@ -334,6 +337,7 @@ pkg_for() {
             pkgconfig)    echo "pkg-config" ;;
             git)          echo "git" ;;
             cmake)        echo "cmake" ;;
+            clang)        echo "clang" ;;
             armgcc)       echo "cross-arm-none-gcc12" ;;
             armlibc)      echo "cross-arm-none-newlib-devel" ;;
             readline)     echo "readline-devel" ;;
@@ -545,10 +549,8 @@ mk_var() {
 }
 
 in_list() {
-    local needle="$1"
-    shift
-    local item
-    for item in $*; do
+    local needle="$1" item
+    for item in $2; do
         [ "$item" = "$needle" ] && return 0
     done
     return 1
@@ -929,7 +931,7 @@ if [ -n "$CREATE_VENV_AT" ]; then
         VENV_ORIGIN="just created"
         VENV_PY="$(venv_python "$VENV_DIR")"
         res_ok "venv created - $VENV_DIR"
-        res_hint "activate it with: source ${VENV_DIR#$PM3PATH/}/bin/activate"
+        res_hint "activate it with: source ${VENV_DIR#"$PM3PATH"/}/bin/activate"
     else
         res_fail "could not create a venv at $CREATE_VENV_AT"
     fi
@@ -966,6 +968,11 @@ def as_tuple(s):
     return tuple(int(p) if p.isdigit() else 0 for p in re.split(r"[._-]+", s))
 
 
+def aligned(a, b):
+    n = max(len(a), len(b))
+    return a + (0,) * (n - len(a)), b + (0,) * (n - len(b))
+
+
 SPEC = re.compile(r"^([A-Za-z0-9._-]+)\s*(==|>=|<=|~=|>|<)?\s*([0-9][^\s,]*)?")
 
 for path in sys.argv[1:]:
@@ -990,9 +997,10 @@ for path in sys.argv[1:]:
                 print("SKIP", name)
                 continue
 
-            if op == "==" and as_tuple(got) != as_tuple(want):
+            have, need = aligned(as_tuple(got), as_tuple(want))
+            if op == "==" and have != need:
                 print("OTHER", name, got, op + want)
-            elif op in (">=", "~=") and as_tuple(got) < as_tuple(want):
+            elif op in (">=", "~=") and have < need:
                 print("OLD", name, got, op + want)
             else:
                 print("OK", name, got)
@@ -1024,7 +1032,7 @@ EOT
         res_skip "$msg"
     fi
 
-    res_hint "install with: $(printf '%s' "${py#$PM3PATH/}") -m pip install -r $reqfile"
+    res_hint "install with: ${py#"$PM3PATH"/} -m pip install -r $reqfile"
     return 1
 }
 
@@ -1041,7 +1049,7 @@ if [ "$WANT_EXTRAS" = "true" ]; then
     done
 else
     res_info "optional requirement files not checked - rerun with --extras"
-    res_hint "$(echo $REQ_EXTRA)"
+    res_hint "$REQ_EXTRA"
 fi
 
 if have uv; then
@@ -1121,9 +1129,12 @@ check_cmd recode recode "recode - 'make miscchecks' encoding checks" note
 
 INSTALL_KEYS="$MISSING_REQ $MISSING_OPT"
 INSTALL_PKGS=""
-[ -n "$(echo "$INSTALL_KEYS" | tr -d ' ')" ] && INSTALL_PKGS="$(pkgs_for_keys "$INSTALL_KEYS")"
+# nix and unrecognised systems resolve to no package names at all, so the keys,
+# not the names, decide whether there is anything to report
+ANY_MISSING="$(echo "$INSTALL_KEYS" | tr -d ' ')"
+[ -n "$ANY_MISSING" ] && INSTALL_PKGS="$(pkgs_for_keys "$INSTALL_KEYS")"
 
-if [ -n "$INSTALL_PKGS" ]; then
+if [ -n "$ANY_MISSING" ]; then
     if [ -n "$(echo "$MISSING_REQ" | tr -d ' ')" ]; then
         section "Packages to install"
     else
@@ -1133,14 +1144,14 @@ if [ -n "$INSTALL_PKGS" ]; then
     if [ "$PKG_MGR" = "nix" ]; then
         printf '  %s\n' "nix-shell tools/shell.nix"
         printf '  %s\n' "brings in everything needed to build the client and the firmware"
-    elif [ -z "$PKG_MGR" ]; then
-        printf '  %s\n' "no known package manager here, install by hand:"
-        printf '  %s\n' "$INSTALL_PKGS"
+    elif [ -z "$INSTALL_PKGS" ]; then
+        printf '  %s\n' "no package names known for this system"
+        printf '  %s\n' "install the items marked fail or warn above, see doc/md/Installation_Instructions/"
     else
         printf '  %s\n' "$(pkg_install_cmd "$INSTALL_PKGS")"
     fi
 
-    if [ "$DO_INSTALL" = "true" ] && [ -n "$PKG_MGR" ] && [ "$PKG_MGR" != "nix" ]; then
+    if [ "$DO_INSTALL" = "true" ] && [ -n "$INSTALL_PKGS" ] && [ "$PKG_MGR" != "nix" ]; then
         echo
         if ask "Run that now?"; then
             case "$PKG_MGR" in
