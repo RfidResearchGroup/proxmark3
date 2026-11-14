@@ -2193,7 +2193,7 @@ static int CmdHF15WriteAfi(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 writeafi",
                   "Write AFI on card",
-                  "hf 15 writeafi -* --afi 12\n"
+                  "hf 15 writeafi --afi 12\n"
                   "hf 15 writeafi -u E011223344556677 --afi 12 -p 0F0F0F0F"
                  );
 
@@ -2218,7 +2218,7 @@ static int CmdHF15WriteAfi(const char *Cmd) {
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, payload.uid, &uidlen);
 
-    payload.afi = arg_get_int_def(ctx, 2, 0);
+    int afi = arg_get_int_def(ctx, 2, 0);
 
     int pwdlen;
     CLIGetHexWithReturn(ctx, 3, payload.pwd, &pwdlen);
@@ -2233,6 +2233,7 @@ static int CmdHF15WriteAfi(const char *Cmd) {
     payload.use_uid = false;
     if (uidlen == ISO15693_UID_LENGTH) {
         payload.use_uid = true;
+        reverse_array(payload.uid, ISO15693_UID_LENGTH);
     }
 
     // sanity checks
@@ -2245,6 +2246,12 @@ static int CmdHF15WriteAfi(const char *Cmd) {
         PrintAndLogEx(WARNING, "password must be 4 hex bytes if provided");
         return PM3_ESOFT;
     }
+
+    if ((afi < 0) || (afi > 255)) {
+        PrintAndLogEx(WARNING, "AFI must be 0-255, got ( " _RED_("%d") " )", afi);
+        return PM3_EINVARG;
+    }
+    payload.afi = afi;
 
     PacketResponseNG resp;
     clearCommandBuffer();
@@ -2308,6 +2315,21 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    if (uidlen != 0 && uidlen != ISO15693_UID_LENGTH) {
+        PrintAndLogEx(WARNING, "UID must include 8 hex bytes, got ( " _RED_("%i") " )", uidlen);
+        return PM3_EINVARG;
+    }
+
+    if ((dsfid < 0) || (dsfid > 255)) {
+        PrintAndLogEx(WARNING, "DSFID must be 0-255, got ( " _RED_("%d") " )", dsfid);
+        return PM3_EINVARG;
+    }
+
+    // default fallback to scan for tag.
+    if (unaddressed == false && uidlen != ISO15693_UID_LENGTH) {
+        scan = true;
+    }
+
     // request to be sent to device/card
     uint16_t approxlen = 2 + ISO15693_UID_LENGTH + 1 + 2;
     iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
@@ -2329,6 +2351,8 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
                 return PM3_EINVARG;
             }
             uidlen = ISO15693_UID_LENGTH;
+        } else {
+            reverse_array(uid, ISO15693_UID_LENGTH);
         }
 
         if (uidlen == ISO15693_UID_LENGTH) {
