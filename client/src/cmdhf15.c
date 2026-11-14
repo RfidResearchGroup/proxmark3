@@ -2744,11 +2744,16 @@ static int CmdHF15Raw(const char *Cmd) {
     bool wait = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
-    datalen = (datalen >= g_conn.max_cmd_data_size) ? g_conn.max_cmd_data_size : datalen;
+    // the packet header has to fit too
+    int maxlen = g_conn.max_cmd_data_size - sizeof(iso15_raw_cmd_t);
+    if (datalen > maxlen) {
+        PrintAndLogEx(FAILED, "raw data too long, max %d bytes", maxlen);
+        return PM3_EINVARG;
+    }
 
     if (crc) {
 
-        if ((datalen - 2) < g_conn.max_cmd_data_size) {
+        if ((datalen + 2) <= maxlen) {
             AddCrc15(data, datalen);
             datalen += 2;
         } else {
@@ -2841,6 +2846,12 @@ static int CmdHF15Raw(const char *Cmd) {
             }
 
         } else {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        }
+    } else {
+        // the device replies anyway: read it, or the next command takes it as its own
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, is_16slot ? 4000 : 2000) == false) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply");
         }
     }
