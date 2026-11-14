@@ -327,6 +327,7 @@ static void FpgaDownloadAndGoEx(int bitstream_target, bool keep_em) {
 #if defined PM5
     // The FPGA of PM5 comes with built-in FLASH, so there is no need to download it at startup anymore.
     downloaded_bitstream = bitstream_target; // FpgaConfCurrentMode() requires downloading for the first time, but we skipped it.
+    pm5_ant_led_track_bitstream(bitstream_target); // reflect the armed RF band on the antenna LEDs
     FpgaConfCurrentMode(bitstream_target);
     return; // always return
 #endif
@@ -417,6 +418,9 @@ int FpgaGetCurrent(void) {
 
 void FpgaResetBitstream(void) {
     downloaded_bitstream = FPGA_BITSTREAM_UNKNOWN;
+#if defined PM5
+    pm5_ant_led_track_bitstream(FPGA_BITSTREAM_UNKNOWN); // RF subsystem parked -> antenna LEDs off
+#endif
 }
 
 //----------------------------------------------------------------------------
