@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `configure_environment.sh` / `make configure` - first-run check of a fresh clone: host and ARM toolchains, required and optional client libraries, the `PLATFORM` / `PLATFORM_EXTRAS` in `Makefile.platform`, Python venv and requirements, and device access rights; reports only, with `--install` to fix what it can (@iceman1001)
 - Changed `hw status` - PM5 Battery, BWM and Power sections are down to 7 lines with colour coded charge, health and temperature; charger profile, chip details and idle / sleep counters moved to debug level (@iceman1001)
 - Changed `hw bwm` - `autooff`, `charge`, `powersave`, `wifi`, `wifipower` and `ble pairing` take dash options (`--on`/`--off`, `--status`/`--stop`, `-m <mode>`) instead of bare words, so they show in the help; their output is aligned and colour codes the state, `autooff` and `ble status` are shorter and flag a default passkey (@iceman1001)
 - Changed `hf mf hardnested` - PartialSumProperty() walks the 16 four bit suffixes as a prefix tree, and the even and odd halves of the all-bitflips update run side by side, about 1 second less per run (@iceman1001)
