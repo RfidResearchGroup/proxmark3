@@ -38,8 +38,10 @@ void pm5_power_idle(void);
 void pm5_power_set_enabled(bool on);
 bool pm5_power_get_enabled(void);
 
-// `hw status` section.
-void pm5_power_print_status(void);
+// `hw status` section. extra is appended to the power-save line.
+void pm5_power_print_status(const char *extra);
+// `hw status` idle / sleep counters, debug level.
+void pm5_power_print_stats(void);
 
 #endif // PM5
 

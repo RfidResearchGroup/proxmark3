@@ -49,10 +49,23 @@ These run over any active connection — USB, BLE, or WiFi.
 [usb] pm3 --> hw status
 ```
 
-The **Battery / BWM** section reports the **AW32001** charger (power path, fault,
-charge state, input limit, charge current/voltage/enable) and the **BQ27427** fuel
-gauge (state-of-charge %, voltage, current, remaining/full capacity, temperature,
-health).
+```
+[#] Battery
+[#]   Charge.............. 83 %  4.07 V  34.7 C  charge done
+[#]   Capacity............ 392 / 473 mAh, health 94 %
+[#] BWM
+[#]   Firmware............ V5 on ESP32-C2, link 1.5 Mbps, BLE off
+[#] Power
+[#]   Power save.......... on, auto-off on USB unplug
+[#]   Flipper............. not attached
+```
+
+The **Battery** section shows the **BQ27427** fuel gauge (state of charge, voltage,
+temperature, charge state, remaining/full capacity, health) and, while discharging,
+the draw and estimated runtime. An **AW32001** charger fault is shown only when present.
+`hw dbg -3` adds the raw gauge values, the charger status and its charge profile
+(input limit, charge current/voltage), the BWM chip and memory details, and the
+power-save counters.
 
 ### `hw bwm setcap` — set fuel-gauge design capacity
 
