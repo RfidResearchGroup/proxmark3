@@ -2944,6 +2944,14 @@ void SendRawCommand15693(iso15_raw_cmd_t *packet) {
     bool read_respone = ((packet->flags & ISO15_READ_RESPONSE) == ISO15_READ_RESPONSE);
     bool init = ((packet->flags & ISO15_CONNECT) == ISO15_CONNECT);
 
+    // without ISO15_CONNECT the reader must be up already, kept by ISO15_NO_DISCONNECT
+    if (init == false && FpgaGetCurrent() != FPGA_BITSTREAM_HF_15) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("ISO15693 reader is not active");
+        reply_ng(CMD_HF_ISO15693_COMMAND, PM3_EINIT, NULL, 0);
+        LED_A_OFF();
+        return;
+    }
+
     // Detect 16-slot inventory mode from protocol flags
     bool is_inventory = (packet->raw[0] & ISO15_REQ_INVENTORY) != 0;
     bool is_16slot = is_inventory && ((packet->raw[0] & ISO15_REQINV_SLOT1) == 0);
