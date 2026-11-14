@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 15 raw -r` - the device reply was left unread, so every later command printed the answer of the one before (@matrix)
+- Fixed `hf 15 raw` - data too long for one packet is refused at once instead of timing out after 2 s (@matrix)
 - Changed PM5 battery - charges to 4.2 V, the full charge of the fitted 3.7 V cell, and the fuel gauge uses its 4.2 V profile instead of the 4.35 V default, so it can detect a full charge and learn the capacity; re-applied at boot after a gauge reset (@iceman1001)
 - Added PM5 FPGA usercode - shown in `hw status`, `hw version` and the connect banner, `fpga/common/gowin_usercode.py` prints the value of a bitstream file (@nieldk)
 - Added `client/requirements.txt` - the Python packages the scripts in `client/` import, `bleak` for the BLE roles of `pm5_ble_bridge.py` and the two maintenance scrapers' deps, none of which were listed anywhere before (@iceman1001)
