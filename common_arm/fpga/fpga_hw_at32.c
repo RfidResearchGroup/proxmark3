@@ -278,9 +278,27 @@ void FpgaSendCommand(uint16_t cmd, uint16_t v) {
     SPI_SSC->ctrl1_bit.spien = TRUE;
 }
 
+// Gowin USERCODE of the running image, read while the JTAG link is up
+static uint32_t fpga_usercode = 0;
+static bool fpga_usercode_valid = false;
+
+static void fpga_read_usercode(void) {
+    fpga_usercode_valid = false;
+    if (gowin_jtag_init() == GOWIN_JTAG_OK) {
+        fpga_usercode = gowin_jtag_read_usercode();
+        fpga_usercode_valid = true;
+    }
+    gowin_jtag_deinit();
+}
+
 void Fpga_print_status(void) {
     DbpString(_CYAN_("Current FPGA image"));
     Dbprintf("  mode.................... All-In-One");
+    if (fpga_usercode_valid) {
+        Dbprintf("  usercode................ 0x%08X", fpga_usercode);
+    } else {
+        Dbprintf("  usercode................ unknown");
+    }
 }
 
 // Define a static configuration context for the Gowin JTAG configuration process
@@ -333,6 +351,12 @@ int FpgaStopConfig(void) {
     if (gci.status != GOWIN_JTAG_OK) {
         return PM3_EFAILED;
     }
+    // A flash image only runs after the next power cycle
+    if (gci.is_cfg_sram) {
+        fpga_read_usercode();
+    } else {
+        fpga_usercode_valid = false;
+    }
     return PM3_SUCCESS;
 }
 
@@ -352,6 +376,8 @@ void FpgaResetComInterface(void) {
     while (1) {
         gowin_jtag_status_t status = gowin_jtag_init();
         if (status == GOWIN_JTAG_OK) {
+            fpga_usercode = gowin_jtag_read_usercode();
+            fpga_usercode_valid = true;
             break;
         }
         SpinDelay(100); // Wait for 100ms before retrying
