@@ -416,6 +416,24 @@ static int iso15_info_error_handling(uint8_t *d, uint16_t n) {
     return res;
 }
 
+// true when the layout fits iso15_tag_t, see ISO15693_TAG_MAX_* in iso15.h.
+// prints the offending values itself, the caller does its own cleanup
+static bool iso15_tag_size_ok(const iso15_tag_t *tag) {
+    if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
+            ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
+            (tag->pagesCount == 0) ||
+            (tag->bytesPerPage == 0)) {
+
+        PrintAndLogEx(FAILED, "Tag size error: pagesCount=%d, bytesPerPage=%d",
+                      tag->pagesCount,
+                      tag->bytesPerPage
+                     );
+        return false;
+    }
+
+    return true;
+}
+
 
 // fast method to just read the UID of a tag (collision detection not supported)
 //  *buf should be large enough to fit the 64bit uid
@@ -1796,15 +1814,7 @@ static int CmdHF15ELoad(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
-            ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
-            (tag->pagesCount == 0) ||
-            (tag->bytesPerPage == 0)) {
-
-        PrintAndLogEx(FAILED, "Tag size error: pagesCount=%d, bytesPerPage=%d",
-                      tag->pagesCount,
-                      tag->bytesPerPage
-                     );
+    if (iso15_tag_size_ok(tag) == false) {
         free(tag);
         return PM3_EINVARG;
     }
@@ -2526,15 +2536,7 @@ static int CmdHF15Dump(const char *Cmd) {
         tag->pagesCount = MIN(128, ISO15693_TAG_MAX_SIZE / blocksize);
     }
 
-    if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
-            ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
-            (tag->pagesCount == 0) ||
-            (tag->bytesPerPage == 0)) {
-
-        PrintAndLogEx(FAILED, "Tag size error: pagesCount=%d, bytesPerPage=%d",
-                      tag->pagesCount,
-                      tag->bytesPerPage
-                     );
+    if (iso15_tag_size_ok(tag) == false) {
         free(packet);
         free(tag);
         DropField();
@@ -3379,15 +3381,7 @@ static int CmdHF15Restore(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
-            ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
-            (tag->pagesCount == 0) ||
-            (tag->bytesPerPage == 0)) {
-
-        PrintAndLogEx(FAILED, "Tag size error: pagesCount=%d, bytesPerPage=%d",
-                      tag->pagesCount,
-                      tag->bytesPerPage
-                     );
+    if (iso15_tag_size_ok(tag) == false) {
         free(tag);
         return PM3_EINVARG;
     }
@@ -4258,15 +4252,7 @@ static int CmdHF15View(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
-            ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
-            (tag->pagesCount == 0) ||
-            (tag->bytesPerPage == 0)) {
-
-        PrintAndLogEx(FAILED, "Tag size error: pagesCount=%d, bytesPerPage=%d",
-                      tag->pagesCount,
-                      tag->bytesPerPage
-                     );
+    if (iso15_tag_size_ok(tag) == false) {
         free(tag);
         return PM3_EINVARG;
     }
