@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 15 rdbl`, `hf 15 wrbl` and `hf 15 rdmulti` - a page number outside 0-255 is refused instead of using its low byte (`wrbl -b 256` wrote page 0) (@matrix)
+- Fixed `hf 15 rdbl`, `hf 15 wrbl` and `hf 15 rdmulti` - a `-u` that is not 8 bytes is refused instead of falling back to the tag found by a scan (@matrix)
+- Fixed `hf 15 rdmulti` - `--cnt` must be 1-6, `--cnt -1` asked for 256 pages (@matrix)
+- Fixed `hf 15 wrbl` - the help of `-d` says 4 or 8 bytes, as accepted, instead of 4 (@matrix)
 - Fixed `hf search` - the OpenPGP AID probe sent 8 bytes for a 6-byte AID, reading past the string, so no OpenPGP card was found (@matrix)
 - Fixed `hf 15 raw -r` - the device reply was left unread, so every later command printed the answer of the one before (@matrix)
 - Fixed `hf 15 raw` - data too long for one packet is refused at once instead of timing out after 2 s (@matrix)
