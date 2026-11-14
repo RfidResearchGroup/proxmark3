@@ -3795,7 +3795,7 @@ static int CmdHF15SlixEASDisable(const char *Cmd) {
                      );
         payload.usepwd = true;
     } else {
-        PrintAndLogEx(INFO, "Trying to enable EAS mode without using a password");
+        PrintAndLogEx(INFO, "Trying to disable EAS mode without using a password");
         payload.usepwd = false;
     }
 
@@ -3849,7 +3849,12 @@ static int CmdHF15SlixDisable(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 1, payload.pwd, &pwdlen);
     CLIParserFree(ctx);
 
-    PrintAndLogEx(INFO, "Trying to disabling privacy mode using password " _GREEN_("%s")
+    if (pwdlen != 4) {
+        PrintAndLogEx(WARNING, "password must be 4 hex bytes");
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(INFO, "Trying to disable privacy mode using password " _GREEN_("%s")
                   , sprint_hex_inrow(payload.pwd, sizeof(payload.pwd))
                  );
 
@@ -3898,6 +3903,11 @@ static int CmdHF15SlixEnable(const char *Cmd) {
     int pwdlen = 0;
     CLIGetHexWithReturn(ctx, 1, payload.pwd, &pwdlen);
     CLIParserFree(ctx);
+
+    if (pwdlen != 4) {
+        PrintAndLogEx(WARNING, "password must be 4 hex bytes");
+        return PM3_ESOFT;
+    }
 
     PrintAndLogEx(INFO, "Trying to enable privacy mode using password " _GREEN_("%s")
                   , sprint_hex_inrow(payload.pwd, sizeof(payload.pwd))
