@@ -2466,6 +2466,7 @@ static int CmdHF15Dump(const char *Cmd) {
         PrintAndLogEx(DEBUG, "iso15693 timeout");
         free(packet);
         free(tag);
+        DropField();
         return PM3_ETIMEOUT;
     }
 
@@ -2473,6 +2474,7 @@ static int CmdHF15Dump(const char *Cmd) {
         PrintAndLogEx(WARNING, "iso15693 card doesn't answer to systeminfo command (%d)", resp.length);
         free(packet);
         free(tag);
+        DropField();
         return PM3_EWRONGANSWER;
     }
 
@@ -2483,6 +2485,7 @@ static int CmdHF15Dump(const char *Cmd) {
     if (res == PM3_ECRC) {
         free(tag);
         free(packet);
+        DropField();
         return res;
     }
 
