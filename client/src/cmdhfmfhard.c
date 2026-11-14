@@ -306,14 +306,59 @@ static void init_bunzip2(bz_stream *compressed_stream, char *input_buffer, uint3
 
 }
 
+#define STATE_FILE_NAME_LEN MAX(sizeof(STATE_FILE_TEMPLATE_RAW), MAX(sizeof(STATE_FILE_TEMPLATE_LZ4), sizeof(STATE_FILE_TEMPLATE_BZ2)))
+
+// directory holding the bitflip state tables, kept after the first hit
+static char *state_files_dir = NULL;
+
+/** find_state_file
+ * locate one bitflip state table. All ~2000 of them sit in the same directory, and
+ * searching the configured default paths for every one of them costs seconds when
+ * those paths are on a network or Windows mount, so only the first file is searched.
+ */
+static int find_state_file(char **foundpath, const char *template, odd_even_t odd_even, uint16_t bitflip) {
+    char state_file_name[STATE_FILE_NAME_LEN];
+    snprintf(state_file_name, sizeof(state_file_name), template, odd_even, bitflip);
+
+    if (state_files_dir != NULL) {
+        size_t pathsize = strlen(state_files_dir) + strlen(state_file_name) + 1;
+        char *path = calloc(pathsize, sizeof(char));
+        if (path == NULL) {
+            return PM3_EMALLOC;
+        }
+        snprintf(path, pathsize, "%s%s", state_files_dir, state_file_name);
+        if (fileExists(path)) {
+            *foundpath = path;
+            return PM3_SUCCESS;
+        }
+        free(path);
+        return PM3_EFILE;
+    }
+
+    char state_files_path[sizeof(STATE_FILES_DIRECTORY) + sizeof(state_file_name)];
+    snprintf(state_files_path, sizeof(state_files_path), "%s%s", STATE_FILES_DIRECTORY, state_file_name);
+    if (searchFile(foundpath, RESOURCES_SUBDIR, state_files_path, "", true) != PM3_SUCCESS) {
+        return PM3_EFILE;
+    }
+
+    char *sep = strrchr(*foundpath, PATHSEP[0]);
+    if (sep != NULL) {
+        size_t dirlen = sep - *foundpath + 1;
+        state_files_dir = calloc(dirlen + 1, sizeof(char));
+        if (state_files_dir != NULL) {
+            memcpy(state_files_dir, *foundpath, dirlen);
+        }
+    }
+    return PM3_SUCCESS;
+}
+
 static void init_bitflip_bitarrays(void) {
 #if defined (DEBUG_REDUCTION)
     uint8_t line = 0;
 #endif
     uint64_t init_bitflip_bitarrays_starttime = msclock();
 
-    char state_file_name[MAX(sizeof(STATE_FILE_TEMPLATE_RAW), MAX(sizeof(STATE_FILE_TEMPLATE_LZ4), sizeof(STATE_FILE_TEMPLATE_BZ2)))];
-    char state_files_path[strlen(get_my_executable_directory()) + strlen(STATE_FILES_DIRECTORY) + sizeof(state_file_name)];
+    char state_file_name[FILE_PATH_SIZE] = {0};
     uint16_t nraw = 0, nlz4 = 0, nbz2 = 0;
     for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
         num_effective_bitflips[odd_even] = 0;
@@ -325,29 +370,17 @@ static void init_bitflip_bitarrays(void) {
             bitflip_bitarrays[odd_even][bitflip] = NULL;
             count_bitflip_bitarrays[odd_even][bitflip] = 1 << 24;
 
-            char *path;
-            snprintf(state_file_name, sizeof(state_file_name), STATE_FILE_TEMPLATE_RAW, odd_even, bitflip);
-            strncpy(state_files_path, STATE_FILES_DIRECTORY, sizeof(state_files_path) - 1);
-            strncat(state_files_path, state_file_name, sizeof(state_files_path) - (strlen(STATE_FILES_DIRECTORY) + 1));
-            if (searchFile(&path, RESOURCES_SUBDIR, state_files_path, "", true) == PM3_SUCCESS) {
+            char *path = NULL;
+            if (find_state_file(&path, STATE_FILE_TEMPLATE_RAW, odd_even, bitflip) == PM3_SUCCESS) {
                 open_uncompressed = true;
+            } else if (find_state_file(&path, STATE_FILE_TEMPLATE_LZ4, odd_even, bitflip) == PM3_SUCCESS) {
+                open_lz4compressed = true;
+            } else if (find_state_file(&path, STATE_FILE_TEMPLATE_BZ2, odd_even, bitflip) == PM3_SUCCESS) {
+                open_bz2compressed = true;
             } else {
-                snprintf(state_file_name, sizeof(state_file_name), STATE_FILE_TEMPLATE_LZ4, odd_even, bitflip);
-                strncpy(state_files_path, STATE_FILES_DIRECTORY, sizeof(state_files_path) - 1);
-                strncat(state_files_path, state_file_name, sizeof(state_files_path) - (strlen(STATE_FILES_DIRECTORY) + 1));
-                if (searchFile(&path, RESOURCES_SUBDIR, state_files_path, "", true) == PM3_SUCCESS) {
-                    open_lz4compressed = true;
-                } else {
-                    snprintf(state_file_name, sizeof(state_file_name), STATE_FILE_TEMPLATE_BZ2, odd_even, bitflip);
-                    strncpy(state_files_path, STATE_FILES_DIRECTORY, sizeof(state_files_path) - 1);
-                    strncat(state_files_path, state_file_name, sizeof(state_files_path) - (strlen(STATE_FILES_DIRECTORY) + 1));
-                    if (searchFile(&path, RESOURCES_SUBDIR, state_files_path, "", true) == PM3_SUCCESS) {
-                        open_bz2compressed = true;
-                    } else {
-                        continue;
-                    }
-                }
+                continue;
             }
+            snprintf(state_file_name, sizeof(state_file_name), "%s", path);
 
             FILE *statesfile = fopen(path, "rb");
             free(path);
@@ -590,6 +623,9 @@ static void init_bitflip_bitarrays(void) {
 }
 
 static void free_bitflip_bitarrays(void) {
+    free(state_files_dir);
+    state_files_dir = NULL;
+
     for (int16_t bitflip = 0x3ff; bitflip > 0x000; bitflip--) {
         free_bitarray(bitflip_bitarrays[ODD_STATE][bitflip]);
     }
@@ -606,24 +642,36 @@ static uint32_t *part_sum_a8_bitarrays[2][NUM_PART_SUMS];
 static uint32_t *sum_a0_bitarrays[2][NUM_SUMS];
 
 static uint16_t PartialSumProperty(uint32_t state, odd_even_t odd_even) {
-    uint16_t sum = 0;
-    for (uint16_t j = 0; j < 16; j++) {
-        uint32_t st = state;
-        uint16_t part_sum = 0;
-        if (odd_even == ODD_STATE) {
-            part_sum ^= filter(st);
-            for (uint16_t i = 0; i < 4; i++) {
-                st = (st << 1) | ((j >> (3 - i)) & 0x01) ;
-                part_sum ^= filter(st);
-            }
-            part_sum ^= 1; // XOR 1 cancelled out for the other 8 bits
-        } else {
-            for (uint16_t i = 0; i < 4; i++) {
-                st = (st << 1) | ((j >> (3 - i)) & 0x01) ;
-                part_sum ^= filter(st);
-            }
+    // the 16 four bit suffixes share prefixes, so walk them as a tree:
+    // 31 filter() calls instead of one chain of 5 per suffix
+    uint32_t st[16];
+    uint16_t ps[16];
+    st[0] = state;
+    ps[0] = (odd_even == ODD_STATE) ? filter(state) : 0;
+
+    uint16_t n = 1;
+    for (uint16_t level = 0; level < 4; level++) {
+        for (uint16_t k = n; k > 0; k--) {
+            uint32_t s0 = st[k - 1] << 1;
+            uint32_t s1 = s0 | 1;
+            uint16_t p = ps[k - 1];
+            st[2 * (k - 1)] = s0;
+            ps[2 * (k - 1)] = p ^ filter(s0);
+            st[2 * (k - 1) + 1] = s1;
+            ps[2 * (k - 1) + 1] = p ^ filter(s1);
         }
-        sum += part_sum;
+        n *= 2;
+    }
+
+    uint16_t sum = 0;
+    if (odd_even == ODD_STATE) {
+        for (uint16_t k = 0; k < 16; k++) {
+            sum += ps[k] ^ 1;   // XOR 1 cancelled out for the other 8 bits
+        }
+    } else {
+        for (uint16_t k = 0; k < 16; k++) {
+            sum += ps[k];
+        }
     }
     return sum;
 }
@@ -640,16 +688,6 @@ static void init_part_sum_bitarrays(void) {
         }
     }
     for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
-        //PrintAndLogEx(INFO, "(%d, %" PRIu16 ")...", odd_even, part_sum_a0);
-        for (uint32_t state = 0; state < (1 << 20); state++) {
-            uint16_t part_sum_a0 = PartialSumProperty(state, odd_even) / 2;
-            for (uint16_t low_bits = 0; low_bits < 1 << 4; low_bits++) {
-                set_bit24(part_sum_a0_bitarrays[odd_even][part_sum_a0], state << 4 | low_bits);
-            }
-        }
-    }
-
-    for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
         for (uint16_t part_sum_a8 = 0; part_sum_a8 < NUM_PART_SUMS; part_sum_a8++) {
             part_sum_a8_bitarrays[odd_even][part_sum_a8] = (uint32_t *)malloc_bitarray(sizeof(uint32_t) * (1 << 19));
             if (part_sum_a8_bitarrays[odd_even][part_sum_a8] == NULL) {
@@ -659,12 +697,21 @@ static void init_part_sum_bitarrays(void) {
             clear_bitarray24(part_sum_a8_bitarrays[odd_even][part_sum_a8]);
         }
     }
+
+    // one pass for both sums: PartialSumProperty() is the expensive part here.
+    // a0 sets the 16 states state << 4 | 0..f, which is exactly one half word.
+    // a8 sets state | 0..f << 20, the same pattern once per 2^20 bits, so fill
+    // the lowest block and copy it up.
     for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
-        //PrintAndLogEx(INFO, "(%d, %" PRIu16 ")...", odd_even, part_sum_a8);
         for (uint32_t state = 0; state < (1 << 20); state++) {
-            uint16_t part_sum_a8 = PartialSumProperty(state, odd_even) / 2;
-            for (uint16_t high_bits = 0; high_bits < 1 << 4; high_bits++) {
-                set_bit24(part_sum_a8_bitarrays[odd_even][part_sum_a8], state | high_bits << 20);
+            uint16_t part_sum = PartialSumProperty(state, odd_even) / 2;
+            part_sum_a0_bitarrays[odd_even][part_sum][state >> 1] |= (state & 1) ? 0x0000ffff : 0xffff0000;
+            set_bit24(part_sum_a8_bitarrays[odd_even][part_sum], state);
+        }
+        for (uint16_t part_sum = 0; part_sum < NUM_PART_SUMS; part_sum++) {
+            uint32_t *bitarray = part_sum_a8_bitarrays[odd_even][part_sum];
+            for (uint32_t high_bits = 1; high_bits < 1 << 4; high_bits++) {
+                memcpy(bitarray + (high_bits << 15), bitarray, (1 << 15) * sizeof(uint32_t));
             }
         }
     }
@@ -937,22 +984,38 @@ static void init_allbitflips_array(void) {
     }
 }
 
+static void *update_allbitflips_thread(void *args) {
+    odd_even_t odd_even = *(odd_even_t *)args;
+    for (uint16_t i = 0; i < 256; i++) {
+        if (nonces[i].all_bitflips_dirty[odd_even]) {
+
+            uint32_t old_count = num_all_bitflips_bitarray[odd_even];
+
+            num_all_bitflips_bitarray[odd_even] = count_bitarray_low20_AND(all_bitflips_bitarray[odd_even], nonces[i].states_bitarray[odd_even]);
+            nonces[i].all_bitflips_dirty[odd_even] = false;
+
+            if (num_all_bitflips_bitarray[odd_even] != old_count) {
+                all_bitflips_bitarray_dirty[odd_even] = true;
+            }
+        }
+    }
+    return NULL;
+}
+
 static void update_allbitflips_array(void) {
     if (hardnested_stage & CHECK_2ND_BYTES) {
-        for (uint16_t i = 0; i < 256; i++) {
-            for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
-                if (nonces[i].all_bitflips_dirty[odd_even]) {
+        // the even and odd halves share nothing, and each is a 256 pass
+        // accumulating AND over 2 MB arrays, so run them side by side
+        odd_even_t odd_even[2] = { EVEN_STATE, ODD_STATE };
+        pthread_t thread_id;
+        bool started = (pthread_create(&thread_id, NULL, update_allbitflips_thread, &odd_even[ODD_STATE]) == 0);
 
-                    uint32_t old_count = num_all_bitflips_bitarray[odd_even];
+        update_allbitflips_thread(&odd_even[EVEN_STATE]);
 
-                    num_all_bitflips_bitarray[odd_even] = count_bitarray_low20_AND(all_bitflips_bitarray[odd_even], nonces[i].states_bitarray[odd_even]);
-                    nonces[i].all_bitflips_dirty[odd_even] = false;
-
-                    if (num_all_bitflips_bitarray[odd_even] != old_count) {
-                        all_bitflips_bitarray_dirty[odd_even] = true;
-                    }
-                }
-            }
+        if (started) {
+            pthread_join(thread_id, NULL);
+        } else {
+            update_allbitflips_thread(&odd_even[ODD_STATE]);
         }
     }
 }

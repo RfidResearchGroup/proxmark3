@@ -4,6 +4,13 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Fixed `hf 15 dump` - wrong block size on tags without DSFID or AFI, buffer overflow on large memories, short block answers copied as full blocks (@matrix)
+- Added `configure_environment.sh` / `make configure` - first-run check of a fresh clone: host and ARM toolchains, required and optional client libraries, the `PLATFORM` / `PLATFORM_EXTRAS` in `Makefile.platform`, Python venv and requirements, and device access rights; reports only, with `--install` to fix what it can (@iceman1001)
+- Changed `hw status` - PM5 Battery, BWM and Power sections are down to 7 lines with colour coded charge, health and temperature; charger profile, chip details and idle / sleep counters moved to debug level (@iceman1001)
+- Changed `hw bwm` - `autooff`, `charge`, `powersave`, `wifi`, `wifipower` and `ble pairing` take dash options (`--on`/`--off`, `--status`/`--stop`, `-m <mode>`) instead of bare words, so they show in the help; their output is aligned and colour codes the state, `autooff` and `ble status` are shorter and flag a default passkey (@iceman1001)
+- Changed `hf mf hardnested` - PartialSumProperty() walks the 16 four bit suffixes as a prefix tree, and the even and odd halves of the all-bitflips update run side by side, about 1 second less per run (@iceman1001)
+- Fixed `--ncpu` - it refused the machine's own core count, so all cores could never be requested explicitly (@iceman1001)
+- Changed `hf mf hardnested` - the partial sum state tables are built in one pass with whole words instead of 67 million single bit writes, cutting about 2 seconds off every run (@iceman1001)
+- Fixed `hf mf hardnested` - it searched every configured default path for each of the ~2000 bitflip state tables, which took 30+ seconds when those paths are on a network or Windows mount; the table directory is now resolved once (@iceman1001)
 - Fixed `tools/external_sam_read.py iclass` - the faked answer to the e-purse update is the new value with its halves swapped, as a card answers (@matrix)
 - Changed `hf mf sen` - default key prioritisation indexed the candidate list instead of rescanning it for each of the ~85k dictionary keys (@iceman1001)
 - Changed `hf mf sen` - the default-key dictionary check no longer mallocs a cipher state per key and gives up on the first wrong keystream byte, ~6x faster for that phase (@iceman1001)
