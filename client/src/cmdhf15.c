@@ -1057,13 +1057,18 @@ static int StCheckSig(uint8_t *uid) {
             free(packet);
             DropField();
             // error 0F/10 on a signature block: no signature to check
-            return (res == PM3_EOUTOFBOUND) ? PM3_SUCCESS : res;
+            if (res == PM3_EOUTOFBOUND) {
+                PrintAndLogEx(INFO, "No signature, block %u returned error %i: %s", 0x3F + i, d[1], TagErrorStr(d[1]));
+                return PM3_SUCCESS;
+            }
+            return res;
         }
 
         if (i == 0) {
 
             if (memcmp(d + 1, "K04S", 4) != 0) {
                 // No signature
+                PrintAndLogEx(INFO, "No signature, block 63 is not K04S");
                 free(packet);
                 DropField();
                 return PM3_SUCCESS;
@@ -1078,9 +1083,12 @@ static int StCheckSig(uint8_t *uid) {
     free(packet);
     DropField();
 
-    uint8_t signature[32];
+    uint8_t signature[32] = {0};
     size_t signature_len = 0;
-    hexstr_to_byte_array(signature_hex, signature, &signature_len);
+    if (hexstr_to_byte_array(signature_hex, signature, &signature_len) == false) {
+        PrintAndLogEx(ERR, "Signature blocks are not a hex string");
+        return PM3_ESOFT;
+    }
 
     uint8_t uid_swap[ISO15693_UID_LENGTH];
     reverse_array_copy(uid, ISO15693_UID_LENGTH, uid_swap);
