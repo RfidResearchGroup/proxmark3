@@ -477,7 +477,7 @@ static int CmdBwmVchg(const char *Cmd) {
         return resp.status;
     }
     uint16_t applied = (resp.length >= 2) ? (resp.data.asBytes[0] | (resp.data.asBytes[1] << 8)) : 0;
-    PrintAndLogEx(SUCCESS, "Charge voltage set to " _YELLOW_("%u.%03u V") " (nearest 15 mV step).", applied / 1000, applied % 1000);
+    PrintAndLogEx(SUCCESS, "Charge voltage...... " _YELLOW_("%u.%03u V") " ( nearest 15 mV step )", applied / 1000, applied % 1000);
     return PM3_SUCCESS;
 }
 
@@ -522,7 +522,8 @@ static int CmdBwmSetCap(const char *Cmd) {
         return resp.status;
     }
 
-    PrintAndLogEx(SUCCESS, "Design capacity programmed. `hw status` should now report sane capacity.");
+    PrintAndLogEx(SUCCESS, "Design capacity..... " _YELLOW_("%d mAh") " programmed", cap);
+    PrintAndLogEx(HINT, "Hint: Verify with `" _YELLOW_("hw status") "`");
     return PM3_SUCCESS;
 }
 
@@ -862,7 +863,7 @@ static int CmdBwmName(const char *Cmd) {
         PrintAndLogEx(FAILED, "failed to set BWM BLE name (is a responsive BWM fitted?)");
         return PM3_EFAILED;
     }
-    PrintAndLogEx(SUCCESS, "BWM BLE name set to " _YELLOW_("%s"), name);
+    PrintAndLogEx(SUCCESS, "BLE name............ " _YELLOW_("%s") " ( stored )", name);
 
     // The ESP applies the name at BLE start-up, so it reboots (device-side) to pick
     // it up. That reboot leaves the AT32<->ESP link desynced (the ESP comes back at
@@ -1243,7 +1244,6 @@ static int CmdBwmBlePairing(const char *Cmd) {
     uint8_t v = on ? 1 : 0;
     int res = ble_action(BWM_BLE_ACTION_PAIRING, &v, 1, false);
     if (res == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Pairing............. %s", on ? _GREEN_("required") : _RED_("not required"));
         PrintAndLogEx(INFO, "The BLE stack is restarting, a connected client is dropped");
     }
     return res;
