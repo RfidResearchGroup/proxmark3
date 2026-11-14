@@ -1996,6 +1996,13 @@ static void BuildIdentifyRequest(uint8_t *cmd) {
 int SendDataTag(const uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t *recv,
                 uint16_t max_recv_len, uint32_t start_time, uint16_t timeout, uint32_t *eof_time, uint16_t *resp_len) {
 
+    // SOF, EOF and 4 (1 out of 4) or 64 (1 out of 256) bytes per byte must fit the ToSend buffer
+    if (sendlen > ((TOSEND_BUFFER_SIZE - 2) / (speed_fast ? 4 : 64))) {
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("ISO15693 frame too long ( %d bytes )", sendlen);
+        *resp_len = 0;
+        return PM3_EOVFLOW;
+    }
+
     if (init) {
         Iso15693InitReader();
         start_time = GetCountSspClk();
