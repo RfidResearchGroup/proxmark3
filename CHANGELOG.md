@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 15 rdmulti` - the tag errors 0x0F and 0x10, as past the end of the memory, are shown instead of nothing (@matrix)
+- Fixed `hf 15 rdmulti` - printed bytes the tag never sent, past the answer buffer for a large `--bs`, now only received blocks, `--bs` capped at 32 (@matrix)
 - Fixed `hf search` - the OpenPGP AID probe sent 8 bytes for a 6-byte AID, reading past the string, so no OpenPGP card was found (@matrix)
 - Fixed `hf 15 raw -r` - the device reply was left unread, so every later command printed the answer of the one before (@matrix)
 - Fixed `hf 15 raw` - data too long for one packet is refused at once instead of timing out after 2 s (@matrix)
