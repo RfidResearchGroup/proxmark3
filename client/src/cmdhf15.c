@@ -2316,6 +2316,12 @@ static int CmdHF15Dump(const char *Cmd) {
         blocksize = 4;
     }
 
+    // ISO15693 block size field is 5 bits
+    if (blocksize > 32) {
+        PrintAndLogEx(WARNING, "Blocksize too large, using maximum 32 bytes");
+        blocksize = 32;
+    }
+
     // default fallback to scan for tag.
     if (uidlen != ISO15693_UID_LENGTH && !unaddressed) {
         scan = true;
@@ -2403,30 +2409,30 @@ static int CmdHF15Dump(const char *Cmd) {
     if (res == PM3_SUCCESS) {
         memcpy(tag->uid, d + 2, 8);
 
+        // optional fields follow the UID in flag order, only when their flag is set
         if (d[1] & 0x01) {
-            tag->dsfid = d[dCpt];
+            tag->dsfid = d[dCpt++];
         }
-        dCpt++;
 
         if (d[1] & 0x02) {
-            tag->afi = d[dCpt];
+            tag->afi = d[dCpt++];
         }
-        dCpt++;
 
         if (d[1] & 0x04) {
             tag->pagesCount = d[dCpt] + 1;
-            tag->bytesPerPage = d[dCpt + 1] + 1;
+            // block size in b5-b1, b8-b6 RFU
+            tag->bytesPerPage = (d[dCpt + 1] & 0x1F) + 1;
+            dCpt += 2;
         } else {
             // Set tag memory layout values (if can't be read in SYSINFO)
             tag->bytesPerPage = blocksize;
-            tag->pagesCount = 128;
+            // 128 blocks, fewer when large blocks would not fit
+            tag->pagesCount = MIN(128, ISO15693_TAG_MAX_SIZE / blocksize);
         }
-        dCpt += 2;
 
         if (d[1] & 0x08) {
             tag->ic = d[dCpt];
         }
-        dCpt++;
 
     } else {
         tag->uid[0] = 0xE0;
@@ -2434,7 +2440,22 @@ static int CmdHF15Dump(const char *Cmd) {
         tag->afi = 0;
         // Set tag memory layout values (if can't be read in SYSINFO)
         tag->bytesPerPage = blocksize;
-        tag->pagesCount = 128;
+        tag->pagesCount = MIN(128, ISO15693_TAG_MAX_SIZE / blocksize);
+    }
+
+    if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
+            ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
+            (tag->pagesCount == 0) ||
+            (tag->bytesPerPage == 0)) {
+
+        PrintAndLogEx(FAILED, "Tag size error: pagesCount=%d, bytesPerPage=%d",
+                      tag->pagesCount,
+                      tag->bytesPerPage
+                     );
+        free(packet);
+        free(tag);
+        DropField();
+        return PM3_EINVARG;
     }
 
     // add length for blockno (1)
@@ -2491,6 +2512,13 @@ static int CmdHF15Dump(const char *Cmd) {
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(FAILED, "Tag returned Error %i: %s", d[1], TagErrorStr(d[1]));
                 break;
+            }
+
+            // flags, lock status, block data, CRC
+            if (resp.length < (2 + tag->bytesPerPage + 2)) {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(FAILED, "block %d answer too short ( %d bytes, block size %u )", blocknum, resp.length, tag->bytesPerPage);
+                continue;
             }
 
             tag->locks[blocknum] = d[1];
