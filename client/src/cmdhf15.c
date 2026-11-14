@@ -412,6 +412,16 @@ static int iso15_info_error_handling(uint8_t *d, uint16_t n) {
     return res;
 }
 
+// shortest GET SYSTEM INFORMATION answer that can carry the optional fields
+// the info flags announce: flags, info flags, UID, those fields, CRC
+static uint16_t iso15_sysinfo_min_len(uint8_t info_flags) {
+    return 2 + ISO15693_UID_LENGTH + 2
+           + ((info_flags & 0x01) ? 1 : 0)
+           + ((info_flags & 0x02) ? 1 : 0)
+           + ((info_flags & 0x04) ? 2 : 0)
+           + ((info_flags & 0x08) ? 1 : 0);
+}
+
 // true when the layout fits iso15_tag_t, see ISO15693_TAG_MAX_* in iso15.h.
 // prints the offending values itself, the caller does its own cleanup
 static bool iso15_tag_size_ok(const iso15_tag_t *tag) {
@@ -1272,6 +1282,12 @@ static int CmdHF15Info(const char *Cmd) {
     int res = iso15_info_error_handling(d, resp.length);
     if (res != PM3_SUCCESS) {
         return res;
+    }
+
+    uint16_t need = iso15_sysinfo_min_len(d[1]);
+    if (resp.length < need) {
+        PrintAndLogEx(WARNING, "iso15693 systeminfo answer too short ( %d bytes, expected %u )", resp.length, need);
+        return PM3_EWRONGANSWER;
     }
 
     memcpy(uid, d + 2, sizeof(uid));
@@ -2502,7 +2518,14 @@ static int CmdHF15Dump(const char *Cmd) {
         return res;
     }
 
-    if (res == PM3_SUCCESS) {
+    bool sysinfo_ok = (res == PM3_SUCCESS);
+    uint16_t need = iso15_sysinfo_min_len(d[1]);
+    if (sysinfo_ok && (resp.length < need)) {
+        PrintAndLogEx(WARNING, "systeminfo answer too short ( %d bytes, expected %u ), using defaults", resp.length, need);
+        sysinfo_ok = false;
+    }
+
+    if (sysinfo_ok) {
         memcpy(tag->uid, d + 2, 8);
 
         // optional fields follow the UID in flag order, only when their flag is set
