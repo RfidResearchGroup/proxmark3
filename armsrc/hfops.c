@@ -50,6 +50,7 @@ int HfReadADC(uint32_t samplesCount, bool ledcontrol) {
 
     uint32_t sbs = samplesCount;
     initSampleBuffer(&sbs);
+    samplesCount = sbs;
 
     uint32_t wdtcntr = 0;
     for (;;) {
