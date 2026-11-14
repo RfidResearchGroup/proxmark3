@@ -69,13 +69,13 @@
         return PM3_ECRC; \
     } \
  \
-    if ((d[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) { \
+    if (((data)[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) { \
  \
-        if (data[1] == 0x0F || data[1] == 0x10) { \
+        if ((data)[1] == 0x0F || (data)[1] == 0x10) { \
             return PM3_EOUTOFBOUND; \
         } \
  \
-        PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", data[1], TagErrorStr(data[1])); \
+        PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", (data)[1], TagErrorStr((data)[1])); \
         return PM3_EWRONGANSWER; \
     } \
 }
@@ -815,7 +815,11 @@ static int NxpTestEAS(const uint8_t *uid, bool fast) {
         return PM3_ETIMEOUT;
     }
 
-    // a SLIX with the EAS mode disabled sends no answer
+    if (resp.status == PM3_ETEAROFF) {
+        return resp.status;
+    }
+
+    // a SLIX with the EAS mode disabled sends no answer (PM3_ETIMEOUT, or PM3_EPARTIAL on noise)
     if (resp.length < 2) {
         PrintAndLogEx(INFO, "");
         PrintAndLogEx(INFO, _CYAN_(" EAS"));
