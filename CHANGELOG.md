@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 15 info` - no answer to EAS ALARM, as sent by the SLIX tested with the EAS mode disabled, is reported as EAS not active instead of ending with an error (@matrix)
+- Fixed `hf 15` - a tag error was reported with the flags byte instead of the error code (@matrix)
+- Fixed `hf 15 info` - a tag error answered with code 0F or 10, e.g. by a SLIX to `-o`, printed nothing (@matrix)
+- Fixed `hf 15 info` - the NXP and ST requests after the system info ignored `-2`: the ST signature was always read in 1 out of 256, the NXP requests always sent in 1 out of 4 (@matrix)
+- Fixed `hf 15 info` - a UID given with `-u` was sent in the wrong byte order, so no tag answered, and a `-u` of the wrong length is refused instead of scanning for any tag (@matrix)
 - Fixed `hf 15 dump` - wrong block size on tags without DSFID or AFI, buffer overflow on large memories, short block answers copied as full blocks (@matrix)
 - Added `configure_environment.sh` / `make configure` - first-run check of a fresh clone: host and ARM toolchains, required and optional client libraries, the `PLATFORM` / `PLATFORM_EXTRAS` in `Makefile.platform`, Python venv and requirements, and device access rights; reports only, with `--install` to fix what it can (@iceman1001)
 - Changed `hw status` - PM5 Battery, BWM and Power sections are down to 7 lines with colour coded charge, health and temperature; charger profile, chip details and idle / sleep counters moved to debug level (@iceman1001)
