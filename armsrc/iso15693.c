@@ -2358,16 +2358,19 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
             Dbhexdump(cmd_len, cmd, false);
         }
 
-        if (cmd_len < 3) {
+        // flags, command and CRC
+        if (cmd_len < 4) {
             continue;
         }
 
         // Check CRC and drop received cmd with bad CRC
         // Iceman: we should already removed bad received commands with 0x00 in the check above
-        uint16_t crc = CalculateCrc15(cmd, cmd_len - 2);
-        if (((crc & 0xff) != cmd[cmd_len - 2]) || ((crc >> 8) != cmd[cmd_len - 1])) {
+        // over the whole frame: Crc16ex() gives 0 for the two bytes of a request without parameters
+        if (CheckCrc15(cmd, cmd_len) == false) {
             if (g_dbglevel >= DBG_DEBUG) {
-                Dbprintf("CrcFail!, expected CRC=%02X%02X", crc & 0xff, crc >> 8);
+                uint8_t crc[2] = {0};
+                compute_crc(CRC_15693, cmd, cmd_len - 2, &crc[0], &crc[1]);
+                Dbprintf("CrcFail!, expected CRC=%02X%02X", crc[0], crc[1]);
             }
             continue;
         }
