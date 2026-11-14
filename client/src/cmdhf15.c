@@ -858,6 +858,13 @@ static int NxpTestEAS(const uint8_t *uid, bool fast) {
 
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, _CYAN_(" EAS"));
+
+    // flags, 32 byte EAS sequence, CRC
+    if (resp.length < (1 + 32 + 2)) {
+        PrintAndLogEx(FAILED, "    EAS answer too short ( %d bytes )", resp.length);
+        return PM3_EWRONGANSWER;
+    }
+
     PrintAndLogEx(INFO, "  EAS (Electronic Article Surveillance) is active.");
     PrintAndLogEx(INFO, "  EAS sequence...");
     PrintAndLogEx(INFO, "  %s", sprint_hex(d + 1, 16));
