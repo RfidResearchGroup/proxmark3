@@ -122,8 +122,8 @@ static bool bwm_gauge_read16(uint8_t cmd, uint16_t *out) {
 }
 
 static bool bq_read_control(uint16_t sub, uint16_t *val);   // fwd decl
-static bool bq_read_design_cap(uint16_t *cap);   // fwd decl
-static bool bq_read_terminate(uint16_t *mv);   // fwd decl (defined with the provisioning code below)
+static bool bq_read_design_cap(uint16_t *cap);   // fwd decl (defined with the provisioning code below)
+static bool bq_read_terminate(uint16_t *mv);   // fwd decl
 
 // Reads the BWM charger + fuel gauge and prints a battery section. Called from
 // SendStatus() under #ifdef PM5, so it only runs on a booted PM5 with I2C available.
