@@ -62,21 +62,13 @@
 }
 #endif
 
+// returns from the calling function on anything but PM3_SUCCESS.
+// iso15_error_handling_card_response() must be in scope at the point of use
 #ifndef ISO15_ERROR_HANDLING_CARD_RESPONSE
 #define ISO15_ERROR_HANDLING_CARD_RESPONSE(data, len) { \
-    if ((check_crc(CRC_15693, (data), (len))) == false) { \
-        PrintAndLogEx(FAILED, "crc ( " _RED_("fail") " )"); \
-        return PM3_ECRC; \
-    } \
- \
-    if (((data)[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) { \
- \
-        if ((data)[1] == 0x0F || (data)[1] == 0x10) { \
-            return PM3_EOUTOFBOUND; \
-        } \
- \
-        PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", (data)[1], TagErrorStr((data)[1])); \
-        return PM3_EWRONGANSWER; \
+    int res_card_ = iso15_error_handling_card_response((data), (len)); \
+    if (res_card_ != PM3_SUCCESS) { \
+        return res_card_; \
     } \
 }
 #endif
@@ -389,6 +381,10 @@ static const char *TagErrorStr(uint8_t error) {
 }
 
 
+static void iso15_print_card_error(const uint8_t *d) {
+    PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", d[1], TagErrorStr(d[1]));
+}
+
 static int iso15_error_handling_card_response(uint8_t *d, uint16_t n) {
     if (check_crc(CRC_15693, d, n) == false) {
         PrintAndLogEx(FAILED, "crc ( " _RED_("fail") " )");
@@ -400,7 +396,7 @@ static int iso15_error_handling_card_response(uint8_t *d, uint16_t n) {
             return PM3_EOUTOFBOUND;
         }
 
-        PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", d[1], TagErrorStr(d[1]));
+        iso15_print_card_error(d);
         return PM3_EWRONGANSWER;
     }
 
@@ -411,7 +407,7 @@ static int iso15_error_handling_card_response(uint8_t *d, uint16_t n) {
 static int iso15_info_error_handling(uint8_t *d, uint16_t n) {
     int res = iso15_error_handling_card_response(d, n);
     if (res == PM3_EOUTOFBOUND) {
-        PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", d[1], TagErrorStr(d[1]));
+        iso15_print_card_error(d);
     }
     return res;
 }
