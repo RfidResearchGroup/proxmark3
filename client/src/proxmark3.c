@@ -1467,7 +1467,7 @@ int main(int argc, char *argv[]) {
             }
             long int ncpus = strtol(argv[i + 1], NULL, 10);
             const int detected_cpus = detect_num_CPUs();
-            if (ncpus < 0 || ncpus >= detected_cpus) {
+            if (ncpus < 0 || ncpus > detected_cpus) {
                 PrintAndLogEx(ERR, _RED_("ERROR:") " invalid number of CPU cores: --ncpu " _YELLOW_("%s") " (available: %d)\n", argv[i + 1], detected_cpus);
                 return 1;
             }

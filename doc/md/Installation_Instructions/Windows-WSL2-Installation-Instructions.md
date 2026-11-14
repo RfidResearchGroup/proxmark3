@@ -292,6 +292,12 @@ nano Makefile.platform
 REM In nano editor: Ctrl-S to save; Ctrl-X to exit
 ```
 
+Alternatively, `./configure_environment.sh` lists the platforms and offers to
+write a `Makefile.platform` for the device you pick. The same run also checks
+that the compilers, client libraries and Python packages needed for the next
+step are in place. See the
+[Linux installation instructions](Linux-Installation-Instructions.md#check-your-build-environment).
+
 #### Compile the project
 ^[Top](#top)
 

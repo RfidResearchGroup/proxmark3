@@ -102,7 +102,8 @@ endif
 include ../common_arm/Makefile.common
 
 ifneq (,$(findstring WITH_BWM_FORWARD,$(PLATFORM_DEFS)))
-    VPATH += ../armsrc
+    # sources only: a plain VPATH also finds ../armsrc/obj/libarmlib.a
+    vpath %.c ../armsrc
 endif
 
 INSTALLFW = $(OBJDIR)/bootrom.elf

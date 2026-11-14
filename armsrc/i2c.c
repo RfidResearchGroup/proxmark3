@@ -1175,7 +1175,7 @@ void sc_request_sam_t1_profile(void) {
 #endif
 }
 
-void sc_pps_remember(const uint8_t *atr, uint8_t atr_len, uint8_t proto, uint8_t ta1) {
+static void sc_pps_remember(const uint8_t *atr, uint8_t atr_len, uint8_t proto, uint8_t ta1) {
     if ((atr_len == 0) || (atr_len > sizeof(s_pps.atr))) {
         return;
     }
@@ -1185,7 +1185,7 @@ void sc_pps_remember(const uint8_t *atr, uint8_t atr_len, uint8_t proto, uint8_t
     s_pps.proto = proto;
 }
 
-void sc_pps_forget(void) {
+static void sc_pps_forget(void) {
     s_pps.atr_len = 0;
     s_pps.ta1 = 0;
     s_pps.tried = false;

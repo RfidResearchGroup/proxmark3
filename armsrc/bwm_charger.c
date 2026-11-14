@@ -26,6 +26,7 @@
 
 #include "i2c.h"
 #include "dbprint.h"
+#include "printf.h"        // sprintf
 #include "ticks_apis.h"   // WaitMS / GetTickCount / GetTickCountDelta
 #include "pm5_power.h"    // pm5_power_boost / unboost around the low-batt poll
 #include "ansi.h"
@@ -124,7 +125,7 @@ void bwm_print_battery_status(void) {
     if (g_bwm_present == false) {
         return;   // no BWM detected at boot; nothing to report
     }
-    DbpString(_CYAN_("Battery / BWM"));
+    DbpString(_CYAN_("Battery"));
 
     StartTicks();
     I2C_init(true);
@@ -137,61 +138,72 @@ void bwm_print_battery_status(void) {
     // not faults, so mask to 0x3F. Fault bit map (AW32001E REG09H):
     //   b5 VIN_FAULT  b4 THERM_SD  b3 BAT_OVP  b2 SAFETY_TMR  b1 NTC_HOT  b0 NTC_COLD
     uint8_t mainctl = 0, f1 = 0, fault = 0, sysstat = 0;
-    if (I2C_BufferReadRaw(&mainctl, 1, BWM_CHG_REG_MAINCTL, BWM_CHG_ADDR) <= 0) {
-        Dbprintf("  Charger............. " _YELLOW_("not responding") " (BWM absent or I2C down)");
-    } else {
-        Dbprintf("  Charger MainCtl..... 0x%02x  %s", mainctl,
-                 (mainctl & BWM_CHG_FET_DIS) ? _RED_("FET_DIS (VMIX off / shipping)")
-                 : _GREEN_("power path enabled"));
+    bool chg_ok = (I2C_BufferReadRaw(&mainctl, 1, BWM_CHG_REG_MAINCTL, BWM_CHG_ADDR) > 0);
+    bool stat_ok = false;
+    char line[150] = {0};    // charger detail, printed last
+    char setup[100] = {0};   // charge profile, debug level
+    if (chg_ok) {
+        char *p = line;
 
         I2C_BufferReadRaw(&f1,    1, BWM_CHG_REG_FAULT, BWM_CHG_ADDR); // 1st = latched history
         I2C_BufferReadRaw(&fault, 1, BWM_CHG_REG_FAULT, BWM_CHG_ADDR); // 2nd = current state
         fault &= 0x3F;
 
-        if (fault == 0) {
-            Dbprintf("  Charger fault....... 0x00 (none)");
+        // Live charge state from REG08 (System Status): CHG_STAT[4:3], PG_STAT[1], THERM_STAT[0]
+        stat_ok = (I2C_BufferReadRaw(&sysstat, 1, BWM_CHG_REG_SYSSTAT, BWM_CHG_ADDR) > 0);
+        if (stat_ok) {
+            static const char *cs[] = { "not charging", "pre-charge", "charging", "charge done" };
+            p += sprintf(p, "%s%s%s", cs[(sysstat >> 3) & 0x03],
+                         (sysstat & 0x02) ? ", power good" : ", power fail",
+                         (sysstat & 0x01) ? ", thermal-reg" : "");
         } else {
-            Dbprintf("  Charger fault....... " _RED_("0x%02x") "%s%s%s%s%s%s", fault,
-                     (fault & 0x20) ? " VIN_FAULT"  : "",
-                     (fault & 0x10) ? " THERM_SD"   : "",
-                     (fault & 0x08) ? " BAT_OVP"    : "",
-                     (fault & 0x04) ? " SAFETY_TMR" : "",
-                     (fault & 0x02) ? " NTC_HOT"    : "",
-                     (fault & 0x01) ? " NTC_COLD"   : "");
+            p += sprintf(p, "status ?");
         }
 
-        // Live charge state from REG08 (System Status): CHG_STAT[4:3], PG_STAT[1], THERM_STAT[0]
-        if (I2C_BufferReadRaw(&sysstat, 1, BWM_CHG_REG_SYSSTAT, BWM_CHG_ADDR) > 0) {
-            static const char *cs[] = { "not charging", "pre-charge", "charging", "charge done" };
-            Dbprintf("  Charge status....... %s%s%s", cs[(sysstat >> 3) & 0x03],
-                     (sysstat & 0x02) ? ", power good" : ", power fail",
-                     (sysstat & 0x01) ? ", thermal-reg" : "");
+        if (mainctl & BWM_CHG_FET_DIS) {
+            p += sprintf(p, ", " _RED_("FET_DIS (VMIX off / shipping)"));
+        }
+
+        if (fault == 0) {
+            p += sprintf(p, ", no fault");
+        } else {
+            p += sprintf(p, ", fault " _RED_("0x%02x") "%s%s%s%s%s%s", fault,
+                         (fault & 0x20) ? " VIN_FAULT"  : "",
+                         (fault & 0x10) ? " THERM_SD"   : "",
+                         (fault & 0x08) ? " BAT_OVP"    : "",
+                         (fault & 0x04) ? " SAFETY_TMR" : "",
+                         (fault & 0x02) ? " NTC_HOT"    : "",
+                         (fault & 0x01) ? " NTC_COLD"   : "");
         }
 
         // Configured charge profile (read-only). Decode tables from AW32001E datasheet V1.4:
         //   IIN_LIM (REG00[3:0]): 0000=50mA, else 80mA + 30mA*(code-1)  [1111=500mA]
         //   VIN_DPM (REG00[7:4]): 3880mV + 80mV*code                    [1000=4.52V default]
         //   ICHG    (REG02[5:0]): 8mA * (code+1)                        [63=512mA]
+        p = setup;
         uint8_t reg00 = 0, reg01 = 0, reg02 = 0;
+        if (I2C_BufferReadRaw(&reg01, 1, 0x01, BWM_CHG_ADDR) > 0) {
+            p += sprintf(p, "%s", (reg01 & (1u << 3)) ? _YELLOW_("disabled") : _GREEN_("enabled"));
+        }
+
+        if (I2C_BufferReadRaw(&reg02, 1, 0x02, BWM_CHG_ADDR) > 0) {
+            uint16_t ichg_ma = 8 * ((reg02 & 0x3F) + 1);
+            p += sprintf(p, "%s%u mA", (p == setup) ? "" : ", ", ichg_ma);
+        }
+
+        uint8_t reg04 = 0;
+        if (I2C_BufferReadRaw(&reg04, 1, BWM_CHG_REG_VCHG, BWM_CHG_ADDR) > 0) {
+            // VBAT_REG (REG04[7:2]): 3600mV + 15mV*code  [101000=4.200V default]
+            uint16_t vchg_mv = BWM_CHG_VCHG_BASE_MV + ((reg04 >> BWM_CHG_VCHG_SHIFT) & 0x3F) * BWM_CHG_VCHG_STEP_MV;
+            p += sprintf(p, "%s%u mV", (p == setup) ? "" : " to ", vchg_mv);
+        }
+
         if (I2C_BufferReadRaw(&reg00, 1, 0x00, BWM_CHG_ADDR) > 0) {
             uint8_t iin = reg00 & 0x0F;
             uint8_t vdpm = (reg00 >> 4) & 0x0F;
             uint16_t iin_ma = (iin == 0) ? 50 : (80 + 30 * (iin - 1));
             uint16_t vdpm_mv = 3880 + 80 * vdpm;
-            Dbprintf("  Input limit......... %u mA, VIN_DPM %u mV", iin_ma, vdpm_mv);
-        }
-        if (I2C_BufferReadRaw(&reg01, 1, 0x01, BWM_CHG_ADDR) > 0) {
-            Dbprintf("  Charge enable....... %s", (reg01 & (1u << 3)) ? _YELLOW_("disabled") : _GREEN_("enabled"));
-        }
-        if (I2C_BufferReadRaw(&reg02, 1, 0x02, BWM_CHG_ADDR) > 0) {
-            uint16_t ichg_ma = 8 * ((reg02 & 0x3F) + 1);
-            Dbprintf("  Charge current...... %u mA", ichg_ma);
-        }
-        uint8_t reg04 = 0;
-        if (I2C_BufferReadRaw(&reg04, 1, BWM_CHG_REG_VCHG, BWM_CHG_ADDR) > 0) {
-            // VBAT_REG (REG04[7:2]): 3600mV + 15mV*code  [101000=4.200V default]
-            uint16_t vchg_mv = BWM_CHG_VCHG_BASE_MV + ((reg04 >> BWM_CHG_VCHG_SHIFT) & 0x3F) * BWM_CHG_VCHG_STEP_MV;
-            Dbprintf("  Charge voltage...... %u mV", vchg_mv);
+            p += sprintf(p, "%sinput %u mA / DPM %u mV", (p == setup) ? "" : ", ", iin_ma, vdpm_mv);
         }
     }
 
@@ -201,25 +213,51 @@ void bwm_print_battery_status(void) {
     bwm_battery_info_t info;
     bwm_read_battery_info(&info);
     if (info.gauge_ok) {
-        Dbprintf("  Battery SoC......... %u %%", info.soc_pct);
-        Dbprintf("  Battery voltage..... %u mV", info.voltage_mv);
-        Dbprintf("  Battery current..... %d mA %s", info.current_ma,
-                 (info.current_ma > 5)  ? _GREEN_("(charging)") :
-                 (info.current_ma < -5) ? _YELLOW_("(discharging)") : "(idle)");
-        Dbprintf("  Remaining capacity.. %u mAh", info.remaining_mah);
+        char charge[150] = {0};
+        char *p = charge;
+
+        // state of charge: green >= 50 %, yellow >= 20 %, else red
+        if (info.soc_pct >= 50) {
+            p += sprintf(p, _GREEN_("%u %%"), info.soc_pct);
+        } else if (info.soc_pct >= 20) {
+            p += sprintf(p, _YELLOW_("%u %%"), info.soc_pct);
+        } else {
+            p += sprintf(p, _RED_("%u %%"), info.soc_pct);
+        }
+
+        p += sprintf(p, "  %u.%02u V  ", info.voltage_mv / 1000, (info.voltage_mv % 1000) / 10);
+
+        // red outside the 0..45 C Li-ion charge window
+        int tabs = (info.temp_c10 < 0) ? -info.temp_c10 : info.temp_c10;
+        const char *sign = (info.temp_c10 < 0) ? "-" : "";
+        if (info.temp_c10 < 0 || info.temp_c10 > 450) {
+            p += sprintf(p, _RED_("%s%d.%d C"), sign, tabs / 10, tabs % 10);
+        } else {
+            p += sprintf(p, "%s%d.%d C", sign, tabs / 10, tabs % 10);
+        }
+
+        uint8_t cstat = stat_ok ? ((sysstat >> 3) & 0x03) : 0;
+        if (info.current_ma > 5) {
+            p += sprintf(p, "  " _GREEN_("%s") " %d mA", (cstat == 1) ? "pre-charge" : "charging", info.current_ma);
+        } else if (info.current_ma < -5) {
         // Measured drain / projected runtime: when running on battery the gauge
         // Current is negative (discharging); |cur| is the real system draw, so
         // remaining runtime ~= RemainingCapacity / draw. Only meaningful while
         // discharging - on charge or idle there is no drain figure to report.
         // (Projection is only as good as RemCap - provision Design Capacity first.)
-        if (info.current_ma < -5) {
             uint16_t draw = (uint16_t)(-info.current_ma);              // mA drawn from the battery
             uint32_t mins = ((uint32_t)info.remaining_mah * 60) / draw; // RemCap/draw -> hours, *60 -> mins
-            Dbprintf("  Battery drain....... %u mA (approx %u h %u min left)",
-                     draw, (unsigned)(mins / 60), (unsigned)(mins % 60));
+            p += sprintf(p, "  " _YELLOW_("discharging") " %u mA, ~%u h %u min left", draw, (unsigned)(mins / 60), (unsigned)(mins % 60));
+        } else if (cstat == 3) {
+            p += sprintf(p, "  " _GREEN_("charge done"));
+        } else {
+            p += sprintf(p, "  idle");
         }
-        int tabs = (info.temp_c10 < 0) ? -info.temp_c10 : info.temp_c10;
-        Dbprintf("  Temp (gauge)........ %d.%d C", info.temp_c10 / 10, tabs % 10);
+
+        if (stat_ok && (sysstat & 0x01)) {
+            p += sprintf(p, ", " _YELLOW_("thermal limit"));
+        }
+        Dbprintf("  Charge.............. %s", charge);
 
         // Battery health: FullChargeCapacity (0x0E) vs the gauge's programmed Design
         // Capacity. FCC is the gauge's learned present full capacity; health = FCC/design.
@@ -228,11 +266,35 @@ void bwm_print_battery_status(void) {
         // Capacity was never provisioned (hw bwm setcap), the ratio is against the gauge
         // default, not the fitted cell - so it can read wildly wrong.
         if (info.full_charge_mah > 0) {
-            Dbprintf("  Full charge cap..... %u mAh (design %u)", info.full_charge_mah, info.design_cap_mah);
-            Dbprintf("  Battery health...... %u", info.health_pct);
+            char health[30] = {0};
+            if (info.health_pct >= 80) {
+                sprintf(health, _GREEN_("%u %%"), info.health_pct);
+            } else if (info.health_pct >= 60) {
+                sprintf(health, _YELLOW_("%u %%"), info.health_pct);
+            } else {
+                sprintf(health, _RED_("%u %%"), info.health_pct);
+            }
+            Dbprintf("  Capacity............ %u / %u mAh, health %s", info.remaining_mah, info.full_charge_mah, health);
+        } else {
+            Dbprintf("  Capacity............ %u mAh", info.remaining_mah);
+        }
+
+        if (g_dbglevel >= DBG_DEBUG) {
+            Dbprintf("  Gauge............... %u mV, %d mA, design %u mAh", info.voltage_mv, info.current_ma, info.design_cap_mah);
         }
     } else {
-        Dbprintf("  Fuel gauge.......... " _YELLOW_("not responding") " (BQ27427 absent or I2C down)");
+        Dbprintf("  Fuel gauge.......... " _RED_("not responding") " (BQ27427 absent or I2C down)");
+    }
+
+    // charger detail only at debug level or when something is wrong
+    if (chg_ok == false) {
+        Dbprintf("  Charger............. " _RED_("not responding") " (BWM absent or I2C down)");
+    } else if ((g_dbglevel >= DBG_DEBUG) || fault || (mainctl & BWM_CHG_FET_DIS)) {
+        Dbprintf("  Charger............. %s", line);
+    }
+
+    if ((g_dbglevel >= DBG_DEBUG) && setup[0]) {
+        Dbprintf("  Charge setup........ %s", setup);
     }
 }
 
