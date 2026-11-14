@@ -572,7 +572,7 @@ static void __attribute__((noinline)) SendVersion(void) {
     // PM5's FPGA (Gowin) bitstream is loaded at runtime via `hw fpga config` and is
     // not compiled into the firmware, so there is no meaningful built-in FPGA
     // version to report here. g_fpga_version_information[] describes the Xilinx
-    // bitstream that PM5 does not run, so omit the section entirely on PM5.
+    // bitstream that PM5 does not run, so PM5 reports the usercode of its image instead.
     strncat(VersionString, "\n [ "_YELLOW_("FPGA")" ] \n ", sizeof(VersionString) - strlen(VersionString) - 1);
 
     for (int i = 0; i < g_fpga_bitstream_num; i++) {
@@ -581,6 +581,14 @@ static void __attribute__((noinline)) SendVersion(void) {
             strncat(VersionString, "\n ", sizeof(VersionString) - strlen(VersionString) - 1);
         }
     }
+#else
+    uint32_t fpga_usercode;
+    if (Fpga_get_usercode(&fpga_usercode)) {
+        sprintf(temp, "\n [ "_YELLOW_("FPGA")" ] \n Usercode... 0x%08X", (unsigned int)fpga_usercode);
+    } else {
+        sprintf(temp, "\n [ "_YELLOW_("FPGA")" ] \n Usercode... unknown");
+    }
+    strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
 #endif
 #ifdef WITH_COMPRESSION
     // Send Chip ID and used flash memory
