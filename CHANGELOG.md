@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 15 info` - AFI, memory size and IC reference are read after the fields the tag really sent (a tag without DSFID or AFI showed wrong values), and a 256-block tag no longer shows 0 blocks (@matrix)
+- Fixed `hf 15 info` - the DSFID and password protection lock bits of NXP tags were read from the wrong bits (@matrix)
+- Fixed `hf 15 info` - on ST25TV512C/02KC the signature overflowed a stack buffer, a tag error leaked the read request, an early return left the field on, and a missing signature ended the command with an error (@matrix)
 - Fixed `hf 15 info` - no answer to EAS ALARM, as sent by the SLIX tested with the EAS mode disabled, is reported as EAS not active instead of ending with an error (@matrix)
 - Fixed `hf 15` - a tag error was reported with the flags byte instead of the error code (@matrix)
 - Fixed `hf 15 info` - a tag error answered with code 0F or 10, e.g. by a SLIX to `-o`, printed nothing (@matrix)
