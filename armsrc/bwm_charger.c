@@ -286,10 +286,16 @@ void bwm_print_battery_status(void) {
         Dbprintf("  Fuel gauge.......... " _RED_("not responding") " (BQ27427 absent or I2C down)");
     }
 
+    // VIN_FAULT only means no input power while running on battery
+    uint8_t real_fault = fault;
+    if (stat_ok && ((sysstat & 0x02) == 0)) {
+        real_fault &= ~0x20;
+    }
+
     // charger detail only at debug level or when something is wrong
     if (chg_ok == false) {
         Dbprintf("  Charger............. " _RED_("not responding") " (BWM absent or I2C down)");
-    } else if ((g_dbglevel >= DBG_DEBUG) || fault || (mainctl & BWM_CHG_FET_DIS)) {
+    } else if ((g_dbglevel >= DBG_DEBUG) || real_fault || (mainctl & BWM_CHG_FET_DIS)) {
         Dbprintf("  Charger............. %s", line);
     }
 
