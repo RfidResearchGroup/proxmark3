@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hw bwm` - `autooff`, `charge`, `powersave`, `wifi`, `wifipower` and `ble pairing` take dash options (`--on`/`--off`, `--status`/`--stop`, `-m <mode>`) instead of bare words, so they show in the help; their output is aligned and colour codes the state, `autooff` and `ble status` are shorter and flag a default passkey (@iceman1001)
 - Changed `hf mf hardnested` - PartialSumProperty() walks the 16 four bit suffixes as a prefix tree, and the even and odd halves of the all-bitflips update run side by side, about 1 second less per run (@iceman1001)
 - Fixed `--ncpu` - it refused the machine's own core count, so all cores could never be requested explicitly (@iceman1001)
 - Changed `hf mf hardnested` - the partial sum state tables are built in one pass with whole words instead of 67 million single bit writes, cutting about 2 seconds off every run (@iceman1001)
