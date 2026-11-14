@@ -2901,13 +2901,28 @@ static int CmdHF15Readmulti(const char *Cmd) {
     CLIParserFree(ctx);
 
     // sanity checks
-    if (blockcnt > 6) {
-        PrintAndLogEx(WARNING, "Page count must be 6 or less, got ( " _RED_("%d") " )", blockcnt);
+    if ((blockno < 0) || (blockno > 255)) {
+        PrintAndLogEx(WARNING, "Page number must be 0-255, got ( " _RED_("%d") " )", blockno);
+        return PM3_EINVARG;
+    }
+
+    if ((blockcnt < 1) || (blockcnt > 6)) {
+        PrintAndLogEx(WARNING, "Page count must be 1-6, got ( " _RED_("%d") " )", blockcnt);
+        return PM3_EINVARG;
+    }
+
+    if ((blockno + blockcnt) > 256) {
+        PrintAndLogEx(WARNING, "Last page must be 255 or less, got ( " _RED_("%d") " )", blockno + blockcnt - 1);
         return PM3_EINVARG;
     }
 
     if ((scan + unaddressed + uid_set) > 1) {
         PrintAndLogEx(WARNING, "Select only one option /scan/unaddress/uid");
+        return PM3_EINVARG;
+    }
+
+    if (uidlen != 0 && uidlen != ISO15693_UID_LENGTH) {
+        PrintAndLogEx(WARNING, "UID must include 8 hex bytes, got ( " _RED_("%i") " )", uidlen);
         return PM3_EINVARG;
     }
 
@@ -3061,8 +3076,18 @@ static int CmdHF15Readblock(const char *Cmd) {
     CLIParserFree(ctx);
 
     // sanity checks
+    if ((blockno < 0) || (blockno > 255)) {
+        PrintAndLogEx(WARNING, "Page number must be 0-255, got ( " _RED_("%d") " )", blockno);
+        return PM3_EINVARG;
+    }
+
     if ((scan + unaddressed + uid_set) > 1) {
         PrintAndLogEx(WARNING, "Select only one option /scan/unaddress/uid");
+        return PM3_EINVARG;
+    }
+
+    if (uidlen != 0 && uidlen != ISO15693_UID_LENGTH) {
+        PrintAndLogEx(WARNING, "UID must include 8 hex bytes, got ( " _RED_("%i") " )", uidlen);
         return PM3_EINVARG;
     }
 
@@ -3253,7 +3278,7 @@ static int CmdHF15Write(const char *Cmd) {
     void *argtable[6 + 4] = {0};
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_int1("b", "blk", "<dec>", "page number (0-255)");
-    argtable[arglen++] = arg_str1("d", "data", "<hex>", "data, 4 bytes");
+    argtable[arglen++] = arg_str1("d", "data", "<hex>", "data, 4 or 8 bytes");
     argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3277,8 +3302,18 @@ static int CmdHF15Write(const char *Cmd) {
     CLIParserFree(ctx);
 
     // sanity checks
+    if ((blockno < 0) || (blockno > 255)) {
+        PrintAndLogEx(WARNING, "Page number must be 0-255, got ( " _RED_("%d") " )", blockno);
+        return PM3_EINVARG;
+    }
+
     if ((scan + unaddressed + uid_set) > 1) {
         PrintAndLogEx(WARNING, "Select only one option /scan/unaddress/uid");
+        return PM3_EINVARG;
+    }
+
+    if (uidlen != 0 && uidlen != ISO15693_UID_LENGTH) {
+        PrintAndLogEx(WARNING, "UID must include 8 hex bytes, got ( " _RED_("%i") " )", uidlen);
         return PM3_EINVARG;
     }
 
