@@ -3140,7 +3140,17 @@ static int CmdHF15Readblock(const char *Cmd) {
 
     uint8_t *d = resp.data.asBytes;
 
-    ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length)
+    int res = iso15_info_error_handling(d, resp.length);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    // flags, lock status, data, CRC
+    int datalen = resp.length - 4;
+    if (datalen < 1) {
+        PrintAndLogEx(FAILED, "iso15693 block answer too short ( %d bytes )", resp.length);
+        return PM3_EWRONGANSWER;
+    }
 
     // print response
     char lck[16] = {0};
@@ -3154,28 +3164,14 @@ static int CmdHF15Readblock(const char *Cmd) {
 
     uint8_t offset = 2;
 
-    bool got_blocksize8 = (resp.length > 8);
-
-    if (got_blocksize8)  {
-        PrintAndLogEx(INFO, "#%3d        |lck| ascii", blockno);
-        PrintAndLogEx(INFO, "------------+---+------");
-        PrintAndLogEx(INFO, "%s| %s | %s"
-                      , sprint_hex(d + offset, 8)
-                      , lck
-                      , sprint_ascii(d + offset, 8)
-                     );
-        PrintAndLogEx(INFO, "------------+---+------");
-
-    } else {
-        PrintAndLogEx(INFO, "#%3d        |lck| ascii", blockno);
-        PrintAndLogEx(INFO, "------------+---+------");
-        PrintAndLogEx(INFO, "%s| %s | %s"
-                      , sprint_hex(d + offset, 4)
-                      , lck
-                      , sprint_ascii(d + offset, 4)
-                     );
-        PrintAndLogEx(INFO, "------------+---+------");
-    }
+    PrintAndLogEx(INFO, "#%3d        |lck| ascii", blockno);
+    PrintAndLogEx(INFO, "------------+---+------");
+    PrintAndLogEx(INFO, "%s| %s | %s"
+                  , sprint_hex(d + offset, datalen)
+                  , lck
+                  , sprint_ascii(d + offset, datalen)
+                 );
+    PrintAndLogEx(INFO, "------------+---+------");
 
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
