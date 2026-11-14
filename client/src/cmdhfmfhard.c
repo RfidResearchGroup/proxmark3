@@ -335,9 +335,8 @@ static int find_state_file(char **foundpath, const char *template, odd_even_t od
         return PM3_EFILE;
     }
 
-    char state_files_path[strlen(STATE_FILES_DIRECTORY) + sizeof(state_file_name) + 1];
-    strncpy(state_files_path, STATE_FILES_DIRECTORY, sizeof(state_files_path) - 1);
-    strncat(state_files_path, state_file_name, sizeof(state_files_path) - (strlen(STATE_FILES_DIRECTORY) + 1));
+    char state_files_path[sizeof(STATE_FILES_DIRECTORY) + sizeof(state_file_name)];
+    snprintf(state_files_path, sizeof(state_files_path), "%s%s", STATE_FILES_DIRECTORY, state_file_name);
     if (searchFile(foundpath, RESOURCES_SUBDIR, state_files_path, "", true) != PM3_SUCCESS) {
         return PM3_EFILE;
     }
