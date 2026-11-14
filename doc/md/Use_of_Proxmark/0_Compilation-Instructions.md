@@ -5,6 +5,7 @@
 # Table of Contents
 - [Compilation instructions](#compilation-instructions)
 - [Table of Contents](#table-of-contents)
+  - [Check your build environment first](#check-your-build-environment-first)
   - [Tuning compilation parameters](#tuning-compilation-parameters)
     - [Compile for Proxmark3 RDV4](#compile-for-proxmark3-rdv4)
     - [Compile for generic Proxmark3 platforms](#compile-for-generic-proxmark3-platforms)
@@ -19,6 +20,23 @@
   - [Run the client](#run-the-client)
   - [Next steps](#next-steps)
 
+
+
+## Check your build environment first
+^[Top](#top)
+
+If this is your first build from this clone, run
+
+```sh
+./configure_environment.sh
+```
+
+or the equivalent `make configure`. It reports which compilers, client libraries
+and Python packages are present, which `PLATFORM` your `Makefile.platform`
+selects, and whether you have access to the device. It changes nothing unless you
+pass `--install`. See the
+[Linux installation instructions](/doc/md/Installation_Instructions/Linux-Installation-Instructions.md#check-your-build-environment)
+for what it covers.
 
 
 ## Tuning compilation parameters

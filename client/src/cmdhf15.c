@@ -69,13 +69,13 @@
         return PM3_ECRC; \
     } \
  \
-    if ((d[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) { \
+    if (((data)[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) { \
  \
-        if (data[1] == 0x0F || data[1] == 0x10) { \
+        if ((data)[1] == 0x0F || (data)[1] == 0x10) { \
             return PM3_EOUTOFBOUND; \
         } \
  \
-        PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", d[0], TagErrorStr(d[0])); \
+        PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", (data)[1], TagErrorStr((data)[1])); \
         return PM3_EWRONGANSWER; \
     } \
 }
@@ -400,11 +400,20 @@ static int iso15_error_handling_card_response(uint8_t *d, uint16_t n) {
             return PM3_EOUTOFBOUND;
         }
 
-        PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", d[0], TagErrorStr(d[0]));
+        PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", d[1], TagErrorStr(d[1]));
         return PM3_EWRONGANSWER;
     }
 
     return PM3_SUCCESS;
+}
+
+// hf 15 info requests: also report the 0F and 10 errors that block reads take as the end of the memory
+static int iso15_info_error_handling(uint8_t *d, uint16_t n) {
+    int res = iso15_error_handling_card_response(d, n);
+    if (res == PM3_EOUTOFBOUND) {
+        PrintAndLogEx(ERR, "iso15693 card returned error %i: %s", d[1], TagErrorStr(d[1]));
+    }
+    return res;
 }
 
 
@@ -768,7 +777,7 @@ static int CmdHF15Samples(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int NxpTestEAS(const uint8_t *uid) {
+static int NxpTestEAS(const uint8_t *uid, bool fast) {
 
     if (uid == NULL) {
         return PM3_EINVARG;
@@ -792,7 +801,10 @@ static int NxpTestEAS(const uint8_t *uid) {
     AddCrc15(packet->raw,  packet->rawlen);
     packet->rawlen += 2;
 
-    packet->flags = (ISO15_CONNECT | ISO15_HIGH_SPEED | ISO15_READ_RESPONSE);
+    packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE);
+    if (fast) {
+        packet->flags |= ISO15_HIGH_SPEED;
+    }
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
@@ -802,28 +814,36 @@ static int NxpTestEAS(const uint8_t *uid) {
         PrintAndLogEx(DEBUG, "iso15693 timeout");
         return PM3_ETIMEOUT;
     }
+
+    if (resp.status == PM3_ETEAROFF) {
+        return resp.status;
+    }
+
+    // a SLIX with the EAS mode disabled sends no answer (PM3_ETIMEOUT, or PM3_EPARTIAL on noise)
     if (resp.length < 2) {
-        return PM3_EWRONGANSWER;
+        PrintAndLogEx(INFO, "");
+        PrintAndLogEx(INFO, _CYAN_(" EAS"));
+        PrintAndLogEx(INFO, "    EAS (Electronic Article Surveillance) is not active");
+        return PM3_SUCCESS;
     }
 
     uint8_t *d = resp.data.asBytes;
 
-    ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length)
+    int res = iso15_info_error_handling(d, resp.length);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
 
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, _CYAN_(" EAS"));
-    if (resp.length < 2) {
-        PrintAndLogEx(INFO, "    EAS (Electronic Article Surveillance) is not active");
-    } else {
-        PrintAndLogEx(INFO, "  EAS (Electronic Article Surveillance) is active.");
-        PrintAndLogEx(INFO, "  EAS sequence...");
-        PrintAndLogEx(INFO, "  %s", sprint_hex(d + 1, 16));
-        PrintAndLogEx(INFO, "  %s", sprint_hex(d + 1 + 16, 16));
-    }
+    PrintAndLogEx(INFO, "  EAS (Electronic Article Surveillance) is active.");
+    PrintAndLogEx(INFO, "  EAS sequence...");
+    PrintAndLogEx(INFO, "  %s", sprint_hex(d + 1, 16));
+    PrintAndLogEx(INFO, "  %s", sprint_hex(d + 1 + 16, 16));
     return PM3_SUCCESS;
 }
 
-static int NxpCheckSig(uint8_t *uid) {
+static int NxpCheckSig(uint8_t *uid, bool fast) {
 
     if (uid == NULL) {
         return PM3_EINVARG;
@@ -848,7 +868,10 @@ static int NxpCheckSig(uint8_t *uid) {
     AddCrc15(packet->raw,  packet->rawlen);
     packet->rawlen += 2;
 
-    packet->flags = (ISO15_CONNECT | ISO15_HIGH_SPEED | ISO15_READ_RESPONSE);
+    packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE);
+    if (fast) {
+        packet->flags |= ISO15_HIGH_SPEED;
+    }
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
@@ -867,7 +890,10 @@ static int NxpCheckSig(uint8_t *uid) {
 
     uint8_t *d = resp.data.asBytes;
 
-    ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length)
+    int res = iso15_info_error_handling(d, resp.length);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
 
     uint8_t signature[32] = {0x00};
     memcpy(signature, d + 1, sizeof(signature));
@@ -877,7 +903,7 @@ static int NxpCheckSig(uint8_t *uid) {
 }
 
 // Get NXP system information from SLIX2 tag/VICC
-static int NxpSysInfo(uint8_t *uid) {
+static int NxpSysInfo(uint8_t *uid, bool fast) {
 
     if (uid == NULL) {
         return PM3_EINVARG;
@@ -901,7 +927,10 @@ static int NxpSysInfo(uint8_t *uid) {
     AddCrc15(packet->raw,  packet->rawlen);
     packet->rawlen += 2;
 
-    packet->flags = (ISO15_CONNECT | ISO15_HIGH_SPEED | ISO15_READ_RESPONSE);
+    packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE);
+    if (fast) {
+        packet->flags |= ISO15_HIGH_SPEED;
+    }
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
@@ -919,7 +948,10 @@ static int NxpSysInfo(uint8_t *uid) {
 
     uint8_t *d = resp.data.asBytes;
 
-    ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length)
+    int res = iso15_info_error_handling(d, resp.length);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
 
     bool support_signature = (d[5] & 0x01);
     bool support_easmode = (d[4] & 0x04);
@@ -988,18 +1020,18 @@ static int NxpSysInfo(uint8_t *uid) {
     PrintAndLogEx(INFO, "    Additional 32 bits feature flags are%s transmitted", ((d[7] & 0x80) ? "" : " not"));
 
     if (support_easmode) {
-        NxpTestEAS(uid);
+        NxpTestEAS(uid, fast);
     }
 
     if (support_signature) {
-        NxpCheckSig(uid);
+        NxpCheckSig(uid, fast);
     }
 
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
-static int StCheckSig(uint8_t *uid) {
+static int StCheckSig(uint8_t *uid, bool fast) {
     // request to be sent to device/card
     uint16_t approxlen = 2 + ISO15693_UID_LENGTH + 1 + 2;
     iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
@@ -1016,6 +1048,9 @@ static int StCheckSig(uint8_t *uid) {
     memcpy(packet->raw + packet->rawlen, uid, ISO15693_UID_LENGTH);
     packet->rawlen += ISO15693_UID_LENGTH;
     packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE | ISO15_NO_DISCONNECT);
+    if (fast) {
+        packet->flags |= ISO15_HIGH_SPEED;
+    }
 
     uint16_t blkoff = packet->rawlen;
     char signature_hex[65] = {0};
@@ -1078,6 +1113,9 @@ static int StCheckSig(uint8_t *uid) {
             memcpy(signature_hex + ((i - 1) * 4), d + 1, 4);
         }
         packet->flags = (ISO15_READ_RESPONSE | ISO15_NO_DISCONNECT);
+        if (fast) {
+            packet->flags |= ISO15_HIGH_SPEED;
+        }
     }
 
     free(packet);
@@ -1134,6 +1172,11 @@ static int CmdHF15Info(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    if (uidlen != 0 && uidlen != ISO15693_UID_LENGTH) {
+        PrintAndLogEx(WARNING, "UID must include 8 hex bytes, got ( " _RED_("%i") " )", uidlen);
+        return PM3_EINVARG;
+    }
+
     // default fallback to scan for tag.
     if (unaddressed == false && uidlen != ISO15693_UID_LENGTH) {
         scan = true;
@@ -1163,6 +1206,8 @@ static int CmdHF15Info(const char *Cmd) {
                 return PM3_EINVARG;
             }
             uidlen = ISO15693_UID_LENGTH;
+        } else {
+            reverse_array(uid, ISO15693_UID_LENGTH);
         }
 
         if (uidlen == ISO15693_UID_LENGTH) {
@@ -1199,7 +1244,10 @@ static int CmdHF15Info(const char *Cmd) {
 
     uint8_t *d = resp.data.asBytes;
 
-    ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length)
+    int res = iso15_info_error_handling(d, resp.length);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
 
     memcpy(uid, d + 2, sizeof(uid));
 
@@ -1269,18 +1317,18 @@ static int CmdHF15Info(const char *Cmd) {
 
         if (d[7] == 0x01 && nxp_version == 0x08) {
             PrintAndLogEx(DEBUG, "SLIX2 Detected, getting NXP System Info");
-            return NxpSysInfo(uid);
+            return NxpSysInfo(uid, fast);
         } else if (d[7] == 0x01 && nxp_version == 0x18) { // If it is an NTAG 5 / ICODE DNA
             PrintAndLogEx(DEBUG, "NTAG 5 / ICODE DNA Detected, getting NXP System Info");
-            int res = NxpSysInfo(uid);
+            res = NxpSysInfo(uid, fast);
             PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 15 implant") "`");
             return res;
         } else if (d[7] == 0x01 && ((d[6] & 0x78) == 0x20)) { // If it is an NTAG ICODE 3
             PrintAndLogEx(DEBUG, "ICODE 3 Detected, getting NXP System Info");
-            return NxpSysInfo(uid);
+            return NxpSysInfo(uid, fast);
         } else if ((d[7] == 0x01 || d[7] == 0x02 || d[7] == 0x03)) { // If SLI, SLIX, SLIX-l, or SLIX-S check EAS status
             PrintAndLogEx(DEBUG, "SLI, SLIX, SLIX-L, or SLIX-S Detected checking EAS status");
-            return NxpTestEAS(uid);
+            return NxpTestEAS(uid, fast);
         }
     } else if (d[8] == 0x02) {
         // ST, check d[7]:
@@ -1290,7 +1338,7 @@ static int CmdHF15Info(const char *Cmd) {
         // ST25TV16K/ST25TV64K    0x48
         if (d[7] == 0x08) {
             PrintAndLogEx(DEBUG, "ST25TVxC Detected, getting ST Signature");
-            return StCheckSig(uid);
+            return StCheckSig(uid, fast);
         }
     }
     PrintAndLogEx(NORMAL, "");
@@ -2344,6 +2392,12 @@ static int CmdHF15Dump(const char *Cmd) {
         blocksize = 4;
     }
 
+    // ISO15693 block size field is 5 bits
+    if (blocksize > 32) {
+        PrintAndLogEx(WARNING, "Blocksize too large, using maximum 32 bytes");
+        blocksize = 32;
+    }
+
     // default fallback to scan for tag.
     if (uidlen != ISO15693_UID_LENGTH && !unaddressed) {
         scan = true;
@@ -2431,30 +2485,30 @@ static int CmdHF15Dump(const char *Cmd) {
     if (res == PM3_SUCCESS) {
         memcpy(tag->uid, d + 2, 8);
 
+        // optional fields follow the UID in flag order, only when their flag is set
         if (d[1] & 0x01) {
-            tag->dsfid = d[dCpt];
+            tag->dsfid = d[dCpt++];
         }
-        dCpt++;
 
         if (d[1] & 0x02) {
-            tag->afi = d[dCpt];
+            tag->afi = d[dCpt++];
         }
-        dCpt++;
 
         if (d[1] & 0x04) {
             tag->pagesCount = d[dCpt] + 1;
-            tag->bytesPerPage = d[dCpt + 1] + 1;
+            // block size in b5-b1, b8-b6 RFU
+            tag->bytesPerPage = (d[dCpt + 1] & 0x1F) + 1;
+            dCpt += 2;
         } else {
             // Set tag memory layout values (if can't be read in SYSINFO)
             tag->bytesPerPage = blocksize;
-            tag->pagesCount = 128;
+            // 128 blocks, fewer when large blocks would not fit
+            tag->pagesCount = MIN(128, ISO15693_TAG_MAX_SIZE / blocksize);
         }
-        dCpt += 2;
 
         if (d[1] & 0x08) {
             tag->ic = d[dCpt];
         }
-        dCpt++;
 
     } else {
         tag->uid[0] = 0xE0;
@@ -2462,7 +2516,22 @@ static int CmdHF15Dump(const char *Cmd) {
         tag->afi = 0;
         // Set tag memory layout values (if can't be read in SYSINFO)
         tag->bytesPerPage = blocksize;
-        tag->pagesCount = 128;
+        tag->pagesCount = MIN(128, ISO15693_TAG_MAX_SIZE / blocksize);
+    }
+
+    if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
+            ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
+            (tag->pagesCount == 0) ||
+            (tag->bytesPerPage == 0)) {
+
+        PrintAndLogEx(FAILED, "Tag size error: pagesCount=%d, bytesPerPage=%d",
+                      tag->pagesCount,
+                      tag->bytesPerPage
+                     );
+        free(packet);
+        free(tag);
+        DropField();
+        return PM3_EINVARG;
     }
 
     // add length for blockno (1)
@@ -2519,6 +2588,13 @@ static int CmdHF15Dump(const char *Cmd) {
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(FAILED, "Tag returned Error %i: %s", d[1], TagErrorStr(d[1]));
                 break;
+            }
+
+            // flags, lock status, block data, CRC
+            if (resp.length < (2 + tag->bytesPerPage + 2)) {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(FAILED, "block %d answer too short ( %d bytes, block size %u )", blocknum, resp.length, tag->bytesPerPage);
+                continue;
             }
 
             tag->locks[blocknum] = d[1];

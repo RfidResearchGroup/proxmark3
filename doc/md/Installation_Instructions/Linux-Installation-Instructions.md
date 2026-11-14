@@ -20,6 +20,9 @@
   - [On NixOS](#on-nixos)
     - [If you don't need...](#if-you-dont-need-4)
 - [Clone the repository](#clone-the-repository)
+- [Check your build environment](#check-your-build-environment)
+  - [Tell it which Proxmark you have](#tell-it-which-proxmark-you-have)
+  - [Let it install what is missing](#let-it-install-what-is-missing)
 - [Check ModemManager](#check-modemmanager)
     - [⚠️ Very important ⚠️](#️-very-important-️)
 - [Check connection](#check-connection)
@@ -234,7 +237,88 @@ you can comment out `gd` in shell.nix.
 
 ```sh
 git clone https://github.com/RfidResearchGroup/proxmark3.git
+cd proxmark3
 ```
+
+# Check your build environment
+^[Top](#top)
+
+Before the first build, let the repo check itself over:
+
+```sh
+./configure_environment.sh
+```
+
+It reports, one line per check, whether this machine has what the project needs:
+
+* GNU make, gcc / g++, pkg-config, git, and a `gcc` new enough for Qt6
+* the `arm-none-eabi` toolchain and a linkable ARM C library, needed for the firmware
+* the required client libraries (readline, bz2, lz4, libcrypto) and the optional ones
+  (zlib, bluez, libpython3, Qt, libgd), each labelled with the feature it enables
+* which `PLATFORM` your `Makefile.platform` selects, and whether the
+  `PLATFORM_EXTRAS` tokens are valid for it
+* a Python venv and the packages from `tools/requirements.txt`
+* membership of the `dialout` (or `uucp`) group, the udev blacklist rule, whether
+  ModemManager is running, and the access rights on `/dev/ttyACM0`
+* the tracked `.dummy` files that hold the firmware object directories in git
+
+Nothing is installed and nothing is changed, apart from the two questions below.
+The last lines tell you what, if anything, is still missing, as one ready-to-paste
+install command for your distribution. Exit status is 0 when the build can proceed.
+
+`make configure` runs the same thing. Call the script directly when `make` itself
+refuses to start, for instance after a typo in `PLATFORM`, since `make` stops on
+that before it could run any target.
+
+## Tell it which Proxmark you have
+^[Top](#top)
+
+Without a `Makefile.platform` every build targets a **Proxmark3 RDV4**, and that
+image does not work on another board. When the file is absent the script lists the
+platforms and offers to write one for your device:
+
+```
+[ warn ] no Makefile.platform, every build will be for PLATFORM=PM3RDV4
+         flashing an RDV4 image to another board gives a non-working device
+         PM3RDV4      Proxmark3 RDV4                                 (the default)
+         PM3GENERIC   Proxmark3 RDV1, RDV2, Easy, rysccorps, clones
+         PM3ICOPYX    iCopy-X and Proxmark3 Max, with PLATFORM_EXTRAS=FLASH
+         PM3ULTIMATE  Proxmark3 Ultimate (XC2S50)
+         PM5          Proxmark5 Iceman Edition (Artery AT32F435/437)
+
+         Which device do you have?
+           1) Proxmark3 RDV4
+           2) Proxmark3 RDV4 with the Blue Shark BT add-on
+           3) Proxmark3 RDV1 / RDV2 / Easy / generic clone
+           4) Proxmark5 Iceman Edition
+           5) Proxmark5 with the Battery Wireless Mod
+           6) iCopy-X or Proxmark3 Max
+           7) Proxmark3 Ultimate
+           0) skip, I will write Makefile.platform myself
+```
+
+Answer `0` and copy `Makefile.platform.sample` yourself if you want the standalone
+mode, the 256KB options or anything else it does not ask about. An existing
+`Makefile.platform` is never overwritten, only checked.
+
+If you already have one, the script confirms what it resolves to and catches the
+combinations the firmware build rejects later on, such as `PLATFORM_EXTRAS=BWM`
+on anything other than `PLATFORM=PM5`.
+
+## Let it install what is missing
+^[Top](#top)
+
+```sh
+./configure_environment.sh --install
+```
+
+This asks before each step, then installs the missing system packages with
+`apt-get` / `pacman` / `dnf` / `zypper`, creates the Python venv and installs
+`tools/requirements.txt` into it. Add `-y` to skip the questions, `--extras` to
+also consider the optional requirement files under `fpga/`, `tools/ePassport/`
+and `tools/btaddon/`, and `--help` for the rest.
+
+On NixOS, use `nix-shell tools/shell.nix` instead; the script says so.
 
 # Check ModemManager
 ^[Top](#top)

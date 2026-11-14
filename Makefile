@@ -40,6 +40,11 @@ TARGETS := bootrom armsrc recovery $(HOST_TARGETS)
 all clean install uninstall check: %:
 	+$(foreach target,$(TARGETS),$(call submake,$(target),$*))
 
+# client runtime leftovers, written to the directory the client was started in
+clean: clean-runtime
+clean-runtime:
+	$(Q)$(RM) hardnested_stats.txt
+
 host: host/all
 host/all host/clean host/install host/uninstall host/check: %:
 	+$(foreach target,$(HOST_TARGETS),$(call submake,$(target),$(notdir $*)))
@@ -201,7 +206,7 @@ ePassport/%: FORCE
 
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
-.PHONY: all host clean install uninstall help _test bootrom fullimage recovery client mfc_card_only mfc_card_reader mfulc_des_brute mfd_aes_brute hitag2crack ePassport style miscchecks release FORCE udev accessrights cleanifplatformchanged
+.PHONY: all host clean install uninstall help _test bootrom fullimage recovery client mfc_card_only mfc_card_reader mfulc_des_brute mfd_aes_brute hitag2crack ePassport style miscchecks release FORCE udev accessrights cleanifplatformchanged clean-runtime configure
 
 help:
 	@echo "Multi-OS Makefile"
@@ -233,6 +238,8 @@ help:
 	@echo "+ .../check       - Run offline tests against specific target. See above."
 	@echo "+ miscchecks      - Detect various encoding issues in source code"
 	@echo
+	@echo "+ configure       - Check this machine can build the project. Run it after cloning."
+	@echo "                    Set CONFIGUREARGS to pass arguments, e.g. CONFIGUREARGS=--install"
 	@echo "+ udev            - Sets udev rules on *nix"
 	@echo "+ accessrights    - Ensure user belongs to correct group on *nix"
 	@echo
@@ -299,6 +306,12 @@ endif
 	$(Q)$(ECHO) CACHED_PLATFORM_EXTRAS=$(PLATFORM_EXTRAS) >> .Makefile.options.cache
 	$(Q)$(ECHO) CACHED_PLATFORM_DEFS=$(PLATFORM_DEFS) >> .Makefile.options.cache
 endif
+
+# first-run check of the build environment: toolchains, client libraries,
+# Python venv and requirements, chosen PLATFORM, device access rights.
+# Set CONFIGUREARGS to pass arguments, e.g. CONFIGUREARGS=--install
+configure: FORCE
+	$(Q)$(BASH) configure_environment.sh $(CONFIGUREARGS)
 
 # configure system to ignore PM3 device as a modem (ModemManager blacklist, effective *only* if ModemManager is not using _strict_ policy)
 # Read doc/md/ModemManager-Must-Be-Discarded.md for more info

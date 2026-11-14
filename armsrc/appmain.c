@@ -266,15 +266,16 @@ static void bwm_autooff_check(void) {
     pm5_power_off();
 }
 
-static void pm5_autooff_print_status(void) {
+// `hw status` text for the power-save line, dst needs ~80 bytes
+static void pm5_autooff_sprint(char *dst) {
     if (g_autooff_enabled == false) {
-        Dbprintf("  Auto power-off...... " _YELLOW_("off"));
+        sprintf(dst, ", auto-off " _YELLOW_("off"));
     } else if (g_autooff_idle_ms == 0) {
-        Dbprintf("  Auto power-off...... " _GREEN_("on") " (%s)", g_autooff_unplug ? "USB unplug only" : "no trigger set");
+        sprintf(dst, ", auto-off %s", g_autooff_unplug ? "on " _GREEN_("USB unplug") : _YELLOW_("no trigger set"));
     } else if (g_autooff_unplug) {
-        Dbprintf("  Auto power-off...... " _GREEN_("on") " (USB unplug, or %u s idle on battery)", g_autooff_idle_ms / 1000);
+        sprintf(dst, ", auto-off on " _GREEN_("USB unplug") " or " _GREEN_("%u s") " idle", (unsigned int)(g_autooff_idle_ms / 1000));
     } else {
-        Dbprintf("  Auto power-off...... " _GREEN_("on") " (%u s idle on battery, also after an unplug)", g_autooff_idle_ms / 1000);
+        sprintf(dst, ", auto-off after " _GREEN_("%u s") " idle on battery", (unsigned int)(g_autooff_idle_ms / 1000));
     }
 }
 #endif // WITH_PM5_AUTOOFF
@@ -723,8 +724,9 @@ static void SendStatus(uint32_t wait) {
     bwm_print_battery_status();
 #endif
 #ifdef WITH_BWM_FORWARD
+    DbpString(_CYAN_("BWM"));
     char baud[SPRINT_BITRATE_LEN];
-    Dbprintf("  BWM link baud....... " _YELLOW_("%s"), sprint_bitrate(baud, bwm_uart_get_baud()));
+    sprint_bitrate(baud, bwm_uart_get_baud());
     {
         // Read the ESP firmware version so hw status shows what the BWM runs
         // (and lets you confirm an OTA took: the string flips after a reflash).
@@ -739,39 +741,62 @@ static void SendStatus(uint32_t wait) {
         }
         if (vres == PM3_SUCCESS) {
             bwm_ver[bwm_ver_len] = 0x00;
-            Dbprintf("  BWM fw version...... " _YELLOW_("%s"), bwm_ver);
             bwm_chip_info_t ci;
-            if (bwm_esp_get_chip_info(&ci, 300) == PM3_SUCCESS) {
-                Dbprintf("  BWM chip............ " _YELLOW_("%s v%u.%u") " pkg %u, flash " _YELLOW_("%s") " %06X (%u MB)",
-                         (ci.model == 12) ? "ESP32-C2" : "ESP32 model ?",
-                         ci.revision / 100, ci.revision % 100, ci.pkg,
-                         bwm_flash_vendor(ci.flash_id >> 16), ci.flash_id & 0xFFFFFF, ci.flash_size >> 20);
-            }
+            bool have_ci = (bwm_esp_get_chip_info(&ci, 300) == PM3_SUCCESS);
             // Only once the ESP answered; older fw lacks these, so keep the wait short.
-            uint8_t ps = 0;
-            if (bwm_esp_get_power_save(&ps, 300) == PM3_SUCCESS) {
-                Dbprintf("  BWM power save...... " _YELLOW_("%s"), ps ? "on" : "off");
-            }
             uint8_t bs = 0;
-            if (bwm_esp_get_ble_state(&bs, 300) == PM3_SUCCESS) {
-                Dbprintf("  BWM BLE............. " _YELLOW_("%s"), (bs == BWM_BLE_STATE_CONNECTED) ? "client connected" : (bs == 1) ? "advertising" : "off");
+            bool have_bs = (bwm_esp_get_ble_state(&bs, 300) == PM3_SUCCESS);
+
+            char line[150] = {0};
+            char *p = line;
+            p += sprintf(p, _YELLOW_("%s"), bwm_ver);
+            if (have_ci) {
+                p += sprintf(p, " on %s", (ci.model == 12) ? "ESP32-C2" : "ESP32 model ?");
             }
-            uint32_t heap[3] = {0};
-            uint8_t hn = 0;
-            if (bwm_esp_get_free_heap(heap, &hn, 300) == PM3_SUCCESS) {
-                if (hn == 3) {
-                    Dbprintf("  BWM free RAM........ " _YELLOW_("%u") " bytes (lowest %u, largest block %u)", heap[0], heap[1], heap[2]);
+
+            p += sprintf(p, ", link " _YELLOW_("%s"), baud);
+            if (have_bs) {
+                if (bs == BWM_BLE_STATE_CONNECTED) {
+                    p += sprintf(p, ", BLE " _GREEN_("client connected"));
                 } else {
-                    Dbprintf("  BWM free RAM........ " _YELLOW_("%u") " bytes", heap[0]);
+                    p += sprintf(p, ", BLE " _YELLOW_("%s"), (bs == 1) ? "advertising" : "off");
                 }
             }
-            // Our cached copy of the ESP's LINK_STATE broadcasts (BLE or WiFi), which holds
-            // off the idle power-off. Debug only: it should agree with the live line above.
+            Dbprintf("  Firmware............ %s", line);
+
             if (g_dbglevel >= DBG_DEBUG) {
+                if (have_ci) {
+                    Dbprintf("  BWM chip............ " _YELLOW_("%s v%u.%u") " pkg %u, flash " _YELLOW_("%s") " %06X (%u MB)",
+                             (ci.model == 12) ? "ESP32-C2" : "ESP32 model ?",
+                             ci.revision / 100, ci.revision % 100, ci.pkg,
+                             bwm_flash_vendor(ci.flash_id >> 16), ci.flash_id & 0xFFFFFF, ci.flash_size >> 20);
+                }
+
+                p = line;
+                uint8_t ps = 0;
+                if (bwm_esp_get_power_save(&ps, 300) == PM3_SUCCESS) {
+                    p += sprintf(p, "power save " _YELLOW_("%s"), ps ? "on" : "off");
+                }
+
+                uint32_t heap[3] = {0};
+                uint8_t hn = 0;
+                if (bwm_esp_get_free_heap(heap, &hn, 300) == PM3_SUCCESS) {
+                    p += sprintf(p, "%s" _YELLOW_("%u") " B free", (p == line) ? "" : ", ", (unsigned int)heap[0]);
+                    if (hn == 3) {
+                        p += sprintf(p, " (lowest %u, largest block %u)", (unsigned int)heap[1], (unsigned int)heap[2]);
+                    }
+                }
+
+                if (p != line) {
+                    Dbprintf("  BWM state........... %s", line);
+                }
+
+                // Our cached copy of the ESP's LINK_STATE broadcasts (BLE or WiFi), which holds
+                // off the idle power-off. Debug only: it should agree with the live line above.
                 Dbprintf("  BWM tracked client.. " _YELLOW_("%s"), bwm_fwd_link_connected() ? "connected (BLE or WiFi)" : "none");
             }
         } else {
-            Dbprintf("  BWM fw version...... " _YELLOW_("%s"), "unknown");
+            Dbprintf("  Firmware............ " _YELLOW_("unknown") ", link " _YELLOW_("%s"), baud);
         }
     }
     if (g_dbglevel >= DBG_DEBUG) {
@@ -789,13 +814,23 @@ static void SendStatus(uint32_t wait) {
     }
 #endif
 #ifdef PM5
-    pm5_power_print_status();
-#endif
+    char autooff[80] = {0};
 #ifdef WITH_PM5_AUTOOFF
-    pm5_autooff_print_status();
+    pm5_autooff_sprint(autooff);
+#endif
+    pm5_power_print_status(autooff);
 #endif
 #ifdef WITH_CEP
-    Dbprintf("  CEP (Flipper) link.. " _YELLOW_("%s"), cep_is_active() ? "attached" : "not attached");
+    if (cep_is_active()) {
+        DbpString("  Flipper............. " _GREEN_("attached"));
+    } else {
+        DbpString("  Flipper............. " _YELLOW_("not attached"));
+    }
+#endif
+#ifdef PM5
+    if (g_dbglevel >= DBG_DEBUG) {
+        pm5_power_print_stats();
+    }
 #endif
     printConnSpeed(wait);
     DbpString(_CYAN_("Various"));

@@ -49,10 +49,23 @@ These run over any active connection — USB, BLE, or WiFi.
 [usb] pm3 --> hw status
 ```
 
-The **Battery / BWM** section reports the **AW32001** charger (power path, fault,
-charge state, input limit, charge current/voltage/enable) and the **BQ27427** fuel
-gauge (state-of-charge %, voltage, current, remaining/full capacity, temperature,
-health).
+```
+[#] Battery
+[#]   Charge.............. 83 %  4.07 V  34.7 C  charge done
+[#]   Capacity............ 392 / 473 mAh, health 94 %
+[#] BWM
+[#]   Firmware............ V5 on ESP32-C2, link 1.5 Mbps, BLE off
+[#] Power
+[#]   Power save.......... on, auto-off on USB unplug
+[#]   Flipper............. not attached
+```
+
+The **Battery** section shows the **BQ27427** fuel gauge (state of charge, voltage,
+temperature, charge state, remaining/full capacity, health) and, while discharging,
+the draw and estimated runtime. An **AW32001** charger fault is shown only when present.
+`hw dbg -3` adds the raw gauge values, the charger status and its charge profile
+(input limit, charge current/voltage), the BWM chip and memory details, and the
+power-save counters.
 
 ### `hw bwm setcap` — set fuel-gauge design capacity
 
@@ -81,8 +94,8 @@ Clears/sets the AW32001E charge-enable bit (`CEB`, `REG01[3]`).
 | `off`      | Disable charging  |
 
 ```
-hw bwm charge on     # enable charging
-hw bwm charge off    # disable charging
+hw bwm charge --on     # enable charging
+hw bwm charge --off    # disable charging
 ```
 
 > [!NOTE]
@@ -125,8 +138,8 @@ drain the battery. Button power-on is unaffected.
 | `off`      | Disable auto power-off  |
 
 ```
-hw bwm autooff off   # disable auto power-off
-hw bwm autooff on    # re-enable auto power-off
+hw bwm autooff --off   # disable auto power-off
+hw bwm autooff --on    # re-enable auto power-off
 ```
 
 > [!NOTE]
@@ -311,7 +324,7 @@ Bluetooth, so one setup covers a Blueshark-equipped Proxmark3 too.
 
 `hw bwm wifi` joins your WiFi network as a **station** and starts a **TCP server** on
 the BWM. You then connect the client over plain TCP. Run `hw bwm wifi` over an
-existing link (USB, or an existing BLE connection). Use `hw bwm wifi status` to check an
+existing link (USB, or an existing BLE connection). Use `hw bwm wifi --status` to check an
 existing connection without touching the config.
 
 ### 3.1 Bring up WiFi
@@ -327,8 +340,8 @@ hw bwm wifi --ssid <ssid> [--pwd <password>] [--port <n>] [--hostname <name>]
 | `--port <dec>`      | TCP server listen port (default `18888`) |
 | `--hostname <name>` | DHCP hostname (default `Proxmark5`)      |
 
-Two sub-actions take no other arguments and are positional (no dashes):
-`hw bwm wifi status` and `hw bwm wifi stop` (see 3.3 and 3.4).
+Two sub-actions take no other arguments:
+`hw bwm wifi --status` and `hw bwm wifi --stop` (see 3.3 and 3.4).
 
 ```
 hw bwm wifi --ssid Home --pwd secret
@@ -362,7 +375,7 @@ Or, as we're using the default port, just
 > `./pm3 -p tcp:pm5-lab.local:18888`; this needs an mDNS-capable resolver on the host
 > (Avahi/nss-mdns or systemd-resolved on Linux; built in on macOS and Windows 10+).
 
-### 3.3 Check WiFi status — `hw bwm wifi status`
+### 3.3 Check WiFi status — `hw bwm wifi --status`
 
 Queries the BWM's current connection state and IP **without** reconnecting or
 changing the WiFi config. Handy to confirm a join actually completed — the
@@ -370,7 +383,7 @@ bring-up occasionally reports failure if the DHCP lease lands late, even though
 the STA connected a moment later.
 
 ```
-hw bwm wifi status
+hw bwm wifi --status
 ```
 
 ```
@@ -383,17 +396,17 @@ hw bwm wifi status
 > not connected right after a bring-up, wait a few seconds and re-check — the
 > lease may still be in flight.
 
-### 3.4 Stop WiFi — `hw bwm wifi stop`
+### 3.4 Stop WiFi — `hw bwm wifi --stop`
 
 Tears down the WiFi station and TCP server and returns the BWM to **BLE-only**.
 Run it over an existing link (USB or BLE); it does not need any other arguments.
 
 ```
-hw bwm wifi stop
+hw bwm wifi --stop
 ```
 
 > [!NOTE]
-> If you issue `hw bwm wifi stop` over the **WiFi** connection itself, that connection
+> If you issue `hw bwm wifi --stop` over the **WiFi** connection itself, that connection
 > drops as the TCP server goes away — reconnect over USB or BLE afterwards.
 
 ---
