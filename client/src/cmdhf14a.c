@@ -239,7 +239,7 @@ const char *getTagInfo(uint8_t uid) {
 static const hintAIDList_t hintAIDList[] = {
     { "\xA0\x00\x00\x06\x47\x2F\x00\x01", 8, "", 0, "FIDO", "hf fido" },
     { "\xA0\x00\x00\x03\x08\x00\x00\x10\x00\x01\x00", 11, "", 0, "PIV", "" },
-    { "\xD2\x76\x00\x01\x24\x01", 8, "", 0, "OpenPGP", "" },
+    { "\xD2\x76\x00\x01\x24\x01", 6, "", 0, "OpenPGP", "" },
     { "\x31\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31", 14, "", 0, "EMV (pse)", "emv" },
     { "\x32\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31", 14, "", 0, "EMV (ppse)", "emv" },
     { "\x41\x44\x20\x46\x31", 5, "", 0, "CIPURSE", "hf cipurse" },
