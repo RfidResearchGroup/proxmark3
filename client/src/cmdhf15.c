@@ -419,8 +419,9 @@ static int iso15_info_error_handling(uint8_t *d, uint16_t n) {
 
 // fast method to just read the UID of a tag (collision detection not supported)
 //  *buf should be large enough to fit the 64bit uid
+//  fast: true for high-speed (1 out of 4), false for low-speed (1 out of 256)
 // returns 1 if succeeded
-static int getUID(bool verbose, bool loop, uint8_t *buf) {
+static int getUID(bool fast, bool verbose, bool loop, uint8_t *buf) {
 
     uint8_t approxlen = 5;
     iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
@@ -437,7 +438,10 @@ static int getUID(bool verbose, bool loop, uint8_t *buf) {
     AddCrc15(packet->raw, 3);
     packet->rawlen += 2;
 
-    packet->flags = (ISO15_CONNECT | ISO15_HIGH_SPEED | ISO15_READ_RESPONSE);
+    packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE);
+    if (fast) {
+        packet->flags |= ISO15_HIGH_SPEED;
+    }
 
     int res = PM3_ESOFT;
     do {
@@ -475,7 +479,7 @@ static int getUID(bool verbose, bool loop, uint8_t *buf) {
 // used with 'hf search'
 bool readHF15Uid(bool loop, bool verbose) {
     uint8_t uid[ISO15693_UID_LENGTH] = {0};
-    if (getUID(verbose, loop, uid) != PM3_SUCCESS) {
+    if (getUID(true, verbose, loop, uid) != PM3_SUCCESS) {
         return false;
     }
     return true;
@@ -1200,7 +1204,7 @@ static int CmdHF15Info(const char *Cmd) {
     if (unaddressed == false) {
         if (scan) {
             PrintAndLogEx(INFO, "Using scan mode");
-            if (getUID(false, false, uid) != PM3_SUCCESS) {
+            if (getUID(fast, false, false, uid) != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "no tag found");
                 free(packet);
                 return PM3_EINVARG;
@@ -2290,7 +2294,7 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
     if (unaddressed == false) {
         if (scan) {
             PrintAndLogEx(INFO, "Using scan mode");
-            if (getUID(verbose, false, uid) != PM3_SUCCESS) {
+            if (getUID(fast, verbose, false, uid) != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "no tag found");
                 free(packet);
                 return PM3_EINVARG;
@@ -2428,7 +2432,7 @@ static int CmdHF15Dump(const char *Cmd) {
         // default fallback to scan for tag. Overriding unaddress parameter
         if (scan) {
             PrintAndLogEx(INFO, "Using scan mode");
-            if (getUID(verbose, false, uid) != PM3_SUCCESS) {
+            if (getUID(fast, verbose, false, uid) != PM3_SUCCESS) {
                 free(packet);
                 free(tag);
                 PrintAndLogEx(WARNING, "no tag found");
@@ -2887,7 +2891,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
     if (unaddressed == false) {
         if (scan) {
             PrintAndLogEx(INFO, "Using scan mode");
-            if (getUID(verbose, false, uid) != PM3_SUCCESS) {
+            if (getUID(fast, verbose, false, uid) != PM3_SUCCESS) {
                 free(packet);
                 PrintAndLogEx(WARNING, "no tag found");
                 return PM3_EINVARG;
@@ -3043,7 +3047,7 @@ static int CmdHF15Readblock(const char *Cmd) {
         // default fallback to scan for tag. Overriding unaddress parameter
         if (scan) {
             PrintAndLogEx(INFO, "Using scan mode");
-            if (getUID(verbose, false, uid) != PM3_SUCCESS) {
+            if (getUID(fast, verbose, false, uid) != PM3_SUCCESS) {
                 free(packet);
                 PrintAndLogEx(WARNING, "no tag found");
                 return PM3_EINVARG;
@@ -3240,7 +3244,7 @@ static int CmdHF15Write(const char *Cmd) {
     if (unaddressed == false) {
         if (scan) {
             PrintAndLogEx(INFO, "Using scan mode");
-            if (getUID(verbose, false, uid) != PM3_SUCCESS) {
+            if (getUID(fast, verbose, false, uid) != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "no tag found");
                 return PM3_EINVARG;
             }
@@ -3325,7 +3329,7 @@ static int CmdHF15Restore(const char *Cmd) {
     if (unaddressed == false) {
         if (scan) {
             PrintAndLogEx(INFO, "Using scan mode");
-            if (getUID(verbose, false, uid) != PM3_SUCCESS) {
+            if (getUID(fast, verbose, false, uid) != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "no tag found");
                 return PM3_EINVARG;
             }
@@ -3510,7 +3514,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
     PrintAndLogEx(INFO, "Get current tag");
 
     uint8_t carduid[ISO15693_UID_LENGTH] = {0x00};
-    if (getUID(true, false, carduid) != PM3_SUCCESS) {
+    if (getUID(true, true, false, carduid) != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "no tag found");
         return PM3_ESOFT;
     }
@@ -3564,7 +3568,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Verifying...");
 
-    if (getUID(true, false, carduid) != PM3_SUCCESS) {
+    if (getUID(true, true, false, carduid) != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "no tag found");
         return PM3_ESOFT;
     }
@@ -4313,7 +4317,7 @@ static int CmdHF15Wipe(const char *Cmd) {
     if (unaddressed == false) {
         if (scan) {
             PrintAndLogEx(INFO, "Using scan mode");
-            if (getUID(verbose, false, uid) != PM3_SUCCESS) {
+            if (getUID(fast, verbose, false, uid) != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "no tag found");
                 return PM3_EINVARG;
             }
@@ -5051,7 +5055,7 @@ static int CmdHF15Implant(const char *Cmd) {
 
     if (uidlen == ISO15693_UID_LENGTH) {
         reverse_array_copy(uid, ISO15693_UID_LENGTH, c.uid);
-    } else if (getUID(false, false, c.uid) != PM3_SUCCESS) {
+    } else if (getUID(true, false, false, c.uid) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "no tag found");
         return PM3_ENODATA;
     }
