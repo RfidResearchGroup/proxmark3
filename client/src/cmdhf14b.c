@@ -2411,9 +2411,9 @@ static int CmdHF14BDump(const char *Cmd) {
             FillFileNameByUID(fptr, card.uid, "-dump", card.uidlen);
         }
 
-        pm3_save_dump(filename, data, total, jsf14b_v2);
+        int res = pm3_save_dump(filename, data, total, jsf14b_v2);
         free(data);
-        return PM3_SUCCESS;
+        return res;
     }
 
     if (select_cardtype == ISO14B_SR) {
@@ -2545,7 +2545,7 @@ static int CmdHF14BDump(const char *Cmd) {
         }
 
         size_t datalen = (lastblock + 2) * ST25TB_SR_BLOCK_SIZE;
-        pm3_save_dump(filename, data, datalen, jsf14b_v2);
+        return pm3_save_dump(filename, data, datalen, jsf14b_v2);
     }
 
     return PM3_ESOFT;
@@ -3348,18 +3348,13 @@ int CmdHF14BNdefRead(const char *Cmd) {
     }
 
 
-    // get total NDEF length before save. If fails, we save it all
-    size_t n = 0;
-    if (NDEFGetTotalLength(response + 2, resplen - 4, &n) != PM3_SUCCESS)
-        n = resplen - 4;
-
-    pm3_save_dump(filename, response + 2, n, jsfNDEF);
+    res = pm3_save_dump(filename, ndef_file, ndef_size, jsfNDEF);
 
     NDEFRecordsDecodeAndPrint(ndef_file, ndef_size, verbose);
     free(ndef_file);
     PrintAndLogEx(NORMAL, "");
     switch_off_field_14b();
-    return PM3_SUCCESS;
+    return res;
 }
 
 static int CmdHF14BView(const char *Cmd) {

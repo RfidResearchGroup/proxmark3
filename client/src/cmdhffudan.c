@@ -353,8 +353,7 @@ static int CmdHFFudanDump(const char *Cmd) {
         free(fptr);
     }
 
-    pm3_save_dump(dataFilename, (uint8_t *)carddata, sizeof(carddata), jsfFudan);
-    return PM3_SUCCESS;
+    return pm3_save_dump(dataFilename, (uint8_t *)carddata, sizeof(carddata), jsfFudan);
 }
 
 static int CmdHFFudanWrBl(const char *Cmd) {

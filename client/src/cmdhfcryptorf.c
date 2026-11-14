@@ -412,9 +412,10 @@ static int CmdHFCryptoRFDump(const char *Cmd) {
         FillFileNameByUID(fptr, card.uid, "-dump", card.uidlen);
     }
 
-    pm3_save_dump(filename, data, datalen, jsfCryptorf);
+    int res = pm3_save_dump(filename, data, datalen, jsfCryptorf);
 
-    return switch_off_field_cryptorf();
+    switch_off_field_cryptorf();
+    return res;
 }
 
 static int CmdHFCryptoRFELoad(const char *Cmd) {
@@ -510,9 +511,9 @@ static int CmdHFCryptoRFESave(const char *Cmd) {
         FillFileNameByUID(fptr, data, "-dump", 4);
     }
 
-    pm3_save_dump(filename, data, numofbytes, jsfCryptorf);
+    int res = pm3_save_dump(filename, data, numofbytes, jsfCryptorf);
     free(data);
-    return PM3_SUCCESS;
+    return res;
 }
 
 static command_t CommandTable[] = {

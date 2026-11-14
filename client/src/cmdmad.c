@@ -206,10 +206,10 @@ static int mad_cmd_read(const char *Cmd, const char *cmd_name, bool force_classi
     print_buffer_with_offset(data, datalen, 0, true);
 
     if (fnlen) {
-        pm3_save_dump(filename, data, datalen, jsfRaw);
+        res = pm3_save_dump(filename, data, datalen, jsfRaw);
     }
 
-    return PM3_SUCCESS;
+    return res;
 }
 
 static int mad_cmd_write(const char *Cmd, const char *cmd_name, bool force_classic, bool force_plus) {

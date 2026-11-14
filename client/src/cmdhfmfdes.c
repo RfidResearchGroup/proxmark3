@@ -9294,12 +9294,12 @@ static int CmdHF14ADesDump(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    pm3_save_dump_json(filename, (uint8_t *)dump, sizeof(desfire_dump_t), jsfMfDesfire_v1);
+    res = pm3_save_dump_json(filename, (uint8_t *)dump, sizeof(desfire_dump_t), jsfMfDesfire_v1);
 
     desfire_dump_free(dump);
     free(keyfile);
     free(dump);
-    return PM3_SUCCESS;
+    return res;
 }
 
 static void DesfireViewPrintKeys(const desfire_dump_app_t *app) {
@@ -9989,11 +9989,11 @@ static int CmdHF14ADesESave(const char *Cmd) {
         FillFileNameByUID(filename, dump->card_info.uid, "-dump", dump->card_info.uidlen);
     }
 
-    pm3_save_dump_json(filename, (uint8_t *)dump, sizeof(desfire_dump_t), jsfMfDesfire_v1);
+    res = pm3_save_dump_json(filename, (uint8_t *)dump, sizeof(desfire_dump_t), jsfMfDesfire_v1);
 
     desfire_dump_free(dump);
     free(dump);
-    return PM3_SUCCESS;
+    return res;
 }
 
 static int CmdHF14ADesEView(const char *Cmd) {

@@ -4075,14 +4075,14 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     }
 
     uint16_t datalen = MFU_DUMP_PREFIX_LENGTH + (pages * MFU_BLOCK_SIZE);
-    pm3_save_dump(filename, (uint8_t *)&dump_file_data, datalen, jsfMfuMemory);
+    int res = pm3_save_dump(filename, (uint8_t *)&dump_file_data, datalen, jsfMfuMemory);
 
     if (is_partial) {
         PrintAndLogEx(WARNING, "Partial dump created. (%d of %d blocks)", pages, card_mem_size);
     }
 
     ulc_print_vuln_hint(ulc_vuln);
-    return PM3_SUCCESS;
+    return res;
 }
 
 static void wait4response(uint32_t cmd, uint8_t b) {
@@ -7696,7 +7696,7 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
     if (NDEFGetTotalLength(records, ndef_size, &n) != PM3_SUCCESS)
         n = ndef_size;
 
-    pm3_save_dump(filename, records, n, jsfNDEF);
+    int res = pm3_save_dump(filename, records, n, jsfNDEF);
 
 
     char *jooki = strstr((char *)records, "s.jooki.rocks/s/?s=");
@@ -7735,7 +7735,7 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
     }
 
     free(records);
-    return status;
+    return (status != PM3_SUCCESS) ? status : res;
 }
 
 

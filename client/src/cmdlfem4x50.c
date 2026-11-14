@@ -280,8 +280,7 @@ static int CmdEM4x50ESave(const char *Cmd) {
         FillFileNameByUID(fptr, (uint8_t *)&data[4 * EM4X50_DEVICE_ID], "-dump", 4);
     }
 
-    pm3_save_dump(filename, data, EM4X50_DUMP_FILESIZE, jsfEM4x50);
-    return PM3_SUCCESS;
+    return pm3_save_dump(filename, data, EM4X50_DUMP_FILESIZE, jsfEM4x50);
 }
 
 static int CmdEM4x50EView(const char *Cmd) {
@@ -913,8 +912,7 @@ static int CmdEM4x50Dump(const char *Cmd) {
         memcpy(data + (i * 4), words[i].byte, 4);
     }
 
-    pm3_save_dump(filename, data, sizeof(data), jsfEM4x50);
-    return PM3_SUCCESS;
+    return pm3_save_dump(filename, data, sizeof(data), jsfEM4x50);
 }
 
 // envoke writing a single word (32 bit) to a EM4x50 tag

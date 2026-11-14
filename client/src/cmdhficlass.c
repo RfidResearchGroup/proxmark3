@@ -2044,11 +2044,11 @@ static int CmdHFiClassESave(const char *Cmd) {
         FillFileNameByUID(fptr, dump, "-dump", 8);
     }
 
-    pm3_save_dump(filename, dump, bytes, jsfIclass);
+    int res = pm3_save_dump(filename, dump, bytes, jsfIclass);
     free(dump);
 
     PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass view -f") "` to view dump file");
-    return PM3_SUCCESS;
+    return res;
 }
 
 static int CmdHFiClassEView(const char *Cmd) {
@@ -2501,6 +2501,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
             }
         }
 
+        int save_res = PM3_SUCCESS;
         if (nosave) {
             PrintAndLogEx(INFO, "Called with no save option");
             PrintAndLogEx(NORMAL, "");
@@ -2517,7 +2518,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
             strcat(fptr, "hf-iclass-");
             FillFileNameByUID(fptr, hdr->csn, "-dump-decrypted", sizeof(hdr->csn));
 
-            pm3_save_dump(fptr, decrypted, decryptedlen, jsfIclass);
+            save_res = pm3_save_dump(fptr, decrypted, decryptedlen, jsfIclass);
             free(fptr);
         }
 
@@ -2555,6 +2556,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
         PrintAndLogEx(INFO, "-------------------------------------------------------------------");
         free(decrypted);
+        return save_res;
     }
 
     return PM3_SUCCESS;
@@ -3181,12 +3183,12 @@ write_dump:
     // save the dump to .bin file
     PrintAndLogEx(SUCCESS, "saving dump file - %u blocks read", bytes_got / 8);
 
-    pm3_save_dump(filename, tag_data, bytes_got, jsfIclass);
+    int res = pm3_save_dump(filename, tag_data, bytes_got, jsfIclass);
 
     PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass decrypt -f") "` to decrypt dump file");
     PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass view -f") "` to view dump file");
     PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
+    return res;
 }
 
 static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *macdata, uint8_t *KEY, bool use_credit_key,

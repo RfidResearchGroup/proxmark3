@@ -765,9 +765,9 @@ static int CmdHfLTODump(const char *Cmd) {
         char *fptr = filename + snprintf(filename, sizeof(filename), "hf-lto-");
         FillFileNameByUID(fptr, dump, "-dump", 5);
     }
-    pm3_save_dump(filename, dump, dump_len, jsfLto);
+    int res = pm3_save_dump(filename, dump, dump_len, jsfLto);
     free(dump);
-    return PM3_SUCCESS;
+    return res;
 }
 
 int restoreLTO(uint8_t *dump, bool verbose) {

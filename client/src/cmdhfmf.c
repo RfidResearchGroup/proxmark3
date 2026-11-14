@@ -7578,7 +7578,10 @@ int CmdHFMFNDEFRead(const char *Cmd) {
             n = datalen;
         }
 
-        pm3_save_dump(filename, data, n, jsfNDEF);
+        res = pm3_save_dump(filename, data, n, jsfNDEF);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
     }
 
     if (verbose == false) {

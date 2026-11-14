@@ -627,9 +627,7 @@ static int CmdLFHitagUDump(const char *Cmd) {
 
     memcpy(s_htu_uid, card->uid, sizeof(s_htu_uid));
     s_htu_icr = card->icr;
-    pm3_save_dump_cb(filename, (uint8_t *)card->pages, mem_size, jsfHitagU, htu_json_callback);
-
-    return PM3_SUCCESS;
+    return pm3_save_dump_cb(filename, (uint8_t *)card->pages, mem_size, jsfHitagU, htu_json_callback);
 }
 
 static int CmdLFHitagUWrite(const char *Cmd) {

@@ -1879,10 +1879,10 @@ static int CmdHF15ESave(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    pm3_save_dump_json(filename, dump, bytes, jsf15_v5);
+    int res = pm3_save_dump_json(filename, dump, bytes, jsf15_v5);
 
     free(dump);
-    return PM3_SUCCESS;
+    return res;
 }
 
 static const char dashes[] = "------------------------------------------------------------";
@@ -2658,10 +2658,10 @@ static int CmdHF15Dump(const char *Cmd) {
         FillFileNameByUID(fptr, SwapEndian64(uid, sizeof(uid), 8), "-dump", sizeof(uid));
     }
 
-    pm3_save_dump_json(filename, (uint8_t *)tag, sizeof(iso15_tag_t), jsf15_v5);
+    res = pm3_save_dump_json(filename, (uint8_t *)tag, sizeof(iso15_tag_t), jsf15_v5);
 
     free(tag);
-    return PM3_SUCCESS;
+    return res;
 }
 
 static int CmdHF15List(const char *Cmd) {

@@ -656,9 +656,7 @@ static int CmdLFHitagSDump(const char *Cmd) {
         FillFileNameByUID(fptr, card->pages[HITAGS_UID_PADR], "-dump", HITAGS_PAGE_SIZE);
     }
 
-    pm3_save_dump(filename, (uint8_t *)card->pages, mem_size, jsfHitagS);
-
-    return PM3_SUCCESS;
+    return pm3_save_dump(filename, (uint8_t *)card->pages, mem_size, jsfHitagS);
 }
 
 static int CmdLFHitagSRestore(const char *Cmd) {

@@ -2900,7 +2900,7 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
     if (NDEFGetTotalLength(data, datalen, &n) != PM3_SUCCESS)
         n = datalen;
 
-    pm3_save_dump(filename, data, n, jsfNDEF);
+    res = pm3_save_dump(filename, data, n, jsfNDEF);
 
     if (verbose == false) {
         PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfp ndefread -v`") " for more details");
@@ -2909,7 +2909,7 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
             PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfp ndefread -vv`") " for more details");
         }
     }
-    return PM3_SUCCESS;
+    return res;
 }
 
 static int CmdHFMFPNDEFWrite(const char *Cmd) {

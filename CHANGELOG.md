@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed the commands that save a dump file - they returned success when the file could not be written (@matrix)
+- Fixed `hf 14b dump` - a saved SR dump returned an error (@matrix)
+- Fixed `hf 14b ndefread` - it saved part of the last read answer instead of the NDEF message (@matrix)
+- Fixed `hf legic esave` - its buffer was never freed (@matrix)
+- Fixed `lf t55xx dump` - an incomplete page 0 read returned success without saving (@matrix)
 - Fixed `hf 15 info` - AFI, memory size and IC reference are read after the fields the tag really sent (a tag without DSFID or AFI showed wrong values), and a 256-block tag no longer shows 0 blocks (@matrix)
 - Fixed `hf 15 info` - the DSFID and password protection lock bits of NXP tags were read from the wrong bits (@matrix)
 - Fixed `hf 15 info` - on ST25TV512C/02KC the signature overflowed a stack buffer, a tag error leaked the read request, an early return left the field on, and a missing signature ended the command with an error (@matrix)

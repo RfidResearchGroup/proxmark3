@@ -1889,8 +1889,7 @@ out:
         FillFileNameByUID(fptr, data, "-dump", HITAG_UID_SIZE);
     }
 
-    pm3_save_dump(filename, data, HITAG2_MAX_BYTE_SIZE, jsfHitag2);
-    return PM3_SUCCESS;
+    return pm3_save_dump(filename, data, HITAG2_MAX_BYTE_SIZE, jsfHitag2);
 }
 
 static int CmdLFHitagView(const char *Cmd) {

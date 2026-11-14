@@ -4037,10 +4037,11 @@ static int CmdT55xxDump(const char *Cmd) {
             data[i] = BSWAP_32(cardmem[i].blockdata);
         }
 
-        pm3_save_dump(filename, (uint8_t *)data, (T55x7_BLOCK_COUNT * sizeof(uint32_t)), jsfT55x7);
+        return pm3_save_dump(filename, (uint8_t *)data, (T55x7_BLOCK_COUNT * sizeof(uint32_t)), jsfT55x7);
     }
 
-    return PM3_SUCCESS;
+    PrintAndLogEx(FAILED, "Page 0 not read in full, dump file not saved");
+    return PM3_ESOFT;
 }
 
 static int CmdT55xxRestore(const char *Cmd) {

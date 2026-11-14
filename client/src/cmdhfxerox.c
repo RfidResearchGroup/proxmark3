@@ -915,8 +915,7 @@ static int CmdHFXeroxDump(const char *Cmd) {
                          );
     }
 
-    pm3_save_dump(filename, data, blockno * XEROX_BLOCK_SIZE, jsf14b_v2);
-    return PM3_SUCCESS;
+    return pm3_save_dump(filename, data, blockno * XEROX_BLOCK_SIZE, jsf14b_v2);
 }
 
 static int CmdHFXeroxView(const char *Cmd) {

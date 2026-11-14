@@ -605,11 +605,11 @@ static int CmdFlashMemDump(const char *Cmd) {
     }
 
     if (filename[0] != '\0') {
-        pm3_save_dump(filename, dump, len, jsfRaw);
+        res = pm3_save_dump(filename, dump, len, jsfRaw);
     }
 
     free(dump);
-    return PM3_SUCCESS;
+    return res;
 }
 
 static int CmdFlashMemWipe(const char *Cmd) {

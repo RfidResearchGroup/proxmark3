@@ -1324,9 +1324,9 @@ static int CmdLegicDump(const char *Cmd) {
         FillFileNameByUID(filename, data, "-dump", 4);
     }
 
-    pm3_save_dump(filename, data, readlen, jsfLegic_v2);
+    int res = pm3_save_dump(filename, data, readlen, jsfLegic_v2);
     free(data);
-    return PM3_SUCCESS;
+    return res;
 }
 
 static int CmdLegicRestore(const char *Cmd) {
@@ -1534,13 +1534,13 @@ static int CmdLegicClone(const char *Cmd) {
 
     if (outlen > 0) {
         PrintAndLogEx(SUCCESS, "Saving cloned dump to %s", outfilename);
-        pm3_save_dump(outfilename, dump, bytes_read, jsfLegic_v2);
+        res = pm3_save_dump(outfilename, dump, bytes_read, jsfLegic_v2);
     } else if (write_to_tag) {
         char auto_filename[FILE_PATH_SIZE] = {0};
         strcat(auto_filename, "hf-legic-");
         FillFileNameByUID(auto_filename, dump, "-dump", 4);
         PrintAndLogEx(SUCCESS, "Saving cloned dump to %s", auto_filename);
-        pm3_save_dump(auto_filename, dump, bytes_read, jsfLegic_v2);
+        res = pm3_save_dump(auto_filename, dump, bytes_read, jsfLegic_v2);
     }
 
     if (write_to_tag) {
@@ -1550,12 +1550,12 @@ static int CmdLegicClone(const char *Cmd) {
             return write_res;
         }
         PrintAndLogEx(SUCCESS, "Done!");
-        return PM3_SUCCESS;
+        return res;
     }
 
     free(dump);
     PrintAndLogEx(SUCCESS, "Done!");
-    return PM3_SUCCESS;
+    return res;
 }
 
 static int CmdLegicELoad(const char *Cmd) {
@@ -1683,8 +1683,9 @@ static int CmdLegicESave(const char *Cmd) {
         legic_xor(data, numofbytes);
     }
 
-    pm3_save_dump(filename, data, numofbytes, jsfLegic_v2);
-    return PM3_SUCCESS;
+    int res = pm3_save_dump(filename, data, numofbytes, jsfLegic_v2);
+    free(data);
+    return res;
 }
 
 static int CmdLegicEView(const char *Cmd) {

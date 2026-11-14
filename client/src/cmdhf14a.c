@@ -4247,7 +4247,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
 
     NDEFRecordsDecodeAndPrint(ndef_file, ndef_size, verbose);
 
-    pm3_save_dump(filename, ndef_file, ndef_size, jsfNDEF);
+    res = pm3_save_dump(filename, ndef_file, ndef_size, jsfNDEF);
 
     if (verbose == false) {
         PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf 14a ndefread -v`") " for more details");
@@ -4259,7 +4259,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
 
     free(ndef_file);
     PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
+    return res;
 }
 
 int CmdHF14ANdefFormat(const char *Cmd) {
