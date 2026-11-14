@@ -2316,6 +2316,12 @@ static int CmdHF15Dump(const char *Cmd) {
         blocksize = 4;
     }
 
+    // ISO15693 block size field is 5 bits
+    if (blocksize > 32) {
+        PrintAndLogEx(WARNING, "Blocksize too large, using maximum 32 bytes");
+        blocksize = 32;
+    }
+
     // default fallback to scan for tag.
     if (uidlen != ISO15693_UID_LENGTH && !unaddressed) {
         scan = true;
@@ -2414,12 +2420,14 @@ static int CmdHF15Dump(const char *Cmd) {
 
         if (d[1] & 0x04) {
             tag->pagesCount = d[dCpt] + 1;
-            tag->bytesPerPage = d[dCpt + 1] + 1;
+            // block size in b5-b1, b8-b6 RFU
+            tag->bytesPerPage = (d[dCpt + 1] & 0x1F) + 1;
             dCpt += 2;
         } else {
             // Set tag memory layout values (if can't be read in SYSINFO)
             tag->bytesPerPage = blocksize;
-            tag->pagesCount = 128;
+            // 128 blocks, fewer when large blocks would not fit
+            tag->pagesCount = MIN(128, ISO15693_TAG_MAX_SIZE / blocksize);
         }
 
         if (d[1] & 0x08) {
@@ -2432,7 +2440,7 @@ static int CmdHF15Dump(const char *Cmd) {
         tag->afi = 0;
         // Set tag memory layout values (if can't be read in SYSINFO)
         tag->bytesPerPage = blocksize;
-        tag->pagesCount = 128;
+        tag->pagesCount = MIN(128, ISO15693_TAG_MAX_SIZE / blocksize);
     }
 
     if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
