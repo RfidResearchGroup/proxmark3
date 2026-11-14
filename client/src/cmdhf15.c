@@ -2626,9 +2626,15 @@ static int CmdHF15Dump(const char *Cmd) {
             }
 
             // flags, lock status, block data, CRC
-            if (resp.length < (2 + tag->bytesPerPage + 2)) {
+            if (resp.length != (2 + tag->bytesPerPage + 2)) {
                 PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(FAILED, "block %d answer too short ( %d bytes, block size %u )", blocknum, resp.length, tag->bytesPerPage);
+                PrintAndLogEx(FAILED, "block %d answer is %d bytes, expected %d for a %u byte block",
+                              blocknum, resp.length, 2 + tag->bytesPerPage + 2, tag->bytesPerPage);
+
+                if (resp.length > 4) {
+                    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("--bs %d") "`", resp.length - 4);
+                }
+
                 continue;
             }
 
