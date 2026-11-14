@@ -939,7 +939,7 @@ fi
 
 # requirements
 REQ_FILES="tools/requirements.txt"
-REQ_EXTRA="fpga/requirements.txt tools/ePassport/requirements.txt tools/btaddon/requirements.txt"
+REQ_EXTRA="client/requirements.txt fpga/requirements.txt tools/ePassport/requirements.txt tools/btaddon/requirements.txt"
 
 check_requirements() {
     local py="$1" reqfile="$2" required="$3" out line
@@ -1052,6 +1052,20 @@ else
     res_hint "$REQ_EXTRA"
 fi
 
+# with --extras, client/requirements.txt was already reported just above
+if [ "$PLATFORM_VAL" = "PM5" ] && [ "$WANT_EXTRAS" != "true" ]; then
+    if [ -n "$VENV_PY" ] && "$VENV_PY" -I -c 'import bleak' >/dev/null 2>&1; then
+        res_ok "bleak - the BLE roles of client/pm5_ble_bridge.py are available"
+    else
+        res_skip "bleak not installed - only client/pm5_ble_bridge.py BLE roles need it"
+        res_hint "native 'pm3 -p ble:<MAC>' and wifi 'pm3 -p tcp:' do not"
+
+        if [ -n "$VENV_PY" ]; then
+            res_hint "install with: ${VENV_PY#"$PM3PATH"/} -m pip install -r client/requirements.txt"
+        fi
+    fi
+fi
+
 if have uv; then
     res_ok "uv - $(first_line uv --version) (tools/pm3_tests.sh uses it when present)"
 else
@@ -1075,6 +1089,24 @@ if [ "$OS" = "Linux" ]; then
         res_warn "user is not in the '$DEV_GROUP' group - /dev/ttyACM0 will be denied"
         res_hint "fix with: make accessrights   (then log out and back in)"
         NEED_ACCESSRIGHTS=true
+    fi
+
+    # 'make accessrights' adds this one too, when the group exists
+    if getent group bluetooth >/dev/null 2>&1; then
+        case "$PLATFORM_VAL $EXTRAS_VAL" in
+            *PM5*|*BTADDON*) BT_SEVERITY="warn" ;;
+            *)               BT_SEVERITY="note" ;;
+        esac
+
+        if id -nG 2>/dev/null | tr ' ' '\n' | grep -qx bluetooth; then
+            res_ok "user is in the 'bluetooth' group - 'pm3 -p bt:' and 'ble:' can connect"
+        elif [ "$BT_SEVERITY" = "warn" ]; then
+            res_warn "user is not in the 'bluetooth' group - 'pm3 -p bt:' / 'ble:' may be denied"
+            res_hint "fix with: make accessrights   (then log out and back in)"
+            NEED_ACCESSRIGHTS=true
+        else
+            res_skip "user is not in the 'bluetooth' group - only matters for 'pm3 -p bt:' / 'ble:'"
+        fi
     fi
 
     if [ -f /etc/udev/rules.d/77-pm3-usb-device-blacklist.rules ] || \
@@ -1107,7 +1139,24 @@ if [ "$OS" = "Linux" ]; then
             res_warn "$PM3_PORT present but not read/writable by this user"
         fi
     else
-        res_info "no /dev/ttyACM* found - plug the Proxmark3 in and rerun to check access"
+        res_info "no /dev/ttyACM* found - plug in over USB and rerun to check those rights"
+        res_hint "a wireless link ('pm3 -p tcp:' / 'ble:' / 'bt:') does not use /dev/ttyACM*,"
+        res_hint "but the rules above still matter: every Proxmark gets flashed over USB"
+    fi
+
+    # ble_resolve_name() opens a raw HCI socket; client/Makefile sets this on install
+    PM3BIN="$(command -v proxmark3 2>/dev/null)"
+    if [ -n "$PM3BIN" ]; then
+        GETCAP="$(command -v getcap 2>/dev/null)"
+        [ -n "$GETCAP" ] || GETCAP=/usr/sbin/getcap
+
+        if [ -x "$GETCAP" ]; then
+            if "$GETCAP" "$PM3BIN" 2>/dev/null | grep -q cap_net_raw; then
+                res_ok "installed client has cap_net_raw - 'pm3 -p ble:<name>' works unprivileged"
+            else
+                res_skip "installed client has no cap_net_raw - 'pm3 -p ble:<name>' needs sudo, 'ble:<MAC>' does not"
+            fi
+        fi
     fi
 
     if [ "$IS_WSL" = "true" ]; then

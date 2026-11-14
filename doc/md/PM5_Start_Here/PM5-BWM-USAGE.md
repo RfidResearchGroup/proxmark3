@@ -216,8 +216,9 @@ On success you'll see e.g. `BLE connected, MTU 512, char handle 0x0014`.
 
 ### 2.2 BLE bridge — cross-platform (`pm5_ble_bridge.py`)
 
-Requires Python 3 and `bleak` (`pip install bleak`). It bridges the BWM's BLE SPP
-to a PTY or a TCP socket that the pm3 client then opens.
+Requires Python 3 and `bleak` (`python3 -m pip install -r client/requirements.txt`,
+or just `pip install bleak`). It bridges the BWM's BLE SPP to a PTY or a TCP
+socket that the pm3 client then opens.
 
 > [!IMPORTANT]
 > Run the bridge on the machine that has the **Bluetooth radio**.
