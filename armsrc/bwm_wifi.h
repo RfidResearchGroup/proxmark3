@@ -50,6 +50,7 @@ int bwm_cmd(uint16_t cmd, const uint8_t *req, uint16_t req_len,
 
 // High-level: full STA-join + TCP-server bring-up. On success writes the
 // BWM's IPv4 (host byte order, a in low byte) to *ip_out.
+// PM3_ENODATA: no IP yet but not refused (may still come up), PM3_EFAILED: join refused.
 int bwm_wifi_forward_up(const char *ssid, const char *password,
                         const char *hostname, uint16_t tcp_port, uint32_t *ip_out);
 
@@ -87,6 +88,9 @@ int bwm_wifi_forward_status(uint8_t *state, uint32_t *ip_out);
 #define BWM_OTA_WRITE_TIMEOUT_MS   20000
 #endif
 #define BWM_CMD_GET_VERSION_INFO   1000   // resp: running firmware version string
+#define BWM_CMD_GET_SYS_FREE_HEAP  1002   // resp: u32 free [+ u32 lowest since boot + u32 largest block]
+#define BWM_CMD_GET_SYS_CHIP_INFO  1023   // resp: bwm_chip_info_t. Newer ESP fw only
+#define BWM_CMD_GET_SYS_RUNTIME_STATS 1024 // resp: u32 uptime s, u8 reset reason, 4 x u16 uart rx errors, u8 n, n x {u8 len, name, u16 stack free}
 #define BWM_CMD_STOP_BLE_SPP       4022   // no payload: stop BLE during OTA (flash contention)
 #define BWM_CMD_START_BLE_SPP      4021   // no payload: restore BLE after OTA
 #define BWM_CMD_SET_BLE_DEVICE_NAME 4002   // req: name bytes
@@ -108,6 +112,23 @@ int bwm_esp_host_value_get(uint8_t id, uint32_t *value, uint32_t timeout_ms);
 #define BWM_CMD_GET_BLE_SPP_STATUS 4020   // resp: u8 0=stopped 1=advertising 2=client connected
 #define BWM_BLE_STATE_CONNECTED    2
 int bwm_esp_get_ble_state(uint8_t *state, uint32_t timeout_ms);
+// heap[0..2] = free, lowest since boot, largest block; *count = words filled (older ESP fw: 1)
+int bwm_esp_get_free_heap(uint32_t heap[3], uint8_t *count, uint32_t timeout_ms);
+typedef struct {
+    uint8_t model;          // esp_chip_model_t, 12 = ESP32-C2
+    uint8_t pkg;            // eFuse package version
+    uint16_t revision;      // MXX, 102 = v1.2
+    uint32_t features;
+    uint32_t flash_id;      // JEDEC: manufacturer << 16 | type << 8 | capacity
+    uint32_t flash_size;    // physical, bytes
+} PACKED bwm_chip_info_t;
+int bwm_esp_get_chip_info(bwm_chip_info_t *ci, uint32_t timeout_ms);
+// Debug: ESP uptime, reset reason and per-task free stack (hw status at debug level)
+void bwm_esp_print_runtime_stats(void);
+// Per-host forwarding on/off (BWM_CMD_SET_FORWARD_TAGGED). PM3_EFAILED: ESP fw without it.
+int bwm_esp_set_forward_tagged(bool on, uint8_t *applied);
+// JEDEC manufacturer byte -> flash maker name, "?" if unknown
+const char *bwm_flash_vendor(uint8_t mfr);
 
 // BLE settings behind `hw bwm ble` (app_com_defs.h, BLE block @4000).
 #define BWM_CMD_GET_BLE_DEVICE_ADDR    4007   // resp: 6 bytes

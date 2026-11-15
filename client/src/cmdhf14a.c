@@ -51,6 +51,7 @@
 #include "mbedtls/cmac.h"
 #include "jansson.h"             // JSON parsing
 #include "pla.h"                 // ECP parsing
+#include "parsers/parsetransit.h"  // transit card identification
 
 static bool g_apdu_in_framing_enable = true;
 bool Get_apdu_in_framing(void) {
@@ -238,7 +239,7 @@ const char *getTagInfo(uint8_t uid) {
 static const hintAIDList_t hintAIDList[] = {
     { "\xA0\x00\x00\x06\x47\x2F\x00\x01", 8, "", 0, "FIDO", "hf fido" },
     { "\xA0\x00\x00\x03\x08\x00\x00\x10\x00\x01\x00", 11, "", 0, "PIV", "" },
-    { "\xD2\x76\x00\x01\x24\x01", 8, "", 0, "OpenPGP", "" },
+    { "\xD2\x76\x00\x01\x24\x01", 6, "", 0, "OpenPGP", "" },
     { "\x31\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31", 14, "", 0, "EMV (pse)", "emv" },
     { "\x32\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31", 14, "", 0, "EMV (ppse)", "emv" },
     { "\x41\x44\x20\x46\x31", 5, "", 0, "CIPURSE", "hf cipurse" },
@@ -1314,6 +1315,9 @@ int CmdHF14ASniff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// ISO/IEC 14443-4 7.5.6 leaves the retransmission count to the PCD
+#define ISO14A_MAX_RETRANS 2
+
 int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, bool silentMode) {
 
     uint16_t cmdc = 0;
@@ -1332,11 +1336,19 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
         cmdc |= ISO14A_NO_DISCONNECT;
     }
 
+    // ISO/IEC 14443-4 7.5.3: the block number toggles once the PICC has answered
+    // the block, not when it is built.  Toggling here left it out of step with the
+    // card for every exchange that did not complete, and nothing but a reselect
+    // put it back
     uint8_t data[PM3_CMD_DATA_SIZE] = { 0x0a | gs_frames_num, 0x00 };
-    gs_frames_num ^= 1;
 
     int min = MIN((int)(g_conn.max_cmd_data_size - 2), (datainlen & 0x1FF));
     memcpy(&data[2], datain, min);
+
+    // R(NAK) for this block, same CID as the I-block above
+    uint8_t nak[2] = { (uint8_t)(0xBA | gs_frames_num), 0x00 };
+    uint8_t attempt = 0;
+
     SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | cmdc, data, min + 2);
 
     uint8_t *recv;
@@ -1348,10 +1360,25 @@ resend:
         int iLen = rlen_1245;
 
         if (iLen == 0) {
+            // ISO/IEC 14443-4 7.5.6: a lost answer is a transmission error, not a
+            // dead exchange.  R(NAK) asks the PICC for its last block again
+            if (attempt++ < ISO14A_MAX_RETRANS) {
+                SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT | cmdc, nak, sizeof(nak));
+                goto resend;
+            }
             if (silentMode == false) {
                 PrintAndLogEx(ERR, "No card response");
             }
             return PM3_ECARDEXCHANGE;
+        }
+
+        // R(ACK) carrying the other block number: the PICC never got our block,
+        // so it goes out once more
+        if ((recv[0] & 0xF6) == 0xA2 && (recv[0] & 0x01) != (data[0] & 0x01)) {
+            if (attempt++ < ISO14A_MAX_RETRANS) {
+                SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | cmdc, data, min + 2);
+                goto resend;
+            }
         }
 
         *dataoutlen = iLen - 2;
@@ -1390,6 +1417,9 @@ resend:
             return PM3_ELENGTH;
         }
 
+        // the PICC answered this block, so the exchange is complete
+        gs_frames_num ^= 1;
+
         memcpy(dataout, &recv[2], *dataoutlen);
 
         // CRC Check
@@ -1401,6 +1431,8 @@ resend:
         }
 
     } else {
+        // the device itself went quiet, not the card.  Asking again would only
+        // stack up another full wait
         if (silentMode == false) {
             PrintAndLogEx(ERR, "Reply timeout.");
         }
@@ -3146,6 +3178,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     bool isISO18092 = false;
     bool isNTAG424 = false;
     bool isSEOS = false;
+    bool isWaveshare = false;
+    bool isGoodisplay = false;
     int nxptype = MTNONE;
 
     if (card.uidlen <= 4) {
@@ -3237,8 +3271,9 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 break;
             }
             case 0x46: {
-                if (memcmp(card.uid, "FSTN10m", 7) == 0) {
+                if ((memcmp(card.uid, "FSTN10m", 7) == 0) || (memcmp(card.uid, "FSTN11m", 7) == 0)) {
                     isMifareClassic = false;
+                    isWaveshare = true;
                     printTag("Waveshare NFC-Powered e-Paper 1.54\" (please disregard MANUFACTURER mapping above)");
                 }
                 break;
@@ -3246,6 +3281,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             case 0x57: {
                 if (memcmp(card.uid, "WSDZ10m", 7) == 0) {
                     isMifareClassic = false;
+                    isWaveshare = true;
                     printTag("Waveshare NFC-Powered e-Paper (please disregard MANUFACTURER mapping above)");
                 }
                 break;
@@ -3351,6 +3387,13 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             isSEOS = true;
             isNTAG424 = false;
             isMifareDESFire = false;
+        }
+
+        // Goodisplay NFC e-paper (FM1280), historical bytes 90 <UID> 00
+        if ((card.sak == 0x28) && (card.uidlen == 4) && (card.ats_len == 13) &&
+                (memcmp(card.ats, "\x0B\x78\x33\xA0\x02\x90", 6) == 0) &&
+                (memcmp(card.ats + 6, card.uid, 4) == 0) && (card.ats[10] == 0x00)) {
+            isGoodisplay = true;
         }
 
         PrintAndLogEx(SUCCESS, "ATS: " _YELLOW_("%s")"[ %02X %02X ]", sprint_hex(card.ats, card.ats_len - 2), card.ats[card.ats_len - 2], card.ats[card.ats_len - 1]);
@@ -3616,8 +3659,17 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfp info") "`");
     }
 
-    if (isMifareDESFire && (isMagic == MAGIC_FLAG_NONE) && isEMV == false) {
+    bool mfdes_hint = (isMifareDESFire && (isMagic == MAGIC_FLAG_NONE) && isEMV == false);
+    if (mfdes_hint) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfdes info") "`");
+    }
+
+    // transit cards known by their ATS alone, no card exchange
+    transit_mfdes_info_t transit_info = { .aids_known = false, .card = &card };
+    transit_idents_t transit_ids;
+    if (card.ats_len > 0 && transit_mfdes_identify(&transit_info, &transit_ids) > 0) {
+        transit_print_idents(&transit_ids);
+        transit_print_ident_hints(&transit_ids, mfdes_hint ? "hf mfdes info" : NULL);
     }
 
     if (isST) {
@@ -3638,22 +3690,25 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     if (isFUDAN) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf fudan dump") "`");
-        /*
-        PrintAndLogEx(HINT, "  hf 14a raw -a -b 7 -k 26");
-        PrintAndLogEx(HINT, "  hf 14a raw -k -c 3000");
-        PrintAndLogEx(HINT, "  hf 14a raw -k -c 3001");
-        PrintAndLogEx(HINT, "  hf 14a raw -k -c 3002");
-        PrintAndLogEx(HINT, "  hf 14a raw -k -c 3003");
-        PrintAndLogEx(HINT, "  hf 14a raw -k -c 3004");
-        PrintAndLogEx(HINT, "  hf 14a raw -k -c 3005");
-        PrintAndLogEx(HINT, "  hf 14a raw -k -c 3006");
-        PrintAndLogEx(HINT, "  hf 14a raw -c 3007");
-        */
     }
 
     if (isNTAG424) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf ntag424 info") "`");
     }
+
+#ifdef HAVE_GD
+    if (isWaveshare) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf waveshare load -h") "`");
+    }
+
+    if (isGoodisplay) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf goodisplay load -h") "`");
+    }
+#else
+    // e-paper commands need libgd
+    (void)isWaveshare;
+    (void)isGoodisplay;
+#endif
 
     if (isMifareClassic || isMifareMini) {
         if (((isMagic & MAGIC_FLAG_GEN_1A) == MAGIC_FLAG_GEN_1A) || ((isMagic & MAGIC_FLAG_GEN_1B) == MAGIC_FLAG_GEN_1B)) {

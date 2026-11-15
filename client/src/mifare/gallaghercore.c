@@ -86,6 +86,7 @@ int gallagher_construct_credential(GallagherCredentials_t *creds, uint8_t region
     creds->issue_level = issue;
     creds->mes = mes;
     memcpy(creds->csn, csn, csn_len);
+    creds->csn_len = csn_len;
     memcpy(creds->site_key, site_key, 16);
     return PM3_SUCCESS;
 }
@@ -117,7 +118,8 @@ int gallagher_parse_cad(uint8_t *cad, uint8_t region, uint16_t facility) {
 
 
 void gallagher_decode_creds(uint8_t *eight_bytes, GallagherCredentials_t *creds) {
-    uint8_t *arr = eight_bytes;
+    uint8_t arr[8];
+    memcpy(arr, eight_bytes, sizeof(arr));
 
     descramble(arr, 8);
 

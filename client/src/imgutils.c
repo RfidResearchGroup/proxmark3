@@ -1,6 +1,10 @@
 
 #include <assert.h>
+#include <stdlib.h>
+#include <string.h>
 #include "imgutils.h"
+#include "ui.h"
+#include "pm3_cmd.h"
 
 struct ycbcr_t {
     int y;
@@ -203,4 +207,59 @@ gdImagePtr img_crop_to_fit(gdImagePtr orig, int width, int height) {
     }
 
     return res;
+}
+
+int img_load_dithered(const char *filename, int width, int height, int *palette, int palette_size, gdImagePtr *out) {
+
+    gdImagePtr rgb_img = gdImageCreateFromFile(filename);
+    if (rgb_img == NULL) {
+        PrintAndLogEx(WARNING, "Could not load image from " _YELLOW_("%s"), filename);
+        return PM3_EFILE;
+    }
+
+    gdImagePtr scaled_img = img_crop_to_fit(rgb_img, width, height);
+    gdImageDestroy(rgb_img);
+    if (scaled_img == NULL) {
+        PrintAndLogEx(WARNING, "Failed to scale input image");
+        return PM3_EFILE;
+    }
+
+    gdImagePtr pal_img = img_palettize(scaled_img, palette, palette_size);
+    gdImageDestroy(scaled_img);
+    if (pal_img == NULL) {
+        PrintAndLogEx(WARNING, "Could not convert image");
+        return PM3_EMALLOC;
+    }
+
+    *out = pal_img;
+    return PM3_SUCCESS;
+}
+
+int img_save(gdImagePtr img, const char *filename) {
+    if (gdImageFile(img, filename)) {
+        PrintAndLogEx(INFO, "Save converted image to " _YELLOW_("%s"), filename);
+        return PM3_SUCCESS;
+    }
+    PrintAndLogEx(WARNING, "Could not save converted image %s", filename);
+    return PM3_EFILE;
+}
+
+uint8_t *img_to_bitplane(gdImagePtr img, int color) {
+    int width8 = (gdImageSX(img) + 7) / 8;
+
+    // start all white, clear the bits of matching pixels
+    uint8_t *plane = malloc(width8 * gdImageSY(img));
+    if (plane == NULL) {
+        return NULL;
+    }
+    memset(plane, 0xFF, width8 * gdImageSY(img));
+
+    for (int y = 0; y < gdImageSY(img); y++) {
+        for (int x = 0; x < gdImageSX(img); x++) {
+            if (gdImageGetPixel(img, x, y) == color) {
+                plane[y * width8 + x / 8] &= ~(0x80 >> (x % 8));
+            }
+        }
+    }
+    return plane;
 }

@@ -569,9 +569,13 @@ int saveFileEx(const char *preferredName, const char *suffix, const void *data, 
         free(fileName);
         return PM3_EFILE;
     }
-    fwrite(data, 1, datalen, f);
-    fflush(f);
-    fclose(f);
+    size_t written = fwrite(data, 1, datalen, f);
+    // fclose() flushes, a full disk shows up there
+    if (fclose(f) != 0 || written != datalen) {
+        PrintAndLogEx(FAILED, "error, can't save the file `" _YELLOW_("%s") "`", fileName);
+        free(fileName);
+        return PM3_EFILE;
+    }
     PrintAndLogEx(SUCCESS, "Saved " _YELLOW_("%zu") " bytes to binary file `" _YELLOW_("%s") "`", datalen, fileName);
     free(fileName);
     return PM3_SUCCESS;
@@ -1973,6 +1977,7 @@ int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata,
     if (bytes_read != fsize) {
         PrintAndLogEx(FAILED, "error, bytes read mismatch file size");
         free(*pdata);
+        *pdata = NULL;
         return PM3_EFILE;
     }
 
@@ -2025,6 +2030,7 @@ int loadFile_TXTsafe(const char *preferredName, const char *suffix, void **pdata
     if (bytes_read != fsize) {
         PrintAndLogEx(FAILED, "error, bytes read mismatch file size");
         free(*pdata);
+        *pdata = NULL;
         return PM3_EFILE;
     }
 
@@ -2112,6 +2118,7 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
     if (newdump == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(*pdata);
+        *pdata = NULL;
         return PM3_EMALLOC;
     } else {
         *pdata = newdump;
@@ -2591,6 +2598,7 @@ int loadFileMCT_safe(const char *preferredName, void **pdata, size_t *datalen) {
     if (newdump == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(*pdata);
+        *pdata = NULL;
         return PM3_EMALLOC;
     } else {
         *pdata = newdump;
@@ -2976,7 +2984,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
                         );
 
         if (*datalen > ISO15693_TAG_MAX_SIZE) {
-            PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   sptr=%zu (%04zx) -- exceeded maxdatalen"
+            PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen"
                           , ISO15693_TAG_MAX_SIZE
                           , ISO15693_TAG_MAX_SIZE
                           , *datalen
@@ -2987,7 +2995,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         }
         tag->pagesCount = *datalen / 4;
         if (tag->pagesCount > ISO15693_TAG_MAX_PAGES) {
-            PrintAndLogEx(ERR, "loadFileJSONex: maxpagecount=%zu (%04zx)   pagecount=%u (%04x) -- exceeded maxpagecount"
+            PrintAndLogEx(ERR, "loadFileJSONex: maxpagecount=%d (%04x)   pagecount=%u (%04x) -- exceeded maxpagecount"
                           , ISO15693_TAG_MAX_PAGES
                           , ISO15693_TAG_MAX_PAGES
                           , tag->pagesCount
@@ -3034,7 +3042,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
         tag->pagesCount = sptr / 4;
         if (tag->pagesCount > ISO15693_TAG_MAX_PAGES) {
-            PrintAndLogEx(ERR, "loadFileJSONex: maxpagecount=%zu (%04zx)   pagecount=%u (%04x) -- exceeded maxpagecount"
+            PrintAndLogEx(ERR, "loadFileJSONex: maxpagecount=%d (%04x)   pagecount=%u (%04x) -- exceeded maxpagecount"
                           , ISO15693_TAG_MAX_PAGES
                           , ISO15693_TAG_MAX_PAGES
                           , tag->pagesCount
@@ -3081,7 +3089,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
         tag->pagesCount = sptr / 8;
         if (tag->pagesCount > ISO15693_TAG_MAX_PAGES) {
-            PrintAndLogEx(ERR, "loadFileJSONex: maxpagecount=%zu (%04zx)   pagecount=%u (%04x) -- exceeded maxpagecount"
+            PrintAndLogEx(ERR, "loadFileJSONex: maxpagecount=%d (%04x)   pagecount=%u (%04x) -- exceeded maxpagecount"
                           , ISO15693_TAG_MAX_PAGES
                           , ISO15693_TAG_MAX_PAGES
                           , tag->pagesCount
@@ -3579,7 +3587,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
     // Nothing above claimed this file. Falling through to `out` used to return
     // PM3_SUCCESS with datalen 0, which reads to the caller as "loaded, empty".
     PrintAndLogEx(ERR, "loadFileJSONex: unsupported FileType `" _YELLOW_("%s") "`", ctype);
-    PrintAndLogEx(HINT, "Hint: the file may have been written by a newer client version");
+    PrintAndLogEx(HINT, "Hint: File may have been written by a newer client version");
     retval = PM3_EFILE;
 
 out:
@@ -4252,7 +4260,7 @@ int convert_15_dump_format(uint8_t **dump, size_t *dumplen, bool verbose) {
 
     if (n == ARRAYLEN(g_iso15_layouts)) {
         PrintAndLogEx(FAILED, "Unsupported ISO15693 dump length ( %zu bytes )", *dumplen);
-        PrintAndLogEx(HINT, "Hint: known lengths are 2139, %d, 2236, 2331 and %d bytes"
+        PrintAndLogEx(HINT, "Hint: Known lengths are 2139, %d, 2236, 2331 and %d bytes"
                       , ISO15_V4_DUMP_LENGTH
                       , ISO15_V5_DUMP_LENGTH
                      );
@@ -4755,7 +4763,7 @@ static int load_dump_check_len(const char *fn, void **pdump, size_t *dumplen, si
                   , *dumplen
                   , maxdumplen
                  );
-    PrintAndLogEx(HINT, "Hint: the file may come from a different client version, or not be a dump of this tag type");
+    PrintAndLogEx(HINT, "Hint: File may come from a different client version, or not be a dump of this tag type");
 
     free(*pdump);
     *pdump = NULL;
@@ -4872,8 +4880,7 @@ int pm3_save_dump_json(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) 
         return PM3_EINVARG;
     }
 
-    saveFileJSON(fn, jsft, d, n, NULL);
-    return PM3_SUCCESS;
+    return saveFileJSON(fn, jsft, d, n, NULL);
 }
 
 int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
@@ -4885,9 +4892,9 @@ int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
         return PM3_EINVARG;
     }
 
-    saveFile(fn, ".bin", d, n);
-    saveFileJSON(fn, jsft, d, n, NULL);
-    return PM3_SUCCESS;
+    int res = saveFile(fn, ".bin", d, n);
+    int res_json = saveFileJSON(fn, jsft, d, n, NULL);
+    return (res != PM3_SUCCESS) ? res : res_json;
 }
 
 int pm3_save_dump_cb(const char *fn, uint8_t *d, size_t n, JSONFileType jsft, void (*callback)(json_t *)) {
@@ -4899,9 +4906,9 @@ int pm3_save_dump_cb(const char *fn, uint8_t *d, size_t n, JSONFileType jsft, vo
         return PM3_EINVARG;
     }
 
-    saveFile(fn, ".bin", d, n);
-    saveFileJSON(fn, jsft, d, n, callback);
-    return PM3_SUCCESS;
+    int res = saveFile(fn, ".bin", d, n);
+    int res_json = saveFileJSON(fn, jsft, d, n, callback);
+    return (res != PM3_SUCCESS) ? res : res_json;
 }
 
 int pm3_save_mf_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
@@ -4910,7 +4917,7 @@ int pm3_save_mf_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
         PrintAndLogEx(INFO, "No data to save, skipping...");
         return PM3_EINVARG;
     }
-    saveFileEx(fn, ".bin", d, n, spDump);
+    int res = saveFileEx(fn, ".bin", d, n, spDump);
 
     iso14a_mf_extdump_t jd = {0};
     jd.card_info.ats_len = 0;
@@ -4933,8 +4940,8 @@ int pm3_save_mf_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
     }
     jd.dump = d;
     jd.dumplen = n;
-    saveFileJSON(fn, jsfMfc_v2, (uint8_t *)&jd, sizeof(jd), NULL);
-    return PM3_SUCCESS;
+    int res_json = saveFileJSON(fn, jsfMfc_v2, (uint8_t *)&jd, sizeof(jd), NULL);
+    return (res != PM3_SUCCESS) ? res : res_json;
 }
 
 int pm3_save_fm11rf08s_nonces(const char *fn, iso14a_fm11rf08s_nonces_with_data_t *d, bool with_data) {
@@ -4945,9 +4952,7 @@ int pm3_save_fm11rf08s_nonces(const char *fn, iso14a_fm11rf08s_nonces_with_data_
     }
 
     if (with_data) {
-        saveFileJSON(fn, jsfFM11RF08SNoncesWithData, (uint8_t *)d, sizeof(*d), NULL);
-    } else {
-        saveFileJSON(fn, jsfFM11RF08SNonces, (uint8_t *)d, sizeof(*d), NULL);
+        return saveFileJSON(fn, jsfFM11RF08SNoncesWithData, (uint8_t *)d, sizeof(*d), NULL);
     }
-    return PM3_SUCCESS;
+    return saveFileJSON(fn, jsfFM11RF08SNonces, (uint8_t *)d, sizeof(*d), NULL);
 }

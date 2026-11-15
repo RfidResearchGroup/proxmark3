@@ -552,18 +552,18 @@ static int CmdCOTAGSim(const char *Cmd) {
                   _CYAN_("Note: COTAG tag full repeating sequence is 128 bits, but readers seem to care about LSB 64 bits only."),
                   "lf cotag sim                                        --> only detect the reader\n"
                   "lf cotag sim -r A37E0D37000C1337                    --> send 64 bits\n"
-                  "lf cotag sim -r 0000000000000002A37E0D37000C1337\n"
-                  "lf cotag sim --floor 32                             --> more sensitive, for a reader further away\n"
-                  "lf cotag sim -r A37E0D37000C1337 --hb_delay_us 2909 --> time the half bit instead of counting cycles\n"
+                  "lf cotag sim -r 0000000000000002A37E0D37000C1337    --> send 128 bits\n"
+                  "lf cotag sim -r A37E0D37000C1337 --active           --> send 64 bits, active tx mode\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("r", "raw", "<hex>", "raw data to answer with, " STR(LF_COTAG_SIM_MIN_BYTES) " to " STR(LF_COTAG_SIM_DATA_LEN) " bytes (64-128 bits)"),
         arg_int0("n", "repeat", "<1-" STR(LF_COTAG_SIM_MAX_REPEATS) ">", "repeat data frame this many times per answer (def 1)"),
-        arg_int0(NULL, "floor", "<16-65535>", "minimum rise threshold (def " STR(LF_COTAG_SIM_FLOOR) ")"),
-        arg_int0(NULL, "hb_delay_us", "<2900-2918>", "custom half bit delay [us] (should be around 2909)"),
-        arg_lit0("v", "verbose", "report detected reader activation sequence while answering"),
+        arg_lit0(NULL, "active", "simulate tag with active tx instead (may give better range but may not work with all readers)"),
+        arg_int0(NULL, "hb_delay_us", "<2900-2918>", "custom half bit delay [us] for active mode (should be around 2909)"),
+        arg_int0(NULL, "floor", "<16-65535>", "minimum rise threshold for activation detection (def " STR(LF_COTAG_SIM_FLOOR) ")"),
+        arg_lit0("v", "verbose", "report detected reader activation while answering"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -572,9 +572,10 @@ static int CmdCOTAGSim(const char *Cmd) {
     int dlen = 0;
     CLIGetHexWithReturn(ctx, 1, data, &dlen);
     int repeats = arg_get_int_def(ctx, 2, 1);
-    int thr_floor = arg_get_int_def(ctx, 3, LF_COTAG_SIM_FLOOR);
+    bool active = arg_get_lit(ctx, 3);
     int hb_delay = arg_get_int_def(ctx, 4, 0);
-    bool verbose = arg_get_lit(ctx, 5);
+    int thr_floor = arg_get_int_def(ctx, 5, LF_COTAG_SIM_FLOOR);
+    bool verbose = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
     if (dlen && (dlen < LF_COTAG_SIM_MIN_BYTES || dlen > LF_COTAG_SIM_DATA_LEN)) {
@@ -598,12 +599,18 @@ static int CmdCOTAGSim(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    if (hb_delay && active == false) {
+        PrintAndLogEx(ERR, "hb_delay_us can only be used with --active");
+        return PM3_EINVARG;
+    }
+
     lf_cotagsim_t payload = {
         .thr_floor = (uint16_t)thr_floor,
         .hb_delay_us = (uint16_t)hb_delay,
         .nbits = (uint8_t)(dlen * 8),
         .repeats = (uint8_t)repeats,
         .verbose = verbose,
+        .active = active,
     };
     memcpy(payload.data, data, dlen);
 

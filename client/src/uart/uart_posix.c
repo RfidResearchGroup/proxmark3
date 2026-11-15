@@ -647,7 +647,8 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
     if (spu->ble) {
         size_t got = 0;
         int ms = (int)(timeout.tv_sec * 1000 + timeout.tv_usec / 1000);
-        int r = ble_recv((ble_conn_t *)spu->ble, pbtRx, pszMaxRxLen, &got, ms);
+        pthread_once(&wakeup_once, uart_wakeup_create);
+        int r = ble_recv((ble_conn_t *)spu->ble, pbtRx, pszMaxRxLen, &got, ms, wakeup_pipe[0]);
         *pszRxLen = (uint32_t)got;
         if (r < 0)
             return PM3_ENOTTY;

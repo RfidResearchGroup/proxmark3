@@ -78,6 +78,9 @@ int wiegand_set_plain_binstr(const char *binstr, wiegand_input_t *input);
 // Decode ASN.1 PACS input into the normalized binary representation used by downstream callers.
 int wiegand_set_new_pacs_binstr(const uint8_t *pacs, size_t pacs_len, wiegand_input_t *input);
 
+// Right-align a sentinel bit plus the payload bits in out_len bytes, as HID stores PACS on iCLASS and MIFARE.
+int wiegand_pack_sentinel_bytes(const char *binstr, uint8_t *out, size_t out_len);
+
 // Build HID transport words from a plain Wiegand payload, including sentinel placement and headers.
 int wiegand_pack_bin_with_hid_header(const char *binstr, wiegand_message_t *packed);
 

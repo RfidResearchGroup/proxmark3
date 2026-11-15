@@ -32,7 +32,7 @@
 |lf_Indala-00002-12345678-1A.pm3          |Indala credit-card style card|
 |lf_indala_4041x_234_21801.pm3            |Indala 4041X 26-bit|
 |lf_Indala-504278295.pm3                  |PSK 26 bit indala|
-|lf_Indala-a0000000e6bd0e92-weak.pm3      |T5577 as Indala PSK1 RF/32, 24 mm off a Proxmark3 Easy antenna. very weak read (Raw: a0000000e6bd0e92)|
+|lf_Indala-a00000008f49d2a1-weak.pm3      |T5577 as Indala PSK1 RF/32, 24 mm off a Proxmark3 Easy antenna. very weak read (Raw: a00000008f49d2a1)|
 |lf_IOProx-XSF-01-3B-44725.pm3            |IO Prox FSK RF/64 ID in name|
 |lf_IOProx-XSF-01-BE-03011.pm3            |IO Prox FSK RF/64 ID in name|
 |lf_Keri.pm3                              |Keri PSK-3 Key Ring tag (back of tag: 1460 3411)|

@@ -41,7 +41,8 @@
 #define T55X7_VIKING_CONFIG_BLOCK       0x00088040  // ASK, compat mode, data rate 32, Manchester, 2 data blocks
 #define T55X7_NORALSY_CONFIG_BLOCK      0x00088C6A  // ASK, compat mode,   (NORALSY - KCP3000), data rate 32, 3 data blocks
 #define T55X7_PRESCO_CONFIG_BLOCK       0x00088088  // ASK, data rate 32, Manchester, 4 data blocks, STT
-#define T55X7_SECURAKEY_CONFIG_BLOCK    0x000C8060  // ASK, Manchester, data rate 40, 3 data blocks
+#define T55X7_SECURAKEY_CONFIG_BLOCK       0x000C8060  // ASK, Manchester, data rate 40, 3 data blocks
+#define T55X7_SECURAKEY_SHORT_CONFIG_BLOCK 0x000C8040  // ASK, Manchester, data rate 40, 2 data blocks
 #define T55X7_UNK_CONFIG_BLOCK          0x000880FA  // ASK, Manchester, data rate 32, 7 data blocks STT, Inverse ...
 #define T55X7_PYRONIX_CONFIG_BLOCK      0x00088C40  // ASK, Manchester, data rate 32, 2 data blocks
 #define T55X7_TEXECOM_CONFIG_BLOCK      0x001C8020  // ASK, Manchester, data rate 128, 1 data block
@@ -57,7 +58,10 @@
 #define T55X7_HID_26_CONFIG_BLOCK       0x00107060  // FSK2a, hid 26 bit - compat mode, data rate 50, 3 data blocks
 #define T55X7_PARADOX_CONFIG_BLOCK      0x00107060  // FSK2a, hid 26 bit - compat mode, data rate 50, 3 data blocks
 #define T55X7_AWID_CONFIG_BLOCK         0x00107060  // FSK2a, hid 26 bit - compat mode, data rate 50, 3 data blocks
+#define T55X7_WATCHNET_CONFIG_BLOCK     0x00107060  // FSK2a, data rate 50, 3 data blocks
 #define T55X7_PYRAMID_CONFIG_BLOCK      0x00107080  // FSK2a, Pyramid 26 bit - compat mode, data rate 50, 4 data blocks
+#define T55X7_KERI_NXT_CONFIG_BLOCK     0x00107080  // FSK2a, data rate 50, 4 data blocks
+#define T55X7_ICT_CONFIG_BLOCK          0x001070E0  // FSK2a, data rate 50, 7 data blocks
 #define T55X7_IOPROX_CONFIG_BLOCK       0x00147040  // FSK2a, data rate 64, 2 data blocks
 
 #define T55X7_INDALA_64_CONFIG_BLOCK    0x00081040  // PSK1, indala 64 bit - compat mode, psk carrier FC * 2, data rate 32, maxblock 2

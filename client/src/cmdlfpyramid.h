@@ -25,5 +25,6 @@ int CmdLFPyramid(const char *Cmd);
 int demodPyramid(bool verbose);
 int detectPyramid(uint8_t *dest, size_t *size, int *waveStartIdx);
 int getPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits);
+int getPyramidBitsEx(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8_t *pyramidBits);
 #endif
 

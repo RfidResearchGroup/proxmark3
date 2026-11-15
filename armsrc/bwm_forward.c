@@ -14,6 +14,7 @@
 #include "bwm_forward.h"
 
 #include "bwm_uart_at32.h"
+#include "bwm_wifi.h"   // bwm_esp_set_forward_tagged()
 #include "pm3_cmd.h"    // PM3_CMD_DATA_SIZE, PM3_* return codes
 #include "ticks_apis.h" // SpinDelay
 #include "string.h"
@@ -29,7 +30,7 @@
 // ---------------------------------------------------------------------------
 #define BWM_TX_OVERHEAD   (2 + 2 + 2 + 2)   // hdr + cmd + len + crc
 #define BWM_TX_MAX_PAYLOAD (PM3_CMD_DATA_SIZE + 64)   // NG/OLD frame ceiling
-#define BWM_TX_BUFSZ      (BWM_TX_OVERHEAD + BWM_TX_MAX_PAYLOAD)
+#define BWM_TX_BUFSZ      (BWM_TX_OVERHEAD + 1 + BWM_TX_MAX_PAYLOAD)   // +1: endpoint byte
 
 static void bwm_pump(void);   // fwd decl: TX gate pumps RX to collect forward-frame acks
 
@@ -42,6 +43,7 @@ static volatile uint8_t  s_fc_head = 0;
 static volatile uint8_t  s_fc_count = 0;
 static volatile uint32_t s_fc_bytes = 0;
 static bwm_fc_stats_t s_fc_stats;         // diagnostics since boot, see bwm_fwd_fc_stats()
+static uint32_t s_fc_last_tx = 0;         // tick of the last forward frame
 
 static void fc_reset(void) {
     s_fc_head = 0;
@@ -60,9 +62,8 @@ static void fc_push(uint16_t len) {
 }
 
 // Release the oldest frame: its ack (or CMD_ERROR) came, or the gate gave up on
-// it. Acks are not matched to frames, so an ack that was eaten elsewhere (bwm_cmd()
-// drains the ring, see #3648) or one that comes after the gate forgot its frame
-// just shifts the window by one frame: the gate is one frame too pessimistic or
+// it. Acks are not matched to frames, so an ack that comes after the gate forgot
+// its frame just shifts the window by one frame: the gate is one frame too pessimistic or
 // too optimistic until the window drains, and drains it does after every command.
 static void fc_pop(void) {
     if (s_fc_count == 0) {
@@ -101,7 +102,77 @@ void bwm_fwd_on_frame_error(void) {
     fc_pop();
 }
 
+// --- Per-host forwarding ----------------------------------------------------
+// Inbound data is de-framed per endpoint (bwm_frame.c); a command's reply goes
+// back to the endpoint it came from. Off until the ESP accepts SET_FORWARD_TAGGED.
+#define BWM_TAG_RETRY_MS    5000   // the ESP may still be booting
+#define BWM_TAG_TRIES       6
+typedef enum { TAG_PENDING = 0, TAG_ON, TAG_REFUSED, TAG_IDLE } bwm_tag_state_t;
+static bwm_tag_state_t s_tag_state = TAG_PENDING;
+static uint8_t s_tag_tries = 0;
+static uint32_t s_tag_last = 0;          // tick of the last failed try
+static bool s_fast_tried = false;         // BWM_UART_BAUD_FAST attempted
+static uint8_t s_rx_ep = BWM_EP_BLE;      // endpoint bwm_read_ng() reads
+static uint8_t s_reply_ep = BWM_EP_ANY;   // endpoint replies go to
+
+bool bwm_fwd_tagged(void) {
+    return s_tag_state == TAG_ON;
+}
+
+static void tag_retrigger(void) {
+    if (s_tag_state != TAG_REFUSED) {
+        s_tag_state = TAG_PENDING;
+        s_tag_tries = 0;
+    }
+}
+
+void bwm_fwd_tag_poll(void) {
+    if (s_tag_state != TAG_PENDING) {
+        return;
+    }
+    if (s_tag_tries && (GetTickCountDelta(s_tag_last) < BWM_TAG_RETRY_MS)) {
+        return;
+    }
+    uint8_t applied = 0;
+    int r = bwm_esp_set_forward_tagged(true, &applied);
+    if (r == PM3_SUCCESS && applied) {
+        s_tag_state = TAG_ON;
+        if ((BWM_UART_BAUD_FAST != 0) && (s_fast_tried == false) && (bwm_uart_get_baud() < BWM_UART_BAUD_FAST)) {
+            s_fast_tried = true;
+            (void)bwm_fwd_negotiate_baud(BWM_UART_BAUD_FAST);
+            // a baud set clears tagging on the ESP, ask again on the next pass
+            s_tag_state = TAG_PENDING;
+            s_tag_tries = 0;
+        }
+    } else if (r == PM3_EFAILED) {
+        s_tag_state = TAG_REFUSED;          // ESP fw without per-host forwarding
+    } else if (++s_tag_tries >= BWM_TAG_TRIES) {
+        s_tag_state = TAG_IDLE;             // retried on the next link change
+    } else {
+        s_tag_last = GetTickCount();
+    }
+}
+
+// Untagged data while tagged: the ESP rebooted and lost the setting.
+void bwm_fwd_on_untagged_data(void) {
+    if (s_tag_state == TAG_ON) {
+        s_tag_state = TAG_PENDING;
+        s_tag_tries = 0;
+    }
+}
+
+void bwm_fwd_latch_reply_ep(void) {
+    if ((s_tag_state == TAG_ON) && !((s_rx_ep == BWM_EP_BLE) && bwm_fifo_untagged())) {
+        s_reply_ep = s_rx_ep;
+    } else {
+        s_reply_ep = BWM_EP_ANY;
+    }
+}
+
 void bwm_fwd_on_link_state(uint8_t ble, uint8_t wifi) {
+    if (((ble && !s_link_ble) || (wifi && !s_link_wifi)) && (s_tag_state == TAG_IDLE)) {
+        tag_retrigger();                    // a client came: worth another try
+    }
     s_link_ble = ble;
     s_link_wifi = wifi;
 }
@@ -119,7 +190,11 @@ int bwm_fwd_writebuffer_sync(const uint8_t *data, size_t len) {
     // time cap is a safety valve so a dead or disconnected ESP can't hard-hang us.
     {
         uint32_t t0 = GetTickCount();
-        uint32_t need = (uint32_t)len + BWM_TX_OVERHEAD;
+        uint32_t need = (uint32_t)len + BWM_TX_OVERHEAD + 1;
+        if (s_fc_count && (GetTickCountDelta(s_fc_last_tx) > BWM_FC_IDLE_RESET_MS)) {
+            s_fc_stats.forgotten += s_fc_count;
+            fc_reset();
+        }
         while ((s_fc_count >= BWM_FC_MAX_FRAMES) || (s_fc_bytes + need > BWM_FC_BYTES)) {
             bwm_pump();
             if (GetTickCountDelta(t0) > BWM_FC_ACK_TIMEOUT_MS) {
@@ -135,13 +210,20 @@ int bwm_fwd_writebuffer_sync(const uint8_t *data, size_t len) {
         }
     }
 
-    size_t n = bwm_frame_build(BWM_CMD_SEND_FORWARD_DATA, data, (uint16_t)len,
+    size_t n;
+    if ((s_reply_ep != BWM_EP_ANY) && (s_tag_state == TAG_ON)) {
+        n = bwm_frame_build_ep(BWM_CMD_SEND_FORWARD_DATA_TO, s_reply_ep, data, (uint16_t)len,
                                frame, sizeof(frame));
+    } else {
+        n = bwm_frame_build(BWM_CMD_SEND_FORWARD_DATA, data, (uint16_t)len,
+                            frame, sizeof(frame));
+    }
     if (n == 0) {
         return PM3_EOVFLOW;
     }
     int wr = bwm_uart_write(frame, n);
     fc_push((uint16_t)n);   // one more forward frame awaiting its ack
+    s_fc_last_tx = GetTickCount();
     return wr;
 }
 
@@ -161,14 +243,32 @@ static void bwm_pump(void) {
     }
 }
 
+void bwm_fwd_pump(void) {
+    bwm_pump();
+}
+
+// Stay on the current endpoint while it has data, else take the other one.
+static uint16_t pick_rx_ep(void) {
+    uint8_t other = (s_rx_ep == BWM_EP_BLE) ? BWM_EP_WIFI : BWM_EP_BLE;
+    if (bwm_fifo_count_ep(s_rx_ep) > 0) {
+        return bwm_fifo_count_ep(s_rx_ep);
+    }
+    if (bwm_fifo_count_ep(other) > 0) {
+        s_rx_ep = other;
+        return bwm_fifo_count_ep(other);
+    }
+    return 0;
+}
+
 uint16_t bwm_fwd_rxdata_available(void) {
-    if (bwm_fifo_count() > 0) {
-        return bwm_fifo_count();
+    uint16_t n = pick_rx_ep();
+    if (n) {
+        return n;
     }
     // No de-framed payload yet, but raw frame bytes may be waiting; pump once so
     // receive_ng()'s gate reflects real forward data.
     bwm_pump();
-    return bwm_fifo_count();
+    return pick_rx_ep();
 }
 
 uint32_t bwm_read_ng(uint8_t *data, size_t len) {
@@ -176,33 +276,22 @@ uint32_t bwm_read_ng(uint8_t *data, size_t len) {
         return 0;
     }
 
-    // Same bounded-retry budget shape as bwm_uart_read(); USART_SLOW_LINK (set
-    // for the BWM/BLE link) widens it so a slow round-trip doesn't time out.
-    uint32_t tryconstant = 0;
-#ifdef USART_SLOW_LINK
-    tryconstant = 50000;
-#endif
-    uint32_t maxtry = 10 * (3000000 / BWM_UART_BAUD) + tryconstant;
-
+    // Give up after BWM_RX_GAP_MS without a new byte. BLE delivers a frame one
+    // write (<= MTU-3 bytes) per connection event, so its pieces come tens of ms apart.
     uint32_t out = 0;
-    uint32_t try = 0;
+    uint32_t last = GetTickCount();
     while (out < len) {
-        while (out < len && bwm_fifo_count() > 0) {
-            data[out++] = bwm_fifo_pop();
-            try = 0;
+        while (out < len && bwm_fifo_count_ep(s_rx_ep) > 0) {
+            data[out++] = bwm_fifo_pop_ep(s_rx_ep);
+            last = GetTickCount();
         }
         if (out >= len) {
             break;
         }
-        uint16_t before = bwm_fifo_count();
         bwm_pump();
-        if (bwm_fifo_count() != before) {
-            try = 0;
-            continue;
+        if ((bwm_fifo_count_ep(s_rx_ep) == 0) && (GetTickCountDelta(last) > BWM_RX_GAP_MS)) {
+            break;
         }
-        if (try++ >= maxtry) {
-                break;
-            }
     }
     return out;
 }
@@ -260,6 +349,12 @@ static bool bwm_probe_at(uint32_t baud, int tries) {
 static void bwm_link_reset(void) {
     bwm_frame_reset();
     fc_reset();
+}
+
+void bwm_fwd_prepare_reset(void) {
+    if (bwm_uart_get_baud() > BWM_UART_BAUD_TARGET) {
+        (void)bwm_fwd_negotiate_baud(BWM_UART_BAUD_TARGET);
+    }
 }
 
 bool bwm_fwd_negotiate_baud(uint32_t target) {

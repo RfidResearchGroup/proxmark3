@@ -485,6 +485,8 @@ CFLAGS += $(MYDEFS) $(MYCFLAGS) $(MYINCLUDES)
 # We cannot just use CFLAGS+=... because it has impact on sub-makes if CFLAGS is defined in env:
 PM3CFLAGS = $(CFLAGS)
 PM3CFLAGS += -I./src -I./include -I../include -I../common -I../common_fpga $(PM3INCLUDES) $(INCLUDES)
+# PrintAndLogEx(x, "") prints an empty line on purpose
+PM3CFLAGS += -Wno-format-zero-length
 # WIP Testing
 #PM3CFLAGS += -std=c11 -pedantic
 
@@ -547,6 +549,13 @@ ifeq ($(QT_FOUND),1)
     else
         # On OSX Qt6 is claiming for a C++11 compiler (gnu++14 works too, but if nothing it fails)
         PM3CXXFLAGS += -std=c++11
+    endif
+    # Qt built with reduce-relocations needs -fPIC (not -fPIE), also when CFLAGS is overridden
+    ifndef IS_WINDOWS
+        ifndef IS_DARWIN
+            PM3CFLAGS += -fPIC
+            PM3CXXFLAGS += -fPIC
+        endif
     endif
 endif
 
@@ -757,6 +766,7 @@ SRCS =  mifare/aiddesfire.c \
         cmdhffmcos.c \
         cmdhffudan.c \
         cmdhfgallagher.c \
+        cmdhfgp.c \
         cmdhfgst.c \
         cmdhfksx6924.c \
         cmdhfcipurse.c \
@@ -802,6 +812,7 @@ SRCS =  mifare/aiddesfire.c \
         cmdlfhitag.c \
         cmdlfhitaghts.c \
         cmdlfhitagu.c \
+        cmdlfict.c \
         cmdlfidteck.c \
         cmdlfindala.c \
         cmdlfio.c \
@@ -822,6 +833,7 @@ SRCS =  mifare/aiddesfire.c \
         cmdlftrovan.c \
         cmdlfviking.c \
         cmdlfvisa2000.c \
+        cmdlfwatchnet.c \
         cmdlfzx8211.c \
         cmdmad.c \
         cmdmain.c \
@@ -914,6 +926,33 @@ SRCS =  mifare/aiddesfire.c \
         parsers/parseproac.c \
         parsers/parserkf.c \
         parsers/parsenortic.c \
+        parsers/parsetransit.c \
+        parsers/parsebip.c \
+        parsers/parsecalypso.c \
+        parsers/parsecharlie.c \
+        parsers/parseclipper.c \
+        parsers/parseintercode.c \
+        parsers/parseintertic.c \
+        parsers/parseitso.c \
+        parsers/parsekazan.c \
+        parsers/parsemetromoney.c \
+        parsers/parsemyki.c \
+        parsers/parsenextfare.c \
+        parsers/parsenol.c \
+        parsers/parseoctopus.c \
+        parsers/parseopal.c \
+        parsers/parseopus.c \
+        parsers/parseplantain.c \
+        parsers/parseravkav.c \
+        parsers/parserenfe.c \
+        parsers/parsesmartrider.c \
+        parsers/parsesuica.c \
+        parsers/parsetmobilitat.c \
+        parsers/parsetroika.c \
+        parsers/parsetrt.c \
+        parsers/parseumarsh.c \
+        parsers/parseventra.c \
+        parsers/parsezolotayakorona.c \
         parsers/hrtparser/hrtparser.c \
         pm3.c \
         pm3_binlib.c \
@@ -960,6 +999,7 @@ SRCS += bucketsort.c \
 ifeq ($(GD_FOUND),1)
     # electronic shelf labels
     SRCS += imgutils.c \
+            cmdhfgoodisplay.c \
             cmdhfwaveshare.c
 endif
 

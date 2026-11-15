@@ -245,59 +245,61 @@ const char *DesfireGetErrorString(int res, uint16_t *sw) {
 
 const char *DesfireAuthErrorToStr(int error) {
     switch (error) {
-        case 1:
-            return "Sending auth command failed";
-        case 2:
+        case DESFIRE_AUTH_TX1_FAIL:
+            return "Authentication failed. PICC rejected the auth command";
+        case DESFIRE_AUTH_NO_DATA1:
             return "Authentication failed. No data received";
-        case 3:
+        case DESFIRE_AUTH_NO_FRAME:
             return "Authentication failed. Invalid key number.";
-        case 4:
+        case DESFIRE_AUTH_RNDB_LEN:
             return "Authentication failed. Length of answer doesn't match algo length";
-        case 5:
+        case DESFIRE_AUTH_SETKEY_DEC:
             return "mbedtls_aes_setkey_dec failed";
-        case 6:
+        case DESFIRE_AUTH_SETKEY_ENC:
             return "mbedtls_aes_setkey_enc failed";
-        case 7:
-            return "Sending auth response (2nd frame) failed";
-        case 8:
+        case DESFIRE_AUTH_TX2_FAIL:
+            return "Authentication failed. PICC rejected the 2nd auth frame";
+        case DESFIRE_AUTH_NO_DATA2:
             return "Authentication failed. Card timeout.";
-        case 9:
+        case DESFIRE_AUTH_NOT_OK:
             return "Authentication failed.";
-        case 10:
+        case DESFIRE_AUTH_SETKEY_DEC2:
             return "mbedtls_aes_setkey_dec failed";
-        case 11:
+        case DESFIRE_AUTH_RNDA_MISMATCH:
             return "Authentication failed. Cannot verify Session Key.";
-        case 12:
+        case DESFIRE_AUTH_CMAC_FAIL:
             return "Authentication failed. Cannot verify CMAC.";
-        case 50:
+        case DESFIRE_AUTH_NO_AES:
             return "PICC returned not an AES answer";
-        case 51:
+        case DESFIRE_AUTH_NO_LRP:
             return "PICC returned not an LRP answer";
-        case 100:
+        case DESFIRE_AUTH_NO_ANSWER:
+            return "Authentication inconclusive. PICC gave no status byte";
+        case DESFIRE_AUTH_NO_METHOD:
             return "Can't find auth method for provided channel parameters.";
-        case 200:
+        case DESFIRE_AUTH_SELECT_FAIL:
             return "Can't select application.";
-        case 201:
+        case DESFIRE_AUTH_NO_CHANNEL:
             return "Authentication returned no error but channel not authenticated.";
-        case 202:
+        case DESFIRE_AUTH_SELECT_ISO_FAIL:
             return "Can't select application by ISO ID.";
-        case 203:
+        case DESFIRE_AUTH_SELECT_EF_FAIL:
             return "Can't select file by ISO ID.";
-        case 301:
+        case DESFIRE_AUTH_ISO_CHAL:
             return "ISO Get challenge error.";
-        case 302:
+        case DESFIRE_AUTH_ISO_CHAL_LEN:
             return "ISO Get challenge returned wrong length.";
-        case 303:
+        case DESFIRE_AUTH_ISO_ENC_RND1:
             return "Crypto encode piccrnd1 error.";
-        case 304:
+        case DESFIRE_AUTH_ISO_EXT_AUTH:
             return "External authenticate error.";
-        case 305:
+        case DESFIRE_AUTH_ISO_INT_AUTH:
             return "Internal authenticate error.";
-        case 306:
+        case DESFIRE_AUTH_ISO_INT_LEN:
             return "Internal authenticate returned wrong length.";
-        case 307:
+        case DESFIRE_AUTH_ISO_DEC_RND2:
             return "Crypto decode piccrnd2 error.";
-        case 308:
+        case DESFIRE_AUTH_ISO_RND_FAIL:
             return "Random numbers don't match. Authentication failed.";
         default:
             break;
@@ -1193,7 +1195,7 @@ int DesfireSelectAndAuthenticateEx(DesfireContext_t *dctx, DesfireSecureChannel 
         res = DesfireAnticollision(verbose);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Desfire anticollision " _RED_("failed"));
-            return 200;
+            return DESFIRE_AUTH_SELECT_FAIL;
         }
 
         if (verbose) {
@@ -1204,7 +1206,7 @@ int DesfireSelectAndAuthenticateEx(DesfireContext_t *dctx, DesfireSecureChannel 
         res = DesfireSelectAIDHex(dctx, aid, false, 0);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Desfire %s select " _RED_("failed"), DesfireWayIDStr(ISW6bAID, aid));
-            return 200;
+            return DESFIRE_AUTH_SELECT_FAIL;
         }
 
         if (verbose) {
@@ -1229,8 +1231,8 @@ int DesfireSelectAndAuthenticateEx(DesfireContext_t *dctx, DesfireSecureChannel 
                 PrintAndLogEx(INFO, "Desfire " _GREEN_("authenticated"));
             }
         } else {
-            PrintAndLogEx(FAILED, "Desfire %s authentication " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(ISW6bAID, aid), 201, DesfireAuthErrorToStr(201));
-            return 201;
+            PrintAndLogEx(FAILED, "Desfire %s authentication " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(ISW6bAID, aid), DESFIRE_AUTH_NO_CHANNEL, DesfireAuthErrorToStr(DESFIRE_AUTH_NO_CHANNEL));
+            return DESFIRE_AUTH_NO_CHANNEL;
         }
     }
 
@@ -1260,7 +1262,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
             if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
                 return res;
             }
-            return 200;
+            return DESFIRE_AUTH_SELECT_FAIL;
         }
 
         if (verbose) {
@@ -1281,7 +1283,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
                     if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
                         return res;
                     }
-                    return 200;
+                    return DESFIRE_AUTH_SELECT_FAIL;
                 }
 
                 if (verbose) {
@@ -1297,7 +1299,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
                     if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
                         return res;
                     }
-                    return 202;
+                    return DESFIRE_AUTH_SELECT_ISO_FAIL;
                 }
                 if (verbose) {
                     PrintAndLogEx(INFO, "%s is " _GREEN_("selected"), DesfireWayIDStr(way, id));
@@ -1312,7 +1314,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
                 if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
                     return res;
                 }
-                return 202;
+                return DESFIRE_AUTH_SELECT_ISO_FAIL;
             }
 
             if (verbose) {
@@ -1331,7 +1333,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
             if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
                 return res;
             }
-            return 200;
+            return DESFIRE_AUTH_SELECT_FAIL;
         }
 
         if (verbose) {
@@ -1347,7 +1349,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
             if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
                 return res;
             }
-            return 202;
+            return DESFIRE_AUTH_SELECT_ISO_FAIL;
         }
         if (verbose) {
             PrintAndLogEx(INFO, "%s is " _GREEN_("selected"), DesfireWayIDStr(way, id));
@@ -1361,7 +1363,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
             if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
                 return res;
             }
-            return 203;
+            return DESFIRE_AUTH_SELECT_EF_FAIL;
         }
 
         if (verbose) {
@@ -1381,8 +1383,8 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
                 PrintAndLogEx(INFO, "Desfire " _GREEN_("authenticated"));
             }
         } else {
-            PrintAndLogEx(FAILED, "Desfire %s authentication " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(way, id), 201, DesfireAuthErrorToStr(201));
-            return 201;
+            PrintAndLogEx(FAILED, "Desfire %s authentication " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(way, id), DESFIRE_AUTH_NO_CHANNEL, DesfireAuthErrorToStr(DESFIRE_AUTH_NO_CHANNEL));
+            return DESFIRE_AUTH_NO_CHANNEL;
         }
     }
 
@@ -1428,7 +1430,7 @@ static int DesfireAuthenticateEV1(DesfireContext_t *dctx, DesfireSecureChannel s
     }
 
     size_t recv_len = 0;
-    uint8_t respcode = 0;
+    uint8_t respcode = 0xFF;
     uint8_t recv_data[256] = {0};
 
     if (verbose)
@@ -1437,15 +1439,17 @@ static int DesfireAuthenticateEV1(DesfireContext_t *dctx, DesfireSecureChannel s
     // Let's send our auth command
     int res = DesfireExchangeEx(false, dctx, subcommand, &dctx->keyNum, 1, &respcode, recv_data, &recv_len, false, 0);
     if (res != PM3_SUCCESS) {
-        return 1;
+        // 0xFF means no status byte came back at all.  The PICC said nothing
+        // about the key, so the attempt is inconclusive and not a refusal
+        return (respcode == 0xFF) ? 60 : 1;
     }
 
     if (!recv_len) {
-        return 2;
+        return DESFIRE_AUTH_NO_DATA1;
     }
 
     if (respcode != MFDES_ADDITIONAL_FRAME) {
-        return 3;
+        return DESFIRE_AUTH_NO_FRAME;
     }
 
     uint32_t expectedlen = 8;
@@ -1454,7 +1458,7 @@ static int DesfireAuthenticateEV1(DesfireContext_t *dctx, DesfireSecureChannel s
     }
 
     if (recv_len != expectedlen) {
-        return 4;
+        return DESFIRE_AUTH_RNDB_LEN;
     }
 
     // Part 2
@@ -1509,15 +1513,17 @@ static int DesfireAuthenticateEV1(DesfireContext_t *dctx, DesfireSecureChannel s
 
     res = DesfireExchangeEx(false, dctx, MFDES_ADDITIONAL_FRAME, both, bothlen, &respcode, recv_data, &recv_len, false, 0);
     if (res != PM3_SUCCESS) {
-        return 7;
+        // a wrong key is the PICC answering this frame with AUTHENTICATION_ERROR.
+        // No status byte at all is a lost exchange, not a verdict on the key
+        return (respcode == 0xFF) ? 60 : 7;
     }
 
     if (!recv_len) {
-        return 8;
+        return DESFIRE_AUTH_NO_DATA2;
     }
 
     if (respcode != MFDES_S_OPERATION_OK) {
-        return 9;
+        return DESFIRE_AUTH_NOT_OK;
     }
 
     // Part 4
@@ -1542,7 +1548,7 @@ static int DesfireAuthenticateEV1(DesfireContext_t *dctx, DesfireSecureChannel s
                 PrintAndLogEx(DEBUG, "Expected_RndA : %s", sprint_hex(RndA, rndlen));
                 PrintAndLogEx(DEBUG, "Generated_RndA : %s", sprint_hex(encRndA, rndlen));
             }
-            return 11;
+            return DESFIRE_AUTH_RNDA_MISMATCH;
         }
     }
 
@@ -1576,7 +1582,7 @@ static int DesfireAuthenticateEV2(DesfireContext_t *dctx, DesfireSecureChannel s
     uint8_t *key = dctx->key;
 
     size_t recv_len = 0;
-    uint8_t respcode = 0;
+    uint8_t respcode = 0xFF;
     uint8_t recv_data[256] = {0};
 
     if (verbose)
@@ -1586,25 +1592,27 @@ static int DesfireAuthenticateEV2(DesfireContext_t *dctx, DesfireSecureChannel s
     uint8_t cdata[] = {dctx->keyNum, 0x00};
     int res = DesfireExchangeEx(false, dctx, subcommand, cdata, (firstauth) ? sizeof(cdata) : 1, &respcode, recv_data, &recv_len, false, 0);
     if (res != PM3_SUCCESS) {
-        return 1;
+        // 0xFF means no status byte came back at all.  The PICC said nothing
+        // about the key, so the attempt is inconclusive and not a refusal
+        return (respcode == 0xFF) ? 60 : 1;
     }
 
     if (!recv_len) {
-        return 2;
+        return DESFIRE_AUTH_NO_DATA1;
     }
 
     if (respcode != MFDES_ADDITIONAL_FRAME) {
-        return 3;
+        return DESFIRE_AUTH_NO_FRAME;
     }
 
     size_t rdataindx = 0;
     if (recv_len != CRYPTO_AES_BLOCK_SIZE) {
         if (recv_len == CRYPTO_AES_BLOCK_SIZE + 1) {
             if (recv_data[0] != 0x00)
-                return 50;
+                return DESFIRE_AUTH_NO_AES;
             rdataindx = 1;
         } else {
-            return 4;
+            return DESFIRE_AUTH_RNDB_LEN;
         }
     }
 
@@ -1613,7 +1621,7 @@ static int DesfireAuthenticateEV2(DesfireContext_t *dctx, DesfireSecureChannel s
 
     // Part 3
     if (aes_decode(IV, key, encRndB, RndB, CRYPTO_AES_BLOCK_SIZE))
-        return 5;
+        return DESFIRE_AUTH_SETKEY_DEC;
 
     if (g_debugMode > 1) {
         PrintAndLogEx(DEBUG, "encRndB: %s", sprint_hex(encRndB, CRYPTO_AES_BLOCK_SIZE));
@@ -1634,29 +1642,31 @@ static int DesfireAuthenticateEV2(DesfireContext_t *dctx, DesfireSecureChannel s
     }
 
     if (aes_encode(IV, key, tmp, both, CRYPTO_AES_BLOCK_SIZE * 2))
-        return 6;
+        return DESFIRE_AUTH_SETKEY_ENC;
     if (g_debugMode > 1) {
         PrintAndLogEx(DEBUG, "EncBoth: %s", sprint_hex(both, CRYPTO_AES_BLOCK_SIZE * 2));
     }
 
     res = DesfireExchangeEx(false, dctx, MFDES_ADDITIONAL_FRAME, both, CRYPTO_AES_BLOCK_SIZE * 2, &respcode, recv_data, &recv_len, false, 0);
     if (res != PM3_SUCCESS) {
-        return 7;
+        // a wrong key is the PICC answering this frame with AUTHENTICATION_ERROR.
+        // No status byte at all is a lost exchange, not a verdict on the key
+        return (respcode == 0xFF) ? 60 : 7;
     }
 
     if (!recv_len) {
-        return 8;
+        return DESFIRE_AUTH_NO_DATA2;
     }
 
     if (respcode != MFDES_S_OPERATION_OK) {
-        return 9;
+        return DESFIRE_AUTH_NOT_OK;
     }
 
     // Part 4
     uint8_t data[32] = {0};
 
     if (aes_decode(IV, key, recv_data, data, recv_len))
-        return 10;
+        return DESFIRE_AUTH_SETKEY_DEC2;
 
     // rotate rndA to check
     memcpy(rotRndA, RndA, CRYPTO_AES_BLOCK_SIZE);
@@ -1669,7 +1679,7 @@ static int DesfireAuthenticateEV2(DesfireContext_t *dctx, DesfireSecureChannel s
             PrintAndLogEx(DEBUG, "Expected_RndA'  : %s", sprint_hex(rotRndA, CRYPTO_AES_BLOCK_SIZE));
             PrintAndLogEx(DEBUG, "Generated_RndA' : %s", sprint_hex(recRndA, CRYPTO_AES_BLOCK_SIZE));
         }
-        return 11;
+        return DESFIRE_AUTH_RNDA_MISMATCH;
     }
 
     if (firstauth) {
@@ -1706,10 +1716,10 @@ static int DesfireAuthenticateISO(DesfireContext_t *dctx, DesfireSecureChannel s
     size_t xlen = 0;
     int res = DesfireISOGetChallenge(dctx, dctx->keyType, piccrnd, &xlen);
     if (res != PM3_SUCCESS)
-        return 301;
+        return DESFIRE_AUTH_ISO_CHAL;
 
     if (xlen != rndlen)
-        return 302;
+        return DESFIRE_AUTH_ISO_CHAL_LEN;
 
     uint8_t both[32] = {0};
     memcpy(both, hostrnd, rndlen);
@@ -1722,17 +1732,17 @@ static int DesfireAuthenticateISO(DesfireContext_t *dctx, DesfireSecureChannel s
     // external authenticate
     res = DesfireISOExternalAuth(dctx, dctx->appSelected, dctx->keyNum, dctx->keyType, both);
     if (res != PM3_SUCCESS)
-        return 304;
+        return DESFIRE_AUTH_ISO_EXT_AUTH;
 
     // internal authenticate
     uint8_t rnddata[64] = {0};
     xlen = 0;
     res = DesfireISOInternalAuth(dctx, dctx->appSelected, dctx->keyNum, dctx->keyType, hostrnd2, rnddata, &xlen);
     if (res != PM3_SUCCESS)
-        return 305;
+        return DESFIRE_AUTH_ISO_INT_AUTH;
 
     if (xlen != rndlen * 2)
-        return 306;
+        return DESFIRE_AUTH_ISO_INT_LEN;
 
     // decode rnddata
     uint8_t piccrnd2[64] = {0};
@@ -1740,7 +1750,7 @@ static int DesfireAuthenticateISO(DesfireContext_t *dctx, DesfireSecureChannel s
 
     // check
     if (memcmp(hostrnd2, &piccrnd2[rndlen], rndlen) != 0)
-        return 308;
+        return DESFIRE_AUTH_ISO_RND_FAIL;
 
     DesfireGenSessionKeyEV1(hostrnd, piccrnd2, dctx->keyType, dctx->sessionKeyEnc);
     DesfireClearIV(dctx);
@@ -1763,7 +1773,7 @@ static int DesfireAuthenticateLRP(DesfireContext_t *dctx, DesfireSecureChannel s
     uint8_t *key = dctx->key;
 
     size_t recv_len = 0;
-    uint8_t respcode = 0;
+    uint8_t respcode = 0xFF;
     uint8_t recv_data[256] = {0};
 
     if (verbose)
@@ -1773,23 +1783,25 @@ static int DesfireAuthenticateLRP(DesfireContext_t *dctx, DesfireSecureChannel s
     uint8_t cdata[] = {dctx->keyNum, 0x01, 0x02};
     int res = DesfireExchangeEx(false, dctx, subcommand, cdata, (firstauth) ? sizeof(cdata) : 1, &respcode, recv_data, &recv_len, false, 0);
     if (res != PM3_SUCCESS) {
-        return 1;
+        // 0xFF means no status byte came back at all.  The PICC said nothing
+        // about the key, so the attempt is inconclusive and not a refusal
+        return (respcode == 0xFF) ? 60 : 1;
     }
 
     if (!recv_len) {
-        return 2;
+        return DESFIRE_AUTH_NO_DATA1;
     }
 
     if (respcode != MFDES_ADDITIONAL_FRAME) {
-        return 3;
+        return DESFIRE_AUTH_NO_FRAME;
     }
 
     if (recv_len != CRYPTO_AES_BLOCK_SIZE + 1) {
-        return 4;
+        return DESFIRE_AUTH_RNDB_LEN;
     }
 
     if (recv_data[0] != 0x01)
-        return 51;
+        return DESFIRE_AUTH_NO_LRP;
 
     // PICC return RndB in plain
     memcpy(RndB, &recv_data[1], 16);
@@ -1820,15 +1832,17 @@ static int DesfireAuthenticateLRP(DesfireContext_t *dctx, DesfireSecureChannel s
 
     res = DesfireExchangeEx(false, dctx, MFDES_ADDITIONAL_FRAME, both, CRYPTO_AES_BLOCK_SIZE * 2, &respcode, recv_data, &recv_len, false, 0);
     if (res != PM3_SUCCESS) {
-        return 7;
+        // a wrong key is the PICC answering this frame with AUTHENTICATION_ERROR.
+        // No status byte at all is a lost exchange, not a verdict on the key
+        return (respcode == 0xFF) ? 60 : 7;
     }
 
     if (!recv_len) {
-        return 8;
+        return DESFIRE_AUTH_NO_DATA2;
     }
 
     if (respcode != MFDES_S_OPERATION_OK) {
-        return 9;
+        return DESFIRE_AUTH_NOT_OK;
     }
 
     // Part 4
@@ -1851,7 +1865,7 @@ static int DesfireAuthenticateLRP(DesfireContext_t *dctx, DesfireSecureChannel s
             PrintAndLogEx(DEBUG, "Expected cmac  : %s", sprint_hex(recCMAC, CRYPTO_AES_BLOCK_SIZE));
             PrintAndLogEx(DEBUG, "Generated cmac : %s", sprint_hex(cmac, CRYPTO_AES_BLOCK_SIZE));
         }
-        return 12;
+        return DESFIRE_AUTH_CMAC_FAIL;
     }
 
     // decode data
@@ -1913,7 +1927,7 @@ int DesfireAuthenticate(DesfireContext_t *dctx, DesfireSecureChannel secureChann
     if (secureChannel == DACLRP)
         return DesfireAuthenticateLRP(dctx, secureChannel, (DesfireIsAuthenticated(dctx) == false), verbose);
 
-    return 100;
+    return DESFIRE_AUTH_NO_METHOD;
 }
 
 bool DesfireCheckAuthCmd(DesfireISOSelectWay way, uint32_t appID, uint8_t keyNum, uint8_t authcmd, bool checklrp) {

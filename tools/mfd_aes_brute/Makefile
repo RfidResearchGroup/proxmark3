@@ -39,7 +39,12 @@ endif
 
 # OS X needs linking to openssl
 ifeq ($(USE_BREW),1)
-    OPENSSL_PREFIX := $(shell brew --prefix openssl)
+    # brew's openssl alias can point at an uninstalled major (e.g. openssl@4);
+    # pick the newest keg that actually has the headers.
+    OPENSSL_PREFIX := $(shell for f in openssl openssl@3 openssl@1.1; do \
+        p=$$(brew --prefix $$f 2>/dev/null); \
+        [ -f "$$p/include/openssl/evp.h" ] && { echo $$p; break; }; \
+      done)
     MYCFLAGS += -I$(OPENSSL_PREFIX)/include
     MYLDFLAGS += -L$(OPENSSL_PREFIX)/lib
 endif

@@ -69,7 +69,7 @@ endif
 PM5_BUILD_HDL = $(addprefix ../,$(PM5_HDL))
 PM5_DEFS      = $(foreach d,$(PM5_DEFINES),-D $(d))
 
-.PHONY: all clean help check-tools smoke $(PM5_NAME)
+.PHONY: all clean help check-tools smoke $(PM5_NAME) $(PM5_NAME)_release
 
 all: $(PM5_NAME)
 
@@ -83,6 +83,16 @@ $(PM5_NAME).fs: $(PM5_OUT)/$(PM5_NAME).fs
 
 $(PM5_NAME).bin: $(PM5_OUT)/$(PM5_NAME).bin
 	$(Q)$(CP) $< .
+
+# Ship the bitstream to the client resources, where `hw fpga config` and the
+# update_fpga scripts find it. Kept apart from `all` so a local test build does
+# not replace the released image by accident.
+PM5_RELEASE_DIR = ../client/resources
+
+$(PM5_NAME)_release: $(PM5_NAME).bin
+	$(info [=] RELEASE $(PM5_RELEASE_DIR)/$(PM5_NAME).bin)
+	$(Q)cp $(PM5_NAME).bin $(PM5_RELEASE_DIR)/$(PM5_NAME).bin
+	$(Q)cd $(PM5_RELEASE_DIR) && $(OC_ENV) $(OC_PYTHON) -c "import hashlib; n = '$(PM5_NAME).bin'; print(hashlib.sha512(open(n, 'rb').read()).hexdigest() + '  ' + n)" > $(PM5_NAME).sha512.txt
 
 # The pin constraints are board specific and are not part of the repository.
 $(PM5_CST):
@@ -162,6 +172,7 @@ help:
 	@echo "#"
 	@echo "#   $(PM5_NAME) - Builds the PM5 bitstream into $(PM5_NAME).fs/.bin"
 	@echo "#   all  - same as $(PM5_NAME)"
+	@echo "#   $(PM5_NAME)_release - Also copies the bitstream to $(PM5_RELEASE_DIR)"
 	@echo "#   clean - Keeps the bitstream but cleans intermediate build files"
 	@echo "#"
 	@echo "# Device: $(PM5_PART) (family $(PM5_FAMILY))"

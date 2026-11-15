@@ -133,7 +133,7 @@ static int sam_send_request_iso15(const uint8_t *const request, const uint8_t re
                 // #2(FF FF FF FF) #1(C9 FD FF FF) 3A 47
 
                 memcpy(nfc_rx_buf + 0, nfc_tx_buf + 6, 4);
-                memcpy(nfc_rx_buf + 4, nfc_tx_buf + 0, 4);
+                memcpy(nfc_rx_buf + 4, nfc_tx_buf + 2, 4);
                 AddCrc(nfc_rx_buf, 8);
                 nfc_rx_len = 10;
 
@@ -172,6 +172,8 @@ static int sam_send_request_iso15(const uint8_t *const request, const uint8_t re
                     DbpString("ISO15 TAG RESPONSE: ");
                     Dbhexdump(nfc_rx_len, nfc_rx_buf, false);
                 }
+
+                sam_capture_iclass(nfc_tx_buf, nfc_tx_len, nfc_rx_buf, nfc_rx_len);
             }
 
 
@@ -373,7 +375,7 @@ static int sam_send_request_emulated(const uint8_t *const request, const uint8_t
             if (is_cmd_update && prevent_epurse_update && nfc_tx_buf[0] == 0x87 && block == 0x02) {
                 // Fake epurse update: swap the two halves of the new epurse value
                 memcpy(nfc_rx_buf + 0, nfc_tx_buf + 6, 4);
-                memcpy(nfc_rx_buf + 4, nfc_tx_buf + 0, 4);
+                memcpy(nfc_rx_buf + 4, nfc_tx_buf + 2, 4);
                 AddCrc(nfc_rx_buf, 8);
                 nfc_rx_len = 10;
             } else {
@@ -633,6 +635,7 @@ int sam_picopass_get_pacs(PacketCommandNG *c) {
     const bool shallow_mod = !!(flags & BITMASK(4));
     const bool info = !!(flags & BITMASK(5));
     const bool emulate_from_file = !!(flags & BITMASK(6));
+    const bool ext_reply = !!(flags & BITMASK(7));
 
     uint8_t *cmd = c->data.asBytes + 1;
     uint16_t cmd_len = c->length - 1;
@@ -642,6 +645,7 @@ int sam_picopass_get_pacs(PacketCommandNG *c) {
     uint8_t sam_response_len = 0;
 
     clear_trace();
+    sam_capture_reset();
     // This path resets the SAM, invalidating any secure-channel state held by
     // CMD_HF_SAM_SC. Ensure the next SC request reopens instead of sending
     // into a reset SAM with a stale routing/session flag.
@@ -686,6 +690,8 @@ int sam_picopass_get_pacs(PacketCommandNG *c) {
                      card_a_info.csn[6], card_a_info.csn[7]);
         }
 
+        sam_capture_uid(card_a_info.csn, sizeof(card_a_info.csn));
+
         // step 2: SamCommand CardDetected using CSN from dump
         sam_set_card_detected_picopass(&card_a_info);
 
@@ -704,6 +710,8 @@ int sam_picopass_get_pacs(PacketCommandNG *c) {
             }
 
             switch_clock_to_ticks();
+
+            sam_capture_uid(card_a_info.csn, sizeof(card_a_info.csn));
 
             // step 3: SamCommand CardDetected
             sam_set_card_detected_picopass(&card_a_info);
@@ -728,7 +736,7 @@ err:
     goto off;
 
 out:
-    reply_ng(CMD_HF_SAM_PICOPASS, PM3_SUCCESS, sam_response, sam_response_len);
+    sam_reply_pacs(CMD_HF_SAM_PICOPASS, ext_reply && (cmd_len == 0) && (breakOnNrMac == false) && (info == false), sam_response, sam_response_len);
 
 off:
     if (disconnectAfter) {

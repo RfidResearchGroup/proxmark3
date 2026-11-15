@@ -426,7 +426,9 @@ int pla_parse_ecp_subcommand(const char *cmd, uint8_t *frame, size_t frame_size)
             }
         } else {
             PrintAndLogEx(ERR, "Unknown ECP type: %s", search_term);
-            PrintAndLogEx(HINT, "Available types: access, transit, vasorpay, vasandpay, vasonly, payonly, gymkit, identity, aidrop");
+            PrintAndLogEx(HINT, "Hint: Following available types:");
+            PrintAndLogEx(HINT, "      access, transit, vasorpay, vasandpay, ");
+            PrintAndLogEx(HINT, "      vasonly, payonly, gymkit, identity, aidrop");
         }
     }
 

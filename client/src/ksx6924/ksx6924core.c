@@ -269,7 +269,7 @@ bool KSX6924ParsePurseInfo(const uint8_t *purseInfo, size_t purseLen, struct ksx
 
     if (purseLen != sizeof(_ksx6924_internal_purse_info_t)) {
         // Invalid size!
-        PrintAndLogEx(FAILED, "Expected %ld bytes, got %ld\n", sizeof(_ksx6924_internal_purse_info_t), purseLen);
+        PrintAndLogEx(FAILED, "Expected %zu bytes, got %zu\n", sizeof(_ksx6924_internal_purse_info_t), purseLen);
         return false;
     }
 
@@ -493,7 +493,7 @@ bool KSX6924ParseInitializeCardResponse(const uint8_t *initCardResponse, size_t 
 
     if (resp_len != sizeof(_ksx6924_initialize_card_response_t)) {
         // Invalid size!
-        PrintAndLogEx(FAILED, "Expected %ld bytes, got %ld\n", sizeof(_ksx6924_initialize_card_response_t), resp_len);
+        PrintAndLogEx(FAILED, "Expected %zu bytes, got %zu\n", sizeof(_ksx6924_initialize_card_response_t), resp_len);
         return false;
     }
 

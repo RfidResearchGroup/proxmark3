@@ -27,7 +27,7 @@ Iceman repository is considered to be the pinnacle of features and functionality
 - [Development](#development)
   - [Supported operating systems](#supported-operating-systems)
   - [Precompiled binaries](#precompiled-binaries)
-  - [Proxmark3 GUI](#proxmark3-gui)
+  - [GUIs](./doc/md/Use_of_Proxmark/Promark-GUIs.md)
   - [Official channels](#official-channels)
   - [Maintainers](#maintainers)
   - [Citation](#citation)
@@ -78,11 +78,10 @@ The last hardware generation is called Proxmark5.  It has
     - 125, 134, 250, 375, 500 KHz Low Frequency Antenna (LF)
     - 13.56 MHz High Frequency Antenna (HF)
     - as a addon:  860-960 MHz Ultra High Frequency Antenna (UHF),  ** not developed yet **
-   
+
 At the moment, Proxmark5-specific instructions are all grouped in [a single Getting Started guide](doc/md/PM5_Start_Here/Getting_Started_With_PM5.md).
 Read it to build, flash and run your Proxmark5 device. See the instruction links in the tables above to get the compilation environment.
 - ⚠ The firmware is not stable at the moment and is actively being developed at.  
-- ⚠ Don't install the BWM addon board for now.
 
 
 ## Proxmark3 RDV4
@@ -172,16 +171,6 @@ This repo compiles nicely on
 ## Precompiled binaries
 
 See [Proxmark3 precompiled builds](https://www.proxmarkbuilds.org/) 
-
-
-## Proxmark3 GUI
-
-Most community driven GUI for Proxmark tends to be quite old and out-of-date.
-Here is a list of a few:
-
-- [Proxmark3 Universal GUI](https://github.com/burma69/PM3UniversalGUI) will work more or less.
-- [Proxmark3 GUI cross-compiled](https://github.com/wh201906/Proxmark3GUI/) which is recently updated and claims to support latest source of this repo.
-- [Proxmark3_GUI](https://github.com/Phreak87/Proxmark3_GUI) simple gui in vb.net
 
 
 ## Official channels

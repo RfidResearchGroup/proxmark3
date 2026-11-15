@@ -22,7 +22,6 @@ ifeq ($(PLTNAME),)
     PLATFORM_FILE ?= ../Makefile.platform
     -include $(PLATFORM_FILE)
     -include ../.Makefile.options.cache
-    -include ../armsrc/Standalone/Makefile.hal
     include ../common_arm/Makefile.hal
     ifeq ($(PLATFORM_CHANGED), true)
         $(error platform definitions have been changed, please "make clean" at the root of the project)
@@ -103,7 +102,8 @@ endif
 include ../common_arm/Makefile.common
 
 ifneq (,$(findstring WITH_BWM_FORWARD,$(PLATFORM_DEFS)))
-    VPATH += ../armsrc
+    # sources only: a plain VPATH also finds ../armsrc/obj/libarmlib.a
+    vpath %.c ../armsrc
 endif
 
 INSTALLFW = $(OBJDIR)/bootrom.elf

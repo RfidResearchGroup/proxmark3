@@ -283,6 +283,33 @@ bool wiegand_new_pacs_to_binstr(const uint8_t *pacs, size_t pacs_len, char *bins
     return true;
 }
 
+int wiegand_pack_sentinel_bytes(const char *binstr, uint8_t *out, size_t out_len) {
+    if (binstr == NULL || out == NULL) {
+        return PM3_EINVARG;
+    }
+
+    size_t bin_len = strlen(binstr);
+    if (bin_len == 0 || (bin_len + 1) > (out_len * 8)) {
+        return PM3_EINVARG;
+    }
+
+    memset(out, 0, out_len);
+
+    // MSB first bit index of the sentinel
+    size_t pos = (out_len * 8) - bin_len - 1;
+    out[pos / 8] |= (uint8_t)(0x80 >> (pos % 8));
+
+    for (size_t i = 0; i < bin_len; i++) {
+        pos++;
+        if (binstr[i] == '1') {
+            out[pos / 8] |= (uint8_t)(0x80 >> (pos % 8));
+        } else if (binstr[i] != '0') {
+            return PM3_EINVARG;
+        }
+    }
+    return PM3_SUCCESS;
+}
+
 int wiegand_pack_bin_with_hid_header(const char *binstr, wiegand_message_t *packed) {
     size_t bin_len = strlen(binstr);
     if (packed == NULL || bin_len == 0 || bin_len > 84) {

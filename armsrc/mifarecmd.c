@@ -203,7 +203,7 @@ OUT:
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     set_tracing(false);
-    BigBuf_free();
+    BigBuf_free_keep_EM();
     return retval;
 }
 
@@ -250,7 +250,7 @@ OUT:
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     set_tracing(false);
-    BigBuf_free();
+    BigBuf_free_keep_EM();
 
     return retval;
 }
@@ -499,8 +499,8 @@ out:
     if (foundkeys || packet->lastchunk) {
         set_tracing(false);
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-        BigBuf_free();
-        BigBuf_Clear_ext(false);
+        BigBuf_free_keep_EM();
+        BigBuf_Clear_keep_EM();
     }
     g_dbglevel = oldbg;
 }
@@ -582,8 +582,8 @@ void MifareUReadCard(mful_readblock_t *packet) {
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
     // free eventually allocated BigBuf memory
-    BigBuf_free();
-    BigBuf_Clear_ext(false);
+    BigBuf_free_keep_EM();
+    BigBuf_Clear_keep_EM();
     set_tracing(true);
 
     // params
@@ -676,7 +676,7 @@ void MifareUReadCard(mful_readblock_t *packet) {
     reply_ng(CMD_HF_MIFAREU_READCARD, PM3_SUCCESS, (uint8_t *)&payload, sizeof(payload));
 
     LEDsoff();
-    BigBuf_free();
+    BigBuf_free_keep_EM();
     set_tracing(false);
 }
 
@@ -1014,8 +1014,8 @@ void MifareAcquireNonces(const mf_acquire_nonces_t *payload) {
     LED_A_ON();
     LED_C_OFF();
 
-    BigBuf_free();
-    BigBuf_Clear_ext(false);
+    BigBuf_free_keep_EM();
+    BigBuf_Clear_keep_EM();
     set_tracing(true);
 
     if (initialize) {
@@ -1143,8 +1143,8 @@ void MifareAcquireEncryptedNonces(const mf_acquire_nonces_t *payload) {
     LED_A_ON();
     LED_C_OFF();
 
-    BigBuf_free();
-    BigBuf_Clear_ext(false);
+    BigBuf_free_keep_EM();
+    BigBuf_Clear_keep_EM();
     set_tracing(false);
 
     if (initialize) {
@@ -1310,8 +1310,8 @@ int MifareAcquireStaticEncryptedNonces(uint32_t flags, const uint8_t *key, bool 
     LED_A_ON();
     LED_C_OFF();
 
-    BigBuf_free();
-    BigBuf_Clear_ext(false);
+    BigBuf_free_keep_EM();
+    BigBuf_Clear_keep_EM();
     set_tracing(false);
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
@@ -1597,8 +1597,8 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
     // free eventually allocated BigBuf memory
-    BigBuf_free();
-    BigBuf_Clear_ext(false);
+    BigBuf_free_keep_EM();
+    BigBuf_Clear_keep_EM();
 
     set_tracing(true);
 
@@ -1701,8 +1701,9 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
 
         if (g_dbglevel >= DBG_DEBUG) Dbprintf("rtr=%d isOK=%d min=%d max=%d avg=%d, delta_time=%d", rtr, isOK, dmin, dmax, davg, delta_time);
 
-        dmin = davg - 2;
-        dmax = davg + 2;
+        // the nonce distance of some cards spreads wider than davg +-2, search the measured range too
+        dmin = MIN(dmin, davg - 2);
+        dmax = MAX(dmax, davg + 2);
 
         LED_B_OFF();
     }
@@ -1847,8 +1848,8 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
     // free eventually allocated BigBuf memory
-    BigBuf_free();
-    BigBuf_Clear_ext(false);
+    BigBuf_free_keep_EM();
+    BigBuf_Clear_keep_EM();
     set_tracing(true);
 
     int8_t isOK = PM3_ESOFT;        // reply_ng() takes int8_t, match it
@@ -2301,8 +2302,8 @@ out:
         if (foundkeys == allkeys || lastchunk) {
             set_tracing(false);
             FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-            BigBuf_free();
-            BigBuf_Clear_ext(false);
+            BigBuf_free_keep_EM();
+            BigBuf_Clear_keep_EM();
         }
         g_dbglevel = oldbg;
         return;
@@ -2527,8 +2528,8 @@ OUT:
             reply_ng(CMD_HF_MIFARE_CHKKEYS_FAST, PM3_EMALLOC, NULL, 0);
             set_tracing(false);
             FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-            BigBuf_free();
-            BigBuf_Clear_ext(false);
+            BigBuf_free_keep_EM();
+            BigBuf_Clear_keep_EM();
             g_dbglevel = oldbg;
             return;
         }
@@ -2542,8 +2543,8 @@ OUT:
 
         set_tracing(false);
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-        BigBuf_free();
-        BigBuf_Clear_ext(false);
+        BigBuf_free_keep_EM();
+        BigBuf_Clear_keep_EM();
 
         // special trick ecfill
         if (use_flashmem && foundkeys == allkeys) {
@@ -2576,6 +2577,9 @@ OUT:
 
     g_dbglevel = oldbg;
 }
+
+// selections in a row MifareChkKeys() may lose before it gives up on the card
+#define CHK_SELECT_RETRIES 10
 
 void MifareChkKeys(uint8_t *datain, uint8_t reserved_mem) {
 
@@ -2627,16 +2631,33 @@ void MifareChkKeys(uint8_t *datain, uint8_t reserved_mem) {
 
     set_tracing(false);
 
+    // a card that stops answering ends the check instead of holding the device in the retry
+    int16_t status = PM3_SUCCESS;
+    uint8_t select_fails = 0;
+
     for (uint16_t i = 0; i < key_count; i++) {
 
+        // Allow button press / usb cmd to interrupt device
+        if (BUTTON_PRESS() || data_available()) {
+            status = PM3_EOPABORTED;
+            break;
+        }
+
+        WDT_HIT();
+
+        // 0 is no card, 3 an ATQA without anticollision bits: both leave nothing selected
+        int sel;
         // Iceman: use piwi's faster nonce collecting part in hardnested.
         if (have_uid == false) { // need a full select cycle to get the uid first
             iso14a_card_select_t card_info;
-            if (iso14443a_select_card(uid, &card_info, &cuid, true, 0, true) == false) {
+            sel = iso14443a_select_card(uid, &card_info, &cuid, true, 0, true);
+            if (sel != 1 && sel != 2) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("ChkKeys: Can't select card (ALL)");
-                if (i) {
-                    --i; // try same key once again
+                if (++select_fails > CHK_SELECT_RETRIES) {
+                    status = PM3_ECARDEXCHANGE;
+                    break;
                 }
+                --i; // try same key once again, 0 wraps and the loop brings it back
                 continue;
             }
             switch (card_info.uidlen) {
@@ -2654,14 +2675,18 @@ void MifareChkKeys(uint8_t *datain, uint8_t reserved_mem) {
             }
             have_uid = true;
         } else { // no need for anticollision. We can directly select the card
-            if (iso14443a_select_card(uid, NULL, NULL, false, cascade_levels, true) == false) {
+            sel = iso14443a_select_card(uid, NULL, NULL, false, cascade_levels, true);
+            if (sel != 1 && sel != 2) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("ChkKeys: Can't select card (UID)");
-                if (i) {
-                    --i; // try same key once again
+                if (++select_fails > CHK_SELECT_RETRIES) {
+                    status = PM3_ECARDEXCHANGE;
+                    break;
                 }
+                --i; // try same key once again, 0 wraps and the loop brings it back
                 continue;
             }
         }
+        select_fails = 0;
 
         key = bytes_to_num(datain + i * 6, 6);
         if (mifare_classic_auth(pcs, cuid, blockNo, keyType, key, AUTH_FIRST)) {
@@ -2677,7 +2702,7 @@ void MifareChkKeys(uint8_t *datain, uint8_t reserved_mem) {
     LED_B_ON();
     crypto1_deinit(pcs);
 
-    reply_ng(CMD_HF_MIFARE_CHKKEYS, PM3_SUCCESS, (uint8_t *)&keyresult, sizeof(keyresult));
+    reply_ng(CMD_HF_MIFARE_CHKKEYS, status, (uint8_t *)&keyresult, sizeof(keyresult));
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     set_tracing(false);
@@ -3328,7 +3353,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
         if (g_dbglevel >= DBG_ERROR) DbpString("Magic ident: failed to allocate buffers");
         reply_ng(CMD_HF_MIFARE_CIDENT, PM3_EMALLOC, NULL, 0);
         switch_off();
-        BigBuf_free();
+        BigBuf_free_keep_EM();
         return;
     }
 
@@ -3531,7 +3556,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
     reply_ng(CMD_HF_MIFARE_CIDENT, PM3_SUCCESS, (uint8_t *)&flag, sizeof(uint16_t));
     // turns off
     OnSuccessMagic();
-    BigBuf_free();
+    BigBuf_free_keep_EM();
 }
 
 void MifareHasStaticNonce(void) {
@@ -3593,7 +3618,7 @@ OUT:
     reply_ng(CMD_HF_MIFARE_STATIC_NONCE, retval, data, sizeof(data));
     // turns off
     OnSuccessMagic();
-    BigBuf_free();
+    BigBuf_free_keep_EM();
     crypto1_deinit(pcs);
 }
 
@@ -3801,7 +3826,7 @@ OUT:
     reply_ng(CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE, retval, data, sizeof(data));
     // turns off
     OnSuccessMagic();
-    BigBuf_free();
+    BigBuf_free_keep_EM();
 }
 
 void OnSuccessMagic(void) {
@@ -3853,7 +3878,7 @@ void MifareGen3UID(uint8_t uidlen, uint8_t *uid) {
     if (old_uid == NULL || cmd == NULL || card_info == NULL) {
         if (g_dbglevel >= DBG_ERROR) DbpString("Gen3 UID: failed to allocate buffers");
         reply_ng(CMD_HF_MIFARE_GEN3UID, PM3_EMALLOC, NULL, 0);
-        BigBuf_free();
+        BigBuf_free_keep_EM();
         return;
     }
 
@@ -3882,7 +3907,7 @@ OUT:
     reply_ng(CMD_HF_MIFARE_GEN3UID, retval, old_uid, uidlen);
     // turns off
     OnSuccessMagic();
-    BigBuf_free();
+    BigBuf_free_keep_EM();
 }
 
 void MifareGen3Blk(uint8_t block_len, uint8_t *block) {
@@ -3897,7 +3922,7 @@ void MifareGen3Blk(uint8_t block_len, uint8_t *block) {
     if (cmd == NULL || card_info == NULL) {
         if (g_dbglevel >= DBG_ERROR) DbpString("Gen3 blk: failed to allocate buffers");
         reply_ng(CMD_HF_MIFARE_GEN3BLK, PM3_EMALLOC, NULL, 0);
-        BigBuf_free();
+        BigBuf_free_keep_EM();
         return;
     }
 
@@ -3955,7 +3980,7 @@ OUT:
     reply_ng(CMD_HF_MIFARE_GEN3BLK, retval, &cmd[sizeof(block_cmd)], MIFARE_BLOCK_SIZE);
     // turns off
     OnSuccessMagic();
-    BigBuf_free();
+    BigBuf_free_keep_EM();
 }
 
 void MifareGen3Freez(void) {
@@ -3979,7 +4004,7 @@ OUT:
     reply_ng(CMD_HF_MIFARE_GEN3FREEZ, retval, NULL, 0);
     // turns off
     OnSuccessMagic();
-    BigBuf_free();
+    BigBuf_free_keep_EM();
 }
 
 void MifareG4ReadBlk(uint8_t blockno, uint8_t *pwd, uint8_t workFlags) {
@@ -4055,7 +4080,7 @@ OUT:
         set_tracing(false);
     }
 
-    BigBuf_free();
+    BigBuf_free_keep_EM();
 }
 
 void MifareG4WriteBlk(uint8_t blockno, uint8_t *pwd, uint8_t *data, uint8_t workFlags) {
@@ -4138,7 +4163,7 @@ OUT:
         set_tracing(false);
     }
 
-    BigBuf_free();
+    BigBuf_free_keep_EM();
 }
 
 void MifareSetMod(uint8_t *datain) {
@@ -4160,7 +4185,7 @@ void MifareSetMod(uint8_t *datain) {
     if (uid == NULL || buf == NULL || par == NULL) {
         if (g_dbglevel >= DBG_ERROR) DbpString("SetMod: failed to allocate buffers");
         reply_ng(CMD_HF_MIFARE_SETMOD, PM3_EMALLOC, NULL, 0);
-        BigBuf_free();
+        BigBuf_free_keep_EM();
         return;
     }
 
@@ -4206,7 +4231,7 @@ void MifareSetMod(uint8_t *datain) {
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
-    BigBuf_free();
+    BigBuf_free_keep_EM();
 }
 
 

@@ -45,11 +45,15 @@ uint8_t hitagu_CRC_check(uint8_t *d, uint32_t nbit) {
     return (Crc16(d, nbit, 0, CRC16_POLY_CCITT, false, false) == 0);
 }
 
-void annotateHitagU(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+void annotateHitagU(char *exp, size_t size, const uint8_t *cmd, uint16_t cmdsize, bool is_response) {
 
     if (is_response) {
 
     } else {
+        // flags and command take 11 bits
+        if (cmdsize < 2) {
+            return;
+        }
         uint8_t flag = reflect8(cmd[0]) & 0x1F;
         uint8_t command = ((reflect8(cmd[0]) >> 5) & 0x07) | ((reflect8(cmd[1]) & 0x07) << 3);
         bool has_uid = false;
@@ -102,14 +106,19 @@ void annotateHitagU(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
                 } else if (cmdsize == (7 + (has_uid * HITAGU_UID_SIZE)) || cmdsize == (9 + (has_uid * HITAGU_UID_SIZE))) {
 
                     uint8_t mfc = 0;
-                    concatbits(&mfc, 0, cmd, 5 + 6 + 8 + 32, 8, false);
+                    concatbits(&mfc, 0, cmd, 5 + 6, 8, false);
                     snprintf(exp + strlen(exp), size - strlen(exp), "LOGIN mfc:%02x ", mfc);
                     has_mfc = true;
                 }
 
+                // flags, command, IC MFC, UID, password
+                if ((cmdsize * 8) < (5 + 6 + has_mfc * 8 + has_uid * HITAGU_UID_SIZE * 8 + HITAG_PASSWORD_SIZE * 8)) {
+                    break;
+                }
+
                 if (has_uid) {
                     uint8_t uid[HITAGU_UID_SIZE] = {0};
-                    concatbits(uid, 0, cmd, 5 + 6 + has_mfc * 8 + 32, HITAGU_UID_SIZE * 8, false);
+                    concatbits(uid, 0, cmd, 5 + 6 + has_mfc * 8, HITAGU_UID_SIZE * 8, false);
                     snprintf(exp + strlen(exp), size - strlen(exp), " uid:%s", sprint_hex_inrow(uid, HITAGU_UID_SIZE));
                 }
 
@@ -123,11 +132,18 @@ void annotateHitagU(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
                 break;
             }
             case HITAGU_CMD_READ_MULTIPLE_BLOCK: {
+                // an addressed request has the UID before the block number
+                uint8_t bit_offset = 5 + 6 + has_uid * HITAGU_UID_SIZE * 8;
+                if ((cmdsize * 8) < (bit_offset + 8 + 8)) {
+                    snprintf(exp + strlen(exp), size - strlen(exp), "READ MULTIPLE BLOCK");
+                    break;
+                }
+
                 uint8_t block_addr = 0;
-                concatbits(&block_addr, 0, cmd, 5 + 6, 8, false);
+                concatbits(&block_addr, 0, cmd, bit_offset, 8, false);
 
                 uint8_t block_count = 0;
-                concatbits(&block_count, 0, cmd, 5 + 6 + 8, 8, false);
+                concatbits(&block_count, 0, cmd, bit_offset + 8, 8, false);
 
                 snprintf(exp + strlen(exp), size - strlen(exp), "READ MULTIPLE BLOCK start:%d num:%d"
                          , reflect8(block_addr)
@@ -136,11 +152,18 @@ void annotateHitagU(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
                 break;
             }
             case HITAGU_CMD_WRITE_SINGLE_BLOCK: {
+                // an addressed request has the UID before the block number
+                uint8_t bit_offset = 5 + 6 + has_uid * HITAGU_UID_SIZE * 8;
+                if ((cmdsize * 8) < (bit_offset + 8 + 32)) {
+                    snprintf(exp + strlen(exp), size - strlen(exp), "WRITE SINGLE BLOCK");
+                    break;
+                }
+
                 uint8_t block_addr = 0;
-                concatbits(&block_addr, 0, cmd, 5 + 6, 8, false);
+                concatbits(&block_addr, 0, cmd, bit_offset, 8, false);
 
                 uint8_t block_data[4] = {0};
-                concatbits(block_data, 0, cmd, 5 + 6 + 8, 32, false);
+                concatbits(block_data, 0, cmd, bit_offset + 8, 32, false);
 
                 snprintf(exp + strlen(exp), size - strlen(exp), "WRITE SINGLE BLOCK start:%d data:[%s]"
                          , reflect8(block_addr)
@@ -198,7 +221,7 @@ int read_htu_uid(void) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "UID....... " _GREEN_("%012llX"), uid);
+    PrintAndLogEx(SUCCESS, "UID....... " _GREEN_("%012" PRIX64), uid);
     // PrintAndLogEx(SUCCESS, "TYPE...... " _GREEN_("%s"), htu_get_type_str(uid));
     return PM3_SUCCESS;
 }
@@ -349,13 +372,16 @@ static int CmdLFHitagURead(const char *Cmd) {
 
     if (page >= HITAGU_MAX_BLOCKS) {
         PrintAndLogEx(WARNING, "Block address out-of-range. Max is 255, got %u", page);
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
     uint32_t count = arg_get_int_def(ctx, 4, 1);
 
-    if (count > HITAGU_MAX_BLOCKS) {
-        PrintAndLogEx(WARNING, "No more than %d blocks can be read at once", HITAGU_MAX_BLOCKS);
+    // the read response holds HITAGU_MAX_PAGE_ADVANCED_PLUS blocks
+    if (count > HITAGU_MAX_PAGE_ADVANCED_PLUS) {
+        PrintAndLogEx(WARNING, "No more than %d blocks can be read at once", HITAGU_MAX_PAGE_ADVANCED_PLUS);
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -422,7 +448,7 @@ static int CmdLFHitagURead(const char *Cmd) {
         count = (user_blocks > page) ? (user_blocks - page) : HITAGU_MAX_BLOCKS;
     }
 
-    for (int i = 0; i < count; ++i) {
+    for (int i = 0; (i < count) && (i < HITAGU_MAX_PAGE_ADVANCED_PLUS); ++i) {
 
         int page_addr = page + i;
         if (page_addr >= HITAGU_MAX_BLOCKS) {
@@ -430,7 +456,7 @@ static int CmdLFHitagURead(const char *Cmd) {
         }
 
         if (card->pages_reason[i] > 0) {
-            PrintAndLogEx(SUCCESS, "% 3u | %s  | " NOLF, page_addr, sprint_hex_ascii(card->pages[i], HITAGU_BLOCK_SIZE));
+            PrintAndLogEx(SUCCESS, "%3u | %s  | " NOLF, page_addr, sprint_hex_ascii(card->pages[i], HITAGU_BLOCK_SIZE));
 
             // access right
             // 82xx
@@ -482,7 +508,7 @@ static int CmdLFHitagURead(const char *Cmd) {
                 PrintAndLogEx(NORMAL, "Data");
             }
         } else {
-            PrintAndLogEx(INFO, "% 3u | -- -- -- -- | ....  | N/A  | " NOLF, page_addr);
+            PrintAndLogEx(INFO, "%3u | -- -- -- -- | ....  | N/A  | " NOLF, page_addr);
             print_error(card->pages_reason[i]);
         }
     }
@@ -644,6 +670,16 @@ static int CmdLFHitagUWrite(const char *Cmd) {
     }
 
     CLIParserFree(ctx);
+
+    if ((page < 0) || (page >= HITAGU_MAX_BLOCKS)) {
+        PrintAndLogEx(WARNING, "Block address out-of-range. Max is 255, got %d", page);
+        return PM3_EINVARG;
+    }
+
+    if (data_len != sizeof(data)) {
+        PrintAndLogEx(WARNING, "Wrong DATA len expected 4, got %d", data_len);
+        return PM3_EINVARG;
+    }
 
     packet.page = page;
     memcpy(packet.data, data, sizeof(packet.data));

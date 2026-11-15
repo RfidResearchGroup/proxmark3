@@ -74,42 +74,13 @@ static model_t models[] = {
     {"2.9  inch e-paper",               16, 296, 128},
     {"4.2  inch e-paper",              100, 400, 300}, // tested
     {"7.5  inch e-paper",              120, 800, 480},
-    {"2.7  inch e-paper",              121, 176, 276}, // tested
+    {"2.7  inch e-paper",              121, 176, 264}, // tested
     {"2.13 inch e-paper B (with red)", 106, 104, 212}, // tested
     {"1.54 inch e-paper B (with red)", 100, 200, 200}, // tested
     {"7.5  inch e-paper HD",           120, 880, 528},
 };
 
 static int CmdHelp(const char *Cmd);
-
-static uint8_t *map8to1(gdImagePtr img, int color) {
-    // Calculate width rounding up
-    uint16_t width8 = (gdImageSX(img) + 7) / 8;
-
-    uint8_t *colormap8 = calloc(width8 * gdImageSY(img), sizeof(uint8_t));
-    if (!colormap8) {
-        return NULL;
-    }
-
-    uint8_t data = 0;
-    uint8_t count = 0;
-    for (uint16_t Y = 0; Y < gdImageSY(img); Y++) {
-        for (uint16_t X = 0; X < gdImageSX(img); X++) {
-            if (gdImageGetPixel(img, X, Y) == color) {
-                data |= 1;
-            }
-            count += 1;
-            if ((count >= 8) || (X == gdImageSX(img) - 1)) {
-                colormap8[X / 8 + Y * width8] = (~data) & 0xFF;
-                count = 0;
-                data = 0;
-            }
-            data = (data << 1) & 0xFF;
-        }
-    }
-
-    return colormap8;
-}
 
 static void read_black(uint32_t i, uint8_t *l, uint8_t model_nr, const uint8_t *black) {
     for (uint8_t j = 0; j < models[model_nr].len; j++) {
@@ -628,20 +599,6 @@ static int CmdHF14AWSLoad(const char *Cmd) {
 
     bool model_has_red = model_nr == M1in54B || model_nr == M2in13B;
 
-    gdImagePtr rgb_img = gdImageCreateFromFile(infile);
-    if (!rgb_img) {
-        PrintAndLogEx(WARNING, "Could not load image from " _YELLOW_("%s"), infile);
-        return PM3_EFILE;
-    }
-
-    gdImagePtr scaled_img = img_crop_to_fit(rgb_img, models[model_nr].width, models[model_nr].height);
-    if (scaled_img == NULL) {
-        PrintAndLogEx(WARNING, "Failed to scale input image");
-        gdImageDestroy(rgb_img);
-        return PM3_EFILE;
-    }
-    gdImageDestroy(rgb_img);
-
     int pal_len = 2;
     int pal[3];
     pal[0] = gdTrueColorAlpha(0xFF, 0xFF, 0xFF, 0); // White
@@ -651,27 +608,19 @@ static int CmdHF14AWSLoad(const char *Cmd) {
         pal[2] = gdTrueColorAlpha(0xFF, 0x00, 0x00, 0); // Red
     }
 
-    gdImagePtr pal_img = img_palettize(scaled_img, pal, pal_len);
-    gdImageDestroy(scaled_img);
-
-    if (!pal_img) {
-        PrintAndLogEx(WARNING, "Could not convert image");
-        return PM3_EMALLOC;
+    gdImagePtr pal_img = NULL;
+    int res = img_load_dithered(infile, models[model_nr].width, models[model_nr].height, pal, pal_len, &pal_img);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
     if (outfilelen) {
-        if (gdImageFile(pal_img, outfile)) {
-            PrintAndLogEx(INFO, "Save converted image to " _YELLOW_("%s"), outfile);
-            gdImageDestroy(pal_img);
-            return PM3_SUCCESS;
-        } else {
-            PrintAndLogEx(WARNING, "Could not save converted image", outfile);
-            gdImageDestroy(pal_img);
-            return PM3_EFILE;
-        }
+        res = img_save(pal_img, outfile);
+        gdImageDestroy(pal_img);
+        return res;
     }
 
-    uint8_t *black_plane = map8to1(pal_img, 1);
+    uint8_t *black_plane = img_to_bitplane(pal_img, 1);
     if (!black_plane) {
         PrintAndLogEx(WARNING, "Could not convert image to bit plane");
         gdImageDestroy(pal_img);
@@ -680,7 +629,7 @@ static int CmdHF14AWSLoad(const char *Cmd) {
 
     uint8_t *red_plane = NULL;
     if (model_has_red) {
-        red_plane = map8to1(pal_img, 2);
+        red_plane = img_to_bitplane(pal_img, 2);
         if (!red_plane) {
             PrintAndLogEx(WARNING, "Could not convert image to bit plane");
             free(black_plane);
@@ -690,7 +639,7 @@ static int CmdHF14AWSLoad(const char *Cmd) {
     }
     gdImageDestroy(pal_img);
 
-    int res = start_drawing(model_nr, black_plane, red_plane);
+    res = start_drawing(model_nr, black_plane, red_plane);
     free(black_plane);
     free(red_plane);
     return res;

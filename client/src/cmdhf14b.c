@@ -41,6 +41,7 @@
 #include "atrs.h"               // atqbToEmulatedAtr
 #include "pla.h"                // ECP parsing
 #include "parsers/parsemykey.h" // MyKey / COGES
+#include "parsers/parsetransit.h" // transit card parsers
 
 #define MAX_14B_TIMEOUT_MS (4949U)
 
@@ -937,6 +938,8 @@ static void sr_view_dump(uint8_t *data, size_t len, const uint8_t *uid, bool den
     if (is_valid_mykey_card(data, len)) {
         (void)mykey_parser_parse(data, len, uid);
     }
+
+    (void)transit_st25tb_parse(data, len, uid);
 }
 
 static void print_std_blocks(uint8_t *data, size_t len, const uint8_t *uid, uint8_t uidlen, bool dense_output) {
@@ -1408,6 +1411,33 @@ static bool HF14B_Std_Info(bool verbose, bool do_aid_search) {
 }
 
 // SRx get and print full info (needs more info...)
+static int read_sr_block(uint8_t blockno, uint8_t *out, uint16_t out_len);
+
+// Transit tickets live on 512 bit tags, read the whole tag and identify it
+static void sr_info_transit(const uint8_t *uid) {
+    if (get_st_cardsize(uid) != SR_SIZE_512) {
+        return;
+    }
+
+    uint8_t data[(512 / 8) + ST25TB_SR_BLOCK_SIZE] = {0};
+    for (uint8_t i = 0; i <= 0x0F; i++) {
+        if (read_sr_block(i, data + (i * ST25TB_SR_BLOCK_SIZE), ST25TB_SR_BLOCK_SIZE) != PM3_SUCCESS) {
+            return;
+        }
+    }
+    if (read_sr_block(0xFF, data + (0x10 * ST25TB_SR_BLOCK_SIZE), ST25TB_SR_BLOCK_SIZE) != PM3_SUCCESS) {
+        return;
+    }
+
+    transit_idents_t transit_ids;
+    if (transit_st25tb_identify(data, sizeof(data), uid, &transit_ids) > 0) {
+        PrintAndLogEx(NORMAL, "");
+        transit_print_idents(&transit_ids);
+        (void)transit_st25tb_parse(data, sizeof(data), uid);
+        transit_print_ident_hints(&transit_ids, NULL);
+    }
+}
+
 static bool HF14B_ST_Info(bool verbose, bool do_aid_search) {
 
     iso14b_raw_cmd_t packet = {
@@ -1439,6 +1469,7 @@ static bool HF14B_ST_Info(bool verbose, bool do_aid_search) {
     }
 
     print_st_general_info(card.uid, card.uidlen);
+    sr_info_transit(card.uid);
 
     if (do_aid_search) {
         hf14b_aid_search(verbose);
@@ -2359,9 +2390,7 @@ static int CmdHF14BDump(const char *Cmd) {
 
         if (total == 0) {
             PrintAndLogEx(WARNING, "No data could be read directly or via SFI.");
-            PrintAndLogEx(HINT, "Hint: tag requires application-specific APDUs.");
-            PrintAndLogEx(HINT, "      Try `hf 14b apdu -d 00A4040007D2760000850101 00` to select NDEF,");
-            PrintAndLogEx(HINT, "      or `hf 14b ndefread` if the tag holds NFC content.");
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 14b ndefread") "` if the tag holds NFC content");
             free(data);
             return PM3_ESOFT;
         }
@@ -3315,7 +3344,7 @@ int CmdHF14BNdefRead(const char *Cmd) {
     }
 
     if (verbose == false) {
-        PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf 14b ndefread -v`") " for more details"); // So far this prints absolutely nothing
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 14b ndefread -v") "` for more details"); // So far this prints absolutely nothing
     }
 
 
@@ -3362,7 +3391,11 @@ static int CmdHF14BView(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (selftest) {
-        return mykey_selftest();
+        int res = mykey_selftest();
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+        return transit_st25tb_selftest();
     }
 
     if (fnlen == 0) {

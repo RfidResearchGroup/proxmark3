@@ -4045,8 +4045,12 @@ static int CmdTestSaveState8(const char *Cmd) {
     srand(time(NULL));
 
     size_t length = (rand() % 256);
-    PrintAndLogEx(DEBUG, "Testing with length = %llu", length);
+    PrintAndLogEx(DEBUG, "Testing with length = %zu", length);
     uint8_t *srcBuffer = (uint8_t *)calloc(length + 1, sizeof(uint8_t));
+    if (srcBuffer == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
 
     //Set up the source buffer with random data
     for (int i = 0; i < length; i++) {
@@ -4054,30 +4058,37 @@ static int CmdTestSaveState8(const char *Cmd) {
     }
 
     buffer_savestate_t test8 = save_buffer8(srcBuffer, length);
-    PrintAndLogEx(DEBUG, "Save State created, length = %llu, padding = %i, type = %i", test8.bufferSize, test8.padding, test8.type);
+    PrintAndLogEx(DEBUG, "Save State created, length = %zu, padding = %i, type = %i", test8.bufferSize, test8.padding, test8.type);
 
     test8.clock = rand();
     test8.offset = rand();
     PrintAndLogEx(DEBUG, "Save State clock = %u, offset = %u", test8.clock, test8.offset);
 
     uint8_t *destBuffer = (uint8_t *)calloc(length, sizeof(uint8_t));
+    if (destBuffer == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        free(srcBuffer);
+        free_buffer_savestate(test8);
+        return PM3_EMALLOC;
+    }
     size_t returnedLength = restore_buffer8(test8, destBuffer);
+    free_buffer_savestate(test8);
 
     if (returnedLength != length) {
         PrintAndLogEx(DEBUG, _YELLOW_("Returned length != expected length!"));
-        PrintAndLogEx(WARNING, "Returned Length = %llu Buffer Length = %llu Expected = %llu", returnedLength, test8.bufferSize, length);
+        PrintAndLogEx(WARNING, "Returned Length = %zu Buffer Length = %zu Expected = %zu", returnedLength, test8.bufferSize, length);
     } else {
         PrintAndLogEx(DEBUG, _GREEN_("Lengths match!") "\n");
     }
 
     for (size_t i = 0; i < returnedLength; i++) {
         if (srcBuffer[i] != destBuffer[i]) {
-            PrintAndLogEx(FAILED, "Buffers don't match at index %lu!, Expected %i, got %i", i, srcBuffer[i], destBuffer[i]);
+            PrintAndLogEx(FAILED, "Buffers don't match at index %zu!, Expected %i, got %i", i, srcBuffer[i], destBuffer[i]);
             free(srcBuffer);
             free(destBuffer);
             return PM3_EFAILED;
         }
-        PrintAndLogEx(DEBUG, "Index %lu matches: %u", i, destBuffer[i]);
+        PrintAndLogEx(DEBUG, "Index %zu matches: %u", i, destBuffer[i]);
     }
     PrintAndLogEx(SUCCESS, _GREEN_("Save State (8-bit) test success!") "\n");
 
@@ -4102,6 +4113,10 @@ static int CmdTestSaveState32(const char *Cmd) {
 
     size_t length = 64;
     uint32_t *srcBuffer = (uint32_t *)calloc(length, sizeof(uint32_t));
+    if (srcBuffer == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
 
     //Set up the source buffer with random data
     for (size_t i = 0; i < length; i++) {
@@ -4109,17 +4124,24 @@ static int CmdTestSaveState32(const char *Cmd) {
     }
 
     buffer_savestate_t test32 = save_buffer32(srcBuffer, length);
-    PrintAndLogEx(DEBUG, "Save State created, length=%llu, type=%i", test32.bufferSize, test32.type);
+    PrintAndLogEx(DEBUG, "Save State created, length=%zu, type=%i", test32.bufferSize, test32.type);
 
     test32.clock = rand();
     test32.offset = rand();
     PrintAndLogEx(DEBUG, "Save State clock=%u, offset=%u", test32.clock, test32.offset);
 
     uint32_t *destBuffer = (uint32_t *)calloc(length, sizeof(uint32_t));
+    if (destBuffer == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        free(srcBuffer);
+        free_buffer_savestate(test32);
+        return PM3_EMALLOC;
+    }
     size_t returnedLength = restore_buffer32(test32, destBuffer);
+    free_buffer_savestate(test32);
 
     if (returnedLength != length) {
-        PrintAndLogEx(FAILED, "Return Length != Buffer Length! Expected '%llu', got '%llu", g_DemodBufferLen, returnedLength);
+        PrintAndLogEx(FAILED, "Return Length != Buffer Length! Expected '%zu', got '%zu", g_DemodBufferLen, returnedLength);
         free(srcBuffer);
         free(destBuffer);
         return PM3_EFAILED;
@@ -4128,12 +4150,12 @@ static int CmdTestSaveState32(const char *Cmd) {
 
     for (size_t i = 0; i < length; i++) {
         if (srcBuffer[i] != destBuffer[i]) {
-            PrintAndLogEx(FAILED, "Buffers don't match at index %lu!, Expected %i, got %i", i, srcBuffer[i], destBuffer[i]);
+            PrintAndLogEx(FAILED, "Buffers don't match at index %zu!, Expected %i, got %i", i, srcBuffer[i], destBuffer[i]);
             free(srcBuffer);
             free(destBuffer);
             return PM3_EFAILED;
         }
-        PrintAndLogEx(DEBUG, "Index %lu matches: %i", i, destBuffer[i]);
+        PrintAndLogEx(DEBUG, "Index %zu matches: %i", i, destBuffer[i]);
     }
     PrintAndLogEx(SUCCESS, _GREEN_("Save State (32-bit) test success!") "\n");
 
@@ -4158,6 +4180,10 @@ static int CmdTestSaveState32S(const char *Cmd) {
 
     size_t length = 64;
     int32_t *srcBuffer = (int32_t *)calloc(length, sizeof(int32_t));
+    if (srcBuffer == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
 
     //Set up the source buffer with random data
     for (int i = 0; i < length; i++) {
@@ -4165,17 +4191,24 @@ static int CmdTestSaveState32S(const char *Cmd) {
     }
 
     buffer_savestate_t test32 = save_bufferS32(srcBuffer, length);
-    PrintAndLogEx(DEBUG, "Save State created, length=%llu, type=%i", test32.bufferSize, test32.type);
+    PrintAndLogEx(DEBUG, "Save State created, length=%zu, type=%i", test32.bufferSize, test32.type);
 
     test32.clock = rand();
     test32.offset = rand();
     PrintAndLogEx(DEBUG, "Save State clock=%u, offset=%u", test32.clock, test32.offset);
 
     int32_t *destBuffer = (int32_t *)calloc(length, sizeof(int32_t));
+    if (destBuffer == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        free(srcBuffer);
+        free_buffer_savestate(test32);
+        return PM3_EMALLOC;
+    }
     size_t returnedLength = restore_bufferS32(test32, destBuffer);
+    free_buffer_savestate(test32);
 
     if (returnedLength != length) {
-        PrintAndLogEx(FAILED, "Return Length != Buffer Length! Expected '%llu', got '%llu", g_DemodBufferLen, returnedLength);
+        PrintAndLogEx(FAILED, "Return Length != Buffer Length! Expected '%zu', got '%zu", g_DemodBufferLen, returnedLength);
         free(srcBuffer);
         free(destBuffer);
         return PM3_EFAILED;
@@ -4461,7 +4494,7 @@ static int CmdFFT(const char *Cmd) {
     int size = arg_get_int_def(ctx, 2, 0);
 
     char win_str[16] = {0};
-    int win_len = sizeof(win_str) - 1;
+    int win_len = sizeof(win_str);
     CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)win_str, win_len, &win_len);
 
     bool use_db = arg_get_lit(ctx, 4);
@@ -5023,7 +5056,7 @@ static int CmdSpectrum(const char *Cmd) {
     int size = arg_get_int_def(ctx, 2, 0);
 
     char win_str[16] = {0};
-    int win_len = sizeof(win_str) - 1;
+    int win_len = sizeof(win_str);
     CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)win_str, win_len, &win_len);
 
     int top = arg_get_int_def(ctx, 4, 5);
@@ -5222,7 +5255,7 @@ static int CmdFitScore(const char *Cmd) {
     int size = arg_get_int_def(ctx, 2, 0);
 
     char mod_str[8] = {0};
-    int mod_len = sizeof(mod_str) - 1;
+    int mod_len = sizeof(mod_str);
     CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)mod_str, mod_len, &mod_len);
 
     int clk_only = arg_get_int_def(ctx, 4, 0);
@@ -5422,11 +5455,11 @@ static int CmdGenSignal(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     char mod_str[8] = {0};
-    int mod_len = sizeof(mod_str) - 1;
+    int mod_len = sizeof(mod_str);
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)mod_str, mod_len, &mod_len);
 
     char enc_str[16] = {0};
-    int enc_len = sizeof(enc_str) - 1;
+    int enc_len = sizeof(enc_str);
     CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)enc_str, enc_len, &enc_len);
 
     pm3_gen_opts_t opts = {0};

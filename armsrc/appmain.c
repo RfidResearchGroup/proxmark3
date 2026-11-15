@@ -266,15 +266,16 @@ static void bwm_autooff_check(void) {
     pm5_power_off();
 }
 
-static void pm5_autooff_print_status(void) {
+// `hw status` text for the power-save line, dst needs ~80 bytes
+static void pm5_autooff_sprint(char *dst) {
     if (g_autooff_enabled == false) {
-        Dbprintf("  Auto power-off...... " _YELLOW_("off"));
+        sprintf(dst, ", auto-off " _YELLOW_("off"));
     } else if (g_autooff_idle_ms == 0) {
-        Dbprintf("  Auto power-off...... " _GREEN_("on") " (%s)", g_autooff_unplug ? "USB unplug only" : "no trigger set");
+        sprintf(dst, ", auto-off %s", g_autooff_unplug ? "on " _GREEN_("USB unplug") : _YELLOW_("no trigger set"));
     } else if (g_autooff_unplug) {
-        Dbprintf("  Auto power-off...... " _GREEN_("on") " (USB unplug, or %u s idle on battery)", g_autooff_idle_ms / 1000);
+        sprintf(dst, ", auto-off on " _GREEN_("USB unplug") " or " _GREEN_("%u s") " idle", (unsigned int)(g_autooff_idle_ms / 1000));
     } else {
-        Dbprintf("  Auto power-off...... " _GREEN_("on") " (%u s idle on battery, also after an unplug)", g_autooff_idle_ms / 1000);
+        sprintf(dst, ", auto-off after " _GREEN_("%u s") " idle on battery", (unsigned int)(g_autooff_idle_ms / 1000));
     }
 }
 #endif // WITH_PM5_AUTOOFF
@@ -571,7 +572,7 @@ static void __attribute__((noinline)) SendVersion(void) {
     // PM5's FPGA (Gowin) bitstream is loaded at runtime via `hw fpga config` and is
     // not compiled into the firmware, so there is no meaningful built-in FPGA
     // version to report here. g_fpga_version_information[] describes the Xilinx
-    // bitstream that PM5 does not run, so omit the section entirely on PM5.
+    // bitstream that PM5 does not run, so PM5 reports the usercode of its image instead.
     strncat(VersionString, "\n [ "_YELLOW_("FPGA")" ] \n ", sizeof(VersionString) - strlen(VersionString) - 1);
 
     for (int i = 0; i < g_fpga_bitstream_num; i++) {
@@ -580,6 +581,14 @@ static void __attribute__((noinline)) SendVersion(void) {
             strncat(VersionString, "\n ", sizeof(VersionString) - strlen(VersionString) - 1);
         }
     }
+#else
+    uint32_t fpga_usercode;
+    if (Fpga_get_usercode(&fpga_usercode)) {
+        sprintf(temp, "\n [ "_YELLOW_("FPGA")" ] \n Usercode... 0x%08X", (unsigned int)fpga_usercode);
+    } else {
+        sprintf(temp, "\n [ "_YELLOW_("FPGA")" ] \n Usercode... unknown");
+    }
+    strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
 #endif
 #ifdef WITH_COMPRESSION
     // Send Chip ID and used flash memory
@@ -691,7 +700,8 @@ static void printConnSpeed(uint32_t wait) {
     Dbprintf("  Bytes transferred.............. %d", bytes_transferred);
     Dbprintf("  Frames sent.................... %d ( %d bytes )", frames_sent, wire_len);
     if (delta_time) {
-        Dbprintf("  Transfer Speed PM3 -> Client... " _YELLOW_("%llu") " bytes/s", 1000 * (uint64_t)bytes_transferred / delta_time);
+        char rate[SPRINT_BYTES_LEN];
+        Dbprintf("  Transfer Speed PM3 -> Client... " _YELLOW_("%s/s"), sprint_bytes(rate, (uint32_t)(1000 * (uint64_t)bytes_transferred / delta_time)));
         Dbprintf("  Frame rate..................... " _YELLOW_("%llu") " frames/s", 1000 * (uint64_t)frames_sent / delta_time);
     }
 }
@@ -722,7 +732,9 @@ static void SendStatus(uint32_t wait) {
     bwm_print_battery_status();
 #endif
 #ifdef WITH_BWM_FORWARD
-    Dbprintf("  BWM link baud....... " _YELLOW_("%u") " bps", bwm_uart_get_baud());
+    DbpString(_CYAN_("BWM"));
+    char baud[SPRINT_BITRATE_LEN];
+    sprint_bitrate(baud, bwm_uart_get_baud());
     {
         // Read the ESP firmware version so hw status shows what the BWM runs
         // (and lets you confirm an OTA took: the string flips after a reflash).
@@ -737,23 +749,62 @@ static void SendStatus(uint32_t wait) {
         }
         if (vres == PM3_SUCCESS) {
             bwm_ver[bwm_ver_len] = 0x00;
-            Dbprintf("  BWM fw version...... " _YELLOW_("%s"), bwm_ver);
+            bwm_chip_info_t ci;
+            bool have_ci = (bwm_esp_get_chip_info(&ci, 300) == PM3_SUCCESS);
             // Only once the ESP answered; older fw lacks these, so keep the wait short.
-            uint8_t ps = 0;
-            if (bwm_esp_get_power_save(&ps, 300) == PM3_SUCCESS) {
-                Dbprintf("  BWM power save...... " _YELLOW_("%s"), ps ? "on" : "off");
-            }
             uint8_t bs = 0;
-            if (bwm_esp_get_ble_state(&bs, 300) == PM3_SUCCESS) {
-                Dbprintf("  BWM BLE............. " _YELLOW_("%s"), (bs == BWM_BLE_STATE_CONNECTED) ? "client connected" : (bs == 1) ? "advertising" : "off");
+            bool have_bs = (bwm_esp_get_ble_state(&bs, 300) == PM3_SUCCESS);
+
+            char line[150] = {0};
+            char *p = line;
+            p += sprintf(p, _YELLOW_("%s"), bwm_ver);
+            if (have_ci) {
+                p += sprintf(p, " on %s", (ci.model == 12) ? "ESP32-C2" : "ESP32 model ?");
             }
-            // Our cached copy of the ESP's LINK_STATE broadcasts (BLE or WiFi), which holds
-            // off the idle power-off. Debug only: it should agree with the live line above.
+
+            p += sprintf(p, ", link " _YELLOW_("%s"), baud);
+            if (have_bs) {
+                if (bs == BWM_BLE_STATE_CONNECTED) {
+                    p += sprintf(p, ", BLE " _GREEN_("client connected"));
+                } else {
+                    p += sprintf(p, ", BLE " _YELLOW_("%s"), (bs == 1) ? "advertising" : "off");
+                }
+            }
+            Dbprintf("  Firmware............ %s", line);
+
             if (g_dbglevel >= DBG_DEBUG) {
+                if (have_ci) {
+                    Dbprintf("  BWM chip............ " _YELLOW_("%s v%u.%u") " pkg %u, flash " _YELLOW_("%s") " %06X (%u MB)",
+                             (ci.model == 12) ? "ESP32-C2" : "ESP32 model ?",
+                             ci.revision / 100, ci.revision % 100, ci.pkg,
+                             bwm_flash_vendor(ci.flash_id >> 16), ci.flash_id & 0xFFFFFF, ci.flash_size >> 20);
+                }
+
+                p = line;
+                uint8_t ps = 0;
+                if (bwm_esp_get_power_save(&ps, 300) == PM3_SUCCESS) {
+                    p += sprintf(p, "power save " _YELLOW_("%s"), ps ? "on" : "off");
+                }
+
+                uint32_t heap[3] = {0};
+                uint8_t hn = 0;
+                if (bwm_esp_get_free_heap(heap, &hn, 300) == PM3_SUCCESS) {
+                    p += sprintf(p, "%s" _YELLOW_("%u") " B free", (p == line) ? "" : ", ", (unsigned int)heap[0]);
+                    if (hn == 3) {
+                        p += sprintf(p, " (lowest %u, largest block %u)", (unsigned int)heap[1], (unsigned int)heap[2]);
+                    }
+                }
+
+                if (p != line) {
+                    Dbprintf("  BWM state........... %s", line);
+                }
+
+                // Our cached copy of the ESP's LINK_STATE broadcasts (BLE or WiFi), which holds
+                // off the idle power-off. Debug only: it should agree with the live line above.
                 Dbprintf("  BWM tracked client.. " _YELLOW_("%s"), bwm_fwd_link_connected() ? "connected (BLE or WiFi)" : "none");
             }
         } else {
-            Dbprintf("  BWM fw version...... " _YELLOW_("%s"), "unknown");
+            Dbprintf("  Firmware............ " _YELLOW_("unknown") ", link " _YELLOW_("%s"), baud);
         }
     }
     if (g_dbglevel >= DBG_DEBUG) {
@@ -766,16 +817,28 @@ static void SendStatus(uint32_t wait) {
                  fc.timeouts, fc.forgotten, fc.bytes_max);
         Dbprintf("  BWM fwd now......... " _YELLOW_("%u") " frames / " _YELLOW_("%u") " B in flight",
                  fc.in_flight_frames, fc.in_flight_bytes);
+        Dbprintf("  BWM fwd routing..... " _YELLOW_("%s"), bwm_fwd_tagged() ? "per host" : "every host");
+        bwm_esp_print_runtime_stats();
     }
 #endif
 #ifdef PM5
-    pm5_power_print_status();
-#endif
+    char autooff[80] = {0};
 #ifdef WITH_PM5_AUTOOFF
-    pm5_autooff_print_status();
+    pm5_autooff_sprint(autooff);
+#endif
+    pm5_power_print_status(autooff);
 #endif
 #ifdef WITH_CEP
-    Dbprintf("  CEP (Flipper) link.. " _YELLOW_("%s"), cep_is_active() ? "attached" : "not attached");
+    if (cep_is_active()) {
+        DbpString("  Flipper............. " _GREEN_("attached"));
+    } else {
+        DbpString("  Flipper............. " _YELLOW_("not attached"));
+    }
+#endif
+#ifdef PM5
+    if (g_dbglevel >= DBG_DEBUG) {
+        pm5_power_print_stats();
+    }
 #endif
     printConnSpeed(wait);
     DbpString(_CYAN_("Various"));
@@ -786,6 +849,12 @@ static void SendStatus(uint32_t wait) {
     tosend_t *ts = get_tosend();
     Dbprintf("  ToSendMax........... %d", ts->max);
     Dbprintf("  ToSend BUFFERSIZE... %d", TOSEND_BUFFER_SIZE);
+
+#ifdef WITH_ISO14443a
+    uint32_t retrans = 0, retrans_lost = 0;
+    iso14_get_retrans(&retrans, &retrans_lost);
+    Dbprintf("  14443-4 retrans..... %u asked, %u still lost", retrans, retrans_lost);
+#endif
 
 #ifdef CHIP_AT91SAM7S
 
@@ -2775,8 +2844,8 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             // Not only clears the emulator memory,
             // also sets default MIFARE values for sector trailers.
-            emlClearMem();
-            reply_ng(CMD_HF_MIFARE_EML_MEMCLR, PM3_SUCCESS, NULL, 0);
+            int res = emlClearMem();
+            reply_ng(CMD_HF_MIFARE_EML_MEMCLR, res, NULL, 0);
             break;
         }
         case CMD_HF_MIFARE_EML_MEMSET: {
@@ -2802,13 +2871,23 @@ static void PacketReceived(PacketCommandNG *packet) {
                 payload->blockwidth = MIFARE_BLOCK_SIZE;
             }
 
-            // a whole-dump upload zeroes what was there first, so a smaller dump can't
-            // leave a tail behind that reads back as card data. esetblk never sets this.
-            if (payload->flags & MFEMUL_MEMSET_CLEAR) {
-                BigBuf_Clear_EM();
+            // the data the packet holds
+            if ((uint32_t)payload->blockcnt * payload->blockwidth > packet->length - sizeof(struct p)) {
+                reply_ng(CMD_HF_MIFARE_EML_MEMSET, PM3_EINVARG, NULL, 0);
+                break;
             }
 
-            emlSetMem_xt(payload->data, payload->blockno, payload->blockcnt, payload->blockwidth);
+            // a whole-dump upload zeroes what was there first, so a smaller dump can't
+            // leave a tail behind that reads back as card data. esetblk never sets this.
+            int res = PM3_SUCCESS;
+            if (payload->flags & MFEMUL_MEMSET_CLEAR) {
+                res = BigBuf_Clear_EM();
+            }
+
+            if (res == PM3_SUCCESS) {
+                res = emlSetMem_xt(payload->data, payload->blockno, payload->blockcnt, payload->blockwidth);
+            }
+            reply_ng(CMD_HF_MIFARE_EML_MEMSET, res, NULL, 0);
             break;
         }
         case CMD_HF_MIFARE_EML_MEMGET: {
@@ -3248,7 +3327,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
 
         case CMD_HF_SAM_MFC: {
-//            sam_mfc_get_pacs();
+            sam_mfc_get_pacs(packet);
             break;
         }
 
@@ -4136,6 +4215,9 @@ static void PacketReceived(PacketCommandNG *packet) {
 #endif
         case CMD_FINISH_WRITE:
         case CMD_HARDWARE_RESET: {
+#ifdef WITH_BWM_FORWARD
+            bwm_fwd_prepare_reset();
+#endif
             usb_disable();
 
             // (iceman) why this wait?
@@ -4149,6 +4231,9 @@ static void PacketReceived(PacketCommandNG *packet) {
             if (g_common_area.flags.bootrom_present) {
                 g_common_area.command = COMMON_AREA_COMMAND_ENTER_FLASH_MODE;
             }
+#ifdef WITH_BWM_FORWARD
+            bwm_fwd_prepare_reset();
+#endif
             usb_disable();
             ResetChip();
             // We're going to flash, and the bootrom will take control.
@@ -4763,6 +4848,9 @@ void __attribute__((noreturn)) AppMain(void) {
 #endif
 #ifdef WITH_CEP
         cep_attach_poll();
+#endif
+#ifdef WITH_BWM_FORWARD
+        bwm_fwd_tag_poll();
 #endif
 
         if (*_stack_start != 0xdeadbeef) {

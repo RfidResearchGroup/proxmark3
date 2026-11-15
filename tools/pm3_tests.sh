@@ -475,15 +475,29 @@ while true; do
       if ! CheckExecute "data rawdemod ar samples"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_keri.pm3; data setdebugmode -1; data rawdemod --ar --samples 1000' 2>&1" "maxLen 1000"; then break; fi
       if ! CheckExecute "data rawdemod am max errors"            "$CLIENTBIN -c 'data load -f traces/lf_EM4102-1.pm3; data setdebugmode -1; data rawdemod --am --max 300' 2>&1" "maxErr 300"; then break; fi
       if ! CheckExecute "mfu pwdgen test"         "$CLIENTBIN -c 'hf mfu pwdgen --test'" "Selftest ok"; then break; fi
+      if ! CheckExecute "mfu pwdgen philips"      "$CLIENTBIN -c 'hf mfu pwdgen --uid 040D4B5AC57181 --mfg 3231303632382035324D'" "Philips Toothbrush \\| FBCFACC1"; then break; fi
       if ! CheckExecute "mfu keygen test"         "$CLIENTBIN -c 'hf mfu keygen --uid 11223344556677'" "80 B1 C2 71 D8 A0"; then break; fi
       if ! CheckExecute "jooki encode test"       "$CLIENTBIN -c 'hf jooki encode --test'" "04 28 F4 DA F0 4A 81  \( ok \)"; then break; fi
       if ! CheckExecute "vigik signature selftest" "$CLIENTBIN -c 'hf mf view --selftest'" "selftest \\( ok \\)"; then break; fi
+      if ! CheckExecute "transit mfc selftest"      "$CLIENTBIN -c 'hf mf view --selftest'" "Transit selftest \\( ok \\)"; then break; fi
+      if ! CheckExecute "transit mfdes selftest"    "$CLIENTBIN -c 'hf mfdes view --selftest'" "Transit selftest \\( ok \\)"; then break; fi
+      if ! CheckExecute "transit mfu selftest"      "$CLIENTBIN -c 'hf mfu view --selftest'" "Transit selftest \\( ok \\)"; then break; fi
+      if ! CheckExecute "transit st25tb selftest"   "$CLIENTBIN -c 'hf 14b view --selftest'" "Transit selftest \\( ok \\)"; then break; fi
+      if ! CheckExecute "transit felica selftest"   "$CLIENTBIN -c 'hf felica dump --selftest'" "Transit selftest \\( ok \\)"; then break; fi
+      if ! CheckExecute "transit calypso selftest"  "$CLIENTBIN -c 'hf calypso info --selftest'" "Transit selftest \\( ok \\)"; then break; fi
       if ! CheckExecute "analyse regex selftest"  "$CLIENTBIN -c 'analyse regex --test'" "Tests \( ok \)"; then break; fi
+      if ! CheckExecute "hf 15 implant selftest"  "$CLIENTBIN -c 'hf 15 implant --test'" "Tests \( ok \)"; then break; fi
       if ! CheckExecute "trace load/list 14a"     "$CLIENTBIN -c 'trace load -f traces/hf_14a_mfu.trace; trace list -1 -t 14a;'" "READBLOCK\(8\)"; then break; fi
       if ! CheckExecute "trace load/list x"       "$CLIENTBIN -c 'trace load -f traces/hf_14a_mfu.trace; trace list -x1 -t 14a;'" "0.0101840425"; then break; fi
       if ! CheckExecute "trace list 7816 T=0 apdu"  "$CLIENTBIN -c 'trace load -f traces/smart_7816.trace; trace list -1 -t 7816;'" "A0  A4  00  00  02  3F  00 .*SELECT FILE"; then break; fi
       if ! CheckExecute "trace list 7816 getresp"   "$CLIENTBIN -c 'trace load -f traces/smart_7816.trace; trace list -1 -t 7816;'" "A0  C0  00  00  22 .*GET RESPONSE"; then break; fi
       if ! CheckExecute "trace list 7816 T=1 block" "$CLIENTBIN -c 'trace load -f traces/smart_7816.trace; trace list -1 -t 7816;'" "I-block N\(S\)=0"; then break; fi
+      if ! CheckExecute "trace list 14a five byte answer" "$CLIENTBIN -c 'trace load -f traces/hf_visa_apple_ecp.trace; trace list -1 -t 14a;'" "Tag [|]03  69  86  03  19 +[|]  ok"; then break; fi
+      if ! CheckExecute "trace list 14b slots"         "$CLIENTBIN -c 'trace load -f traces/hf_14b_reader.trace; trace list -1 -t 14b;'" "05  00  08  39  73 +[|]  ok [|] 1 slot WUPB"; then break; fi
+      if ! CheckExecute "trace list 14b xerox wup2"    "$CLIENTBIN -c 'trace load -f traces/hf_14b_xerox_info.trace; trace list -1 -t 14b;'" "5D  37  21  71  71 +[|]  ok [|] XEROX WUP2"; then break; fi
+      if ! CheckExecute "trace list 14b slot nack"     "$CLIENTBIN -c 'trace load -f traces/hf_14b_xerox_info.trace; trace list -1 -t 14b;'" "Rdr [|]A7 +[|] +[|] Slot 3 NACK"; then break; fi
+      if ! CheckExecute "trace list seos pps crc"      "$CLIENTBIN -c 'trace load -f traces/hf_seos_sniff_fc54_cn64001.trace; trace list -1 -t seos;'" "D0  11  00  52  A6 +[|]  ok [|] PPS"; then break; fi
+      if ! CheckExecute "trace list ht2 long frames"   "$CLIENTBIN -c 'trace load -f traces/hf_visa_apple_normal.trace; trace list -1 -t ht2;'" "131146992 [|] +131147472 [|] Rdr [|] 07 +[|] +8 [|]"; then break; fi
       if ! CheckExecute "smart pps help"            "$CLIENTBIN -c 'smart pps -h'" "select protocol T=1"; then break; fi
       if ! CheckExecute "smart raw help t1"         "$CLIENTBIN -c 'smart raw -h'" "use protocol T=1"; then break; fi
       if ! CheckExecute "nfc decode test oob"             "$CLIENTBIN -c 'nfc decode -d DA2010016170706C69636174696F6E2F766E642E626C7565746F6F74682E65702E6F6F62301000649201B96DFB0709466C65782032'" "Flex 2"; then break; fi
@@ -558,17 +572,38 @@ while true; do
       if ! CheckExecute "wiegand Verkada40 decode test 3" "$CLIENTBIN -c 'wiegand decode --raw 8A20002721'" "Verkada40.*FC: 81  CN: 5008  parity \( ok \)"; then break; fi
       if ! CheckExecute "wiegand IR56 encode roundtrip"   "$CLIENTBIN -c 'wiegand encode -w IR56 --fc 123 --cn 123 --pre'" "9E000000100007B0000007B"; then break; fi
       if ! CheckExecute "wiegand IR56 decode roundtrip"   "$CLIENTBIN -c 'wiegand decode --raw 9E000000100007B0000007B'" "IR56.*FC: 123  CN: 123"; then break; fi
+      if ! CheckExecute "wiegand C37 encode"             "$CLIENTBIN -c 'wiegand encode -w C37 --fc 123 --cn 45678 --new'" "New PACS\\.{9} 0x 03A807BB26E0"; then break; fi
+      if ! CheckExecute "wiegand C37 decode"             "$CLIENTBIN -c 'wiegand decode --new 03A807BB26E0'" "\[C37 +\] Cansec C37 37-bit +FC: 123  CN: 45678  OEM: 40  parity \( ok \)"; then break; fi
+      if ! CheckExecute "wiegand C37 bad oem"            "$CLIENTBIN -c 'wiegand encode -w C37 --oem 41 --fc 123 --cn 45678' 2>&1" "could not be encoded in the selected format"; then break; fi
+      if ! CheckExecute "wiegand WN55 encode"            "$CLIENTBIN -c 'wiegand encode -w WN55 --fc 100 --cn 1234 --new'" "New PACS\\.{9} 0x 0180019000001348"; then break; fi
+      if ! CheckExecute "wiegand WN55 decode"            "$CLIENTBIN -c 'wiegand decode --new 0180019000001348'" "\[WN55 +\] WatchNET 55-bit +FC: 100  CN: 1234  parity \( ok \)"; then break; fi
+      if ! CheckExecute "wiegand WN55 over max"          "$CLIENTBIN -c 'wiegand encode -w WN55 --fc 2097152 --cn 1' 2>&1" "could not be encoded in the selected format"; then break; fi
+      if ! CheckExecute "wiegand downgrade selftest"      "$CLIENTBIN -c 'wiegand downgrade --selftest'" "Tests \( ok \)"; then break; fi
+      if ! CheckExecute "wiegand downgrade prox"          "$CLIENTBIN -c 'wiegand downgrade --new 068F80A8C0 --dg prox'" "lf hid clone -w H10301 --fc 31 --cn 337"; then break; fi
+      if ! CheckExecute "wiegand downgrade sr needs sio"  "$CLIENTBIN -c 'wiegand downgrade --new 068F80A8C0 --dg sr'" "iCLASS SR needs a SIO"; then break; fi
 
       echo -e "\n${C_BLUE}Testing LF:${C_NC}"
       if ! CheckExecute "lf hitag2 test"             "$CLIENTBIN -c 'lf hitag test'" "Tests \( ok"; then break; fi
-      if ! CheckExecute "lf cotag demod test 1/4"    "$CLIENTBIN -c 'data load -f traces/lf_cotag_220_8331.pm3; lf cotag demod -c 272 -v'" \
+      if ! CheckExecute "lf hitag ta help"           "$CLIENTBIN -c 'lf hitag ta -h'" "Test recorded authentications"; then break; fi
+      if ! CheckExecute "lf cotag demod test 1/9"    "$CLIENTBIN -c 'data load -f traces/lf_cotag_220_8331.pm3; lf cotag demod -c 272 -v'" \
                                                                      "data hex:     0    0    0    0    0    0    0    0    0    0    0    0    0    1    0    5    8    2    4    E    0    0    0    0    8    0    2    3    D    F    7    7"; then break; fi
-      if ! CheckExecute "lf cotag demod test 2/4"    "$CLIENTBIN -c 'data load -f traces/cotag/lf_cotag_passive_02402447_700000.pm3; lf cotag demod -v'" \
+      if ! CheckExecute "lf cotag demod test 2/9"    "$CLIENTBIN -c 'data load -f traces/cotag/lf_cotag_passive_02402447_700000.pm3; lf cotag demod -v'" \
                                                                      "data hex:     0    0    0    0    0    0    0    0    0    0    0    0    0    1    0    5    8    2    4    E    0    0    0    0    8    0    2    4    A    8    8    F"; then break; fi
-      if ! CheckExecute "lf cotag demod test 3/4"    "$CLIENTBIN -c 'data load -f traces/cotag/lf_cotag_passive_bewator_01576814_700000.pm3; lf cotag demod -v'" \
+      if ! CheckExecute "lf cotag demod test 3/9"    "$CLIENTBIN -c 'data load -f traces/cotag/lf_cotag_passive_bewator_01576814_700000.pm3; lf cotag demod -v'" \
                                                                      "data hex:     0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    7    C    B    B    7    0    0    0    0    8    0    1    8    0    F    6    E"; then break; fi
-      if ! CheckExecute "lf cotag demod test 4/4"    "$CLIENTBIN -c 'data load -f traces/cotag/lf_cotag_active_00001577_700000.pm3; lf cotag demod -v'" \
+      if ! CheckExecute "lf cotag demod test 4/9"    "$CLIENTBIN -c 'data load -f traces/cotag/lf_cotag_active_00001577_700000.pm3; lf cotag demod -v'" \
                                                                      "data hex:     0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    2    8    2    7    B    0    4    8    E    0    0    0    0    0    6    2    9"; then break; fi
+      if ! CheckExecute "lf cotag demod test 5/9"    "$CLIENTBIN -c 'data load -f traces/cotag/lf_cotag_active_00001558_700000.pm3; lf cotag demod'" "Card number 1558  \\( 0x000616 \\)"; then break; fi
+      if ! CheckExecute "lf cotag demod test 6/9"    "$CLIENTBIN -c 'data load -f traces/cotag/lf_cotag_active_00385816_700000.pm3; lf cotag demod'" "Card number 385816  \\( 0x05E318 \\)"; then break; fi
+      if ! CheckExecute "lf cotag demod test 7/9"    "$CLIENTBIN -c 'data load -f traces/cotag/lf_cotag_passive_02402442_700000.pm3; lf cotag demod'" "Card number 2402442  \\( 0x24A88A \\)"; then break; fi
+      if ! CheckExecute "lf cotag demod test 8/9"    "$CLIENTBIN -c 'data load -f traces/cotag/lf_cotag_passive_bewator_01576805_700000.pm3; lf cotag demod'" "Card number 1576805  \\( 0x180F65 \\)"; then break; fi
+      if ! CheckExecute "lf cotag demod test 9/9"    "$CLIENTBIN -c 'data load -f traces/cotag/lf_cotag_passive_bewator_01576807_700000.pm3; lf cotag demod'" "Card number 1576807  \\( 0x180F67 \\)"; then break; fi
+      if ! CheckExecute "lf cotag search active"     "$CLIENTBIN -c 'data load -f traces/cotag/lf_cotag_active_00001558_700000.pm3; lf search -1'" "Valid COTAG ID found"; then break; fi
+      if ! CheckExecute "lf cotag search passive"    "$CLIENTBIN -c 'data load -f traces/cotag/lf_cotag_passive_02402442_700000.pm3; lf search -1'" "Valid COTAG ID found"; then break; fi
+      if ! CheckExecute "lf cotag reader 3361 no tag"  "$CLIENTBIN -c 'data load -f traces/cotag/lf_cotag_reader_3361_act_seq.pm3; lf cotag demod'" "COTAG demod failed"; then break; fi
+      if ! CheckExecute "lf cotag reader HD500 no tag" "$CLIENTBIN -c 'data load -f traces/cotag/lf_cotag_reader_HD500_act_seq.pm3; lf cotag demod'" "COTAG demod failed"; then break; fi
+      if ! CheckExecute "lf cotag reader TWN4 no tag"  "$CLIENTBIN -c 'data load -f traces/cotag/lf_cotag_reader_twn4_act_seq.pm3; lf cotag demod'" "COTAG demod failed"; then break; fi
+      if ! CheckExecute "lf cotag reader search"     "$CLIENTBIN -c 'data load -f traces/cotag/lf_cotag_reader_twn4_act_seq.pm3; lf search -1'" "No known 125/134 kHz tags found"; then break; fi
       if ! CheckExecute "lf AWID test"               "$CLIENTBIN -c 'data load -f traces/lf_AWID-15-259.pm3;lf search -1'" "AWID ID found"; then break; fi
       if ! CheckExecute "lf EM410x test"             "$CLIENTBIN -c 'data load -f traces/lf_EM4102-1.pm3;lf search -1'" "EM410x ID found"; then break; fi
       if ! CheckExecute "lf EM4x05 test"             "$CLIENTBIN -c 'data load -f traces/lf_EM4x05.pm3;lf search -1'" "FDX-B ID found"; then break; fi
@@ -577,8 +612,9 @@ while true; do
       if ! CheckExecute "lf EM4x70 recover test 2/3" "$CLIENTBIN -c 'lf em 4x70 recover --key 022A028C02BE --rnd 7D5167003571F8 --frn 982DBCC0 --grn 36C0E0'" "022a028c02be366866191b60"; then break; fi
       if ! CheckExecute "lf EM4x70 recover test 3/3" "$CLIENTBIN -c 'lf em 4x70 recover --key 022A028C02BE --rnd 7D5167003571F8 --frn 982DBCC0 --grn 36C0E0'" "022a028c02bef1e352c2718d"; then break; fi
       if ! CheckExecute "lf FDX-A FECAVA test"       "$CLIENTBIN -c 'data load -f traces/lf_EM4305_fdxa_destron.pm3;lf search -1'" "FDX-A FECAVA Destron ID found"; then break; fi
+      if ! CheckExecute "lf destron sim help"        "$CLIENTBIN -c 'lf destron sim -h'" "lf destron sim --uid 1A2B3C4D5E"; then break; fi
       if ! CheckExecute "lf FDX-B test"              "$CLIENTBIN -c 'data load -f traces/lf_HomeAgain1600.pm3;lf search -1'" "FDX-B ID found"; then break; fi
-      if ! CheckExecute "lf FDX/BioThermo test"      "$CLIENTBIN -c 'data load -f traces/lf_FDXB_Bio-Thermo.pm3; lf fdxb demod'" "95.2 F / 35.1 C"; then break; fi
+      if ! CheckExecute "lf FDX/BioThermo test"      "$CLIENTBIN -c 'data load -f traces/lf_FDXB_Bio-Thermo.pm3; lf fdxb demod'" "95.20 F / 35.11 C"; then break; fi
       if ! CheckExecute "lf GPROXII test"            "$CLIENTBIN -c 'data load -f traces/lf_GProx_36_30_14489.pm3; lf search -1'" "Guardall G-Prox II ID found"; then break; fi
       if ! CheckExecute "lf HID Prox test"           "$CLIENTBIN -c 'data load -f traces/lf_HID-proxCardII-05512-11432784-1.pm3;lf search -1'" "HID Prox ID found"; then break; fi
       if ! CheckExecute "lf IDTECK test"             "$CLIENTBIN -c 'data load -f traces/lf_IDTECK_4944544BAC40E069.pm3; lf search -1'" "Idteck ID found"; then break; fi
@@ -589,12 +625,14 @@ while true; do
       if ! CheckExecute "lf IDTECK reject test"      "if ! $CLIENTBIN -c 'lf idteck demod --raw DEADBEEFDEADBEEF' 2>&1 | grep -q 'IDTECK Tag Found'; then echo OK; fi" "OK"; then break; fi
       if ! CheckExecute "lf IDTECK no wiegand test"  "if ! $CLIENTBIN -c 'lf idteck demod --raw 4944544B351FBE4B' 2>&1 | grep -q 'H10301'; then echo OK; fi" "OK"; then break; fi
       if ! CheckExecute "lf INDALA test"             "$CLIENTBIN -c 'data load -f traces/lf_Indala-504278295.pm3;lf search -1'" "Indala ID found"; then break; fi
-      if ! CheckExecute "lf INDALA weak test"        "$CLIENTBIN -c 'data load -f traces/lf_Indala-a0000000e6bd0e92-weak.pm3;lf search -1'" "Raw: a0000000e6bd0e92"; then break; fi
-      if ! CheckExecute "lf INDALA weak test 2"      "$CLIENTBIN -c 'data load -f traces/lf_Indala-a0000000e6bd0e92-weak.pm3; lf indala demod'" \
-                                                              "Indala \(len 64\)  Raw: a0000000e6bd0e92"; then break; fi
+      if ! CheckExecute "lf INDALA weak test"        "$CLIENTBIN -c 'data load -f traces/lf_Indala-a00000008f49d2a1-weak.pm3;lf search -1'" "Raw: a00000008f49d2a1"; then break; fi
+      if ! CheckExecute "lf INDALA weak test 2"      "$CLIENTBIN -c 'data load -f traces/lf_Indala-a00000008f49d2a1-weak.pm3; lf indala demod'" \
+                                                              "Indala \(len 64\)  Raw: a00000008f49d2a1"; then break; fi
       if ! CheckExecute "lf PSK reject test"         "$CLIENTBIN -c 'data load -f traces/lf_NRZ_RF64_fc2-ripple_synthetic.pm3;lf search -1'" "No known 125/134 kHz tags found"; then break; fi
       if ! CheckExecute "lf KERI test"               "$CLIENTBIN -c 'data load -f traces/lf_Keri.pm3;lf search -1'" "Pyramid ID found"; then break; fi
       if ! CheckExecute "lf NEXWATCH test"           "$CLIENTBIN -c 'data load -f traces/lf_NEXWATCH_Quadrakey-521512301.pm3;lf search -1 '" "NexWatch ID found"; then break; fi
+      if ! CheckExecute "lf NEXWATCH raw id test"    "$CLIENTBIN -c 'data load -f traces/lf_NEXWATCH_Quadrakey-521512301.pm3; lf nexwatch demod'" "NexWatch raw id : 0x213c9f8f"; then break; fi
+      if ! CheckExecute "lf NEXWATCH raw id test 2"  "$CLIENTBIN -c 'data load -f traces/lf_NEXWATCH_Nexkey_74755342.pm3; lf nexwatch demod'" "NexWatch raw id : 0x24643f12"; then break; fi
       if ! CheckExecute "lf SECURAKEY test"          "$CLIENTBIN -c 'data load -f traces/lf_NEXWATCH_Securakey-64169.pm3;lf search -1 '" "Securakey ID found"; then break; fi
       if ! CheckExecute "lf PAC test"                "$CLIENTBIN -c 'data load -f traces/lf_PAC-8E4C058E.pm3;lf search -1'" "PAC/Stanley ID found"; then break; fi
       if ! CheckExecute "lf PARADOX test"            "$CLIENTBIN -c 'data load -f traces/lf_Paradox-96_40426-APJN08.pm3;lf search -1'" "Paradox ID found"; then break; fi
@@ -612,10 +650,10 @@ while true; do
                                                                      "EM 410x ID 0F0368568B"; then break; fi
       if ! CheckExecute "lf T55 fdxb_animal test"           "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_animal.pm3; lf search -1'" "FDX-B ID found"; then break; fi
       if ! CheckExecute "lf T55 fdxb_animal test 2"         "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_animal.pm3; lf fdxb demod'" \
-                                                                     "Animal ID......... 999-000000112233"; then break; fi
+                                                                     "Animal code......... 999 000000112233"; then break; fi
       if ! CheckExecute "lf T55 fdxb_extended test"         "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_extended.pm3; lf search -1'" "FDX-B ID found"; then break; fi
       if ! CheckExecute "lf T55 fdxb_extended test 2"       "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_fdxb_extended.pm3; lf fdxb demod'" \
-                                                                     "temperature... 95.2 F / 35.1 C"; then break; fi
+                                                                     "temperature... 95.20 F / 35.11 C"; then break; fi
       if ! CheckExecute "lf T55 gallagher test"             "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_gallagher.pm3; lf search -1'" "GALLAGHER ID found"; then break; fi
       if ! CheckExecute "lf T55 gallagher test 2"           "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_gallagher.pm3; lf gallagher demod'" \
                                                                      "GALLAGHER - Region: 1 Facility: 16640 Card No.: 201 Issue Level: 1"; then break; fi
@@ -691,6 +729,64 @@ while true; do
       if ! CheckExecute "lf T55 visa2000 test"              "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_visa2000.pm3; lf search -1'" "Visa2000 ID found"; then break; fi
       if ! CheckExecute "lf T55 visa2000 test 2"            "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_visa2000.pm3; lf visa2000 demod'" \
                                                                      "Visa2000 - Card 112233, Raw: 564953320001B66900000183"; then break; fi
+      if ! CheckExecute "lf watchnet raw test"              "$CLIENTBIN -c 'lf watchnet demod --raw 1fe2be111128811111118d88'" \
+                                                                     "WatchNET - len: 55 FC: 100 CN: 1234 - Wiegand: 4000c8000009a4 parity \( ok \)"; then break; fi
+      if ! CheckExecute "lf watchnet reject test"           "$CLIENTBIN -c 'lf watchnet demod --raw 000000000000000000000000' 2>&1" "Invalid WatchNET raw data"; then break; fi
+      if ! CheckExecute "lf ict 24x raw test"               "$CLIENTBIN -c 'lf ict demod --raw f656595a5a6566696a9596999aa5a6a9aa5556595a65666900000000'" \
+                                                                     "ICT - Type: ICT 24X, Decoded \(94 bits\): 11233456789abcdef0123456"; then break; fi
+      if ! CheckExecute "lf ict gt081 raw test"             "$CLIENTBIN -c 'lf ict demod --raw f5565996999699969996999699969996999696600000000000000000'" \
+                                                                     "ICT - Type: ICT GT 081, Decoded \(78 bits\): 0129a9a9a9a9a9a9a994"; then break; fi
+      if ! CheckExecute "lf ict reject test"                "$CLIENTBIN -c 'lf ict demod --raw 00000000000000000000000000000000000000000000000000000000' 2>&1" \
+                                                                     "Invalid LF ICT preamble/postamble"; then break; fi
+      if ! CheckExecute "lf keri nxt raw test"              "$CLIENTBIN -c 'lf keri demod --raw 0001010101010101123456789ABCDEF0'" \
+                                                                     "KERI NXT - Raw: 0001010101010101123456789ABCDEF0"; then break; fi
+      if ! CheckExecute "lf keri nxt pyramid reject"        "$CLIENTBIN -c 'lf keri demod --raw 00010101010101010101016eb35e5da4' 2>&1" \
+                                                                     "Invalid KERI NXT raw data"; then break; fi
+      if ! CheckExecute "lf securakey short raw test"       "$CLIENTBIN -c 'lf securakey demod --raw 7fc000000065cc92'" \
+                                                                     "Securakey Short - CN: 1697426, Raw: 7FC000000065CC92"; then break; fi
+      if ! CheckExecute "lf securakey short reject"         "$CLIENTBIN -c 'lf securakey demod --raw 7fc000000465cc92' 2>&1" \
+                                                                     "Invalid Securakey Short raw data"; then break; fi
+      if ! CheckExecute "lf indala 40010 raw test"          "$CLIENTBIN -c 'lf indala demod --raw a0000000f4cbdd01'" \
+                                                                     "Keyscan 40010\. FC: 123 CN: 45678"; then break; fi
+      if ! CheckExecute "lf indala 40010 fc0 test"          "$CLIENTBIN -c 'lf indala demod --raw a000000024c1d400'" \
+                                                                     "Keyscan 40010\. FC: 0 CN: 45678"; then break; fi
+      if ! CheckExecute "lf awid cansec37 raw test"         "$CLIENTBIN -c 'lf awid demod --raw 012274811ebdd47781111111'" \
+                                                                     "Farpointe/Cansec 37-bit - FC: 123 CN: 45678"; then break; fi
+      if ! CheckExecute "lf awid hcc40 raw test"            "$CLIENTBIN -c 'lf awid demod --raw 01241b444727114d88111111'" \
+                                                                     "Farpointe HCC40 - ID without parity: 2a499602d2"; then break; fi
+      if ! CheckExecute "lf awid rbh50 raw test"            "$CLIENTBIN -c 'lf awid demod --raw 0128817e41111111711e2811'" \
+                                                                     "RBH - CN: 12345"; then break; fi
+      if ! CheckExecute "lf gproxii 40 raw test"            "$CLIENTBIN -c 'lf gproxii demod --raw fac2b20c2b081af101ae43d8'" \
+                                                                     "G-Prox-II - Len: 40 FC: 123 Card: 555666777 xor: 141"; then break; fi
+      if ! CheckExecute "lf pyramid 35 raw test"            "$CLIENTBIN -c 'lf pyramid demod --raw 00010101010101010102017c802649c4'" \
+                                                                     "Pyramid - len: 35, FC: 1000 Card: 1234 - Wiegand: 007d009a4"; then break; fi
+      if ! CheckExecute "lf pyramid bad crc reject"         "$CLIENTBIN -c 'lf pyramid demod --raw 00010101010101010102017c802649c5' 2>&1" \
+                                                                     "Invalid Pyramid raw data"; then break; fi
+      if ! CheckExecute "lf io ssf raw test"                "$CLIENTBIN -c 'lf io demod --raw 007840603059cf3f'" \
+                                                                     "IO Prox SSF - 0101:01337"; then break; fi
+      if ! CheckExecute "lf em410x cdvi pattern"            "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_em410x.pm3; lf em 410x demod'" \
+                                                                     "Pattern CDVI +: FC: 104 CN: 22155"; then break; fi
+      if ! CheckExecute "lf em410x eyeongate pattern"       "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_em410x.pm3; lf em 410x demod'" \
+                                                                     "Pattern EYEonGATE +: 0006837899"; then break; fi
+      if ! CheckExecute "lf t55xx cfg securakey short"      "$CLIENTBIN -c 'lf t55xx info -c 000C8040'" "SecuraKey Short"; then break; fi
+      if ! CheckExecute "lf t55xx cfg watchnet"             "$CLIENTBIN -c 'lf t55xx info -c 00107060'" "WatchNET"; then break; fi
+      if ! CheckExecute "lf t55xx cfg keri nxt"             "$CLIENTBIN -c 'lf t55xx info -c 00107080'" "Keri NXT"; then break; fi
+      if ! CheckExecute "lf t55xx cfg ict"                  "$CLIENTBIN -c 'lf t55xx info -c 001070E0'" "Config block match\\.\\.\\. ICT"; then break; fi
+      # block 0 reads saved after 'lf t55xx detect --r0'. info -1 decodes block 0 with the config detect found
+      if ! CheckExecute "lf T55 detect ask rf32"            "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_ask_rf32.pm3; lf t55xx detect -1; lf t55xx info -1'" "000880E0 - "; then break; fi
+      if ! CheckExecute "lf T55 detect ask rf32 st"         "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_ask_rf32_st.pm3; lf t55xx detect -1; lf t55xx info -1'" "000880E8 - "; then break; fi
+      if ! CheckExecute "lf T55 detect fsk2a rf50"          "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_fsk2a_rf50.pm3; lf t55xx detect -1; lf t55xx info -1'" "001070E0 - "; then break; fi
+      if ! CheckExecute "lf T55 detect fsk2a rf50 st"       "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_fsk2a_rf50_st.pm3; lf t55xx detect -1; lf t55xx info -1'" "001070E8 - "; then break; fi
+      if ! CheckExecute "lf T55 detect noralsy clone st"    "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_noralsy_st.pm3; lf t55xx detect -1; lf t55xx info -1'" "00088068 - "; then break; fi
+      # the Seq. terminator line detect prints. Ask hits take it from DetectST, fsk hits from a copy of block 0 33 to 36 bits away
+      if ! CheckExecute "lf T55 detect ask st flag no"      "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_ask_rf32.pm3; lf t55xx detect -1'" "Seq\. terminator\.\.\. No"; then break; fi
+      if ! CheckExecute "lf T55 detect ask st flag yes"     "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_ask_rf32_st.pm3; lf t55xx detect -1'" "Seq\. terminator\.\.\. Yes"; then break; fi
+      if ! CheckExecute "lf T55 detect fsk st flag no"      "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_fsk2a_rf50.pm3; lf t55xx detect -1'" "Seq\. terminator\.\.\. No"; then break; fi
+      if ! CheckExecute "lf T55 detect fsk st flag yes"     "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_fsk2a_rf50_st.pm3; lf t55xx detect -1'" "Seq\. terminator\.\.\. Yes"; then break; fi
+      # short fsk st captures. At 5100 samples the copy sits before the word detect picks.
+      # 3050 samples from sample 2000 leave no room on either side, and lengths from 2800 to 3350 give the same answer
+      if ! CheckExecute "lf T55 detect fsk st flag behind"  "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_fsk2a_rf50_st.pm3; data rtrim -i 5100; lf t55xx detect -1'" "Seq\. terminator\.\.\. Yes"; then break; fi
+      if ! CheckExecute "lf T55 detect fsk st flag no room" "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_fsk2a_rf50_st.pm3; data ltrim -i 2000; data rtrim -i 3050; lf t55xx detect -1'" "Seq\. terminator\.\.\. Yes"; then break; fi
 
       echo -e "\n${C_BLUE}Testing HF:${C_NC}"
       if ! CheckExecute "hf mf offline text"               "$CLIENTBIN -c 'hf mf'" "content from tag dump file"; then break; fi
@@ -705,8 +801,10 @@ while true; do
       if ! CheckExecute "hf mfdes test"                  "$CLIENTBIN -c 'hf mfdes test'"   "Tests \( ok"; then break; fi
       if ! CheckExecute "hf gst test"                    "$CLIENTBIN -c 'hf gst test'"     "Tests \( ok"; then break; fi
       if ! CheckExecute "hf saflok test"                 "$CLIENTBIN -c 'hf saflok test'"  "Tests \( ok"; then break; fi
+      if ! CheckExecute "hf gallagher test"              "$CLIENTBIN -c 'hf gallagher test'" "Tests \( ok"; then break; fi
       if ! CheckExecute "mad test"                       "$CLIENTBIN -c 'mad test'"        "Tests \( ok"; then break; fi
       if ! CheckExecute "hf waveshare load"              "$CLIENTBIN -c 'hf waveshare load -m 6 -f tools/lena.bmp -s dither.bmp' && echo '34ff55fe7257876acf30dae00eb0e439 dither.bmp' | md5sum -c -" "dither.bmp: OK"; then break; fi
+      if ! CheckExecute "hf goodisplay load"             "$CLIENTBIN -c 'hf goodisplay load -m 2 -f tools/lena.bmp -s gd_dither.bmp' && echo '3738750a8ce7f89913c7af012acfc1fa gd_dither.bmp' | md5sum -c -" "gd_dither.bmp: OK"; then break; fi
     fi
   echo -e "\n------------------------------------------------------------"
   echo -e "Tests [ ${C_GREEN}OK${C_NC} ] ${C_OK}\n"

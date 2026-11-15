@@ -250,7 +250,7 @@ static void print_hitag2_paxton(bool show_header, const uint8_t *data) {
 // [=]  4/0x04 | 39 04 21 1C | 9.!.  | RW  | User
 // [=]  5/0x05 | AC 3F 00 06 | .?..  | RW  | User
 
-    char formfactor[16];
+    char formfactor[16] = {0};
     switch (data[23]) {
         case 0x06: {
             strcat(formfactor, "isocard");
@@ -332,7 +332,7 @@ static void print_hitag2_configuration(uint32_t uid, uint8_t config) {
     PrintAndLogEx(NORMAL, "");
 }
 
-const char *annotation[] = {
+static const char *annotation[] = {
     "UID", "Pwd", "Key/Pwd", "Config",
     "User", "User", "User", "User",
     "User", "User", "User", "User"
@@ -410,7 +410,7 @@ static void print_hitag2_blocks(uint8_t *d, uint16_t n) {
                       , sprint_hex(d + (i * HITAG_BLOCK_SIZE), HITAG_BLOCK_SIZE)
                       , sprint_ascii(d + (i * HITAG_BLOCK_SIZE), HITAG_BLOCK_SIZE)
                       , lckstr
-                      , annotation[i]
+                      , (i < ARRAYLEN(annotation)) ? annotation[i] : "User"
                      );
     }
     PrintAndLogEx(INFO, "--------+-------------+-------+-----+---------");
@@ -420,7 +420,7 @@ static void print_hitag2_blocks(uint8_t *d, uint16_t n) {
 }
 
 // Annotate HITAG protocol
-void annotateHitag1(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+void annotateHitag1(char *exp, size_t size, const uint8_t *cmd, uint16_t cmdsize, bool is_response) {
 }
 
 static struct {
@@ -583,7 +583,7 @@ static uint8_t hitag2_get_page(const char *bs) {
     return 255;
 }
 
-void hitag2_annotate_plain(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, uint8_t bits) {
+void hitag2_annotate_plain(char *exp, size_t size, const uint8_t *cmd, uint16_t cmdsize, uint8_t bits) {
 
     if (cmdsize == 0) {
         return;
@@ -598,7 +598,7 @@ void hitag2_annotate_plain(char *exp, size_t size, const uint8_t *cmd, uint8_t c
     bytes_2_binstr(binstr, cmd, cmdsize);
 
     size_t bn = strlen(binstr);
-    if (bits) {
+    if ((bits > 0) && (bits <= 8)) {
         if (cmdsize == 1) {
             bn = bits;
         } else if (cmdsize > 1) {
@@ -651,7 +651,7 @@ void hitag2_annotate_plain(char *exp, size_t size, const uint8_t *cmd, uint8_t c
     free(binstr);
 }
 
-void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, uint8_t bits, bool is_response, const uint64_t *keys, uint32_t keycount, bool isdecrypted) {
+void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint16_t cmdsize, uint8_t bits, bool is_response, const uint64_t *keys, uint32_t keycount, bool isdecrypted) {
 
     if (cmdsize == 0) {
         return;
@@ -666,7 +666,7 @@ void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
     bytes_2_binstr(binstr, cmd, cmdsize);
 
     size_t bn = strlen(binstr);
-    if (bits) {
+    if ((bits > 0) && (bits <= 8)) {
         if (cmdsize == 1) {
             bn = bits;
         } else if (cmdsize > 1) {
@@ -674,12 +674,13 @@ void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
         }
     }
 
-    memcpy(_ht2state.plain, cmd, cmdsize);
-    _ht2state.plainlen = cmdsize;
+    // a frame longer than plain is no Hitag 2 frame, it is kept cut and not decrypted
+    _ht2state.plainlen = MIN(cmdsize, sizeof(_ht2state.plain));
+    memcpy(_ht2state.plain, cmd, _ht2state.plainlen);
 
     if (_ht2state.state == STATE_ENCRYPTED || _ht2state.state == STATE_START_ENCRYPTED) {
 
-        if (_ht2state.found_key && isdecrypted == false) {
+        if (_ht2state.found_key && isdecrypted == false && (bn <= (sizeof(_ht2state.plain) * 8))) {
             ht2_hitag2_cipher_transcrypt(&_ht2state.cipher_state, _ht2state.plain, bn / 8, bn % 8);
         }
     }
@@ -1225,6 +1226,11 @@ static int CmdLFHitag2CheckChallenges(const char *Cmd) {
                   "Test recorded authentications (replay?)",
                   "lf hitag ta"
                  );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
     lf_hitag_data_t packet;
@@ -1330,6 +1336,11 @@ static int CmdLFHitagWriter(const char *Cmd) {
 
     if (dlen != sizeof(data)) {
         PrintAndLogEx(WARNING, "Wrong DATA len expected 4, got %d", dlen);
+        return PM3_EINVARG;
+    }
+
+    if ((page < 0) || (page >= HITAG2_MAX_BLOCKS)) {
+        PrintAndLogEx(WARNING, "Page address out-of-range. Max is %d, got %d", HITAG2_MAX_BLOCKS - 1, page);
         return PM3_EINVARG;
     }
 

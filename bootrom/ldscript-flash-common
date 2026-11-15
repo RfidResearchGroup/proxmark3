@@ -23,6 +23,7 @@ PHDRS
 {
     phase1 PT_LOAD;
     phase2 PT_LOAD;
+    phase2data PT_LOAD;
     bss PT_LOAD;
 }
 
@@ -49,15 +50,23 @@ SECTIONS
         *(.glue_7t)
         *(.rodata)
         *(.rodata.*)
-        *(.data)
-        *(.data.*)
         *(.ramfunc)
         . = ALIGN(4);
     } >ram AT>bootphase2 :phase2
 
+    /* own RW segment, else phase2 is RWX; copied together with .bootphase2 */
+    .bootphase2_data : {
+        *(.data)
+        *(.data.*)
+        . = ALIGN(4);
+    } >ram AT>bootphase2 :phase2data
+
     __bootphase2_src_start__ = LOADADDR(.bootphase2);
     __bootphase2_start__ = ADDR(.bootphase2);
-    __bootphase2_end__ = __bootphase2_start__ + SIZEOF(.bootphase2);
+    __bootphase2_end__ = ADDR(.bootphase2_data) + SIZEOF(.bootphase2_data);
+
+    ASSERT(ADDR(.bootphase2_data) == __bootphase2_start__ + SIZEOF(.bootphase2), "bootphase2 data not contiguous in RAM")
+    ASSERT(LOADADDR(.bootphase2_data) == __bootphase2_src_start__ + SIZEOF(.bootphase2), "bootphase2 data not contiguous in flash")
 
     .bss : {
         __bss_start__ = .;

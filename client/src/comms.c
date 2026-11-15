@@ -30,6 +30,7 @@
 #include "util_posix.h" // msclock
 #include "util_darwin.h" // en/dis-ableNapp();
 #include "usart_defs.h"
+#include "commonutil.h"   // sprint_bitrate
 
 // #define COMMS_DEBUG
 // #define COMMS_DEBUG_RAW
@@ -970,7 +971,8 @@ int TestProxmark(pm3_device_t *dev) {
                   g_conn.em_size,
                   (g_pm3_capabilities.em_allocated) ? " ( in use )" : "");
     if (g_conn.send_via_fpc_usart) {
-        PrintAndLogEx(SUCCESS, "PM3 UART serial baudrate: " _GREEN_("%u") "\n", g_conn.uart_speed);
+        char baud[SPRINT_BITRATE_LEN];
+        PrintAndLogEx(SUCCESS, "PM3 UART serial baudrate: " _GREEN_("%s") "\n", sprint_bitrate(baud, g_conn.uart_speed));
     } else {
         int res;
         if (g_conn.send_via_local_ip) {
@@ -1206,6 +1208,27 @@ bool WaitForResponseTimeout(uint32_t cmd, PacketResponseNG *response, size_t ms_
 
 bool WaitForResponse(uint32_t cmd, PacketResponseNG *response) {
     return WaitForResponseTimeoutW(cmd, response, -1, true);
+}
+
+// The device allocates the emulator memory on first use, and the trace of an
+// earlier command can leave no room for it
+void PrintEmulatorAllocError(int status) {
+    if (status == PM3_EMALLOC) {
+        PrintAndLogEx(FAILED, "\nNot enough free device memory for the emulator memory");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("data clear") "` to free it, then try again");
+    }
+}
+
+// Result of an emulator memory write. The first one can wait for an FPGA
+// bitstream to load
+int WaitForEmulatorWrite(uint32_t cmd) {
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(cmd, &resp, 2500) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        return PM3_ETIMEOUT;
+    }
+    PrintEmulatorAllocError(resp.status);
+    return resp.status;
 }
 
 /**

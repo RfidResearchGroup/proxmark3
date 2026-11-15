@@ -82,10 +82,12 @@ For more options, look [here](#Build-Extras)
 
 ## Flash the FPGA
 
+This writes `client/resources/fpga_pm5.bin` to the FPGA flash.
 ```
 ./pm3
 script run update_fpga
 ```
+
 
 ## I Have A BWM Now What
 
@@ -99,9 +101,10 @@ script run update_fpga
 ./pm3
 script run update_fpga_and_bwm
 ```
-* Run `hw status` and verify that `BWM fw version` matches this:
+* Run `hw status` and verify that the BWM `Firmware` line matches this:
 ```
-[#]   BWM fw version...... V1-12-g23bfa7b
+[#] BWM
+[#]   Firmware............ V5 on ESP32-C2, link 1.5 Mbps, BLE off
 ```
   * You have finished flashing the FPGA and BWM.
 
@@ -154,6 +157,8 @@ On Windows, you can try the following:
 - Open the proxmark client to try to connect to verify your device is re-working.
 
 
+##
+
 ## Build Extras
 The Proxmark5 platform must be specified when compiling the firmware.
 You have several options:
@@ -186,3 +191,4 @@ Do not use them unless you fully understand what you're doing.
 - [PM5 RGB Controller](./PM5_Controllers/PM5_RGB_Controller_RM.md)
 - [PM5 BWM Install](https://github.com/RfidResearchGroup/Proxmark5_BWM_esp32/blob/master/INSTALL.md)
 - [PM5 <--> Flipper Usage](./PM5-FLIPPER-USAGE.md)
+- [Compile the FPGA Image From Source](./Compiling_the_FGPA.md)

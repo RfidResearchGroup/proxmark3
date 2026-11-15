@@ -36,6 +36,7 @@ uint32_t prng_successor(uint32_t x, uint32_t n);
 
 #if !defined(__arm__) || defined(__linux__) || defined(_WIN32) || defined(__APPLE__) // bare metal ARM Proxmark lacks malloc()/free()
 struct Crypto1State *lfsr_recovery32(uint32_t ks2, uint32_t in);
+struct Crypto1State *lfsr_recovery32_dual(uint32_t ks1, uint32_t in1, uint32_t ks2, uint32_t in2);
 struct Crypto1State *lfsr_recovery64(uint32_t ks2, uint32_t ks3);
 struct Crypto1State *
 lfsr_common_prefix(uint32_t pfx, uint32_t rr, uint8_t ks[8], uint8_t par[8][8], uint32_t no_par);

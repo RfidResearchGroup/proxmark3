@@ -33,16 +33,15 @@
 #include "cmdflashmem.h" // get_signature..
 #include "fileutils.h"   // loadFile_safe
 #include "util_posix.h"
+#include "util.h"        // g_debugMode
+
+static const CLIParserOption bwm_onoff_opts[] = {
+    {0, "off"},
+    {1, "on"},
+    {0, NULL},
+};
 
 static int CmdBwmAutoOff(const char *Cmd) {
-    // Positional sub-action (no dashes): hw bwm autooff [on|off] [--idle <sec>]
-    char verb[16] = {0};
-    int consumed = 0;
-    sscanf(Cmd, "%15s%n", verb, &consumed);
-    bool on  = (strcmp(verb, "on")  == 0);
-    bool off = (strcmp(verb, "off") == 0);
-    const char *rest = (on || off) ? Cmd + consumed : Cmd;
-
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw bwm autooff",
                   "Show or set automatic power-off (PM5 only). Two triggers:\n"
@@ -52,39 +51,41 @@ static int CmdBwmAutoOff(const char *Cmd) {
                   " - on battery with no command, button press or BLE/WiFi client for --idle\n"
                   "   seconds: off (0 = never, the default).\n"
                   "Button power-on is unaffected. Stored on the BWM; without a module, defaults.",
-                  "hw bwm autooff             --> show the current state\n"
-                  "hw bwm autooff off         --> disable both triggers\n"
-                  "hw bwm autooff on          --> re-enable\n"
-                  "hw bwm autooff --idle 300  --> also off after 5 min idle on battery\n"
-                  "hw bwm autooff --idle 0    --> USB-unplug trigger only (default)\n"
-                  "hw bwm autooff --unplug off --idle 300  --> survive the unplug, off 5 min idle later");
+                  "hw bwm autooff                         --> show the current state\n"
+                  "hw bwm autooff --off                   --> disable both triggers\n"
+                  "hw bwm autooff --on                    --> re-enable\n"
+                  "hw bwm autooff --idle 300              --> also off after 5 min idle on battery\n"
+                  "hw bwm autooff --idle 0                --> USB-unplug trigger only (default)\n"
+                  "hw bwm autooff --unplug off --idle 300 --> survive the unplug, off 5 min idle later");
+
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0(NULL, "on", "enable auto power-off"),
+        arg_lit0(NULL, "off", "disable auto power-off"),
         arg_int0("i", "idle", "<sec>", "idle timeout on battery in seconds, 0 = never"),
         arg_str0("u", "unplug", "<on|off>", "power off when USB is pulled (default on)"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, rest, argtable, true);
-    int idle = arg_get_int_def(ctx, 1, -1);
-    uint8_t ubuf[8] = {0};
-    int ulen = 0;
-    int ures = CLIParamStrToBuf(arg_get_str(ctx, 2), ubuf, sizeof(ubuf) - 1, &ulen);
-    CLIParserFree(ctx);
-    if (ures) {
-        PrintAndLogEx(WARNING, "--unplug takes " _YELLOW_("on") " or " _YELLOW_("off"));
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool on = arg_get_lit(ctx, 1);
+    bool off = arg_get_lit(ctx, 2);
+    int idle = arg_get_int_def(ctx, 3, -1);
+    int u = -1;
+    if (CLIGetOptionList(arg_get_str(ctx, 4), bwm_onoff_opts, &u)) {
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
-    uint8_t unplug = BWM_AUTOOFF_KEEP_U8;
-    if (ulen) {
-        if (strcmp((char *)ubuf, "on") == 0) {
-            unplug = 1;
-        } else if (strcmp((char *)ubuf, "off") == 0) {
-            unplug = 0;
-        } else {
-            PrintAndLogEx(WARNING, "--unplug takes " _YELLOW_("on") " or " _YELLOW_("off"));
-            return PM3_EINVARG;
-        }
+
+    CLIParserFree(ctx);
+
+    if (on && off) {
+        PrintAndLogEx(WARNING, "specify " _YELLOW_("--on") " or " _YELLOW_("--off") ", not both");
+        return PM3_EINVARG;
     }
+
+    uint8_t unplug = (u < 0) ? BWM_AUTOOFF_KEEP_U8 : (uint8_t)u;
+
     if ((idle < -1) || (idle > (int)BWM_AUTOOFF_IDLE_MAX_S)) {
         PrintAndLogEx(WARNING, "idle must be 0 to %lu seconds", (unsigned long)BWM_AUTOOFF_IDLE_MAX_S);
         return PM3_EINVARG;
@@ -96,7 +97,7 @@ static int CmdBwmAutoOff(const char *Cmd) {
         uint32_t idle_s;
         uint8_t unplug;
     } PACKED payload = {
-        .action = (on || off || (idle >= 0) || ulen) ? BWM_AUTOOFF_ACTION_SET : BWM_AUTOOFF_ACTION_GET,
+        .action = (on || off || (idle >= 0) || (u >= 0)) ? BWM_AUTOOFF_ACTION_SET : BWM_AUTOOFF_ACTION_GET,
         .enabled = on ? 1 : (off ? 0 : BWM_AUTOOFF_KEEP_U8),
         .idle_s = (idle >= 0) ? (uint32_t)idle : BWM_AUTOOFF_KEEP_U32,
         .unplug = unplug,
@@ -106,132 +107,179 @@ static int CmdBwmAutoOff(const char *Cmd) {
     SendCommandNG(CMD_PM5_BWM_AUTOOFF, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_PM5_BWM_AUTOOFF, &resp, 5000) == false) {
-        PrintAndLogEx(WARNING, "command timeout (is this a PM5?)");
+        PrintAndLogEx(WARNING, "command timeout");
         return PM3_ETIMEOUT;
     }
+
     if (resp.status == PM3_ENOTIMPL) {
         PrintAndLogEx(WARNING, "firmware built without auto power-off support");
         return resp.status;
     }
+
     if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "failed to set auto power-off");
         return resp.status;
     }
+
     bool enabled = (resp.length >= 1) && (resp.data.asBytes[0] != 0);
-    PrintAndLogEx(SUCCESS, "Auto power-off....... %s", enabled ? _GREEN_("on") : _YELLOW_("off"));
+    PrintAndLogEx(INFO, "--- " _CYAN_("BWM auto power-off") " ----------------");
+    PrintAndLogEx(SUCCESS, "Auto power-off...... %s", enabled ? _GREEN_("on") : _YELLOW_("off"));
     if (resp.length < 5) {
         // firmware before the idle timeout: it only reports the switch
         return PM3_SUCCESS;
     }
+
     uint32_t idle_s;
     memcpy(&idle_s, &resp.data.asBytes[1], sizeof(idle_s));
-    if (idle_s) {
-        PrintAndLogEx(INFO, "Idle timeout......... " _YELLOW_("%u") " s", idle_s);
-    } else {
-        PrintAndLogEx(INFO, "Idle timeout......... off");
-    }
-    if (resp.length >= sizeof(bwm_autooff_status_t)) {
-        const bwm_autooff_status_t *st = (const bwm_autooff_status_t *)resp.data.asBytes;
-        const char *live = (st->ble_live == 2) ? "client connected" : (st->ble_live == 1) ? "advertising, no client" : (st->ble_live == 0) ? "off" : "no answer";
-        PrintAndLogEx(INFO, "Unplug power-off..... %s", st->unplug ? "on" : _YELLOW_("off") " (an unplug only restarts the idle clock)");
-        PrintAndLogEx(INFO, "Stored on module..... %s", st->persisted ? "yes" : _YELLOW_("no"));
-        PrintAndLogEx(INFO, "USB power............ %s", st->usb ? "present" : "absent");
-        PrintAndLogEx(INFO, "USB seen since boot.. %s", st->usb_seen ? "yes" : "no");
-        PrintAndLogEx(INFO, "Unplug trigger....... %s", (enabled && st->unplug && st->usb_seen) ? _GREEN_("armed") : "not armed");
-        PrintAndLogEx(INFO, "Tracked client....... %s", st->link ? "connected (BLE or WiFi)" : "none");
-        PrintAndLogEx(INFO, "Module BLE state..... %s", live);
-        PrintAndLogEx(INFO, "Idle for............. %u s", st->idle_now_s);
-        if (st->persisted == 0) {
-            PrintAndLogEx(HINT, "no module, or one too old to store it: the defaults return at the next boot");
+
+    if (resp.length < sizeof(bwm_autooff_status_t)) {
+        if (idle_s) {
+            PrintAndLogEx(INFO, "Idle timeout........ " _YELLOW_("%u s") " on battery", idle_s);
+        } else {
+            PrintAndLogEx(INFO, "Idle timeout........ off");
         }
+        return PM3_SUCCESS;
+    }
+
+    const bwm_autooff_status_t *st = (const bwm_autooff_status_t *)resp.data.asBytes;
+
+    // a connected BLE / WiFi client holds the idle timer off
+    if (idle_s == 0) {
+        PrintAndLogEx(INFO, "Idle timeout........ off");
+    } else if (st->link) {
+        PrintAndLogEx(INFO, "Idle timeout........ " _YELLOW_("%u s") " on battery, " _YELLOW_("paused") " while a client is connected", idle_s);
+    } else {
+        PrintAndLogEx(INFO, "Idle timeout........ " _YELLOW_("%u s") " on battery, idle now %u s", idle_s, st->idle_now_s);
+    }
+
+    if (st->unplug == 0) {
+        PrintAndLogEx(INFO, "Unplug power-off.... off");
+    } else if (enabled && st->usb_seen) {
+        PrintAndLogEx(INFO, "Unplug power-off.... on, " _GREEN_("armed"));
+    } else if (enabled) {
+        PrintAndLogEx(INFO, "Unplug power-off.... on, " _YELLOW_("not armed") " until USB power is seen");
+    } else {
+        PrintAndLogEx(INFO, "Unplug power-off.... on, " _YELLOW_("not armed"));
+    }
+
+    PrintAndLogEx(INFO, "Stored on module.... %s", st->persisted ? _GREEN_("yes") : _YELLOW_("no"));
+
+    if (g_debugMode) {
+        const char *live = (st->ble_live == 2) ? "client connected" : (st->ble_live == 1) ? "advertising, no client" : (st->ble_live == 0) ? "off" : "no answer";
+        PrintAndLogEx(DEBUG, "USB power........... %s, %sseen since boot", st->usb ? "present" : "absent", st->usb_seen ? "" : "not ");
+        PrintAndLogEx(DEBUG, "Tracked client...... %s", st->link ? "connected (BLE or WiFi)" : "none");
+        PrintAndLogEx(DEBUG, "Module BLE state.... %s", live);
+    }
+
+    if (st->persisted == 0) {
+        PrintAndLogEx(HINT, "Hint: Not persisted, default values at the next boot");
     }
     return PM3_SUCCESS;
 }
 
+// One "WiFi" line, shared by `wifi --status`, `wifipower` and the bring-up
+static void bwm_print_wifi_state(uint8_t state, uint32_t ip, bool have_ip) {
+    switch (state) {
+        case BWM_WIFI_STATE_OFF:
+            PrintAndLogEx(SUCCESS, "WiFi................ " _YELLOW_("off") " (BLE only)");
+            break;
+        case 2: // connected
+            if (have_ip == false) {
+                PrintAndLogEx(SUCCESS, "WiFi................ " _GREEN_("connected"));
+            } else if (ip) {
+                PrintAndLogEx(SUCCESS, "WiFi................ " _GREEN_("connected") ", IP " _YELLOW_("%u.%u.%u.%u"),
+                              ip & 0xFF,
+                              (ip >> 8) & 0xFF,
+                              (ip >> 16) & 0xFF,
+                              (ip >> 24) & 0xFF
+                             );
+            } else {
+                PrintAndLogEx(SUCCESS, "WiFi................ " _YELLOW_("associated") ", waiting for a DHCP lease");
+            }
+            break;
+        case 1: // connecting
+            PrintAndLogEx(SUCCESS, "WiFi................ " _YELLOW_("connecting"));
+            break;
+        case 3: // reconnect wait
+            PrintAndLogEx(SUCCESS, "WiFi................ " _YELLOW_("reconnecting"));
+            break;
+        case 4: // task stopped
+            PrintAndLogEx(SUCCESS, "WiFi................ " _RED_("connect task stopped"));
+            break;
+        case 0: // disconnected
+        default:
+            PrintAndLogEx(SUCCESS, "WiFi................ " _RED_("not connected") " (configured)");
+            break;
+    }
+}
+
+static int bwm_wifi_status(void) {
+
+    uint8_t q[1] = { BWM_WIFI_ACTION_STATUS };
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_WIFI, q, sizeof(q));
+    PacketResponseNG r;
+    if (WaitForResponseTimeout(CMD_PM5_BWM_WIFI, &r, 5000) == false) {
+        PrintAndLogEx(WARNING, "command timeout");
+        return PM3_ETIMEOUT;
+    }
+
+    if (r.status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "could not query BWM WiFi status");
+        return r.status;
+    }
+
+    uint8_t state = (r.length >= 1) ? r.data.asBytes[0] : 0xFF;
+    uint32_t ip = 0;
+    if (r.length >= 5) {
+        ip = r.data.asBytes[1] | (r.data.asBytes[2] << 8) | (r.data.asBytes[3] << 16) | ((uint32_t)r.data.asBytes[4] << 24);
+    }
+
+    bwm_print_wifi_state(state, ip, true);
+    if (state == BWM_WIFI_STATE_OFF) {
+        PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hw bwm wifi --ssid <ssid> --pwd <pwd>") "`");
+    } else if ((state == 2) && ip) {
+        PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("pm3 -p tcp:%u.%u.%u.%u:<port>") "`",
+                      ip & 0xFF,
+                      (ip >> 8) & 0xFF,
+                      (ip >> 16) & 0xFF,
+                      (ip >> 24) & 0xFF
+                     );
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
+static int bwm_wifi_stop(void) {
+    uint8_t off[1] = { BWM_WIFI_ACTION_STOP };
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_BWM_WIFI, off, sizeof(off));
+    PacketResponseNG r;
+    if (WaitForResponseTimeout(CMD_PM5_BWM_WIFI, &r, 5000) == false) {
+        PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
+        return PM3_ETIMEOUT;
+    }
+
+    if (r.status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "failed to disable BWM WiFi");
+        return r.status;
+    }
+
+    PrintAndLogEx(SUCCESS, "WiFi................ " _YELLOW_("off") ", back to BLE only");
+    return PM3_SUCCESS;
+}
+
 static int CmdBWMWifi(const char *Cmd) {
-    // Sub-actions that carry no other arguments are positional keywords now:
-    //   hw bwm wifi status   (was --status)
-    //   hw bwm wifi stop     (was --stop)
-    // Bringing WiFi up still takes value flags, so it stays the default
-    // (no-keyword) form: hw bwm wifi --ssid <ssid> --pwd <pwd> [--port <n>]
-    char verb[16] = {0};
-    sscanf(Cmd, "%15s", verb);
-
-    if (strcmp(verb, "status") == 0) {
-        uint8_t q[1] = { BWM_WIFI_ACTION_STATUS };
-        clearCommandBuffer();
-        SendCommandNG(CMD_PM5_BWM_WIFI, q, sizeof(q));
-        PacketResponseNG r;
-        if (WaitForResponseTimeout(CMD_PM5_BWM_WIFI, &r, 5000) == false) {
-            PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
-            return PM3_ETIMEOUT;
-        }
-        if (r.status != PM3_SUCCESS) {
-            PrintAndLogEx(FAILED, "could not query BWM WiFi status (BWM present?)");
-            return r.status;
-        }
-        uint8_t state = (r.length >= 1) ? r.data.asBytes[0] : 0xFF;
-        uint32_t ip = 0;
-        if (r.length >= 5) {
-            ip = r.data.asBytes[1] | (r.data.asBytes[2] << 8) | (r.data.asBytes[3] << 16) | ((uint32_t)r.data.asBytes[4] << 24);
-        }
-        switch (state) {
-            case 0xFF:
-                PrintAndLogEx(INFO, "BWM WiFi disabled (BLE-only). Bring it up with " _YELLOW_("hw bwm wifi --ssid <ssid> --pwd <pwd>"));
-                break;
-            case 2: // connected
-                if (ip) {
-                    PrintAndLogEx(SUCCESS, "BWM WiFi connected, IP " _YELLOW_("%u.%u.%u.%u"),
-                                  ip & 0xFF, (ip >> 8) & 0xFF, (ip >> 16) & 0xFF, (ip >> 24) & 0xFF);
-                    PrintAndLogEx(HINT, "Connect with: " _YELLOW_("pm3 -p tcp:%u.%u.%u.%u:<port>"),
-                                  ip & 0xFF, (ip >> 8) & 0xFF, (ip >> 16) & 0xFF, (ip >> 24) & 0xFF);
-                } else {
-                    PrintAndLogEx(INFO, "BWM WiFi associated, waiting for a DHCP lease...");
-                }
-                break;
-            case 1: // connecting
-                PrintAndLogEx(INFO, "BWM WiFi connecting...");
-                break;
-            case 3: // reconnect wait
-                PrintAndLogEx(INFO, "BWM WiFi reconnecting...");
-                break;
-            case 4: // task stopped
-                PrintAndLogEx(INFO, "BWM WiFi connect task stopped");
-                break;
-            case 0: // disconnected
-            default:
-                PrintAndLogEx(INFO, "BWM WiFi configured but not connected");
-                break;
-        }
-        return PM3_SUCCESS;
-    }
-
-    if (strcmp(verb, "stop") == 0) {
-        uint8_t off[1] = { BWM_WIFI_ACTION_STOP };
-        clearCommandBuffer();
-        SendCommandNG(CMD_PM5_BWM_WIFI, off, sizeof(off));
-        PacketResponseNG r;
-        if (WaitForResponseTimeout(CMD_PM5_BWM_WIFI, &r, 5000) == false) {
-            PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
-            return PM3_ETIMEOUT;
-        }
-        if (r.status != PM3_SUCCESS) {
-            PrintAndLogEx(FAILED, "failed to disable BWM WiFi");
-            return r.status;
-        }
-        PrintAndLogEx(SUCCESS, "BWM WiFi disabled (back to BLE-only)");
-        return PM3_SUCCESS;
-    }
-
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw bwm wifi",
                   "Bring up the BWM in STA + TCP-server mode: join a WiFi network and\n"
-                  "start a TCP server so the client can connect over WiFi. PM5 only.\n"
-                  "Sub-actions (no dashes): 'status' shows state, 'stop' tears WiFi down.",
-                  "hw bwm wifi status                              --> show connection state + IP\n"
-                  "hw bwm wifi stop                                --> tear down WiFi, back to BLE-only\n"
-                  "hw bwm wifi --ssid Home --pwd secret            --> bring up, port 18888\n"
-                  "hw bwm wifi --ssid Home --pwd secret --port 9000");
+                  "start a TCP server so the client can connect over WiFi. PM5 only.",
+                  "hw bwm wifi --status                                  --> show connection state + IP\n"
+                  "hw bwm wifi --stop                                    --> tear down WiFi, back to BLE-only\n"
+                  "hw bwm wifi --ssid Home --pwd secret                  --> bring up, port 18888\n"
+                  "hw bwm wifi --ssid \"My Home\" --pwd secret --port 9000 --> quote an SSID with spaces, port 9000");
 
     void *argtable[] = {
         arg_param_begin,
@@ -239,33 +287,51 @@ static int CmdBWMWifi(const char *Cmd) {
         arg_str0(NULL, "pwd",  "<pwd>",  "WiFi password (omit for open network)"),
         arg_int0(NULL, "port", "<dec>",  "TCP server listen port (default 18888)"),
         arg_str0(NULL, "hostname", "<name>", "DHCP hostname (default Proxmark5)"),
+        arg_lit0(NULL, "status", "show connection state and IP"),
+        arg_lit0(NULL, "stop", "tear down WiFi, back to BLE-only"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     uint8_t ssid[64] = {0};
     int ssid_len = 0;
-    CLIParamStrToBuf(arg_get_str(ctx, 1), ssid, sizeof(ssid) - 1, &ssid_len);
+    CLIParamStrToBuf(arg_get_str(ctx, 1), ssid, sizeof(ssid), &ssid_len);
 
     uint8_t pwd[64] = {0};
     int pwd_len = 0;
-    CLIParamStrToBuf(arg_get_str(ctx, 2), pwd, sizeof(pwd) - 1, &pwd_len);
+    CLIParamStrToBuf(arg_get_str(ctx, 2), pwd, sizeof(pwd), &pwd_len);
 
     int port = arg_get_int_def(ctx, 3, 18888);
 
     uint8_t host[33] = {0};
     int host_len = 0;
-    CLIParamStrToBuf(arg_get_str(ctx, 4), host, sizeof(host) - 1, &host_len);
+    CLIParamStrToBuf(arg_get_str(ctx, 4), host, sizeof(host), &host_len);
     if (host_len == 0) {
         strcpy((char *)host, "Proxmark5");
         host_len = 9;
     }
+    bool status = arg_get_lit(ctx, 5);
+    bool stop = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
-    if (ssid_len == 0) {
-        PrintAndLogEx(FAILED, "an SSID is required (or " _YELLOW_("hw bwm wifi stop") " to tear down)");
+    if ((status + stop + (ssid_len > 0)) > 1) {
+        PrintAndLogEx(WARNING, "specify one of " _YELLOW_("--ssid") ", " _YELLOW_("--status") " or " _YELLOW_("--stop"));
         return PM3_EINVARG;
     }
+
+    if (status) {
+        return bwm_wifi_status();
+    }
+
+    if (stop) {
+        return bwm_wifi_stop();
+    }
+
+    if (ssid_len == 0) {
+        PrintAndLogEx(FAILED, "an SSID is required (or " _YELLOW_("hw bwm wifi --stop") " to tear down)");
+        return PM3_EINVARG;
+    }
+
     if (port < 1 || port > 65535) {
         PrintAndLogEx(FAILED, "port must be 1..65535");
         return PM3_EINVARG;
@@ -294,50 +360,55 @@ static int CmdBWMWifi(const char *Cmd) {
     PacketResponseNG resp;
     // ARM blocks during join + DHCP wait, so allow a long client timeout
     if (WaitForResponseTimeout(CMD_PM5_BWM_WIFI, &resp, 60000) == false) {
-        PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
+        PrintAndLogEx(WARNING, "command timeout");
         return PM3_ETIMEOUT;
     }
+
     if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "BWM WiFi bring-up failed (check SSID/password and signal)");
-        PrintAndLogEx(HINT, "If it may have joined after DHCP, check: " _YELLOW_("hw bwm wifi status"));
+        // PM3_ENODATA: no IP yet, but not refused either
+        if (resp.status == PM3_ENODATA) {
+            PrintAndLogEx(HINT, "Hint: Check `" _YELLOW_("hw bwm wifi --status") "`");
+        }
         return resp.status;
     }
 
     uint32_t ip = resp.data.asDwords[0];
-    PrintAndLogEx(SUCCESS, "BWM on WiFi at %u.%u.%u.%u",
-                  ip & 0xFF, (ip >> 8) & 0xFF, (ip >> 16) & 0xFF, (ip >> 24) & 0xFF);
-    PrintAndLogEx(HINT, "Connect with: " _YELLOW_("pm3 -p tcp:%u.%u.%u.%u:%d"),
-                  ip & 0xFF, (ip >> 8) & 0xFF, (ip >> 16) & 0xFF, (ip >> 24) & 0xFF, port);
-    PrintAndLogEx(HINT, "Or by name (router-dependent): " _YELLOW_("pm3 -p tcp:%s:%d"), host, port);
-    PrintAndLogEx(HINT, "Or by mDNS (BWM fw with mDNS): " _YELLOW_("pm3 -p tcp:%s.local:%d"), host, port);
+    bwm_print_wifi_state(2, ip, true);
+
+    PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("pm3 -p tcp:%u.%u.%u.%u:%d") "`",
+                  ip & 0xFF,
+                  (ip >> 8) & 0xFF,
+                  (ip >> 16) & 0xFF,
+                  (ip >> 24) & 0xFF,
+                  port
+                 );
+    PrintAndLogEx(HINT, "      by name: `" _YELLOW_("pm3 -p tcp:%s:%d") "`", host, port);
+    PrintAndLogEx(HINT, "      by mDNS: `" _YELLOW_("pm3 -p tcp:%s.local:%d") "`", host, port);
     return PM3_SUCCESS;
 }
 
 static int CmdBwmCharge(const char *Cmd) {
-    // Positional sub-action (no dashes): hw bwm charge on | off
-    char verb[16] = {0};
-    sscanf(Cmd, "%15s", verb);
-    bool on  = (strcmp(verb, "on")  == 0);
-    bool off = (strcmp(verb, "off") == 0);
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwm charge",
+                  "Enable or disable BWM battery charging by clearing/setting the AW32001E charge-enable bit (CEB, REG01[3]).\n"
+                  _RED_("One-shot:") _WHITE_(" The charger watchdog reverts this after ~160 s unless serviced.\n")
+                  "Charging may stop on its own. Use to nudge a top-up.",
+                  "hw bwm charge --off    --> disable charging\n"
+                  "hw bwm charge --on     --> enable charging");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "on", "enable charging"),
+        arg_lit0(NULL, "off", "disable charging"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    bool on = arg_get_lit(ctx, 1);
+    bool off = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
 
-    if (!on && !off) {
-        // Not a recognised sub-action: render help (also serves -h / empty),
-        // or error on a stray token, then stop.
-        CLIParserContext *ctx;
-        CLIParserInit(&ctx, "hw bwm charge",
-                      "Enable or disable BWM battery charging by clearing/setting the\n"
-                      "AW32001E charge-enable bit (CEB, REG01[3]). PM5 only.\n"
-                      _RED_("One-shot:") " the charger watchdog reverts this after ~160 s unless\n"
-                      "serviced, so charging may stop on its own. Use to nudge a top-up.",
-                      "hw bwm charge off    --> disable charging\n"
-                      "hw bwm charge on     --> enable charging");
-        void *argtable[] = {
-            arg_param_begin,
-            arg_param_end
-        };
-        CLIExecWithReturn(ctx, Cmd, argtable, true);
-        CLIParserFree(ctx);
-        PrintAndLogEx(WARNING, "specify " _YELLOW_("on") " or " _YELLOW_("off"));
+    if (on == off) {
+        PrintAndLogEx(WARNING, "specify " _YELLOW_("--on") " or " _YELLOW_("--off"));
         return PM3_EINVARG;
     }
 
@@ -351,14 +422,16 @@ static int CmdBwmCharge(const char *Cmd) {
         PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
         return PM3_ETIMEOUT;
     }
+
     if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "charger did not respond (check BWM present)");
         return resp.status;
     }
-    PrintAndLogEx(SUCCESS, "Charging %s. Verify with " _YELLOW_("hw status") ".",
-                  off ? "disabled" : "enabled");
+    PrintAndLogEx(SUCCESS, "Charging............ %s", (off) ? _YELLOW_("disabled") : _GREEN_("enabled"));
+    PrintAndLogEx(HINT, "Hint: Verify with `" _YELLOW_("hw status") "`");
+
     if (off == false) {
-        PrintAndLogEx(HINT, "Reverts on the charger watchdog (~160 s) if not serviced.");
+        PrintAndLogEx(HINT, "Hint: Reverts on the charger watchdog (~160 s) if not serviced.");
     }
     return PM3_SUCCESS;
 }
@@ -367,20 +440,20 @@ static int CmdBwmVchg(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw bwm vchg",
                   "Set the BWM charger (AW32001E) charge-voltage regulation target.\n"
-                  "Lowering it below 4.2 V reduces top-of-charge stress and extends cell\n"
-                  "life. Snaps to the nearest 15 mV step; clamped to 3600..4200 mV. This is\n"
-                  "a runtime register write (reverts on the charger watchdog / POR); the\n"
-                  "firmware re-applies the " _YELLOW_("4100 mV") " default at every boot. PM5 only.",
-                  "hw bwm vchg              --> set charge voltage to default 4100 mV (->4.095 V)\n"
-                  "hw bwm vchg --mv 4200    --> set charge voltage to 4200 mV");
+                  "Lowering it below 4.2 V reduces top-of-charge stress and extends cell life.\n"
+                  "Snaps to the nearest 15 mV step; clamped to 3600..4200 mV. \n"
+                  "This is a runtime register write (reverts on the charger watchdog / POR);\n"
+                  "the firmware re-applies the " _YELLOW_("4200 mV") " default at every boot.",
+                  "hw bwm vchg              --> set charge voltage to default 4200 mV\n"
+                  "hw bwm vchg --mv 4100    --> set charge voltage to 4100 mV (->4.095 V)");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0(NULL, "mv", "<mV>", "charge voltage in mV (default 4100, clamped 3600..4200)"),
+        arg_int0(NULL, "mv", "<mV>", "charge voltage in mV (default 4200, clamped 3600..4200)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    int mv = arg_get_int_def(ctx, 1, 4100);
+    int mv = arg_get_int_def(ctx, 1, 4200);
     CLIParserFree(ctx);
 
     if (mv < 3600 || mv > 4200) {
@@ -395,22 +468,25 @@ static int CmdBwmVchg(const char *Cmd) {
     SendCommandNG(CMD_PM5_BWM_SET_VCHG, payload, sizeof(payload));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_PM5_BWM_SET_VCHG, &resp, 5000) == false) {
-        PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
+        PrintAndLogEx(WARNING, "command timeout");
         return PM3_ETIMEOUT;
     }
+
     if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "failed to set charge voltage - check BWM present");
         return resp.status;
     }
     uint16_t applied = (resp.length >= 2) ? (resp.data.asBytes[0] | (resp.data.asBytes[1] << 8)) : 0;
-    PrintAndLogEx(SUCCESS, "Charge voltage set to " _YELLOW_("%u.%03u V") " (nearest 15 mV step).", applied / 1000, applied % 1000);
+    PrintAndLogEx(SUCCESS, "Charge voltage...... " _YELLOW_("%u.%03u V") " ( nearest 15 mV step )", applied / 1000, applied % 1000);
     return PM3_SUCCESS;
 }
 
 static int CmdBwmSetCap(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw bwm setcap",
-                  "Program the BWM fuel gauge (BQ27427) Design Capacity for the fitted cell.\n"
+                  "Program the BWM fuel gauge (BQ27427) Design Capacity for the fitted cell,\n"
+                  "select its 4.2 V chemistry profile and set 0 % to the 3300 mV shutdown floor\n"
+                  "(the firmware also does this at boot after a gauge reset).\n"
                   "Run ONCE after fitting or replacing the battery. This triggers a gauge\n"
                   "config-update; do not run it repeatedly, as that disrupts the Impedance\n"
                   "Track learning cycle. PM5 only.",
@@ -433,37 +509,31 @@ static int CmdBwmSetCap(const char *Cmd) {
 
     uint8_t payload[2] = { (uint8_t)(cap & 0xFF), (uint8_t)((cap >> 8) & 0xFF) };
     PrintAndLogEx(INFO, "Programming BWM gauge design capacity to " _YELLOW_("%d mAh") "...", cap);
-    PrintAndLogEx(INFO, "Run this " _YELLOW_("once") "; then perform a full charge/discharge learning cycle.");
+    PrintAndLogEx(INFO, "Run " _YELLOW_("once") "; then perform a full charge/discharge learning cycle.");
 
     clearCommandBuffer();
     SendCommandNG(CMD_PM5_BWM_SET_CAP, payload, sizeof(payload));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_PM5_BWM_SET_CAP, &resp, 5000) == false) {
-        PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a BWM fitted?)");
+        PrintAndLogEx(WARNING, "command timeout");
         return PM3_ETIMEOUT;
     }
+
     if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "gauge provisioning failed - check BWM present and gauge unsealed");
         return resp.status;
     }
-    PrintAndLogEx(SUCCESS, "Design capacity programmed. `hw status` should now report sane capacity.");
+
+    PrintAndLogEx(SUCCESS, "Design capacity..... " _YELLOW_("%d mAh") " programmed", cap);
+    PrintAndLogEx(HINT, "Hint: Verify with `" _YELLOW_("hw status") "`");
     return PM3_SUCCESS;
 }
 
 
-static void progressbar(long sent, long total, int style) {
-    int percent = (int)((double)sent / total * 100);
-
-    // Use \r at the start to move the cursor back to the beginning of the line
-    printf("\rProgress: [%d%%]", percent);
-
-    // Force stdout to print immediately without waiting for a newline
-    fflush(stdout);
-}
-
 // One full OTA attempt: BEGIN -> WRITE... -> END. The BWM OTA has no resume
 // (DEV.md 8.4): a dropped chunk can't be re-sent, so any failure here means the
 // caller must restart the whole thing.
+// PM3_SUCCESS: END acked. PM3_ETIMEOUT: all data sent, END ack lost. Else: not uploaded.
 static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms) {
     PacketResponseNG resp;
 
@@ -471,21 +541,28 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms
     // OTA slot here; that can take 20-40 s on a 4 MB ESP32-C2, so wait longer
     // than the device-side 60 s timeout plus USB round-trip.
     uint8_t beg[5] = { BWM_OTA_ACTION_BEGIN,
-                       (uint8_t)(fwlen & 0xFF), (uint8_t)((fwlen >> 8) & 0xFF),
-                       (uint8_t)((fwlen >> 16) & 0xFF), (uint8_t)((fwlen >> 24) & 0xFF)
+                       (uint8_t)(fwlen & 0xFF),
+                       (uint8_t)((fwlen >> 8) & 0xFF),
+                       (uint8_t)((fwlen >> 16) & 0xFF),
+                       (uint8_t)((fwlen >> 24) & 0xFF)
                      };
+
     clearCommandBuffer();
     SendCommandNG(CMD_PM5_BWM_ESP_OTA, beg, sizeof(beg));
     if (WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 75000) == false) {
         PrintAndLogEx(FAILED, "OTA begin timed out (ESP is likely still erasing the OTA slot)");
-        PrintAndLogEx(HINT, "Wait a few seconds and retry; do not power-cycle mid-erase.");
-        return PM3_ETIMEOUT;
+        PrintAndLogEx(HINT, "Hint: Wait a few seconds and retry. Do not power-cycle mid-erase");
+        return PM3_EFAILED;
     }
+
     if (resp.status != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "OTA begin failed (status %d)%s", resp.status,
-                      (resp.status == PM3_ETIMEOUT) ? " - UART timeout waiting for ESP" : "");
-        return resp.status;
+        PrintAndLogEx(FAILED, "OTA begin failed (status %d)%s",
+                      resp.status,
+                      (resp.status == PM3_ETIMEOUT) ? " - UART timeout waiting for ESP" : ""
+                     );
+        return PM3_EFAILED;
     }
+
     PrintAndLogEx(INFO, "Uploading " _YELLOW_("%zu") " bytes of ESP firmware over the BWM link...", fwlen);
 
     // WRITE chunks. Bounded by BWM_OTA_CHUNK_MAX (the ESP forwards each WRITE over
@@ -495,6 +572,7 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms
     if (buf == NULL) {
         return PM3_EMALLOC;
     }
+
     size_t sent = 0;
     while (sent < fwlen) {
         size_t n = MIN(maxchunk, fwlen - sent);
@@ -503,29 +581,38 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms
         clearCommandBuffer();
         SendCommandNG(CMD_PM5_BWM_ESP_OTA, buf, (uint16_t)(n + 1));
         bool got = WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 25000);
+
         if (!got || resp.status != PM3_SUCCESS) {
             PrintAndLogEx(NORMAL, "");
-            if (!got) {
+
+            if (got == false) {
                 PrintAndLogEx(WARNING, "OTA write stalled at offset %zu (no response)", sent);
             } else if (resp.status == PM3_ETIMEOUT) {
                 PrintAndLogEx(WARNING, "OTA write timed out at offset %zu (ESP did not ACK that chunk)", sent);
             } else {
                 PrintAndLogEx(WARNING, "OTA write rejected at offset %zu (status %d)", sent, resp.status);
             }
+
             free(buf);
             return PM3_EFAILED;
         }
+
         sent += n;
-        progressbar(sent, fwlen, STYLE_MIXED);
+        PrintAndLogEx(INPLACE, "Sent " _YELLOW_("%zu") " / " _YELLOW_("%zu") " bytes  (" _YELLOW_("%u") "%%)"
+                      , sent
+                      , fwlen
+                      , (uint32_t)((sent * 100) / fwlen)
+                     );
 
         // Pace the stream. The client->AT32 hop (USB/BLE) is far faster than the
         // AT32->ESP UART, so back-to-back writes can outrun the UART and drop a
         // chunk -> esp_ota_end() then sees written < total and aborts. A small
         // gap gives the UART time to drain. (BLE is naturally paced, which is why
-        // it "worked" and bursty USB did not - see nemanjan00.)
+        // it "worked" and bursty USB did not)
         if (write_delay_ms) {
             msleep(write_delay_ms);
         }
+
     }
     free(buf);
     PrintAndLogEx(NORMAL, "");
@@ -538,18 +625,13 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms
     if (got_end && (resp.status == PM3_SUCCESS)) {
         return PM3_SUCCESS;
     }
+
     if (got_end) {
-        // The BWM answered END with an error. The common one is a size mismatch:
-        // esp_ota_end() found written < total, i.e. chunks were dropped in transit.
-        // That is a genuine failure (boot partition NOT switched) - restart, and
-        // hint at pacing, which is the usual cure.
         PrintAndLogEx(WARNING, "OTA finalize rejected (status %d) - data was lost in transit", resp.status);
-        PrintAndLogEx(HINT, "Try a per-write delay: " _YELLOW_("hw bwm upgrade -f <fw> --delay 20"));
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hw bwm upgrade --delay 20 -f <fw>") "`");
         return PM3_EFAILED;
     }
-    // No answer at all. Over BLE the END auto-reboot drops the link before the ack
-    // returns, so a timeout here means "reached END, reboot likely happened" -
-    // verify by version rather than discarding a possibly-good flash.
+
     return PM3_ETIMEOUT;
 }
 
@@ -562,10 +644,32 @@ static int bwm_get_version(char *out, size_t outlen) {
     if ((WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &r, 5000) == false) || (r.status != PM3_SUCCESS)) {
         return PM3_EFAILED;
     }
+
     uint16_t n = (r.length < (uint16_t)(outlen - 1)) ? r.length : (uint16_t)(outlen - 1);
     memcpy(out, r.data.asBytes, n);
     out[n] = 0;
     return PM3_SUCCESS;
+}
+
+// Does the running BWM fw match the image? ESP reports only the git hash,
+// the image app descriptor holds the full describe string (e.g. V1-12-g<hash>).
+static const char *bwm_ver_tag(const char *running, const uint8_t *fw, size_t fwlen) {
+    // esp_app_desc_t.version[32] at 0x30
+    if (running == NULL || running[0] == 0 || fwlen < 0x50 || fw[0x30] == 0) {
+        return " ( " _CYAN_("n/a") " )";
+    }
+
+    char img[33] = {0};
+    memcpy(img, fw + 0x30, 32);
+
+    size_t rl = strlen(running);
+    size_t il = strlen(img);
+    bool match = (strcmp(img, running) == 0);
+    if (match == false && il > rl + 2) {
+        match = (strncmp(img + il - rl - 2, "-g", 2) == 0) && (strcmp(img + il - rl, running) == 0);
+    }
+
+    return match ? " ( " _GREEN_("ok") " )" : " ( " _RED_("outdated") " )";
 }
 
 static int CmdBWMUpgrade(const char *Cmd) {
@@ -582,6 +686,7 @@ static int CmdBWMUpgrade(const char *Cmd) {
         arg_param_end,
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
+
     int fnlen = 0;
     char fn[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)fn, sizeof(fn), &fnlen);
@@ -610,6 +715,7 @@ static int CmdBWMUpgrade(const char *Cmd) {
         free(fw);
         return PM3_EFILE;
     }
+
     if (fw[0] != 0xE9) {
         PrintAndLogEx(FAILED, "refusing to flash: not an ESP image (magic " _YELLOW_("0x%02X") ", expected 0xE9)", fw[0]);
         free(fw);
@@ -638,14 +744,19 @@ static int CmdBWMUpgrade(const char *Cmd) {
     char ver_before[64] = {0};
     bool have_before = (bwm_get_version(ver_before, sizeof(ver_before)) == PM3_SUCCESS);
     if (have_before) {
-        PrintAndLogEx(INFO, "Current BWM firmware..... " _YELLOW_("%s"), ver_before);
+        PrintAndLogEx(INFO, "Current BWM firmware..... " _YELLOW_("%s") "%s", ver_before, bwm_ver_tag(ver_before, fw, fwlen));
+    } else {
+        PrintAndLogEx(INFO, "Current BWM firmware..... unknown%s", bwm_ver_tag(NULL, fw, fwlen));
     }
 
     // No resume (DEV.md 8.4): a chunk lost mid-transfer restarts the whole upload.
-    const int max_attempts = 6;   // a single dropped chunk restarts the whole upload;
+    // a single dropped chunk restarts the whole upload;
+    const int max_attempts = 6;
+
     // more attempts make an all-fail run rare until per-chunk
     // retry (offset-idempotent ESP write) lands.
     for (int attempt = 1; attempt <= max_attempts; attempt++) {
+
         if (attempt > 1) {
             // Abort the in-flight ESP OTA (if any) and give a slow erase a chance
             // to finish before we BEGIN again. Otherwise attempt N's BEGIN races
@@ -658,6 +769,7 @@ static int CmdBWMUpgrade(const char *Cmd) {
             (void)WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &abortr, 8000);
             msleep(3000);
         }
+
         int res = bwm_ota_once(fw, fwlen, write_delay_ms);
 
         // Failed during BEGIN/WRITE: image incomplete, restart the whole thing.
@@ -670,13 +782,16 @@ static int CmdBWMUpgrade(const char *Cmd) {
         if (res == PM3_ETIMEOUT) {
             PrintAndLogEx(INFO, "finalize ack not seen - all data was sent, confirming by version...");
         }
+
         // Upload is complete and the ESP is rebooting into the new image. The
         // AT32<->ESP link is now desynced (the ESP comes back at its boot-default
         // baud), and the AT32 only re-negotiates on its own reset - so reset the PM5
         // to re-sync the link cleanly rather than trying to re-link in place. This
         // drops the client link; the user reconnects to a cleanly re-linked PM5.
         (void)have_before;
+
         PrintAndLogEx(SUCCESS, "BWM firmware uploaded; resetting the PM5 to re-sync the link...");
+
         free(fw);
         clearCommandBuffer();
         SendCommandNG(CMD_HARDWARE_RESET, NULL, 0);
@@ -694,6 +809,7 @@ static int CmdBWMUpgrade(const char *Cmd) {
     PrintAndLogEx(FAILED, "BWM firmware update could not be confirmed after %d attempts", max_attempts);
     return PM3_EFAILED;
 }
+
 static int CmdHelpBwm(const char *Cmd);
 
 static int CmdBwmName(const char *Cmd) {
@@ -704,10 +820,10 @@ static int CmdBwmName(const char *Cmd) {
                   "the BWM to apply it - this briefly drops a BLE/WiFi connection; reconnect after\n"
                   "a few seconds. Over USB the reboot is not noticeable.",
                   "hw bwm name                 --> show current BLE name\n"
-                  "hw bwm name --set MyPM5      --> set BLE name to 'MyPM5'");
+                  "hw bwm name --set MyPM5     --> set BLE name to 'MyPM5'");
     void *argtable[] = {
         arg_param_begin,
-        arg_str0(NULL, "set", "<name>", "new BLE name (1-31 chars); omit to read current name"),
+        arg_str0(NULL, "set", "<name>", "new BLE name (1-15 chars); omit to read current name"),
         arg_param_end,
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -730,7 +846,7 @@ static int CmdBwmName(const char *Cmd) {
         char out[BWM_BLE_NAME_MAX_LEN + 1] = {0};
         uint16_t n = (r.length < sizeof(out) - 1) ? r.length : (uint16_t)(sizeof(out) - 1);
         memcpy(out, r.data.asBytes, n);
-        PrintAndLogEx(SUCCESS, "BWM BLE name..... " _YELLOW_("%s"), out);
+        PrintAndLogEx(SUCCESS, "BLE name............ " _YELLOW_("%s"), out);
         return PM3_SUCCESS;
     }
 
@@ -749,7 +865,7 @@ static int CmdBwmName(const char *Cmd) {
         PrintAndLogEx(FAILED, "failed to set BWM BLE name (is a responsive BWM fitted?)");
         return PM3_EFAILED;
     }
-    PrintAndLogEx(SUCCESS, "BWM BLE name set to " _YELLOW_("%s"), name);
+    PrintAndLogEx(SUCCESS, "BLE name............ " _YELLOW_("%s") " ( stored )", name);
 
     // The ESP applies the name at BLE start-up, so it reboots (device-side) to pick
     // it up. That reboot leaves the AT32<->ESP link desynced (the ESP comes back at
@@ -774,10 +890,12 @@ static int bwm_setting_txn(uint16_t cmd, uint8_t action, uint8_t value, bool has
         PrintAndLogEx(WARNING, "command timeout (is this a PM5 with a responsive BWM?)");
         return PM3_ETIMEOUT;
     }
+
     if (resp->status == PM3_ENOTIMPL) {
         PrintAndLogEx(WARNING, "firmware built without BWM link support");
         return resp->status;
     }
+
     if (resp->status != PM3_SUCCESS || resp->length < 1) {
         PrintAndLogEx(FAILED, "BWM did not answer the %s command (BWM firmware too old?)", what);
         return (resp->status != PM3_SUCCESS) ? resp->status : PM3_EFAILED;
@@ -785,53 +903,33 @@ static int bwm_setting_txn(uint16_t cmd, uint8_t action, uint8_t value, bool has
     return PM3_SUCCESS;
 }
 
-static const char *bwm_wifi_state_name(uint8_t state) {
-    switch (state) {
-        case 0:
-            return "disconnected";
-        case 1:
-            return "connecting";
-        case 2:
-            return "connected";
-        case 3:
-            return "reconnecting";
-        case 4:
-            return "connect task stopped";
-        default:
-            return "unknown state";
-    }
-}
-
 static int CmdBwmPowerSave(const char *Cmd) {
-    // Positional sub-action (no dashes): hw bwm powersave [on | off]; no verb shows the state
-    char verb[16] = {0};
-    sscanf(Cmd, "%15s", verb);
-    bool on   = (strcmp(verb, "on")  == 0);
-    bool off  = (strcmp(verb, "off") == 0);
-    bool show = (verb[0] == 0);
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwm powersave",
+                  "Show or set the BWM (ESP32) power-save switch, stored on the BWM in NVS.\n"
+                  "Default is " _GREEN_("on") ": the ESP scales its clock down, light-sleeps between\n"
+                  "link traffic, and after 30 s of fast advertising (boot, disconnect) advertises\n"
+                  "once a second. " _YELLOW_("off") " pins it at full clock, no sleep, fast advertising\n"
+                  "throughout. Applies at once and survives reboots. PM5 only.",
+                  "hw bwm powersave          --> show the current state\n"
+                  "hw bwm powersave --off    --> stock always-on behaviour\n"
+                  "hw bwm powersave --on     --> re-enable power saving");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "on", "enable power saving"),
+        arg_lit0(NULL, "off", "disable power saving"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool on = arg_get_lit(ctx, 1);
+    bool off = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
 
-    if (!on && !off && !show) {
-        // Not a recognised sub-action: render help (also serves -h), or error on
-        // a stray token, then stop.
-        CLIParserContext *ctx;
-        CLIParserInit(&ctx, "hw bwm powersave",
-                      "Show or set the BWM (ESP32) power-save switch, stored on the BWM in NVS.\n"
-                      "Default is " _GREEN_("on") ": the ESP scales its clock down, light-sleeps between\n"
-                      "link traffic, and after 30 s of fast advertising (boot, disconnect) advertises\n"
-                      "once a second. " _YELLOW_("off") " pins it at full clock, no sleep, fast advertising\n"
-                      "throughout. Applies at once and survives reboots. PM5 only.",
-                      "hw bwm powersave        --> show the current state\n"
-                      "hw bwm powersave off    --> stock always-on behaviour\n"
-                      "hw bwm powersave on     --> re-enable power saving");
-        void *argtable[] = {
-            arg_param_begin,
-            arg_param_end
-        };
-        CLIExecWithReturn(ctx, Cmd, argtable, true);
-        CLIParserFree(ctx);
-        PrintAndLogEx(WARNING, "specify " _YELLOW_("on") ", " _YELLOW_("off") " or nothing to show the state");
+    if (on && off) {
+        PrintAndLogEx(WARNING, "specify " _YELLOW_("--on") " or " _YELLOW_("--off") ", not both");
         return PM3_EINVARG;
     }
+    bool show = (on == false) && (off == false);
 
     PacketResponseNG resp;
     int res = bwm_setting_txn(CMD_PM5_BWM_POWERSAVE, show ? BWM_POWERSAVE_ACTION_GET : BWM_POWERSAVE_ACTION_SET,
@@ -840,7 +938,7 @@ static int CmdBwmPowerSave(const char *Cmd) {
         return res;
     }
     bool state = (resp.data.asBytes[0] != 0);
-    PrintAndLogEx(SUCCESS, "BWM power save..... %s", state ? _GREEN_("on") : _YELLOW_("off"));
+    PrintAndLogEx(SUCCESS, "Power save.......... %s", state ? _GREEN_("on") : _YELLOW_("off"));
     return PM3_SUCCESS;
 }
 
@@ -857,46 +955,44 @@ static const char *bwm_wifi_ps_name(uint8_t mode) {
     }
 }
 
+// -2 = WiFi fully off
+static const CLIParserOption bwm_wifi_ps_opts[] = {
+    {-2, "off"},
+    {BWM_WIFI_PS_NONE, "none"},
+    {BWM_WIFI_PS_MIN, "min"},
+    {BWM_WIFI_PS_MAX, "max"},
+    {0, NULL},
+};
+
 static int CmdBwmWifiPower(const char *Cmd) {
-    // Positional sub-action (no dashes): hw bwm wifipower [off | none | min | max]; no verb shows the state
-    char verb[16] = {0};
-    sscanf(Cmd, "%15s", verb);
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw bwm wifipower",
+                  "Show or set how much power the BWM (ESP32) spends on WiFi.\n"
+                  _YELLOW_("off") " turns WiFi fully off (BLE-only, persisted; the default state, same as\n"
+                  "`hw bwm wifi --stop`). Bring it back with " _YELLOW_("hw bwm wifi --ssid <ssid> --pwd <pwd>") ".\n"
+                  "The other three set the modem power-save type while WiFi is up, stored on the\n"
+                  "BWM: " _GREEN_("min") " (default) sleeps between DTIM beacons, " _YELLOW_("max") " for the whole\n"
+                  "listen interval, " _YELLOW_("none") " never. Independent of " _YELLOW_("hw bwm powersave") ". PM5 only.",
+                  "hw bwm wifipower               --> show whether WiFi is up and the power-save type\n"
+                  "hw bwm wifipower -m off        --> WiFi fully off, BLE-only\n"
+                  "hw bwm wifipower -m none       --> modem always on while WiFi is up\n"
+                  "hw bwm wifipower -m min        --> ESP-IDF default (DTIM sleep)\n"
+                  "hw bwm wifipower -m max        --> deepest modem sleep");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("m", "mode", "<off|none|min|max>", "WiFi off, or the modem power-save type"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
     int mode = -1;
-    if (verb[0] == 0) {
-        mode = -1;
-    } else if (strcmp(verb, "off") == 0) {
-        // WiFi fully off: same as `hw bwm wifi stop`.
-        return CmdBWMWifi("stop");
-    } else if (strcmp(verb, "none") == 0) {
-        mode = BWM_WIFI_PS_NONE;
-    } else if (strcmp(verb, "min") == 0) {
-        mode = BWM_WIFI_PS_MIN;
-    } else if (strcmp(verb, "max") == 0) {
-        mode = BWM_WIFI_PS_MAX;
-    } else {
-        // Not a recognised sub-action: render help (also serves -h), or error on
-        // a stray token, then stop.
-        CLIParserContext *ctx;
-        CLIParserInit(&ctx, "hw bwm wifipower",
-                      "Show or set how much power the BWM (ESP32) spends on WiFi.\n"
-                      _YELLOW_("off") " turns WiFi fully off (BLE-only, persisted; the default state, same as\n"
-                      "`hw bwm wifi stop`). Bring it back with " _YELLOW_("hw bwm wifi --ssid <ssid> --pwd <pwd>") ".\n"
-                      "The other three set the modem power-save type while WiFi is up, stored on the\n"
-                      "BWM: " _GREEN_("min") " (default) sleeps between DTIM beacons, " _YELLOW_("max") " for the whole\n"
-                      "listen interval, " _YELLOW_("none") " never. Independent of " _YELLOW_("hw bwm powersave") ". PM5 only.",
-                      "hw bwm wifipower          --> show whether WiFi is up and the power-save type\n"
-                      "hw bwm wifipower off      --> WiFi fully off, BLE-only\n"
-                      "hw bwm wifipower none     --> modem always on while WiFi is up\n"
-                      "hw bwm wifipower min      --> ESP-IDF default (DTIM sleep)\n"
-                      "hw bwm wifipower max      --> deepest modem sleep");
-        void *argtable[] = {
-            arg_param_begin,
-            arg_param_end
-        };
-        CLIExecWithReturn(ctx, Cmd, argtable, true);
+    if (CLIGetOptionList(arg_get_str(ctx, 1), bwm_wifi_ps_opts, &mode)) {
         CLIParserFree(ctx);
-        PrintAndLogEx(WARNING, "specify " _YELLOW_("off") ", " _YELLOW_("none") ", " _YELLOW_("min") ", " _YELLOW_("max") " or nothing to show the state");
         return PM3_EINVARG;
+    }
+    CLIParserFree(ctx);
+
+    if (mode == -2) {
+        return bwm_wifi_stop();
     }
 
     PacketResponseNG resp;
@@ -906,12 +1002,8 @@ static int CmdBwmWifiPower(const char *Cmd) {
         return res;
     }
     uint8_t wifi_state = (resp.length >= 2) ? resp.data.asBytes[1] : BWM_WIFI_STATE_OFF;
-    if (wifi_state == BWM_WIFI_STATE_OFF) {
-        PrintAndLogEx(SUCCESS, "BWM WiFi................ " _GREEN_("off") " (BLE-only)");
-    } else {
-        PrintAndLogEx(SUCCESS, "BWM WiFi................ " _YELLOW_("on") " (%s)", bwm_wifi_state_name(wifi_state));
-    }
-    PrintAndLogEx(SUCCESS, "BWM WiFi power save..... " _YELLOW_("%s"), bwm_wifi_ps_name(resp.data.asBytes[0]));
+    bwm_print_wifi_state(wifi_state, 0, false);
+    PrintAndLogEx(SUCCESS, "WiFi power save..... " _YELLOW_("%s"), bwm_wifi_ps_name(resp.data.asBytes[0]));
     return PM3_SUCCESS;
 }
 
@@ -946,41 +1038,63 @@ static int ble_dbm_to_level(int dbm) {
 }
 
 static void ble_print_status(const bwm_ble_status_t *st) {
+
     PrintAndLogEx(INFO, "--- " _CYAN_("BWM BLE") " ---------------------------");
+
     if (st->enabled == 0xFF) {
-        PrintAndLogEx(INFO, "BLE................ %s " _YELLOW_("(module firmware without the on/off switch)"), ble_state_str(st->state));
+        PrintAndLogEx(INFO, "BLE................. " _YELLOW_("%s") " ( BWM firmware w/o the on/off switch )", ble_state_str(st->state));
     } else if (st->enabled == 0) {
-        PrintAndLogEx(INFO, "BLE................ " _YELLOW_("off") " (persisted; radio silent, USB/WiFi only)");
+        PrintAndLogEx(INFO, "BLE................. " _YELLOW_("off") " ( USB/WiFi only )");
+    } else if (st->state == 2) {
+        PrintAndLogEx(INFO, "BLE................. " _GREEN_("on") ", " _GREEN_("%s"), ble_state_str(st->state));
     } else {
-        PrintAndLogEx(INFO, "BLE................ " _GREEN_("on") ", %s", ble_state_str(st->state));
+        PrintAndLogEx(INFO, "BLE................. " _GREEN_("on") ", %s", ble_state_str(st->state));
     }
+
     if (st->name[0]) {
-        PrintAndLogEx(INFO, "Name............... " _YELLOW_("%s"), st->name);
+        PrintAndLogEx(INFO, "Name................ " _YELLOW_("%s"), st->name);
     }
+
     if (st->addr[0] != 0xFF || st->addr[5] != 0xFF) {
-        PrintAndLogEx(INFO, "Address............ %02X:%02X:%02X:%02X:%02X:%02X",
-                      st->addr[0], st->addr[1], st->addr[2], st->addr[3], st->addr[4], st->addr[5]);
+        PrintAndLogEx(INFO, "Address............. %02X:%02X:%02X:%02X:%02X:%02X",
+                      st->addr[0],
+                      st->addr[1],
+                      st->addr[2],
+                      st->addr[3],
+                      st->addr[4],
+                      st->addr[5]
+                     );
     }
+
+    // 123456 is the factory passkey
+    bool default_key = (memcmp(st->passkey, "123456", 6) == 0);
     if (st->bonding == 1) {
-        PrintAndLogEx(INFO, "Pairing............ " _GREEN_("required") " (LE Secure Connections, passkey " _YELLOW_("%.6s") ")", st->passkey);
-        if (memcmp(st->passkey, "123456", 6) == 0) {
-            PrintAndLogEx(WARNING, "the passkey is the factory default, change it: " _YELLOW_("hw bwm ble pairing -k <6 digits>"));
+        if (default_key) {
+            PrintAndLogEx(INFO, "Pairing............. " _GREEN_("required") ", passkey " _RED_("%.6s") " ( default )", st->passkey);
+        } else {
+            PrintAndLogEx(INFO, "Pairing............. " _GREEN_("required") ", passkey " _YELLOW_("%.6s"), st->passkey);
         }
     } else if (st->bonding == 0) {
-        PrintAndLogEx(INFO, "Pairing............ " _RED_("not required") " - anyone in range can connect and use the device");
-        PrintAndLogEx(HINT, "enable it with " _YELLOW_("hw bwm ble pairing on"));
+        PrintAndLogEx(INFO, "Pairing............. " _RED_("not required") "%s", (st->enabled != 0) ? ", anyone in range can connect" : "");
     }
+
     if (st->bonded_count != 0xFF) {
-        PrintAndLogEx(INFO, "Bonded devices..... %u%s", st->bonded_count, (st->bonded_count == BWM_BLE_BONDED_MAX) ? " (or more)" : "");
+        PrintAndLogEx(INFO, "Bonded devices...... " _YELLOW_("%u") "%s", st->bonded_count, (st->bonded_count == BWM_BLE_BONDED_MAX) ? " (or more)" : "");
         for (uint8_t i = 0; i < st->bonded_count; i++) {
             const uint8_t *a = st->bonded[i];
             PrintAndLogEx(INFO, "  [%u] %02X:%02X:%02X:%02X:%02X:%02X (%s)", i,
                           a[0], a[1], a[2], a[3], a[4], a[5], (a[6] == 0) ? "public" : "random");
         }
     }
+
     if (st->txp_adv != 0xFF && st->txp_conn != 0xFF) {
-        PrintAndLogEx(INFO, "TX power........... advertising %d dBm, connection %d dBm",
-                      ble_level_to_dbm(st->txp_adv), ble_level_to_dbm(st->txp_conn));
+        PrintAndLogEx(INFO, "TX power............ advertising %d dBm, connection %d dBm", ble_level_to_dbm(st->txp_adv), ble_level_to_dbm(st->txp_conn));
+    }
+
+    if ((st->enabled != 0) && (st->bonding == 0)) {
+        PrintAndLogEx(HINT, "Hint: To require pairing, use `" _YELLOW_("hw bwm ble pairing --on") "`");
+    } else if ((st->bonding == 1) && default_key) {
+        PrintAndLogEx(HINT, "Hint: To change the passkey, use `" _YELLOW_("hw bwm ble pairing -k <6 digits>") "`");
     }
 }
 
@@ -990,29 +1104,35 @@ static int ble_action(uint8_t action, const uint8_t *arg, size_t alen, bool quie
     if (alen > sizeof(payload) - 1) {
         return PM3_EINVARG;
     }
+
     if (alen) {
         memcpy(&payload[1], arg, alen);
     }
+
     clearCommandBuffer();
     SendCommandNG(CMD_PM5_BWM_BLE, payload, 1 + alen);
     PacketResponseNG resp;
     // Up to a dozen module round trips behind one reply, plus a light-sleep wake.
     if (WaitForResponseTimeout(CMD_PM5_BWM_BLE, &resp, 8000) == false) {
-        PrintAndLogEx(WARNING, "command timeout (is this a PM5? over BLE, a pairing or on/off change drops your own link)");
+        PrintAndLogEx(WARNING, "command timeout");
         return PM3_ETIMEOUT;
     }
+
     if (resp.status == PM3_ENOTIMPL) {
         PrintAndLogEx(WARNING, "firmware built without the BWM link");
         return resp.status;
     }
+
     if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "module refused or did not answer (%s)", (resp.status == PM3_ETIMEOUT) ? "timeout" : "error");
         return resp.status;
     }
+
     if (resp.length < sizeof(bwm_ble_status_t)) {
         PrintAndLogEx(FAILED, "short reply (%u bytes)", resp.length);
         return PM3_EFAILED;
     }
+
     if (quiet == false) {
         ble_print_status((const bwm_ble_status_t *)resp.data.asBytes);
     }
@@ -1061,14 +1181,6 @@ static int CmdBwmBleOff(const char *Cmd) {
 }
 
 static int CmdBwmBlePairing(const char *Cmd) {
-    // Positional sub-action (no dashes): hw bwm ble pairing [on|off] [-k <digits>]
-    char verb[16] = {0};
-    int consumed = 0;
-    sscanf(Cmd, "%15s%n", verb, &consumed);
-    bool on  = (strcmp(verb, "on")  == 0);
-    bool off = (strcmp(verb, "off") == 0);
-    const char *rest = (on || off) ? Cmd + consumed : Cmd;
-
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw bwm ble pairing",
                   "Require pairing before a BLE client can use the device. The module ships with\n"
@@ -1079,20 +1191,30 @@ static int CmdBwmBlePairing(const char *Cmd) {
                   "Both settings persist on the module. A change of on/off restarts the BLE\n"
                   "stack, which " _YELLOW_("drops a connected client - reconnect (and pair) afterwards.") "\n"
                   "The factory passkey is 123456; set your own.",
-                  "hw bwm ble pairing on                --> require pairing\n"
-                  "hw bwm ble pairing on -k 482913      --> require pairing with this passkey\n"
-                  "hw bwm ble pairing -k 482913         --> change the passkey only\n"
-                  "hw bwm ble pairing off               --> open access again");
+                  "hw bwm ble pairing --on                --> require pairing\n"
+                  "hw bwm ble pairing --on -k 482913      --> require pairing with this passkey\n"
+                  "hw bwm ble pairing -k 482913           --> change the passkey only\n"
+                  "hw bwm ble pairing --off               --> open access again");
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0(NULL, "on", "require pairing"),
+        arg_lit0(NULL, "off", "don't require pairing"),
         arg_str0("k", "key", "<6 digits>", "passkey a client must enter"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, rest, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    bool on = arg_get_lit(ctx, 1);
+    bool off = arg_get_lit(ctx, 2);
     uint8_t key[8] = {0};
     int keylen = 0;
-    int kres = CLIParamStrToBuf(arg_get_str(ctx, 1), key, sizeof(key) - 1, &keylen);
+    int kres = CLIParamStrToBuf(arg_get_str(ctx, 3), key, sizeof(key), &keylen);
     CLIParserFree(ctx);
+
+    if (on && off) {
+        PrintAndLogEx(WARNING, "specify " _YELLOW_("--on") " or " _YELLOW_("--off") ", not both");
+        return PM3_EINVARG;
+    }
+
     if (kres) {
         PrintAndLogEx(WARNING, "the passkey must be exactly 6 digits");
         return PM3_EINVARG;
@@ -1103,6 +1225,7 @@ static int CmdBwmBlePairing(const char *Cmd) {
         for (int i = 0; ok && i < 6; i++) {
             ok = isdigit(key[i]);
         }
+
         if (ok == false) {
             PrintAndLogEx(WARNING, "the passkey must be exactly 6 digits");
             return PM3_EINVARG;
@@ -1111,18 +1234,19 @@ static int CmdBwmBlePairing(const char *Cmd) {
         if (res != PM3_SUCCESS) {
             return res;
         }
+
         if (!on && !off) {
-            PrintAndLogEx(SUCCESS, "passkey set");
+            PrintAndLogEx(SUCCESS, "Passkey set");
             return PM3_SUCCESS;
         }
     } else if (!on && !off) {
-        PrintAndLogEx(WARNING, "specify " _YELLOW_("on") ", " _YELLOW_("off") " and/or " _YELLOW_("-k <6 digits>"));
+        PrintAndLogEx(WARNING, "specify " _YELLOW_("--on") ", " _YELLOW_("--off") " and/or " _YELLOW_("-k <6 digits>"));
         return PM3_EINVARG;
     }
     uint8_t v = on ? 1 : 0;
     int res = ble_action(BWM_BLE_ACTION_PAIRING, &v, 1, false);
     if (res == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "pairing %s; the BLE stack is restarting, a connected client is dropped", on ? _GREEN_("required") : _YELLOW_("not required"));
+        PrintAndLogEx(INFO, "The BLE stack is restarting, a connected client is dropped");
     }
     return res;
 }
@@ -1148,6 +1272,7 @@ static int CmdBwmBleForget(const char *Cmd) {
         PrintAndLogEx(WARNING, "specify either " _YELLOW_("-i <idx>") " or " _YELLOW_("--all"));
         return PM3_EINVARG;
     }
+
     if (idx > 254) {
         PrintAndLogEx(WARNING, "index out of range");
         return PM3_EINVARG;
@@ -1191,6 +1316,7 @@ static int CmdBwmBleTxPower(const char *Cmd) {
         uint8_t v[2] = { 0, (uint8_t)la };
         res = ble_action(BWM_BLE_ACTION_TXPOWER, v, 2, has_conn);
     }
+
     if (res == PM3_SUCCESS && has_conn) {
         uint8_t v[2] = { 1, (uint8_t)lc };
         res = ble_action(BWM_BLE_ACTION_TXPOWER, v, 2, false);
@@ -1230,7 +1356,7 @@ static command_t BwmCommandTable[] = {
     {"powersave", CmdBwmPowerSave, IfBwm, "Show/set the BWM power-save switch (DFS, light sleep, slow adv)"},
     {"setcap",   CmdBwmSetCap,  IfBwm, "Set fuel-gauge design capacity (run once after battery change)"},
     {"upgrade",  CmdBWMUpgrade, IfBwm, "Reflash BWM (ESP32) firmware over the BWM link, no header"},
-    {"vchg",     CmdBwmVchg,    IfBwm, "Set charger charge-voltage target (default 4100 mV)"},
+    {"vchg",     CmdBwmVchg,    IfBwm, "Set charger charge-voltage target (default 4200 mV)"},
     {"wifi",     CmdBWMWifi,    IfBwm, "Bring up WiFi (STA + TCP server) for a tcp: connection"},
     {"wifipower", CmdBwmWifiPower, IfBwm, "WiFi fully off, or the modem power-save type (none/min/max)"},
     {NULL, NULL, NULL, NULL}

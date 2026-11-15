@@ -1603,12 +1603,12 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
                     uint32_t value_set = (uint32_t)iter;
                     bool success = set_bitfield(&testdata, start_bit, num_bits, value_set);
                     if (!success) {
-                        PrintAndLogEx(FAILED, "set_bitfield failed for start_bit %zu, num_bits %zu, test_value " PRIx32, start_bit, num_bits, value_set);
+                        PrintAndLogEx(FAILED, "set_bitfield failed for start_bit %zu, num_bits %zu, test_value %" PRIx32, start_bit, num_bits, value_set);
                         result_bitfield = PM3_EFAILED;
                     }
                     uint32_t x = get_bitfield(&testdata, start_bit, num_bits);
                     if (x != value_set) {
-                        PrintAndLogEx(FAILED, "get/set_bitfield failed for start_bit %zu, num_bits %zu, test_value " PRIx32 ": got " PRIx32", expected " PRIx32, start_bit, num_bits, value_set, x, value_set);
+                        PrintAndLogEx(FAILED, "get/set_bitfield failed for start_bit %zu, num_bits %zu, test_value %" PRIx32 ": got %" PRIx32", expected %" PRIx32, start_bit, num_bits, value_set, x, value_set);
                         result_bitfield = PM3_EFAILED;
                     }
                     // Clear the field for the next test

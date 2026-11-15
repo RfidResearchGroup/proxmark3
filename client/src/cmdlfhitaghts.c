@@ -37,7 +37,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-void annotateHitagS(char *exp, size_t size, const uint8_t *cmd, uint8_t nbits, bool is_response) {
+void annotateHitagS(char *exp, size_t size, const uint8_t *cmd, uint16_t nbits, bool is_response) {
     uint8_t command = 0;
 
     // the caller reuses this buffer across frames, and the appends below are
@@ -229,9 +229,9 @@ static int process_hitags_common_args(CLIParserContext *ctx, lf_hitag_data_t *co
         return PM3_EINVARG;
     }
 
-    uint8_t mode = arg_get_int_def(ctx, 5, 3);
+    int mode = arg_get_int_def(ctx, 5, 3);
 
-    if (mode > 3) {
+    if ((mode < 0) || (mode > 3)) {
         PrintAndLogEx(WARNING, "Wrong response protocol mode, expected 0, 1, 2 or 3, got %d", mode);
         return PM3_EINVARG;
     }
@@ -347,7 +347,7 @@ static void hitags_config_print(hitags_config_t config) {
     PrintAndLogEx(INFO, " Memory type...... " _GREEN_("%s"),
     (const char *[]) {"Hitag S 32", "Hitag S 256", "Hitag S 2048", "Unknown Hitag S/8211"}[config.MEMT]);
 
-    PrintAndLogEx(INFO, " Authenticaion.... %s", config.auth ? _YELLOW_("Yes") : "No");
+    PrintAndLogEx(INFO, " Authentication... %s", config.auth ? _YELLOW_("Yes") : "No");
 
     PrintAndLogEx(INFO, " TTF coding....... %s",
     config.RES3 ? "FSK  0=RF/10 1=RF/8" : (const char *[]) {"Manchester", "Biphase"}[config.TTFC]);
@@ -416,6 +416,7 @@ static int CmdLFHitagSRead(const char *Cmd) {
 
     if (page > 255) {
         PrintAndLogEx(WARNING, "Page address Invalid.");
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -423,6 +424,7 @@ static int CmdLFHitagSRead(const char *Cmd) {
 
     if (count > HITAGS_MAX_PAGES) {
         PrintAndLogEx(WARNING, "No more than 64 pages can be read at once.");
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -475,12 +477,11 @@ static int CmdLFHitagSRead(const char *Cmd) {
             break;
         }
         if (card->pages_reason[i] >= 0) {
-            PrintAndLogEx(SUCCESS, "% 3u | %s  | " NOLF, page_addr, sprint_hex_ascii(card->pages[i], HITAGS_PAGE_SIZE));
+            PrintAndLogEx(SUCCESS, "%3u | %s  | " NOLF, page_addr, sprint_hex_ascii(card->pages[i], HITAGS_PAGE_SIZE));
 
             // access right
             if (page_addr == HITAGS_UID_PADR) {
                 PrintAndLogEx(NORMAL, _RED_("RO  ")NOLF);
-                \
             } else if (packet.cmd == HTSF_82xx && page_addr > 40) {  // using an 82xx (pages>40 are RO)
                 PrintAndLogEx(NORMAL, _RED_("RO  ")NOLF);
             } else if (page_addr == HITAGS_CONFIG_PADR) {
@@ -524,7 +525,7 @@ static int CmdLFHitagSRead(const char *Cmd) {
                     PrintAndLogEx(NORMAL, _RED_("RO  ")NOLF);
                 else
                     PrintAndLogEx(NORMAL, _GREEN_("RW  ")NOLF);
-            } else if (24 <= page_addr && page_addr <= 32) {
+            } else if (24 <= page_addr && page_addr <= 31) {
                 if (card->config_page.s.LCK2)
                     PrintAndLogEx(NORMAL, _RED_("RO  ")NOLF);
                 else
@@ -556,7 +557,7 @@ static int CmdLFHitagSRead(const char *Cmd) {
             } else
                 PrintAndLogEx(NORMAL, "Data");
         } else {
-            PrintAndLogEx(INFO, "% 3u | -- -- -- -- | ....  | N/A  | " NOLF, page_addr);
+            PrintAndLogEx(INFO, "%3u | -- -- -- -- | ....  | N/A  | " NOLF, page_addr);
             print_error(card->pages_reason[i]);
         }
     }
@@ -701,6 +702,7 @@ static int CmdLFHitagSRestore(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParserFree(ctx);
 
     if (fnlen == 0) {
         PrintAndLogEx(ERR, "Must specify a file");
@@ -929,6 +931,16 @@ static int CmdLFHitagSWrite(const char *Cmd) {
     }
 
     CLIParserFree(ctx);
+
+    if ((page < 0) || (page > 255)) {
+        PrintAndLogEx(WARNING, "Page address Invalid.");
+        return PM3_EINVARG;
+    }
+
+    if (data_len != sizeof(data)) {
+        PrintAndLogEx(WARNING, "Wrong DATA len expected 4, got %d", data_len);
+        return PM3_EINVARG;
+    }
 
     packet.page = page;
     memcpy(packet.data, data, sizeof(packet.data));

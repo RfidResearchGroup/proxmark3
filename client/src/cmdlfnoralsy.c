@@ -46,7 +46,7 @@ int demodNoralsy(bool verbose) {
     (void) verbose; // unused so far
     //ASK / Manchester
     bool st = true;
-    if (ASKDemod_ext(32, 0, 0, 0, false, false, false, 1, &st) != PM3_SUCCESS) {
+    if (ASKDemod_ext(32, 0, 100, 0, false, false, false, 1, &st) != PM3_SUCCESS) {
         if (g_debugMode) PrintAndLogEx(DEBUG, "DEBUG: Error - Noralsy: ASK/Manchester Demod failed");
         return PM3_ESOFT;
     }
@@ -104,8 +104,8 @@ int demodNoralsy(bool verbose) {
     }
 
     PrintAndLogEx(SUCCESS, "Noralsy - Card: " _GREEN_("%u")", Year: " _GREEN_("%u") ", Raw: %08X%08X%08X", cardid, year, raw1, raw2, raw3);
-    if (raw1 != 0xBB0214FF) {
-        PrintAndLogEx(WARNING, "Unknown bits set in first block! Expected 0xBB0214FF, Found: 0x%08X", raw1);
+    if ((raw1 != 0xBB0214FF) && (raw1 != 0xBB0314FF)) {
+        PrintAndLogEx(WARNING, "Unknown bits set in first block! Expected 0xBB0214FF or 0xBB0314FF, Found: 0x%08X", raw1);
         PrintAndLogEx(WARNING, "Please post this output in forum to further research on this format");
     }
     return PM3_SUCCESS;
@@ -173,8 +173,8 @@ static int CmdNoralsyClone(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint32_t id = arg_get_u32_def(ctx, 1, 0);
-    uint16_t year = arg_get_u32_def(ctx, 2, 2000);
+    uint64_t cn_arg = arg_get_u64_def(ctx, 1, 0);
+    uint64_t year_arg = arg_get_u64_def(ctx, 2, 2000);
     bool q5 = arg_get_lit(ctx, 3);
     bool em = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
@@ -183,6 +183,14 @@ static int CmdNoralsyClone(const char *Cmd) {
         PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
         return PM3_EINVARG;
     }
+
+    // the frame carries 7 BCD digits of cn and the last 2 of the year, read back as 1961-2060
+    if (cn_arg > 9999999 || year_arg < 1961 || year_arg > 2060) {
+        PrintAndLogEx(FAILED, "CN has a max value of 9999999 and year must be 1961-2060");
+        return PM3_EINVARG;
+    }
+    uint32_t id = (uint32_t)cn_arg;
+    uint16_t year = (uint16_t)year_arg;
 
     uint32_t blocks[4] = {T55x7_MODULATION_MANCHESTER | T55x7_BITRATE_RF_32 | T55x7_ST_TERMINATOR | 3 << T55x7_MAXBLOCK_SHIFT, 0, 0};
     char cardtype[16] = {"T55x7"};
@@ -246,9 +254,17 @@ static int CmdNoralsySim(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    uint32_t id = arg_get_u32_def(ctx, 1, 0);
-    uint16_t year = arg_get_u32_def(ctx, 2, 2000);
+    uint64_t cn_arg = arg_get_u64_def(ctx, 1, 0);
+    uint64_t year_arg = arg_get_u64_def(ctx, 2, 2000);
     CLIParserFree(ctx);
+
+    // the frame carries 7 BCD digits of cn and the last 2 of the year, read back as 1961-2060
+    if (cn_arg > 9999999 || year_arg < 1961 || year_arg > 2060) {
+        PrintAndLogEx(FAILED, "CN has a max value of 9999999 and year must be 1961-2060");
+        return PM3_EINVARG;
+    }
+    uint32_t id = (uint32_t)cn_arg;
+    uint16_t year = (uint16_t)year_arg;
 
     uint8_t bs[96];
     memset(bs, 0, sizeof(bs));
@@ -346,7 +362,7 @@ int detectNoralsy(uint8_t *dest, size_t *size) {
 }
 /*
 *
-* 2520116 | BB0214FF2529900116360000 | 10111011 00000011 00010100 11111111 00100101 00101001 10010000 00000001 00010110 00110110 00000000 00000000
+* 2520116 | BB0314FF2529900116360000 | 10111011 00000011 00010100 11111111 00100101 00101001 10010000 00000001 00010110 00110110 00000000 00000000
 *           aaa*aaaaiiiYY*iiiicc----                ****                   iiiiiiii iiiiYYYY YYYY**** iiiiiiii iiiiiiii cccccccc
 *
 * a = fixed value BB0*14FF

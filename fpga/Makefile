@@ -9,6 +9,7 @@
 #   make            - every PM3 image
 #   make pm3        - same
 #   make pm5        - the PM5 bitstream
+#   make fpga_pm5_release - the PM5 bitstream, copied to client/resources
 #   make <target>   - routed by name, e.g. fpga_pm3_hf, fpga_pm3_ult_lf, fpga_pm5
 #   make clean      - both platforms
 #   make help       - both target lists
@@ -59,6 +60,7 @@ help:
 	@echo "#"
 	@echo "#   make           - every PM3 image (Xilinx ISE)"
 	@echo "#   make pm5       - the PM5 bitstream (yosys/nextpnr-himbaechel)"
+	@echo "#   make fpga_pm5_release - same, copied to client/resources"
 	@echo "#   make <target>  - routed by name, e.g. fpga_pm3_hf, fpga_pm5"
 	@echo "#   make clean     - both platforms"
 	@echo "################################################################"

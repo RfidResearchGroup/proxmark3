@@ -28,6 +28,52 @@
 #define DESFIRE_TX_FRAME_MAX_LEN 54
 #define DESFIRE_BUFFER_SIZE 65538
 
+// DesfireAuthenticate() / DesfireSelectAndAuthenticate*() result codes.
+// PM3_SUCCESS means authenticated;  everything else names the stage that did
+// not complete.  The numbers are printed to the user, so they stay put.
+//
+// first auth frame, the one carrying the key number
+#define DESFIRE_AUTH_TX1_FAIL          1    // PICC answered with an error status
+#define DESFIRE_AUTH_NO_DATA1          2    // answered without data
+#define DESFIRE_AUTH_NO_FRAME          3    // answer wasn't ADDITIONAL_FRAME
+#define DESFIRE_AUTH_RNDB_LEN          4    // RndB length doesn't match the algo
+#define DESFIRE_AUTH_SETKEY_DEC        5    // mbedtls_aes_setkey_dec failed
+#define DESFIRE_AUTH_SETKEY_ENC        6    // mbedtls_aes_setkey_enc failed
+// second auth frame, the one carrying RndA + RndB'.  A wrong key is the PICC
+// answering this one with AUTHENTICATION_ERROR
+#define DESFIRE_AUTH_TX2_FAIL          7    // PICC answered with an error status
+#define DESFIRE_AUTH_NO_DATA2          8    // answered without data
+#define DESFIRE_AUTH_NOT_OK            9    // answer status wasn't OPERATION_OK
+#define DESFIRE_AUTH_SETKEY_DEC2      10    // mbedtls_aes_setkey_dec failed
+#define DESFIRE_AUTH_RNDA_MISMATCH    11    // session key can't be verified
+#define DESFIRE_AUTH_CMAC_FAIL        12    // CMAC can't be verified
+// the application holds no key of this type
+#define DESFIRE_AUTH_NO_AES           50    // PICC didn't answer AES
+#define DESFIRE_AUTH_NO_LRP           51    // PICC didn't answer LRP
+// no status byte came back at all, so the PICC said nothing about the key.
+// Inconclusive:  not the same as the PICC refusing it
+#define DESFIRE_AUTH_NO_ANSWER        60
+#define DESFIRE_AUTH_NO_METHOD       100    // no auth method for these parameters
+// select / channel
+#define DESFIRE_AUTH_SELECT_FAIL     200
+#define DESFIRE_AUTH_NO_CHANNEL      201    // no error, yet not authenticated
+#define DESFIRE_AUTH_SELECT_ISO_FAIL 202
+#define DESFIRE_AUTH_SELECT_EF_FAIL  203
+// ISO mode authentication
+#define DESFIRE_AUTH_ISO_CHAL        301    // get challenge error
+#define DESFIRE_AUTH_ISO_CHAL_LEN    302    // get challenge wrong length
+#define DESFIRE_AUTH_ISO_ENC_RND1    303    // crypto encode piccrnd1 error
+#define DESFIRE_AUTH_ISO_EXT_AUTH    304    // external authenticate error
+#define DESFIRE_AUTH_ISO_INT_AUTH    305    // internal authenticate error
+#define DESFIRE_AUTH_ISO_INT_LEN     306    // internal authenticate wrong length
+#define DESFIRE_AUTH_ISO_DEC_RND2    307    // crypto decode piccrnd2 error
+#define DESFIRE_AUTH_ISO_RND_FAIL    308    // random numbers don't match
+
+// true for the codes that end the exchange before the second auth frame goes
+// out:  no secure channel was established and the application has to be
+// selected again
+#define DESFIRE_AUTH_PRE_CRYPTO(res) ((res) >= DESFIRE_AUTH_TX1_FAIL && (res) < DESFIRE_AUTH_TX2_FAIL)
+
 enum DesfireISOSelectControlEnum {
     ISSMFDFEF     = 0x00,
     ISSChildDF    = 0x01,

@@ -339,8 +339,13 @@ int receive_ng(PacketCommandNG *rx) {
 
 #if defined(WITH_BWM_FORWARD)
     // De-frame inbound BWM app_com DATA_FORWARD packets into a raw NG stream.
-    if (bwm_fwd_rxdata_available() > 0)
-        return receive_ng_internal(rx, bwm_read_ng, false, true, false);
+    if (bwm_fwd_rxdata_available() > 0) {
+        int res = receive_ng_internal(rx, bwm_read_ng, false, true, false);
+        if (res == PM3_SUCCESS) {
+            bwm_fwd_latch_reply_ep();
+        }
+        return res;
+    }
 #elif defined(WITH_FPC_USART_HOST)
     // Check if there is a FPC packet available
     if (usart_rxdata_available() > 0)

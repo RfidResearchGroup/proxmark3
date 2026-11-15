@@ -24,7 +24,7 @@ typedef enum {
     RISING
 } EdgeType;
 
-size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol);
+size_t DemodPCF7931(uint8_t *outBlocks, uint32_t *outStarts, size_t max_blocks, bool ledcontrol);
 bool IsBlock0PCF7931(uint8_t *block);
 bool IsBlock1PCF7931(const uint8_t *block);
 void ReadPCF7931(bool ledcontrol);

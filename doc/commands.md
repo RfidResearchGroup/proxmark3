@@ -253,6 +253,7 @@ Check column "offline" for their availability.
 |`hf 15 list             `|Y       |`List ISO-15693 history`
 |`hf 15 demod            `|Y       |`Demodulate ISO-15693 from tag`
 |`hf 15 dump             `|N       |`Read all memory pages of an ISO-15693 tag, save to file`
+|`hf 15 implant          `|Y       |`Read temperature from NTAG 5 link sensor implant`
 |`hf 15 info             `|N       |`Tag information`
 |`hf 15 sniff            `|N       |`Sniff ISO-15693 traffic`
 |`hf 15 raw              `|N       |`Send raw hex data to tag`
@@ -302,7 +303,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf calypso help        `|Y       |`This help`
-|`hf calypso info        `|N       |`Tag information`
+|`hf calypso info        `|Y       |`Tag information`
 |`hf calypso dump        `|N       |`Dump nodes after application profile scan`
 |`hf calypso probecmdcompat`|N       |`Probe SELECT command compatibility`
 |`hf calypso list        `|Y       |`List Calypso history`
@@ -371,7 +372,7 @@ Check column "offline" for their availability.
 |`hf felica sniff        `|N       |`Sniff ISO 18092/FeliCa traffic`
 |`hf felica wrbl         `|N       |`write block data to an authentication-not-required Service.`
 |`hf felica seacauth1    `|N       |`FeliCa SEAC Authentication1`
-|`hf felica dump         `|N       |`Wait for and try dumping FeliCa`
+|`hf felica dump         `|Y       |`Wait for and try dumping FeliCa`
 |`hf felica discnodes    `|N       |`discover Area Code and Service Code nodes.`
 |`hf felica sim          `|N       |`Emulate FeliCa Standard from dump file`
 |`hf felica rqservice    `|N       |`verify the existence of Area and Service, and to acquire Key Version.`
@@ -472,6 +473,28 @@ Check column "offline" for their availability.
 |`hf gallagher decode    `|Y       |`Decode Gallagher credential block`
 |`hf gallagher encode    `|Y       |`Encode Gallagher credential block`
 |`hf gallagher reader    `|N       |`Read & decode all Gallagher credentials on a DESFire or Classic card`
+
+
+### hf goodisplay
+
+ { Goodisplay NFC ePaper...            }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf goodisplay help     `|Y       |`This help`
+|`hf goodisplay load     `|Y       |`Load image file to Goodisplay NFC ePaper`
+
+
+### hf gp
+
+ { GlobalPlatform secure elements...   }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf gp help             `|Y       |`This help`
+|`hf gp aids             `|N       |`Find applet AIDs via partial SELECT walk`
+|`hf gp info             `|N       |`Read card info without authentication`
+|`hf gp crs              `|N       |`List contactless applets via the CRS registry`
 
 
 ### hf gst
@@ -657,6 +680,7 @@ Check column "offline" for their availability.
 |`hf mf rdbl             `|N       |`Read MIFARE Classic block`
 |`hf mf rdsc             `|N       |`Read MIFARE Classic sector`
 |`hf mf restore          `|N       |`Restore MIFARE Classic binary file to tag`
+|`hf mf sam              `|N       |`Extract PACS via a HID SAM`
 |`hf mf setmod           `|N       |`Set MIFARE Classic EV1 load modulation strength`
 |`hf mf value            `|Y       |`Value blocks`
 |`hf mf view             `|Y       |`Display content from tag dump file`
@@ -792,6 +816,7 @@ Check column "offline" for their availability.
 |`hf mfdes getversion    `|N       |`Get version/type information`
 |`hf mfdes getuid        `|N       |`Get uid from card`
 |`hf mfdes pc            `|N       |`Run proximity check`
+|`hf mfdes sam           `|N       |`Extract PACS via a HID SAM`
 |`hf mfdes info          `|N       |`Tag information`
 |`hf mfdes mad           `|N       |`Prints MAD records / files from the card`
 |`hf mfdes setconfig     `|N       |`Set card configuration`
@@ -1024,12 +1049,12 @@ Check column "offline" for their availability.
 |`hw fpga                `|N       |`Fpga commands`
 |`hw fpgaoff             `|N       |`Turn off FPGA on device`
 |`hw ant_pm5             `|N       |`Control the antennal of pm5`
-|`hw qc_pm5              `|N       |`Perform QC test (hardware or IO) for the PM5`
+|`hw qc_pm5              `|Y       |`Perform QC test (hardware or IO) for the PM5`
 |`hw factorydata         `|N       |`Get/Set the factory data for Device`
 |`hw lcd                 `|N       |`Send command/data to LCD`
 |`hw lcdreset            `|N       |`Hardware reset LCD`
 |`hw ping                `|N       |`Test if the Proxmark3 is responsive`
-|`hw powersave           `|N       |`Enable/disable the PM5 power-save idle`
+|`hw powersave           `|Y       |`Enable/disable the PM5 power-save idle`
 |`hw readmem             `|N       |`Read from MCU flash`
 |`hw reset               `|N       |`Reset the device`
 |`hw setlfdivisor        `|N       |`Drive LF antenna at 12MHz / (divisor + 1)`
@@ -1106,7 +1131,6 @@ Check column "offline" for their availability.
 |`lf awid demod          `|Y       |`demodulate an AWID FSK tag from the GraphBuffer`
 |`lf awid reader         `|N       |`attempt to read and extract tag data`
 |`lf awid sim            `|N       |`simulate AWID tag`
-|`lf awid brute          `|N       |`bruteforce card number against reader`
 |`lf awid watch          `|N       |`continuously watch for cards.  Reader mode`
 
 
@@ -1234,7 +1258,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf fdxb help           `|Y       |`this help`
 |`lf fdxb demod          `|Y       |`demodulate a FDX-B ISO11784/85 tag from the GraphBuffer`
-|`lf fdxb reader         `|N       |`attempt to read at 134kHz and extract tag data`
+|`lf fdxb reader         `|N       |`attempt to read at 134 kHz, then 125 kHz, and extract tag data`
 |`lf fdxb clone          `|N       |`clone animal ID tag to T55x7, Q5/T5555 or EM4305/4469`
 |`lf fdxb sim            `|N       |`simulate Animal ID tag`
 
@@ -1336,6 +1360,19 @@ Check column "offline" for their availability.
 |`lf hitag htu dump      `|N       |`Dump Hitag µ blocks to a file`
 |`lf hitag htu wrbl      `|N       |`Write Hitag µ block`
 |`lf hitag htu sim       `|N       |`Simulate Hitag µ transponder`
+
+
+### lf ict
+
+ { ICT RFIDs...               }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf ict help            `|Y       |`This help`
+|`lf ict demod           `|Y       |`demodulate an LF ICT FSK tag from the GraphBuffer`
+|`lf ict reader          `|N       |`attempt to read and extract tag data`
+|`lf ict clone           `|N       |`clone LF ICT tag to T55x7, Q5/T5555 or EM4305/4469`
+|`lf ict sim             `|N       |`simulate LF ICT tag`
 
 
 ### lf idteck
@@ -1616,6 +1653,19 @@ Check column "offline" for their availability.
 |`lf visa2000 sim        `|N       |`simulate Visa2000 tag`
 
 
+### lf watchnet
+
+ { WatchNET RFIDs...          }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf watchnet help       `|Y       |`This help`
+|`lf watchnet demod      `|Y       |`demodulate a WatchNET FSK tag from the GraphBuffer`
+|`lf watchnet reader     `|N       |`attempt to read and extract tag data`
+|`lf watchnet clone      `|N       |`clone WatchNET tag to T55x7, Q5/T5555 or EM4305/4469`
+|`lf watchnet sim        `|N       |`simulate WatchNET tag`
+
+
 ### mad
 
  { MAD commands... }
@@ -1848,6 +1898,7 @@ Check column "offline" for their availability.
 |`wiegand list           `|Y       |`List available wiegand formats`
 |`wiegand encode         `|Y       |`Encode to wiegand raw hex (currently for HID Prox)`
 |`wiegand decode         `|Y       |`Convert raw hex to decoded wiegand format (currently for HID Prox)`
+|`wiegand downgrade      `|Y       |`Downgrade a HID credential to iCLASS, MIFARE Classic or HID Prox`
 
 
 Full help dump done.

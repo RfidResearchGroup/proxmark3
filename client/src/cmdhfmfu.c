@@ -41,6 +41,7 @@
 #include "crc16.h"
 #include "crypto/originality.h"
 #include "util.h"
+#include "parsers/parsetransit.h"   // transit card parsers
 #include <pthread.h>
 #include <vec/vec.h>
 
@@ -1202,7 +1203,70 @@ static int ulaes_print_key(uint8_t *data) {
 }
 
 // Only takes 16 bytes of data.  Now key data available here
-static int ulc_print_configuration(uint8_t *data) {
+// UL-C key page write protection, from the config pages 0x28..0x2B
+typedef enum {
+    ULC_CFG_UNKNOWN = 0,
+    ULC_CFG_LOCKED,     // lock byte 3 locks the key pages
+    ULC_CFG_RELAY,      // key pages writable after authentication
+    ULC_CFG_OPEN,       // key pages 0x2C..0x2E writable without authentication
+    ULC_CFG_READ_PROTECTED,
+} ulc_cfg_vuln_t;
+
+static ulc_cfg_vuln_t ulc_config_vuln(const uint8_t *data) {
+    // page 0x28 byte 1 (lock byte 3), bit 7 locks the key pages 0x2C..0x2F
+    if (data[1] & 0x80) {
+        return ULC_CFG_LOCKED;
+    }
+    // writes need authentication from page AUTH0 on
+    if (data[8] >= 0x2F) {
+        return ULC_CFG_OPEN;
+    }
+    return ULC_CFG_RELAY;
+}
+
+// eprint 2026/100 "BREAKMEIFYOUCAN!"
+static void ulc_print_vuln_hint(ulc_cfg_vuln_t v) {
+    switch (v) {
+        case ULC_CFG_RELAY:
+            PrintAndLogEx(HINT, "Hint: Key pages not locked. Relay a reader authentication, overwrite three key pages,");
+            PrintAndLogEx(HINT, "      then recover the fourth with " _YELLOW_("`hf mfu desbrute --reader`") " (eprint 2026/100)");
+            break;
+        case ULC_CFG_OPEN:
+            PrintAndLogEx(HINT, "Hint: Key pages writable without authentication. Overwrite three key pages,");
+            PrintAndLogEx(HINT, "      then recover the fourth with " _YELLOW_("`hf mfu desbrute --reader`") " (eprint 2026/100)");
+            break;
+        case ULC_CFG_UNKNOWN:
+        case ULC_CFG_LOCKED:
+        case ULC_CFG_READ_PROTECTED:
+        default:
+            break;
+    }
+}
+
+// green = exploitable, red = not
+static void ulc_print_config_verdict(ulc_cfg_vuln_t v) {
+    switch (v) {
+        case ULC_CFG_LOCKED:
+            PrintAndLogEx(SUCCESS, "ULC config... " _RED_("locked"));
+            break;
+        case ULC_CFG_RELAY:
+            PrintAndLogEx(SUCCESS, "ULC config... " _GREEN_("relay"));
+            PrintAndLogEx(SUCCESS, "Attack....... " _GREEN_("relayed auth 75%%"));
+            break;
+        case ULC_CFG_OPEN:
+            PrintAndLogEx(SUCCESS, "ULC config... " _GREEN_("unlocked"));
+            PrintAndLogEx(SUCCESS, "Attack....... " _GREEN_("partial key overwrite"));
+            break;
+        case ULC_CFG_READ_PROTECTED:
+            PrintAndLogEx(INFO, "ULC config... " _YELLOW_("read protected") ", can't assess the key page lock");
+            break;
+        case ULC_CFG_UNKNOWN:
+        default:
+            break;
+    }
+}
+
+static ulc_cfg_vuln_t ulc_print_configuration(const uint8_t *data) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("UL-C Configuration") " --------------------------");
@@ -1233,8 +1297,10 @@ static int ulc_print_configuration(uint8_t *data) {
                   (data[12] & 1) ? "write access restricted" : _RED_("R/W access restricted")
                  );
 
-    return PM3_SUCCESS;
+    return ulc_config_vuln(data);
 }
+
+static ulc_cfg_vuln_t mfu_print_dump_ulc_config(const mfu_dump_t *card, uint16_t block_cnt);
 
 static int ulaes_print_configuration(uint8_t *data, uint8_t start_page) {
 
@@ -1943,13 +2009,13 @@ static mfu_identify_t mfu_ident_table[] = {
         "Philips Toothbrush", "0004040201010F03",
         16, 20, "0310D1010C55027068696C6970732E636F6DFE00",
         ul_ev1_pwdgen_def, ul_ev1_packgen_def,
-        "hf mfu pwdgen -r"
+        "hf mfu pwdgen"
     },
     {
         "Philips Toothbrush", "0004040201010F03",
         16, 36, "0320D1011C55027068696C6970732E636F6D2F6E6663627275736868656164746170FE00",
         ul_ev1_pwdgen_def, ul_ev1_packgen_def,
-        "hf mfu pwdgen -r"
+        "hf mfu pwdgen"
     },
     {
         "Bank Of Archie brothers", "0004030101000B03",
@@ -2032,7 +2098,14 @@ int mfu_get_version_uid(uint8_t *version, uint8_t *uid) {
 #define MFULC_PRNG_SAMPLES 40
 #define MFULC_PRNG_CLEAR   39
 
-static int mfulc_prng_test(uint32_t samples) {
+typedef enum {
+    MFULC_PRNG_NA = 0,          // could not collect nonces
+    MFULC_PRNG_WEAK,
+    MFULC_PRNG_GENUINE,
+    MFULC_PRNG_INCONCLUSIVE,
+} mfulc_prng_t;
+
+static mfulc_prng_t mfulc_prng_test(uint32_t samples, uint32_t *got_out, uint32_t *first_dup_out) {
     if (samples < 2) {
         samples = 2;
     }
@@ -2059,9 +2132,10 @@ static int mfulc_prng_test(uint32_t samples) {
         got++;
     }
 
+    *got_out = got;
+    *first_dup_out = 0;
     if (got < 2) {
-        PrintAndLogEx(INFO, "PRNG......... could not collect nonces (got %u)", got);
-        return PM3_ESOFT;
+        return MFULC_PRNG_NA;
     }
 
     uint32_t first_dup = 0;
@@ -2079,16 +2153,20 @@ static int mfulc_prng_test(uint32_t samples) {
     }
 
     if (dups > 0) {
-        PrintAndLogEx(SUCCESS, "PRNG......... " _RED_("Weak") " (RndB collision at %u)", first_dup);
-        return PM3_SUCCESS;
+        *first_dup_out = first_dup;
+        return MFULC_PRNG_WEAK;
     }
+    return (got >= MFULC_PRNG_CLEAR) ? MFULC_PRNG_GENUINE : MFULC_PRNG_INCONCLUSIVE;
+}
 
-    if (got >= MFULC_PRNG_CLEAR) {
-        PrintAndLogEx(SUCCESS, "PRNG......... " _GREEN_("Genuine"));
+// green = counterfeit / magic, exploitable
+static void mfulc_print_ic(const char *vendor, const char *ic, bool counterfeit) {
+    PrintAndLogEx(SUCCESS, "Vendor....... " _YELLOW_("%s"), vendor);
+    if (counterfeit) {
+        PrintAndLogEx(SUCCESS, "Chip IC...... " _GREEN_("%s"), ic);
     } else {
-        PrintAndLogEx(INFO, "PRNG......... inconclusive (%u/%u nonces)", got, (uint32_t)MFULC_PRNG_CLEAR);
+        PrintAndLogEx(SUCCESS, "Chip IC...... " _YELLOW_("%s"), ic);
     }
-    return PM3_SUCCESS;
 }
 
 static int mfulc_fingerprint(void) {
@@ -2107,7 +2185,7 @@ static int mfulc_fingerprint(void) {
     uint16_t rlen_2017 = 0;
     if (WaitForIso14aReply(&resp, 500, &rlen_2017, NULL)) {
         if ((rlen_2017 == 11) && (resp.data.asBytes[0] == 0x00)) {
-            PrintAndLogEx(SUCCESS, _GREEN_("Lab401 Ultralight-C compatible UID modifiable"));
+            mfulc_print_ic("Lab401", "Ultralight-C compatible, UID modifiable", true);
             DropField();
             return PM3_SUCCESS;
         }
@@ -2125,7 +2203,7 @@ static int mfulc_fingerprint(void) {
     uint16_t rlen_2035 = 0;
     if (WaitForIso14aReply(&resp, 500, &rlen_2035, NULL)) {
         if ((rlen_2035 == 11) && (resp.data.asBytes[0] == 0xAF)) {
-            PrintAndLogEx(SUCCESS, _GREEN_("Feiju FJ8010"));
+            mfulc_print_ic("Feiju", "FJ8010", true);
             DropField();
             return PM3_SUCCESS;
         }
@@ -2149,11 +2227,12 @@ static int mfulc_fingerprint(void) {
             response[9] ^= resp.data.asBytes[9];
             response[10] ^= resp.data.asBytes[10];
             if ((response[9] == 0x6C) && (response[10] == 0xF3)) {
-                PrintAndLogEx(SUCCESS, _GREEN_("USCUID-UL with ULC authentication, variant 1"));
+                mfulc_print_ic("unknown", "USCUID-UL with ULC authentication, variant 1", true);
             } else if ((response[9] == 0xB4) && (response[10] == 0xC5)) {
-                PrintAndLogEx(SUCCESS, _GREEN_("USCUID-UL with ULC authentication, variant 2"));
+                mfulc_print_ic("unknown", "USCUID-UL with ULC authentication, variant 2", true);
             } else {
-                PrintAndLogEx(SUCCESS, _GREEN_("USCUID-UL with ULC authentication") _RED_(" unknown variant") ", please report!");
+                mfulc_print_ic("unknown", "USCUID-UL with ULC authentication", true);
+                PrintAndLogEx(INFO, "              " _RED_("unknown variant") ", please report!");
             }
             DropField();
             return PM3_SUCCESS;
@@ -2174,10 +2253,9 @@ static int mfulc_fingerprint(void) {
             uint16_t rlen_2084 = 0;
             if (WaitForIso14aReply(&resp, 500, &rlen_2084, NULL)) {
                 if (rlen_2084 == 18) {
-                    if ((resp.data.asBytes[0] == 0x04) && (resp.data.asBytes[6] == 0x15) && (resp.data.asBytes[7] == 0x89)) {
-                        PrintAndLogEx(SUCCESS, _GREEN_("GT23SC4489"));
-                    } else {
-                        PrintAndLogEx(SUCCESS, _GREEN_("GT23SC4489") _RED_(" unknown variant") ", please report!");
+                    mfulc_print_ic("Giantec", "GT23SC4489", true);
+                    if ((resp.data.asBytes[0] != 0x04) || (resp.data.asBytes[6] != 0x15) || (resp.data.asBytes[7] != 0x89)) {
+                        PrintAndLogEx(INFO, "              " _RED_("unknown variant") ", please report!");
                     }
                     DropField();
                     return PM3_SUCCESS;
@@ -2196,15 +2274,34 @@ static int mfulc_fingerprint(void) {
             cmd[1] = 3;
             status = ul_send_cmd_raw(cmd, sizeof(cmd), data, 4, false);
             if ((status > 0) && (data[0] == 0xE1) && (data[1] == 0x10) && (data[2] == 0x12) && (data[3] == 0x00)) {
-                PrintAndLogEx(INFO, "MIFARE Hospitality (MF0ICU2(H))");
+                mfulc_print_ic("NXP", "MF0ICU2(H), MIFARE Hospitality", false);
                 DropField();
                 return PM3_SUCCESS;
             }
         }
     }
     // weak-PRNG backstop
-    mfulc_prng_test(MFULC_PRNG_SAMPLES);
-    PrintAndLogEx(INFO, "likely MF0ICU2");
+    uint32_t got = 0, first_dup = 0;
+    // green = weak / exploitable, red = genuine
+    switch (mfulc_prng_test(MFULC_PRNG_SAMPLES, &got, &first_dup)) {
+        case MFULC_PRNG_GENUINE:
+            PrintAndLogEx(SUCCESS, "PRNG......... " _RED_("genuine"));
+            mfulc_print_ic("NXP", "MF0ICU2", false);
+            break;
+        case MFULC_PRNG_WEAK:
+            PrintAndLogEx(SUCCESS, "PRNG......... " _GREEN_("weak") " ( RndB collision at nonce %u )", first_dup);
+            mfulc_print_ic("unknown", "counterfeit UL-C", true);
+            break;
+        case MFULC_PRNG_INCONCLUSIVE:
+            PrintAndLogEx(INFO, "PRNG......... " _YELLOW_("inconclusive") " ( %u / %u nonces )", got, (uint32_t)MFULC_PRNG_CLEAR);
+            mfulc_print_ic("likely NXP", "likely MF0ICU2", false);
+            break;
+        case MFULC_PRNG_NA:
+        default:
+            PrintAndLogEx(INFO, "PRNG......... n/a ( got %u nonces )", got);
+            mfulc_print_ic("unknown", "unknown", false);
+            break;
+    }
     DropField();
     return PM3_SUCCESS;
 }
@@ -2230,6 +2327,7 @@ static int mfu_fingerprint(uint64_t tagtype, bool has_auth_key, const uint8_t *a
     }
 
     maxbytes = ((maxbytes / MFU_BLOCK_SIZE) + 1) * MFU_BLOCK_SIZE;
+    maxbytes = MAX(maxbytes, TRANSIT_MFU_IDENTIFY_LEN);
     data = calloc(maxbytes, sizeof(uint8_t));
     if (data == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
@@ -2334,6 +2432,14 @@ static int mfu_fingerprint(uint64_t tagtype, bool has_auth_key, const uint8_t *a
                 PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("%s") "`", item->hint);
             }
         }
+    }
+
+    transit_idents_t transit_ids;
+    if (transit_mfu_identify(data, buffer_size, &transit_ids) > 0) {
+        transit_print_idents(&transit_ids);
+        (void)transit_mfu_parse(data, buffer_size);
+        transit_print_ident_hints(&transit_ids, NULL);
+        res = PM3_SUCCESS;
     }
 
 out:
@@ -2726,21 +2832,24 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
 
         // read pages 0x28, 0x29, 0x2A, 0x2B
         uint8_t ulc_conf[16] = {0x00};
+        ulc_cfg_vuln_t ulc_vuln = ULC_CFG_UNKNOWN;
         status = ul_read(0x28, ulc_conf, sizeof(ulc_conf), false);
         if (status <= 0) {
             PrintAndLogEx(ERR, "Error: tag didn't answer to page 40 read command");
-            PrintAndLogEx(HINT, "Hint: Tag config may be set to read-protect those pages, try dumping");
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu dump") "`");
             DropField();
             return PM3_ESOFT;
         }
 
         if (status == 16) {
-            ulc_print_configuration(ulc_conf);
+            ulc_vuln = ulc_print_configuration(ulc_conf);
         } else {
+            ulc_vuln = ULC_CFG_READ_PROTECTED;
             locked = true;
         }
 
         mfu_fingerprint(tagtype, has_auth_key, auth_key_ptr, ak_len, use_schann);
+        ulc_print_config_verdict(ulc_vuln);
 
         DropField();
 
@@ -2764,12 +2873,14 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 ulc_print_3deskey(ulc_deskey);
             }
 
+            ulc_print_vuln_hint(ulc_vuln);
             PrintAndLogEx(NORMAL, "");
             return PM3_SUCCESS;
 
         } else {
             // if we called info with key, just return
             if (has_auth_key) {
+                ulc_print_vuln_hint(ulc_vuln);
                 PrintAndLogEx(NORMAL, "");
                 return PM3_SUCCESS;
             }
@@ -2784,6 +2895,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 PrintAndLogEx(INFO, "n/a");
             }
 
+            ulc_print_vuln_hint(ulc_vuln);
             PrintAndLogEx(NORMAL, "");
             return PM3_SUCCESS;
         }
@@ -3042,11 +3154,11 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             }
             if (len < 1) {
                 PrintAndLogEx(WARNING, _YELLOW_("password not known"));
-                PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
+                PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu pwdgen") "` for suggestions");
             }
         } else {
             if (locked) {
-                PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
+                PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu pwdgen") "` for suggestions");
             }
         }
     }
@@ -3058,11 +3170,11 @@ out:
 
     if (locked) {
         PrintAndLogEx(INFO, "\nTag appears to be locked, try using a key to get more info");
-        PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu pwdgen") "` for suggestions");
     }
 
     if (tagtype & (MFU_TT_MAGIC_1A | MFU_TT_MAGIC_1B | MFU_TT_MAGIC_2)) {
-        PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`script run hf_mfu_setuid -h`") " to set UID");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("script run hf_mfu_setuid -h") "` to set UID");
     }
 
     PrintAndLogEx(NORMAL, "");
@@ -3637,6 +3749,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         arg_lit0(NULL, "ns", "no save to file"),
         arg_lit0("z", "dense", "dense dump output style"),
         arg_lit0(NULL, "schann", "use secure channel. Must have key"),
+        arg_lit0("v", "verbose", "verbose output, decode the UL-C config"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -3655,6 +3768,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     bool nosave = arg_get_lit(ctx, 6);
     bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 7));
     bool use_schann = arg_get_lit(ctx, 8);
+    bool verbose = arg_get_lit(ctx, 9);
     CLIParserFree(ctx);
 
     bool has_auth_key = false;
@@ -3934,8 +4048,18 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu ndefread")"`");
     }
 
+    if (start_page == 0) {
+        (void)transit_mfu_parse(dump_file_data.data, pages * MFU_BLOCK_SIZE);
+    }
+
+    ulc_cfg_vuln_t ulc_vuln = ULC_CFG_UNKNOWN;
+    if (verbose && (start_page == 0)) {
+        ulc_vuln = mfu_print_dump_ulc_config(&dump_file_data, pages);
+    }
+
     if (nosave) {
         PrintAndLogEx(INFO, "Called with no save option");
+        ulc_print_vuln_hint(ulc_vuln);
         PrintAndLogEx(NORMAL, "");
         return PM3_SUCCESS;
     }
@@ -3957,6 +4081,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         PrintAndLogEx(WARNING, "Partial dump created. (%d of %d blocks)", pages, card_mem_size);
     }
 
+    ulc_print_vuln_hint(ulc_vuln);
     return PM3_SUCCESS;
 }
 
@@ -4466,8 +4591,11 @@ static int CmdHF14AMfUeLoad(const char *Cmd) {
     snprintf(nc, nc_len, "%s --ul", Cmd);
     int res = CmdHF14AMfELoad(nc);
     free(nc);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
 
-    PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfu sim -t 7`") " to simulate an Amiibo.");
+    PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mfu sim -t 7") "` to simulate an Amiibo.");
     PrintAndLogEx(INFO, "Done!");
     return res;
 }
@@ -4896,23 +5024,37 @@ static int mfu_auth_chk(uint8_t key_index, const char *filename, int fnlen, int 
             int res = mfu_3pass_check_keys(key_index, firstChunk, lastChunk, nkeys, segment, ref_key, xor_ref_key, keyBlock + (i * keysize), false, true, &auths, &ms, check_answer, use_fastread0);
             firstChunk = false;
 
-            // all keys,  aborted
-            if (res == PM3_SUCCESS || res == 2) {
+            // all keys
+            if (res == PM3_SUCCESS) {
                 PrintAndLogEx(NORMAL, "");
                 goto out;
             }
-            PrintAndLogEx(INPLACE, "Testing %5u/%5u ( " _YELLOW_("%02.1f %%") " )", i, keycnt, (float)i * 100 / keycnt);
+
+            // aborted or no answer,  the field is still ON if not on last chunk
+            if ((res == PM3_EOPABORTED) || (res == PM3_ETIMEOUT)) {
+                clearCommandBuffer();
+                SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);
+                if (res == PM3_ETIMEOUT) {
+                    ret = res;
+                }
+                PrintAndLogEx(NORMAL, "");
+                goto out;
+            }
+            PrintAndLogEx(INPLACE, "Testing %5u/%5u ( " _YELLOW_("%02.1f %%") " )", i + nkeys, keycnt, (float)(i + nkeys) * 100 / keycnt);
         } // end chunks of keys
     }
     PrintAndLogEx(NORMAL, "");
 out:
     PrintAndLogEx(INFO, "Time spent " _YELLOW_("%.1fs"), (float)(ms / 1000.0));
     PrintAndLogEx(INFO, "Authentication attempts: %u", auths);
-    PrintAndLogEx(INFO, "Speed: %.1f auths/s", (float)(auths * 1000.0 / ms));
+    // ms is 0 until a chunk answers
+    if (ms) {
+        PrintAndLogEx(INFO, "Speed: %.1f auths/s", (float)(auths * 1000.0 / ms));
+    }
 
     free(keyBlock);
     PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
+    return ret;
 }
 
 static int CmdHF14AMfUAuthChk(const char *Cmd) {
@@ -6309,16 +6451,18 @@ static int CmdHF14AMfUKeyGen(const char *Cmd) {
 static int CmdHF14AMfUPwdGen(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfu pwdgen",
-                  "Generate different passwords from known pwdgen algos",
-                  "hf mfu pwdgen -r\n"
-                  "hf mfu pwdgen --uid 11223344556677\n"
+                  "Generate different passwords from known pwdgen algos.\n"
+                  "Reads UID and Philips MFG string from the tag, or works offline with `--uid`.",
+                  "hf mfu pwdgen                          -> read from tag\n"
+                  "hf mfu pwdgen --uid 11223344556677     -> offline\n"
+                  "hf mfu pwdgen --uid 040D4B5AC57181 --mfg 3231303632382035324D  -> offline, Philips pwd FBCFACC1\n"
                   "hf mfu pwdgen --test"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("u", "uid", "<hex>", "UID (7 hex bytes)"),
-        arg_lit0("r", NULL, "Read UID from tag"),
+        arg_str0("u", "uid", "<hex>", "UID (7 hex bytes), offline"),
+        arg_str0(NULL, "mfg", "<hex>", "Philips toothbrush MFG string, pages 21-23 bytes 2..11 (10 hex bytes)"),
         arg_lit0(NULL, "test", "self test"),
         arg_param_end
     };
@@ -6327,7 +6471,9 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
     int u_len = 0;
     uint8_t uid[7] = {0x00};
     CLIGetHexWithReturn(ctx, 1, uid, &u_len);
-    bool use_tag = arg_get_lit(ctx, 2);
+    int mfg_len = 0;
+    uint8_t philips_mfg[10] = {0};
+    CLIGetHexWithReturn(ctx, 2, philips_mfg, &mfg_len);
     bool selftest = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
@@ -6335,9 +6481,23 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
         return generator_selftest();
     }
 
-    uint8_t philips_mfg[10] = {0};
+    if (mfg_len && mfg_len != sizeof(philips_mfg)) {
+        PrintAndLogEx(WARNING, "MFG must be 10 hex bytes");
+        return PM3_EINVARG;
+    }
 
-    if (use_tag) {
+    if (mfg_len && u_len == 0) {
+        PrintAndLogEx(WARNING, "`--mfg` needs `--uid`");
+        return PM3_EINVARG;
+    }
+
+    if (u_len == 0) {
+
+        if (g_session.pm3_present == false) {
+            PrintAndLogEx(WARNING, "Offline, use `--uid`");
+            return PM3_ENOTTY;
+        }
+
         // read uid from tag
         int res = ul_read_uid(uid);
         if (res == PM3_ELENGTH) {
@@ -7310,7 +7470,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
         int cnt_val = 0;
         uint8_t tear = 0;
         if (mfu_cnt_preflight(cnt_no, &cnt_val, &tear) != PM3_SUCCESS) {
-            PrintAndLogEx(HINT, "Try `hf mfu countertear -f` if this is a false negative");
+            PrintAndLogEx(HINT, "HInt: Try `" _YELLOW_("hf mfu countertear -f") "`");
             retval = PM3_ESOFT;
             goto exit;
         }
@@ -7322,7 +7482,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
         if (res == PM3_EOPABORTED) {
             if (delay_bd > -1) {
                 PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(NORMAL, "[x] Interrupted by user.");
+                PrintAndLogEx(NORMAL, "Aboarted by user");
             }
             // script: stops with no working delay leave silently
             goto exit;
@@ -7636,23 +7796,21 @@ int CmdHF14MfuNDEFWrite(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 1, authenticationkey, &ak_len);
     swap_endian = arg_get_lit(ctx, 2);
 
-    // CLIParamStrToBuf copies the trailing NUL as well but only rejects lengths
-    // strictly above maxdatalen, so leave room for that byte
     int urilen = 0;
     char uri[1024] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)uri, sizeof(uri) - 1, &urilen);
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)uri, sizeof(uri), &urilen);
 
     int textlen = 0;
     char text[1024] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)text, sizeof(text) - 1, &textlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)text, sizeof(text), &textlen);
 
     int langlen = 0;
     char lang[32] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t *)lang, sizeof(lang) - 1, &langlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t *)lang, sizeof(lang), &langlen);
 
     int aarlen = 0;
     char aar[256] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)aar, sizeof(aar) - 1, &aarlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)aar, sizeof(aar), &aarlen);
 
     int rawlen = 0;
     uint8_t raw[MFU_NDEF_MAX_BYTES] = {0};
@@ -7883,7 +8041,7 @@ int CmdHF14MfuNDEFWrite(const char *Cmd) {
     if (ndef_print_CC(data + 12) == PM3_ESOFT) {
         DropField();
         PrintAndLogEx(ERR, "Error: tag didnt contain a NDEF Container");
-        PrintAndLogEx(HINT, "Hint: the tag needs to be NDEF formatted first");
+        PrintAndLogEx(HINT, "Hint: Tag needs to be NDEF formatted first");
         return PM3_ESOFT;
     }
 
@@ -8126,9 +8284,8 @@ int CmdHF14MfuNDEFFormat(const char *Cmd) {
     if (fmt == NULL) {
         if (cc_len == 0) {
             PrintAndLogEx(FAILED, "Don't know the Capability Container for this tag type");
-            PrintAndLogEx(INFO, "Block 3 is One Time Programmable, a wrong value can not be undone,");
-            PrintAndLogEx(INFO, "so this command will not guess one.");
-            PrintAndLogEx(HINT, "Hint: supply it yourself with `" _YELLOW_("hf mfu ndefformat -d <hex> --force") "`");
+            PrintAndLogEx(INFO, "Block 3 is One Time Programmable, a wrong value can not be undone");
+            PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mfu ndefformat -d <hex> --force") "`");
             return PM3_ENOTIMPL;
         }
         if (force == false) {
@@ -8162,7 +8319,7 @@ int CmdHF14MfuNDEFFormat(const char *Cmd) {
             PrintAndLogEx(INFO, "    requested... %d bytes ( MLEN %02X )", cc_override[2] * 8, cc_override[2]);
             PrintAndLogEx(INFO, "    tag holds... %d bytes ( MLEN %02X )", fmt->page[0][2] * 8, fmt->page[0][2]);
             PrintAndLogEx(INFO, "Block 3 is One Time Programmable, this can not be undone.");
-            PrintAndLogEx(HINT, "Hint: add `" _YELLOW_("--force") "` if you really mean it");
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("--force") "` if you really mean it");
             return PM3_EINVARG;
         }
 
@@ -8346,7 +8503,7 @@ int CmdHF14MfuNDEFFormat(const char *Cmd) {
         PrintAndLogEx(FAILED, "Capability Container did not take");
         PrintAndLogEx(INFO, "    wanted...... " _GREEN_("%s"), sprint_hex_inrow(pages[0], MFU_BLOCK_SIZE));
         PrintAndLogEx(INFO, "    on tag now.. " _RED_("%s"), sprint_hex_inrow(verify, MFU_BLOCK_SIZE));
-        PrintAndLogEx(HINT, "Hint: block 3 is OTP, check whether its block locking bit is set");
+        PrintAndLogEx(HINT, "Hint: Block 3 is OTP, check whether its block locking bit is set");
         return PM3_ESOFT;
     }
 
@@ -8355,7 +8512,7 @@ int CmdHF14MfuNDEFFormat(const char *Cmd) {
         // one sprint_hex_inrow() call per line: it returns a shared static buffer
         PrintAndLogEx(INFO, "    wanted...... " _GREEN_("%s"), sprint_hex_inrow(pages[1], 2 * MFU_BLOCK_SIZE));
         PrintAndLogEx(INFO, "    on tag now.. " _RED_("%s"), sprint_hex_inrow(verify + MFU_BLOCK_SIZE, 2 * MFU_BLOCK_SIZE));
-        PrintAndLogEx(HINT, "Hint: these blocks are ordinary user memory, check the lock bytes");
+        PrintAndLogEx(HINT, "Hint: Check the lock bytes");
         return PM3_ESOFT;
     }
 
@@ -8402,12 +8559,14 @@ static int CmdHF14AMfuEView(const char *Cmd) {
         arg_param_begin,
         arg_int0("e", "end", "<dec>", "index of last block"),
         arg_lit0("z", "dense", "dense dump output style"),
+        arg_lit0("v", "verbose", "verbose output, decode the UL-C config"),
         arg_param_end
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     int end = arg_get_int_def(ctx, 1, -1);
     bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 2));
+    bool verbose = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     bool override_end = (end != -1) ;
@@ -8431,10 +8590,16 @@ static int CmdHF14AMfuEView(const char *Cmd) {
 
     mfu_print_dump(dump, end, 0, dense_output);
 
+    ulc_cfg_vuln_t ulc_vuln = ULC_CFG_UNKNOWN;
+    if (verbose) {
+        ulc_vuln = mfu_print_dump_ulc_config(dump, end);
+    }
+
     if (ndef_detect_message(dump->data, end * MFU_BLOCK_SIZE)) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu ndefread")"`");
     }
 
+    ulc_print_vuln_hint(ulc_vuln);
     free(dump);
     return PM3_SUCCESS;
 }
@@ -8530,6 +8695,16 @@ static uint64_t mfu_dump_get_tagtype(const mfu_dump_t *card) {
     return MFU_TT_UNKNOWN;
 }
 
+// UL-C config and key page lock from a dump, needs pages 0x28..0x2B
+static ulc_cfg_vuln_t mfu_print_dump_ulc_config(const mfu_dump_t *card, uint16_t block_cnt) {
+    if ((mfu_dump_get_tagtype(card) != MFU_TT_UL_C) || (block_cnt < (0x2B + 1))) {
+        return ULC_CFG_UNKNOWN;
+    }
+    ulc_cfg_vuln_t v = ulc_print_configuration(card->data + (0x28 * MFU_BLOCK_SIZE));
+    ulc_print_config_verdict(v);
+    return v;
+}
+
 // `hf mfu dump` appends the authentication key to the dump when one was given.
 // UL-C:   pages 0x2C..0x2F,  stored as SwapEndian64(key, 16, 8)
 // UL-AES: pages 0x30..0x33,  stored as SwapEndian64(key, 16, 16)
@@ -8574,13 +8749,15 @@ static int CmdHF14AMfuView(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfu view",
                   "Print a MIFARE Ultralight/NTAG dump file (bin/eml/json)",
-                  "hf mfu view -f hf-mfu-01020304-dump.bin"
+                  "hf mfu view -f hf-mfu-01020304-dump.bin\n"
+                  "hf mfu view --selftest"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
+        arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0("v", "verbose", "Verbose output"),
         arg_lit0("z", "dense", "dense dump output style"),
+        arg_lit0(NULL, "selftest", "Run the dump parsers self tests and exit"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -8589,7 +8766,17 @@ static int CmdHF14AMfuView(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     bool verbose = arg_get_lit(ctx, 2);
     bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 3));
+    bool selftest = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
+
+    if (selftest) {
+        return transit_mfu_selftest();
+    }
+
+    if (fnlen == 0) {
+        PrintAndLogEx(ERR, "Specify a filename with `-f` or run `--selftest`");
+        return PM3_EINVARG;
+    }
 
     // read dump file
     uint8_t *dump = NULL;
@@ -8622,7 +8809,9 @@ static int CmdHF14AMfuView(const char *Cmd) {
     mfu_dump_t *p = (mfu_dump_t *)dump;
     mfu_print_dump(p, block_cnt, 0, dense_output);
 
+    ulc_cfg_vuln_t ulc_vuln = ULC_CFG_UNKNOWN;
     if (verbose) {
+        ulc_vuln = mfu_print_dump_ulc_config(p, block_cnt);
         mfu_print_dump_keys(p, block_cnt);
     }
 
@@ -8631,6 +8820,9 @@ static int CmdHF14AMfuView(const char *Cmd) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu ndefread")"`");
     }
 
+    (void)transit_mfu_parse(p->data, block_cnt * MFU_BLOCK_SIZE);
+
+    ulc_print_vuln_hint(ulc_vuln);
     free(dump);
     return PM3_SUCCESS;
 }

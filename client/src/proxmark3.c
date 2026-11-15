@@ -746,7 +746,7 @@ static void set_my_executable_path(void) {
     if (wai_getExecutablePath(my_executable_path, path_length, &dirname_length) != -1) {
         my_executable_path[path_length] = '\0';
         my_executable_directory = (char *)calloc(dirname_length + 2, sizeof(uint8_t));
-        if (my_executable_path == NULL) {
+        if (my_executable_directory == NULL) {
             PrintAndLogEx(WARNING, "Failed to allocate memory");
             return;
         }
@@ -1467,7 +1467,7 @@ int main(int argc, char *argv[]) {
             }
             long int ncpus = strtol(argv[i + 1], NULL, 10);
             const int detected_cpus = detect_num_CPUs();
-            if (ncpus < 0 || ncpus >= detected_cpus) {
+            if (ncpus < 0 || ncpus > detected_cpus) {
                 PrintAndLogEx(ERR, _RED_("ERROR:") " invalid number of CPU cores: --ncpu " _YELLOW_("%s") " (available: %d)\n", argv[i + 1], detected_cpus);
                 return 1;
             }

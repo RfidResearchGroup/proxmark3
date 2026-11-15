@@ -1,6 +1,6 @@
 MYSRCPATHS =
 MYINCLUDES = -I../../../common -I../../../include -I../../src
-MYCFLAGS = -Wno-cast-align
+MYCFLAGS = -Wno-cast-align -Wno-format-zero-length
 MYDEFS =
 MYSRCS = \
 	argtable3.c \

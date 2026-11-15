@@ -340,6 +340,20 @@ typedef struct {
     bool EM;
 } PACKED lf_hidsim_t;
 
+// Extended PACS reply of CMD_HF_SAM_PICOPASS (flag bit 7), CMD_HF_SAM_SEOS and
+// CMD_HF_SAM_MFC (flag bit 2). Followed by sio_len SIO bytes, then sam_len
+// bytes of SAM response. Only sent for a plain PACS request.
+#define SAM_EXT_REPLY_MAGIC   0xE5
+#define SAM_EXT_SIO_MAX       128
+typedef struct {
+    uint8_t magic;
+    uint8_t uid_len;
+    uint8_t uid[10];        // CSN for iCLASS, UID for ISO14443-A
+    uint8_t sio_start;      // iCLASS block the SIO was read from, 0 otherwise
+    uint8_t sio_len;        // plaintext SIO seen on the air, 0 if none
+    uint8_t sam_len;
+} PACKED sam_ext_reply_hdr_t;
+
 // For CMD_LF_FSK_SIMULATE (FSK)
 typedef struct {
     uint8_t fchigh;
@@ -390,6 +404,7 @@ typedef struct {
     uint16_t hb_delay_us;   // optional custom half bit delay [us]
     uint8_t repeats;        // repeat data frame this many times per answer
     bool verbose;
+    bool active;            // transmit 66 kHz instead of load modulating at reader carrier / 2
     uint8_t nbits;         // number of data bits
     uint8_t data[LF_COTAG_SIM_DATA_LEN];
 } PACKED lf_cotagsim_t;
@@ -513,6 +528,15 @@ typedef struct {
     uint8_t byte;
     uint8_t data;
 } PACKED pcf7931_write_t;
+
+#define PCF7931_READ_MAX_BLOCKS 12
+
+// CMD_LF_PCF7931_READ reply payload
+typedef struct {
+    uint8_t count;
+    uint8_t pos[PCF7931_READ_MAX_BLOCKS];   // index in the sequence sent after tag reset, 0 = RFB (or block 1 if RB1)
+    uint8_t blocks[PCF7931_READ_MAX_BLOCKS][16];
+} PACKED pcf7931_read_t;
 
 // CMD_LF_HITAGS_SIMULATE / CMD_LF_HITAGU_SIMULATE payload
 typedef struct {
@@ -963,7 +987,7 @@ typedef struct {
 #define CMD_PM5_BWM_BLE_NAME 0x017F   // payload: [action:u8][name bytes if SET]
 #define BWM_BLE_NAME_ACTION_GET 0x00  // resp: current BLE device name string
 #define BWM_BLE_NAME_ACTION_SET 0x01  // req: name bytes follow the action byte; BWM reboots to apply
-#define BWM_BLE_NAME_MAX_LEN    15    // usable chars; ESP name buffer is 16 incl NUL
+#define BWM_BLE_NAME_MAX_LEN    15    // usable chars; BLE advert fits at most 17
 // PM5, toggle the power-save idle (48 MHz + WFI when idle). Used by `hw powersave`.
 #define CMD_PM5_POWERSAVE    0x0180
 // PM5, BWM power-save switch on the ESP (DFS, light sleep, low-duty advertising;

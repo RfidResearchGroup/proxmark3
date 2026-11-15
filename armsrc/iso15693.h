@@ -50,7 +50,7 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size); // simulate an ISO1
 void BruteforceIso15693Afi(uint32_t flags); // find an AFI of a tag
 void SendRawCommand15693(iso15_raw_cmd_t *packet); // send arbitrary commands from CLI
 
-void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool iclass);
+void RAMFUNC SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool iclass);
 
 int SendDataTag(const uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t *recv,
                 uint16_t max_recv_len, uint32_t start_time, uint16_t timeout, uint32_t *eof_time, uint16_t *resp_len);

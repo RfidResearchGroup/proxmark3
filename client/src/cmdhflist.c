@@ -53,8 +53,32 @@ static AuthData_t AuthData;
 // answer completes a split byte and so carries no CRC either.
 static bool gs_14a_anticoll_answer = false;
 
+// ISO 14443-4 session: set after the ATS, cleared by WUPA / REQA / HLTA / DESELECT
+static bool gs_14a4_active = false;
+// RATS seen, the next tag frame is the ATS
+static bool gs_14a4_ats_pending = false;
+// [0] reader, [1] tag: last I-block had the chaining bit, so the next one is continuation data
+static bool gs_14a4_chained[2] = {false, false};
+// last reader I-block was decoded as APDU, so the tag answer ends in SW1 SW2
+static bool gs_14a4_apdu_open = false;
+// last annotateIso14443a() frame was a response APDU ending in SW1 SW2
+static bool gs_14a4_last_sw = false;
+
+bool annotateIso14443aLastHasSW(void) {
+    return gs_14a4_last_sw;
+}
+
+static void iso14a4_reset(void) {
+    gs_14a4_active = false;
+    gs_14a4_ats_pending = false;
+    gs_14a4_chained[0] = false;
+    gs_14a4_chained[1] = false;
+    gs_14a4_apdu_open = false;
+}
+
 void ClearAuthData(void) {
     gs_14a_anticoll_answer = false;
+    iso14a4_reset();
     AuthData.uid = 0;
     AuthData.nt = 0;
     AuthData.first_auth = true;
@@ -78,7 +102,7 @@ static uint8_t *gs_mfuc_key = NULL;
  *          2 : Not crc-command
  */
 
-uint8_t iso14443A_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
+uint8_t iso14443A_CRC_check(bool isResponse, uint8_t *d, uint16_t n) {
 
     // Neither half of a bit oriented ANTICOLLISION exchange carries a CRC: the
     // request stops mid byte and the answer completes it.  NVB counts SEL and
@@ -106,33 +130,21 @@ uint8_t iso14443A_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
         return 2;
     }
 
-    if (isResponse && (n == 5)) {
+    // an ANTICOLLISION answer, UID and BCC, has no CRC: its BCC tells it from
+    // a five byte ISO14443-4 answer
+    if (isResponse && (n == 5) && ((d[0] ^ d[1] ^ d[2] ^ d[3]) == d[4])) {
         return 2;
     }
 
     return check_crc(CRC_14443_A, d, n);
 }
 
-uint8_t seos_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
-    if (n < 3) {
-        return 2;
-    }
-
-    // 5 bytes response Card busy 0xFA have crc, the rest is most likely 14a anticollision
-    if ((n == 5) && (d[0] != 0xFA)) {
-        return 2;
-    }
-
-    if (d[1] == 0x50 &&
-            d[0] >= ISO14443A_CMD_ANTICOLL_OR_SELECT &&
-            d[0] <= ISO14443A_CMD_ANTICOLL_OR_SELECT_3) {
-        return 2;
-    }
-    return check_crc(CRC_14443_A, d, n);
+uint8_t seos_CRC_check(bool isResponse, uint8_t *d, uint16_t n) {
+    return iso14443A_CRC_check(isResponse, d, n);
 }
 
 
-uint8_t mifare_CRC_check(bool isResponse, uint8_t *data, uint8_t len) {
+uint8_t mifare_CRC_check(bool isResponse, uint8_t *data, uint16_t len) {
     switch (MifareAuthState) {
         case masNone:
         case masError:
@@ -156,15 +168,15 @@ uint8_t mifare_CRC_check(bool isResponse, uint8_t *data, uint8_t len) {
  *          1 : CRC-command, CRC ok
  *          2 : Not crc-command
  */
-uint8_t iso14443B_CRC_check(uint8_t *d, uint8_t n) {
+uint8_t iso14443B_CRC_check(uint8_t *d, uint16_t n) {
     return check_crc(CRC_14443_B, d, n);
 }
 
-uint8_t iso15693_CRC_check(uint8_t *d, uint8_t n) {
+uint8_t iso15693_CRC_check(uint8_t *d, uint16_t n) {
     return check_crc(CRC_15693, d, n);
 }
 
-uint8_t felica_CRC_check(uint8_t *d, uint8_t n) {
+uint8_t felica_CRC_check(uint8_t *d, uint16_t n) {
     return check_crc(CRC_FELICA, d, n);
 }
 
@@ -177,7 +189,7 @@ uint8_t felica_CRC_check(uint8_t *d, uint8_t n) {
  *          1 : CRC-command, CRC ok
  *          2 : Not crc-command
  */
-uint8_t iclass_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
+uint8_t iclass_CRC_check(bool isResponse, uint8_t *d, uint16_t n) {
     //CRC commands (and responses) are all at least 4 bytes
     if (n < 4) return 2;
 
@@ -225,7 +237,7 @@ uint8_t iclass_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
 }
 
 
-static int annotateEcp(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize) {
+static int annotateEcp(char *exp, size_t size, const uint8_t *cmd, uint16_t cmdsize) {
     if (cmdsize < 7 || cmd[0] != ECP_HEADER) {
         return PM3_ESOFT;
     }
@@ -265,7 +277,22 @@ static int annotateEcp(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsi
     return PM3_ESOFT;
 }
 
-int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+// "name(operand)", or the name alone when the frame stops before the operand
+static void annotateCmdOperand(char *exp, size_t size, const char *name, bool color, const uint8_t *cmd, uint16_t cmdsize) {
+    if (cmdsize < 2) {
+        snprintf(exp, size, "%s", name);
+    } else if (color) {
+        snprintf(exp, size, "%s(" _MAGENTA_("%d") ")", name, cmd[1]);
+    } else {
+        snprintf(exp, size, "%s(%d)", name, cmd[1]);
+    }
+}
+
+int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool is_response) {
+
+    if (cmdsize == 0) {
+        return PM3_ESOFT;
+    }
 
     if (is_response == false) {
         if ((gs_ntag_i2c_state == 1) && (cmdsize == 6) && (memcmp(cmd + 1, "\x00\x00\x00", 3) == 0)) {
@@ -288,6 +315,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 break;
             case ISO14443A_CMD_WUPA:
                 snprintf(exp, size, "WUPA");
+                iso14a4_reset();
                 break;
             // 93 20 = Anticollision (usage: 9320 - answer: 4bytes UID+1byte UID-bytes-xor)
             // 93 50 = Bit oriented anti-collision (usage: 9350+ up to 5bytes, 9350 answer - up to 5bytes UID+BCC)
@@ -332,20 +360,30 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
             }
             case ISO14443A_CMD_REQA:
                 snprintf(exp, size, "REQA");
+                iso14a4_reset();
                 break;
             case ISO14443A_CMD_READBLOCK:
-                snprintf(exp, size, "READBLOCK(" _MAGENTA_("%d") ")", cmd[1]);
+                annotateCmdOperand(exp, size, "READBLOCK", true, cmd, cmdsize);
                 break;
             case ISO14443A_CMD_WRITEBLOCK:
-                snprintf(exp, size, "WRITEBLOCK(" _MAGENTA_("%d") ")", cmd[1]);
+                annotateCmdOperand(exp, size, "WRITEBLOCK", true, cmd, cmdsize);
                 break;
             case ISO14443A_CMD_HALT:
                 snprintf(exp, size, "HALT");
                 MifareAuthState = masNone;
+                iso14a4_reset();
                 break;
             case ISO14443A_CMD_RATS: {
+                if (cmdsize < 2) {
+                    snprintf(exp, size, "RATS");
+                    break;
+                }
                 uint16_t fsdi2fsd[] = {16, 24, 32, 40, 48, 64, 96, 128, 256, 512, 1024, 2048, 4096, 4096, 4096, 4096};
                 snprintf(exp, size, "RATS - FSDI=%x (FSD=%u), CID=%x", (cmd[1] & 0xF0) >> 4, fsdi2fsd[(cmd[1] & 0xF0) >> 4], (cmd[1] & 0x0F));
+                if (cmdsize == 4) {
+                    iso14a4_reset();
+                    gs_14a4_ats_pending = true;
+                }
                 break;
             }
             /* Actually, PPSS is Dx
@@ -357,10 +395,10 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 snprintf(exp, size, "OPTIONAL TIMESLOT");
                 break;
             case MIFARE_CMD_INC:
-                snprintf(exp, size, "INC(" _MAGENTA_("%d") ")", cmd[1]);
+                annotateCmdOperand(exp, size, "INC", true, cmd, cmdsize);
                 break;
             case MIFARE_CMD_DEC:
-                snprintf(exp, size, "DEC(" _MAGENTA_("%d") ")", cmd[1]);
+                annotateCmdOperand(exp, size, "DEC", true, cmd, cmdsize);
                 break;
             case MIFARE_CMD_RESTORE:
 
@@ -379,7 +417,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
 
                 break;
             case MIFARE_CMD_TRANSFER:
-                snprintf(exp, size, "TRANSFER(" _MAGENTA_("%d") ")", cmd[1]);
+                annotateCmdOperand(exp, size, "TRANSFER", true, cmd, cmdsize);
                 break;
             case MIFARE_AUTH_KEYA: {
                 if (cmdsize > 3) {
@@ -393,7 +431,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
             }
             case MIFARE_AUTH_KEYB: {
                 MifareAuthState = masNt;
-                snprintf(exp, size, "AUTH-B(" _MAGENTA_("%d") ")", cmd[1]);
+                annotateCmdOperand(exp, size, "AUTH-B", true, cmd, cmdsize);
                 break;
             }
             case MIFARE_MAGIC_GDM_AUTH_KEY: {
@@ -404,7 +442,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 break;
             }
             case MIFARE_MAGIC_GDM_WRITEBLOCK: {
-                snprintf(exp, size, "MAGIC WRITEBLOCK(" _MAGENTA_("%d") ")", cmd[1]);
+                annotateCmdOperand(exp, size, "MAGIC WRITEBLOCK", true, cmd, cmdsize);
                 break;
             }
             case MIFARE_MAGICWUPC1:
@@ -445,13 +483,17 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
             case MIFARE_ULEV1_FASTREAD : {
                 if (cmdsize >= 3 && cmd[2] <= 0xE6)
                     snprintf(exp, size, "READ RANGE (" _MAGENTA_("%d-%d") ")", cmd[1], cmd[2]);
-                else
+                else if (cmdsize >= 3)
                     // outside limits, useful for some tags...
                     snprintf(exp, size, "READ RANGE (" _MAGENTA_("%d-%d") ") (?)", cmd[1], cmd[2]);
+                else
+                    snprintf(exp, size, "READ RANGE");
                 break;
             }
             case MIFARE_ULC_WRITE : {
-                if (cmd[1] < 0x21)
+                if (cmdsize < 2)
+                    snprintf(exp, size, "WRITEBLOCK");
+                else if (cmd[1] < 0x21)
                     snprintf(exp, size, "WRITEBLOCK(" _MAGENTA_("%d") ")", cmd[1]);
                 else if (cmdsize >= 6)
                     // outside limits, useful for some tags...
@@ -459,14 +501,14 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 break;
             }
             case MIFARE_ULEV1_READ_CNT : {
-                if (cmd[1] < 5)
+                if (cmdsize > 1 && cmd[1] < 5)
                     snprintf(exp, size, "READ CNT(" _MAGENTA_("%d") ")", cmd[1]);
                 else
                     snprintf(exp, size, "?");
                 break;
             }
             case MIFARE_ULEV1_INCR_CNT : {
-                if (cmd[1] < 5) {
+                if (cmdsize >= 5 && cmd[1] < 5) {
                     uint32_t v = MemLeToUint3byte(cmd + 2);
                     snprintf(exp, size, "INCR CNT(" _MAGENTA_("%d") ") %u", cmd[1], v);
                 } else {
@@ -478,7 +520,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 snprintf(exp, size, "READ SIG");
                 break;
             case MIFARE_ULEV1_CHECKTEAR:
-                snprintf(exp, size, "CHK TEARING(" _MAGENTA_("%d") ")", cmd[1]);
+                annotateCmdOperand(exp, size, "CHK TEARING", true, cmd, cmdsize);
                 break;
             case MIFARE_ULEV1_VCSL:
                 snprintf(exp, size, "VCSL");
@@ -487,9 +529,9 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 snprintf(exp, size, "WRITE SIG");
                 break;
             case MIFARE_ULNANO_LOCKSIG: {
-                if (cmd[1] == 0)
+                if (cmdsize > 1 && cmd[1] == 0)
                     snprintf(exp, size, "UNLOCK SIG");
-                else if (cmd[1] == 2)
+                else if (cmdsize > 1 && cmd[1] == 2)
                     snprintf(exp, size, "LOCK SIG");
                 else
                     snprintf(exp, size, "?");
@@ -543,11 +585,177 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
     return PM3_SUCCESS;
 }
 
-void annotateIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+static const char *iso7816_ins_name(uint8_t ins) {
+    switch (ins) {
+        case ISO7816_READ_BINARY:
+            return "READ BIN";
+        case ISO7816_WRITE_BINARY:
+            return "WRITE BIN";
+        case ISO7816_UPDATE_BINARY:
+            return "UPDATE BIN";
+        case ISO7816_ERASE_BINARY:
+            return "ERASE BIN";
+        case ISO7816_READ_RECORDS:
+            return "READ RECORDS";
+        case ISO7816_WRITE_RECORDS:
+            return "WRITE RECORDS";
+        case ISO7816_APPEND_RECORD:
+            return "APPEND RECORD";
+        case ISO7816_UPDATE_RECORD:
+            return "UPDATE RECORD";
+        case ISO7816_GET_DATA:
+            return "GET DATA";
+        case ISO7816_PUT_DATA:
+            return "PUT DATA";
+        case ISO7816_SELECT_FILE:
+            return "SELECT FILE";
+        case ISO7816_VERIFY:
+            return "VERIFY";
+        case ISO7816_INTERNAL_AUTHENTICATION:
+            return "INTERNAL AUTH";
+        case ISO7816_EXTERNAL_AUTHENTICATION:
+            return "EXTERNAL AUTH";
+        case ISO7816_GET_CHALLENGE:
+            return "GET CHALLENGE";
+        case ISO7816_MANAGE_CHANNEL:
+            return "MANAGE CHANNEL";
+        case ISO7816_GET_RESPONSE:
+            return "GET RESPONSE";
+        default:
+            return NULL;
+    }
+}
+
+// ISO 7816-4 cases 1-4, short and extended
+static bool iso7816_apdu_len_ok(const uint8_t *apdu, size_t n) {
+    if (n == 4 || n == 5) {
+        return true;
+    }
+    if (n < 6) {
+        return false;
+    }
+    size_t lc = apdu[4];
+    if (lc) {
+        return (n == 5 + lc || n == 6 + lc);
+    }
+    if (n < 7) {
+        return false;
+    }
+    if (n == 7) {
+        return true;
+    }
+    lc = (apdu[5] << 8) | apdu[6];
+    return (lc && (n == 7 + lc || n == 9 + lc));
+}
+
+// ISO 14443-4 I-block holding an APDU, only inside a session opened by RATS / ATS.
+// PCB 000xCN1b: chaining 0x10, CID 0x08, NAD 0x04. CRC_A must hold.
+// Returns the INF offset, 0 when the frame is not decoded as APDU.
+static size_t iso14a4_apdu_frame(uint8_t *cmd, uint16_t cmdsize, bool is_response, bool *chained_first) {
+
+    *chained_first = false;
+    if (gs_14a4_active == false || cmdsize < 1) {
+        return 0;
+    }
+
+    uint8_t pcb = cmd[0];
+    if ((pcb & 0xE2) != 0x02) {
+        return 0;
+    }
+
+    if (check_crc(CRC_14443_A, cmd, cmdsize) == false) {
+        return 0;
+    }
+
+    bool *chain = &gs_14a4_chained[is_response ? 1 : 0];
+    bool continuation = *chain;
+    bool chaining = (pcb & 0x10);
+    *chain = chaining;
+
+    size_t hdr = 1 + ((pcb & 0x08) ? 1 : 0) + ((pcb & 0x04) ? 1 : 0);
+
+    // response: SW1 SW2 only in the last block of a chain, and only to an APDU
+    if (is_response) {
+        if (chaining || gs_14a4_apdu_open == false || cmdsize < hdr + 2 + 2) {
+            return 0;
+        }
+        gs_14a4_apdu_open = false;
+        return hdr;
+    }
+
+    // command: header only in the first block of a chain
+    if (continuation) {
+        return 0;
+    }
+    gs_14a4_apdu_open = false;
+    if (cmdsize < hdr + 4 + 2) {
+        return 0;
+    }
+
+    // CLA FF and INS 6x / 9x are invalid
+    uint8_t cla = cmd[hdr];
+    uint8_t ins = cmd[hdr + 1];
+    if (cla == 0xFF || (ins & 0xF0) == 0x60 || (ins & 0xF0) == 0x90) {
+        return 0;
+    }
+
+    // Lc / Le must account for the whole INF, a chained block holds only part of it
+    if (chaining == false && iso7816_apdu_len_ok(cmd + hdr, cmdsize - hdr - 2) == false) {
+        return 0;
+    }
+
+    gs_14a4_apdu_open = true;
+    *chained_first = chaining;
+    return hdr;
+}
+
+void annotateIso14443a(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool is_response) {
+
+    gs_14a4_last_sw = false;
+
+    // the ATS opens the session, a reader frame instead means the ATS was not captured
+    if (gs_14a4_ats_pending) {
+        gs_14a4_ats_pending = false;
+        gs_14a4_active = true;
+        if (is_response) {
+            applyIso14443a(exp, size, cmd, cmdsize, is_response);
+            return;
+        }
+    }
+
+    if (gs_14a4_active && is_response == false && cmdsize >= 1 && (cmd[0] & 0xF7) == 0xC2) {
+        snprintf(exp, size, "S-block DESELECT");
+        iso14a4_reset();
+        return;
+    }
+
+    bool chained_first = false;
+    size_t hdr = iso14a4_apdu_frame(cmd, cmdsize, is_response, &chained_first);
+    if (hdr) {
+        if (is_response) {
+            gs_14a4_last_sw = true;
+            uint8_t sw1 = cmd[cmdsize - 4];
+            uint8_t sw2 = cmd[cmdsize - 3];
+            // only negative status, 9000 and 61xx are success
+            if ((sw1 == 0x90 && sw2 == 0x00) == false && sw1 != 0x61) {
+                snprintf(exp, size, "%s", GetAPDUCodeDescription(sw1, sw2));
+            }
+            return;
+        }
+
+        const char *name = iso7816_ins_name(cmd[hdr + 1]);
+        if (name) {
+            snprintf(exp, size, "%s%s", name, chained_first ? " (chained)" : "");
+        } else {
+            snprintf(exp, size, "APDU CLA %02X INS %02X%s", cmd[hdr], cmd[hdr + 1], chained_first ? " (chained)" : "");
+        }
+        return;
+    }
+
     applyIso14443a(exp, size, cmd, cmdsize, is_response);
 }
 
-void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool isResponse) {
+void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool isResponse) {
 
     enum pico_state {PICO_NONE, PICO_SELECT, PICO_AUTH_EPURSE, PICO_AUTH_MACS };
     static enum pico_state curr_state = PICO_NONE;
@@ -555,6 +763,10 @@ void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool 
     static uint8_t epurse[8];
     static uint8_t rmac[4];
     static uint8_t tmac[4];
+
+    if (cmdsize == 0) {
+        return;
+    }
 
     if (isResponse == false)  {
         uint8_t c = cmd[0] & 0x0F;
@@ -582,6 +794,10 @@ void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool 
                 break;
             case ICLASS_CMD_CHECK:
                 curr_state = PICO_AUTH_MACS;
+                if (cmdsize < 9) {
+                    snprintf(exp, size, "CHECK");
+                    break;
+                }
                 memcpy(rmac, cmd + 1, 4);
                 memcpy(tmac, cmd + 5, 4);
 
@@ -594,7 +810,7 @@ void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool 
 
                 break;
             case ICLASS_CMD_READ4:
-                snprintf(exp, size, "READ4(%d)", cmd[1]);
+                annotateCmdOperand(exp, size, "READ4", false, cmd, cmdsize);
                 break;
             case ICLASS_CMD_READ_OR_IDENTIFY: {
 
@@ -606,19 +822,19 @@ void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool 
                 break;
             }
             case ICLASS_CMD_PAGESEL:
-                snprintf(exp, size, "PAGESEL(%d)", cmd[1]);
+                annotateCmdOperand(exp, size, "PAGESEL", false, cmd, cmdsize);
                 curr_state = PICO_NONE;
                 break;
             case ICLASS_CMD_UPDATE:
-                snprintf(exp, size, "UPDATE(%d)", cmd[1]);
+                annotateCmdOperand(exp, size, "UPDATE", false, cmd, cmdsize);
                 curr_state = PICO_NONE;
                 break;
             case ICLASS_CMD_READCHECK:
                 if (ICLASS_CREDIT(cmd[0])) {
-                    snprintf(exp, size, "READCHECK[Kc](%d)", cmd[1]);
+                    annotateCmdOperand(exp, size, "READCHECK[Kc]", false, cmd, cmdsize);
                     curr_state = PICO_AUTH_EPURSE;
                 } else {
-                    snprintf(exp, size, "READCHECK[Kd](%d)", cmd[1]);
+                    annotateCmdOperand(exp, size, "READCHECK[Kd]", false, cmd, cmdsize);
                     curr_state = PICO_AUTH_EPURSE;
                 }
                 break;
@@ -635,10 +851,14 @@ void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool 
     } else {
 
         if (curr_state == PICO_SELECT) {
-            memcpy(csn, cmd, 8);
+            if (cmdsize >= 8) {
+                memcpy(csn, cmd, 8);
+            }
             curr_state = PICO_NONE;
         } else if (curr_state == PICO_AUTH_EPURSE) {
-            memcpy(epurse, cmd, 8);
+            if (cmdsize >= 8) {
+                memcpy(epurse, cmd, 8);
+            }
         } else if (curr_state == PICO_AUTH_MACS) {
             snprintf(exp, size, _GREEN_("CHECK SUCCESS"));
             curr_state = PICO_NONE;
@@ -647,7 +867,7 @@ void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool 
     return;
 }
 
-void annotateIso15693(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+void annotateIso15693(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize) {
 
     if (cmdsize >= 2) {
         switch (cmd[1]) {
@@ -683,8 +903,10 @@ void annotateIso15693(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             case ISO15693_READ_MULTI_BLOCK:
                 if (cmdsize == 6) {
                     snprintf(exp, size, "READ_MULTI_BLOCK(%d-%d)", cmd[2], (cmd[2] + cmd[3]));
-                } else {
+                } else if (cmdsize == 6 + 8) { // with UID
                     snprintf(exp, size, "READ_MULTI_BLOCK(%d-%d)", cmd[10], (cmd[10] + cmd[11]));
+                } else {
+                    snprintf(exp, size, "READ_MULTI_BLOCK");
                 }
                 return;
             case ISO15693_WRITE_MULTI_BLOCK:
@@ -803,7 +1025,10 @@ void annotateIso15693(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     }
 }
 
-void annotateTopaz(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+void annotateTopaz(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize) {
+    if (cmdsize == 0) {
+        return;
+    }
     switch (cmd[0]) {
         case TOPAZ_REQA:
             snprintf(exp, size, "REQA");
@@ -844,13 +1069,15 @@ void annotateTopaz(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     }
 }
 
+static bool annotateIso14443_s_r_block(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool is_response, bool show_block_number);
+
 // iso 7816-3
 //
 // contact tells the two framings apart: a contactless frame is always a block
 // typed by its first byte, while a contact T=0 frame is a bare APDU and a T=1
 // frame is NAD PCB LEN INF EDC. Without it a GSM APDU starting with CLA 'A0'
 // matches the T=CL R-block test.
-void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response, bool contact) {
+void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool is_response, bool contact) {
 
     if (cmdsize < 2) {
         return;
@@ -930,39 +1157,7 @@ not_a_block:
 
     // S-block
     if (blocks && ((cmd[0] & 0xC0) == 0xC0) && ((cmdsize == 3) || (cmdsize == 4))) {
-
-        switch ((cmd[0] & 0x3F)) {
-            case 0x00   :
-                snprintf(exp, size, "S-block RESYNCH req");
-                break;
-            case 0x20   :
-                snprintf(exp, size, "S-block RESYNCH resp");
-                break;
-            case 0x01   :
-                snprintf(exp, size, "S-block IFS req");
-                break;
-            case 0x21   :
-                snprintf(exp, size, "S-block IFS resp");
-                break;
-            case 0x02   :
-                snprintf(exp, size, "S-block ABORT req");
-                break;
-            case 0x22   :
-                snprintf(exp, size, "S-block ABORT resp");
-                break;
-            case 0x03   :
-                snprintf(exp, size, "S-block WTX reqt");
-                break;
-            case 0x23   :
-                snprintf(exp, size, "S-block WTX resp");
-                break;
-            case 0x32:
-                snprintf(exp, size, "S-block WTX req");
-                break;
-            default     :
-                snprintf(exp, size, "S-block");
-                break;
-        }
+        annotateIso14443_s_r_block(exp, size, cmd, cmdsize, is_response, false);
     }
     // R-block (ack)
     else if (blocks && ((cmd[0] & 0xD0) == 0x80) && (cmdsize > 2)) {
@@ -997,66 +1192,14 @@ not_a_block:
             return;
         }
 
-        switch (cmd[pos]) {
-            case ISO7816_READ_BINARY:
-                snprintf(exp, size, "READ BIN");
-                break;
-            case ISO7816_WRITE_BINARY:
-                snprintf(exp, size, "WRITE BIN");
-                break;
-            case ISO7816_UPDATE_BINARY:
-                snprintf(exp, size, "UPDATE BIN");
-                break;
-            case ISO7816_ERASE_BINARY:
-                snprintf(exp, size, "ERASE BIN");
-                break;
-            case ISO7816_READ_RECORDS:
-                snprintf(exp, size, "READ RECORDS");
-                break;
-            case ISO7816_WRITE_RECORDS:
-                snprintf(exp, size, "WRITE RECORDS");
-                break;
-            case ISO7816_APPEND_RECORD:
-                snprintf(exp, size, "APPEND RECORD");
-                break;
-            case ISO7816_UPDATE_RECORD:
-                snprintf(exp, size, "UPDATE RECORD");
-                break;
-            case ISO7816_GET_DATA:
-                snprintf(exp, size, "GET DATA");
-                break;
-            case ISO7816_PUT_DATA:
-                snprintf(exp, size, "PUT DATA");
-                break;
-            case ISO7816_SELECT_FILE:
-                snprintf(exp, size, "SELECT FILE");
-                break;
-            case ISO7816_VERIFY:
-                snprintf(exp, size, "VERIFY");
-                break;
-            case ISO7816_INTERNAL_AUTHENTICATION:
-                snprintf(exp, size, "INTERNAL AUTH");
-                break;
-            case ISO7816_EXTERNAL_AUTHENTICATION:
-                snprintf(exp, size, "EXTERNAL AUTH");
-                break;
-            case ISO7816_GET_CHALLENGE:
-                snprintf(exp, size, "GET CHALLENGE");
-                break;
-            case ISO7816_MANAGE_CHANNEL:
-                snprintf(exp, size, "MANAGE CHANNEL");
-                break;
-            case ISO7816_GET_RESPONSE:
-                snprintf(exp, size, "GET RESPONSE");
-                break;
-            default:
-                //snprintf(exp, size, "?");
-                break;
+        const char *name = iso7816_ins_name(cmd[pos]);
+        if (name) {
+            snprintf(exp, size, "%s", name);
         }
     }
 }
 
-static bool iso14443_4_get_i_block_inf(uint8_t *cmd, uint8_t cmdsize, bool is_response, const uint8_t **inf, size_t *inf_len) {
+static bool iso14443_4_get_i_block_inf(uint8_t *cmd, uint16_t cmdsize, bool is_response, const uint8_t **inf, size_t *inf_len) {
     (void)is_response;
     size_t frame_len = cmdsize;
     if (frame_len < 1 || (cmd[0] & 0xC0) != 0x00 || (cmd[0] & 0x02) != 0x02) {
@@ -1081,7 +1224,7 @@ static bool iso14443_4_get_i_block_inf(uint8_t *cmd, uint8_t cmdsize, bool is_re
     return true;
 }
 
-static bool annotateIso14443_s_r_block(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response, bool show_block_number) {
+static bool annotateIso14443_s_r_block(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool is_response, bool show_block_number) {
     (void)is_response;
     size_t frame_len = cmdsize;
     if (frame_len < 1 || frame_len > 4) {
@@ -1338,7 +1481,7 @@ static bool annotateCalypsoApdu(char *exp, size_t size, const uint8_t *apdu, siz
     }
 }
 
-static bool annotateIso14443bPrime(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+static bool annotateIso14443bPrime(char *exp, size_t size, const uint8_t *cmd, uint16_t cmdsize, bool is_response) {
     if (cmdsize < 2) {
         return false;
     }
@@ -1398,7 +1541,7 @@ static bool annotateIso14443bPrime(char *exp, size_t size, const uint8_t *cmd, u
     }
 }
 
-void annotateCalypso(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+void annotateCalypso(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool is_response) {
     if (cmdsize < 1) {
         return;
     }
@@ -1432,7 +1575,7 @@ void annotateCalypso(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool
 }
 
 // MIFARE DESFire
-void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize) {
 
     // it's basically a ISO14443a tag, so try annotation from there
     if (applyIso14443a(exp, size, cmd, cmdsize, false) != PM3_SUCCESS) {
@@ -1441,7 +1584,7 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             return;
         }
         // I-block 000xCN1x
-        else if (((cmd[0] & 0xC0) == 0x00) && (cmdsize > 2)) {
+        else if ((cmdsize > 2) && ((cmd[0] & 0xC0) == 0x00)) {
 
             const uint8_t *inf = NULL;
             if (iso14443_4_get_i_block_inf(cmd, cmdsize, false, &inf, NULL) == false) {
@@ -1451,6 +1594,9 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             int pos = inf - cmd;
 
             for (uint8_t i = 0; i < 2; i++, pos++) {
+                if (pos >= cmdsize) {
+                    break;
+                }
                 bool found_annotation = true;
 
                 uint8_t *data = cmd + pos + 1;
@@ -1458,7 +1604,7 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                 if (i > 0 && cmd[pos - 1] == 0x90) {
                     data += 3;
                 }
-                uint8_t data_size = 0;
+                uint16_t data_size = 0;
                 if (cmdsize > (data - cmd)) {
                     data_size = cmdsize - (data - cmd);
                 }
@@ -1590,11 +1736,11 @@ void annotateMfDesfire(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                         }
                         break;
                     case MFDES_UPDATE_RECORD: {
-                        snprintf(exp, size, "MFDES_UPDATE_RECORD)");
+                        snprintf(exp, size, "UPDATE RECORD");
                         break;
                     }
                     case MFDES_UPDATE_RECORD2: {
-                        snprintf(exp, size, "MFDES_UPDATE_RECORD_2)");
+                        snprintf(exp, size, "UPDATE RECORD_2");
                         break;
                     }
                     case MFDES_NOTIFY_TRANSACTION_SUCCESS:
@@ -1864,7 +2010,7 @@ const char *mfpGetCommandMacedForCode(uint8_t code) {
     return "MACed" ;
 }
 
-void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize) {
 
     // If we are in Mifare Classic Authenticated mode, all the work has already be done elsewhere
     if ((MifareAuthState != masNone) && (MifareAuthState != masError)) {
@@ -1877,7 +2023,7 @@ void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     }
 
     // ok this part is copy paste from annotateMfDesfire, it seems to work for MIFARE Plus also
-    if (((cmd[0] & 0xC0) == 0x00) && (cmdsize > 2)) {
+    if ((cmdsize > 2) && ((cmd[0] & 0xC0) == 0x00)) {
 
         const uint8_t *inf = NULL;
         if (iso14443_4_get_i_block_inf(cmd, cmdsize, false, &inf, NULL) == false) {
@@ -1887,6 +2033,9 @@ void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
         int pos = inf - cmd;
 
         for (uint8_t i = 0; i < 2; i++, pos++) {
+            if (pos >= cmdsize) {
+                break;
+            }
             bool found_annotation = true;
 
             uint8_t *data = cmd + pos + 1;
@@ -1894,7 +2043,7 @@ void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             if (i > 0 && cmd[pos - 1] == 0x90) {
                 data += 3;
             }
-            uint8_t data_size = 0;
+            uint16_t data_size = 0;
             if (cmdsize > (data - cmd)) {
                 data_size = cmdsize - (data - cmd);
             }
@@ -2144,7 +2293,11 @@ void annotateMfPlus(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 0F = Completion
 0A 11 22 33 44 55 66 = Authenticate (11 22 33 44 55 66 = data to authenticate)
 **/
-void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool is_response) {
+
+    if (cmdsize == 0) {
+        return;
+    }
 
     if (annotateIso14443bPrime(exp, size, cmd, cmdsize, is_response)) {
         return;
@@ -2180,7 +2333,7 @@ void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bo
                 snprintf(exp, size, "Slot 2 NACK");
                 return;
             case 0xA7:  {
-                snprintf(exp, size, "Slot 0 NACK");
+                snprintf(exp, size, "Slot 3 NACK");
                 return;
             }
             default:
@@ -2190,6 +2343,11 @@ void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bo
 
     switch (cmd[0]) {
         case ISO14443B_REQB : {
+
+            if (cmdsize < 3) {
+                snprintf(exp, size, "REQB");
+                break;
+            }
 
             switch (cmd[2] & 0x07) {
                 case 0:
@@ -2208,10 +2366,11 @@ void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bo
                     snprintf(exp, size, "16 slots ");
                     break;
             }
+            size_t n = strlen(exp);
             if ((cmd[2] & 0x8))
-                snprintf(exp, size, "WUPB");
+                snprintf(exp + n, size - n, "WUPB");
             else
-                snprintf(exp, size, "REQB");
+                snprintf(exp + n, size - n, "REQB");
             break;
         }
         case ISO14443B_ATTRIB:
@@ -2224,16 +2383,16 @@ void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bo
             snprintf(exp, size, "INITIATE");
             break;
         case ISO14443B_SELECT:
-            snprintf(exp, size, "SELECT(%d)", cmd[1]);
+            annotateCmdOperand(exp, size, "SELECT", false, cmd, cmdsize);
             break;
         case ISO14443B_GET_UID:
             snprintf(exp, size, "GET UID");
             break;
         case ISO14443B_READ_BLK:
-            snprintf(exp, size, "READ_BLK(%d)", cmd[1]);
+            annotateCmdOperand(exp, size, "READ_BLK", false, cmd, cmdsize);
             break;
         case ISO14443B_WRITE_BLK:
-            snprintf(exp, size, "WRITE_BLK(%d)", cmd[1]);
+            annotateCmdOperand(exp, size, "WRITE_BLK", false, cmd, cmdsize);
             break;
         case ISO14443B_RESET:
             snprintf(exp, size, "RESET");
@@ -2263,6 +2422,9 @@ void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bo
                 snprintf(exp, size, "XEROX EXT_READ_BLK(%u)", cmd[2 + 8]);
                 break;
             }
+            // any other 02 frame, an I-block among them, is no Xerox WUP
+            snprintf(exp, size, "?");
+            break;
 
         case ISO14443B_XEROX_WUP1:
             if (cmdsize == 5) {
@@ -2271,7 +2433,7 @@ void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bo
             }
         case ISO14443B_XEROX_WUP2:
             if (cmdsize == 5) {
-                snprintf(exp, size, "XEROX WUP1");
+                snprintf(exp, size, "XEROX WUP2");
                 break;
             }
         default:
@@ -2284,7 +2446,11 @@ void annotateIso14443b(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bo
 }
 
 // CryptoRF which is based on ISO-14443B
-void annotateCryptoRF(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+void annotateCryptoRF(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize) {
+
+    if (cmdsize == 0) {
+        return;
+    }
 
     switch (cmd[0]) {
         case CRYPTORF_SET_USER_ZONE:
@@ -2323,7 +2489,16 @@ void annotateCryptoRF(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     }
 }
 
-void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool isResponse) {
+// the frame holds the bytes of apdu at pos
+static bool seos_frame_matches_apdu(const uint8_t *cmd, uint16_t cmdsize, int pos, const char *apdu, size_t len) {
+    return (((size_t)pos + len) <= cmdsize) && (memcmp(cmd + pos, apdu, len) == 0);
+}
+
+void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool isResponse) {
+
+    if (cmdsize == 0) {
+        return;
+    }
 
     if (cmd[0] == 0xFA && cmdsize == 5) {
         snprintf(exp, size, (isResponse) ? "BUSY" : "DONE?");
@@ -2331,7 +2506,7 @@ void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is
     }
 
     // it's basically a ISO14443a tag, so try annotation from there
-    if (applyIso14443a(exp, size, cmd, cmdsize, false) != PM3_SUCCESS) {
+    if (applyIso14443a(exp, size, cmd, cmdsize, isResponse) != PM3_SUCCESS) {
 
         annotateIso7816(exp, size, cmd, cmdsize, isResponse, false);
 
@@ -2349,100 +2524,100 @@ void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is
             }
         }
 
-        if (memcmp(cmd + pos, "\x00\xA4\x04\x00", 4) == 0) {
-            uint8_t n = cmd[pos + 4];
+        if (seos_frame_matches_apdu(cmd, cmdsize, pos, "\x00\xA4\x04\x00", 4) && (cmdsize > pos + 4)) {
+            uint8_t n = MIN(cmd[pos + 4], cmdsize - (pos + 5));
             snprintf(exp, size, "SELECT AID " _WHITE_("%s"), sprint_hex_inrow(cmd + pos + 4 + 1, n));
             // iceman:  add a lookup to known SEOS AID's
             return;
         }
 
-        if (memcmp(cmd + pos, "\x80\xA5\x00\x00", 4) == 0) {
+        if (seos_frame_matches_apdu(cmd, cmdsize, pos, "\x80\xA5\x00\x00", 4)) {
             snprintf(exp, size, "SELECT GDF");
             return;
         }
 
-        if (memcmp(cmd + pos, "\x80\xA5\x04\x00", 4) == 0) {
-            uint8_t n = cmd[pos + 4 + 2];
+        if (seos_frame_matches_apdu(cmd, cmdsize, pos, "\x80\xA5\x04\x00", 4) && (cmdsize > pos + 6)) {
+            uint8_t n = MIN(cmd[pos + 4 + 2], cmdsize - (pos + 7));
             snprintf(exp, size, "SELECT OID " _WHITE_("%s"), sprint_hex_inrow(cmd + pos + 4 + 2 + 1, n));
             return;
         }
 
-        if (memcmp(cmd + pos, "\x80\xA5\x07", 3) == 0) {
+        if (seos_frame_matches_apdu(cmd, cmdsize, pos, "\x80\xA5\x07", 3) && (cmdsize > pos + 3)) {
             uint8_t ks = cmd[pos + 3];
             snprintf(exp, size, "SELECT GDF " _WHITE_("(") " key " _MAGENTA_("%02X") " )", ks);
             return;
         }
 
-        if (memcmp(cmd + pos, "\x00\x87\x00", 3) == 0) {
+        if (seos_frame_matches_apdu(cmd, cmdsize, pos, "\x00\x87\x00", 3) && (cmdsize > pos + 3)) {
 
             uint8_t ks = cmd[pos + 3];
-            if (memcmp(cmd + pos + 3 + 1, "\x04\x7c\x02\x81\x00", 5) == 0) {
+            if (seos_frame_matches_apdu(cmd, cmdsize, pos + 3 + 1, "\x04\x7c\x02\x81\x00", 5)) {
                 snprintf(exp, size, "GET CHALLENGE " _WHITE_("(") " key " _MAGENTA_("%02X") " )", ks);
                 return;
             }
 
-            if (memcmp(cmd + pos + 3 + 1, "\x2C\x7C\x2A\x82\x28", 5) == 0) {
+            if (seos_frame_matches_apdu(cmd, cmdsize, pos + 3 + 1, "\x2C\x7C\x2A\x82\x28", 5)) {
                 snprintf(exp, size, "MUTUAL AUTHENTICATION " _WHITE_("(") " key " _MAGENTA_("%02X") " )", ks);
             }
             return;
         }
 
-        if (memcmp(cmd + pos, "\x0C\xCB\x3F\xFF", 4) == 0) {
+        if (seos_frame_matches_apdu(cmd, cmdsize, pos, "\x0C\xCB\x3F\xFF", 4)) {
             snprintf(exp, size, "GET DATA");
             return;
         }
 
-        if (memcmp(cmd + pos, "\x0C\xDB\x3F\xFF", 4) == 0) {
+        if (seos_frame_matches_apdu(cmd, cmdsize, pos, "\x0C\xDB\x3F\xFF", 4)) {
             snprintf(exp, size, "UPDATE DATA");
             return;
         }
 
-        if (memcmp(cmd + pos, "\x0C\xED\x06\x00", 4) == 0) {
+        if (seos_frame_matches_apdu(cmd, cmdsize, pos, "\x0C\xED\x06\x00", 4)) {
             snprintf(exp, size, "DELETE DATA");
             return;
         }
 
-        if (memcmp(cmd + pos, "\x0C\x41\x0C\x03", 4) == 0) {
+        if (seos_frame_matches_apdu(cmd, cmdsize, pos, "\x0C\x41\x0C\x03", 4)) {
             snprintf(exp, size, "CREATE ADF");
             return;
         }
 
-        if (memcmp(cmd + pos, "\x00\xD4\x00\x00\x00", 5) == 0) {
+        if (seos_frame_matches_apdu(cmd, cmdsize, pos, "\x00\xD4\x00\x00\x00", 5)) {
             snprintf(exp, size, "GET REMAINING CREDITS");
             return;
         }
 
-        if (memcmp(cmd + pos, "\xA0\x10\x00\x00\x00", 5) == 0) {
+        if (seos_frame_matches_apdu(cmd, cmdsize, pos, "\xA0\x10\x00\x00\x00", 5)) {
             snprintf(exp, size, "GET APPLET INFO");
             return;
         }
 
-        if (memcmp(cmd + pos, "\xA0\xD3\x00\x00\x00", 5) == 0) {
+        if (seos_frame_matches_apdu(cmd, cmdsize, pos, "\xA0\xD3\x00\x00\x00", 5)) {
             snprintf(exp, size, "GET APPLET VERSION");
             return;
         }
 
-        if (memcmp(cmd + pos, "\xA0\xDA\x04", 3) == 0) {
+        if (seos_frame_matches_apdu(cmd, cmdsize, pos, "\xA0\xDA\x04", 3)) {
             snprintf(exp, size, "PUSH ENGINE ID");
             return;
         }
 
-        if (memcmp(cmd + pos, "\xA0\xDA\x05", 3) == 0) {
+        if (seos_frame_matches_apdu(cmd, cmdsize, pos, "\xA0\xDA\x05", 3)) {
             snprintf(exp, size, "PUSH USERNAME");
             return;
         }
 
-        if (memcmp(cmd + pos, "\xA0\xDA\x10\x00\x01\x01", 6) == 0) {
+        if (seos_frame_matches_apdu(cmd, cmdsize, pos, "\xA0\xDA\x10\x00\x01\x01", 6)) {
             snprintf(exp, size, "FINAL PERSONALIZE");
             return;
         }
 
-        if (memcmp(cmd + pos, "\xA0\xDA\x25\x00\x02\x01", 6) == 0) {
+        if (seos_frame_matches_apdu(cmd, cmdsize, pos, "\xA0\xDA\x25\x00\x02\x01", 6)) {
             snprintf(exp, size, "UNKNOWN OPCODE ( 0x25 )");
             return;
         }
 
-        if (memcmp(cmd + pos, "\xA0\xCA\x00\x00\x00", 5) == 0) {
+        if (seos_frame_matches_apdu(cmd, cmdsize, pos, "\xA0\xCA\x00\x00\x00", 5)) {
             snprintf(exp, size, "GET DATA");
             return ;
         }
@@ -2451,14 +2626,14 @@ void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is
         //  Tells the card "the next byte is a DESFire native opcode, not an ISO 7816 standard INS."
         //  INS 0x5A    DESFire native opcode SelectApplication (3-byte AID).
 
-        if (memcmp(cmd + pos, "\x90\x5A\x00\x00", 4) == 0) {
+        if (seos_frame_matches_apdu(cmd, cmdsize, pos, "\x90\x5A\x00\x00", 4) && (cmdsize > pos + 7)) {
             snprintf(exp, size, "(desfire) SELECT AID " _CYAN_("%02X%02X%02X"), cmd[pos + 5], cmd[pos + 6], cmd[pos + 7]);
             return;
         }
 
         if (isResponse) {
 
-            if (memcmp(cmd + pos, "\xCD\x02", 2) == 0) {
+            if (seos_frame_matches_apdu(cmd, cmdsize, pos, "\xCD\x02", 2) && (cmdsize > pos + 3)) {
 
                 uint8_t ea = cmd[pos + 2];
                 uint8_t ha = cmd[pos + 3];
@@ -2489,7 +2664,10 @@ void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is
 // 1 = read
 // 0 = write
 // Quite simpel tag
-void annotateLegic(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+void annotateLegic(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize) {
+    if (cmdsize < 2) {
+        return;
+    }
     uint8_t bitsend = cmd[0];
     uint8_t cmdBit = (cmd[1] & 1);
     switch (bitsend) {
@@ -2519,6 +2697,9 @@ void annotateLegic(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
         case 9:
         case 11: {
 
+            if (cmdsize < 3) {
+                break;
+            }
             uint16_t address = (cmd[2] << 7) | cmd[1] >> 1;
 
             if (cmdBit == LEGIC_READ) {
@@ -2531,7 +2712,7 @@ void annotateLegic(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             break;
         }
         case 21: {
-            if (cmdBit == LEGIC_WRITE) {
+            if ((cmdsize >= 4) && (cmdBit == LEGIC_WRITE)) {
                 uint16_t address = ((cmd[2] << 7) | cmd[1] >> 1) & 0xFF;
                 uint8_t val = (cmd[3] & 1) << 7 | cmd[2] >> 1;
                 snprintf(exp, size, "WRITE Byte(%d) %02X", address, val);
@@ -2539,7 +2720,7 @@ void annotateLegic(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             break;
         }
         case 23: {
-            if (cmdBit == LEGIC_WRITE) {
+            if ((cmdsize >= 4) && (cmdBit == LEGIC_WRITE)) {
                 uint16_t address = ((cmd[2] << 7) | cmd[1] >> 1) & 0x3FF;
                 uint8_t val = (cmd[3] & 0x7) << 5 | cmd[2] >> 3;
                 snprintf(exp, size, "WRITE Byte(%d) %02X", address, val);
@@ -2553,7 +2734,7 @@ void annotateLegic(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     }
 }
 
-static bool annotateFelicaSeac(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+static bool annotateFelicaSeac(char *exp, size_t size, const uint8_t *cmd, uint16_t cmdsize, bool is_response) {
     if (cmdsize < 7 || cmd[4] != 0x01 || cmd[5] != 0x01 ||
             (cmd[6] != 0x01 && cmd[6] < 0x0F)) {
         return false;
@@ -2587,7 +2768,7 @@ static bool annotateFelicaSeac(char *exp, size_t size, const uint8_t *cmd, uint8
     return true;
 }
 
-void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
+void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool is_response) {
     if (cmdsize < 4) {
         snprintf(exp, size, "?");
         return;
@@ -3051,15 +3232,18 @@ void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool 
     }
 }
 
-void annotateLTO(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+void annotateLTO(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize) {
+    if (cmdsize == 0) {
+        return;
+    }
     switch (cmd[0]) {
         case LTO_REQ_STANDARD:
             snprintf(exp, size, "REQ Standard");
             break;
         case LTO_SELECT:
-            if (cmd[1] == 0x70)
+            if (cmdsize > 1 && cmd[1] == 0x70)
                 snprintf(exp, size, "SELECT_UID-2");
-            else if (cmd[1] == 0x20)
+            else if (cmdsize > 1 && cmd[1] == 0x20)
                 snprintf(exp, size, "SELECT");
             break;
         case LTO_REQ_ALL:
@@ -3075,7 +3259,7 @@ void annotateLTO(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             snprintf(exp, size, "READWORD");
             break;
         case (LTO_READBLOCK & 0xF0):
-            snprintf(exp, size, "READBLOCK(%d)", cmd[1]);
+            annotateCmdOperand(exp, size, "READBLOCK", false, cmd, cmdsize);
             break;
         case LTO_READBLOCK_CONT:
             snprintf(exp, size, "READBLOCK CONT");
@@ -3084,7 +3268,7 @@ void annotateLTO(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             snprintf(exp, size, "WRITEWORD");
             break;
         case (LTO_WRITEBLOCK & 0xF0):
-            snprintf(exp, size, "WRITEBLOCK(%d)", cmd[1]);
+            annotateCmdOperand(exp, size, "WRITEBLOCK", false, cmd, cmdsize);
             break;
         case LTO_HALT:
             snprintf(exp, size, "HALT");
@@ -3094,8 +3278,8 @@ void annotateLTO(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     }
 }
 
-void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize,
-                    const uint8_t *parity, uint8_t paritysize, bool isResponse) {
+void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize,
+                    const uint8_t *parity, uint16_t paritysize, bool isResponse) {
     if (!isResponse && cmdsize == 1) {
         switch (cmd[0]) {
             case ISO14443A_CMD_WUPA:
@@ -3198,7 +3382,7 @@ static void mf_get_paritybinstr(char *s, uint32_t val, uint8_t par) {
     s[0] = '\0';
 }
 
-bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isResponse, uint8_t *mfData, size_t *mfDataLen, const uint64_t *dicKeys, uint32_t dicKeysCount) {
+bool DecodeMifareData(uint8_t *cmd, uint16_t cmdsize, uint8_t *parity, bool isResponse, uint8_t *mfData, size_t *mfDataLen, const uint64_t *dicKeys, uint32_t dicKeysCount) {
     static struct Crypto1State *traceCrypto1;
 
     *mfDataLen = 0;
@@ -3380,7 +3564,7 @@ bool NTParityChk(AuthData_t *ad, uint32_t ntx) {
     return true;
 }
 
-bool NestedCheckKey(uint64_t key, AuthData_t *ad, uint8_t *cmd, uint8_t cmdsize, uint8_t *parity) {
+bool NestedCheckKey(uint64_t key, AuthData_t *ad, uint8_t *cmd, uint16_t cmdsize, uint8_t *parity) {
     uint8_t buf[32] = {0};
     struct Crypto1State *pcs;
 
@@ -3418,7 +3602,7 @@ bool NestedCheckKey(uint64_t key, AuthData_t *ad, uint8_t *cmd, uint8_t cmdsize,
     return true;
 }
 
-bool CheckCrypto1Parity(const uint8_t *cmd_enc, uint8_t cmdsize, uint8_t *cmd, const uint8_t *parity_enc) {
+bool CheckCrypto1Parity(const uint8_t *cmd_enc, uint16_t cmdsize, uint8_t *cmd, const uint8_t *parity_enc) {
     for (int i = 0; i < cmdsize - 1; i++) {
         if (oddparity8(cmd[i]) ^ (cmd[i + 1] & 0x01) ^ ((parity_enc[i / 8] >> (7 - i % 8)) & 0x01) ^ (cmd_enc[i + 1] & 0x01))
             return false;
@@ -3441,7 +3625,7 @@ uint64_t GetCrypto1ProbableKey(AuthData_t *ad) {
 }
 
 // FMCOS 2.0
-void annotateFMCOS20(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+void annotateFMCOS20(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize) {
 
     if (cmdsize < 2)
         return;
@@ -3459,6 +3643,13 @@ void annotateFMCOS20(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             pos = 3;
             break;
     }
+
+    if (pos >= cmdsize) {
+        return;
+    }
+    // P1, 0xFF when the frame stops before it
+    uint8_t p1 = (pos + 1 < cmdsize) ? cmd[pos + 1] : 0xFF;
+
     switch (cmd[pos]) {
         case FMCOS20_CMD_EXTERNAL_AUTHENTICATION:
             snprintf(exp, size, "EXT. AUTH");
@@ -3506,9 +3697,9 @@ void annotateFMCOS20(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             snprintf(exp, size, "APP UNBLOCK");
             break;
         case FMCOS20_CMD_APP_BLOCK:
-            if (cmd[pos + 1] == 0)
+            if (p1 == 0)
                 snprintf(exp, size, "APP BLOCK (TEMP)");
-            else if (cmd[pos + 1] == 1)
+            else if (p1 == 1)
                 snprintf(exp, size, "APP BLOCK (PERM)");
             else
                 snprintf(exp, size, "APP BLOCK");
@@ -3517,34 +3708,34 @@ void annotateFMCOS20(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             snprintf(exp, size, "PIN UNBLOCK");
             break;
         case FMCOS20_CMD_CHANGE_PIN:
-            if (cmd[pos + 1] == 0)
+            if (p1 == 0)
                 snprintf(exp, size, "RESET PIN");
-            else if (cmd[pos + 1] == 1)
+            else if (p1 == 1)
                 snprintf(exp, size, "CHANGE PIN");
             break;
         case FMCOS20_CMD_INITIALIZE_TRANSACTION:
-            if (cmd[pos + 1] == 0)
+            if (p1 == 0)
                 snprintf(exp, size, "INIT. TRANSACTION (CREDIT)");
-            else if (cmd[pos + 1] == 1)
+            else if (p1 == 1)
                 snprintf(exp, size, "INIT. TRANSACTION (PURCHASE)");
-            else if (cmd[pos + 1] == 2)
+            else if (p1 == 2)
                 snprintf(exp, size, "INIT. TRANSACTION (CASH WITHDRAW)");
-            else if (cmd[pos + 1] == 3)
+            else if (p1 == 3)
                 snprintf(exp, size, "INIT. TRANSACTION (CAPP PURCHASE)");
-            else if (cmd[pos + 1] == 4)
+            else if (p1 == 4)
                 snprintf(exp, size, "INIT. TRANSACTION (OVERDRAFT)");
-            else if (cmd[pos + 1] == 5)
+            else if (p1 == 5)
                 snprintf(exp, size, "INIT. TRANSACTION (WITHDRAW)");
             break;
         case FMCOS20_CMD_CREDIT_LOAD:
             snprintf(exp, size, "CREDIT LOAD");
             break;
         case FMCOS20_CMD_PURCHASE:
-            if (cmd[pos + 1] == 0)
+            if (p1 == 0)
                 snprintf(exp, size, "PURCHASE");
-            else if (cmd[pos + 1] == 1)
+            else if (p1 == 1)
                 snprintf(exp, size, "CAPP PURCHASE / CASH WITHDRAW");
-            else if (cmd[pos + 1] == 3)
+            else if (p1 == 3)
                 snprintf(exp, size, "WITHDRAW");
             break;
         case FMCOS20_CMD_UPDATE_OVERDRAW_LIMIT:
@@ -3557,15 +3748,15 @@ void annotateFMCOS20(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             snprintf(exp, size, "GET BALANCE");
             break;
         case FMCOS20_CMD_INITIALIZE_GREY_LOCK_UNLOCK:
-            if (cmd[pos + 1] == 8)
+            if (p1 == 8)
                 snprintf(exp, size, "INIT. GRAY LOCK");
-            else if (cmd[pos + 1] == 9)
+            else if (p1 == 9)
                 snprintf(exp, size, "INIT. GRAY UNLOCK");
             break;
         case FMCOS20_CMD_GREY_LOCK_UNLOCK:
-            if (cmd[pos + 1] == 8)
+            if (p1 == 8)
                 snprintf(exp, size, "GRAY LOCK");
-            else if (cmd[pos + 1] == 9)
+            else if (p1 == 9)
                 snprintf(exp, size, "GRAY UNLOCK");
             break;
         case FMCOS20_CMD_DEBIT_UNLOCK:

@@ -8,6 +8,7 @@
 #include "ticks_apis.h"      // GetTickCount / GetTickCountDelta
 #include "dbprint.h"
 #include "string.h"
+#include "commonutil.h"   // ARRAYLEN
 
 // app_com CRC-16/CCITT-FALSE (same as bwm_forward)
 static uint16_t wifi_crc16(const uint8_t *d, size_t n, uint16_t crc) {
@@ -19,36 +20,14 @@ static uint16_t wifi_crc16(const uint8_t *d, size_t n, uint16_t crc) {
     return crc;
 }
 
-// Minimal one-shot app_com response parser: scans the UART RX stream for a
-// SLAVE_RESP (0x2D 0x3D) echoing want_cmd, or a SLAVE_BCAST CMD_ERROR (8091).
-// Runs only during setup, so it fully owns the RX stream here.
-typedef enum { W_H1, W_H2, W_CL, W_CH, W_LL, W_LH, W_PL, W_KL, W_KH } wstate_t;
-
 #ifndef MIN
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
-// Drop whatever is already sitting in the UART RX ring so a late ACK from a
-// timed-out command cannot be consumed as the next command's response (same
-// cmd code, e.g. a slow OTA_BEGIN ack arriving after we already gave up).
-static void bwm_cmd_drain_rx(void) {
-    uint8_t buf[64];
-    uint32_t t0 = GetTickCount();
-    while (bwm_uart_rx_available()) {
-        uint16_t avail = bwm_uart_rx_available();
-        (void)bwm_uart_read(buf, (uint32_t)MIN(avail, (uint16_t)sizeof(buf)));
-        if (GetTickCountDelta(t0) > 50) {
-            break;
-        }
-    }
-}
-
 int bwm_cmd(uint16_t cmd, const uint8_t *req, uint16_t req_len,
             uint8_t *resp, uint16_t *resp_len, uint32_t timeout_ms) {
 
-    bwm_cmd_drain_rx();
-
-    // ---- build + send HOST_CMD frame ----
+    // ---- build HOST_CMD frame ----
     uint8_t frame[8 + 256];
     if (req_len > sizeof(frame) - 8) {
         return PM3_EOVFLOW;
@@ -67,114 +46,45 @@ int bwm_cmd(uint16_t cmd, const uint8_t *req, uint16_t req_len,
     uint16_t crc = wifi_crc16(frame, idx, 0xFFFF);
     frame[idx++] = (uint8_t)(crc & 0xFF);
     frame[idx++] = (uint8_t)(crc >> 8);
+
+    // The shared parser owns the RX stream: forward acks and client data that
+    // arrive meanwhile must reach bwm_forward, not be dropped. Parse what is
+    // already queued before arming, so a late reply to a timed-out command is
+    // not taken as this one's.
+    bwm_fwd_pump();
+    bool want = (resp != NULL) && (resp_len != NULL);
+    bwm_frame_expect(cmd, want ? resp : NULL, want ? *resp_len : 0);
     bwm_uart_write(frame, idx);
 
-    // ---- wait for the matching SLAVE_RESP ----
-    wstate_t st = W_H1;
-    bool     is_resp = false;
-    uint16_t rcmd = 0, rlen = 0, rgot = 0, rcrc_recv = 0, rcrc_calc = 0;
-    uint8_t  pbuf[256];
-    uint8_t  h1 = 0;
-
+    int res = PM3_ETIMEOUT;
     uint32_t t0 = GetTickCount();
-    for (;;) {
-        if (GetTickCountDelta(t0) > timeout_ms) {
-            return PM3_ETIMEOUT;
-        }
-        uint8_t buf[64];
-        uint16_t avail = bwm_uart_rx_available();
-        if (avail == 0) {
-            SpinDelay(1);
-            continue;
-        }
-        uint32_t n = bwm_uart_read(buf, (uint32_t)MIN(avail, (uint16_t)sizeof(buf)));
-        for (uint32_t i = 0; i < n; i++) {
-            uint8_t byte = buf[i];
-            switch (st) {
-                case W_H1:
-                    if (byte == BWM_HDR_SLAVE_RESP_1 || byte == BWM_HDR_SLAVE_BCAST_1) {
-                        h1 = byte;
-                        is_resp = (byte == BWM_HDR_SLAVE_RESP_1);
-                        st = W_H2;
-                    }
-                    break;
-                case W_H2: {
-                    bool ok = (is_resp  && byte == BWM_HDR_SLAVE_RESP_2) ||
-                              (!is_resp && byte == BWM_HDR_SLAVE_BCAST_2);
-                    if (ok) {
-                        uint8_t hdr[2] = { h1, byte };
-                        rcrc_calc = wifi_crc16(hdr, 2, 0xFFFF);
-                        rgot = 0;
-                        st = W_CL;
-                    } else {
-                        st = W_H1;
-                    }
-                    break;
-                }
-                case W_CL:
-                    rcmd = byte;
-                    rcrc_calc = wifi_crc16(&byte, 1, rcrc_calc);
-                    st = W_CH;
-                    break;
-                case W_CH:
-                    rcmd |= (uint16_t)byte << 8;
-                    rcrc_calc = wifi_crc16(&byte, 1, rcrc_calc);
-                    st = W_LL;
-                    break;
-                case W_LL:
-                    rlen = byte;
-                    rcrc_calc = wifi_crc16(&byte, 1, rcrc_calc);
-                    st = W_LH;
-                    break;
-                case W_LH:
-                    rlen |= (uint16_t)byte << 8;
-                    rcrc_calc = wifi_crc16(&byte, 1, rcrc_calc);
-                    st = (rlen ? W_PL : W_KL);
-                    break;
-                case W_PL:
-                    if (rgot < sizeof(pbuf)) pbuf[rgot] = byte;
-                    rcrc_calc = wifi_crc16(&byte, 1, rcrc_calc);
-                    if (++rgot >= rlen) st = W_KL;
-                    break;
-                case W_KL:
-                    rcrc_recv = byte;
-                    st = W_KH;
-                    break;
-                case W_KH: {
-                    rcrc_recv |= (uint16_t)byte << 8;
-                    if (rcrc_recv == rcrc_calc) {
-                        if (is_resp && rcmd == cmd) {
-                            // matching ack for our command
-                            if (resp && resp_len) {
-                                uint16_t cpy = MIN(rlen, *resp_len);
-                                memcpy(resp, pbuf, cpy);
-                                *resp_len = cpy;
-                            }
-                            return PM3_SUCCESS;
-                        }
-                        if (!is_resp && rcmd == BWM_CMD_CMD_ERROR && rlen >= 2) {
-                            uint16_t failed_cmd = (uint16_t)pbuf[0] | ((uint16_t)pbuf[1] << 8);
-                            if (failed_cmd == cmd) {
-                                int32_t esp_err = 0;
-                                if (rlen >= 6) {
-                                    esp_err = (int32_t)((uint32_t)pbuf[2] | ((uint32_t)pbuf[3] << 8) |
-                                                        ((uint32_t)pbuf[4] << 16) | ((uint32_t)pbuf[5] << 24));
-                                }
-                                // Expected in places (e.g. a status query while WiFi is
-                                // off): only worth seeing when debugging the link.
-                                if (g_dbglevel >= DBG_DEBUG) {
-                                    Dbprintf("[bwm-wifi] cmd 0x%04x failed, esp_err=0x%08x", (unsigned)cmd, (unsigned)esp_err);
-                                }
-                                return PM3_EFAILED;
-                            }
-                        }
-                    }
-                    st = W_H1;
-                    break;
-                }
+    while (GetTickCountDelta(t0) <= timeout_ms) {
+        bwm_fwd_pump();
+        uint16_t rlen = 0;
+        int32_t esp_err = 0;
+        int8_t st = bwm_frame_expect_poll(&rlen, &esp_err);
+        if (st > 0) {
+            if (want) {
+                *resp_len = rlen;
             }
+            res = PM3_SUCCESS;
+            break;
+        }
+        if (st < 0) {
+            // Expected in places (e.g. a status query while WiFi is
+            // off): only worth seeing when debugging the link.
+            if (g_dbglevel >= DBG_DEBUG) {
+                Dbprintf("[bwm-wifi] cmd 0x%04x failed, esp_err=0x%08x", (unsigned)cmd, (unsigned)esp_err);
+            }
+            res = PM3_EFAILED;
+            break;
+        }
+        if (bwm_uart_rx_available() == 0) {
+            SpinDelay(1);
         }
     }
+    bwm_frame_expect_end();
+    return res;
 }
 
 // ---------------------------------------------------------------------------
@@ -186,6 +96,23 @@ static int step(uint16_t cmd, const uint8_t *req, uint16_t rl,
         Dbprintf("[bwm-wifi] %s failed (%d)", what, r);
     }
     return r;
+}
+
+// ESP-IDF wifi_err_reason_t values seen when a join fails
+static const char *bwm_wifi_reason_str(uint8_t reason) {
+    switch (reason) {
+        case 2:
+        case 15:
+        case 202:
+        case 204:
+            return "wrong password?";
+        case 201:
+            return "network not found, BWM is 2.4 GHz only";
+        case 210:
+            return "no network with compatible security";
+        default:
+            return "join failed";
+    }
 }
 
 int bwm_wifi_forward_up(const char *ssid, const char *password,
@@ -220,7 +147,7 @@ int bwm_wifi_forward_up(const char *ssid, const char *password,
     // 4) join the AP and wait for it to finish (up to ~15s)
     if ((r = step(BWM_CMD_START_WIFI_CONNECT_TASK, NULL, 0, NULL, NULL, TO, "start connect")) != PM3_SUCCESS) return r;
     uint8_t secs = 25;   // iPhone/phone hotspots can be slow to become joinable
-    uint8_t wr[2];
+    uint8_t wr[2] = { 2, 0 };   // "timed out" if the reply is short
     uint16_t wl = sizeof(wr);
     if ((r = step(BWM_CMD_WAIT_FOR_WIFI_CONNECT_TASK, &secs, 1, wr, &wl, 30000, "wait connect")) != PM3_SUCCESS) return r;
 
@@ -245,8 +172,17 @@ int bwm_wifi_forward_up(const char *ssid, const char *password,
         while (GetTickCountDelta(t) < BWM_WIFI_DHCP_POLL_MS) { }
     }
     if (ip == 0) {
-        Dbprintf("[bwm-wifi] joined but no IP after DHCP wait (result=%u err=%u)", wr[0], wr[1]);
-        return PM3_EFAILED;
+        // wr[0]: ESP join result, 0 joined / 1 failed (wr[1] = WiFi reason) / 2 timed out
+        // PM3_ENODATA: may still come up (client hints at wifi status), PM3_EFAILED: join refused
+        if (wr[0] == 0) {
+            Dbprintf("[bwm-wifi] joined but no IP after DHCP wait");
+        } else if (wr[0] == 1) {
+            Dbprintf("[bwm-wifi] could not join: %s (reason %u)", bwm_wifi_reason_str(wr[1]), wr[1]);
+            return PM3_EFAILED;
+        } else {
+            Dbprintf("[bwm-wifi] join timed out, no IP");
+        }
+        return PM3_ENODATA;
     }
 
     // 6) start the TCP server (binds the STA interface now that it has an IP)
@@ -338,6 +274,132 @@ int bwm_esp_get_power_save(uint8_t *state, uint32_t timeout_ms) {
 
 int bwm_esp_get_ble_state(uint8_t *state, uint32_t timeout_ms) {
     return bwm_esp_u8_cmd(BWM_CMD_GET_BLE_SPP_STATUS, NULL, 0, state, timeout_ms);
+}
+
+int bwm_esp_get_free_heap(uint32_t heap[3], uint8_t *count, uint32_t timeout_ms) {
+    uint8_t resp[12] = {0};
+    uint16_t rlen = sizeof(resp);
+    *count = 0;
+    int r = bwm_cmd(BWM_CMD_GET_SYS_FREE_HEAP, NULL, 0, resp, &rlen, timeout_ms);
+    if (r != PM3_SUCCESS) {
+        return r;
+    }
+    if (rlen < 4) {
+        return PM3_EFAILED;
+    }
+    *count = (rlen >= sizeof(resp)) ? 3 : 1;
+    memcpy(heap, resp, *count * sizeof(uint32_t));
+    return PM3_SUCCESS;
+}
+
+// makers seen on Espressif modules; 0x20 is XMC there, not Micron/ST
+const char *bwm_flash_vendor(uint8_t mfr) {
+    switch (mfr) {
+        case 0x0B:
+            return "XTX";
+        case 0x20:
+            return "XMC";
+        case 0x5E:
+            return "Zbit";
+        case 0x68:
+            return "Boya";
+        case 0x85:
+            return "Puya";
+        case 0x9D:
+            return "ISSI";
+        case 0xA1:
+            return "Fudan";
+        case 0xC2:
+            return "MXIC";
+        case 0xC8:
+            return "GD";
+        case 0xEF:
+            return "Winbond";
+        default:
+            return "?";
+    }
+}
+
+static const char *esp_reset_str(uint8_t r) {
+    // esp_reset_reason_t
+    static const char *const names[] = {
+        "unknown", "power-on", "external", "software", "panic", "int watchdog", "task watchdog",
+        "watchdog", "deep sleep", "brownout", "sdio", "usb", "jtag", "efuse", "power glitch", "cpu lockup"
+    };
+    return (r < ARRAYLEN(names)) ? names[r] : "?";
+}
+
+void bwm_esp_print_runtime_stats(void) {
+    uint8_t resp[512];
+    uint16_t rlen = sizeof(resp);
+    if ((bwm_cmd(BWM_CMD_GET_SYS_RUNTIME_STATS, NULL, 0, resp, &rlen, 300) != PM3_SUCCESS) || (rlen < 14)) {
+        return;
+    }
+    uint32_t up = (uint32_t)resp[0] | ((uint32_t)resp[1] << 8) | ((uint32_t)resp[2] << 16) | ((uint32_t)resp[3] << 24);
+    // ESP32-C2: a software restart reads as watchdog, the uptime is what tells
+    Dbprintf("  BWM uptime.......... " _YELLOW_("%u") " s, last reset: %s", up, esp_reset_str(resp[4]));
+    uint16_t err[4];
+    for (int e = 0; e < 4; e++) {
+        err[e] = (uint16_t)(resp[5 + 2 * e] | (resp[6 + 2 * e] << 8));
+    }
+    Dbprintf("  BWM uart rx errors.. fifo overflow " _YELLOW_("%u") ", ring full " _YELLOW_("%u") ", crc " _YELLOW_("%u") ", timeout " _YELLOW_("%u"),
+             err[0], err[1], err[2], err[3]);
+
+    // three tasks per line
+    char name[3][17];
+    uint16_t free_b[3];
+    uint8_t k = 0;
+    bool first = true;
+    uint8_t count = resp[13];
+    uint16_t i = 14;
+    for (uint8_t t = 0; t < count; t++) {
+        if (i >= rlen) {
+            break;
+        }
+        uint8_t len = resp[i++];
+        if ((i + len + 2) > rlen) {
+            break;
+        }
+        memset(name[k], 0, sizeof(name[k]));
+        memcpy(name[k], &resp[i], MIN(len, (uint8_t)16));
+        i += len;
+        free_b[k] = (uint16_t)(resp[i] | (resp[i + 1] << 8));
+        i += 2;
+        k++;
+        if ((k == 3) || (t + 1 == count)) {
+            const char *lead = first ? "BWM stack free......" : "                    ";
+            if (k == 3) {
+                Dbprintf("  %s %s " _YELLOW_("%u") ", %s " _YELLOW_("%u") ", %s " _YELLOW_("%u"), lead, name[0], free_b[0], name[1], free_b[1], name[2], free_b[2]);
+            } else if (k == 2) {
+                Dbprintf("  %s %s " _YELLOW_("%u") ", %s " _YELLOW_("%u"), lead, name[0], free_b[0], name[1], free_b[1]);
+            } else {
+                Dbprintf("  %s %s " _YELLOW_("%u"), lead, name[0], free_b[0]);
+            }
+            first = false;
+            k = 0;
+        }
+    }
+}
+
+int bwm_esp_set_forward_tagged(bool on, uint8_t *applied) {
+    uint8_t req = on ? 1 : 0;
+    uint8_t resp = 0;
+    uint16_t rlen = sizeof(resp);
+    int r = bwm_cmd(BWM_CMD_SET_FORWARD_TAGGED, &req, 1, &resp, &rlen, 300);
+    if (applied) {
+        *applied = ((r == PM3_SUCCESS) && (rlen == 1)) ? resp : 0;
+    }
+    return r;
+}
+
+int bwm_esp_get_chip_info(bwm_chip_info_t *ci, uint32_t timeout_ms) {
+    uint16_t rlen = sizeof(*ci);
+    memset(ci, 0, sizeof(*ci));
+    int r = bwm_cmd(BWM_CMD_GET_SYS_CHIP_INFO, NULL, 0, (uint8_t *)ci, &rlen, timeout_ms);
+    if (r != PM3_SUCCESS) {
+        return r;
+    }
+    return (rlen == sizeof(*ci)) ? PM3_SUCCESS : PM3_EFAILED;
 }
 
 int bwm_esp_host_value_set(uint8_t id, uint32_t value, uint32_t timeout_ms) {

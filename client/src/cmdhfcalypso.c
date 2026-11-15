@@ -35,6 +35,7 @@
 #include "fileutils.h"
 #include "iso7816/apduinfo.h"
 #include "iso7816/iso7816core.h"
+#include "parsers/parsetransit.h"  // transit card parsers
 #include "protocols.h"
 #include "ui.h"
 #include "util.h"
@@ -1840,7 +1841,7 @@ static int calypso_select_file_id_with_p1_fallback(uint16_t file_id, bool check_
     sAPDU_t apdu = {0x00, ISO7816_SELECT_FILE, CALYPSO_SELECT_CURRENT_DF_P1, CALYPSO_SELECT_CURRENT_DF_P2, sizeof(file_id_data), file_id_data};
     int res = calypso_exchange_select(apdu, response);
     if (res != PM3_SUCCESS || (calypso_select_sw_has_file(response->sw) &&
-            (check_lid == false || calypso_fcp_matches_lid(response->data, response->len, file_id)))) {
+                               (check_lid == false || calypso_fcp_matches_lid(response->data, response->len, file_id)))) {
         return res;
     }
 
@@ -1878,12 +1879,12 @@ static int calypso_select_file_path(const uint16_t *path, size_t path_len, calyp
 
 static int calypso_select_file_path_then_id_fallback(const uint16_t *path, size_t path_len, uint16_t file_id, const calypso_dump_profile_t *profile, calypso_apdu_response_t *response) {
     const calypso_dump_node_t *node = calypso_dump_profile_unique_lid_node(profile,
-                                        &(calypso_dump_node_t) {.has_select_lid = true, .select_lid = file_id});
+    &(calypso_dump_node_t) {.has_select_lid = true, .select_lid = file_id});
     bool check_lid = node != NULL && node->select_aid_len > 0;
     if (path != NULL && path_len > 0) {
         int res = calypso_select_file_path(path, path_len, response);
         if (res != PM3_SUCCESS || (calypso_select_sw_has_file(response->sw) &&
-                (check_lid == false || calypso_fcp_matches_lid(response->data, response->len, file_id)))) {
+                                   (check_lid == false || calypso_fcp_matches_lid(response->data, response->len, file_id)))) {
             return res;
         }
 
@@ -1893,7 +1894,7 @@ static int calypso_select_file_path_then_id_fallback(const uint16_t *path, size_
             const uint16_t legacy_path[] = {file_id, file_id};
             res = calypso_select_file_path(legacy_path, ARRAYLEN(legacy_path), response);
             if (res != PM3_SUCCESS || (calypso_select_sw_has_file(response->sw) &&
-                    (check_lid == false || calypso_fcp_matches_lid(response->data, response->len, file_id)))) {
+                                       (check_lid == false || calypso_fcp_matches_lid(response->data, response->len, file_id)))) {
                 return res;
             }
         }
@@ -2050,6 +2051,75 @@ static int calypso_read_ticketing_environment(uint8_t *env, size_t env_len, size
     }
 
     return calypso_read_ticketing_environment_file(env, env_len, read_len, sw);
+}
+
+static bool calypso_read_transit_record(uint8_t sfi, uint8_t record, transit_calypso_record_t *rec) {
+    size_t len = 0;
+    uint16_t sw = 0;
+    int res = calypso_read_sfi_record(sfi, record, 0, rec->data, sizeof(rec->data), &len, &sw);
+    if (res != PM3_SUCCESS || sw != ISO7816_OK || len == 0) {
+        rec->len = 0;
+        return false;
+    }
+    rec->len = (uint8_t)len;
+    return true;
+}
+
+// Contracts, events and counters for the transit parsers, by SFI in the selected application
+static void calypso_run_transit_parsers(const calypso_select_result_t *selected, const uint8_t *icc, size_t icc_len,
+                                        const uint8_t *env, size_t env_len) {
+    transit_calypso_card_t card;
+    memset(&card, 0, sizeof(card));
+
+    if (selected->parsed.has_serial) {
+        memcpy(card.serial, selected->parsed.serial, sizeof(card.serial));
+        card.has_serial = true;
+    }
+
+    if (icc != NULL) {
+        card.icc.len = (uint8_t)MIN(icc_len, sizeof(card.icc.data));
+        memcpy(card.icc.data, icc, card.icc.len);
+    }
+
+    card.env.len = (uint8_t)MIN(env_len, sizeof(card.env.data));
+    memcpy(card.env.data, env, card.env.len);
+
+    // same identifier line as the other info commands, the parsers below decode it
+    transit_idents_t transit_ids;
+    if (transit_calypso_identify(&card, &transit_ids) > 0) {
+        PrintAndLogEx(NORMAL, "");
+        transit_print_idents(&transit_ids);
+    }
+
+    (void)calypso_read_transit_record(0x1E, 1, &card.contract_list);
+    (void)calypso_read_transit_record(0x19, 1, &card.counters);
+
+    // records are numbered from 1, a missing one ends the file
+    for (uint8_t i = 0; i < 4; i++) {
+        if (calypso_read_transit_record(0x09, i + 1, &card.contracts[i]) == false) {
+            break;
+        }
+        card.contract_count++;
+    }
+    // second contracts file, only after a full first one
+    for (uint8_t i = 4; card.contract_count == 4 && i < TRANSIT_CALYPSO_MAX_CONTRACTS; i++) {
+        if (calypso_read_transit_record(0x06, i - 3, &card.contracts[i]) == false) {
+            break;
+        }
+        card.contract_count++;
+    }
+    // per contract counters, Rav-Kav keeps its stored value here
+    for (uint8_t i = 0; i < ARRAYLEN(card.contract_counters); i++) {
+        (void)calypso_read_transit_record(0x0A + i, 1, &card.contract_counters[i]);
+    }
+    for (uint8_t i = 0; i < TRANSIT_CALYPSO_MAX_EVENTS; i++) {
+        if (calypso_read_transit_record(0x08, i + 1, &card.events[i]) == false) {
+            break;
+        }
+        card.event_count++;
+    }
+
+    (void)transit_calypso_parse(&card);
 }
 
 static void calypso_dump_filename_add_serial(calypso_dump_filename_context_t *ctx, const calypso_select_result_t *selected) {
@@ -4774,12 +4844,14 @@ static int CmdHFCalypsoInfo(const char *Cmd) {
                   "Tag information for Calypso cards",
                   "hf calypso info\n"
                   "hf calypso info -v\n"
-                  "hf calypso info --aid 315449432E494341");
+                  "hf calypso info --aid 315449432E494341\n"
+                  "hf calypso info --selftest");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0(NULL, "aid", "<hex>", "Calypso application AID or AID prefix (5..16 bytes)"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "selftest", "Run the transit parsers self tests and exit"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -4788,10 +4860,21 @@ static int CmdHFCalypsoInfo(const char *Cmd) {
     int user_aid_len = 0;
     int parse_res = CLIParamHexToBuf(arg_get_str(ctx, 1), user_aid, sizeof(user_aid), &user_aid_len);
     bool verbose = arg_get_lit(ctx, 2);
+    bool selftest = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     if (parse_res != PM3_SUCCESS) {
         return PM3_EINVARG;
+    }
+
+    if (selftest) {
+        return transit_calypso_selftest();
+    }
+
+    // listed as always available so the self test runs offline
+    if (IfPm3Iso14443() == false) {
+        PrintAndLogEx(WARNING, "Only offline mode is available, use `" _YELLOW_("--selftest") "`");
+        return PM3_ENOTTY;
     }
     if (user_aid_len > 0 && (user_aid_len < 5 || user_aid_len > CALYPSO_MAX_AID_LEN)) {
         PrintAndLogEx(ERR, "AID length must be 5..16 bytes, got %d", user_aid_len);
@@ -4851,6 +4934,7 @@ static int CmdHFCalypsoInfo(const char *Cmd) {
     res = calypso_read_ticketing_environment(ticket_env, sizeof(ticket_env), &ticket_env_len, &ticket_env_sw);
     if (res == PM3_SUCCESS && ticket_env_sw == ISO7816_OK) {
         calypso_print_ticketing_environment(ticket_env, ticket_env_len, verbose);
+        calypso_run_transit_parsers(&selected, (icc_valid || icc_read_ok) ? icc : NULL, icc_len, ticket_env, ticket_env_len);
     } else if (verbose) {
         PrintAndLogEx(INFO, "");
         PrintAndLogEx(INFO, "Ticketing environment unavailable (%04X - %s)", ticket_env_sw, GetAPDUCodeDescription(ticket_env_sw >> 8, ticket_env_sw & 0xFF));
@@ -4863,7 +4947,7 @@ static int CmdHFCalypsoInfo(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help", CmdHelp,          AlwaysAvailable, "This help"},
-    {"info", CmdHFCalypsoInfo, IfPm3Iso14443,   "Tag information"},
+    {"info", CmdHFCalypsoInfo, AlwaysAvailable, "Tag information"},
     {"dump", CmdHFCalypsoDump, IfPm3Iso14443, "Dump nodes after application profile scan"},
     {"probecmdcompat", CmdHFCalypsoProbe, IfPm3Iso14443, "Probe SELECT command compatibility"},
     {"list", CmdHFCalypsoList, AlwaysAvailable, "List Calypso history"},

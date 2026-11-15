@@ -188,10 +188,17 @@ static bool test_MES(void) {
 
 bool GallagherTest(bool verbose) {
     bool result = true;
+
+    PrintAndLogEx(INFO, "------ " _CYAN_("Gallagher tests") " ------");
+
     result &= test_CAD();
     result &= test_creds();
     result &= test_known_vector_creds();
     result &= test_mad_crc();
     result &= test_MES();
+
+    PrintAndLogEx(INFO, "---------------------------");
+    PrintAndLogEx(SUCCESS, "Tests ( %s )", (result) ? _GREEN_("ok") : _RED_("fail"));
+    PrintAndLogEx(NORMAL, "");
     return result;
 }

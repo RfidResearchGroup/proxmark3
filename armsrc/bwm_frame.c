@@ -17,6 +17,7 @@
 //-----------------------------------------------------------------------------
 
 #include "bwm_frame.h"
+#include "string.h"
 
 // CRC-16/CCITT-FALSE, byte-identical to the BWM firmware's crc16_ccitt()
 // (poly 0x1021, init 0xFFFF, MSB-first, no reflection, no xorout).
@@ -58,10 +59,21 @@ typedef struct {
 
 static bwm_parser_t s_p = { .state = S_IDLE };
 
-// De-framed payload ring
-static uint8_t  s_fifo[BWM_FIFO_SZ];
-static volatile uint16_t s_fifo_head = 0;   // write
-static volatile uint16_t s_fifo_tail = 0;   // read
+// De-framed payload rings, one per endpoint (bootrom: one)
+#ifdef AS_BOOTROM
+#define BWM_FIFOS   1
+#else
+#define BWM_FIFOS   2
+#endif
+typedef struct {
+    uint8_t buf[BWM_FIFO_SZ];
+    volatile uint16_t head;   // write
+    volatile uint16_t tail;   // read
+} bwm_fifo_t;
+static bwm_fifo_t s_fifo[BWM_FIFOS];
+#ifndef AS_BOOTROM
+static volatile bool s_fifo0_untagged = false;
+#endif
 
 // --- Flow control (ack window) ---------------------------------------------
 // s_fwd_inflight: forward frames sent but not yet acked by the ESP. Bumped on
@@ -79,19 +91,29 @@ static volatile bool s_baud_ack = false;
 // ESP is alive and responding at the baud we just switched to (verify step).
 static volatile bool s_getbaud_ack = false;
 
-static uint16_t fifo_count(void) {
-    return (uint16_t)((s_fifo_head - s_fifo_tail) & (BWM_FIFO_SZ - 1));
+#ifndef AS_BOOTROM
+// bwm_cmd()'s pending request, see bwm_frame_expect()
+static uint16_t s_exp_cmd = 0;          // 0 = none
+static volatile int8_t s_exp_state = 0;
+static uint8_t *s_exp_buf = NULL;
+static uint16_t s_exp_cap = 0;
+static uint16_t s_exp_len = 0;
+static int32_t s_exp_err = 0;
+#endif
+
+static uint16_t fifo_count(bwm_fifo_t *f) {
+    return (uint16_t)((f->head - f->tail) & (BWM_FIFO_SZ - 1));
 }
-static void fifo_push(uint8_t b) {
-    uint16_t next = (uint16_t)((s_fifo_head + 1) & (BWM_FIFO_SZ - 1));
-    if (next != s_fifo_tail) {              // drop on overflow rather than corrupt
-        s_fifo[s_fifo_head] = b;
-        s_fifo_head = next;
+static void fifo_push(bwm_fifo_t *f, uint8_t b) {
+    uint16_t next = (uint16_t)((f->head + 1) & (BWM_FIFO_SZ - 1));
+    if (next != f->tail) {                  // drop on overflow rather than corrupt
+        f->buf[f->head] = b;
+        f->head = next;
     }
 }
-static uint8_t fifo_pop(void) {
-    uint8_t b = s_fifo[s_fifo_tail];
-    s_fifo_tail = (uint16_t)((s_fifo_tail + 1) & (BWM_FIFO_SZ - 1));
+static uint8_t fifo_pop(bwm_fifo_t *f) {
+    uint8_t b = f->buf[f->tail];
+    f->tail = (uint16_t)((f->tail + 1) & (BWM_FIFO_SZ - 1));
     return b;
 }
 
@@ -176,11 +198,44 @@ static void bwm_feed_byte(bwm_parser_t *p, uint8_t byte) {
         case S_CRC_HI:
             p->crc_recv |= (uint16_t)byte << 8;
             if (p->crc_recv == p->crc_calc) {
+#ifndef AS_BOOTROM
+                if ((s_exp_cmd != 0) && (s_exp_state == 0)) {
+                    if ((p->is_bcast == false) && (p->cmd == s_exp_cmd)) {
+                        s_exp_len = MIN(p->len, s_exp_cap);
+                        if (s_exp_len) {
+                            memcpy(s_exp_buf, p->payload, s_exp_len);
+                        }
+                        s_exp_state = 1;
+                    } else if (p->is_bcast && (p->cmd == BWM_CMD_CMD_ERROR) && (p->len >= 2) &&
+                               (((uint16_t)p->payload[0] | ((uint16_t)p->payload[1] << 8)) == s_exp_cmd)) {
+                        s_exp_err = 0;
+                        if (p->len >= 6) {
+                            s_exp_err = (int32_t)((uint32_t)p->payload[2] | ((uint32_t)p->payload[3] << 8) |
+                                                  ((uint32_t)p->payload[4] << 16) | ((uint32_t)p->payload[5] << 24));
+                        }
+                        s_exp_state = -1;
+                    }
+                }
+#endif
                 if (p->is_bcast && p->cmd == BWM_CMD_DATA_FORWARD) {
                     for (uint16_t i = 0; i < p->len; i++) {
-                        fifo_push(p->payload[i]);
+                        fifo_push(&s_fifo[0], p->payload[i]);
                     }
-                } else if ((p->is_bcast == false) && p->cmd == BWM_CMD_SEND_FORWARD_DATA) {
+#ifndef AS_BOOTROM
+                    s_fifo0_untagged = true;
+                    bwm_fwd_on_untagged_data();
+                } else if (p->is_bcast && p->cmd == BWM_CMD_DATA_FORWARD_FROM && p->len >= 1 &&
+                           p->payload[0] < BWM_FIFOS) {
+                    bwm_fifo_t *f = &s_fifo[p->payload[0]];
+                    for (uint16_t i = 1; i < p->len; i++) {
+                        fifo_push(f, p->payload[i]);
+                    }
+                    if (p->payload[0] == 0) {
+                        s_fifo0_untagged = false;
+                    }
+#endif
+                } else if ((p->is_bcast == false) &&
+                           (p->cmd == BWM_CMD_SEND_FORWARD_DATA || p->cmd == BWM_CMD_SEND_FORWARD_DATA_TO)) {
                     // SLAVE_RESP ack for a forward frame -> one slot freed
                     if (s_fwd_inflight > 0) {
                         s_fwd_inflight--;
@@ -190,7 +245,8 @@ static void bwm_feed_byte(bwm_parser_t *p, uint8_t byte) {
                     bwm_fwd_on_frame_ack();
 #endif
                 } else if (p->is_bcast && p->cmd == BWM_CMD_CMD_ERROR && p->len >= 2 &&
-                           (((uint16_t)p->payload[0] | ((uint16_t)p->payload[1] << 8)) == BWM_CMD_SEND_FORWARD_DATA)) {
+                           ((((uint16_t)p->payload[0] | ((uint16_t)p->payload[1] << 8)) == BWM_CMD_SEND_FORWARD_DATA) ||
+                            (((uint16_t)p->payload[0] | ((uint16_t)p->payload[1] << 8)) == BWM_CMD_SEND_FORWARD_DATA_TO))) {
                     // the ESP could not deliver a forward frame: this is its answer instead of the ack
 #ifndef AS_BOOTROM
                     bwm_fwd_on_frame_error();
@@ -222,12 +278,26 @@ void bwm_frame_feed(uint8_t byte) {
 }
 
 uint16_t bwm_fifo_count(void) {
-    return fifo_count();
+    return fifo_count(&s_fifo[0]);
 }
 
 uint8_t bwm_fifo_pop(void) {
-    return fifo_pop();
+    return fifo_pop(&s_fifo[0]);
 }
+
+#ifndef AS_BOOTROM
+uint16_t bwm_fifo_count_ep(uint8_t ep) {
+    return (ep < BWM_FIFOS) ? fifo_count(&s_fifo[ep]) : 0;
+}
+
+uint8_t bwm_fifo_pop_ep(uint8_t ep) {
+    return (ep < BWM_FIFOS) ? fifo_pop(&s_fifo[ep]) : 0;
+}
+
+bool bwm_fifo_untagged(void) {
+    return s_fifo0_untagged;
+}
+#endif
 
 int16_t bwm_frame_inflight(void) {
     return s_fwd_inflight;
@@ -249,6 +319,32 @@ bool bwm_frame_take_fwd_ack(void) {
     return true;
 }
 
+#ifndef AS_BOOTROM
+void bwm_frame_expect(uint16_t cmd, uint8_t *buf, uint16_t cap) {
+    s_exp_buf = buf;
+    s_exp_cap = (buf != NULL) ? cap : 0;
+    s_exp_len = 0;
+    s_exp_err = 0;
+    s_exp_state = 0;
+    s_exp_cmd = cmd;
+}
+
+int8_t bwm_frame_expect_poll(uint16_t *len, int32_t *esp_err) {
+    if (len) {
+        *len = s_exp_len;
+    }
+    if (esp_err) {
+        *esp_err = s_exp_err;
+    }
+    return s_exp_state;
+}
+
+void bwm_frame_expect_end(void) {
+    s_exp_cmd = 0;
+    s_exp_buf = NULL;
+}
+#endif
+
 bool bwm_frame_baud_ack(void) {
     return s_baud_ack;
 }
@@ -269,8 +365,13 @@ void bwm_frame_clear_getbaud_ack(void) {
 
 void bwm_frame_reset(void) {
     s_p.state      = S_IDLE;
-    s_fifo_head    = 0;
-    s_fifo_tail    = 0;
+    for (int i = 0; i < BWM_FIFOS; i++) {
+        s_fifo[i].head = 0;
+        s_fifo[i].tail = 0;
+    }
+#ifndef AS_BOOTROM
+    s_fifo0_untagged = false;
+#endif
     s_fwd_inflight = 0;
     s_fwd_ack      = false;
     s_baud_ack     = false;
@@ -299,3 +400,30 @@ size_t bwm_frame_build(uint16_t cmd, const uint8_t *payload, uint16_t len,
     out[idx++] = (uint8_t)((crc >> 8) & 0xFF);
     return idx;
 }
+
+#ifndef AS_BOOTROM
+// bwm_frame_build() with a one-byte endpoint in front of the payload
+size_t bwm_frame_build_ep(uint16_t cmd, uint8_t ep, const uint8_t *payload, uint16_t len,
+                          uint8_t *out, size_t outsz) {
+    size_t idx = 0;
+    uint16_t plen = (uint16_t)(len + 1);
+    if (out == NULL || outsz < (size_t)(8 + plen)) {
+        return 0;
+    }
+    out[idx++] = BWM_HDR_HOST_CMD_1;
+    out[idx++] = BWM_HDR_HOST_CMD_2;
+    out[idx++] = (uint8_t)(cmd & 0xFF);
+    out[idx++] = (uint8_t)((cmd >> 8) & 0xFF);
+    out[idx++] = (uint8_t)(plen & 0xFF);
+    out[idx++] = (uint8_t)((plen >> 8) & 0xFF);
+    out[idx++] = ep;
+    if (len && payload) {
+        memcpy(&out[idx], payload, len);
+        idx += len;
+    }
+    uint16_t crc = bwm_crc16(out, idx, BWM_CRC16_INIT);
+    out[idx++] = (uint8_t)(crc & 0xFF);
+    out[idx++] = (uint8_t)((crc >> 8) & 0xFF);
+    return idx;
+}
+#endif

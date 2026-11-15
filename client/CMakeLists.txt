@@ -422,6 +422,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhffmcos.c
         ${PM3_ROOT}/client/src/cmdhffudan.c
         ${PM3_ROOT}/client/src/cmdhfgallagher.c
+        ${PM3_ROOT}/client/src/cmdhfgp.c
         ${PM3_ROOT}/client/src/cmdhfgst.c
         ${PM3_ROOT}/client/src/cmdhficlass.c
         ${PM3_ROOT}/client/src/cmdhfict.c
@@ -465,6 +466,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdlfhitag.c
         ${PM3_ROOT}/client/src/cmdlfhitaghts.c
         ${PM3_ROOT}/client/src/cmdlfhitagu.c
+        ${PM3_ROOT}/client/src/cmdlfict.c
         ${PM3_ROOT}/client/src/cmdlfidteck.c
         ${PM3_ROOT}/client/src/cmdlfindala.c
         ${PM3_ROOT}/client/src/cmdlfio.c
@@ -485,6 +487,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdlftrovan.c
         ${PM3_ROOT}/client/src/cmdlfviking.c
         ${PM3_ROOT}/client/src/cmdlfvisa2000.c
+        ${PM3_ROOT}/client/src/cmdlfwatchnet.c
         ${PM3_ROOT}/client/src/cmdlfzx8211.c
         ${PM3_ROOT}/client/src/cmdmad.c
         ${PM3_ROOT}/client/src/cmdmain.c
@@ -516,6 +519,33 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/parsers/parseproac.c
         ${PM3_ROOT}/client/src/parsers/parserkf.c
         ${PM3_ROOT}/client/src/parsers/parsenortic.c
+        ${PM3_ROOT}/client/src/parsers/parsetransit.c
+        ${PM3_ROOT}/client/src/parsers/parsebip.c
+        ${PM3_ROOT}/client/src/parsers/parsecalypso.c
+        ${PM3_ROOT}/client/src/parsers/parsecharlie.c
+        ${PM3_ROOT}/client/src/parsers/parseclipper.c
+        ${PM3_ROOT}/client/src/parsers/parseintercode.c
+        ${PM3_ROOT}/client/src/parsers/parseintertic.c
+        ${PM3_ROOT}/client/src/parsers/parseitso.c
+        ${PM3_ROOT}/client/src/parsers/parsekazan.c
+        ${PM3_ROOT}/client/src/parsers/parsemetromoney.c
+        ${PM3_ROOT}/client/src/parsers/parsemyki.c
+        ${PM3_ROOT}/client/src/parsers/parsenextfare.c
+        ${PM3_ROOT}/client/src/parsers/parsenol.c
+        ${PM3_ROOT}/client/src/parsers/parseoctopus.c
+        ${PM3_ROOT}/client/src/parsers/parseopal.c
+        ${PM3_ROOT}/client/src/parsers/parseopus.c
+        ${PM3_ROOT}/client/src/parsers/parseplantain.c
+        ${PM3_ROOT}/client/src/parsers/parseravkav.c
+        ${PM3_ROOT}/client/src/parsers/parserenfe.c
+        ${PM3_ROOT}/client/src/parsers/parsesmartrider.c
+        ${PM3_ROOT}/client/src/parsers/parsesuica.c
+        ${PM3_ROOT}/client/src/parsers/parsetmobilitat.c
+        ${PM3_ROOT}/client/src/parsers/parsetroika.c
+        ${PM3_ROOT}/client/src/parsers/parsetrt.c
+        ${PM3_ROOT}/client/src/parsers/parseumarsh.c
+        ${PM3_ROOT}/client/src/parsers/parseventra.c
+        ${PM3_ROOT}/client/src/parsers/parsezolotayakorona.c
         ${PM3_ROOT}/client/src/parsers/hrtparser/hrtparser.c
         ${PM3_ROOT}/client/src/pla.c
         ${PM3_ROOT}/client/src/preferences.c
@@ -675,6 +705,7 @@ if (NOT SKIPGD EQUAL 1 AND GD_FOUND)
     set(ADDITIONAL_LNKDIRS ${GD_LIBRARY_DIRS} ${ADDITIONAL_LNKDIRS})
     set(TARGET_SOURCES
             ${PM3_ROOT}/client/src/imgutils.c
+            ${PM3_ROOT}/client/src/cmdhfgoodisplay.c
             ${PM3_ROOT}/client/src/cmdhfwaveshare.c
             ${TARGET_SOURCES})
     add_definitions("-DHAVE_GD")
@@ -884,7 +915,7 @@ if ((NOT SKIPQT EQUAL 1) AND Qt6_FOUND)
     target_include_directories(proxmark3 PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
-target_compile_options(proxmark3 PUBLIC -Wall -Werror -Wno-missing-braces -O3)
+target_compile_options(proxmark3 PUBLIC -Wall -Werror -Wno-missing-braces -Wno-format-zero-length -O3)
 if (EMBED_READLINE)
     if (NOT SKIPREADLINE EQUAL 1)
         add_dependencies(proxmark3 ncurses readline)

@@ -817,6 +817,7 @@ static const char *rkf_log_slot(const rkf_tcas_t *t, uint8_t sector) {
 }
 
 static void rkf_read_tcas(const uint8_t *blk, rkf_tcas_t *t) {
+    memset(t, 0, sizeof(*t)); // padding too, instances are compared with memcmp
     t->identifier = (uint8_t)rkf_bits(blk, 0, 8);
     t->version = (uint8_t)rkf_bits(blk, 8, 6);
     for (uint8_t s = 0; s < RKF_SECTORS; s++) {

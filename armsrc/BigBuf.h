@@ -69,7 +69,7 @@ void BigBuf_initialize(void);
 void BigBuf_Clear(void);
 void BigBuf_Clear_ext(bool verbose);
 void BigBuf_Clear_keep_EM(void);
-void BigBuf_Clear_EM(void);
+int BigBuf_Clear_EM(void);
 uint8_t *BigBuf_malloc(uint32_t);
 uint8_t *BigBuf_calloc(uint32_t);
 void BigBuf_free(void);

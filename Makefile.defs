@@ -185,8 +185,8 @@ ifneq ($(NOHARDENING),1)
 
   ifndef IS_WINDOWS
     ifndef IS_DARWIN
-      ifeq ($(ARCH),x86_64)
-        CFLAGS += -fcf-protection=full
+      ifneq ($(findstring x86_64,$(shell $(CC) -dumpmachine 2>/dev/null)),)
+        DEFCFLAGS += -fcf-protection=full
       endif
       DEFCFLAGS += -fPIC
       DEFCXXFLAGS += -fPIC

@@ -356,7 +356,10 @@ static void handle_packet(const char *s, size_t len) {
     }
     switch (s[0]) {
         case '?':
-        case 'c': case 'C': case 's': case 'S':   // no execution control
+        case 'c':
+        case 'C':
+        case 's':
+        case 'S':   // no execution control
             send_str("S05");
             break;
         case 'g':                                  // registers are not available
@@ -367,7 +370,9 @@ static void handle_packet(const char *s, size_t len) {
             memset(s_out, '0', 8);
             send_payload(s_out, 8);
             break;
-        case 'H': case 'T': case 'D':
+        case 'H':
+        case 'T':
+        case 'D':
             send_str("OK");
             break;
         case 'm':
@@ -376,7 +381,8 @@ static void handle_packet(const char *s, size_t len) {
         case 'M':
             do_mem_write(s + 1, s + len);
             break;
-        case 'G': case 'P':                        // registers are read-only
+        case 'G':
+        case 'P':                        // registers are read-only
             send_err(0x01);
             break;
         case 'v':
