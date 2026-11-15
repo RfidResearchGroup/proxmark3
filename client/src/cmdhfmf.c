@@ -10811,12 +10811,12 @@ static int gdm_stage_uid_block(const gdm_wakeup_t *w, uint8_t write_cmd,
 }
 
 static bool gdm_write_result_unknown(int status) {
-    return status == PM3_ETIMEOUT || status == PM3_ETEAROFF;
+    return status == PM3_ESOFT || status == PM3_ETIMEOUT || status == PM3_ETEAROFF;
 }
 
 static int gdm_select_uid(uint8_t *uid, uint8_t *uidlen) {
     clearCommandBuffer();
-    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE, NULL, 0);
+    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_RATS, NULL, 0);
 
     PacketResponseNG resp = {0};
     uint8_t select_status = 0;
