@@ -93,6 +93,11 @@
 #include "buzzer.h"        // PM5 mainboard buzzer API
 #include "rgb_indicator.h" // PM5 antenna-RGB power/battery indicator (WITH_PM5_PWR_LED)
 #include "pm5_power.h"     // PM5 power-save idle (clock scaling + WFI)
+#ifdef PM5
+#include "pm5_usb_host_cdc.h" // PM5 USB host CDC (ICSD) driver
+#define PM5_ICSD_RESP_MAX    512   // max ICSD response bytes
+#define PM5_ICSD_TIMEOUT_MS  2000  // bulk read timeout
+#endif
 
 
 #ifdef WITH_PM5_AUTOOFF
@@ -4730,6 +4735,41 @@ static void PacketReceived(PacketCommandNG *packet) {
             pm5_power_set_enabled((packet->length >= 1) ? (packet->data.asBytes[0] != 0) : true);
             uint8_t state = pm5_power_get_enabled() ? 1 : 0;
             reply_ng(CMD_PM5_POWERSAVE, PM3_SUCCESS, &state, 1);
+            break;
+        }
+        case CMD_PM5_ICSD_RAW: {
+            // Payload: NUL-terminated command line (e.g. "Who\r\n").
+            char payload[PM5_ICSD_RESP_MAX];
+            size_t n = packet->length;
+            if (n >= sizeof(payload)) {
+                n = sizeof(payload) - 1;
+            }
+            memcpy(payload, packet->data.asBytes, n);
+            payload[n] = '\0';
+
+            char resp[PM5_ICSD_RESP_MAX];
+            int len = -1;
+            if (pm5_icsd_send_cmd(payload) == 0) {
+                len = pm5_icsd_read_response(resp, sizeof(resp), PM5_ICSD_TIMEOUT_MS);
+            }
+            if (len < 0) {
+                reply_ng(CMD_PM5_ICSD_RAW, PM3_EIO, NULL, 0);
+            } else {
+                reply_ng(CMD_PM5_ICSD_RAW, PM3_SUCCESS, (uint8_t *)resp, (uint16_t)len);
+            }
+            break;
+        }
+        case CMD_PM5_ICSD_RD: {
+            char resp[PM5_ICSD_RESP_MAX];
+            int len = -1;
+            if (pm5_icsd_send_cmd("RD\r\n") == 0) {
+                len = pm5_icsd_read_response(resp, sizeof(resp), PM5_ICSD_TIMEOUT_MS);
+            }
+            if (len < 0) {
+                reply_ng(CMD_PM5_ICSD_RD, PM3_EIO, NULL, 0);
+            } else {
+                reply_ng(CMD_PM5_ICSD_RD, PM3_SUCCESS, (uint8_t *)resp, (uint16_t)len);
+            }
             break;
         }
 #endif // PM5

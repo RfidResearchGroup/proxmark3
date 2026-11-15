@@ -328,6 +328,7 @@ if (PM5)
     list(APPEND THUMBSRC i2c.c)
     list(APPEND THUMBSRC buzzer.c) # generic mainboard buzzer (QC self-test + BWM low-batt)
     list(APPEND THUMBSRC pm5_power.c) # low-power idle (core clock scaling + WFI)
+    list(APPEND THUMBSRC pm5_usb_host_cdc.c) # USB host CDC (OTGFS1) driver
     list(APPEND THUMBSRC at32_unit_test.c) # TODO DXL: AT32单元测试代码
 endif ()
 

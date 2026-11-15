@@ -26,6 +26,7 @@
 //-----------------------------------------------------------------------------
 
 #include "pm5_cep.h"
+#include "pm5_usb_host_cdc.h"
 
 #include "at32f435_437.h"
 #include "at32f435_437_crm.h"
@@ -42,6 +43,12 @@
 #define CEP_CC_CONTROLLER_ADDR   0x47
 #define CEP_CC_STATUS_REG        0x09
 #define CEP_ATTACH_POLL_MS       50      // CC-controller I2C poll interval
+
+// TUSB320 status register bits 7:6 - attach role as seen by the PM5 port.
+#define CEP_ATTACH_UNATTACHED    0x00
+#define CEP_ATTACH_SRC           0x01    // PM5 sources VBUS -> act as USB host (ICS/ICSD device)
+#define CEP_ATTACH_SNK           0x02    // partner sources VBUS -> Flipper Zero (USART1 handshake)
+#define CEP_ATTACH_PEER          0x03    // PD peer -> Flipper Zero
 #define CEP_HANDSHAKE_STRING     "iamf0rupm5"
 #define CEP_HANDSHAKE_STX        0x02
 #define CEP_SPI_BYTE_TIMEOUT     100000  // spin-wait iterations per byte (matches source)
@@ -71,6 +78,9 @@
 static bool s_cep_active = false;   // handshake completed, SPI transport live
 static bool s_cep_attached = false; // CC controller reports a physical attach
 static uint32_t s_last_spi_activity_tick = 0; // last time a real SPI poll was seen
+
+static bool s_usb_host_mode = false; // OTGFS1 host CDC owns PA9/PA11/PA12
+static bool s_usart1_active = false; // USART1 half-duplex owns PA9
 
 bool cep_is_active(void) {
     return s_cep_active;
@@ -197,6 +207,7 @@ void cep_spi_resync(void) {
 
 void cep_init(void) {
     cep_usart_init();
+    s_usart1_active = true;
     cep_spi_init();
     // I2C_init() must be preceded by StartTicks(), like everywhere else.
     StartTicks();
@@ -277,6 +288,81 @@ static bool cep_do_handshake(void) {
 // Attach polling (non-blocking, rate-limited)
 // ---------------------------------------------------------------------------
 
+// Release USART1 and hand PA9/PA11/PA12 to OTGFS1 (GPIO_MUX_10), then bring
+// up the USB host CDC stack. PA11/PA12 are OTGFS1 DM/DP; PA9 is the USART1
+// half-duplex line being repurposed. pm5_usb_host_cdc_init() re-configures
+// PA11/PA12 itself, so the explicit mux here is just the PA9 handoff.
+static void cep_usb_host_enter(void) {
+    usart_enable(USART1, FALSE);
+
+    gpio_init_type gpio_init_struct;
+    gpio_default_para_init(&gpio_init_struct);
+    gpio_init_struct.gpio_drive_strength = GPIO_DRIVE_STRENGTH_STRONGER;
+    gpio_init_struct.gpio_mode = GPIO_MODE_MUX;
+    gpio_init_struct.gpio_pull = GPIO_PULL_NONE;
+    gpio_init_struct.gpio_pins = GPIO_PINS_9 | GPIO_PINS_11 | GPIO_PINS_12;
+    gpio_init(GPIOA, &gpio_init_struct);
+    gpio_pin_mux_config(GPIOA, GPIO_PINS_SOURCE9, GPIO_MUX_10);
+    gpio_pin_mux_config(GPIOA, GPIO_PINS_SOURCE11, GPIO_MUX_10);
+    gpio_pin_mux_config(GPIOA, GPIO_PINS_SOURCE12, GPIO_MUX_10);
+
+    pm5_usb_host_cdc_init();
+}
+
+// Re-establish USART1 half-duplex on PA9 (2400 8N1). The USART1 peripheral
+// itself keeps its config across a host-mode stint - only the line and the
+// enable bit need restoring.
+static void cep_usart1_restore(void) {
+    gpio_init_type gpio_init_struct;
+    gpio_default_para_init(&gpio_init_struct);
+    gpio_init_struct.gpio_drive_strength = GPIO_DRIVE_STRENGTH_STRONGER;
+    gpio_init_struct.gpio_out_type = GPIO_OUTPUT_OPEN_DRAIN;
+    gpio_init_struct.gpio_mode = GPIO_MODE_MUX;
+    gpio_init_struct.gpio_pins = GPIO_PINS_9;
+    gpio_init_struct.gpio_pull = GPIO_PULL_UP;
+    gpio_init(GPIOA, &gpio_init_struct);
+    gpio_pin_mux_config(GPIOA, GPIO_PINS_SOURCE9, GPIO_MUX_7);
+    usart_enable(USART1, TRUE);
+}
+
+// Float the shared USB/USART lines to high-impedance inputs.
+static void cep_lines_float(void) {
+    gpio_init_type gpio_init_struct;
+    gpio_default_para_init(&gpio_init_struct);
+    gpio_init_struct.gpio_mode = GPIO_MODE_INPUT;
+    gpio_init_struct.gpio_pull = GPIO_PULL_NONE;
+    gpio_init_struct.gpio_pins = GPIO_PINS_9 | GPIO_PINS_11 | GPIO_PINS_12;
+    gpio_init(GPIOA, &gpio_init_struct);
+}
+
+// Flipper Zero path: USART1 handshake + SPI NG transport (unchanged logic).
+static void cep_fap_poll(void) {
+    // The FAP re-runs its handshake on every app launch, not just on a
+    // fresh physical attach - the CC controller's attach bits don't
+    // reliably blip on every relaunch (confirmed on hardware: sometimes
+    // they do, sometimes they don't), so gating the handshake listener on
+    // that edge alone missed real handshake attempts and required a
+    // physical unplug/replug to recover (GH #3667). Instead, watch for a
+    // fresh incoming byte any time we're attached, regardless of edge.
+    // cep_do_handshake() itself is timeout-bounded so a spurious byte
+    // can't hang the main loop.
+    if (usart_flag_get(USART1, USART_RDBF_FLAG) != RESET) {
+        s_cep_active = cep_do_handshake();
+        if (s_cep_active) {
+            s_last_spi_activity_tick = GetTickCount();
+        }
+    }
+
+    // The FAP quitting doesn't touch the CC controller's attach bit - the
+    // cable stays connected, so `attached` alone can't tell us it's gone.
+    // Losing its SPI poll cadence (normally every 20-120ms) is what
+    // actually means it has - fall back to the slower/idle main loop
+    // once that cadence has been missing this long.
+    if (s_cep_active && (GetTickCountDelta(s_last_spi_activity_tick) > CEP_ACTIVITY_TIMEOUT_MS)) {
+        s_cep_active = false;
+    }
+}
+
 void cep_attach_poll(void) {
     static uint32_t last_tick = 0;
 
@@ -297,36 +383,41 @@ void cep_attach_poll(void) {
         return;
     }
 
-    bool attached = ((cc_ctrl_data >> 6 & 0x03) != 0);
-    s_cep_attached = attached;
+    uint8_t attach = (cc_ctrl_data >> 6) & 0x03;
+    s_cep_attached = (attach != CEP_ATTACH_UNATTACHED);
 
-    if (!attached) {
+    if (attach == CEP_ATTACH_SRC) {
+        // PM5 sources VBUS: drive an ICS/ICSD CDC device as USB host.
+        if (!s_usb_host_mode) {
+            cep_usb_host_enter();
+            s_usb_host_mode = true;
+            s_usart1_active = false;
+        }
         s_cep_active = false;
+        pm5_usb_host_cdc_poll();
+    } else if (attach == CEP_ATTACH_SNK || attach == CEP_ATTACH_PEER) {
+        // Partner sources VBUS: Flipper Zero - USART1 handshake + SPI.
+        if (s_usb_host_mode) {
+            pm5_usb_host_cdc_deinit();
+            s_usb_host_mode = false;
+        }
+        if (!s_usart1_active) {
+            cep_usart1_restore();
+            s_usart1_active = true;
+        }
+        cep_fap_poll();
     } else {
-        // The FAP re-runs its handshake on every app launch, not just on a
-        // fresh physical attach - the CC controller's attach bits don't
-        // reliably blip on every relaunch (confirmed on hardware: sometimes
-        // they do, sometimes they don't), so gating the handshake listener on
-        // that edge alone missed real handshake attempts and required a
-        // physical unplug/replug to recover (GH #3667). Instead, watch for a
-        // fresh incoming byte any time we're attached, regardless of edge.
-        // cep_do_handshake() itself is timeout-bounded so a spurious byte
-        // can't hang the main loop.
-        if (usart_flag_get(USART1, USART_RDBF_FLAG) != RESET) {
-            s_cep_active = cep_do_handshake();
-            if (s_cep_active) {
-                s_last_spi_activity_tick = GetTickCount();
-            }
+        // Unattached: release the shared lines and reset state.
+        if (s_usb_host_mode) {
+            pm5_usb_host_cdc_deinit();
+            s_usb_host_mode = false;
         }
-
-        // The FAP quitting doesn't touch the CC controller's attach bit - the
-        // cable stays connected, so `attached` alone can't tell us it's gone.
-        // Losing its SPI poll cadence (normally every 20-120ms) is what
-        // actually means it has - fall back to the slower/idle main loop
-        // once that cadence has been missing this long.
-        if (s_cep_active && (GetTickCountDelta(s_last_spi_activity_tick) > CEP_ACTIVITY_TIMEOUT_MS)) {
-            s_cep_active = false;
+        if (s_usart1_active) {
+            usart_enable(USART1, FALSE);
+            s_usart1_active = false;
         }
+        s_cep_active = false;
+        cep_lines_float();
     }
 
     uint8_t int_state = cc_ctrl_data >> 4 & 0x01;

@@ -78,6 +78,12 @@ extern "C" {
   * @brief usb host mode select otgfs1 (CEP port, PM5 only)
   */
 #ifdef USE_OTG_HOST_MODE
+
+/* Artery host driver references this debug hook; keep it a no-op to satisfy -Werror. */
+#ifndef USBH_DEBUG
+#define USBH_DEBUG(...) do {} while (0)
+#endif
+
 #define USB_HOST_ID                        0
 #define USB_HOST_CLOCK                     CRM_OTGFS1_PERIPH_CLOCK
 #define USB_HOST_IRQ                       OTGFS1_IRQn
