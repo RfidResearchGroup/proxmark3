@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf topaz view` - the `.bin` of a dynamic memory tag was read as the one of a static memory tag: its blocks came out shifted by 12 bytes, without the dynamic memory (@matrix)
+- Fixed `hf topaz view` - the lock bits, the capability container and the NDEF it printed were those of the last tag read, and the dynamic memory was read from the tag on the antenna (@matrix)
+- Fixed `hf topaz view` - the NDEF was decoded over 476 bytes from block 1, past the static memory, instead of over the data area of the tag (@matrix)
 - Changed PM5 battery gauge - 0 % is now the 3300 mV low-battery shutdown point instead of 3200 mV, so the PM5 no longer powers off while a few percent are still shown (@iceman1001)
 - Fixed `hf search` - the OpenPGP AID probe sent 8 bytes for a 6-byte AID, reading past the string, so no OpenPGP card was found (@matrix)
 - Fixed `hf 15 raw -r` - the device reply was left unread, so every later command printed the answer of the one before (@matrix)
