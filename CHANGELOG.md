@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 14b dump` - an SR dump whose system block could not be read was saved with zeros in its place instead of failing (@matrix)
+- Fixed `hf 14b dump` - a saved SR dump returned an error (@matrix)
 - Changed PM5 battery gauge - 0 % is now the 3300 mV low-battery shutdown point instead of 3200 mV, so the PM5 no longer powers off while a few percent are still shown (@iceman1001)
 - Fixed `hf search` - the OpenPGP AID probe sent 8 bytes for a 6-byte AID, reading past the string, so no OpenPGP card was found (@matrix)
 - Fixed `hf 15 raw -r` - the device reply was left unread, so every later command printed the answer of the one before (@matrix)
