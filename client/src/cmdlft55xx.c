@@ -221,26 +221,13 @@ void Set_t55xx_Config(t55xx_conf_block_t conf) {
 static int CmdHelp(const char *Cmd);
 
 static void arg_add_t55xx_downloadlink(void *at[], uint8_t *idx, uint8_t show, uint8_t dl_mode_def) {
-    const size_t r_count = 56;
-    const size_t r_len = r_count * sizeof(uint8_t);
+    // argtable keeps these help texts and never frees them
+    static char r0[56], r1[56], r2[56], r3[56], r4[56];
 
-    char *r0 = (char *)calloc(r_count, sizeof(uint8_t));
-    char *r1 = (char *)calloc(r_count, sizeof(uint8_t));
-    char *r2 = (char *)calloc(r_count, sizeof(uint8_t));
-    char *r3 = (char *)calloc(r_count, sizeof(uint8_t));
-
-    if (r0 == NULL || r1 == NULL || r2 == NULL || r3 == NULL) {
-        PrintAndLogEx(WARNING, "Failed to allocate memory");
-        free(r0);
-        free(r1);
-        free(r2);
-        free(r3);
-        return;
-    }
-    snprintf(r0, r_len, "downlink - fixed bit length %s", (dl_mode_def == 0) ? "(detected def)" : "");
-    snprintf(r1, r_len, "downlink - long leading reference %s", (dl_mode_def == 1) ? "(detected def)" : "");
-    snprintf(r2, r_len, "downlink - leading zero %s", (dl_mode_def == 2) ? "(detected def)" : "");
-    snprintf(r3, r_len, "downlink - 1 of 4 coding reference %s", (dl_mode_def == 3) ? "(detected def)" : "");
+    snprintf(r0, sizeof(r0), "downlink - fixed bit length %s", (dl_mode_def == 0) ? "(detected def)" : "");
+    snprintf(r1, sizeof(r1), "downlink - long leading reference %s", (dl_mode_def == 1) ? "(detected def)" : "");
+    snprintf(r2, sizeof(r2), "downlink - leading zero %s", (dl_mode_def == 2) ? "(detected def)" : "");
+    snprintf(r3, sizeof(r3), "downlink - 1 of 4 coding reference %s", (dl_mode_def == 3) ? "(detected def)" : "");
 
     uint8_t n = *idx;
     at[n++] = arg_lit0(NULL, "r0", r0);
@@ -249,16 +236,7 @@ static void arg_add_t55xx_downloadlink(void *at[], uint8_t *idx, uint8_t show, u
     at[n++] = arg_lit0(NULL, "r3", r3);
 
     if (show == T55XX_DLMODE_ALL) {
-        char *r4 = (char *)calloc(r_count, sizeof(uint8_t));
-        if (r4 == NULL) {
-            PrintAndLogEx(WARNING, "Failed to allocate memory");
-            free(r0);
-            free(r1);
-            free(r2);
-            free(r3);
-            return;
-        }
-        snprintf(r4, r_len, "try all downlink modes %s", (dl_mode_def == 4) ? "(def)" : "");
+        snprintf(r4, sizeof(r4), "try all downlink modes %s", (dl_mode_def == 4) ? "(def)" : "");
         at[n++] = arg_lit0(NULL, "all", r4);
     }
     at[n++] = arg_param_end;
@@ -4008,6 +3986,11 @@ static int CmdT55xxDump(const char *Cmd) {
         }
     }
 
+    if (success == false) {
+        PrintAndLogEx(FAILED, "Page 0 not read in full");
+        return PM3_ESOFT;
+    }
+
     if (nosave) {
         PrintAndLogEx(INFO, "Called with no save option");
         PrintAndLogEx(NORMAL, "");
@@ -4015,31 +3998,27 @@ static int CmdT55xxDump(const char *Cmd) {
     }
 
     // all ok, save dump to file
-    if (success) {
-
-        // set default filename, if not set by user
-        if (strlen(filename) == 0) {
-            strcpy(filename, "lf-t55xx");
-            for (uint8_t i = 1; i <= 7; i++) {
-                if ((cardmem[i].blockdata != 0x00) && (cardmem[i].blockdata != 0xFFFFFFFF)) {
-                    snprintf(filename + strlen(filename), sizeof(filename) - strlen(filename), "-%08X", cardmem[i].blockdata);
-                } else {
-                    break;
-                }
+    // set default filename, if not set by user
+    if (strlen(filename) == 0) {
+        strcpy(filename, "lf-t55xx");
+        for (uint8_t i = 1; i <= 7; i++) {
+            if ((cardmem[i].blockdata != 0x00) && (cardmem[i].blockdata != 0xFFFFFFFF)) {
+                snprintf(filename + strlen(filename), sizeof(filename) - strlen(filename), "-%08X", cardmem[i].blockdata);
+            } else {
+                break;
             }
-            strcat(filename, "-dump");
         }
-
-        // Swap endian so the files match the txt display
-        uint32_t data[T55x7_BLOCK_COUNT] = {0};
-
-        for (int i = 0; i < T55x7_BLOCK_COUNT; i++) {
-            data[i] = BSWAP_32(cardmem[i].blockdata);
-        }
-
-        pm3_save_dump(filename, (uint8_t *)data, (T55x7_BLOCK_COUNT * sizeof(uint32_t)), jsfT55x7);
+        strcat(filename, "-dump");
     }
 
+    // Swap endian so the files match the txt display
+    uint32_t data[T55x7_BLOCK_COUNT] = {0};
+
+    for (int i = 0; i < T55x7_BLOCK_COUNT; i++) {
+        data[i] = BSWAP_32(cardmem[i].blockdata);
+    }
+
+    pm3_save_dump(filename, (uint8_t *)data, (T55x7_BLOCK_COUNT * sizeof(uint32_t)), jsfT55x7);
     return PM3_SUCCESS;
 }
 
