@@ -6,6 +6,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed `hf 15 wipe` - a failed write ends it with an error instead of `Done!`, only the end of the memory ends it quietly (@matrix)
 - Fixed `hf 15 restore` and `hf 15 wipe --bs` - a block of more than 8 bytes overflowed the write request, and `wipe --bs` is capped at 32 (@matrix)
 - Fixed `hf 15 wrbl`, `hf 15 restore` and `hf 15 wipe` with `--ua` - the check for a TI tag read the UID before it was set, and `restore --ua` sent addressed requests (@matrix)
+- Changed PM5 battery gauge - 0 % is now the 3300 mV low-battery shutdown point instead of 3200 mV, so the PM5 no longer powers off while a few percent are still shown (@iceman1001)
 - Fixed `hf search` - the OpenPGP AID probe sent 8 bytes for a 6-byte AID, reading past the string, so no OpenPGP card was found (@matrix)
 - Fixed `hf 15 raw -r` - the device reply was left unread, so every later command printed the answer of the one before (@matrix)
 - Fixed `hf 15 raw` - data too long for one packet is refused at once instead of timing out after 2 s (@matrix)
