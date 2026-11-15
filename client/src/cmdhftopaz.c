@@ -998,7 +998,8 @@ static int CmdHFTopazRdBl(const char *Cmd) {
     int blockno = arg_get_int_def(ctx, 1, -1);
     CLIParserFree(ctx);
 
-    if (blockno < 0) {
+    // ADD8 is one byte
+    if ((blockno < 0) || (blockno > 0xFF)) {
         PrintAndLogEx(WARNING, "Wrong block number");
         return PM3_EINVARG;
     }
@@ -1043,7 +1044,8 @@ static int CmdHFTopazWrBl(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    if (blockno < 0) {
+    // ADD8 is one byte
+    if ((blockno < 0) || (blockno > 0xFF)) {
         PrintAndLogEx(WARNING, "Wrong block number");
         return PM3_EINVARG;
     }
