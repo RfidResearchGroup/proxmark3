@@ -400,7 +400,7 @@ static int topaz_print_CC(uint8_t *data) {
 // (data[3] & 0xF0) ? "(RFU)" : "Read access granted without any security",
 // (data[3] & 0x0F) == 0 ? "Write access granted without any security" : (data[3] & 0x0F) == 0x0F ? "No write access granted at all" : "(RFU)");
     uint8_t cc_major = (data[1] & 0xF0) >> 4;
-    uint8_t cc_minor = (data[1] & 0x00);
+    uint8_t cc_minor = (data[1] & 0x0F);
 
     uint8_t cc_write = data[3] & 0x0F;
     uint8_t cc_read  = (data[3] & 0xF0) >> 4;
@@ -432,7 +432,6 @@ static int topaz_print_CC(uint8_t *data) {
 
 //    PrintAndLogEx(SUCCESS, "  %02X : version %d.%d supported by tag", data[1], (data[1] & 0xF0) >> 4, data[1] & 0x0F);
     PrintAndLogEx(SUCCESS, "  %02X: version %d.%d supported by tag", data[1], cc_major, cc_minor);
-    PrintAndLogEx(SUCCESS, "       : %s / %s", rStr, wStr);
 
     PrintAndLogEx(SUCCESS, "  %02X: Physical Memory Size: %d bytes", data[2], (data[2] + 1) * 8);
     if (data[2] == 0x0E)
@@ -442,20 +441,7 @@ static int topaz_print_CC(uint8_t *data) {
     else if (data[2] == 0xFF)
         PrintAndLogEx(SUCCESS, "  %02X: NDEF Memory Size: %d bytes", data[2], 2048);
 
-    uint8_t msb3   = (data[3] & 0xE0) >> 5;
-    uint8_t sf     = (data[3] & 0x10) >> 4;
-    uint8_t lb     = (data[3] & 0x08) >> 3;
-    uint8_t mlrule = (data[3] & 0x06) >> 1;
-    uint8_t mbread = (data[3] & 0x01);
-
-    PrintAndLogEx(SUCCESS, "  %02X: Additional feature information", data[3]);
-    PrintAndLogEx(SUCCESS, "  ^^");
-    PrintAndLogEx(SUCCESS, "  %s", sprint_bin(&data[3], 1));
-    PrintAndLogEx(SUCCESS, "  xxx..... - %02X: RFU ( %s )", msb3, (msb3 == 0) ? _GREEN_("ok") : _RED_("fail"));
-    PrintAndLogEx(SUCCESS, "  ...x.... - %02X: %s special frame", sf, (sf) ? "support" : "don\'t support");
-    PrintAndLogEx(SUCCESS, "  ....x... - %02X: %s lock block", lb, (lb) ? "support" : "don\'t support");
-    PrintAndLogEx(SUCCESS, "  .....xx. - %02X: RFU ( %s )", mlrule, (mlrule == 0) ? _GREEN_("ok") : _RED_("fail"));
-    PrintAndLogEx(SUCCESS, "  .......x - %02X: IC %s multiple block reads", mbread, (mbread) ? "support" : "don\'t support");
+    PrintAndLogEx(SUCCESS, "  %02X: %s / %s", data[3], rStr, wStr);
     PrintAndLogEx(SUCCESS, "");
 
     return PM3_SUCCESS;
@@ -749,6 +735,7 @@ int CmdHFTopazInfo(const char *Cmd) {
 
     int status = readTopazUid(false, verbose);
     if (status != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "no tag found");
         return status;
     }
 
@@ -817,7 +804,7 @@ static int CmdHFTopazRaw(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
-    PrintAndLogEx(INFO, "not yet implemented. Use `hf 14 raw --topaz` meanwhile");
+    PrintAndLogEx(INFO, "not yet implemented. Use `hf 14a raw --topaz` meanwhile");
     return PM3_SUCCESS;
 }
 
@@ -877,6 +864,7 @@ static int CmdHFTopazDump(const char *Cmd) {
 
     int status = readTopazUid(false, false);
     if (status != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "no tag found");
         return status;
     }
     printTopazDumpContents(&topaz_tag);
