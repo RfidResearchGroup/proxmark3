@@ -5,6 +5,12 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 - Fixed `hf 15 rdbl` - the tag errors 0x0F and 0x10, as past the end of the memory, are shown instead of nothing (@matrix)
 - Fixed `hf 15 rdbl` - blocks of more than 8 bytes are printed in full instead of their first 8 bytes (@matrix)
+- Fixed `hf iclass dump` - the emulator memory is kept, a dump no longer wipes what `hf iclass eload` loaded (@matrix)
+- Fixed `hf 14a raw --topaz` - the answer's CRC was checked as a CRC_A instead of the CRC_B Topaz uses, so a valid answer showed its CRC in red (@matrix)
+- Fixed `hf 15 writeafi` and `hf 15 writedsfid` - a UID given with `-u` was sent in the wrong byte order, so no tag answered (@matrix)
+- Fixed `hf 15 writeafi` - the help example used a `-*` option the command does not have (@matrix)
+- Fixed `hf 15 writedsfid` - without `-u`, or with a `-u` that is not 8 bytes, it sent an addressed request without a UID, now it scans for the tag and refuses such a `-u` (@matrix)
+- Fixed `hf 15 writeafi` and `hf 15 writedsfid` - an AFI or DSFID outside 0-255 is refused instead of writing its low byte (`--afi 300` wrote 0x2C) (@matrix)
 - Fixed `hf 15 wipe` - a failed write ends it with an error instead of `Done!`, only the end of the memory ends it quietly (@matrix)
 - Fixed `hf 15 restore` and `hf 15 wipe --bs` - a block of more than 8 bytes overflowed the write request, and `wipe --bs` is capped at 32 (@matrix)
 - Fixed `hf 15 wrbl`, `hf 15 restore` and `hf 15 wipe` with `--ua` - the check for a TI tag read the UID before it was set, and `restore --ua` sent addressed requests (@matrix)
