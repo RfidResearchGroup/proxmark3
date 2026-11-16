@@ -116,7 +116,7 @@ static int topaz_rall(const uint8_t *uid, uint8_t *response) {
     uint8_t rall_cmd[] = {TOPAZ_RALL, 0, 0, 0, 0, 0, 0, 0, 0};
     memcpy(&rall_cmd[3], uid, 4);
 
-    if (topaz_send_cmd(rall_cmd, sizeof(rall_cmd), response, &resp_len, true) == PM3_ETIMEOUT) {
+    if (topaz_send_cmd(rall_cmd, sizeof(rall_cmd), response, &resp_len, true) != PM3_SUCCESS) {
         topaz_switch_off_field();
         return PM3_ESOFT; // RALL failed
     }
@@ -151,7 +151,7 @@ static int topaz_read_block(uint8_t blockno, uint8_t *block_data) {
     uint16_t resp_len = 11;
     uint8_t response[11] = {0};
 
-    if (topaz_send_cmd(read8_cmd, sizeof(read8_cmd), response, &resp_len, true) == PM3_ETIMEOUT) {
+    if (topaz_send_cmd(read8_cmd, sizeof(read8_cmd), response, &resp_len, true) != PM3_SUCCESS) {
         topaz_switch_off_field();
         return PM3_ESOFT; // READ8 failed
     }
@@ -188,7 +188,7 @@ static int topaz_read_segment(uint8_t segno, uint8_t *segment_data) {
     rseg_cmd[1] = segno << 4;
     memcpy(&rseg_cmd[10], uid_echo, 4);
 
-    if (topaz_send_cmd(rseg_cmd, sizeof(rseg_cmd), rseg_response, &resp_len, true) == PM3_ETIMEOUT) {
+    if (topaz_send_cmd(rseg_cmd, sizeof(rseg_cmd), rseg_response, &resp_len, true) != PM3_SUCCESS) {
         topaz_switch_off_field();
         return PM3_ESOFT; // RSEG failed
     }
@@ -605,7 +605,7 @@ static void topaz_print_control_TLVs(uint8_t *memory) {
 // read all of the dynamic memory
 static int topaz_read_dynamic_data(void) {
     // first read the remaining block of segment 0
-    if (topaz_read_block(0x0F, &topaz_tag.dynamic_memory[0]) == PM3_ESOFT) {
+    if (topaz_read_block(0x0F, &topaz_tag.dynamic_memory[0]) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error while reading dynamic memory block " _YELLOW_("%02x") ". Aborting...", 0x0F);
         return PM3_ESOFT;
     }
@@ -613,7 +613,7 @@ static int topaz_read_dynamic_data(void) {
     // read the remaining segments
     uint8_t max = topaz_tag.size / 128 - 1;
     for (uint8_t segment = 1; segment <= max; segment++) {
-        if (topaz_read_segment(segment, &topaz_tag.dynamic_memory[(segment - 1) * 128 + 8]) == PM3_ESOFT) {
+        if (topaz_read_segment(segment, &topaz_tag.dynamic_memory[(segment - 1) * 128 + 8]) != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Error while reading dynamic memory block " _YELLOW_("%02x") ". Aborting...", segment);
             return PM3_ESOFT;
         }
