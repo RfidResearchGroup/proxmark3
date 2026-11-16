@@ -484,9 +484,9 @@ static int CmdBwmVchg(const char *Cmd) {
 static int CmdBwmSetCap(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw bwm setcap",
-                  "Program the BWM fuel gauge (BQ27427) Design Capacity for the fitted cell and\n"
-                  "select its 4.2 V chemistry profile (the firmware also does this at boot after\n"
-                  "a gauge reset).\n"
+                  "Program the BWM fuel gauge (BQ27427) Design Capacity for the fitted cell,\n"
+                  "select its 4.2 V chemistry profile and set 0 % to the 3300 mV shutdown floor\n"
+                  "(the firmware also does this at boot after a gauge reset).\n"
                   "Run ONCE after fitting or replacing the battery. This triggers a gauge\n"
                   "config-update; do not run it repeatedly, as that disrupts the Impedance\n"
                   "Track learning cycle. PM5 only.",
