@@ -139,7 +139,8 @@ void I2C_recovery(void) {
 }
 
 void I2C_init(bool has_ticks) {
-    gpio_sw_i2c_rst_setup();
+    gpio_i2c_hw_rst_setup();
+    gpio_i2c_sw_bus_setup();
 
     if (has_ticks) {
         WaitMS(2);

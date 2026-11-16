@@ -23,20 +23,30 @@ void gpio_inter_usb_spi_role_setup(void) {
     // Unsupported
 }
 
-void gpio_sw_i2c_rst_setup(void) {
-    // Configure reset pin, close up pull, push-pull output, default high
-    AT91C_BASE_PIOA->PIO_PPUDR = GPIO_I2C_RST;
-    AT91C_BASE_PIOA->PIO_MDDR = GPIO_I2C_RST;
-
+void gpio_i2c_sw_bus_setup(void) {
     // Configure I2C pin, open up, open leakage
     AT91C_BASE_PIOA->PIO_PPUER |= (GPIO_I2C_SCL | GPIO_I2C_SDA);
     AT91C_BASE_PIOA->PIO_MDER |= (GPIO_I2C_SCL | GPIO_I2C_SDA);
 
-    // default three lines all pull up
-    AT91C_BASE_PIOA->PIO_SODR |= (GPIO_I2C_SCL | GPIO_I2C_SDA | GPIO_I2C_RST);
+    // default 2 lines all pull up
+    AT91C_BASE_PIOA->PIO_SODR |= (GPIO_I2C_SCL | GPIO_I2C_SDA);
 
-    AT91C_BASE_PIOA->PIO_OER |= (GPIO_I2C_SCL | GPIO_I2C_SDA | GPIO_I2C_RST);
-    AT91C_BASE_PIOA->PIO_PER |= (GPIO_I2C_SCL | GPIO_I2C_SDA | GPIO_I2C_RST);
+    // Output & IO function enable
+    AT91C_BASE_PIOA->PIO_OER |= (GPIO_I2C_SCL | GPIO_I2C_SDA);
+    AT91C_BASE_PIOA->PIO_PER |= (GPIO_I2C_SCL | GPIO_I2C_SDA);
+}
+
+void gpio_i2c_hw_rst_setup(void) {
+    // Configure reset pin, close up pull, push-pull output, default high
+    AT91C_BASE_PIOA->PIO_PPUDR = GPIO_I2C_RST;
+    AT91C_BASE_PIOA->PIO_MDDR = GPIO_I2C_RST;
+
+    // default reset pin pull up
+    AT91C_BASE_PIOA->PIO_SODR |= GPIO_I2C_RST;
+
+    // Output & IO function enable
+    AT91C_BASE_PIOA->PIO_OER |= GPIO_I2C_RST;
+    AT91C_BASE_PIOA->PIO_PER |= GPIO_I2C_RST;
 }
 
 void gpio_fpga_switch_setup(void) {
