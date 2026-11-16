@@ -1937,7 +1937,7 @@ int CmdLFRelay(const char *Cmd) {
 
     if (is_rdr && (iplen == 0)) {
         PrintAndLogEx(ERR, "IP address is empty");
-        PrintAndLogEx(HINT, "try `" _YELLOW_("lf relay --rdr --ip <ip>") "`");
+        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("lf relay --rdr --ip <ip>") "`");
         return PM3_EINVARG;
     }
 

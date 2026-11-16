@@ -2270,6 +2270,14 @@ void pm3_version_short(void) {
                     PrintAndLogEx(NORMAL, "    OS........ %.*s", len, ptr + 12);
                 }
             }
+
+            // fpga, PM5 only
+            ptr = strstr(payload->versionstr, "Usercode... ");
+            if (ptr != NULL) {
+                char *ptr_end = strstr(ptr, "\n");
+                int len = (ptr_end != NULL) ? (int)(ptr_end - ptr) - 12 : (int)strlen(ptr + 12);
+                PrintAndLogEx(NORMAL, "    FPGA...... usercode %.*s", len, ptr + 12);
+            }
             PrintAndLogEx(NORMAL, "");
 
             if (armsrc_mismatch) {

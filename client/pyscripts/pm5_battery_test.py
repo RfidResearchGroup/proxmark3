@@ -70,9 +70,9 @@ def parse_args():
     return args
 
 
-# `hw status` prints one "Label..... <num> <unit>" line per field. Pull the
-# first number out, tolerating a missing/garbled line (comms hiccup) by
-# returning None instead of crashing the run.
+# Pull the first "<num> <unit>" out of the `hw status` line with that label,
+# tolerating a missing/garbled line (comms hiccup) by returning None instead
+# of crashing the run.
 def grab(output, label, unit):
     for line in output.split("\n"):
         if label in line:
@@ -114,11 +114,19 @@ def main():
                 p.console("hw status --ms 0")
                 out = p.grabbed_output
 
-                voltage, _ = grab(out, "Battery voltage", "mV")
-                current, cline = grab(out, "Battery current", "mA")
-                soc, _ = grab(out, "Battery SoC", "%")
-                temp, _ = grab(out, "Temp (gauge)", "C")
-                capacity, _ = grab(out, "Remaining capacity", "mAh")
+                volts, cline = grab(out, "Charge....", "V")
+                voltage = volts * 1000 if volts is not None else None
+                # mA only while charging / discharging, the draw is printed unsigned
+                current, _ = grab(out, "Charge....", "mA")
+                if cline is not None:
+                    if current is None:
+                        current = 0.0
+                    elif "discharging" in cline:
+                        current = -current
+                soc, _ = grab(out, "Charge....", "%")
+                temp, _ = grab(out, "Charge....", "C")
+                # "remaining / full mAh"
+                capacity, _ = grab(out, "Capacity....", "/")
 
                 elapsed = time.monotonic() - t0
                 ts = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -145,9 +153,9 @@ def main():
                     print(f"Voltage {voltage:g} mV below cutoff "
                           f"{args.cutoff:g} mV, stopping.")
                     break
-                # gauge marks the current line "idle" when neither charging nor
-                # discharging - nothing more to log
-                if cline is not None and "idle" in cline:
+                # gauge marks the charge line "idle" / "charge done" when neither
+                # charging nor discharging - nothing more to log
+                if cline is not None and ("idle" in cline or "charge done" in cline):
                     print("Gauge current idle, stopping.")
                     break
                 n += 1

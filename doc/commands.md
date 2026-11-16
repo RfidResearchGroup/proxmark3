@@ -1049,12 +1049,12 @@ Check column "offline" for their availability.
 |`hw fpga                `|N       |`Fpga commands`
 |`hw fpgaoff             `|N       |`Turn off FPGA on device`
 |`hw ant_pm5             `|N       |`Control the antennal of pm5`
-|`hw qc_pm5              `|N       |`Perform QC test (hardware or IO) for the PM5`
+|`hw qc_pm5              `|Y       |`Perform QC test (hardware or IO) for the PM5`
 |`hw factorydata         `|N       |`Get/Set the factory data for Device`
 |`hw lcd                 `|N       |`Send command/data to LCD`
 |`hw lcdreset            `|N       |`Hardware reset LCD`
 |`hw ping                `|N       |`Test if the Proxmark3 is responsive`
-|`hw powersave           `|N       |`Enable/disable the PM5 power-save idle`
+|`hw powersave           `|Y       |`Enable/disable the PM5 power-save idle`
 |`hw readmem             `|N       |`Read from MCU flash`
 |`hw reset               `|N       |`Reset the device`
 |`hw setlfdivisor        `|N       |`Drive LF antenna at 12MHz / (divisor + 1)`
@@ -1131,7 +1131,6 @@ Check column "offline" for their availability.
 |`lf awid demod          `|Y       |`demodulate an AWID FSK tag from the GraphBuffer`
 |`lf awid reader         `|N       |`attempt to read and extract tag data`
 |`lf awid sim            `|N       |`simulate AWID tag`
-|`lf awid brute          `|N       |`bruteforce card number against reader`
 |`lf awid watch          `|N       |`continuously watch for cards.  Reader mode`
 
 
@@ -1361,6 +1360,19 @@ Check column "offline" for their availability.
 |`lf hitag htu dump      `|N       |`Dump Hitag µ blocks to a file`
 |`lf hitag htu wrbl      `|N       |`Write Hitag µ block`
 |`lf hitag htu sim       `|N       |`Simulate Hitag µ transponder`
+
+
+### lf ict
+
+ { ICT RFIDs...               }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf ict help            `|Y       |`This help`
+|`lf ict demod           `|Y       |`demodulate an LF ICT FSK tag from the GraphBuffer`
+|`lf ict reader          `|N       |`attempt to read and extract tag data`
+|`lf ict clone           `|N       |`clone LF ICT tag to T55x7, Q5/T5555 or EM4305/4469`
+|`lf ict sim             `|N       |`simulate LF ICT tag`
 
 
 ### lf idteck
@@ -1639,6 +1651,19 @@ Check column "offline" for their availability.
 |`lf visa2000 reader     `|N       |`attempt to read and extract tag data`
 |`lf visa2000 clone      `|N       |`clone Visa2000 tag to T55x7, Q5/T5555 or EM4305/4469`
 |`lf visa2000 sim        `|N       |`simulate Visa2000 tag`
+
+
+### lf watchnet
+
+ { WatchNET RFIDs...          }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf watchnet help       `|Y       |`This help`
+|`lf watchnet demod      `|Y       |`demodulate a WatchNET FSK tag from the GraphBuffer`
+|`lf watchnet reader     `|N       |`attempt to read and extract tag data`
+|`lf watchnet clone      `|N       |`clone WatchNET tag to T55x7, Q5/T5555 or EM4305/4469`
+|`lf watchnet sim        `|N       |`simulate WatchNET tag`
 
 
 ### mad

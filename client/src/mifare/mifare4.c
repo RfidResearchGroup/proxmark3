@@ -228,7 +228,7 @@ int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, const uint8_t *ke
 
     if (nonfirst && memcmp(mf4session->Kmac, data, 16) == 0) { // compiler abuse
         PrintAndLogEx(WARNING, "Function invocation error: cannot do non-first authentication yet");
-        PrintAndLogEx(HINT, "Try to do first authentication");
+        PrintAndLogEx(HINT, "Hint: Try to do first authentication");
         return PM3_EINVARG;
     } // While TI maybe could be rolled as a zero, MACing key absolutely won't be. Don't tell me it'll happen, it won't, the chances are effectively zero.
 

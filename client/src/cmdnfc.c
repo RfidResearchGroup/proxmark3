@@ -215,23 +215,21 @@ static int CmdNfcEncode(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    // CLIParamStrToBuf copies the trailing NUL as well but only rejects lengths
-    // strictly above maxdatalen, so leave room for that byte
     int urilen = 0;
     char uri[1024] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)uri, sizeof(uri) - 1, &urilen);
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)uri, sizeof(uri), &urilen);
 
     int textlen = 0;
     char text[1024] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)text, sizeof(text) - 1, &textlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)text, sizeof(text), &textlen);
 
     int langlen = 0;
     char lang[32] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)lang, sizeof(lang) - 1, &langlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)lang, sizeof(lang), &langlen);
 
     int aarlen = 0;
     char aar[256] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)aar, sizeof(aar) - 1, &aarlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)aar, sizeof(aar), &aarlen);
 
     bool use_tlv = arg_get_lit(ctx, 5);
 

@@ -313,7 +313,6 @@ static int CLIParseCommandParametersEx(CLIParserContext *ctx, size_t keyid, size
 
         char cdata[250] = {0};
         int cdatalen = sizeof(cdata);
-        cdatalen--; // for trailer 0x00
         if (CLIParamStrToBuf(arg_get_str(ctx, sreqid), (uint8_t *)cdata, cdatalen, &cdatalen))
             return PM3_ESOFT;
 
@@ -333,7 +332,6 @@ static int CLIParseCommandParametersEx(CLIParserContext *ctx, size_t keyid, size
 
         cdatalen = sizeof(cdata);
         memset(cdata, 0, cdatalen);
-        cdatalen--; // for trailer 0x00
         if (CLIParamStrToBuf(arg_get_str(ctx, srespid), (uint8_t *)cdata, cdatalen, &cdatalen))
             return PM3_ESOFT;
 

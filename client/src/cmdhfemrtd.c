@@ -1438,7 +1438,7 @@ static void emrtd_check_cam(emrtd_session_t *ssn) {
 
         const char *mode = NULL;
         if (emrtd_pace_cam_verify(ssn, pk_icc, pk_icclen, &mode) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "Chip Authentication.. " _GREEN_("verified") " ( the chip is genuine, not a clone )");
+            PrintAndLogEx(SUCCESS, "Chip Authentication.. " _GREEN_("verified") " ( the chip is genuine )");
             PrintAndLogEx(INFO, "CAM encoding...... %s", mode);
             return;
         }
@@ -1450,9 +1450,6 @@ static void emrtd_check_cam(emrtd_session_t *ssn) {
     }
 
     PrintAndLogEx(WARNING, "Chip Authentication.. " _YELLOW_("not verified") " ( we cannot check this document's CAM proof )");
-    PrintAndLogEx(HINT, "Hint: the secure channel is valid and every file is authentic. Only the anti-clone");
-    PrintAndLogEx(HINT, "Hint: proof is unchecked, which is a known gap, not a sign of a bad document");
-    PrintAndLogEx(HINT, "Hint: if you want to help close it, please report everything below");
     emrtd_pace_cam_dump(ssn, pk_icc, pk_icclen);
 }
 
@@ -2914,7 +2911,7 @@ static int CmdHFeMRTDDump(const char *Cmd) {
     bool error = false;
     int slen = 0;
     // Go through all args, if even one isn't supplied, mark BAC as unavailable
-    if (CLIParamStrToBuf(arg_get_str(ctx, 1), docnum, 9, &slen) != 0 || slen == 0) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 1), docnum, sizeof(docnum), &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
         strn_upper((char *)docnum, slen);
@@ -2924,27 +2921,27 @@ static int CmdHFeMRTDDump(const char *Cmd) {
         }
     }
 
-    if (CLIParamStrToBuf(arg_get_str(ctx, 2), dob, 6, &slen) != 0 || slen == 0) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 2), dob, sizeof(dob), &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
         if (!validate_date(dob, slen)) {
             PrintAndLogEx(ERR, "Date of birth date format is incorrect, cannot continue.");
-            PrintAndLogEx(HINT, "Hint: Use the format YYMMDD.");
+            PrintAndLogEx(HINT, "Hint: Use the format " _YELLOW_("YYMMDD"));
             error = true;
         }
     }
 
-    if (CLIParamStrToBuf(arg_get_str(ctx, 3), expiry, 6, &slen) != 0 || slen == 0) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 3), expiry, sizeof(expiry), &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
         if (!validate_date(expiry, slen)) {
             PrintAndLogEx(ERR, "Expiry date format is incorrect, cannot continue.");
-            PrintAndLogEx(HINT, "Hint: Use the format YYMMDD.");
+            PrintAndLogEx(HINT, "Hint: Use the format " _YELLOW_("YYMMDD"));
             error = true;
         }
     }
 
-    if (CLIParamStrToBuf(arg_get_str(ctx, 4), mrz, 44, &slen) == 0 && slen != 0) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 4), mrz, sizeof(mrz), &slen) == 0 && slen != 0) {
         if (slen != 44) {
             PrintAndLogEx(ERR, "MRZ length is incorrect, it should be 44, not %i", slen);
             error = true;
@@ -2957,12 +2954,12 @@ static int CmdHFeMRTDDump(const char *Cmd) {
             // TODO check MRZ checksums?
             if (!validate_date(dob, 6)) {
                 PrintAndLogEx(ERR, "Date of birth date format is incorrect, cannot continue.");
-                PrintAndLogEx(HINT, "Hint: Use the format YYMMDD.");
+                PrintAndLogEx(HINT, "Hint: Use the format " _YELLOW_("YYMMDD"));
                 error = true;
             }
             if (!validate_date(expiry, 6)) {
                 PrintAndLogEx(ERR, "Expiry date format is incorrect, cannot continue.");
-                PrintAndLogEx(HINT, "Hint: Use the format YYMMDD.");
+                PrintAndLogEx(HINT, "Hint: Use the format " _YELLOW_("YYMMDD"));
                 error = true;
             }
         }
@@ -2970,7 +2967,7 @@ static int CmdHFeMRTDDump(const char *Cmd) {
 
     uint8_t can[15] = { 0x00 };
     bool CAN = false;
-    if (CLIParamStrToBuf(arg_get_str(ctx, 5), can, sizeof(can) - 1, &slen) == 0 && slen != 0) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 5), can, sizeof(can), &slen) == 0 && slen != 0) {
         CAN = true;
         if (emrtd_validate_can((const char *)can, slen) == false) {
             error = true;
@@ -3048,7 +3045,7 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
     bool error = false;
     int slen = 0;
     // Go through all args, if even one isn't supplied, mark BAC as unavailable
-    if (CLIParamStrToBuf(arg_get_str(ctx, 1), docnum, 9, &slen) != 0 || slen == 0) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 1), docnum, sizeof(docnum), &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
         strn_upper((char *)docnum, slen);
@@ -3057,27 +3054,27 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
         }
     }
 
-    if (CLIParamStrToBuf(arg_get_str(ctx, 2), dob, 6, &slen) != 0 || slen == 0) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 2), dob, sizeof(dob), &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
         if (!validate_date(dob, slen)) {
             PrintAndLogEx(ERR, "Date of birth date format is incorrect, cannot continue.");
-            PrintAndLogEx(HINT, "Hint: Use the format YYMMDD.");
+            PrintAndLogEx(HINT, "Hint: Use the format " _YELLOW_("YYMMDD"));
             error = true;
         }
     }
 
-    if (CLIParamStrToBuf(arg_get_str(ctx, 3), expiry, 6, &slen) != 0 || slen == 0) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 3), expiry, sizeof(expiry), &slen) != 0 || slen == 0) {
         BAC = false;
     } else {
         if (!validate_date(expiry, slen)) {
             PrintAndLogEx(ERR, "Expiry date format is incorrect, cannot continue.");
-            PrintAndLogEx(HINT, "Hint: Use the format YYMMDD.");
+            PrintAndLogEx(HINT, "Hint: Use the format " _YELLOW_("YYMMDD"));
             error = true;
         }
     }
 
-    if (CLIParamStrToBuf(arg_get_str(ctx, 4), mrz, 44, &slen) == 0 && slen != 0) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 4), mrz, sizeof(mrz), &slen) == 0 && slen != 0) {
         if (slen != 44) {
             PrintAndLogEx(ERR, "MRZ length is incorrect, it should be 44, not %i", slen);
             error = true;
@@ -3090,19 +3087,19 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
             // TODO check MRZ checksums?
             if (!validate_date(dob, 6)) {
                 PrintAndLogEx(ERR, "Date of birth date format is incorrect, cannot continue.");
-                PrintAndLogEx(HINT, "Hint: Use the format YYMMDD.");
+                PrintAndLogEx(HINT, "Hint: Use the format " _YELLOW_("YYMMDD"));
                 error = true;
             }
             if (!validate_date(expiry, 6)) {
                 PrintAndLogEx(ERR, "Expiry date format is incorrect, cannot continue.");
-                PrintAndLogEx(HINT, "Hint: Use the format YYMMDD.");
+                PrintAndLogEx(HINT, "Hint: Use the format " _YELLOW_("YYMMDD"));
                 error = true;
             }
         }
     }
     uint8_t can[15] = { 0x00 };
     bool CAN = false;
-    if (CLIParamStrToBuf(arg_get_str(ctx, 5), can, sizeof(can) - 1, &slen) == 0 && slen != 0) {
+    if (CLIParamStrToBuf(arg_get_str(ctx, 5), can, sizeof(can), &slen) == 0 && slen != 0) {
         CAN = true;
         if (emrtd_validate_can((const char *)can, slen) == false) {
             error = true;

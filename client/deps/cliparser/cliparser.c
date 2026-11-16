@@ -368,8 +368,9 @@ int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
         return 0;
     }
 
-    if (ibuf > maxdatalen) {
-        PrintAndLogEx(ERR, "Parameter error: string too long (%i chars), expected MAX %i chars\n", ibuf, maxdatalen);
+    // maxdatalen is the buffer size, the terminator needs one byte of it
+    if (ibuf + 1 > maxdatalen) {
+        PrintAndLogEx(ERR, "Parameter error: string too long (%i chars), expected MAX %i chars\n", ibuf, maxdatalen - 1);
         return 2;
     }
 

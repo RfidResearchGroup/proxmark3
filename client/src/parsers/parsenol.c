@@ -87,8 +87,7 @@ int nol_parser_parse(const desfire_dump_t *dump) {
 
     const desfire_dump_file_t *f = nol_find_file(nol_find_app(dump, NOL_AID_SERIAL), NOL_FID_SERIAL);
     if (f == NULL || f->read_ok == false || f->data == NULL || f->datalen < NOL_SERIAL_MIN_LEN) {
-        PrintAndLogEx(HINT, "Hint: file %02X of %06X is free to read, try `" _YELLOW_("hf mfdes dump --no-auth") "`",
-                      NOL_FID_SERIAL, NOL_AID_SERIAL);
+        PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mfdes dump --no-auth") "`");
         return PM3_SUCCESS;
     }
 

@@ -95,7 +95,7 @@ int itso_parser_parse(const desfire_dump_t *dump) {
 
     const desfire_dump_file_t *f = itso_find_file(app, ITSO_FID_SHELL);
     if (f == NULL || f->read_ok == false || f->data == NULL || f->datalen < ITSO_SHELL_MIN_LEN) {
-        PrintAndLogEx(HINT, "Hint: file %02X is free to read, try `" _YELLOW_("hf mfdes dump --no-auth") "`", ITSO_FID_SHELL);
+        PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mfdes dump --no-auth") "`");
         return PM3_SUCCESS;
     }
 

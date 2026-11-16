@@ -117,10 +117,12 @@ kvsprintf(char const *fmt, void *arg, int radix, va_list ap) {
         width = 0;
 
         while ((ch = (u_char) * fmt++) != '%' || stop) {
-            PCHAR(ch);
+            // terminate without counting the NUL, like standard sprintf
             if (ch == '\0') {
+                *d = '\0';
                 return (retval);
             }
+            PCHAR(ch);
         }
 
         percent = fmt - 1;
@@ -453,7 +455,7 @@ number:
                 break;
         }
     }
-    PCHAR(0);
+    *d = '\0';
     return retval;
 #undef PCHAR
 }

@@ -1295,7 +1295,7 @@ int CmdEM4x05Dump(const char *Cmd) {
 
     if (success != PM3_SUCCESS) {
         PrintAndLogEx(INFO, _RED_("Partial reads") ", exiting");
-        PrintAndLogEx(HINT, "Try use a password?");
+        PrintAndLogEx(HINT, "Hint: Try use a password?");
         PrintAndLogEx(NORMAL, "");
         return success;
     }
@@ -2567,10 +2567,10 @@ static int CmdEM4x05View(const char *Cmd) {
     PrintAndLogEx(INFO, "Note:");
     PrintAndLogEx(INFO, "All ZEROS password block might be filler data");
     if (verbose == false && verbose2 == false) {
-        PrintAndLogEx(HINT, "try adding `" _YELLOW_("-v")  "` or `" _YELLOW_("-vv")  "` for more details");
+        PrintAndLogEx(HINT, "Hint: For more details, add `" _YELLOW_("-v")  "` or `" _YELLOW_("-vv") "`");
     }
     if (verbose && verbose2 == false) {
-        PrintAndLogEx(HINT, "try adding `" _YELLOW_("-vv")  "` for more details");
+        PrintAndLogEx(HINT, "Hint: For more details, add `" _YELLOW_("-vv")  "`");
     }
     return PM3_SUCCESS;
 }

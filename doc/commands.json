@@ -4373,7 +4373,7 @@
             "options": [
                 "-h, --help This help",
                 "--aid <hex> AID or partial AID to search for (def: all)",
-                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless)",
                 "-a, --apdu Show APDU requests and responses",
                 "-v, --verbose Verbose output"
             ],
@@ -4393,7 +4393,7 @@
                 "-h, --help This help",
                 "--prefix <hex> AID prefix to enumerate",
                 "--quick Skip the registered RID sweep",
-                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless)",
                 "-a, --apdu Show APDU requests and responses",
                 "-v, --verbose Verbose output"
             ],
@@ -4409,7 +4409,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
+                "-w, --wired Send data via contact (iso7816) interface. (def: Contactless)",
                 "-a, --apdu Show APDU requests and responses",
                 "-v, --verbose Verbose output"
             ],
@@ -9520,9 +9520,10 @@
                 "-q, --qty <dec> Manually set number of pages to dump",
                 "--ns no save to file",
                 "-z, --dense dense dump output style",
-                "--schann use secure channel. Must have key"
+                "--schann use secure channel. Must have key",
+                "-v, --verbose verbose output, decode the UL-C config"
             ],
-            "usage": "hf mfu dump [-hlz] [-f <fn>] [-k <hex>] [-p <dec>] [-q <dec>] [--ns] [--schann]"
+            "usage": "hf mfu dump [-hlzv] [-f <fn>] [-k <hex>] [-p <dec>] [-q <dec>] [--ns] [--schann]"
         },
         "hf mfu eload": {
             "command": "hf mfu eload",
@@ -9582,9 +9583,10 @@
             "options": [
                 "-h, --help This help",
                 "-e, --end <dec> index of last block",
-                "-z, --dense dense dump output style"
+                "-z, --dense dense dump output style",
+                "-v, --verbose verbose output, decode the UL-C config"
             ],
-            "usage": "hf mfu eview [-hz] [-e <dec>]"
+            "usage": "hf mfu eview [-hzv] [-e <dec>]"
         },
         "hf mfu help": {
             "command": "hf mfu help",
@@ -10006,16 +10008,17 @@
         },
         "hf ntag424 getfs": {
             "command": "hf ntag424 getfs",
-            "description": "Read and print file settings for file",
+            "description": "Read and print file settings for a file, or for every file on the card",
             "notes": [
+                "hf ntag424 getfs -> list all files",
                 "hf ntag424 getfs --fileno 2"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--fileno <dec> File number"
+                "--fileno <dec> File number (def: all files)"
             ],
-            "usage": "hf ntag424 getfs [-h] --fileno <dec>"
+            "usage": "hf ntag424 getfs [-h] [--fileno <dec>]"
         },
         "hf ntag424 gettt": {
             "command": "hf ntag424 gettt",
@@ -11276,7 +11279,7 @@
         },
         "hw bwm charge": {
             "command": "hw bwm charge",
-            "description": "Enable or disable BWM battery charging by clearing/setting the AW32001E charge-enable bit (CEB, REG01[3]). PM5 only. One-shot: the charger watchdog reverts this after ~160 s unless serviced, so charging may stop on its own. Use to nudge a top-up.",
+            "description": "Enable or disable BWM battery charging by clearing/setting the AW32001E charge-enable bit (CEB, REG01[3]). One-shot: The charger watchdog reverts this after ~160 s unless serviced. Charging may stop on its own. Use to nudge a top-up.",
             "notes": [
                 "hw bwm charge off -> disable charging",
                 "hw bwm charge on -> enable charging"
@@ -11364,7 +11367,7 @@
         },
         "hw bwm vchg": {
             "command": "hw bwm vchg",
-            "description": "Set the BWM charger (AW32001E) charge-voltage regulation target. Lowering it below 4.2 V reduces top-of-charge stress and extends cell life. Snaps to the nearest 15 mV step; clamped to 3600..4200 mV. This is a runtime register write (reverts on the charger watchdog / POR); the firmware re-applies the 4100 mV default at every boot. PM5 only.",
+            "description": "Set the BWM charger (AW32001E) charge-voltage regulation target. Lowering it below 4.2 V reduces top-of-charge stress and extends cell life. Snaps to the nearest 15 mV step; clamped to 3600..4200 mV. This is a runtime register write (reverts on the charger watchdog / POR); the firmware re-applies the 4100 mV default at every boot.",
             "notes": [
                 "hw bwm vchg -> set charge voltage to default 4100 mV (->4.095 V)",
                 "hw bwm vchg --mv 4200 -> set charge voltage to 4200 mV"
@@ -11476,7 +11479,7 @@
         },
         "hw fpga": {
             "command": "hw fpga",
-            "description": "help This help ------------- ----------------------- Operation ----------------------- --------------------------------------------------------------------------------------- hw fpgaoff available offline: no Turn of fpga and antenna field",
+            "description": "help This help ------------- ----------------------- Operation ----------------------- pwrpwm Adjust the input voltage of the driver through FPGA. --------------------------------------------------------------------------------------- hw fpgaoff available offline: no Turn of fpga and antenna field",
             "notes": [
                 "hw fpgaoff"
             ],
@@ -11488,7 +11491,7 @@
         },
         "hw help": {
             "command": "hw help",
-            "description": "help This help ------------- ----------------------- Operation ----------------------- timeout Set the communication timeout on the client side version Show version information about the client and Proxmark3 ------------- ----------------------- Hardware ----------------------- connect Connect to the device via serial port --------------------------------------------------------------------------------------- hw detectreader available offline: no Start to detect presences of reader field",
+            "description": "help This help ------------- ----------------------- Operation ----------------------- timeout Set the communication timeout on the client side version Show version information about the client and Proxmark3 ------------- ----------------------- Hardware ----------------------- connect Connect to the device via serial port qc_pm5 Perform QC test (hardware or IO) for the PM5 powersave Enable/disable the PM5 power-save idle --------------------------------------------------------------------------------------- hw detectreader available offline: no Start to detect presences of reader field",
             "notes": [
                 "hw detectreader",
                 "hw detectreader -L"
@@ -11548,7 +11551,7 @@
                 "hw powersave off -> stay at 288 MHz, no idle sleep",
                 "hw powersave on -> re-enable the power-save idle"
             ],
-            "offline": false,
+            "offline": true,
             "options": [
                 "-h, --help This help"
             ],
@@ -11564,7 +11567,7 @@
                 "hw qc_pm5 --iohigh <index> --pwd <hex> -> drive PM5 test IO <index> high",
                 "hw qc_pm5 --ioreset <index> --pwd <hex> -> reset PM5 test IO <index> to default"
             ],
-            "offline": false,
+            "offline": true,
             "options": [
                 "-h, --help This help",
                 "-t, --timeout <s> test sequence timeout in seconds (default 20)",
@@ -11750,25 +11753,6 @@
             ],
             "usage": "hw version [-h]"
         },
-        "lf awid brute": {
-            "command": "lf awid brute",
-            "description": "Enables bruteforce of AWID reader with specified facility-code. This is a attack against reader. if cardnumber is given, it starts with it and goes up / down one step if cardnumber is not given, it starts with 1 and goes up to 65535",
-            "notes": [
-                "lf awid brute --fmt 26 --fc 224",
-                "lf awid brute --fmt 50 --fc 2001 --delay 2000",
-                "lf awid brute --fmt 50 --fc 2001 --cn 200 --delay 2000 -v"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help",
-                "--fmt <dec> format length 26|50",
-                "--fc <dec> 8|16bit value facility code",
-                "--cn <dec> optional - card number to start with, max 65535",
-                "--delay <dec> optional - delay betweens attempts in ms. Default 1000ms",
-                "-v, --verbose verbose output"
-            ],
-            "usage": "lf awid brute [-hv] --fmt <dec> --fc <dec> [--cn <dec>] [--delay <dec>]"
-        },
         "lf awid clone": {
             "command": "lf awid clone",
             "description": "clone a AWID Prox tag to a T55x7, Q5/T5555 or EM4305/4469 tag",
@@ -11781,9 +11765,9 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--fmt <dec> format length 26|34|37|50",
-                "--fc <dec> 8|16bit value facility code",
-                "--cn <dec> 16|32-bit value card number",
+                "--fmt <dec> format length 26|34|37|40|50",
+                "--fc <dec> 6|8|13|16bit value facility code",
+                "--cn <dec> 16|18|24|32-bit value card number",
                 "--q5 optional - specify writing to Q5/T5555 tag",
                 "--em optional - specify writing to EM4305/4469 tag"
             ],
@@ -11794,13 +11778,14 @@
             "description": "Try to find AWID Prox preamble, if found decode / descramble data",
             "notes": [
                 "lf awid demod",
-                "lf awid demod --raw"
+                "lf awid demod --raw 0128b12eb1811d7117e22111 -> decode raw 96-bit AWID hex"
             ],
             "offline": true,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-r, --raw <hex> raw hex bytes (12 bytes)"
             ],
-            "usage": "lf awid demod [-h]"
+            "usage": "lf awid demod [-h] [-r <hex>]"
         },
         "lf awid help": {
             "command": "lf awid help",
@@ -11844,9 +11829,9 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--fmt <dec> format length 26|32|36|40",
-                "--fc <dec> 8-bit value facility code",
-                "--cn <dec> 16-bit value card number"
+                "--fmt <dec> format length 26|34|37|40|50",
+                "--fc <dec> facility code",
+                "--cn <dec> card number"
             ],
             "usage": "lf awid sim [-h] --fmt <dec> --fc <dec> --cn <dec>"
         },
@@ -12851,9 +12836,10 @@
         },
         "lf gproxii clone": {
             "command": "lf gproxii clone",
-            "description": "Clone a Guardall tag to a T55x7, Q5/T5555 or EM4305/4469 tag. The facility-code is 8-bit and the card number is 20-bit. Larger values are truncated. Currently work only on 26 | 36 bit format",
+            "description": "Clone a Guardall tag to a T55x7, Q5/T5555 or EM4305/4469 tag. Supports 26, 36, and 40 bit formats. Larger FC/CN values are truncated.",
             "notes": [
                 "lf gproxii clone --xor 141 --fmt 26 --fc 123 --cn 1337 -> encode for T55x7 tag",
+                "lf gproxii clone --xor 141 --fmt 40 --fc 123 --cn 555666777 -> encode 40-bit fmt for T55x7 tag",
                 "lf gproxii clone --xor 141 --fmt 26 --fc 123 --cn 1337 --q5 -> encode for Q5/T5555 tag",
                 "lf gproxii clone --xor 141 --fmt 26 --fc 123 --cn 1337 --em -> encode for EM4305/4469"
             ],
@@ -12862,8 +12848,8 @@
                 "-h, --help This help",
                 "--xor <dec> 8-bit xor value (installation dependant)",
                 "--fmt <dec> format length 26|32|36|40",
-                "--fc <dec> 8-bit value facility code",
-                "--cn <dec> 16-bit value card number",
+                "--fc <dec> 8|14-bit value facility code",
+                "--cn <dec> 16|20|30-bit value card number",
                 "--q5 optional - specify writing to Q5/T5555 tag",
                 "--em optional - specify writing to EM4305/4469 tag"
             ],
@@ -12898,23 +12884,24 @@
         },
         "lf gproxii sim": {
             "command": "lf gproxii sim",
-            "description": "Enables simulation of Guardall card with specified card number. Simulation runs until the button is pressed or another USB command is issued. The facility-code is 8-bit and the card number is 16-bit. Larger values are truncated. Currently work only on 26 | 36 bit format",
+            "description": "Enables simulation of Guardall card with specified card number. Simulation runs until the button is pressed or another USB command is issued. Supports 26, 36, and 40 bit formats. Larger FC/CN values are truncated.",
             "notes": [
-                "lf gproxii sim --xor 141 --fmt 26 --fc 123 --cn 1337"
+                "lf gproxii sim --xor 141 --fmt 26 --fc 123 --cn 1337",
+                "lf gproxii sim --xor 141 --fmt 40 --fc 123 --cn 555666777"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "--xor <dec> 8-bit xor value (installation dependant)",
                 "--fmt <dec> format length 26|32|36|40",
-                "--fc <dec> 8-bit value facility code",
-                "--cn <dec> 16-bit value card number"
+                "--fc <dec> 8|14-bit value facility code",
+                "--cn <dec> 16|20|30-bit value card number"
             ],
             "usage": "lf gproxii sim [-h] --xor <dec> --fmt <dec> --fc <dec> --cn <dec>"
         },
         "lf help": {
             "command": "lf help",
-            "description": "help This help ----------- -------------- Low Frequency -------------- awid { AWID RFIDs... } cotag { COTAG CHIPs... } destron { FDX-A Destron RFIDs... } em { EM CHIPs & RFIDs... } fdxb { FDX-B RFIDs... } gallagher { GALLAGHER RFIDs... } gproxii { Guardall Prox II RFIDs... } hid { HID Prox RFIDs... } hitag { Hitag CHIPs... } idteck { Idteck RFIDs... } indala { Indala RFIDs... } io { ioProx RFIDs... } jablotron { Jablotron RFIDs... } keri { KERI RFIDs... } motorola { Motorola Flexpass RFIDs... } nedap { Nedap RFIDs... } nexwatch { NexWatch RFIDs... } noralsy { Noralsy RFIDs... } pac { PAC/Stanley RFIDs... } paradox { Paradox RFIDs... } pcf7931 { PCF7931 CHIPs... } presco { Presco RFIDs... } pyramid { Farpointe/Pyramid RFIDs... } securakey { Securakey RFIDs... } ti { TI CHIPs... } t55xx { T55xx CHIPs... } trovan { Trovan animal IDs... } viking { Viking RFIDs... } visa2000 { Visa2000 RFIDs... } ----------- --------------------- General --------------------- search Read and Search for valid known tag --------------------------------------------------------------------------------------- lf config available offline: no Get/Set config for LF sampling, bit/sample, decimation, frequency These changes are temporary, will be reset after a power cycle. - use `lf read` performs a read (active field) - use `lf sniff` performs a sniff (no active field)",
+            "description": "help This help ----------- -------------- Low Frequency -------------- awid { AWID RFIDs... } cotag { COTAG CHIPs... } destron { FDX-A Destron RFIDs... } em { EM CHIPs & RFIDs... } fdxb { FDX-B RFIDs... } gallagher { GALLAGHER RFIDs... } gproxii { Guardall Prox II RFIDs... } hid { HID Prox RFIDs... } hitag { Hitag CHIPs... } ict { ICT RFIDs... } idteck { Idteck RFIDs... } indala { Indala RFIDs... } io { ioProx RFIDs... } jablotron { Jablotron RFIDs... } keri { KERI RFIDs... } motorola { Motorola Flexpass RFIDs... } nedap { Nedap RFIDs... } nexwatch { NexWatch RFIDs... } noralsy { Noralsy RFIDs... } pac { PAC/Stanley RFIDs... } paradox { Paradox RFIDs... } pcf7931 { PCF7931 CHIPs... } presco { Presco RFIDs... } pyramid { Farpointe/Pyramid RFIDs... } securakey { Securakey RFIDs... } ti { TI CHIPs... } t55xx { T55xx CHIPs... } trovan { Trovan animal IDs... } viking { Viking RFIDs... } visa2000 { Visa2000 RFIDs... } watchnet { WatchNET RFIDs... } ----------- --------------------- General --------------------- search Read and Search for valid known tag --------------------------------------------------------------------------------------- lf config available offline: no Get/Set config for LF sampling, bit/sample, decimation, frequency These changes are temporary, will be reset after a power cycle. - use `lf read` performs a read (active field) - use `lf sniff` performs a sniff (no active field)",
             "notes": [
                 "lf config -> shows current config",
                 "lf config -b 8 --125 -> samples at 125 kHz, 8 bps",
@@ -13608,6 +13595,63 @@
             ],
             "usage": "lf hitag wrbl [-h2] [--pwd] [--nrar <hex>] [--crypto] [-k <hex>] -p <dec> -d <hex>"
         },
+        "lf ict clone": {
+            "command": "lf ict clone",
+            "description": "Clone an LF ICT tag to a T55x7, Q5/T5555 or EM4305/4469 tag",
+            "notes": [
+                "lf ict clone --raw f656595a5a6566696a9596999aa5a6a9aa5556595a65666900000000",
+                "lf ict clone --raw f656595a5a6566696a9596999aa5a6a9aa5556595a65666900000000 --q5",
+                "lf ict clone --raw f656595a5a6566696a9596999aa5a6a9aa5556595a65666900000000 --em"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-r, --raw <hex> raw hex data. 28 bytes",
+                "--q5 optional - specify writing to Q5/T5555 tag",
+                "--em optional - specify writing to EM4305/4469 tag"
+            ],
+            "usage": "lf ict clone [-h] -r <hex> [--q5] [--em]"
+        },
+        "lf ict help": {
+            "command": "lf ict help",
+            "description": "help This help demod demodulate an LF ICT FSK tag from the GraphBuffer --------------------------------------------------------------------------------------- lf ict demod available offline: yes Try to find LF ICT preamble, if found decode tag data",
+            "notes": [
+                "lf ict demod",
+                "lf ict demod --raw f656595a5a6566696a9596999aa5a6a9aa5556595a65666900000000"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-r, --raw <hex> raw bytes. 28 bytes"
+            ],
+            "usage": "lf ict demod [-h] [-r <hex>]"
+        },
+        "lf ict reader": {
+            "command": "lf ict reader",
+            "description": "Read an LF ICT tag",
+            "notes": [
+                "lf ict reader -@ -> continuous reader mode"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-@ optional - continuous reader mode"
+            ],
+            "usage": "lf ict reader [-h@]"
+        },
+        "lf ict sim": {
+            "command": "lf ict sim",
+            "description": "Enables simulation of LF ICT card from raw hex data. Simulation runs until the button is pressed or another USB command is issued.",
+            "notes": [
+                "lf ict sim --raw f656595a5a6566696a9596999aa5a6a9aa5556595a65666900000000"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-r, --raw <hex> raw hex data. 28 bytes"
+            ],
+            "usage": "lf ict sim [-h] -r <hex>"
+        },
         "lf idteck clone": {
             "command": "lf idteck clone",
             "description": "clone a Idteck tag to T55x7 or Q5/T5555 tag Tag must be on the antenna when issuing this command.",
@@ -13684,6 +13728,7 @@
                 "lf indala clone --heden 888",
                 "lf indala clone --fc 123 --cn 1337",
                 "lf indala clone --fc 123 --cn 1337 --4041x",
+                "lf indala clone --fc 123 --cn 45678 --40010",
                 "lf indala clone -r a0000000a0002021",
                 "lf indala clone -r 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5"
             ],
@@ -13696,15 +13741,17 @@
                 "--cn <decimal> Card number (26 bit H10301 format)",
                 "--q5 Optional - specify writing to Q5/T5555 tag",
                 "--em Optional - specify writing to EM4305/4469 tag",
-                "--4041x Optional - specify Indala 4041X format, must use with fc and cn"
+                "--4041x Optional - specify Indala 4041X format, must use with fc and cn",
+                "--40010 Optional - specify Indala Keyscan 40010 format, must use with fc and cn"
             ],
-            "usage": "lf indala clone [-h] [-r <hex>] [--heden <decimal>] [--fc <decimal>] [--cn <decimal>] [--q5] [--em] [--4041x]"
+            "usage": "lf indala clone [-h] [-r <hex>] [--heden <decimal>] [--fc <decimal>] [--cn <decimal>] [--q5] [--em] [--4041x] [--40010]"
         },
         "lf indala demod": {
             "command": "lf indala demod",
             "description": "Tries to PSK demodulate the graphbuffer as Indala",
             "notes": [
                 "lf indala demod",
+                "lf indala demod --raw a0000000f4cbdd01 -> decode raw 64-bit or 224-bit Indala hex",
                 "lf indala demod --clock 32 -> demod a Indala tag from the GraphBuffer using a clock of RF/32",
                 "lf indala demod --clock 32 -i -> demod a Indala tag from the GraphBuffer using a clock of RF/32 and inverting data",
                 "lf indala demod --clock 64 -i --maxerror 0 -> demod a Indala tag from the GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors"
@@ -13714,9 +13761,10 @@
                 "-h, --help This help",
                 "--clock <dec> optional - set clock (as integer), if not set, autodetect.",
                 "--maxerr <dec> optional - set maximum allowed errors, default = 100",
-                "-i, --invert optional - invert output"
+                "-i, --invert optional - invert output",
+                "-r, --raw <hex> raw hex bytes (8 or 28 bytes)"
             ],
-            "usage": "lf indala demod [-hi] [--clock <dec>] [--maxerr <dec>]"
+            "usage": "lf indala demod [-hi] [--clock <dec>] [--maxerr <dec>] [-r <hex>]"
         },
         "lf indala help": {
             "command": "lf indala help",
@@ -13736,9 +13784,10 @@
                 "-d, --delay <dec> delay betweens attempts in ms. Default 1000ms",
                 "--up direction to increment card number. (default is both directions)",
                 "--down direction to decrement card number. (default is both directions)",
-                "--4041x specify Indala 4041X format"
+                "--4041x specify Indala 4041X format",
+                "--40010 specify Indala Keyscan 40010 format"
             ],
-            "usage": "lf indala brute [-hv] [--fc <dec>] [--cn <dec>] [-d <dec>] [--up] [--down] [--4041x]"
+            "usage": "lf indala brute [-hv] [--fc <dec>] [--cn <dec>] [-d <dec>] [--up] [--down] [--4041x] [--40010]"
         },
         "lf indala reader": {
             "command": "lf indala reader",
@@ -13763,6 +13812,7 @@
                 "lf indala sim --heden 888",
                 "lf indala sim --fc 123 --cn 1337",
                 "lf indala sim --fc 123 --cn 1337 --4041x",
+                "lf indala sim --fc 123 --cn 45678 --40010",
                 "lf indala sim --raw a0000000a0002021",
                 "lf indala sim --raw 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5"
             ],
@@ -13773,15 +13823,18 @@
                 "--heden <decimal> Cardnumber for Heden 2L format",
                 "--fc <decimal> Facility code (26 bit H10301 format)",
                 "--cn <decimal> Card number (26 bit H10301 format)",
-                "--4041x Optional - specify Indala 4041X format, must use with fc and cn"
+                "--4041x Optional - specify Indala 4041X format, must use with fc and cn",
+                "--40010 Optional - specify Indala Keyscan 40010 format, must use with fc and cn"
             ],
-            "usage": "lf indala sim [-h] [-r <hex>] [--heden <decimal>] [--fc <decimal>] [--cn <decimal>] [--4041x]"
+            "usage": "lf indala sim [-h] [-r <hex>] [--heden <decimal>] [--fc <decimal>] [--cn <decimal>] [--4041x] [--40010]"
         },
         "lf io clone": {
             "command": "lf io clone",
             "description": "clone a ioProx card with specified facility-code and card number to a T55x7, Q5/T5555 or EM4305/4469 tag. Tag must be on the antenna when issuing this command.",
             "notes": [
-                "lf io clone --vn 1 --fc 101 --cn 1337"
+                "lf io clone --vn 1 --fc 101 --cn 1337",
+                "lf io clone --ssf 8004 --cn 45732",
+                "lf io clone --raw 007840603059cf3f"
             ],
             "offline": false,
             "options": [
@@ -13789,22 +13842,26 @@
                 "--vn <dec> 8bit version",
                 "--fc <dec> 8bit facility code",
                 "--cn <dec> 16bit card number",
+                "--ssf <hex> Kantech SSF 2-byte prefix (version+fc hex)",
+                "-r, --raw <hex> raw hex bytes (8 bytes)",
                 "--q5 optional - specify writing to Q5/T5555 tag",
                 "--em optional - specify writing to EM4305/4469 tag"
             ],
-            "usage": "lf io clone [-h] --vn <dec> --fc <dec> --cn <dec> [--q5] [--em]"
+            "usage": "lf io clone [-h] [--vn <dec>] [--fc <dec>] [--cn <dec>] [--ssf <hex>] [-r <hex>] [--q5] [--em]"
         },
         "lf io help": {
             "command": "lf io help",
             "description": "help this help demod demodulate an ioProx tag from the GraphBuffer --------------------------------------------------------------------------------------- lf io demod available offline: yes Try to find ioProx preamble, if found decode / descramble data",
             "notes": [
-                "lf io demod"
+                "lf io demod",
+                "lf io demod --raw 007840603059cf3f -> decode raw 64-bit ioProx hex"
             ],
             "offline": true,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-r, --raw <hex> raw hex bytes (8 bytes)"
             ],
-            "usage": "lf io demod [-h]"
+            "usage": "lf io demod [-h] [-r <hex>]"
         },
         "lf io reader": {
             "command": "lf io reader",
@@ -13823,16 +13880,20 @@
             "command": "lf io sim",
             "description": "Enables simulation of ioProx card with specified facility-code and card number. Simulation runs until the button is pressed or another USB command is issued.",
             "notes": [
-                "lf io sim --vn 1 --fc 101 --cn 1337"
+                "lf io sim --vn 1 --fc 101 --cn 1337",
+                "lf io sim --ssf 8004 --cn 45732",
+                "lf io sim --raw 007840603059cf3f"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "--vn <dec> 8bit version",
                 "--fc <dec> 8bit facility code",
-                "--cn <dec> 16bit card number"
+                "--cn <dec> 16bit card number",
+                "--ssf <hex> Kantech SSF 2-byte prefix (version+fc hex)",
+                "-r, --raw <hex> raw hex bytes (8 bytes)"
             ],
-            "usage": "lf io sim [-h] --vn <dec> --fc <dec> --cn <dec>"
+            "usage": "lf io sim [-h] [--vn <dec>] [--fc <dec>] [--cn <dec>] [--ssf <hex>] [-r <hex>]"
         },
         "lf io watch": {
             "command": "lf io watch",
@@ -13906,30 +13967,35 @@
             "description": "clone a KERI tag to a T55x7, Q5/T5555 or EM4305/4469 tag",
             "notes": [
                 "lf keri clone -t i --cn 12345 -> Internal ID",
-                "lf keri clone -t m --fc 6 --cn 12345 -> MS ID"
+                "lf keri clone -t m --fc 6 --cn 12345 -> MS ID",
+                "lf keri clone -t n --raw 0001010101010101123456789ABCDEF0 -> NXT"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-t, --type <m|i> Type m - MS, i - Internal ID",
+                "-t, --type <m|i|n> Type m - MS, i - Internal ID, n - NXT",
                 "--fc <dec> Facility Code",
                 "--cn <dec> KERI card ID",
+                "-r, --raw <hex> raw hex data. 8 bytes (MS/Internal) or 16 bytes (NXT)",
                 "--q5 specify writing to Q5/T5555 tag",
                 "--em specify writing to EM4305/4469 tag"
             ],
-            "usage": "lf keri clone [-h] [-t <m|i>] [--fc <dec>] --cn <dec> [--q5] [--em]"
+            "usage": "lf keri clone [-h] [-t <m|i|n>] [--fc <dec>] [--cn <dec>] [-r <hex>] [--q5] [--em]"
         },
         "lf keri help": {
             "command": "lf keri help",
             "description": "help This help demod demodulate an KERI tag from the GraphBuffer --------------------------------------------------------------------------------------- lf keri demod available offline: yes Try to find KERI preamble, if found decode / descramble data",
             "notes": [
-                "lf keri demod"
+                "lf keri demod",
+                "lf keri demod --raw E00000008001B669",
+                "lf keri demod --raw 0001010101010101123456789ABCDEF0"
             ],
             "offline": true,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-r, --raw <hex> raw hex data. 8 bytes (MS/Internal) or 16 bytes (NXT)"
             ],
-            "usage": "lf keri demod [-h]"
+            "usage": "lf keri demod [-h] [-r <hex>]"
         },
         "lf keri reader": {
             "command": "lf keri reader",
@@ -13946,16 +14012,22 @@
         },
         "lf keri sim": {
             "command": "lf keri sim",
-            "description": "Enables simulation of KERI card with internal ID. You supply a KERI card id and it will converted to a KERI internal ID.",
+            "description": "Enables simulation of KERI card with internal ID, MS ID, or NXT raw hex. You supply a KERI card id and it will converted to a KERI internal ID.",
             "notes": [
-                "lf keri sim --id 112233"
+                "lf keri sim --id 112233",
+                "lf keri sim -t m --fc 6 --cn 12345",
+                "lf keri sim -t n --raw 0001010101010101123456789ABCDEF0"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--id <dec> KERI card ID"
+                "--id <dec> KERI card ID (Internal ID)",
+                "-t, --type <m|i|n> Type m - MS, i - Internal ID, n - NXT",
+                "--fc <dec> Facility Code (for MS)",
+                "--cn <dec> Card Number",
+                "-r, --raw <hex> raw hex data. 8 bytes (MS/Internal) or 16 bytes (NXT)"
             ],
-            "usage": "lf keri sim [-h] --id <dec>"
+            "usage": "lf keri sim [-h] [--id <dec>] [-t <m|i|n>] [--fc <dec>] [--cn <dec>] [-r <hex>]"
         },
         "lf motorola clone": {
             "command": "lf motorola clone",
@@ -14072,7 +14144,7 @@
         },
         "lf nexwatch clone": {
             "command": "lf nexwatch clone",
-            "description": "clone a Nexwatch tag to a T55x7, Q5/T5555 or EM4305/4469 tag. You can use raw hex values or create a credential based on id, mode and type of credential (Nexkey / Quadrakey / Russian)",
+            "description": "clone a Nexwatch tag to a T55x7, Q5/T5555 or EM4305/4469 tag. You can use raw hex values or create a credential based on id, mode and type of credential (Nexkey / Quadrakey / Honeywell)",
             "notes": [
                 "lf nexwatch clone --raw 5600000000213C9F8F150C00",
                 "lf nexwatch clone --cn 521512301 -m 1 --nc -> Nexkey credential",
@@ -14122,7 +14194,7 @@
         },
         "lf nexwatch sim": {
             "command": "lf nexwatch sim",
-            "description": "Enables simulation of secura card with specified card number. Simulation runs until the button is pressed or another USB command is issued. You can use raw hex values or create a credential based on id, mode and type of credential (Nexkey/Quadrakey)",
+            "description": "Enables simulation of NexWatch card with specified card number. Simulation runs until the button is pressed or another USB command is issued. You can use raw hex values or create a credential based on id, mode and type of credential (Nexkey / Quadrakey / Honeywell)",
             "notes": [
                 "lf nexwatch sim --raw 5600000000213C9F8F150C00",
                 "lf nexwatch sim --cn 521512301 -m 1 --nc -> Nexkey credential",
@@ -14347,14 +14419,16 @@
             "command": "lf pcf7931 help",
             "description": "help This help config Configure the password, the tags initialization delay and time offsets (optional) --------------------------------------------------------------------------------------- lf pcf7931 reader available offline: no read a PCF7931 tag",
             "notes": [
-                "lf pcf7931 reader -@ -> continuous reader mode"
+                "lf pcf7931 reader -@ -> continuous reader mode",
+                "lf pcf7931 reader --rfb 2 -> number blocks starting at 2 when block 1 is missing or ambiguous"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-@ optional - continuous reader mode"
+                "-@ optional - continuous reader mode",
+                "--rfb <0-7> first transmitted block, used when block 1 is missing or ambiguous"
             ],
-            "usage": "lf pcf7931 reader [-h@]"
+            "usage": "lf pcf7931 reader [-h@] [--rfb <0-7>]"
         },
         "lf pcf7931 write": {
             "command": "lf pcf7931 write",
@@ -14430,9 +14504,10 @@
         },
         "lf pyramid clone": {
             "command": "lf pyramid clone",
-            "description": "clone a Farpointe/Pyramid tag to a T55x7, Q5/T5555 or EM4305/4469 tag. The facility-code is 8-bit and the card number is 16-bit. Larger values are truncated. Currently only works on 26bit",
+            "description": "clone a Farpointe/Pyramid tag to a T55x7, Q5/T5555 or EM4305/4469 tag. Supports 26-bit (8-bit FC, 16-bit CN) and 35-bit (17-bit FC, 16-bit CN) formats.",
             "notes": [
-                "lf pyramid clone --fc 123 --cn 11223 -> encode for T55x7 tag",
+                "lf pyramid clone --fc 123 --cn 11223 -> encode 26-bit for T55x7 tag",
+                "lf pyramid clone --fmt 35 --fc 1000 --cn 123 -> encode 35-bit for T55x7 tag",
                 "lf pyramid clone --raw 0001010101010101010440013223921c -> idem, raw mode",
                 "lf pyramid clone --fc 123 --cn 11223 --q5 -> encode for Q5/T5555 tag",
                 "lf pyramid clone --fc 123 --cn 11223 --em -> encode for EM4305/4469"
@@ -14440,25 +14515,28 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--fc <dec> 8-bit value facility code",
-                "--cn <dec> 16-bit value card number",
+                "--fc <dec> 8-bit (26b) or 17-bit (35b) facility code",
+                "--cn <dec> 16-bit card number",
                 "--q5 optional - specify writing to Q5/T5555 tag",
                 "--em optional - specify writing to EM4305/4469 tag",
-                "-r, --raw <hex> raw hex data. 16 bytes"
+                "-r, --raw <hex> raw hex data. 16 bytes",
+                "--fmt <dec> format length 26|35 (default 26)"
             ],
-            "usage": "lf pyramid clone [-h] [--fc <dec>] [--cn <dec>] [--q5] [--em] [-r <hex>]"
+            "usage": "lf pyramid clone [-h] [--fc <dec>] [--cn <dec>] [--q5] [--em] [-r <hex>] [--fmt <dec>]"
         },
         "lf pyramid help": {
             "command": "lf pyramid help",
             "description": "help this help demod demodulate a Pyramid FSK tag from the GraphBuffer --------------------------------------------------------------------------------------- lf pyramid demod available offline: yes Try to find Farpoint/Pyramid preamble, if found decode / descramble data",
             "notes": [
-                "lf pyramid demod"
+                "lf pyramid demod",
+                "lf pyramid demod --raw 00010101010101010101016eb35e5da4 -> decode raw 128-bit Pyramid hex"
             ],
             "offline": true,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-r, --raw <hex> raw hex bytes (16 bytes)"
             ],
-            "usage": "lf pyramid demod [-h]"
+            "usage": "lf pyramid demod [-h] [-r <hex>]"
         },
         "lf pyramid reader": {
             "command": "lf pyramid reader",
@@ -14475,19 +14553,21 @@
         },
         "lf pyramid sim": {
             "command": "lf pyramid sim",
-            "description": "Enables simulation of Farpointe/Pyramid card with specified card number. Simulation runs until the button is pressed or another USB command is issued. The facility-code is 8-bit and the card number is 16-bit. Larger values are truncated. Currently work only on 26bit",
+            "description": "Enables simulation of Farpointe/Pyramid card with specified card number. Simulation runs until the button is pressed or another USB command is issued. Supports 26-bit (8-bit FC, 16-bit CN) and 35-bit (17-bit FC, 16-bit CN) formats.",
             "notes": [
                 "lf pyramid sim --fc 123 --cn 1337",
+                "lf pyramid sim --fmt 35 --fc 1000 --cn 1337",
                 "lf pyramid sim --raw 0001010101010101010440013223921c"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--fc <dec> 8-bit value facility code",
-                "--cn <dec> 16-bit value card number",
-                "-r, --raw <hex> raw hex data. 16 bytes"
+                "--fc <dec> 8-bit (26b) or 17-bit (35b) facility code",
+                "--cn <dec> 16-bit card number",
+                "-r, --raw <hex> raw hex data. 16 bytes",
+                "--fmt <dec> format length 26|35 (default 26)"
             ],
-            "usage": "lf pyramid sim [-h] [--fc <dec>] [--cn <dec>] [-r <hex>]"
+            "usage": "lf pyramid sim [-h] [--fc <dec>] [--cn <dec>] [-r <hex>] [--fmt <dec>]"
         },
         "lf read": {
             "command": "lf read",
@@ -14552,28 +14632,33 @@
             "notes": [
                 "lf securakey clone --raw 7FCB400001ADEA5344300000 -> encode for T55x7 tag",
                 "lf securakey clone --raw 7FCB400001ADEA5344300000 --q5 -> encode for Q5/T5555 tag",
-                "lf securakey clone --raw 7FCB400001ADEA5344300000 --em -> encode for EM4305/4469"
+                "lf securakey clone --raw 7FCB400001ADEA5344300000 --em -> encode for EM4305/4469",
+                "lf securakey clone --cn 1697426 -> encode 24-bit short for T55x7 tag"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-r, --raw <hex> raw hex data. 12 bytes",
+                "-r, --raw <hex> raw hex data. 8 bytes (short) or 12 bytes (standard)",
+                "--cn <dec> 24-bit card number (Securakey Short)",
                 "--q5 optional - specify writing to Q5/T5555 tag",
                 "--em optional - specify writing to EM4305/4469 tag"
             ],
-            "usage": "lf securakey clone [-h] -r <hex> [--q5] [--em]"
+            "usage": "lf securakey clone [-h] [-r <hex>] [--cn <dec>] [--q5] [--em]"
         },
         "lf securakey help": {
             "command": "lf securakey help",
             "description": "help This help demod demodulate an Securakey tag from the GraphBuffer --------------------------------------------------------------------------------------- lf securakey demod available offline: yes Try to find Securakey preamble, if found decode / descramble data",
             "notes": [
-                "lf securakey demod"
+                "lf securakey demod",
+                "lf securakey demod --raw 7FCB400001ADEA5344300000",
+                "lf securakey demod --raw 7fc000000065cc92"
             ],
             "offline": true,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-r, --raw <hex> raw hex data. 8 bytes (short) or 12 bytes (standard)"
             ],
-            "usage": "lf securakey demod [-h]"
+            "usage": "lf securakey demod [-h] [-r <hex>]"
         },
         "lf securakey reader": {
             "command": "lf securakey reader",
@@ -14590,16 +14675,18 @@
         },
         "lf securakey sim": {
             "command": "lf securakey sim",
-            "description": "Enables simulation of secura card with specified card number. Simulation runs until the button is pressed or another USB command is issued.",
+            "description": "Enables simulation of Securakey card with raw hex or 24-bit card number. Simulation runs until the button is pressed or another USB command is issued.",
             "notes": [
-                "lf securakey sim --raw 7FCB400001ADEA5344300000"
+                "lf securakey sim --raw 7FCB400001ADEA5344300000",
+                "lf securakey sim --cn 1697426"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-r, --raw <hex> raw hex data. 12 bytes"
+                "-r, --raw <hex> raw hex data. 8 bytes (short) or 12 bytes (standard)",
+                "--cn <dec> 24-bit card number (Securakey Short)"
             ],
-            "usage": "lf securakey sim [-h] [-r <hex>]"
+            "usage": "lf securakey sim [-h] [-r <hex>] [--cn <dec>]"
         },
         "lf sim": {
             "command": "lf sim",
@@ -15350,6 +15437,69 @@
                 "--cn <dec> Visa2k card ID"
             ],
             "usage": "lf visa2000 sim [-h] --cn <dec>"
+        },
+        "lf watchnet clone": {
+            "command": "lf watchnet clone",
+            "description": "Clone a WatchNET tag to a T55x7, Q5/T5555 or EM4305/4469 tag",
+            "notes": [
+                "lf watchnet clone --fc 100 --cn 1234",
+                "lf watchnet clone --raw 1fe2be111128811111118d88",
+                "lf watchnet clone --fc 100 --cn 1234 --q5",
+                "lf watchnet clone --fc 100 --cn 1234 --em"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--fc <dec> facility code (0..2097151)",
+                "--cn <dec> card number (32-bit)",
+                "-r, --raw <hex> raw hex data. 12 bytes",
+                "--q5 optional - specify writing to Q5/T5555 tag",
+                "--em optional - specify writing to EM4305/4469 tag"
+            ],
+            "usage": "lf watchnet clone [-h] [--fc <dec>] [--cn <dec>] [-r <hex>] [--q5] [--em]"
+        },
+        "lf watchnet help": {
+            "command": "lf watchnet help",
+            "description": "help This help demod demodulate a WatchNET FSK tag from the GraphBuffer --------------------------------------------------------------------------------------- lf watchnet demod available offline: yes Try to find WatchNET preamble, if found decode / descramble data",
+            "notes": [
+                "lf watchnet demod",
+                "lf watchnet demod --raw 1fe2be111128811111118d88"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-r, --raw <hex> raw bytes. 12 bytes"
+            ],
+            "usage": "lf watchnet demod [-h] [-r <hex>]"
+        },
+        "lf watchnet reader": {
+            "command": "lf watchnet reader",
+            "description": "Read a WatchNET tag",
+            "notes": [
+                "lf watchnet reader -@ -> continuous reader mode"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-@ optional - continuous reader mode"
+            ],
+            "usage": "lf watchnet reader [-h@]"
+        },
+        "lf watchnet sim": {
+            "command": "lf watchnet sim",
+            "description": "Enables simulation of WatchNET card with specified facility code and card number. Simulation runs until the button is pressed or another USB command is issued.",
+            "notes": [
+                "lf watchnet sim --fc 100 --cn 1234",
+                "lf watchnet sim --raw 1fe2be111128811111118d88"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--fc <dec> facility code (0..2097151)",
+                "--cn <dec> card number (32-bit)",
+                "-r, --raw <hex> raw hex data. 12 bytes"
+            ],
+            "usage": "lf watchnet sim [-h] [--fc <dec>] [--cn <dec>] [-r <hex>]"
         },
         "mad decode": {
             "command": "mad decode",
@@ -17008,8 +17158,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 945,
+        "commands_extracted": 952,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-11-10T05:21:34+00:00"
+        "extracted_on": "2026-11-13T00:56:11+00:00"
     }
 }

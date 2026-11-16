@@ -2196,7 +2196,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
                           gaps.skippedaid, (gaps.skippedaid == 1) ? "" : "s");
         }
 
-        PrintAndLogEx(HINT, "Hint: reposition the card and run the check again");
+        PrintAndLogEx(HINT, "Hint: Reposition tag and run again");
     }
 
     // save keys to json
@@ -9487,7 +9487,7 @@ static int CmdHF14ADesSim(const char *Cmd) {
         if (resp.status != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Simulation stopped (status %d)", resp.status);
             if (resp.status == PM3_EINVARG) {
-                PrintAndLogEx(HINT, "Hint: check the card image and probe payload");
+                PrintAndLogEx(HINT, "Hint: Check tag image and probe payload");
             }
             return resp.status;
         }
@@ -9503,7 +9503,7 @@ static int CmdHF14ADesSim(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Done!");
     if (has_probe == false) {
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfdes esave`") " to see what a reader changed");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfdes esave") "` to see what a reader changed");
     }
     return PM3_SUCCESS;
 }
@@ -9806,7 +9806,7 @@ static int CmdHF14ADesETest(const char *Cmd) {
         } else {
             PrintAndLogEx(FAILED, "%s failed, %s", name, why);
             if (res == PM3_ENODATA) {
-                PrintAndLogEx(HINT, "Hint: load one with " _YELLOW_("`hf mfdes eload -f <fn>`"));
+                PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mfdes eload -f <fn>") "`");
             }
         }
         return res;
@@ -9972,7 +9972,7 @@ static int CmdHF14ADesESave(const char *Cmd) {
     free(img);
 
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(HINT, "Hint: emulator memory holds no DESFire card image, try " _YELLOW_("`hf mfdes eload`"));
+        PrintAndLogEx(HINT, "Hint: No DESFire card image in emulator, try `" _YELLOW_("hf mfdes eload") "`");
         free(dump);
         return res;
     }
@@ -10539,7 +10539,7 @@ static int CmdHF14ADesIntAuth(const char *Cmd) {
     // Parse public key input (flexible: hex, PEM, DER, file path)
     char pubkey_input[DUOX_MAX_KEY_INPUT] = {0};
     int pubkey_input_len = 0;
-    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)pubkey_input, sizeof(pubkey_input) - 1, &pubkey_input_len);
+    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)pubkey_input, sizeof(pubkey_input), &pubkey_input_len);
 
     bool pubkey_provided = (pubkey_input_len > 0);
 
@@ -10660,7 +10660,7 @@ static int CmdHF14ADesVdeSign(const char *Cmd) {
 
     char pubkey_input[DUOX_MAX_KEY_INPUT] = {0};
     int pubkey_input_len = 0;
-    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)pubkey_input, sizeof(pubkey_input) - 1, &pubkey_input_len);
+    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)pubkey_input, sizeof(pubkey_input), &pubkey_input_len);
     bool pubkey_provided = (pubkey_input_len > 0);
 
     mfd_app_select app_select = MfdSelectionInitDFName(kDuoxVDEDefaultDFName, ARRAYLEN(kDuoxVDEDefaultDFName));
