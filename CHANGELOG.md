@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 15 writeafi` and `hf 15 writedsfid` - a UID given with `-u` was sent in the wrong byte order, so no tag answered (@matrix)
+- Fixed `hf 15 writeafi` - the help example used a `-*` option the command does not have (@matrix)
+- Fixed `hf 15 writedsfid` - without `-u`, or with a `-u` that is not 8 bytes, it sent an addressed request without a UID, now it scans for the tag and refuses such a `-u` (@matrix)
+- Fixed `hf 15 writeafi` and `hf 15 writedsfid` - an AFI or DSFID outside 0-255 is refused instead of writing its low byte (`--afi 300` wrote 0x2C) (@matrix)
 - Fixed `hf 15 wipe` - a failed write ends it with an error instead of `Done!`, only the end of the memory ends it quietly (@matrix)
 - Fixed `hf 15 restore` and `hf 15 wipe --bs` - a block of more than 8 bytes overflowed the write request, and `wipe --bs` is capped at 32 (@matrix)
 - Fixed `hf 15 wrbl`, `hf 15 restore` and `hf 15 wipe` with `--ua` - the check for a TI tag read the UID before it was set, and `restore --ua` sent addressed requests (@matrix)
