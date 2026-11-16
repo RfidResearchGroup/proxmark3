@@ -1908,7 +1908,7 @@ out:
 // turn off afterwards
 void iClass_Dump(uint8_t *msg) {
 
-    BigBuf_free();
+    BigBuf_free_keep_EM();
 
     iclass_dump_req_t *cmd = (iclass_dump_req_t *)msg;
     iclass_auth_req_t *req = &cmd->req;
@@ -2000,7 +2000,7 @@ void iClass_Dump(uint8_t *msg) {
         reply_ng(CMD_HF_ICLASS_DUMP, PM3_SUCCESS, (uint8_t *)&response, sizeof(response));
     }
 
-    BigBuf_free();
+    BigBuf_free_keep_EM();
 }
 
 static bool iclass_writeblock_ext(uint8_t blockno, uint8_t *data, uint8_t *mac, bool use_mac, bool shallow_mod) {
