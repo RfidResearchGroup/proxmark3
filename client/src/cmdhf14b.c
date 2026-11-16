@@ -2474,6 +2474,7 @@ static int CmdHF14BDump(const char *Cmd) {
         uint8_t data[cardsize];
         memset(data, 0, sizeof(data));
         uint16_t blocknum = 0;
+        bool success = false;
 
         for (int retry = 0; retry < 3; retry++) {
 
@@ -2503,6 +2504,7 @@ static int CmdHF14BDump(const char *Cmd) {
                 if (blocknum == 0xFF) {
                     // we reserved space for this block after 0x0F and 0x7F,  ie 0x10, 0x80
                     memcpy(data + ((lastblock + 1) * ST25TB_SR_BLOCK_SIZE), recv, ST25TB_SR_BLOCK_SIZE);
+                    success = true;
                     break;
                 }
                 memcpy(data + (blocknum * ST25TB_SR_BLOCK_SIZE), recv, ST25TB_SR_BLOCK_SIZE);
@@ -2524,7 +2526,7 @@ static int CmdHF14BDump(const char *Cmd) {
         PrintAndLogEx(NORMAL, "");
         switch_off_field_14b();
 
-        if (blocknum != 0xFF) {
+        if (success == false) {
             PrintAndLogEx(FAILED, "dump failed");
             return PM3_ESOFT;
         }
@@ -2546,6 +2548,7 @@ static int CmdHF14BDump(const char *Cmd) {
 
         size_t datalen = (lastblock + 2) * ST25TB_SR_BLOCK_SIZE;
         pm3_save_dump(filename, data, datalen, jsf14b_v2);
+        return PM3_SUCCESS;
     }
 
     return PM3_ESOFT;
