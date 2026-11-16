@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf gallagher reader -c` - it read sector N * 4 instead of the sectors the MAD lists with AID 0x4812, missed the credential `hf gallagher clone -c` writes and could overflow a stack buffer on a 4K card (@matrix)
+- Fixed `hf gallagher reader` - with `-@` it stopped after one read, with `-c` it checked the MES block with a zeroed site key and no CSN and returned success without a card (@matrix)
 - Fixed `hf iclass dump` - the emulator memory is kept, a dump no longer wipes what `hf iclass eload` loaded (@matrix)
 - Fixed `hf 14a raw --topaz` - the answer's CRC was checked as a CRC_A instead of the CRC_B Topaz uses, so a valid answer showed its CRC in red (@matrix)
 - Fixed `hf 15 writeafi` and `hf 15 writedsfid` - a UID given with `-u` was sent in the wrong byte order, so no tag answered (@matrix)
