@@ -22,9 +22,13 @@ set_property(CACHE PLATFORM PROPERTY STRINGS "PM3RDV4" "PM3GENERIC" "PM3ICOPYX" 
 +--------------------------------------------+
 | BWM             | PM5 Battery Wireless Mod |
 +--------------------------------------------+
+| NO_LOWBATT_BEEP | PM5 disable low-batt beep|
++--------------------------------------------+
+|NO_LOWBATT_SHUTDOWN| PM5 no low-batt cutoff |
++--------------------------------------------+
 ]]
 set(PLATFORM_EXTRAS "" CACHE STRING "Default PLATFORM_EXTRAS is unset")
-set_property(CACHE PLATFORM_EXTRAS PROPERTY STRINGS "BTADDON" "BWM" "")
+set_property(CACHE PLATFORM_EXTRAS PROPERTY STRINGS "BTADDON" "BWM" "NO_LOWBATT_BEEP" "NO_LOWBATT_SHUTDOWN" "")
 
 # Skip fpga bit stream files pack to arm's fw?
 # Some platform is no download in arm side required.
@@ -116,8 +120,23 @@ if ("${PLATFORM_EXTRAS_TMP}" MATCHES "BWM")
     if (NOT PLATFORM STREQUAL "PM5")
         message(FATAL_ERROR "PLATFORM_EXTRAS token BWM is only valid on PLATFORM=PM5")
     endif ()
-    list(APPEND PLATFORM_DEFS -DWITH_BWM_FORWARD)
+    list(APPEND PLATFORM_DEFS -DWITH_BWM_FORWARD -DWITH_BWM_STATUS -DWITH_PM5_PWR_LED -DWITH_PM5_AUTOOFF -DWITH_BWM_LOWBATT_BEEP -DWITH_PM5_LOWBATT_SHUTDOWN)
     list(REMOVE_ITEM PLATFORM_EXTRAS_TMP "BWM")
+endif ()
+if ("${PLATFORM_EXTRAS_TMP}" MATCHES "NO_LOWBATT_SHUTDOWN")
+    if (NOT PLATFORM STREQUAL "PM5")
+        message(FATAL_ERROR "PLATFORM_EXTRAS token NO_LOWBATT_SHUTDOWN is only valid on PLATFORM=PM5")
+    endif ()
+    list(REMOVE_ITEM PLATFORM_DEFS -DWITH_PM5_LOWBATT_SHUTDOWN)
+    list(REMOVE_ITEM PLATFORM_EXTRAS_TMP "NO_LOWBATT_SHUTDOWN")
+endif ()
+if ("${PLATFORM_EXTRAS_TMP}" MATCHES "NO_LOWBATT_BEEP")
+    if (NOT PLATFORM STREQUAL "PM5")
+        message(FATAL_ERROR "PLATFORM_EXTRAS token NO_LOWBATT_BEEP is only valid on PLATFORM=PM5")
+    endif ()
+    # beep is the carrier for the shutdown poll, so dropping it drops shutdown too
+    list(REMOVE_ITEM PLATFORM_DEFS -DWITH_BWM_LOWBATT_BEEP -DWITH_PM5_LOWBATT_SHUTDOWN)
+    list(REMOVE_ITEM PLATFORM_EXTRAS_TMP "NO_LOWBATT_BEEP")
 endif ()
 if ("${PLATFORM_EXTRAS_TMP}" MATCHES "FPC_USART_DEV")
     list(APPEND PLATFORM_DEFS -DWITH_FPC_USART_DEV)
@@ -125,6 +144,15 @@ if ("${PLATFORM_EXTRAS_TMP}" MATCHES "FPC_USART_DEV")
 endif ()
 if (PLATFORM_EXTRAS_TMP)
     message(FATAL_ERROR "Unknown PLATFORM_EXTRAS token(s): ${PLATFORM_EXTRAS_TMP}")
+endif ()
+
+# Proxmark5 specific support
+if (SKIP_CEP)
+    if (NOT PLATFORM STREQUAL "PM5")
+        message(FATAL_ERROR "SKIP_CEP token is only valid on PLATFORM=PM5")
+    endif ()
+elseif (PLATFORM STREQUAL "PM5")
+    list(APPEND PLATFORM_DEFS -DWITH_CEP)
 endif ()
 
 # common LF support
@@ -165,6 +193,9 @@ if (NOT SKIP_DESFIRE_SIM)
 endif ()
 if (NOT SKIP_ICLASS)
     list(APPEND PLATFORM_DEFS -DWITH_ICLASS)
+endif ()
+if (NOT SKIP_SEOS)
+    list(APPEND PLATFORM_DEFS -DWITH_SEOS)
 endif ()
 if (NOT SKIP_FELICA)
     list(APPEND PLATFORM_DEFS -DWITH_FELICA)

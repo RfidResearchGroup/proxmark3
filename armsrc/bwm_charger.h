@@ -34,7 +34,7 @@
 // Used as the default target for `hw bwm setcap` and as the fall-back divisor for
 // the battery-health estimate.
 #define BWM_DEFAULT_DESIGN_CAP_MAH   500
-#define BWM_DEFAULT_VCHG_MV          4100   // default charge-voltage target (mV); snaps to 4095 (15mV step)
+#define BWM_DEFAULT_VCHG_MV          4200   // default charge-voltage target (mV), full charge of the 4.2 V cell
 
 #ifdef WITH_BWM_CHARGERKICK
 // Emergency charge-path enable. Clears the AW32001 shipping/FET-disabled state so

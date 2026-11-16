@@ -193,6 +193,12 @@ else ()
     set(SRC_BWM)
 endif ()
 
+if ("${APP_CFLAGS}" MATCHES "WITH_CEP")
+    set(SRC_CEP pm5_cep.c)
+else ()
+    set(SRC_CEP)
+endif ()
+
 # BWM charger (AW32001) + fuel gauge (BQ27427), incl. the optional low-batt beep
 if ("${APP_CFLAGS}" MATCHES "WITH_BWM_STATUS" OR "${APP_CFLAGS}" MATCHES "WITH_BWM_CHARGERKICK")
     set(SRC_BWM_CHARGER bwm_charger.c)
@@ -278,6 +284,7 @@ set(THUMBSRC
         ${SRC_SMARTCARD}
         ${SRC_FPC}
         ${SRC_BWM}
+        ${SRC_CEP}
         ${SRC_HITAG}
         ${SRC_EM4x50}
         ${SRC_EM4x70}

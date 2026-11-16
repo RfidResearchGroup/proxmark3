@@ -62,7 +62,7 @@ void Set_apdu_in_framing(bool v) {
 }
 
 static int CmdHelp(const char *Cmd);
-static int waitCmd(bool i_select, uint32_t timeout, bool verbose);
+static int waitCmd(bool i_select, uint32_t timeout, bool verbose, CrcType_t crc_type);
 
 
 // based on ISO/IEC JTC1/SC17 STANDING DOCUMENT 5 (Updated 20 September 2024) Register of IC manufacturers
@@ -239,7 +239,7 @@ const char *getTagInfo(uint8_t uid) {
 static const hintAIDList_t hintAIDList[] = {
     { "\xA0\x00\x00\x06\x47\x2F\x00\x01", 8, "", 0, "FIDO", "hf fido" },
     { "\xA0\x00\x00\x03\x08\x00\x00\x10\x00\x01\x00", 11, "", 0, "PIV", "" },
-    { "\xD2\x76\x00\x01\x24\x01", 8, "", 0, "OpenPGP", "" },
+    { "\xD2\x76\x00\x01\x24\x01", 6, "", 0, "OpenPGP", "" },
     { "\x31\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31", 14, "", 0, "EMV (pse)", "emv" },
     { "\x32\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31", 14, "", 0, "EMV (ppse)", "emv" },
     { "\x41\x44\x20\x46\x31", 5, "", 0, "CIPURSE", "hf cipurse" },
@@ -1943,13 +1943,12 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
         }
     }
 
+    // the CRC of the frame format in use, for the command and for its answer
+    CrcType_t crc_type = (topazmode) ? CRC_14443_B : CRC_14443_A;
+
     if (crc && datalen > 0 && datalen < sizeof(data) - 2) {
         uint8_t first, second;
-        if (topazmode) {
-            compute_crc(CRC_14443_B, data, datalen, &first, &second);
-        } else {
-            compute_crc(CRC_14443_A, data, datalen, &first, &second);
-        }
+        compute_crc(crc_type, data, datalen, &first, &second);
         data[datalen++] = first;
         data[datalen++] = second;
     }
@@ -2021,14 +2020,14 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
     if (reply) {
         int res = 0;
         if (active_select)
-            res = waitCmd(true, timeout, verbose);
+            res = waitCmd(true, timeout, verbose, crc_type);
         if (res == PM3_SUCCESS && datalen > 0)
-            waitCmd(false, timeout, verbose);
+            waitCmd(false, timeout, verbose, crc_type);
     }
     return PM3_SUCCESS;
 }
 
-static int waitCmd(bool i_select, uint32_t timeout, bool verbose) {
+static int waitCmd(bool i_select, uint32_t timeout, bool verbose, CrcType_t crc_type) {
     PacketResponseNG resp;
     uint16_t rlen = 0;
 
@@ -2059,7 +2058,7 @@ static int waitCmd(bool i_select, uint32_t timeout, bool verbose) {
         uint8_t *data = resp.data.asBytes;
 
         if (i_select == false && len >= 3) {
-            bool crc = check_crc(CRC_14443_A, data, len);
+            bool crc = check_crc(crc_type, data, len);
 
             char s[16];
             snprintf(s,

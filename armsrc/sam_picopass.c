@@ -133,7 +133,7 @@ static int sam_send_request_iso15(const uint8_t *const request, const uint8_t re
                 // #2(FF FF FF FF) #1(C9 FD FF FF) 3A 47
 
                 memcpy(nfc_rx_buf + 0, nfc_tx_buf + 6, 4);
-                memcpy(nfc_rx_buf + 4, nfc_tx_buf + 0, 4);
+                memcpy(nfc_rx_buf + 4, nfc_tx_buf + 2, 4);
                 AddCrc(nfc_rx_buf, 8);
                 nfc_rx_len = 10;
 
@@ -375,7 +375,7 @@ static int sam_send_request_emulated(const uint8_t *const request, const uint8_t
             if (is_cmd_update && prevent_epurse_update && nfc_tx_buf[0] == 0x87 && block == 0x02) {
                 // Fake epurse update: swap the two halves of the new epurse value
                 memcpy(nfc_rx_buf + 0, nfc_tx_buf + 6, 4);
-                memcpy(nfc_rx_buf + 4, nfc_tx_buf + 0, 4);
+                memcpy(nfc_rx_buf + 4, nfc_tx_buf + 2, 4);
                 AddCrc(nfc_rx_buf, 8);
                 nfc_rx_len = 10;
             } else {

@@ -101,9 +101,10 @@ script run update_fpga
 ./pm3
 script run update_fpga_and_bwm
 ```
-* Run `hw status` and verify that `BWM fw version` matches this:
+* Run `hw status` and verify that the BWM `Firmware` line matches this:
 ```
-[#]   BWM fw version...... V5
+[#] BWM
+[#]   Firmware............ V5 on ESP32-C2, link 1.5 Mbps, BLE off
 ```
   * You have finished flashing the FPGA and BWM.
 

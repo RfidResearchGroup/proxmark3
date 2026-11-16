@@ -1,0 +1,13 @@
+# Python packages the scripts in client/ import. None of them are needed to
+# build or run the Proxmark3 client itself.
+# Install with:  python3 -m pip install -r client/requirements.txt
+
+# pm5_ble_bridge.py, for its BLE roles only. The native BLE transport
+# (pm3 -p ble:<MAC>), the wifi transport (pm3 -p tcp:) and the --relay role all
+# work without it, and the import is lazy so the other roles still run.
+# The API the bridge uses is unchanged from 0.19 through 3.1.
+bleak>=0.19
+
+# Maintenance only, these regenerate files that are already checked in.
+Unidecode    # atr_scrap_pcsctools.py
+jq           # update_amiibo_tools_lua.py
