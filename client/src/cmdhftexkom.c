@@ -453,6 +453,7 @@ static int texkom_get_type(texkom_card_select_t *card, bool verbose) {
     }
 
     uint32_t size = (resp.data.asDwords[0]);
+    samplesCount = size;
     if (size > 0) {
         if (getSamples(samplesCount, false) != PM3_SUCCESS) {
             if (verbose)
@@ -672,6 +673,7 @@ static int CmdHFTexkomReader(const char *Cmd) {
         }
 
         uint32_t size = (resp.data.asDwords[0]);
+        samplesCount = size;
         if (size > 0) {
             if (getSamples(samplesCount, false) != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "Get samples error");
