@@ -1751,13 +1751,16 @@ static int CmdHF15Reader(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static void hf15EmlClear(void) {
+static int hf15EmlClear(void) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_EML_CLEAR, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO15693_EML_CLEAR, &resp, 2500) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        return PM3_ETIMEOUT;
     }
+    PrintEmulatorAllocError(resp.status);
+    return resp.status;
 }
 
 static int hf15EmlSetMem(const uint8_t *data, uint16_t count, size_t offset) {
@@ -1785,7 +1788,7 @@ static int hf15EmlSetMem(const uint8_t *data, uint16_t count, size_t offset) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_EML_SETMEM, (uint8_t *)payload, paylen);
     free(payload);
-    return PM3_SUCCESS;
+    return WaitForEmulatorWrite(CMD_HF_ISO15693_EML_SETMEM);
 }
 
 static int CmdHF15ELoad(const char *Cmd) {
@@ -1840,7 +1843,11 @@ static int CmdHF15ELoad(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Clearing emulator memory");
     fflush(stdout);
-    hf15EmlClear();
+    // a timeout is not fatal, the upload below reports its own result
+    if (hf15EmlClear() == PM3_EMALLOC) {
+        free(tag);
+        return PM3_EMALLOC;
+    }
 
     PrintAndLogEx(INFO, "Uploading to emulator memory");
     PrintAndLogEx(INFO, "." NOLF);
@@ -1858,10 +1865,12 @@ static int CmdHF15ELoad(const char *Cmd) {
         }
 
         uint16_t bytestosend = MIN(chuncksize, bytes_read);
-        if (hf15EmlSetMem((uint8_t *)tag + offset, bytestosend, offset) != PM3_SUCCESS) {
+        res = hf15EmlSetMem((uint8_t *)tag + offset, bytestosend, offset);
+        if (res != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Can't set emulator memory at offest: %zu / 0x%zx", offset, offset);
+            g_conn.block_after_ACK = false;
             free(tag);
-            return PM3_ESOFT;
+            return res;
         }
         PrintAndLogEx(NORMAL, "." NOLF);
         fflush(stdout);
