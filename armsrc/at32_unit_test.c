@@ -300,7 +300,7 @@ void test_i2c_rgb_software(void) {
 
         uint8_t addrs[] = {0x48, 0x49, 0x68, 0x69,};
         for (int i = 0; i < sizeof(addrs); ++i) {
-            ret = I2C_BufferReadRaw(buf24_empty, 1, 0xFF, addrs[i] << 1);
+            ret = I2C_BufferRead(buf24_empty, 1, 0xFF, addrs[i] << 1);
             dxl_print_dbg("固件版本寄存器读取结果： %d, v%d.%d\r\n", ret, buf24_empty[0], buf24_empty[1]);
             if (ret) {
                 dxl_print_dbg("轮询地址为 %02x\r\n", addrs[i]);
@@ -310,7 +310,7 @@ void test_i2c_rgb_software(void) {
 
 #endif
 
-        ret = I2C_BufferReadRaw(buf24_empty, 1, 0xFF, addr << 1);
+        ret = I2C_BufferRead(buf24_empty, 1, 0xFF, addr << 1);
         dxl_print_dbg("固件版本寄存器读取结果： %d, v%d.%d\r\n", ret, buf24_empty[0], buf24_empty[1]);
 
         ret = I2C_BufferWrite(buf24_empty, 2, 0xFF, addr << 1); // 写数据寄存器，每三个字节就是对应的RGB888值
@@ -325,7 +325,7 @@ void test_i2c_rgb_software(void) {
 
         uint8_t idx_last_ok = 255;
         while (1) {
-            ret = I2C_BufferReadRaw(buf24_empty, 1, 0xFF, addrs[idx] << 1);
+            ret = I2C_BufferRead(buf24_empty, 1, 0xFF, addrs[idx] << 1);
             if (ret) {
                 if (idx_last_ok == idx) {
                     continue;
@@ -355,7 +355,7 @@ void test_i2c_rgb_software(void) {
 
         idx = 2;
         while (1) {
-            ret = I2C_BufferReadRaw(buf24_empty, 1, 0xFF, addrs[idx] << 1);
+            ret = I2C_BufferRead(buf24_empty, 1, 0xFF, addrs[idx] << 1);
             if (!ret) {
                 dxl_print_dbg("通信失败\r\n");
             }
@@ -365,10 +365,10 @@ void test_i2c_rgb_software(void) {
 
 #if 0
 
-        ret = I2C_BufferReadRaw(buf24_empty, 1, 0x01, addr << 1);
+        ret = I2C_BufferRead(buf24_empty, 1, 0x01, addr << 1);
         dxl_print_dbg("数量寄存器读取结果： %d, 值 = %d\r\n", ret, buf24_empty[0]);
 
-        ret = I2C_BufferReadRaw(buf24_empty, 1, 0x02, addr << 1);
+        ret = I2C_BufferRead(buf24_empty, 1, 0x02, addr << 1);
         dxl_print_dbg("索引寄存器读取结果： %d, 值 = %d\r\n", ret, buf24_empty[0]);
 
         // ---- 写入相关数据，测试后续的数据读取功能是否正常
@@ -384,12 +384,12 @@ void test_i2c_rgb_software(void) {
 
         // ---- 写入结束
 
-        ret = I2C_BufferReadRaw(buf24_empty, sizeof(buf24_empty), 0x03, addr << 1);
+        ret = I2C_BufferRead(buf24_empty, sizeof(buf24_empty), 0x03, addr << 1);
         dxl_print_dbg("数据寄存器读取结果： %d\r\n", ret);
         for (int i = 0; i < sizeof(buf24); ++i) dxl_print_dbg("%02x ", (uint8_t) buf24_empty[i]);
         dxl_print_dbg("\r\n");
 
-        ret = I2C_BufferReadRaw(buf24_empty, 1, 0x04, addr << 1);
+        ret = I2C_BufferRead(buf24_empty, 1, 0x04, addr << 1);
         dxl_print_dbg("熄灯寄存器读取结果： %d, 值 = %d\r\n", ret, buf24_empty[0]);
 
         // ---- 测试写索引锁定寄存器然后再读取
@@ -397,13 +397,13 @@ void test_i2c_rgb_software(void) {
         ret = I2C_WriteByte(1, 0x05, addr << 1); // 写索引锁定寄存器，使能自增
         dxl_print_dbg("索引锁定寄存器（使能锁定）写入结果： %d\r\n", ret);
 
-        ret = I2C_BufferReadRaw(buf24_empty, 1, 0x05, addr << 1);
+        ret = I2C_BufferRead(buf24_empty, 1, 0x05, addr << 1);
         dxl_print_dbg("索引锁定寄存器读取结果： %d, 值 = %d\r\n", ret, buf24_empty[0]);
 
         ret = I2C_WriteByte(0, 0x05, addr << 1); // 写索引锁定寄存器，使能自增
         dxl_print_dbg("索引锁定寄存器（关闭锁定）写入结果： %d\r\n", ret);
 
-        ret = I2C_BufferReadRaw(buf24_empty, 1, 0x05, addr << 1);
+        ret = I2C_BufferRead(buf24_empty, 1, 0x05, addr << 1);
         dxl_print_dbg("索引锁定寄存器读取结果： %d, 值 = %d\r\n", ret, buf24_empty[0]);
 
         // ---- 测试结束
@@ -413,18 +413,18 @@ void test_i2c_rgb_software(void) {
         ret = I2C_WriteByte(1, 0x06, addr << 1); // 写闪灯使能寄存器，使能自增
         dxl_print_dbg("闪灯使能寄存器（使能闪灯）写入结果： %d\r\n", ret);
 
-        ret = I2C_BufferReadRaw(buf24_empty, 1, 0x06, addr << 1);
+        ret = I2C_BufferRead(buf24_empty, 1, 0x06, addr << 1);
         dxl_print_dbg("闪灯使能寄存器读取结果： %d, 值 = %d\r\n", ret, buf24_empty[0]);
 
         ret = I2C_WriteByte(0, 0x06, addr << 1); // 写闪灯使能寄存器，使能自增
         dxl_print_dbg("闪灯使能寄存器（关闭闪灯）写入结果： %d\r\n", ret);
 
-        ret = I2C_BufferReadRaw(buf24_empty, 1, 0x06, addr << 1);
+        ret = I2C_BufferRead(buf24_empty, 1, 0x06, addr << 1);
         dxl_print_dbg("闪灯使能寄存器读取结果： %d, 值 = %d\r\n", ret, buf24_empty[0]);
 
         // ---- 测试结束
 
-        ret = I2C_BufferReadRaw(buf24_empty, 2, 0x07, addr << 1);
+        ret = I2C_BufferRead(buf24_empty, 2, 0x07, addr << 1);
         dxl_print_dbg("闪灯使能寄存器读取结果： %d, 亮时长 = %d, 灭时长 = %d\r\n", ret, buf24_empty[0], buf24_empty[1]);
 
 #endif
@@ -525,7 +525,7 @@ void test_i2c_rgb_software(void) {
         //ret = I2C_WriteByte(0x00, 0x04, addr << 1); // 写熄灯寄存器，数据可传可不传，无所谓
         //dxl_print_dbg("熄灯寄存器写入结果： %d\r\n", ret);
 
-        ret = I2C_BufferReadRaw(buf24_empty, sizeof(buf24_empty), 0x03, addr << 1);
+        ret = I2C_BufferRead(buf24_empty, sizeof(buf24_empty), 0x03, addr << 1);
         dxl_print_dbg("数据寄存器读取结果： %d\r\n", ret);
         for (int i = 0; i < sizeof(buf24); ++i) dxl_print_dbg("%02x ", (uint8_t) buf24_empty[i]);
         dxl_print_dbg("\r\n");
@@ -672,7 +672,7 @@ void test_i2c_ant_software(void) {
         (void) ret;
 
         // 读版本号，通信如果没问题应当成功
-        ret = I2C_BufferReadRaw(buf8_empty, 1, 0xFF, addr << 1);
+        ret = I2C_BufferRead(buf8_empty, 1, 0xFF, addr << 1);
         dxl_print_dbg("固件版本寄存器读取结果： %d, v%d.%d\r\n", ret, buf8_empty[0], buf8_empty[1]);
 
         // 写版本号寄存器，肯定要失败才对的
@@ -680,7 +680,7 @@ void test_i2c_ant_software(void) {
         dxl_print_dbg("固件版本寄存器写入结果： %d\r\n", ret);
 
         // 设备标志寄存器，标志当前是pm5的多频复合天线，理论上要读取到：0x70 0x6D 0x35 0x5F 0x61 0x6E 0x74 0x78
-        ret = I2C_BufferReadRaw(buf8_empty, 8, 0xFE, addr << 1);
+        ret = I2C_BufferRead(buf8_empty, 8, 0xFE, addr << 1);
         dxl_print_dbg("设备标志寄存器读取结果(%d)：  %02x %02x %02x %02x %02x %02x %02x %02x\r\n", ret,
                       buf8_empty[0], buf8_empty[1], buf8_empty[2], buf8_empty[3],
                       buf8_empty[4], buf8_empty[5], buf8_empty[6], buf8_empty[7]);
@@ -690,7 +690,7 @@ void test_i2c_ant_software(void) {
         dxl_print_dbg("设备标志寄存器写入结果： %d\r\n", ret);
 
         // 读取IO数据寄存器，8个bit控制8个IO
-        ret = I2C_BufferReadRaw(buf8_empty, 1, 0x01, addr << 1);
+        ret = I2C_BufferRead(buf8_empty, 1, 0x01, addr << 1);
         dxl_print_dbg("IO数据寄存器读取结果： %d\r\n", ret);
 
         // 等待按钮重新按下
@@ -722,7 +722,7 @@ void test_i2c_ant_software(void) {
 #endif
 
             // 读取IO数据寄存器，8个bit控制8个IO
-            ret = I2C_BufferReadRaw(buf8_empty, 1, 0x01, addr << 1);
+            ret = I2C_BufferRead(buf8_empty, 1, 0x01, addr << 1);
             dxl_print_dbg("IO数据寄存器读取结果： value = %d, ret = %d\r\n", buf8_empty[0], ret);
             // 延迟一下，流水灯测试
             SpinDelay(50);
@@ -1097,7 +1097,7 @@ void test_bat_coulometer(void) {
 
         while (1) {
             // Voltage(): 0x04 and 0x05
-            bool ret = I2C_BufferReadRaw(data, 2, 0x04, addr);
+            bool ret = I2C_BufferRead(data, 2, 0x04, addr);
             dxl_print_dbg("Read result: %d, voltage = %dmv\n", ret, *(uint16_t *) data);
             SpinDelay(500);
         }
@@ -1128,16 +1128,16 @@ void test_bat_charger(void) {
         uint8_t data[20];
 
         // 0x00 是输入控制，电压和电流
-        bool ret = I2C_BufferReadRaw(data, 1, 0x00, addr);
+        bool ret = I2C_BufferRead(data, 1, 0x00, addr);
         dxl_print_dbg("Read result: %d, InputSourceCtrl: 0x%02x\n", ret, data[0]);
 
         // 0x09 故障寄存器
-        ret = I2C_BufferReadRaw(data, 1, 0x09, addr);
+        ret = I2C_BufferRead(data, 1, 0x09, addr);
         dxl_print_dbg("Read result: %d, Fault: 0x%02x\n", ret, data[0]);
 
 #if 0 // 测试运输模式，会导致vmi关闭输出
         // 0x06 MainControl 默认0xC0 B5 是 FET_DIS
-        ret = I2C_BufferReadRaw(data, 1, 0x06, addr);
+        ret = I2C_BufferRead(data, 1, 0x06, addr);
         dxl_print_dbg("Read result: %d, MainControl: 0x%02x\n", ret, data[0]);
         // 判断是否处于运输模式，如果是，则不做啥，如果不是，则进入运输模式
         if ((data[0] >> 5) & 0x01) {
@@ -1152,7 +1152,7 @@ void test_bat_charger(void) {
 
 #if 1
         // 0x09 PowerOnConfig 寄存器
-        ret = I2C_BufferReadRaw(data, 1, 0x01, addr);
+        ret = I2C_BufferRead(data, 1, 0x01, addr);
         dxl_print_dbg("Read result: %d, PowerOnCfg: 0x%02x\n", ret, data[0]);
         // 第三位是充电控制位，为0时使能充电
         if (!(data[0] >> 3 & 0x01)) {
@@ -1164,7 +1164,7 @@ void test_bat_charger(void) {
             dxl_print_dbg("Write result: %d, MainControl: 0x%02x\n", ret, data[0]);
         }
         // 0x02 ChargeCurrentControl 寄存器
-        ret = I2C_BufferReadRaw(data, 1, 0x02, addr);
+        ret = I2C_BufferRead(data, 1, 0x02, addr);
         dxl_print_dbg("Read result: %d, ChargeCurrentControl: 0x%02x\n", ret, data[0]);
         // 写充电电流控制寄存器为 0x1F 将设置充电电流为 256ma
         data[0] = 0x1F;
@@ -1182,7 +1182,7 @@ void test_bat_charger_only_settings(void) {
     uint8_t data[20];
 
     // 0x09 PowerOnConfig 寄存器
-    I2C_BufferReadRaw(data, 1, 0x01, addr);
+    I2C_BufferRead(data, 1, 0x01, addr);
     // 第三位是充电控制位，为0时使能充电
     if (!(data[0] >> 3 & 0x01)) {
         // 已经是充电模式
@@ -1270,7 +1270,7 @@ void test_coulometer_charger_int(void) {
         uint8_t coulometer_addr = 0xAA; // 最高位为 1010101（地址位） [0|1]（读写位），所以我们给出的整字节地址就是 0xAA 即可
 
         // 我们需要打开充电
-        ret = I2C_BufferReadRaw(data, 1, 0x01, charger_addr);
+        ret = I2C_BufferRead(data, 1, 0x01, charger_addr);
         dxl_print_dbg("Read result: %d, PowerOnCfg: 0x%02x\n", ret, data[0]);
         // 第三位是充电控制位，为0时使能充电
         if (!(data[0] >> 3 & 0x01)) {
@@ -1613,7 +1613,7 @@ void test_f0_com_by_usb_cep(void) {
                     if (GetTicks() - resp_wait_spi_tdbe > 1000 * 1000) {
                         // 等待超过1s还没有发送出去，说明可能和F0的连接已经断开了
                         // 如果和F0的连接已经断开，则不再进行等待传输
-                        bool ret = I2C_BufferReadRaw(&cc_ctrl_data, 1, 0x09, cc_controller_addr << 1);
+                        bool ret = I2C_BufferRead(&cc_ctrl_data, 1, 0x09, cc_controller_addr << 1);
                         if (ret && (cc_ctrl_data >> 6 & 0x03) == 0) {
                             is_cep_connected = false;
 #if TEST_F0_PRINT
@@ -1635,7 +1635,7 @@ void test_f0_com_by_usb_cep(void) {
 #if TEST_F0_CONNECTION
 
         // 检查和F0的互联是否已经断开
-        bool ret = I2C_BufferReadRaw(&cc_ctrl_data, 1, 0x09, cc_controller_addr << 1);
+        bool ret = I2C_BufferRead(&cc_ctrl_data, 1, 0x09, cc_controller_addr << 1);
         if (ret) {
 #if TEST_F0_PRINT
             // dxl_print_dbg("cc_ctrl_data: %d\n", cc_ctrl_data);
@@ -1695,7 +1695,7 @@ void test_24c02(void) {
         // 用 I2C_BufferWrite 写入
 
         uint8_t data[256];
-        bool ret = I2C_BufferReadRaw(data, sizeof(data), 0x00, addr_24c02 << 1);
+        bool ret = I2C_BufferRead(data, sizeof(data), 0x00, addr_24c02 << 1);
         dxl_print_dbg("Read result: %d, data: %s\n", ret, data);
 
         // 尝试解析为结构化的出厂数据

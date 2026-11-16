@@ -529,7 +529,8 @@ bool I2C_BufferWrite(const uint8_t *data, uint16_t len, uint8_t device_cmd, uint
 
 // read one array of data (Data array, Readout length, command to be written , SlaveDevice address  ).
 // len = uint16 because we need to read up to 256bytes
-int16_t I2C_BufferRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t device_address) {
+// Note: The first U16 data must is data length from device response! And '*data' exclude the U16 length info.
+int16_t I2C_AdaptiveRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t device_address) {
 
     // sanity check - need at least 2 bytes for the SIM-module length header
     // (the response format prepends a 2-byte BE length); fewer cannot be parsed.
@@ -640,7 +641,7 @@ int16_t I2C_BufferRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t 
 // read one array of data (Data array, Readout length, command to be written , SlaveDevice address  ).
 // len = uint16 because we need to read up to 256bytes
 // No data process logic, only raw rx.
-int16_t I2C_BufferReadRaw(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t device_address) {
+int16_t I2C_BufferRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t device_address) {
 
     // sanity check
     if (data == NULL || len == 0) {
@@ -865,7 +866,7 @@ int I2C_get_version(uint8_t *major, uint8_t *minor) {
     // restore, reconnecting a client leaves the module on the default rate and
     // an already negotiated card unreachable.
     sc_rate_restore();
-    uint8_t len = I2C_BufferRead(resp, sizeof(resp), I2C_DEVICE_CMD_GETVERSION, I2C_DEVICE_ADDRESS_MAIN);
+    uint8_t len = I2C_AdaptiveRead(resp, sizeof(resp), I2C_DEVICE_CMD_GETVERSION, I2C_DEVICE_ADDRESS_MAIN);
     if (len > 1) {
         *major = resp[0];
         *minor = resp[1];
@@ -908,7 +909,7 @@ bool sc_rx_bytes(uint8_t *dest, uint16_t *destlen, uint32_t wait) {
 
         I2C_WaitForSim(wait);
 
-        len = I2C_BufferRead(dest, *destlen, I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
+        len = I2C_AdaptiveRead(dest, *destlen, I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
 
         LED_C_ON();
 

@@ -128,8 +128,8 @@ bool I2C_WriteCmd(uint8_t device_cmd, uint8_t device_address);
 
 bool I2C_WriteByte(uint8_t data, uint8_t device_cmd, uint8_t device_address);
 bool I2C_BufferWrite(const uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t device_address);
-int16_t I2C_BufferReadRaw(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t device_address);
 int16_t I2C_BufferRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t device_address);
+int16_t I2C_AdaptiveRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t device_address);
 
 // for firmware
 int16_t I2C_ReadFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address);

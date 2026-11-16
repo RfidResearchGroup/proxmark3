@@ -260,7 +260,7 @@ static bool cep_do_handshake(void) {
                 StartTicks();
                 I2C_init(true);
                 uint8_t cc_ctrl_data;
-                bool ret = I2C_BufferReadRaw(&cc_ctrl_data, 1, CEP_CC_STATUS_REG, CEP_CC_CONTROLLER_ADDR << 1);
+                bool ret = I2C_BufferRead(&cc_ctrl_data, 1, CEP_CC_STATUS_REG, CEP_CC_CONTROLLER_ADDR << 1);
                 if (!ret || ((cc_ctrl_data >> 6 & 0x03) == 0)) {
                     return false;   // disconnected mid-reply, or can't tell - bail either way
                 }
@@ -292,7 +292,7 @@ void cep_attach_poll(void) {
     I2C_init(true);
 
     uint8_t cc_ctrl_data;
-    bool ret = I2C_BufferReadRaw(&cc_ctrl_data, 1, CEP_CC_STATUS_REG, CEP_CC_CONTROLLER_ADDR << 1);
+    bool ret = I2C_BufferRead(&cc_ctrl_data, 1, CEP_CC_STATUS_REG, CEP_CC_CONTROLLER_ADDR << 1);
     if (!ret) {
         return;
     }

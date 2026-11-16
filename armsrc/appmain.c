@@ -1350,7 +1350,7 @@ static bool QCTestPM5(uint8_t *failed_item, uint32_t timeout_ms) {
     bool data_u8_valid = false;
 
     // 读取天线当前MAP配置，如果读取不到，则认为天线的控制芯片可能有问题
-    isok = I2C_BufferReadRaw(&data_u8, 1, 0x02, addr_ant << 1);
+    isok = I2C_BufferRead(&data_u8, 1, 0x02, addr_ant << 1);
     if (!isok) {
         *failed_item = 0;
         result = false;
@@ -4306,7 +4306,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint8_t cmd = payload->reg_type == 0 ? 0x01 : 0x02;
             uint8_t data;
 
-            bool isok = I2C_BufferReadRaw(&data, 1, cmd, addr << 1);
+            bool isok = I2C_BufferRead(&data, 1, cmd, addr << 1);
             reply_ng(CMD_ANT_CONTROL_READ, isok ? PM3_SUCCESS : PM3_EFAILED, &data, sizeof(data));
             break;
         }
@@ -4316,7 +4316,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             uint8_t addr = 0x50; // TODO DXL define move to header?
             uint8_t data[256]; // 24c02: 256byte
-            bool isok = I2C_BufferReadRaw(data, sizeof(data), 0x00, addr << 1);
+            bool isok = I2C_BufferRead(data, sizeof(data), 0x00, addr << 1);
             reply_ng(CMD_EEPROM_FACTORY_INFO_READ, isok ? PM3_SUCCESS : PM3_EFAILED, data, sizeof(data));
             break;
         }
