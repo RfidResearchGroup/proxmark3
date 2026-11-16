@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf topaz view` - a json dump was loaded with its blocks 8 blocks apart, past the buffer, and then refused (@matrix)
+- Fixed the Topaz json dump loader - it did not check that the tag fits the buffer: a Topaz json given to a command with a smaller one, `lf hitag view` for one, overflowed it (@matrix)
 - Fixed `hf iclass dump` - the emulator memory is kept, a dump no longer wipes what `hf iclass eload` loaded (@matrix)
 - Fixed `hf 14a raw --topaz` - the answer's CRC was checked as a CRC_A instead of the CRC_B Topaz uses, so a valid answer showed its CRC in red (@matrix)
 - Fixed `hf 15 writeafi` and `hf 15 writedsfid` - a UID given with `-u` was sent in the wrong byte order, so no tag answered (@matrix)
