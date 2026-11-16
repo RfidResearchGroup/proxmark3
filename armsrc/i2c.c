@@ -25,34 +25,6 @@
 #include "util.h"
 #include "string.h"
 
-#define SCL_H    Gpio_I2C_SCL_High()
-#define SCL_L    Gpio_I2C_SCL_Low()
-#define SDA_H    Gpio_I2C_SDA_High()
-#define SDA_L    Gpio_I2C_SDA_Low()
-#define RST_H    Gpio_I2C_RST_High()
-#define RST_L    Gpio_I2C_RST_Low()
-
-#define SCL_read Gpio_I2C_SCL_Read()
-#define SDA_read Gpio_I2C_SDA_Read()
-
-#define I2C_ERROR  "I2C_WaitAck Error"
-
-// Bus timing lives in i2c.h alongside the timeouts derived from it, so the two
-// cannot drift apart.
-#define I2C_DELAY_1CLK    SpinDelayUsPrecision(I2C_DELAY_1CLK_US)
-#define I2C_DELAY_2CLK    SpinDelayUsPrecision(I2C_DELAY_2CLK_US)
-#define I2C_DELAY_SDA     SpinDelayUsPrecision(s_app_i2c_timing ? I2C_DELAY_SDA_APP_US : I2C_DELAY_SDA_US)
-#define I2C_DELAY_HOLD    SpinDelayUsPrecision(I2C_DELAY_HOLD_US)
-#define I2C_DELAY_HIGH    SpinDelayUsPrecision(I2C_DELAY_HIGH_US)
-
-static bool s_app_i2c_timing = false;
-
-bool sc_set_app_i2c_timing(bool enabled) {
-    bool previous = s_app_i2c_timing;
-    s_app_i2c_timing = enabled && I2C_APP_FAST_TIMING;
-    return previous;
-}
-
 #define SC_PROTO_T0     (1 << 0)
 #define SC_PROTO_T1     (1 << 1)
 
@@ -103,56 +75,8 @@ static struct {
 // first in this file.
 static void sc_rate_restore(void);
 
-// try i2c bus recovery at 100kHz = 5us high, 5us low
-void I2C_recovery(void) {
-
-    DbpString("Performing i2c bus recovery");
-
-    // reset I2C
-    SDA_H;
-    SCL_H;
-
-    //9nth cycle acts as NACK
-    for (int i = 0; i < 10; i++)  {
-        SCL_H;
-        WaitUS(5);
-        SCL_L;
-        WaitUS(5);
-    }
-
-    //a STOP signal (SDA from low to high while CLK is high)
-    SDA_L;
-    WaitUS(5);
-
-    SCL_H;
-    WaitUS(2);
-    SDA_H;
-    WaitUS(2);
-
-    bool isok = (SCL_read && SDA_read);
-    if (!SDA_read)
-        DbpString("I2C bus recovery  error: SDA still LOW");
-    if (!SCL_read)
-        DbpString("I2C bus recovery  error: SCL still LOW");
-    if (isok)
-        DbpString("I2C bus recovery complete");
-}
-
-void I2C_init(bool has_ticks) {
-    gpio_i2c_hw_rst_setup();
-    gpio_i2c_sw_bus_setup();
-
-    if (has_ticks) {
-        WaitMS(2);
-    }
-
-    bool isok = (SCL_read && SDA_read);
-    if (isok == false)
-        I2C_recovery();
-}
-
 // set the reset state
-void I2C_SetResetStatus(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA) {
+static void sim_set_lines(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA) {
     if (LineRST)
         RST_H;
     else
@@ -179,11 +103,11 @@ void I2C_Reset_EnterMainProgram(void) {
     StartTicks();
     sc_log_trace_reset();
     I2C_init(true);
-    I2C_SetResetStatus(0, 0, 0);
+    sim_set_lines(0, 0, 0);
     WaitMS(30);
-    I2C_SetResetStatus(1, 0, 0);
+    sim_set_lines(1, 0, 0);
     WaitMS(30);
-    I2C_SetResetStatus(1, 1, 1);
+    sim_set_lines(1, 1, 1);
     WaitMS(10);
 }
 
@@ -192,39 +116,10 @@ void I2C_Reset_EnterMainProgram(void) {
 void I2C_Reset_EnterBootloader(void) {
     StartTicks();
     I2C_init(true);
-    I2C_SetResetStatus(0, 1, 1);
+    sim_set_lines(0, 1, 1);
     WaitMS(100);
-    I2C_SetResetStatus(1, 1, 1);
+    sim_set_lines(1, 1, 1);
     WaitMS(10);
-}
-
-// Wait for the clock to go High.
-static bool WaitSCL_H_delay(uint32_t delay) {
-    while (delay--) {
-        if (SCL_read) {
-            return true;
-        }
-        I2C_DELAY_1CLK;
-    }
-    return false;
-}
-
-static bool WaitSCL_H(void) {
-    return WaitSCL_H_delay(I2C_ITERS_FOR_MS(I2C_STRETCH_TIMEOUT_MS));
-}
-
-static bool WaitSCL_L_delay(uint32_t delay) {
-    while (delay--) {
-        if (SCL_read == false) {
-            return true;
-        }
-        I2C_DELAY_1CLK;
-    }
-    return false;
-}
-
-static bool WaitSCL_L(void) {
-    return WaitSCL_L_delay(I2C_ITERS_FOR_MS(I2C_STRETCH_TIMEOUT_MS));
 }
 
 // How long to allow the SIM module to *start* an operation, i.e. to pull SCL
@@ -248,33 +143,7 @@ static bool WaitSCL_L_timeout(void) {
     // hold. Polled at bus granularity: a command the module already finished
     // never shows SCL low at all, and at 1 ms a step that cost the full
     // timeout on every fast exchange.
-    return WaitSCL_L_delay(I2C_ITERS_FOR_MS(SIM_START_TIMEOUT_MS));
-}
-
-static bool I2C_Start(void) {
-
-    I2C_DELAY_2CLK;
-    I2C_DELAY_2CLK;
-    SDA_H;
-    I2C_DELAY_1CLK;
-    SCL_H;
-    if (WaitSCL_H() == false) {
-        return false;
-    }
-
-    I2C_DELAY_2CLK;
-
-    if (SCL_read == false) {
-        return false;
-    }
-
-    if (SDA_read == false) {
-        return false;
-    }
-
-    SDA_L;
-    I2C_DELAY_2CLK;
-    return true;
+    return I2C_WaitSCL_L(I2C_ITERS_FOR_MS(SIM_START_TIMEOUT_MS));
 }
 
 static bool I2C_WaitForSim(uint32_t wait) {
@@ -285,551 +154,7 @@ static bool I2C_WaitForSim(uint32_t wait) {
     }
 
     // wait is an iteration count; build it with I2C_ITERS_FOR_MS().
-    return WaitSCL_H_delay(wait);
-}
-
-// send i2c STOP
-static void I2C_Stop(void) {
-    SCL_L;
-    I2C_DELAY_2CLK;
-    SDA_L;
-    I2C_DELAY_2CLK;
-    SCL_H;
-    I2C_DELAY_2CLK;
-
-    if (WaitSCL_H() == false) {
-        return;
-    }
-
-    SDA_H;
-    I2C_DELAY_2CLK;
-    I2C_DELAY_2CLK;
-    I2C_DELAY_2CLK;
-    I2C_DELAY_2CLK;
-}
-
-// Send i2c ACK
-static void I2C_Ack(void) {
-    SCL_L;
-    I2C_DELAY_2CLK;
-    SDA_L;
-    I2C_DELAY_2CLK;
-    SCL_H;
-    I2C_DELAY_2CLK;
-
-    if (WaitSCL_H() == false) {
-        return;
-    }
-
-    SCL_L;
-    I2C_DELAY_2CLK;
-}
-
-// Send i2c NACK
-static void I2C_NoAck(void) {
-    SCL_L;
-    I2C_DELAY_2CLK;
-    SDA_H;
-    I2C_DELAY_2CLK;
-    SCL_H;
-    I2C_DELAY_2CLK;
-
-    if (WaitSCL_H() == false) {
-        return;
-    }
-
-    SCL_L;
-    I2C_DELAY_2CLK;
-}
-
-static bool I2C_WaitAck(void) {
-    SCL_L;
-    I2C_DELAY_1CLK;
-    SDA_H;
-    I2C_DELAY_1CLK;
-    SCL_H;
-
-    if (WaitSCL_H() == false) {
-        return false;
-    }
-
-    I2C_DELAY_2CLK;
-    I2C_DELAY_2CLK;
-    if (SDA_read) {
-        SCL_L;
-        return false;
-    }
-    SCL_L;
-    return true;
-}
-
-static void I2C_SendByte(uint8_t data) {
-
-    uint8_t bits = 8;
-
-    while (bits--) {
-        SCL_L;
-
-        I2C_DELAY_HOLD;
-
-        if (data & 0x80)
-            SDA_H;
-        else
-            SDA_L;
-
-        data <<= 1;
-
-        I2C_DELAY_SDA;
-
-        SCL_H;
-        if (WaitSCL_H() == false) {
-            return;
-        }
-
-        I2C_DELAY_HIGH;
-    }
-    SCL_L;
-}
-
-static int16_t I2C_ReadByte(void) {
-    uint8_t bits = 8, b = 0;
-
-    SDA_H;
-    while (bits--) {
-
-        b <<= 1;
-        SCL_L;
-        if (WaitSCL_L() == false) {
-            return -2;
-        }
-
-        I2C_DELAY_SDA;
-        SCL_H;
-        if (WaitSCL_H() == false) {
-            return -1;
-        }
-
-        I2C_DELAY_HIGH;
-        if (SDA_read) {
-            b |= 0x01;
-        }
-    }
-    SCL_L;
-    return b;
-}
-
-// Sends one byte  (command to be written, SlaveDevice address)
-bool I2C_WriteCmd(uint8_t device_cmd, uint8_t device_address) {
-    bool _break = true;
-    do {
-        if (I2C_Start() == false) {
-            return false;
-        }
-
-        I2C_SendByte(device_address & 0xFE);
-        if (I2C_WaitAck() == false) {
-            break;
-        }
-
-        I2C_SendByte(device_cmd);
-        if (I2C_WaitAck() == false) {
-            break;
-        }
-
-        _break = false;
-    } while (false);
-
-    I2C_Stop();
-
-    if (_break) {
-
-        if (g_dbglevel > DBG_DEBUG) DbpString(I2C_ERROR);
-
-        return false;
-    }
-    return true;
-}
-
-// Sends 1 byte data (data to be written, command to be written , SlaveDevice address)
-bool I2C_WriteByte(uint8_t data, uint8_t device_cmd, uint8_t device_address) {
-    bool _break = true;
-    do {
-        if (I2C_Start() == false) {
-            return false;
-        }
-
-        I2C_SendByte(device_address & 0xFE);
-        if (I2C_WaitAck() == false) {
-            break;
-        }
-
-        I2C_SendByte(device_cmd);
-        if (I2C_WaitAck() == false) {
-            break;
-        }
-
-        I2C_SendByte(data);
-        if (I2C_WaitAck() == false) {
-            break;
-        }
-
-        _break = false;
-    } while (false);
-
-    I2C_Stop();
-    if (_break) {
-        if (g_dbglevel > DBG_DEBUG) DbpString(I2C_ERROR);
-        return false;
-    }
-    return true;
-}
-
-// Sends array of data (array, length, command to be written , SlaveDevice address)
-// len = uint16 because we need to write up to 256 bytes
-bool I2C_BufferWrite(const uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t device_address) {
-    bool _break = true;
-    do {
-        if (I2C_Start() == false) {
-            return false;
-        }
-
-        I2C_SendByte(device_address & 0xFE);
-        if (I2C_WaitAck() == false) {
-            break;
-        }
-
-        I2C_SendByte(device_cmd);
-        if (I2C_WaitAck() == false) {
-            break;
-        }
-
-        while (len) {
-
-            I2C_SendByte(*data);
-            if (I2C_WaitAck() == false)
-                break;
-
-            len--;
-            data++;
-        }
-
-        if (len == 0) {
-            _break = false;
-        }
-
-    } while (false);
-
-    I2C_Stop();
-    if (_break) {
-        if (g_dbglevel > DBG_DEBUG) DbpString(I2C_ERROR);
-        return false;
-    }
-    return true;
-}
-
-// read one array of data (Data array, Readout length, command to be written , SlaveDevice address  ).
-// len = uint16 because we need to read up to 256bytes
-// Note: The first U16 data must is data length from device response! And '*data' exclude the U16 length info.
-int16_t I2C_AdaptiveRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t device_address) {
-
-    // sanity check - need at least 2 bytes for the SIM-module length header
-    // (the response format prepends a 2-byte BE length); fewer cannot be parsed.
-    if (data == NULL || len < 2) {
-        return 0;
-    }
-
-    // extra wait  500us (514us measured)
-    // 200us  (xx measured)
-    WaitUS(600);
-
-    bool _break = true;
-
-    do {
-        if (I2C_Start() == false) {
-            return 0;
-        }
-
-        // 0xB0 / 0xC0  == i2c write
-        I2C_SendByte(device_address & 0xFE);
-        if (I2C_WaitAck() == false) {
-            break;
-        }
-
-        I2C_SendByte(device_cmd);
-        if (I2C_WaitAck() == false) {
-            break;
-        }
-
-        // 0xB1 / 0xC1 == i2c read
-        I2C_Start();
-        I2C_SendByte(device_address | 1);
-        if (I2C_WaitAck() == false) {
-            break;
-        }
-
-        _break = false;
-    } while (false);
-
-    if (_break) {
-        I2C_Stop();
-        if (g_dbglevel > DBG_DEBUG) DbpString(I2C_ERROR);
-        return 0;
-    }
-
-    uint16_t readcount = 0;
-    uint16_t recv_len = 0;
-
-    while (len) {
-
-        int16_t tmp = I2C_ReadByte();
-        if (tmp < 0) {
-            return tmp;
-        }
-
-        *data = (uint8_t)tmp & 0xFF;
-
-        len--;
-
-        // Starting firmware v4 the length is encoded on the first two bytes.
-        switch (readcount) {
-            case 0: {
-                // Length (MSB)
-                recv_len = (*data) << 8;
-                break;
-            }
-            case 1: {
-                // Length (LSB)
-                recv_len += *data;
-
-                // old packages..
-                if (recv_len > 0x0200) {
-                    // [0] = len
-                    // [1] = data
-                    recv_len >>= 8;
-                    data++;
-                }
-
-                // Adjust len if needed
-                if (len > recv_len) {
-                    len = recv_len;
-                }
-                break;
-            }
-            default: {
-                // Data byte received
-                data++;
-                break;
-            }
-        }
-
-        readcount++;
-
-        // acknowledgements. After last byte send NACK.
-        if (len == 0) {
-            I2C_NoAck();
-        } else {
-            I2C_Ack();
-        }
-    }
-
-    I2C_Stop();
-
-    // return bytecount - bytes encoding length
-    return readcount - 2;
-}
-
-// read one array of data (Data array, Readout length, command to be written , SlaveDevice address  ).
-// len = uint16 because we need to read up to 256bytes
-// No data process logic, only raw rx.
-int16_t I2C_BufferRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t device_address) {
-
-    // sanity check
-    if (data == NULL || len == 0) {
-        return 0;
-    }
-
-//    uint8_t *pd = data;
-
-    // extra wait  500us (514us measured)
-    // 200us  (xx measured)
-    WaitUS(600);
-
-    bool _break = true;
-
-    do {
-        if (I2C_Start() == false) {
-            return 0;
-        }
-
-        // 0xB0 / 0xC0  == i2c write
-        I2C_SendByte(device_address & 0xFE);
-        if (I2C_WaitAck() == false) {
-            break;
-        }
-
-        I2C_SendByte(device_cmd);
-        if (I2C_WaitAck() == false) {
-            break;
-        }
-
-        // 0xB1 / 0xC1 == i2c read
-        I2C_Start();
-        I2C_SendByte(device_address | 1);
-        if (I2C_WaitAck() == false) {
-            break;
-        }
-
-        _break = false;
-    } while (false);
-
-    if (_break) {
-        I2C_Stop();
-        if (g_dbglevel > DBG_DEBUG) DbpString(I2C_ERROR);
-        return 0;
-    }
-
-    int16_t count = 0;
-
-    while (len) {
-        int16_t tmp = I2C_ReadByte();
-        if (tmp < 0) {
-            return tmp;
-        }
-
-        data[count] = (uint8_t)tmp & 0xFF;
-        len--;
-        count++;
-
-        // acknowledgements. After last byte send NACK.
-        if (len == 0) {
-            I2C_NoAck();
-        } else {
-            I2C_Ack();
-        }
-    }
-
-    I2C_Stop();
-
-//    Dbprintf("rec len...  %u  count... %u", recv_len, count);
-//    Dbhexdump(count, data, false);
-
-    return count;
-}
-
-int16_t I2C_ReadFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address) {
-    //START, 0xB0, 0x00, 0x00, START, 0xB1, xx, yy, zz, ......, STOP
-    bool _break = true;
-    uint8_t readcount = 0;
-
-    // sending
-    do {
-        if (I2C_Start() == false) {
-            return 0;
-        }
-
-        // 0xB0 / 0xC0  i2c write
-        I2C_SendByte(device_address & 0xFE);
-        if (I2C_WaitAck() == false)
-            break;
-
-        I2C_SendByte(msb);
-        if (I2C_WaitAck() == false) {
-            break;
-        }
-
-        I2C_SendByte(lsb);
-        if (I2C_WaitAck() == false) {
-            break;
-        }
-
-        // 0xB1 / 0xC1  i2c read
-        I2C_Start();
-        I2C_SendByte(device_address | 1);
-        if (I2C_WaitAck() == false) {
-            break;
-        }
-
-        _break = false;
-    } while (false);
-
-    if (_break) {
-        I2C_Stop();
-        if (g_dbglevel > DBG_DEBUG) DbpString(I2C_ERROR);
-        return 0;
-    }
-
-    // reading
-    while (len) {
-
-        int16_t tmp = I2C_ReadByte();
-        if (tmp < 0) {
-            return tmp;
-        }
-
-        *data = (uint8_t)tmp & 0xFF;
-
-        data++;
-        readcount++;
-        len--;
-
-        // acknowledgements. After last byte send NACK.
-        if (len == 0)
-            I2C_NoAck();
-        else
-            I2C_Ack();
-    }
-
-    I2C_Stop();
-    return readcount;
-}
-
-bool I2C_WriteFW(const uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address) {
-    //START, 0xB0, 0x00, 0x00, xx, yy, zz, ......, STOP
-    bool _break = true;
-
-    do {
-        if (I2C_Start() == false) {
-            return false;
-        }
-
-        // 0xB0  == i2c write
-        I2C_SendByte(device_address & 0xFE);
-        if (I2C_WaitAck() == false) {
-            break;
-        }
-
-        I2C_SendByte(msb);
-        if (I2C_WaitAck() == false) {
-            break;
-        }
-
-        I2C_SendByte(lsb);
-        if (I2C_WaitAck() == false) {
-            break;
-        }
-
-        while (len) {
-            I2C_SendByte(*data);
-            if (I2C_WaitAck() == false) {
-                break;
-            }
-            len--;
-            data++;
-        }
-
-        if (len == 0) {
-            _break = false;
-        }
-
-    } while (false);
-
-    I2C_Stop();
-
-    if (_break) {
-        if (g_dbglevel > DBG_DEBUG) DbpString(I2C_ERROR);
-        return false;
-    }
-    return true;
+    return I2C_WaitSCL_H(wait);
 }
 
 static bool sim_module_at_least(uint8_t major, uint8_t minor, uint8_t want_major, uint8_t want_minor) {
@@ -1460,6 +785,124 @@ OUT:
     LEDsoff();
 }
 
+// Raw sequential access to the module's byte address space, used to read back
+// the firmware image for verification.
+static int16_t sim_fw_read(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address) {
+    //START, 0xB0, 0x00, 0x00, START, 0xB1, xx, yy, zz, ......, STOP
+    bool _break = true;
+    uint8_t readcount = 0;
+
+    // sending
+    do {
+        if (I2C_Start() == false) {
+            return 0;
+        }
+
+        // 0xB0 / 0xC0  i2c write
+        I2C_SendByte(device_address & 0xFE);
+        if (I2C_WaitAck() == false)
+            break;
+
+        I2C_SendByte(msb);
+        if (I2C_WaitAck() == false) {
+            break;
+        }
+
+        I2C_SendByte(lsb);
+        if (I2C_WaitAck() == false) {
+            break;
+        }
+
+        // 0xB1 / 0xC1  i2c read
+        I2C_Start();
+        I2C_SendByte(device_address | 1);
+        if (I2C_WaitAck() == false) {
+            break;
+        }
+
+        _break = false;
+    } while (false);
+
+    if (_break) {
+        I2C_Stop();
+        if (g_dbglevel > DBG_DEBUG) DbpString(I2C_ERROR);
+        return 0;
+    }
+
+    // reading
+    while (len) {
+
+        int16_t tmp = I2C_ReadByte();
+        if (tmp < 0) {
+            return tmp;
+        }
+
+        *data = (uint8_t)tmp & 0xFF;
+
+        data++;
+        readcount++;
+        len--;
+
+        // acknowledgements. After last byte send NACK.
+        if (len == 0)
+            I2C_NoAck();
+        else
+            I2C_Ack();
+    }
+
+    I2C_Stop();
+    return readcount;
+}
+
+static bool sim_fw_write(const uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address) {
+    //START, 0xB0, 0x00, 0x00, xx, yy, zz, ......, STOP
+    bool _break = true;
+
+    do {
+        if (I2C_Start() == false) {
+            return false;
+        }
+
+        // 0xB0  == i2c write
+        I2C_SendByte(device_address & 0xFE);
+        if (I2C_WaitAck() == false) {
+            break;
+        }
+
+        I2C_SendByte(msb);
+        if (I2C_WaitAck() == false) {
+            break;
+        }
+
+        I2C_SendByte(lsb);
+        if (I2C_WaitAck() == false) {
+            break;
+        }
+
+        while (len) {
+            I2C_SendByte(*data);
+            if (I2C_WaitAck() == false) {
+                break;
+            }
+            len--;
+            data++;
+        }
+
+        if (len == 0) {
+            _break = false;
+        }
+
+    } while (false);
+
+    I2C_Stop();
+
+    if (_break) {
+        if (g_dbglevel > DBG_DEBUG) DbpString(I2C_ERROR);
+        return false;
+    }
+    return true;
+}
+
 void SmartCardUpgrade(uint64_t arg0) {
 
     LED_C_ON();
@@ -1490,7 +933,7 @@ void SmartCardUpgrade(uint64_t arg0) {
         size_t size = MIN(I2C_BLOCK_SIZE, length);
 
         // write
-        int16_t res = I2C_WriteFW(fwdata + pos, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
+        int16_t res = sim_fw_write(fwdata + pos, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
         if (!res) {
             Dbprintf("Writing failed at offset 0x%04X", pos);
             isOK = false;
@@ -1501,7 +944,7 @@ void SmartCardUpgrade(uint64_t arg0) {
         WaitMS(50);
 
         // read
-        res = I2C_ReadFW(verifydata, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
+        res = sim_fw_read(verifydata, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
         if (res <= 0) {
             Dbprintf("Reading back failed at offset 0x%04X", pos);
             isOK = false;

@@ -17,6 +17,7 @@
 #define __I2C_H
 
 #include "common.h"
+#include "i2c_apis.h"
 #include "pm3_cmd.h"
 
 #define I2C_DEVICE_ADDRESS_BOOT     0xB0
@@ -65,75 +66,17 @@
 // The SIM module v4 supports up to 384 bytes for the length.
 #define  ISO7816_MAX_FRAME 270
 
-// Bit banged bus timing. 1CLK is spent twice per bit, 2CLK once, so the bit
-// period is 2 * 1CLK + 2CLK, 62 us or about 16 kHz. Every timeout below derives
-// from these, so they are the only two numbers to change.
-//
-//Old value was 20/22 (16 kHz) - increased to 4/2 (100 kHz) and seems to be working reliably.
-//It was previously reported that 5/7 (59 kHz) was too fast, but this was before SIM module firmware updates.
-//Values above 4/2 (100 kHz) have been tested to work successfully, but they seem to run slower than 4/2.
-#ifndef PM5
-#define I2C_DELAY_1CLK_US       4
-#define I2C_DELAY_2CLK_US       2
-#endif
-
-
-//Gating for PM5 old values as the new ones seems to be incompatible until further changes
-#ifdef PM5
-#define I2C_DELAY_1CLK_US       20
-#define I2C_DELAY_2CLK_US       22
-#endif
-
-// Only one delay per bit is rise time critical: the one bracketing an SDA
-// transition, where a released line has to charge through the pull-up before
-// it reads as a 1. Sampling before that is what corrupted the bus every time
-// these were simply scaled down together. The others are padding - hold after
-// SCL falls (spec 0.3 us) and SCL high width (spec 4 us) - so they get the
-// standard mode minimum with margin instead of a full clock.
-#define I2C_DELAY_SDA_US        15
-#define I2C_DELAY_SDA_APP_US    8
-#define I2C_APP_FAST_TIMING     1
-#define I2C_DELAY_HOLD_US       2
-#define I2C_DELAY_HIGH_US       6
-
-// The SCL wait loops spend one 1CLK per iteration, so their timeouts are
-// iteration counts. Written in ms and converted here so the two cannot drift.
-#define I2C_ITERS_PER_MS        (1000U / I2C_DELAY_1CLK_US)
-#define I2C_ITERS_FOR_MS(ms)    ((uint32_t)(ms) * (uint32_t)I2C_ITERS_PER_MS)
-
-#define I2C_STRETCH_TIMEOUT_MS  100     // slave stretching SCL inside a transfer
 #define I2C_WAIT_MAX_MS         60000   // clamp on a host supplied SC_WAIT
 
 // Must cover the card's block waiting time: 1.4 s at BWI=4, 2.9 s at BWI=5.
 #define SIM_WAIT_MS             3000
 #define SIM_WAIT_DELAY          I2C_ITERS_FOR_MS(SIM_WAIT_MS)
 
-// -std=c99, so no _Static_assert
-#define I2C_BUILD_ASSERT(cond, name) typedef char i2c_assert_##name[(cond) ? 1 : -1]
-
-I2C_BUILD_ASSERT((1000U % I2C_DELAY_1CLK_US) == 0, clk_divides_ms);
 I2C_BUILD_ASSERT(SIM_WAIT_MS >= 3000, sim_wait_covers_bwt);
 I2C_BUILD_ASSERT((uint64_t)I2C_WAIT_MAX_MS * I2C_ITERS_PER_MS <= 0xFFFFFFFFULL, wait_fits_u32);
 
-
-void I2C_recovery(void);
-void I2C_init(bool has_ticks);
-void I2C_Reset(void); // TODO DXL: Not implemented but defined?
-void I2C_SetResetStatus(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA);
-
 void I2C_Reset_EnterMainProgram(void);
 void I2C_Reset_EnterBootloader(void);
-
-bool I2C_WriteCmd(uint8_t device_cmd, uint8_t device_address);
-
-bool I2C_WriteByte(uint8_t data, uint8_t device_cmd, uint8_t device_address);
-bool I2C_BufferWrite(const uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t device_address);
-int16_t I2C_BufferRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t device_address);
-int16_t I2C_AdaptiveRead(uint8_t *data, uint16_t len, uint8_t device_cmd, uint8_t device_address);
-
-// for firmware
-int16_t I2C_ReadFW(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address);
-bool I2C_WriteFW(const uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address);
 
 // Which SIM module opcode a set of SC_RAW* flags asks for.
 uint8_t sc_raw_device_cmd(smartcard_command_t flags);
@@ -157,8 +100,6 @@ void sc_log_trace_reset(void);
 
 bool sc_rx_bytes(uint8_t *dest, uint16_t *destlen, uint32_t wait);
 
-// Returns the previous app timing state.
-bool sc_set_app_i2c_timing(bool enabled);
 //
 bool GetATR(smart_card_atr_t *card_ptr, bool verbose);
 
