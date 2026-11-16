@@ -4,6 +4,9 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Fixed `hf 15` reader commands - the emulator memory is kept instead of being reset to zeros (@matrix)
+- Fixed `hf 15 slixeasdisable` and `hf 15 slixprivacydisable` - the first message said "enable" and "disabling" instead of "disable" (@matrix)
+- Fixed `hf 15 slixprivacydisable` and `hf 15 slixprivacyenable` - a password shorter than 4 bytes is refused instead of being sent with zero or uninitialised bytes (@matrix)
+- Changed PM5 battery gauge - 0 % is now the 3300 mV low-battery shutdown point instead of 3200 mV, so the PM5 no longer powers off while a few percent are still shown (@iceman1001)
 - Fixed `hf search` - the OpenPGP AID probe sent 8 bytes for a 6-byte AID, reading past the string, so no OpenPGP card was found (@matrix)
 - Fixed `hf 15 raw -r` - the device reply was left unread, so every later command printed the answer of the one before (@matrix)
 - Fixed `hf 15 raw` - data too long for one packet is refused at once instead of timing out after 2 s (@matrix)
