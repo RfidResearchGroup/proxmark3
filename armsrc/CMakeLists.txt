@@ -48,6 +48,7 @@ set(INC_DIRS
         ../common_arm/flash_data
         ../common_arm/flash_code
         ../common_arm/gpio
+        ../common_arm/i2c
         ../common_arm/sys
         ../common_arm/fpga
         ../common_arm/wdt
@@ -315,6 +316,7 @@ set(THUMBSRC
         ${SRC_GPIO}
         ${SRC_WDT}
         ${SRC_SYS}
+        ../common_arm/i2c/i2c_core.c
         ../common_arm/rssi/rssi_core.c
         ../common_arm/ticks/ticks_core.c
         hfsnoop.c

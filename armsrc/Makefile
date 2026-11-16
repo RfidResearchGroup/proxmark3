@@ -41,7 +41,8 @@ APP_CFLAGS += $(ARMLIB_EXPORT_CFLAGS)
 # HAL for platform
 ifeq ($(PLATFORM),PM5)
 	SRC_STARTUP    = startup_at32f435_437.s
-    SRC_TICKS      = ../common_arm/ticks/ticks_hw_at32.c i2c.c # TODO DXL: It always depends on I2C, so the compilation location of this source file needs to be optimized.
+	SRC_I2C        = ../common_arm/i2c/i2c_core.c
+    SRC_TICKS      = ../common_arm/ticks/ticks_hw_at32.c
     SRC_GPIO       = ../common_arm/gpio/gpio_hw_at32.c
     SRC_WDT        = ../common_arm/wdt/wdt_hw_at32.c
     SRC_RSSI       = ../common_arm/rssi/rssi_hw_at32.c
@@ -57,6 +58,7 @@ ifeq ($(PLATFORM),PM5)
     LIBS           += $(ARMLIB_OBJ)
 else
 	SRC_STARTUP    =
+	SRC_I2C        = ../common_arm/i2c/i2c_core.c
     SRC_TICKS      = ../common_arm/ticks/ticks_hw_at91.c
     SRC_GPIO       = ../common_arm/gpio/gpio_hw_at91.c
     SRC_WDT        = ../common_arm/wdt/wdt_hw_at91.c
@@ -107,7 +109,7 @@ else
 endif
 
 ifneq (,$(findstring WITH_SMARTCARD,$(APP_CFLAGS)))
-    SRC_SMARTCARD = i2c.c i2c_direct.c emvsim.c
+    SRC_SMARTCARD = i2c.c i2c_direct.c emvsim.c $(SRC_I2C)
 else
     SRC_SMARTCARD =
 endif
