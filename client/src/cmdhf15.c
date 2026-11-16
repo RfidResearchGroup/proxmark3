@@ -3208,8 +3208,8 @@ static int CmdHF15Readblock(const char *Cmd) {
 static int hf_15_write_blk(const uint8_t *pm3flags, uint16_t flags, const uint8_t *uid, bool fast, uint8_t blockno, const uint8_t *data, uint8_t dlen) {
 
     // request to be sent to device/card
-    //   2 + 8 + 1 + (4|8) + 2
-    uint8_t approxlen = 21;
+    //   2 + 8 + 1 + dlen + 2
+    uint16_t approxlen = 2 + ISO15693_UID_LENGTH + 1 + dlen + 2;
     iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
     if (packet == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
@@ -3282,7 +3282,7 @@ static int CmdHF15Write(const char *Cmd) {
     argtable[arglen++] = arg_param_end;
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t uid[ISO15693_UID_LENGTH];
+    uint8_t uid[ISO15693_UID_LENGTH] = {0};
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
     bool uid_set = (uidlen == ISO15693_UID_LENGTH) ? true : false;
@@ -3364,7 +3364,7 @@ static int CmdHF15Restore(const char *Cmd) {
     argtable[arglen++] = arg_param_end;
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    uint8_t uid[ISO15693_UID_LENGTH];
+    uint8_t uid[ISO15693_UID_LENGTH] = {0};
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
 
@@ -3393,8 +3393,7 @@ static int CmdHF15Restore(const char *Cmd) {
     }
 
     // default fallback to scan for tag.
-    // overriding unaddress parameter :)
-    if (uidlen != ISO15693_UID_LENGTH) {
+    if (uidlen != ISO15693_UID_LENGTH && !unaddressed) {
         scan = true;
     }
 
@@ -3479,7 +3478,7 @@ static int CmdHF15Restore(const char *Cmd) {
 
         for (tried = 0; tried < retries; tried++) {
 
-            retval = hf_15_write_blk(&pm3flags, flags, uid, fast, i, data, tag->bytesPerPage);
+            retval = hf_15_write_blk(&pm3flags, flags, ((unaddressed) ? NULL : uid), fast, i, data, tag->bytesPerPage);
 
             if (retval == PM3_SUCCESS) {
                 PrintAndLogEx(INPLACE, "blk %3d", i);
@@ -3819,7 +3818,7 @@ static int CmdHF15SlixEASDisable(const char *Cmd) {
                      );
         payload.usepwd = true;
     } else {
-        PrintAndLogEx(INFO, "Trying to enable EAS mode without using a password");
+        PrintAndLogEx(INFO, "Trying to disable EAS mode without using a password");
         payload.usepwd = false;
     }
 
@@ -3873,7 +3872,12 @@ static int CmdHF15SlixDisable(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 1, payload.pwd, &pwdlen);
     CLIParserFree(ctx);
 
-    PrintAndLogEx(INFO, "Trying to disabling privacy mode using password " _GREEN_("%s")
+    if (pwdlen != 4) {
+        PrintAndLogEx(WARNING, "password must be 4 hex bytes");
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(INFO, "Trying to disable privacy mode using password " _GREEN_("%s")
                   , sprint_hex_inrow(payload.pwd, sizeof(payload.pwd))
                  );
 
@@ -3922,6 +3926,11 @@ static int CmdHF15SlixEnable(const char *Cmd) {
     int pwdlen = 0;
     CLIGetHexWithReturn(ctx, 1, payload.pwd, &pwdlen);
     CLIParserFree(ctx);
+
+    if (pwdlen != 4) {
+        PrintAndLogEx(WARNING, "password must be 4 hex bytes");
+        return PM3_ESOFT;
+    }
 
     PrintAndLogEx(INFO, "Trying to enable privacy mode using password " _GREEN_("%s")
                   , sprint_hex_inrow(payload.pwd, sizeof(payload.pwd))
@@ -4343,7 +4352,7 @@ static int CmdHF15Wipe(const char *Cmd) {
     argtable[arglen++] = arg_param_end;
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    uint8_t uid[ISO15693_UID_LENGTH];
+    uint8_t uid[ISO15693_UID_LENGTH] = {0};
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
     bool uid_set = (uidlen == ISO15693_UID_LENGTH) ? true : false;
@@ -4366,6 +4375,12 @@ static int CmdHF15Wipe(const char *Cmd) {
     if (blocksize < 4) {
         PrintAndLogEx(WARNING, "Blocksize too small, using default 4 bytes");
         blocksize = 4;
+    }
+
+    // ISO15693 block size field is 5 bits
+    if (blocksize > 32) {
+        PrintAndLogEx(WARNING, "Blocksize too large, using maximum 32 bytes");
+        blocksize = 32;
     }
 
     // default fallback to scan for tag.
@@ -4395,7 +4410,7 @@ static int CmdHF15Wipe(const char *Cmd) {
     PrintAndLogEx(INFO, "Wiping tag...");
 
     uint16_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
-    uint8_t empty[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t empty[32] = {0};
 
     uint8_t pm3flags = (ISO15_CONNECT | ISO15_READ_RESPONSE | ISO15_LONG_WAIT | ISO15_NO_DISCONNECT);
     if (fast) {
@@ -4415,6 +4430,13 @@ static int CmdHF15Wipe(const char *Cmd) {
                 }
             }
         } else {
+            // 0F / 10: past the last block
+            if (res != PM3_EOUTOFBOUND) {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(FAILED, "Wiping block %d ( " _RED_("fail") " )", i);
+                DropField();
+                return res;
+            }
             break;
         }
     }
