@@ -209,6 +209,7 @@ static int get_uid_slix(uint32_t start_time, uint32_t *eof_time, uint8_t *uid) {
     SendDataTag(cmd, sizeof(cmd), false, true, answer, ISO15693_MAX_RESPONSE_LENGTH, start_time, ISO15693_READER_TIMEOUT, eof_time, &recvlen);
 
     if (recvlen != 12) {
+        BigBuf_free_keep_EM();
         return PM3_ETIMEOUT;
     }
 
@@ -221,7 +222,7 @@ static int get_uid_slix(uint32_t start_time, uint32_t *eof_time, uint8_t *uid) {
     uid[6] = answer[8];
     uid[7] = answer[9];
 
-    BigBuf_free();
+    BigBuf_free_keep_EM();
     return PM3_SUCCESS;
 }
 
@@ -1645,9 +1646,9 @@ void AcquireRawAdcSamplesIso15693(void) {
 
     LEDsoff();
     DbpString("Starting to acquire data...");
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
+    FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF_15);
 
-    BigBuf_free();
+    BigBuf_free_keep_EM();
     clear_trace();
 
     // Start from off (no field generated)
@@ -1944,7 +1945,7 @@ void RAMFUNC SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, b
 void Iso15693InitReader(void) {
 
     LEDsoff();
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
+    FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF_15);
 
     // Start from off (no field generated)
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
