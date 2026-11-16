@@ -1641,9 +1641,13 @@ int prepareJSON(json_t *root, JSONFileType ftype, uint8_t *data, size_t datalen,
                 JsonSaveBufAsHexCompact(root, path, &tag->data_blocks[i][0], TOPAZ_BLOCK_SIZE);
             }
 
-            // ICEMAN todo:  add dynamic memory.
-            // uint16_z Size
-            // uint8_t *dynamic_memory;
+            // the dynamic memory, block 0x0F and up
+            if ((tag->size > TOPAZ_STATIC_MEMORY) && (tag->dynamic_memory != NULL)) {
+                for (size_t i = TOPAZ_STATIC_MEMORY / TOPAZ_BLOCK_SIZE; i < tag->size / TOPAZ_BLOCK_SIZE; i++) {
+                    snprintf(path, sizeof(path), "$.blocks.%zu", i);
+                    JsonSaveBufAsHexCompact(root, path, &tag->dynamic_memory[(i * TOPAZ_BLOCK_SIZE) - TOPAZ_STATIC_MEMORY], TOPAZ_BLOCK_SIZE);
+                }
+            }
 
             break;
         }

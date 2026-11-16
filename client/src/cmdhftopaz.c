@@ -915,10 +915,19 @@ static int CmdHFTopazDump(const char *Cmd) {
     }
 
     if (topaz_tag.size > TOPAZ_STATIC_MEMORY) {
-        uint8_t mem[TOPAZ_MAX_SIZE];
+        // the capability container gives the size, up to 2048 bytes
+        uint8_t *mem = calloc(topaz_tag.size, sizeof(uint8_t));
+        if (mem == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            free(topaz_tag.dynamic_memory);
+            return PM3_EMALLOC;
+        }
         memcpy(mem, topaz_tag.data_blocks, TOPAZ_STATIC_MEMORY);
         memcpy(mem + TOPAZ_STATIC_MEMORY, topaz_tag.dynamic_memory, topaz_tag.size - TOPAZ_STATIC_MEMORY);
-        pm3_save_dump(filename, mem, topaz_tag.size, jsfTopaz);
+        // the .bin is the memory, the json is written from the tag
+        saveFile(filename, ".bin", mem, topaz_tag.size);
+        saveFileJSON(filename, jsfTopaz, (uint8_t *)&topaz_tag, sizeof(topaz_tag_t), NULL);
+        free(mem);
     } else {
         pm3_save_dump(filename, (uint8_t *)&topaz_tag, sizeof(topaz_tag_t), jsfTopaz);
     }
