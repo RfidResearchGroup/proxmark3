@@ -900,6 +900,31 @@ static const uint8_t CARDAX_STRING[] = {
     0x61, 0x78, 0x2E, 0x63, 0x6F, 0x6D, 0x20, 0x20
 };
 
+// Key B of the MAD and CAD sectors of Gallagher cards, key A is the public MAD key
+static const uint8_t GALLAGHER_MAD_KEY_B[] = {0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5};
+
+static int hfgal_write_blocks(uint8_t first_block, uint8_t count, const uint8_t *data,
+                              const uint8_t *key, uint8_t key_type) {
+    for (uint8_t i = 0; i < count; i++) {
+        int res = mf_write_block(first_block + i, key_type, key, data + (i * MFBLOCK_SIZE));
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+    }
+    return PM3_SUCCESS;
+}
+
+// Write MAD or CAD blocks with the Gallagher or hf mf ndefformat MAD key B, else the transport keys
+static int hfgal_write_directory_blocks(uint8_t first_block, uint8_t count, const uint8_t *data) {
+    if (hfgal_write_blocks(first_block, count, data, GALLAGHER_MAD_KEY_B, MF_KEY_B) == PM3_SUCCESS ||
+            hfgal_write_blocks(first_block, count, data, g_mifare_mad_key_b, MF_KEY_B) == PM3_SUCCESS ||
+            hfgal_write_blocks(first_block, count, data, g_mifare_default_key, MF_KEY_B) == PM3_SUCCESS ||
+            hfgal_write_blocks(first_block, count, data, g_mifare_default_key, MF_KEY_A) == PM3_SUCCESS) {
+        return PM3_SUCCESS;
+    }
+    return PM3_EFAILED;
+}
+
 /**
  * @brief Write a Gallagher site-specific sector to a MIFARE Classic card.
  *
@@ -958,7 +983,7 @@ static int hfgal_write_site_specific_sector(uint8_t sector_num, GallagherCredent
     for (int i = 0; i < 3; i++) {
         int res = mf_write_block(first_block + i, write_key_type, write_key, &sector_data[i * MFBLOCK_SIZE]);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Failed writing block %d (sector %d, block %d)", first_block + i, sector_num, i);
+            PrintAndLogEx(DEBUG, "Failed writing block %d (sector %d, block %d)", first_block + i, sector_num, i);
             return res;
         }
     }
@@ -966,7 +991,7 @@ static int hfgal_write_site_specific_sector(uint8_t sector_num, GallagherCredent
     // Write block 3 (sector trailer) to set keys and access bits
     int res = mf_write_block(first_block + 3, write_key_type, write_key, trailer);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed writing sector trailer (sector %d)", sector_num);
+        PrintAndLogEx(DEBUG, "Failed writing sector trailer (sector %d)", sector_num);
         return res;
     }
 
@@ -977,58 +1002,120 @@ static int hfgal_write_site_specific_sector(uint8_t sector_num, GallagherCredent
 }
 
 /**
- * @brief Update the MAD sector 0 to register Gallagher AIDs.
+ * @brief Register the Gallagher sectors in the MAD.
  *
- * Reads the existing MAD, sets AID entries for the credential and
- * optionally CAD sectors, recalculates the CRC, and writes it back.
+ * Sets the AIDs of the credential and optionally CAD sectors, sectors 17-31 in MAD2, and
+ * recalculates the CRCs. A card without a MAD (no DA in the GPB of sector 0, AN10787) gets
+ * a new one with the public MAD key A, Gallagher's MAD key B and the access 0x787788.
  *
  * @param cred_sector Sector number for the credential data (AID 0x4812).
  * @param cad_sector Sector number for the CAD, or 0 to skip.
- * @param mad_key Key B for MAD sector 0 (6 bytes).
- * @param mad_key_type Key type for MAD sector 0.
+ * @param dry_run Only check that the MAD can list the sectors, write nothing.
  * @param verbose Verbose output.
  * @return PM3_SUCCESS on success.
  */
-static int hfgal_update_mad(uint8_t cred_sector, uint8_t cad_sector,
-                            const uint8_t *mad_key, uint8_t mad_key_type,
-                            bool verbose) {
-    // Read current MAD (sector 0)
+static int hfgal_update_mad(uint8_t cred_sector, uint8_t cad_sector, bool dry_run, bool verbose) {
+    bool need_mad2 = (cred_sector > MAD1_NUM_AIDS || cad_sector > MAD1_NUM_AIDS);
+
     mad1_sector_t sector0 = {0};
-    int res = mf_read_sector(0, mad_key_type, mad_key, (uint8_t *)&sector0);
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed reading MAD sector 0");
-        return res;
+    mad2_sector_t sector16 = {0};
+    bool have_mad = (mf_read_sector(MF_MAD1_SECTOR, MF_KEY_A, g_mifare_mad_key, (uint8_t *)&sector0) == PM3_SUCCESS) &&
+                    (sector0.trailer.gpb & MAD_GPB_DA_MASK);
+
+    if (have_mad) {
+        if (need_mad2 && ((sector0.trailer.gpb & MAD_GPB_VER_MASK) != 0x02 ||
+                          mf_read_sector(MF_MAD2_SECTOR, MF_KEY_A, g_mifare_mad_key, (uint8_t *)&sector16) != PM3_SUCCESS)) {
+            PrintAndLogEx(ERR, "The MAD of the card has no MAD2 for sectors 17-31");
+            return PM3_ENOTIMPL;
+        }
+    } else {
+        memset(&sector0.mad, 0, sizeof(sector0.mad));
+        mf_trailer_t trailer = {0};
+        memcpy(trailer.key_a, g_mifare_mad_key, MIFARE_KEY_SIZE);
+        memcpy(trailer.access, GALLAGHER_ACCESS_BITS, sizeof(trailer.access));
+        memcpy(trailer.key_b, GALLAGHER_MAD_KEY_B, MIFARE_KEY_SIZE);
+        // GPB 0x00 in sector 16, DA, MA and the MAD version in sector 0
+        sector16.trailer = trailer;
+        trailer.gpb = MAD_GPB_DA_MASK | MAD_GPB_MA_MASK | (need_mad2 ? 0x02 : 0x01);
+        sector0.trailer = trailer;
+    }
+    if (dry_run) {
+        return PM3_SUCCESS;
     }
 
-    // Set AID for credential sector (0x4812)
-    if (cred_sector >= 1 && cred_sector <= MAD1_NUM_AIDS) {
-        sector0.mad.aid[cred_sector - 1] = CLASSIC_CRED_AID;
+    const uint8_t sectors[] = {cred_sector, cad_sector};
+    const uint16_t aids[] = {CLASSIC_CRED_AID, CLASSIC_CAD_AID};
+    for (size_t i = 0; i < ARRAYLEN(sectors); i++) {
+        if (sectors[i] >= 1 && sectors[i] <= MAD1_NUM_AIDS) {
+            sector0.mad.aid[sectors[i] - 1] = aids[i];
+        } else if (sectors[i] > MF_MAD2_SECTOR) {
+            sector16.mad.aid[sectors[i] - MF_MAD2_SECTOR - 1] = aids[i];
+        }
     }
 
-    // Set AID for CAD sector (0x4811)
-    if (cad_sector >= 1 && cad_sector <= MAD1_NUM_AIDS) {
-        sector0.mad.aid[cad_sector - 1] = CLASSIC_CAD_AID;
+    // MAD2 first, so that sector 0 never announces a MAD2 the card lacks
+    if (need_mad2) {
+        sector16.mad.crc = CRC8Mad((uint8_t *)&sector16.mad.info, sizeof(mad2_t) - 1);
+        if (hfgal_write_directory_blocks(mfFirstBlockOfSector(MF_MAD2_SECTOR), have_mad ? 3 : 4, (uint8_t *)&sector16) != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed writing MAD2 sector 16");
+            return PM3_EFAILED;
+        }
     }
 
+    // blocks 1 and 2, the trailer only for a new MAD (block 0 is the manufacturer block)
     sector0.mad.crc = CRC8Mad((uint8_t *)&sector0.mad.info, sizeof(mad1_t) - 1);
-
-    // Write blocks 1 and 2 of sector 0 back (block 0 is manufacturer block, don't touch)
-    res = mf_write_block(1, mad_key_type, mad_key, MF_SECTOR_BLOCK(sector0, 1));
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed writing MAD block 1");
-        return res;
-    }
-
-    res = mf_write_block(2, mad_key_type, mad_key, MF_SECTOR_BLOCK(sector0, 2));
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed writing MAD block 2");
-        return res;
+    if (hfgal_write_directory_blocks(1, have_mad ? 2 : 3, MF_SECTOR_BLOCK(sector0, 1)) != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed writing MAD sector 0");
+        return PM3_EFAILED;
     }
 
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "Updated MAD sector 0");
+        PrintAndLogEx(SUCCESS, "%s MAD sector 0%s", have_mad ? "Updated" : "Wrote", need_mad2 ? " and MAD2 sector 16" : "");
     }
     return PM3_SUCCESS;
+}
+
+/**
+ * @brief Add the credential sector to the CAD sector of a MIFARE Classic card.
+ *
+ * Keeps the other sites of a CAD the sector holds, else writes a new CAD and gives the
+ * sector the MAD keys, as megabug/gallagher-research formats/cad.md describes.
+ *
+ * @param cad_sector Sector number for the CAD.
+ * @param cred_sector Sector number of the credential data.
+ * @param creds Gallagher cardholder credentials (region and facility code).
+ * @param dry_run Only check that the CAD has a free entry, write nothing.
+ * @return PM3_SUCCESS on success.
+ */
+static int hfgal_write_classic_cad(uint8_t cad_sector, uint8_t cred_sector, const GallagherCredentials_t *creds,
+                                   bool dry_run) {
+    uint8_t sector[4 * MFBLOCK_SIZE] = {0};
+    bool new_sector = (mf_read_sector(cad_sector, MF_KEY_A, g_mifare_mad_key, sector) != PM3_SUCCESS);
+    if (new_sector) {
+        memset(sector, 0, sizeof(sector));
+    }
+
+    int res = gallagher_add_cad_entry(sector, creds->region_code, creds->facility_code, cred_sector);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "No free CAD entry in sector %d", cad_sector);
+        return res;
+    }
+    if (dry_run) {
+        return PM3_SUCCESS;
+    }
+
+    // block 3: MAD key A, access 0x787788, user byte 0xC1, MAD key B
+    uint8_t *trailer = &sector[3 * MFBLOCK_SIZE];
+    memcpy(trailer, g_mifare_mad_key, MIFARE_KEY_SIZE);
+    memcpy(trailer + 6, GALLAGHER_ACCESS_BITS, 3);
+    trailer[9] = 0xC1;
+    memcpy(trailer + 10, GALLAGHER_MAD_KEY_B, MIFARE_KEY_SIZE);
+
+    res = hfgal_write_directory_blocks(mfFirstBlockOfSector(cad_sector), new_sector ? 4 : 3, sector);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed writing CAD sector %d", cad_sector);
+    }
+    return res;
 }
 
 /**
@@ -1065,19 +1152,31 @@ static int hfgal_write_classic_card(GallagherCredentials_t *creds, uint8_t cred_
 
     DropField();
 
-    // Populate CSN in credentials
-    memcpy(creds->csn, card.uid, card.uidlen);
+    // the MES holds the UID reversed as CSN
+    reverse_array_copy(card.uid, card.uidlen, creds->csn);
     creds->csn_len = card.uidlen;
 
     if (verbose) {
         PrintAndLogEx(INFO, "Card UID: %s", sprint_hex(card.uid, card.uidlen));
     }
 
-    // For a fresh sector, try writing with the default Key B first (blank card),
-    // then try Gallagher Key B (already-formatted card)
+    // check the CAD and the MAD before writing anything
+    int res = PM3_SUCCESS;
+    if (cad_sector != 0) {
+        res = hfgal_write_classic_cad(cad_sector, cred_sector, creds, true);
+    }
+    if (res == PM3_SUCCESS && update_mad) {
+        res = hfgal_update_mad(cred_sector, cad_sector, true, verbose);
+    }
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    // Try writing with Gallagher Key B first (already-formatted card),
+    // then with the default Key B and Key A (blank card)
     static const uint8_t default_key[MIFARE_KEY_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
-    int res = hfgal_write_site_specific_sector(cred_sector, creds, GALLAGHER_MFC_KEY_B, MF_KEY_B, verbose);
+    res = hfgal_write_site_specific_sector(cred_sector, creds, GALLAGHER_MFC_KEY_B, MF_KEY_B, verbose);
     if (res != PM3_SUCCESS) {
         if (verbose) {
             PrintAndLogEx(INFO, "Gallagher Key B failed, trying default key...");
@@ -1093,20 +1192,17 @@ static int hfgal_write_classic_card(GallagherCredentials_t *creds, uint8_t cred_
         return res;
     }
 
+    // the CAD before the MAD that lists it
+    if (cad_sector != 0) {
+        res = hfgal_write_classic_cad(cad_sector, cred_sector, creds, false);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+    }
+
     // Update MAD if requested
     if (update_mad) {
-        // Try MAD Key B first, then default key
-        static const uint8_t mad_default_b[MIFARE_KEY_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-        res = hfgal_update_mad(cred_sector, cad_sector, g_mifare_mad_key_b, MF_KEY_B, verbose);
-        if (res != PM3_SUCCESS) {
-            if (verbose) {
-                PrintAndLogEx(INFO, "MAD Key B failed, trying default key...");
-            }
-            res = hfgal_update_mad(cred_sector, cad_sector, mad_default_b, MF_KEY_B, verbose);
-            if (res != PM3_SUCCESS) {
-                res = hfgal_update_mad(cred_sector, cad_sector, mad_default_b, MF_KEY_A, verbose);
-            }
-        }
+        res = hfgal_update_mad(cred_sector, cad_sector, false, verbose);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Failed updating MAD - credentials were written but MAD was not updated");
         }
@@ -1328,7 +1424,9 @@ static int CmdGallagherClone(const char *cmd) {
 
     bool classic_mode = arg_get_lit(ctx, arg++);
 
-    int picc_key_num = arg_get_int_def(ctx, arg++, 0);
+    // arg_get_int_def() evaluates its index twice, arg moves on its own line
+    int picc_key_num = arg_get_int_def(ctx, arg, 0);
+    arg++;
 
     int picc_key_algo = T_DES;
     if (CLIGetOptionList(arg_get_str(ctx, arg++), DesfireAlgoOpts, &picc_key_algo)) {
@@ -1386,8 +1484,10 @@ static int CmdGallagherClone(const char *cmd) {
     SetAPDULogging(arg_get_lit(ctx, arg++));
     bool verbose = arg_get_lit(ctx, arg++);
 
-    int cred_sector = arg_get_int_def(ctx, arg++, 15);
-    int cad_sector = arg_get_int_def(ctx, arg++, 0);
+    int cred_sector = arg_get_int_def(ctx, arg, 15);
+    arg++;
+    int cad_sector = arg_get_int_def(ctx, arg, 0);
+    arg++;
     bool no_mes = arg_get_lit(ctx, arg++);
     bool no_mad = arg_get_lit(ctx, arg++);
 
@@ -1404,6 +1504,12 @@ static int CmdGallagherClone(const char *cmd) {
         }
         if (cad_sector < 0 || cad_sector > 31) {
             PM3_RET_ERR(PM3_EINVARG, "CAD sector must be between 0 and 31");
+        }
+        if (cad_sector == cred_sector) {
+            PM3_RET_ERR(PM3_EINVARG, "CAD sector must differ from the credential sector");
+        }
+        if (no_mad == false && (cred_sector == MF_MAD2_SECTOR || cad_sector == MF_MAD2_SECTOR)) {
+            PM3_RET_ERR(PM3_EINVARG, "Sector 16 holds MAD2, use another sector or --nomad");
         }
 
         GallagherCredentials_t creds = {

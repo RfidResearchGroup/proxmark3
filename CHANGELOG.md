@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf gallagher clone` - the client took the value of `-n`, `--sector` and `--cadsector` from the next option, crashed with `-n` and could read past a heap buffer (@matrix)
+- Fixed `hf gallagher clone -c` - the MES had the UID unreversed, a blank card got no readable MAD, a Gallagher MAD was not updated, sectors 17-31 were left out of MAD2 and no CAD was written (@matrix)
 - Fixed `hf iclass dump` - the emulator memory is kept, a dump no longer wipes what `hf iclass eload` loaded (@matrix)
 - Fixed `hf 14a raw --topaz` - the answer's CRC was checked as a CRC_A instead of the CRC_B Topaz uses, so a valid answer showed its CRC in red (@matrix)
 - Fixed `hf 15 writeafi` and `hf 15 writedsfid` - a UID given with `-u` was sent in the wrong byte order, so no tag answered (@matrix)
