@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 15` reader commands - the emulator memory is kept instead of being reset to zeros (@matrix)
 - Fixed `hf 15 slixeasdisable` and `hf 15 slixprivacydisable` - the first message said "enable" and "disabling" instead of "disable" (@matrix)
 - Fixed `hf 15 slixprivacydisable` and `hf 15 slixprivacyenable` - a password shorter than 4 bytes is refused instead of being sent with zero or uninitialised bytes (@matrix)
 - Changed PM5 battery gauge - 0 % is now the 3300 mV low-battery shutdown point instead of 3200 mV, so the PM5 no longer powers off while a few percent are still shown (@iceman1001)
