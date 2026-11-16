@@ -69,9 +69,10 @@ power-save counters.
 
 ### `hw bwm setcap` — set fuel-gauge design capacity
 
-Program the BQ27427 **Design Capacity** for the fitted cell and select its 4.2 V
-chemistry profile (chem ID 1202, the gauge ships on the 4.35 V one). The firmware
-re-applies both at boot after a gauge reset, keeping a capacity set here.
+Program the BQ27427 **Design Capacity** for the fitted cell, select its 4.2 V
+chemistry profile (chem ID 1202, the gauge ships on the 4.35 V one) and set the
+gauge Terminate Voltage (0 %) to 3300 mV, the firmware low-battery shutdown floor.
+The firmware re-applies these at boot after a gauge reset, keeping a capacity set here.
 
 | Argument      | Description                            |
 | ------------- | -------------------------------------- |
