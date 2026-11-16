@@ -52,13 +52,9 @@
 #define CEP_HANDSHAKE_STRING     "iamf0rupm5"
 #define CEP_HANDSHAKE_STX        0x02
 #define CEP_SPI_BYTE_TIMEOUT     100000  // spin-wait iterations per byte (matches source)
-// The Flipper master only clocks the bus in bursts roughly every ~120ms
-// (its own idle poll cadence) - CEP_SPI_BYTE_TIMEOUT alone (~3-10ms real
-// time) is far shorter than that gap, so the first reply byte - the one
-// racing against the master's next poll - needs a budget that actually
-// spans it. Once that byte clears, the master is mid-CS and keeps
-// clocking continuously, so every later byte stays on the short timeout.
-// Took measured CEP reply success from ~22% to ~100% in testing.
+// First reply byte races the Flipper's ~120ms poll gap; this timeout spans it.
+// Later bytes clock continuously on the short timeout. Measured reply success
+// ~22% -> ~100% with this budget.
 #define CEP_SPI_HEADER_BYTE_TIMEOUT  2000000
 #define CEP_SPI_RESPONSE_TIMEOUT_US  (1000 * 1000)  // 1s, matches source
 #define CEP_HANDSHAKE_RX_TIMEOUT_MS  2000  // bail out of the receive loop rather than ever hang the main loop
@@ -79,7 +75,8 @@ static bool s_cep_active = false;   // handshake completed, SPI transport live
 static bool s_cep_attached = false; // CC controller reports a physical attach
 static uint32_t s_last_spi_activity_tick = 0; // last time a real SPI poll was seen
 
-static bool s_usb_host_mode = false; // OTGFS1 host CDC owns PA9/PA11/PA12
+static bool s_usb_host_mode = false;   // OTGFS1 host CDC owns PA9/PA11/PA12
+static bool s_usb_host_forced = false; // user explicitly requested host CDC mode (hw pm5 icsd init)
 static bool s_usart1_active = false; // USART1 half-duplex owns PA9
 
 bool cep_is_active(void) {
@@ -288,11 +285,10 @@ static bool cep_do_handshake(void) {
 // Attach polling (non-blocking, rate-limited)
 // ---------------------------------------------------------------------------
 
-// Release USART1 and hand PA9/PA11/PA12 to OTGFS1 (GPIO_MUX_10), then bring
-// up the USB host CDC stack. PA11/PA12 are OTGFS1 DM/DP; PA9 is the USART1
-// half-duplex line being repurposed. pm5_usb_host_cdc_init() re-configures
-// PA11/PA12 itself, so the explicit mux here is just the PA9 handoff.
-static void cep_usb_host_enter(void) {
+// Release USART1, hand PA9/PA11/PA12 to OTGFS1 (GPIO_MUX_10), then bring up
+// the USB host CDC stack. PA11/PA12 are OTGFS1 DM/DP; PA9 is the USART1 line
+// being repurposed.
+void cep_usb_host_enter(void) {
     usart_enable(USART1, FALSE);
 
     gpio_init_type gpio_init_struct;
@@ -307,6 +303,19 @@ static void cep_usb_host_enter(void) {
     gpio_pin_mux_config(GPIOA, GPIO_PINS_SOURCE12, GPIO_MUX_10);
 
     pm5_usb_host_cdc_init();
+}
+
+void cep_ensure_usb_host_mode(void) {
+    if (!s_usb_host_mode) {
+        cep_usb_host_enter();
+    }
+    s_usb_host_mode = true;
+    s_usb_host_forced = true;
+    s_usart1_active = false;
+}
+
+bool cep_is_usb_host_active(void) {
+    return s_usb_host_mode;
 }
 
 // Re-establish USART1 half-duplex on PA9 (2400 8N1). The USART1 peripheral
@@ -387,17 +396,13 @@ void cep_attach_poll(void) {
     s_cep_attached = (attach != CEP_ATTACH_UNATTACHED);
 
     if (attach == CEP_ATTACH_SRC) {
-        // PM5 sources VBUS: drive an ICS/ICSD CDC device as USB host.
-        if (!s_usb_host_mode) {
-            cep_usb_host_enter();
-            s_usb_host_mode = true;
-            s_usart1_active = false;
+        /* Only poll host stack if explicitly enabled or host mode is already entered */
+        if (s_usb_host_mode) {
+            pm5_usb_host_cdc_poll();
         }
-        s_cep_active = false;
-        pm5_usb_host_cdc_poll();
     } else if (attach == CEP_ATTACH_SNK || attach == CEP_ATTACH_PEER) {
         // Partner sources VBUS: Flipper Zero - USART1 handshake + SPI.
-        if (s_usb_host_mode) {
+        if (s_usb_host_mode && !s_usb_host_forced) {
             pm5_usb_host_cdc_deinit();
             s_usb_host_mode = false;
         }
@@ -408,7 +413,7 @@ void cep_attach_poll(void) {
         cep_fap_poll();
     } else {
         // Unattached: release the shared lines and reset state.
-        if (s_usb_host_mode) {
+        if (s_usb_host_mode && !s_usb_host_forced) {
             pm5_usb_host_cdc_deinit();
             s_usb_host_mode = false;
         }

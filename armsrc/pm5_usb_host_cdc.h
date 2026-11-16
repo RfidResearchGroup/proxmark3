@@ -15,13 +15,9 @@
 //-----------------------------------------------------------------------------
 // Proxmark5 USB host CDC (ACM) driver - minimal.
 //
-// Brings up OTGFS1 as a USB full-speed host, enumerates a CDC-ACM device
-// (e.g. an ICS/ICSD module that exposes a "Who"/"RD" ASCII command console),
-// applies the ACM line coding, and offers blocking bulk IN/OUT wrappers.
-//
-// The heavy lifting (core init, enumeration, channel/URB handling) lives in
-// the Artery host stack under armlib/at32_usb; this file only wires that
-// stack to the PM5 OTGFS1 port and layers the CDC class requests on top.
+// Brings up OTGFS1 as USB host, enumerates a CDC-ACM device, applies the ACM
+// line coding, and offers blocking bulk IN/OUT wrappers. Core init/enumeration
+// live in the Artery host stack under armlib/at32_usb.
 //-----------------------------------------------------------------------------
 
 #ifndef PM5_USB_HOST_CDC_H__
@@ -42,6 +38,11 @@ void pm5_usb_host_cdc_poll(void);
 
 // True once a CDC device has been enumerated and class-configured.
 bool pm5_icsd_is_connected(void);
+
+// Diagnostic snapshot of the host state machine (any out pointer may be NULL).
+void pm5_icsd_get_debug_state(uint8_t *initialized, uint8_t *connected,
+                              uint8_t *global_state, uint8_t *enum_state, uint8_t *req_state,
+                              uint8_t *conn_sts, uint8_t *port_enable);
 
 // Send a NUL-terminated command line (e.g. "Who\r\n", "RD\r\n") over the
 // bulk OUT endpoint. Returns 0 on success, negative on error.

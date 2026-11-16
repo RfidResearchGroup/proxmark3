@@ -18,6 +18,11 @@
 
 #include "pm5_usb_host_cdc.h"
 
+#include <string.h>
+
+#include "pm5_cep.h"
+#include "ticks_apis.h"
+
 #include "usb_conf.h"
 #include "usb_core.h"
 #include "usb_std.h"
@@ -28,7 +33,6 @@
 #include "at32f435_437_crm.h"
 #include "at32f435_437_gpio.h"
 #include "at32f435_437_misc.h"
-#include "at32f435_437_acc.h"
 
 // CDC-ACM class request not exposed by usb_std.h.
 #define CDC_SET_CONTROL_LINE_STATE 0x22
@@ -38,11 +42,15 @@
 #define CDC_LINE_CODING_115200 115200
 #define CDC_LINE_CODING_BITS 8
 
-// Spin budget for a blocking transfer. Each iteration reads one volatile
-// register, so this is a rough wall-clock stand-in: long enough that a real
+// Wall-clock timeout for a blocking bulk transfer. Long enough that a real
 // device answers, short enough not to hang the main loop on a dead link.
-#define CDC_SPINS_PER_MS 2000
-#define CDC_XFER_SPINS 200000
+#define CDC_XFER_TIMEOUT_MS 1000
+// Once a reply has started, no new byte for this long marks the end of the
+// stream. The ICSD device emits its answer as several short CDC packets, so a
+// single short packet is not the end.
+#define CDC_IDLE_GAP_MS 200
+// Timeout for draining stale bulk IN data before a new command.
+#define CDC_DRAIN_TIMEOUT_MS 20
 
 typedef enum {
     CDC_REQ_LINE_CODING = 0,
@@ -151,6 +159,8 @@ static void cdc_setup_line_coding(usbh_core_type *uhost) {
     uhost->ctrl.setup.wIndex = g_cdc.ctrl_if;
     uhost->ctrl.setup.wLength = (uint16_t)sizeof(linecoding_type);
 
+    // usbh_ctrl_request only queues when req_state == CMD_SEND; reset it first.
+    uhost->req_state = CMD_SEND;
     usbh_ctrl_request(uhost, (uint8_t *)&g_cdc.line, (uint16_t)sizeof(linecoding_type));
 }
 
@@ -161,6 +171,9 @@ static void cdc_setup_control_line_state(usbh_core_type *uhost) {
     uhost->ctrl.setup.wIndex = g_cdc.ctrl_if;
     uhost->ctrl.setup.wLength = 0;
 
+    // Reset req_state (left at CMD_WAIT by the previous transfer) or this
+    // request is dropped and DTR/RTS is never asserted.
+    uhost->req_state = CMD_SEND;
     usbh_ctrl_request(uhost, NULL, 0);
 }
 
@@ -312,50 +325,64 @@ static bool cdc_ensure_channels(usbh_core_type *uhost) {
     return true;
 }
 
-static bool cdc_wait_channel(usbh_core_type *uhost, uint8_t ch, uint32_t spins) {
-    while (spins--) {
+// Wait for a channel to reach a terminal URB state. Returns 0 when URB_DONE,
+// -1 on error/stall/timeout.
+static int cdc_wait_channel(usbh_core_type *uhost, uint8_t ch, uint32_t timeout_ms) {
+    uint32_t start = GetTickCount();
+    while (GetTickCountDelta(start) < timeout_ms) {
         urb_sts_type st = usbh_get_urb_status(uhost, ch);
-        if (st != URB_IDLE && st != URB_NOTREADY) {
-            return true;
+        if (st == URB_DONE) {
+            return 0;
+        }
+        if (st == URB_STALL || st == URB_ERROR) {
+            return -1;
         }
     }
-    return false;
+    return -1;
 }
 
-static int cdc_bulk_out(usbh_core_type *uhost, const uint8_t *buf, uint16_t len) {
+static int cdc_bulk_out(usbh_core_type *uhost, const uint8_t *buf, uint16_t len, uint32_t timeout_ms) {
     if (!cdc_ensure_channels(uhost)) {
         return -1;
     }
     usbh_bulk_send(uhost, g_ch_out, (uint8_t *)buf, len);
-    if (!cdc_wait_channel(uhost, g_ch_out, CDC_XFER_SPINS)) {
-        return -1;
-    }
-    return (usbh_get_urb_status(uhost, g_ch_out) == URB_DONE) ? 0 : -1;
+    return cdc_wait_channel(uhost, g_ch_out, timeout_ms);
 }
 
-static int cdc_bulk_in(usbh_core_type *uhost, uint8_t *buf, uint16_t len, uint32_t spins) {
-    uint32_t expected, remain, got;
+// Received bytes are tracked by the RX-FIFO ISR in hch[].trans_count, the
+// authoritative count; HCTSIZ's remaining-size field can lag the FIFO drain.
+static int cdc_bulk_in(usbh_core_type *uhost, uint8_t *buf, uint16_t len, uint32_t timeout_ms) {
+    uint32_t got;
 
     if (!cdc_ensure_channels(uhost)) {
         return -1;
     }
     usbh_bulk_recv(uhost, g_ch_in, buf, len);
-    if (!cdc_wait_channel(uhost, g_ch_in, spins)) {
-        return -1;
-    }
-    if (usbh_get_urb_status(uhost, g_ch_in) != URB_DONE) {
+    if (cdc_wait_channel(uhost, g_ch_in, timeout_ms) != 0) {
         return -1;
     }
 
-    // The driver rounds the request up to a whole packet; the register holds
-    // how many bytes are still pending, so received = expected - remaining.
-    expected = ((uint32_t)len + g_cdc.bulk_in_mp - 1) / g_cdc.bulk_in_mp * g_cdc.bulk_in_mp;
-    remain = USB_CHL(uhost->usb_reg, g_ch_in)->hctsiz_bit.xfersize;
-    got = (expected > remain) ? (expected - remain) : 0;
+    got = uhost->hch[g_ch_in].trans_count;
     if (got > len) {
         got = len;
     }
     return (int)got;
+}
+
+// Discard stale bulk IN data so a previous, partially-read reply cannot leak
+// into the next command's response.
+static void cdc_drain_rx(usbh_core_type *uhost) {
+    uint8_t discard[USB_MAX_EP0_SIZE];
+    int i;
+
+    if (!g_connected || !g_channels_open) {
+        return;
+    }
+    for (i = 0; i < 16; i++) {
+        if (cdc_bulk_in(uhost, discard, sizeof(discard), CDC_DRAIN_TIMEOUT_MS) <= 0) {
+            break;
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -369,14 +396,10 @@ void pm5_usb_host_cdc_init(void) {
         return;
     }
 
-    // USB 48 MHz: HICK + ACC trim, the same source the device port uses.
-    crm_usb_clock_source_select(CRM_USB_CLOCK_SOURCE_HICK);
-    crm_periph_clock_enable(CRM_ACC_PERIPH_CLOCK, TRUE);
-    acc_write_c1(7980);
-    acc_write_c2(8000);
-    acc_write_c3(8020);
-    acc_sof_select(ACC_SOF_OTG1);
-    acc_calibration_mode_enable(ACC_CAL_HICKTRIM, TRUE);
+    // The 48 MHz USB clock and ACC SOF trim are already set up at boot for the
+    // device port (OTGFS2 owns ACC_SOF_OTG2 for the PC client link). Don't touch
+    // the ACC here: stealing the SOF trim (ACC_SOF_OTG1) breaks OTGFS2
+    // enumeration. OTGFS1 shares the same 48 MHz clock.
 
     // OTGFS1 (host) peripheral clock + DP/DM pins.
     crm_periph_clock_enable(USB_HOST_CLOCK, TRUE);
@@ -392,12 +415,20 @@ void pm5_usb_host_cdc_init(void) {
     gpio_pin_mux_config(USB_HOST_PIN_GPIO, USB_HOST_PIN_DP_SOURCE, USB_HOST_PIN_MUX);
     gpio_pin_mux_config(USB_HOST_PIN_GPIO, USB_HOST_PIN_DM_SOURCE, USB_HOST_PIN_MUX);
 
-    nvic_irq_enable(USB_HOST_IRQ, 0, 0);
+    /* Artery host core is interrupt-driven: only usbh_irq_handler() clears the
+       port/channel/RX-FIFO interrupts and sets conn_sts, port_enable, URB_DONE.
+       The NVIC line must be enabled too, or the FSM never leaves USBH_IDLE. Set
+       g_initialized first - a pending SOF/port interrupt must find the ISR ready
+       to service it, not skip it and storm. Priority 5 (low) so OTGFS1 can't
+       preempt or starve the OTGFS2 client link, which sits at priority 0. */
     usbh_init(&g_otg, USB_FULL_SPEED_CORE_ID, USB_OTG1_ID, &g_cdc_class_handler, &g_usbhost_user_handler);
 
     g_connected = false;
     g_channels_open = false;
     g_initialized = true;
+
+    NVIC_ClearPendingIRQ(USB_HOST_IRQ);
+    nvic_irq_enable(USB_HOST_IRQ, 5, 0);
 }
 
 void pm5_usb_host_cdc_deinit(void) {
@@ -412,76 +443,140 @@ void pm5_usb_host_cdc_deinit(void) {
 }
 
 void pm5_usb_host_cdc_poll(void) {
-    if (!g_initialized) {
+    if (!g_initialized || !cep_is_usb_host_active()) {
         return;
     }
+
+    /* Pump Artery's host state machine */
     usbh_loop_handler(&g_otg.host);
+}
+
+void pm5_icsd_get_debug_state(uint8_t *initialized, uint8_t *connected,
+                              uint8_t *global_state, uint8_t *enum_state, uint8_t *req_state,
+                              uint8_t *conn_sts, uint8_t *port_enable) {
+    if (initialized)  *initialized  = g_initialized ? 1 : 0;
+    if (connected)    *connected    = g_connected ? 1 : 0;
+    if (global_state) *global_state = g_otg.host.global_state;
+    if (enum_state)   *enum_state   = g_otg.host.enum_state;
+    if (req_state)    *req_state    = g_otg.host.req_state;
+    if (conn_sts)     *conn_sts     = (uint8_t)g_otg.host.conn_sts;
+    if (port_enable)  *port_enable  = (uint8_t)g_otg.host.port_enable;
 }
 
 bool pm5_icsd_is_connected(void) {
     return g_connected;
 }
 
-int pm5_icsd_send_cmd(const char *cmd) {
-    uint16_t len = 0;
+static void cdc_wait_connected(uint32_t timeout_ms) {
+    uint32_t start = GetTickCount();
+    while (!g_connected) {
+        pm5_usb_host_cdc_poll();
+        if (GetTickCountDelta(start) >= timeout_ms) {
+            break;
+        }
+        SpinDelayUs(1000);
+    }
+}
 
-    if (cmd == NULL || !g_connected) {
+int pm5_icsd_send_cmd(const char *cmd) {
+    if (cmd == NULL) {
         return -1;
     }
-    while (len < 0xFFFF && cmd[len] != '\0') {
-        len++;
+    if (!g_initialized) {
+        cep_ensure_usb_host_mode();
     }
-    if (len == 0) {
-        return 0;
+    if (!g_connected) {
+        cdc_wait_connected(1500);
     }
-    return (cdc_bulk_out(&g_otg.host, (const uint8_t *)cmd, len) == 0) ? 0 : -1;
+    if (!g_connected) {
+        return -1;
+    }
+
+    // Discard stale bulk IN data from a previous, partially-read reply.
+    cdc_drain_rx(&g_otg.host);
+
+    char tx_buf[64];
+    size_t len = strlen(cmd);
+    if (len == 0 || len > sizeof(tx_buf) - 3) {
+        return -1;
+    }
+    memcpy(tx_buf, cmd, len);
+    if (tx_buf[len - 1] != '\n') {
+        if (tx_buf[len - 1] == '\r') {
+            tx_buf[len++] = '\n';
+        } else {
+            tx_buf[len++] = '\r';
+            tx_buf[len++] = '\n';
+        }
+    }
+    tx_buf[len] = '\0';
+
+    return (cdc_bulk_out(&g_otg.host, (const uint8_t *)tx_buf, (uint16_t)len, CDC_XFER_TIMEOUT_MS) == 0) ? 0 : -1;
 }
 
 int pm5_icsd_read_response(char *buf, size_t max_len, uint32_t timeout_ms) {
     uint8_t chunk_buf[USB_MAX_EP0_SIZE];
-    uint32_t spins;
     size_t total = 0;
+    bool got_any = false;
 
-    if (buf == NULL || !g_connected) {
+    if (buf == NULL) {
         return -1;
     }
-    spins = (timeout_ms > 0) ? (timeout_ms * CDC_SPINS_PER_MS) : CDC_XFER_SPINS;
-    if (spins == 0) {
-        spins = CDC_XFER_SPINS;
+    if (max_len == 0) {
+        return 0;
+    }
+    if (!g_initialized) {
+        cep_ensure_usb_host_mode();
+    }
+    if (!g_connected) {
+        cdc_wait_connected(1500);
+    }
+    if (!g_connected) {
+        return -1;
+    }
+    if (timeout_ms < 1200) {
+        timeout_ms = 1200;
     }
 
-    while (total < max_len) {
-        uint16_t chunk = (uint16_t)((max_len - total >= (size_t)g_cdc.bulk_in_mp) ? g_cdc.bulk_in_mp : (max_len - total));
-        int got = cdc_bulk_in(&g_otg.host, chunk_buf, chunk, spins);
+    // Keep one byte for the NUL terminator.
+    while (total + 1 < max_len) {
+        size_t room = max_len - 1 - total;
+        uint16_t chunk = (uint16_t)((room >= (size_t)g_cdc.bulk_in_mp) ? g_cdc.bulk_in_mp : room);
+        // First byte: generous timeout; afterwards a short idle gap ends the stream.
+        uint32_t wait = got_any ? CDC_IDLE_GAP_MS : timeout_ms;
+        int got = cdc_bulk_in(&g_otg.host, chunk_buf, chunk, wait);
         size_t n;
 
+        // No (more) data: end of stream. Return what we have, if any.
         if (got <= 0) {
-            return (total > 0) ? (int)total : -1;
+            break;
         }
         n = (size_t)got;
         if (n > (size_t)chunk) {
             n = (size_t)chunk;
         }
-        for (size_t k = 0; k < n; k++) {
-            buf[total + k] = (char)chunk_buf[k];
-        }
+        memcpy(buf + total, chunk_buf, n);
         total += n;
-
-        // A short packet marks the end of the response.
-        if ((size_t)got < (size_t)chunk) {
-            break;
-        }
+        got_any = true;
+        // A short packet is not the end for this device; keep reading until
+        // the idle gap expires.
     }
-    return (int)total;
+    buf[total] = '\0';
+    return got_any ? (int)total : -1;
 }
 
-// ---------------------------------------------------------------------------
-// OTGFS1 interrupt (weak Default_Handler in startup_at32f435_437.s)
-// ---------------------------------------------------------------------------
-
+// OTGFS1 interrupt. Only usbh_irq_handler() clears port/channel/RX-FIFO
+// interrupts and drives URB_DONE; without this ISR the host core stalls in
+// USBH_IDLE. A pending pre-init interrupt is disabled to avoid re-entry.
+#if defined(PM5)
 void OTGFS1_IRQHandler(void) {
-    usbh_irq_handler(&g_otg);
+    if (g_initialized) {
+        usbh_irq_handler(&g_otg);
+    } else {
+        nvic_irq_disable(USB_HOST_IRQ);
+    }
 }
+#endif
 
 // ---------------------------------------------------------------------------
 // handler tables (referenced above; keep at end for readability)
