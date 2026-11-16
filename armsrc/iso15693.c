@@ -2312,6 +2312,10 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
     uint8_t nbPages = 0;
     uint8_t pwdId = 0;
 
+    // the first CRC of a type builds its table, which takes longer than the
+    // reader waits for an answer: build it now rather than on the first command
+    init_table(CRC_15693);
+
     while (exit_loop == false) {
 
         button_pressed = BUTTON_PRESS();
