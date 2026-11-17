@@ -3251,12 +3251,10 @@ static void PacketReceived(PacketCommandNG *packet) {
 #ifdef WITH_SMARTCARD
         case CMD_SMART_ATR: {
             SmartCardATR();
-            SmartCard_HwClose();
             break;
         }
         case CMD_SMART_PPS: {
             SmartCardPPS((const smart_card_pps_t *)packet->data.asBytes);
-            SmartCard_HwClose();
             break;
         }
         case CMD_SMART_SETCLOCK: {
@@ -3265,7 +3263,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
             SmartCardSetClock(payload->new_clk);
-            SmartCard_HwClose();
             break;
         }
         case CMD_SMART_RAW: {
