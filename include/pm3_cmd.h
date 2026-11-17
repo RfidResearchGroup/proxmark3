@@ -290,6 +290,9 @@ typedef struct {
 
     // Appended in version 13.
     bool compiled_with_cep : 1;     // PM5 built with CEP (Flipper Zero, Type-C extended port; on by default, SKIP_CEP=1 to disable)
+
+    // Appended in version 14.
+    bool compiled_with_rtttl : 1;   // PM5 buzzer RTTTL playback
 } PACKED capabilities_t;
 // Bump this whenever a command payload changes shape, so a mismatched client and
 // firmware refuse to talk instead of misparsing each other.
@@ -297,7 +300,8 @@ typedef struct {
 //   11: capabilities_t gained em_size / em_allocated
 //   12: capabilities_t gained compiled_with_bwm
 //   13: capabilities_t gained compiled_with_cep
-#define CAPABILITIES_VERSION 13
+//   14: capabilities_t gained compiled_with_rtttl
+#define CAPABILITIES_VERSION 14
 // what a pre-v9 device would have used, it could not tell us
 #define CAPABILITIES_LEGACY_CMD_DATA_SIZE 512
 extern capabilities_t g_pm3_capabilities;
@@ -1063,6 +1067,12 @@ typedef struct {
     // not yet merged): a cep_attached byte distinguishing "physically
     // present, handshake not yet complete" from "active".
 } PACKED cep_status_t;
+
+// PM5 RTTTL: request = 1..2047 text bytes plus a final NUL, RAM only.
+// Reply after blocking playback: one byte rtttl_status_t, PM3_SUCCESS on success
+// or PM3_EINVARG on invalid input/playback error. No early success ACK.
+#define CMD_PM5_RTTTL 0x0186
+
 #define BWM_OTA_ACTION_BEGIN 0x00
 #define BWM_OTA_ACTION_WRITE 0x01
 #define BWM_OTA_ACTION_END   0x02

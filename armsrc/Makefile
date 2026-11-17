@@ -139,7 +139,7 @@ endif
 
 # Generic PM5 mainboard buzzer (QC self-test + BWM low-batt warning)
 ifeq ($(PLATFORM),PM5)
-    SRC_BUZZER = buzzer.c
+    SRC_BUZZER = buzzer.c rtttl.c
 else
     SRC_BUZZER =
 endif
