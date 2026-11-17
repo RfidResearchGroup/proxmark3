@@ -43,9 +43,10 @@ typedef enum {
 } smartcard_vcc_t;
 
 // Card-detect result. SC_CHK_UNSUPPORTED means the board has no way to tell.
+// Both SC_CHK_PRESENT and SC_CHK_UNSUPPORTED should be considered as indicating that the card is present.
 typedef enum {
-    SC_CHK_PRESENT = 0,
-    SC_CHK_NONE,
+    SC_CHK_PRESENT = 0, // The card does indeed exist.
+    SC_CHK_NONE,        // There is indeed no card.
     SC_CHK_UNSUPPORTED, // There is no card-insertion detection feature.
 } smartcard_present_t;
 

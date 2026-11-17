@@ -430,7 +430,8 @@ void SmartCard_HwClose(void) {
 }
 
 smartcard_present_t SmartCard_HwGetPresent(void) {
-    // TODO: read SC_PM5_REG_OFFN; bit0 is 1 when the card is present.
+    // TODO DXL: 等到新硬件支持插卡检测功能传递给TDA8035之后再考虑接入到SIM卡适配器
+    //  然后通过I2C获取该状态
     return SC_CHK_UNSUPPORTED;
 }
 
