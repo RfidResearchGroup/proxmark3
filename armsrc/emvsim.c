@@ -51,7 +51,7 @@
 #include "commonutil.h"
 #include "dbprint.h"
 #include "ticks_apis.h"
-#include "i2c_direct.h"
+#include "smartcard.h"
 
 // Hardcoded response to the reader for file not found, plus the checksum
 static uint8_t filenotfound[] = {0x02, 0x6a, 0x82, 0x93, 0x2f};

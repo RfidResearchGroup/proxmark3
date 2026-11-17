@@ -13,8 +13,8 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-#ifndef __I2C_H
-#define __I2C_H
+#ifndef SMARTCARD_H
+#define SMARTCARD_H
 
 #include "common.h"
 #include "i2c_apis.h"
@@ -75,4 +75,8 @@ void SmartCardPPS(const smart_card_pps_t *p);
 void SmartCard_PrintStatus(void);
 int SmartCard_GetModuleInfo(uint8_t *major, uint8_t *minor, void *info);
 
-#endif
+// Send one APDU to the card and hand its answer back with the caller's
+// prepend byte and a CRC, for the EMV simulator.
+int CmdSmartRaw(const uint8_t prepend, const uint8_t *data, int dlen, uint8_t *output, uint16_t *olen);
+
+#endif // SMARTCARD_H

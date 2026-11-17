@@ -33,7 +33,7 @@
 #include "commonutil.h"
 #include "ticks_apis.h"
 #include "dbprint.h"
-#include "i2c.h"
+#include "smartcard.h"
 #include "protocols.h"
 #include "optimized_cipher.h"
 #include "fpga_loader.h"

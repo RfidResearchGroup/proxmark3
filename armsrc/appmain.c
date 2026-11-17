@@ -88,7 +88,7 @@
 #include "sam_mfc.h"
 #include "sam_sc.h"
 #include "cmac_calc.h"
-#include "i2c.h"
+#include "smartcard.h"
 #include "i2c_apis.h"
 #include "bwm_charger.h"   // BWM charger / fuel-gauge + low-batt warning (WITH_BWM_*)
 #include "buzzer.h"        // PM5 mainboard buzzer API
@@ -286,7 +286,7 @@ static void pm5_autooff_sprint(char *dst) {
 #endif
 
 #ifdef WITH_SMARTCARD
-#include "i2c.h"
+#include "smartcard.h"
 #endif
 
 #ifdef WITH_FPC_USART

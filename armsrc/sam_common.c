@@ -26,7 +26,7 @@
 #include "commonutil.h"
 #include "ticks_apis.h"
 #include "dbprint.h"
-#include "i2c.h"
+#include "smartcard.h"
 #include "iso15693.h"
 #include "protocols.h"
 #include "crc16.h"

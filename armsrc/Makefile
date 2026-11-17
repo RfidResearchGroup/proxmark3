@@ -120,7 +120,7 @@ else
 endif
 
 ifneq (,$(findstring WITH_SMARTCARD,$(APP_CFLAGS)))
-    SRC_SMARTCARD = i2c.c i2c_direct.c emvsim.c $(SRC_SMARTCARD_HW) ../common_arm/smartcard/smartcard_rate.c ../common_arm/smartcard/smartcard_atr.c
+    SRC_SMARTCARD = smartcard.c emvsim.c $(SRC_SMARTCARD_HW) ../common_arm/smartcard/smartcard_rate.c ../common_arm/smartcard/smartcard_atr.c
 else
     SRC_SMARTCARD =
 endif

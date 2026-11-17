@@ -22,7 +22,7 @@
 #include "appmain.h"
 #include "cmd.h"
 #include "dbprint.h"
-#include "i2c.h"          // ISO7816_MAX_FRAME, I2C_Reset_EnterMainProgram
+#include "smartcard.h"      // ISO7816_MAX_FRAME, I2C_Reset_EnterMainProgram
 #include "proxmark3_arm.h"
 #include "sam_common.h"
 #include "ticks_apis.h"
