@@ -994,6 +994,7 @@ SRCS += bucketsort.c \
         iso15693tools.c \
         legic_prng.c \
         lfdemod.c \
+        rtttl.c \
         util_posix.c
 
 ifeq ($(GD_FOUND),1)
