@@ -33,7 +33,7 @@
 #include "at32f435_437_usart.h"
 #include "at32f435_437_spi.h"
 #include "gpio_apis.h"
-#include "i2c.h"
+#include "i2c_apis.h"
 #include "ticks_apis.h"
 #include "dbprint.h"
 #include "pm3_cmd.h"

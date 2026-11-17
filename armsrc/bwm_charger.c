@@ -24,7 +24,7 @@
 
 #if defined(WITH_BWM_CHARGERKICK) || defined(WITH_BWM_STATUS)
 
-#include "i2c.h"
+#include "i2c_apis.h"
 #include "dbprint.h"
 #include "printf.h"        // sprintf
 #include "ticks_apis.h"   // WaitMS / GetTickCount / GetTickCountDelta

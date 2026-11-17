@@ -1,5 +1,5 @@
 #include "rgb_apis.h"
-#include "i2c.h"        // RGB LED is driven over I2C
+#include "i2c_apis.h"   // RGB LED is driven over I2C
 #include "ticks_apis.h" // I2C timing needs ticks running
 
 // PM5 antenna RGB LED, driven by an I2C RGB controller (7-bit address 0x48).

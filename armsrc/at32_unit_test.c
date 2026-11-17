@@ -28,7 +28,7 @@
 #include "fpga_apis.h"
 #include "rssi_apis.h"
 #include "fpga_gw_jtag.h"
-#include "i2c.h"
+#include "i2c_apis.h"
 #include "commonutil.h"
 #include "sys_apis.h"
 #include "ticks_apis.h"
