@@ -177,6 +177,10 @@ void SmartCard_HwOpenBootloader(void) {
     WaitMS(10);
 }
 
+void SmartCard_HwClose(void) {
+    // The SIM adapter has no card power control.
+}
+
 bool SmartCard_HwSetReload(uint16_t reload) {
     // SETBAUD carries TH1, which the module turns back into 256 - TH1. R = 256
     // wraps to 0, which is exactly what the timer wants.

@@ -61,6 +61,10 @@ int SmartCard_HwAdapterInfo(uint8_t *major, uint8_t *minor, void *info);
 // Bring the adapter up.
 void SmartCard_HwOpen(void);
 
+// Power the card down. The adapter stays up; a later open or ATR powers the
+// card again. Boards without card power control do nothing.
+void SmartCard_HwClose(void);
+
 // Put the link back on a rate negotiated earlier, in 16x clocks per etu.
 bool SmartCard_HwSetReload(uint16_t reload);
 

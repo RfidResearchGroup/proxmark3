@@ -416,6 +416,12 @@ void SmartCard_HwOpen(void) {
     uart_init(s_baud);
 }
 
+void SmartCard_HwClose(void) {
+    // Deactivate the card; the front end runs the power-down sequence.
+    ctrl_write(SC_PM5_REG_CARD_CTRL, 0);
+    s_resp_ready = false;
+}
+
 bool SmartCard_HwATR(uint8_t *atr, uint16_t *len, uint32_t wait) {
 
     if ((atr == NULL) || (len == NULL)) {
