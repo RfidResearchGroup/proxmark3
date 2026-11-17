@@ -426,6 +426,10 @@ void SmartCardATR(void) {
 void SmartCardRaw(const smart_card_raw_t *p) {
     LED_D_ON();
 
+    // PM5 turnaround timeouts run on the tick timer, and a raw command without
+    // SC_CONNECT does not reset the adapter.
+    StartTicks();
+
     uint16_t len = 0;
     uint8_t *resp = BigBuf_calloc(ISO7816_MAX_FRAME);
     if (resp == NULL) {

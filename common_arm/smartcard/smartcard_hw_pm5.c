@@ -71,6 +71,13 @@
 // GetTicks() runs at 1.5 MHz, so a millisecond is 1500 ticks.
 #define SC_PM5_TICKS_PER_MS     1500u
 
+// Upper layers pass the adapter's I2C iteration budget; the USART waits take
+// milliseconds.
+static uint32_t wait_to_ms(uint32_t wait) {
+    uint32_t ms = wait / I2C_ITERS_PER_MS;
+    return (ms == 0) ? 1 : ms;
+}
+
 static uint32_t s_clkin_hz = SC_PM5_CLKIN_HZ;
 static uint32_t s_card_clk_hz = SC_PM5_DEFAULT_CARD_CLK_HZ;
 static uint8_t s_clk_div = SC_PM5_CLK_DIV_2;
@@ -469,6 +476,7 @@ bool SmartCard_HwATR(uint8_t *atr, uint16_t *len, uint32_t wait) {
     // up entirely at the caller's budget.
     uint16_t n = 0;
     uint8_t b = 0;
+    uint32_t budget_ms = wait_to_ms(wait);
     uint32_t start = GetTicks();
     uint32_t idle_start = start;
     while (n < *len) {
@@ -481,7 +489,7 @@ bool SmartCard_HwATR(uint8_t *atr, uint16_t *len, uint32_t wait) {
         if (GetTicksDelta(idle_start) > (SC_PM5_ATR_IDLE_MS * SC_PM5_TICKS_PER_MS)) {
             break;
         }
-        if (GetTicksDelta(start) > (wait * SC_PM5_TICKS_PER_MS)) {
+        if (GetTicksDelta(start) > (budget_ms * SC_PM5_TICKS_PER_MS)) {
             break;
         }
     }
@@ -580,7 +588,7 @@ bool SmartCard_HwRecv(uint8_t *dest, uint16_t *len, uint32_t wait) {
     uint16_t n = 0;
     uint8_t b = 0;
 
-    if (uart_recv_byte(&b, wait) == false) {
+    if (uart_recv_byte(&b, wait_to_ms(wait)) == false) {
         *len = 0;
         return false;
     }
