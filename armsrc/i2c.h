@@ -19,6 +19,7 @@
 #include "common.h"
 #include "i2c_apis.h"
 #include "pm3_cmd.h"
+#include "smartcard_apis.h"
 #include "smartcard_hw_rdv4.h"
 
 // SAM secure-channel transport policy for the performance build.  Artemis
@@ -72,7 +73,7 @@ void SmartCardRaw(const smart_card_raw_t *p);
 void SmartCardUpgrade(uint64_t arg0);
 void SmartCardSetClock(uint64_t arg0);
 void SmartCardPPS(const smart_card_pps_t *p);
-void I2C_print_status(void);
-int I2C_get_version(uint8_t *major, uint8_t *minor);
+void SmartCard_PrintStatus(void);
+int SmartCard_GetModuleInfo(uint8_t *major, uint8_t *minor, void *info);
 
 #endif

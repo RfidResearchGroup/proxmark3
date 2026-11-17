@@ -58,6 +58,14 @@
 #define SIM_MODULE_VERS_T1_HI       4
 #define SIM_MODULE_VERS_T1_LO       51
 
+// What this adapter can tell us beyond its version number. The write-up of a
+// version belongs to the board that owns the firmware, so it lives here rather
+// than in the shared interface.
+typedef struct {
+    bool ok;    // meets the minimum this build supports
+    bool t1;    // T=1 and PPS in this adapter firmware
+} smartcard_rdv4_info_t;
+
 // Reset and line control of the adapter.
 void SmartCard_HwSetAdapterLines(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA);
 
@@ -68,5 +76,12 @@ bool SmartCard_HwWaitForSim(uint32_t wait);
 
 // Read one answer frame from the adapter.
 bool SmartCard_RxBytes(uint8_t *dest, uint16_t *destlen, uint32_t wait);
+
+// Raw sequential access to the adapter's byte address space, used to write and
+// verify its firmware. Only this board exposes an update path today, so these
+// do not belong to the shared interface.
+void SmartCard_HwOpenBootloader(void);
+int16_t SmartCard_HwModuleRead(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address);
+bool SmartCard_HwModuleWrite(const uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address);
 
 #endif // SMARTCARD_HW_RDV4_H

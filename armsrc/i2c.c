@@ -84,67 +84,56 @@ void I2C_Reset_EnterMainProgram(void) {
     s_pps_proto_cmd = 0;
     StartTicks();
     sc_log_trace_reset();
-    I2C_init(true);
-    SmartCard_HwSetAdapterLines(0, 0, 0);
-    WaitMS(30);
-    SmartCard_HwSetAdapterLines(1, 0, 0);
-    WaitMS(30);
-    SmartCard_HwSetAdapterLines(1, 1, 1);
-    WaitMS(10);
+    SmartCard_HwOpen();
 }
 
 // Reset the SIM_Adapter, then enter the bootloader program
 // Reserve for firmware update.
 void I2C_Reset_EnterBootloader(void) {
     StartTicks();
-    I2C_init(true);
-    SmartCard_HwSetAdapterLines(0, 1, 1);
-    WaitMS(100);
-    SmartCard_HwSetAdapterLines(1, 1, 1);
-    WaitMS(10);
+    SmartCard_HwOpenBootloader();
 }
 
-static bool sim_module_at_least(uint8_t major, uint8_t minor, uint8_t want_major, uint8_t want_minor) {
-    return ((major > want_major) || ((major == want_major) && (minor >= want_minor)));
-}
-
-void I2C_print_status(void) {
+void SmartCard_PrintStatus(void) {
     DbpString(_CYAN_("Smart card module (ISO 7816)"));
 
-    uint8_t major, minor;
-    if (I2C_get_version(&major, &minor) == PM3_SUCCESS) {
+    uint8_t major = 0, minor = 0;
+    bool present;
 
-        bool ok = sim_module_at_least(major, minor, SIM_MODULE_VERS_MIN_HI, SIM_MODULE_VERS_MIN_LO);
-        bool t1 = sim_module_at_least(major, minor, SIM_MODULE_VERS_T1_HI, SIM_MODULE_VERS_T1_LO);
+#ifndef PM5
+    smartcard_rdv4_info_t info = {0};
+    present = (SmartCard_GetModuleInfo(&major, &minor, &info) == PM3_SUCCESS);
+#else
+    present = (SmartCard_GetModuleInfo(&major, &minor, NULL) == PM3_SUCCESS);
+#endif
 
-        Dbprintf("  version................. v%d.%02d ( %s )"
-                 , major
-                 , minor
-                 , ok ? _GREEN_("ok") : _RED_("Outdated")
-                );
-
-        Dbprintf("  T=1, PPS................ ( %s )"
-                 , t1 ? _GREEN_("supported") : _YELLOW_("not in this firmware")
-                );
-    } else {
+    if (present == false) {
         DbpString("  version................. ( " _RED_("fail") " )");
+        return;
     }
+
+#ifndef PM5
+    Dbprintf("  version................. v%d.%02d ( %s )"
+             , major
+             , minor
+             , info.ok ? _GREEN_("ok") : _RED_("Outdated")
+            );
+
+    Dbprintf("  T=1, PPS................ ( %s )"
+             , info.t1 ? _GREEN_("supported") : _YELLOW_("not in this firmware")
+            );
+#else
+    Dbprintf("  version................. v%d.%02d", major, minor);
+#endif
 }
 
-int I2C_get_version(uint8_t *major, uint8_t *minor) {
-    uint8_t resp[] = {0, 0, 0, 0};
+int SmartCard_GetModuleInfo(uint8_t *major, uint8_t *minor, void *info) {
     I2C_Reset_EnterMainProgram();
     // The capability probe runs this on every client connect. Without the
     // restore, reconnecting a client leaves the module on the default rate and
     // an already negotiated card unreachable.
     sc_rate_restore();
-    uint8_t len = I2C_AdaptiveRead(resp, sizeof(resp), I2C_DEVICE_CMD_GETVERSION, I2C_DEVICE_ADDRESS_MAIN);
-    if (len > 1) {
-        *major = resp[0];
-        *minor = resp[1];
-        return PM3_SUCCESS;
-    }
-    return PM3_EDEVNOTSUPP;
+    return SmartCard_HwModuleInfo(major, minor, info);
 }
 
 static uint32_t s_trace_tick = 0;
@@ -329,11 +318,7 @@ static void sc_rate_restore(void) {
         return;
     }
 
-    // SETBAUD carries TH1, which the module turns back into 256 - TH1. R = 256
-    // wraps to 0, which is exactly what the timer wants.
-    uint8_t th1 = (uint8_t)((256u - r) & 0xFFu);
-
-    if (I2C_WriteByte(th1, I2C_DEVICE_CMD_SETBAUD, I2C_DEVICE_ADDRESS_MAIN) == false) {
+    if (SmartCard_HwSetReload(r) == false) {
         if (g_dbglevel >= DBG_ERROR) {
             DbpString("SC: could not put the module back on the negotiated rate");
         }
@@ -707,124 +692,6 @@ OUT:
     LEDsoff();
 }
 
-// Raw sequential access to the module's byte address space, used to read back
-// the firmware image for verification.
-static int16_t sim_fw_read(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address) {
-    //START, 0xB0, 0x00, 0x00, START, 0xB1, xx, yy, zz, ......, STOP
-    bool _break = true;
-    uint8_t readcount = 0;
-
-    // sending
-    do {
-        if (I2C_Start() == false) {
-            return 0;
-        }
-
-        // 0xB0 / 0xC0  i2c write
-        I2C_SendByte(device_address & 0xFE);
-        if (I2C_WaitAck() == false)
-            break;
-
-        I2C_SendByte(msb);
-        if (I2C_WaitAck() == false) {
-            break;
-        }
-
-        I2C_SendByte(lsb);
-        if (I2C_WaitAck() == false) {
-            break;
-        }
-
-        // 0xB1 / 0xC1  i2c read
-        I2C_Start();
-        I2C_SendByte(device_address | 1);
-        if (I2C_WaitAck() == false) {
-            break;
-        }
-
-        _break = false;
-    } while (false);
-
-    if (_break) {
-        I2C_Stop();
-        if (g_dbglevel > DBG_DEBUG) DbpString(I2C_ERROR);
-        return 0;
-    }
-
-    // reading
-    while (len) {
-
-        int16_t tmp = I2C_ReadByte();
-        if (tmp < 0) {
-            return tmp;
-        }
-
-        *data = (uint8_t)tmp & 0xFF;
-
-        data++;
-        readcount++;
-        len--;
-
-        // acknowledgements. After last byte send NACK.
-        if (len == 0)
-            I2C_NoAck();
-        else
-            I2C_Ack();
-    }
-
-    I2C_Stop();
-    return readcount;
-}
-
-static bool sim_fw_write(const uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address) {
-    //START, 0xB0, 0x00, 0x00, xx, yy, zz, ......, STOP
-    bool _break = true;
-
-    do {
-        if (I2C_Start() == false) {
-            return false;
-        }
-
-        // 0xB0  == i2c write
-        I2C_SendByte(device_address & 0xFE);
-        if (I2C_WaitAck() == false) {
-            break;
-        }
-
-        I2C_SendByte(msb);
-        if (I2C_WaitAck() == false) {
-            break;
-        }
-
-        I2C_SendByte(lsb);
-        if (I2C_WaitAck() == false) {
-            break;
-        }
-
-        while (len) {
-            I2C_SendByte(*data);
-            if (I2C_WaitAck() == false) {
-                break;
-            }
-            len--;
-            data++;
-        }
-
-        if (len == 0) {
-            _break = false;
-        }
-
-    } while (false);
-
-    I2C_Stop();
-
-    if (_break) {
-        if (g_dbglevel > DBG_DEBUG) DbpString(I2C_ERROR);
-        return false;
-    }
-    return true;
-}
-
 void SmartCardUpgrade(uint64_t arg0) {
 
     LED_C_ON();
@@ -855,7 +722,7 @@ void SmartCardUpgrade(uint64_t arg0) {
         size_t size = MIN(I2C_BLOCK_SIZE, length);
 
         // write
-        int16_t res = sim_fw_write(fwdata + pos, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
+        int16_t res = SmartCard_HwModuleWrite(fwdata + pos, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
         if (!res) {
             Dbprintf("Writing failed at offset 0x%04X", pos);
             isOK = false;
@@ -866,7 +733,7 @@ void SmartCardUpgrade(uint64_t arg0) {
         WaitMS(50);
 
         // read
-        res = sim_fw_read(verifydata, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
+        res = SmartCard_HwModuleRead(verifydata, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT);
         if (res <= 0) {
             Dbprintf("Reading back failed at offset 0x%04X", pos);
             isOK = false;
@@ -988,9 +855,7 @@ void SmartCardSetClock(uint64_t arg0) {
     // Fsys and the card clock move together, so a negotiated etu stays valid in
     // card clocks - but the reset still wiped the divisor that produces it.
     sc_rate_restore();
-    // Send SIM CLC
-    // start [C0 05 xx] stop
-    I2C_WriteByte(arg0, I2C_DEVICE_CMD_SIM_CLC, I2C_DEVICE_ADDRESS_MAIN);
+    SmartCard_HwSetClock(arg0);
     reply_ng(CMD_SMART_SETCLOCK, PM3_SUCCESS, NULL, 0);
     set_tracing(false);
     LEDsoff();

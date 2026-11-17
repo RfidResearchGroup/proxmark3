@@ -17,6 +17,8 @@
 //-----------------------------------------------------------------------------
 #include "smartcard_hw_rdv4.h"
 
+#include "smartcard_apis.h"
+
 #include "i2c_apis.h"
 #include "proxmark3_arm.h"
 #include "ticks_apis.h"
@@ -97,5 +99,176 @@ bool SmartCard_RxBytes(uint8_t *dest, uint16_t *destlen, uint32_t wait) {
     }
 
     *destlen = len;
+    return true;
+}
+
+// Reset the SIM_Adapter, then  enter the main program
+void SmartCard_HwOpen(void) {
+    I2C_init(true);
+    SmartCard_HwSetAdapterLines(0, 0, 0);
+    WaitMS(30);
+    SmartCard_HwSetAdapterLines(1, 0, 0);
+    WaitMS(30);
+    SmartCard_HwSetAdapterLines(1, 1, 1);
+    WaitMS(10);
+}
+
+// Reset the SIM_Adapter, then enter the bootloader program
+// Reserve for firmware update.
+void SmartCard_HwOpenBootloader(void) {
+    I2C_init(true);
+    SmartCard_HwSetAdapterLines(0, 1, 1);
+    WaitMS(100);
+    SmartCard_HwSetAdapterLines(1, 1, 1);
+    WaitMS(10);
+}
+
+bool SmartCard_HwSetReload(uint16_t reload) {
+    // SETBAUD carries TH1, which the module turns back into 256 - TH1. R = 256
+    // wraps to 0, which is exactly what the timer wants.
+    uint8_t th1 = (uint8_t)((256u - reload) & 0xFFu);
+    return I2C_WriteByte(th1, I2C_DEVICE_CMD_SETBAUD, I2C_DEVICE_ADDRESS_MAIN);
+}
+
+void SmartCard_HwSetClock(uint64_t f) {
+    // start [C0 05 xx] stop
+    I2C_WriteByte((uint8_t)f, I2C_DEVICE_CMD_SIM_CLC, I2C_DEVICE_ADDRESS_MAIN);
+}
+
+static bool sim_module_at_least(uint8_t major, uint8_t minor, uint8_t want_major, uint8_t want_minor) {
+    return ((major > want_major) || ((major == want_major) && (minor >= want_minor)));
+}
+
+int SmartCard_HwModuleInfo(uint8_t *major, uint8_t *minor, void *info) {
+    uint8_t resp[] = {0, 0, 0, 0};
+    uint8_t len = I2C_AdaptiveRead(resp, sizeof(resp), I2C_DEVICE_CMD_GETVERSION, I2C_DEVICE_ADDRESS_MAIN);
+    if (len <= 1) {
+        return PM3_EDEVNOTSUPP;
+    }
+    *major = resp[0];
+    *minor = resp[1];
+    if (info != NULL) {
+        smartcard_rdv4_info_t *i = (smartcard_rdv4_info_t *)info;
+        i->ok = sim_module_at_least(resp[0], resp[1], SIM_MODULE_VERS_MIN_HI, SIM_MODULE_VERS_MIN_LO);
+        i->t1 = sim_module_at_least(resp[0], resp[1], SIM_MODULE_VERS_T1_HI, SIM_MODULE_VERS_T1_LO);
+    }
+    return PM3_SUCCESS;
+}
+
+// Raw sequential access to the adapter's byte address space, used to read back
+// the firmware image for verification.
+int16_t SmartCard_HwModuleRead(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address) {
+    //START, 0xB0, 0x00, 0x00, START, 0xB1, xx, yy, zz, ......, STOP
+    bool _break = true;
+    uint8_t readcount = 0;
+
+    // sending
+    do {
+        if (I2C_Start() == false) {
+            return 0;
+        }
+
+        // 0xB0 / 0xC0  i2c write
+        I2C_SendByte(device_address & 0xFE);
+        if (I2C_WaitAck() == false)
+            break;
+
+        I2C_SendByte(msb);
+        if (I2C_WaitAck() == false) {
+            break;
+        }
+
+        I2C_SendByte(lsb);
+        if (I2C_WaitAck() == false) {
+            break;
+        }
+
+        // 0xB1 / 0xC1  i2c read
+        I2C_Start();
+        I2C_SendByte(device_address | 1);
+        if (I2C_WaitAck() == false) {
+            break;
+        }
+
+        _break = false;
+    } while (false);
+
+    if (_break) {
+        I2C_Stop();
+        if (g_dbglevel > DBG_DEBUG) DbpString(I2C_ERROR);
+        return 0;
+    }
+
+    // reading
+    while (len) {
+
+        int16_t tmp = I2C_ReadByte();
+        if (tmp < 0) {
+            return tmp;
+        }
+
+        *data = (uint8_t)tmp & 0xFF;
+
+        data++;
+        readcount++;
+        len--;
+
+        // acknowledgements. After last byte send NACK.
+        if (len == 0)
+            I2C_NoAck();
+        else
+            I2C_Ack();
+    }
+
+    I2C_Stop();
+    return readcount;
+}
+
+bool SmartCard_HwModuleWrite(const uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address) {
+    //START, 0xB0, 0x00, 0x00, xx, yy, zz, ......, STOP
+    bool _break = true;
+
+    do {
+        if (I2C_Start() == false) {
+            return false;
+        }
+
+        // 0xB0  == i2c write
+        I2C_SendByte(device_address & 0xFE);
+        if (I2C_WaitAck() == false) {
+            break;
+        }
+
+        I2C_SendByte(msb);
+        if (I2C_WaitAck() == false) {
+            break;
+        }
+
+        I2C_SendByte(lsb);
+        if (I2C_WaitAck() == false) {
+            break;
+        }
+
+        while (len) {
+            I2C_SendByte(*data);
+            if (I2C_WaitAck() == false) {
+                break;
+            }
+            len--;
+            data++;
+        }
+
+        if (len == 0) {
+            _break = false;
+        }
+
+    } while (false);
+
+    I2C_Stop();
+
+    if (_break) {
+        if (g_dbglevel > DBG_DEBUG) DbpString(I2C_ERROR);
+        return false;
+    }
     return true;
 }

@@ -717,7 +717,7 @@ static void SendStatus(uint32_t wait) {
     Flashmem_print_status();
 #endif
 #ifdef WITH_SMARTCARD
-    I2C_print_status();
+    SmartCard_PrintStatus();
 #endif
 #ifdef WITH_LF
     printLFConfig();      // LF Sampling config
@@ -1006,7 +1006,7 @@ static void SendCapabilities(void) {
     // command then said it was not available in this mode.
     capabilities.hw_available_smartcard = false;
     for (uint8_t i = 0; i < 3; i++) {
-        if (I2C_get_version(&maj, &min) == PM3_SUCCESS) {
+        if (SmartCard_GetModuleInfo(&maj, &min, NULL) == PM3_SUCCESS) {
             capabilities.hw_available_smartcard = true;
             break;
         }
