@@ -23,7 +23,7 @@
 #include "dbprint.h"
 
 // set the reset state
-void SmartCard_HwSetLines(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA) {
+void SmartCard_HwSetAdapterLines(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA) {
     if (LineRST)
         RST_H;
     else

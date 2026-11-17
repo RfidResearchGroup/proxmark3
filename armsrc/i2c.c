@@ -85,11 +85,11 @@ void I2C_Reset_EnterMainProgram(void) {
     StartTicks();
     sc_log_trace_reset();
     I2C_init(true);
-    SmartCard_HwSetLines(0, 0, 0);
+    SmartCard_HwSetAdapterLines(0, 0, 0);
     WaitMS(30);
-    SmartCard_HwSetLines(1, 0, 0);
+    SmartCard_HwSetAdapterLines(1, 0, 0);
     WaitMS(30);
-    SmartCard_HwSetLines(1, 1, 1);
+    SmartCard_HwSetAdapterLines(1, 1, 1);
     WaitMS(10);
 }
 
@@ -98,9 +98,9 @@ void I2C_Reset_EnterMainProgram(void) {
 void I2C_Reset_EnterBootloader(void) {
     StartTicks();
     I2C_init(true);
-    SmartCard_HwSetLines(0, 1, 1);
+    SmartCard_HwSetAdapterLines(0, 1, 1);
     WaitMS(100);
-    SmartCard_HwSetLines(1, 1, 1);
+    SmartCard_HwSetAdapterLines(1, 1, 1);
     WaitMS(10);
 }
 

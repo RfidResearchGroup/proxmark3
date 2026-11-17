@@ -59,7 +59,7 @@
 #define SIM_MODULE_VERS_T1_LO       51
 
 // Reset and line control of the adapter.
-void SmartCard_HwSetLines(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA);
+void SmartCard_HwSetAdapterLines(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA);
 
 // Wait until the adapter has taken the command and stopped stretching SCL,
 // then until it has an answer ready. wait is an iteration count, build it with
