@@ -46,7 +46,14 @@ typedef enum {
 // because on some boards the answer only exists inside the reset window.
 bool SmartCard_HwATR(uint8_t *atr, uint16_t *len, uint32_t wait);
 
+// Hand one frame to the card with the requested framing. A board may run the
+// whole T=0 dialogue here and hold the answer for SmartCard_HwRecv(). False
+// means the frame could not be sent.
 bool SmartCard_HwSend(smartcard_mode_t mode, const uint8_t *data, uint16_t len);
+
+// Read the card's answer. On entry *len is the capacity of dest; on success it
+// is the number of bytes read. wait is the board's receive budget. False means
+// no answer or a link error.
 bool SmartCard_HwRecv(uint8_t *dest, uint16_t *len, uint32_t wait);
 
 // ISO 7816-3 clause 9. req is PPS0, optionally followed by PPS1; out is
