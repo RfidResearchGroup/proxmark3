@@ -218,7 +218,7 @@ int sam_mfc_get_pacs(PacketCommandNG *c) {
     clear_trace();
     sam_capture_reset();
     sam_sc_session_invalidate();
-    I2C_Reset_EnterMainProgram();
+    SmartCard_ResetAdapter();
 
     set_tracing(true);
     StartTicks();

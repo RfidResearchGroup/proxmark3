@@ -280,7 +280,7 @@ void test_i2c_rgb_software(void) {
         }
 
         // 测试是否会干扰到 CC 和 RGB 灯
-        // I2C_Reset_EnterMainProgram();
+        // SmartCard_ResetAdapter();
 
         // 尝试读取数据
         // 0x47 << 1

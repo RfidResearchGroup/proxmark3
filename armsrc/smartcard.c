@@ -71,7 +71,7 @@ static bool s_sam_t1_profile_requested = false;
 #endif
 
 // A negotiated rate lives in two places that reset independently: the module's
-// UART divisor, which any I2C_Reset_EnterMainProgram() wipes, and the card,
+// UART divisor, which any SmartCard_ResetAdapter() wipes, and the card,
 // which only an RST pulse clears. Left alone the two drift apart and every
 // exchange fails until something resets the card.
 //
@@ -93,9 +93,9 @@ static struct {
 // first in this file.
 static void sc_rate_restore(void);
 
-// Reset the SIM_Adapter, then  enter the main program
-// Note: the SIM_Adapter will not enter the main program after power up. Please run this function before use SIM_Adapter.
-void I2C_Reset_EnterMainProgram(void) {
+// Reset the adapter and bring it up.
+// It does not come up by itself after power up, so run this before use.
+void SmartCard_ResetAdapter(void) {
     // whatever we knew about the card is no longer trustworthy
     s_card_protocols = 0;
     s_proto_announced = false;
@@ -139,7 +139,7 @@ void SmartCard_PrintStatus(void) {
 }
 
 int SmartCard_GetModuleInfo(uint8_t *major, uint8_t *minor, void *info) {
-    I2C_Reset_EnterMainProgram();
+    SmartCard_ResetAdapter();
     // The capability probe runs this on every client connect. Without the
     // restore, reconnecting a client leaves the module on the default rate and
     // an already negotiated card unreachable.
@@ -411,7 +411,7 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
 void SmartCardATR(void) {
     LED_D_ON();
     set_tracing(true);
-    I2C_Reset_EnterMainProgram();
+    SmartCard_ResetAdapter();
     smart_card_atr_t card;
     if (GetATR(&card, true)) {
         reply_ng(CMD_SMART_ATR, PM3_SUCCESS, (uint8_t *)&card, sizeof(smart_card_atr_t));
@@ -445,7 +445,7 @@ void SmartCardRaw(const smart_card_raw_t *p) {
 
     if ((flags & SC_CONNECT) == SC_CONNECT) {
 
-        I2C_Reset_EnterMainProgram();
+        SmartCard_ResetAdapter();
 
         // Without SC_SELECT there is no ATR to negotiate against, so put the
         // rate back by hand. With it, GetATR() resets the card and runs the PPS
@@ -547,7 +547,7 @@ void SmartCardPPS(const smart_card_pps_t *p) {
 
     LED_D_ON();
     set_tracing(true);
-    I2C_Reset_EnterMainProgram();
+    SmartCard_ResetAdapter();
 
     smart_card_atr_t card;
     s_pps.reapply = false;                // this call is the negotiation
@@ -618,7 +618,7 @@ out:
 void SmartCardSetClock(uint64_t arg0) {
     LED_D_ON();
     set_tracing(true);
-    I2C_Reset_EnterMainProgram();
+    SmartCard_ResetAdapter();
     // Fsys and the card clock move together, so a negotiated etu stays valid in
     // card clocks - but the reset still wiped the divisor that produces it.
     sc_rate_restore();
@@ -661,7 +661,7 @@ static void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint
 
     if ((flags & SC_CONNECT) == SC_CONNECT) {
 
-        I2C_Reset_EnterMainProgram();
+        SmartCard_ResetAdapter();
 
         if ((flags & SC_SELECT) == SC_SELECT) {
             smart_card_atr_t card;

@@ -22,7 +22,7 @@
 #include "appmain.h"
 #include "cmd.h"
 #include "dbprint.h"
-#include "smartcard.h"      // ISO7816_MAX_FRAME, I2C_Reset_EnterMainProgram
+#include "smartcard.h"      // ISO7816_MAX_FRAME, SmartCard_ResetAdapter
 #include "proxmark3_arm.h"
 #include "sam_common.h"
 #include "ticks_apis.h"
@@ -542,7 +542,7 @@ void sam_sc_handler(const PacketCommandNG *c) {
         // leave it marked live if ATR recovery or the warmup subsequently
         // fails.
         s_sam_sc_session_active = false;
-        I2C_Reset_EnterMainProgram();
+        SmartCard_ResetAdapter();
         StartTicks();
 #if SAM_SC_FORCE_T1_PROFILE
         sc_request_sam_t1_profile();
@@ -676,7 +676,7 @@ void sam_sc_handler(const PacketCommandNG *c) {
             // Caller requested an explicit teardown after this op (typically
             // after a samCommandSecureChannelTerminate). Do a full reset to
             // bring the SAM back to a clean idle state.
-            I2C_Reset_EnterMainProgram();
+            SmartCard_ResetAdapter();
             s_sam_sc_session_active = false;
         }
 
@@ -713,7 +713,7 @@ void sam_sc_handler(const PacketCommandNG *c) {
 
     // SAM_SC_FLAG_NO_PAYLOAD path: caller wants to manage session state only.
     if (release) {
-        I2C_Reset_EnterMainProgram();
+        SmartCard_ResetAdapter();
         s_sam_sc_session_active = false;
     }
 
