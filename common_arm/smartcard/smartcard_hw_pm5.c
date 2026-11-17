@@ -71,7 +71,11 @@
 // GetTicks() runs at 1.5 MHz, so a millisecond is 1500 ticks.
 #define SC_PM5_TICKS_PER_MS     1500u
 
-static uint32_t s_baud = SC_PM5_CARD_CLK_HZ / SC_PM5_DEFAULT_ETU;
+static uint32_t s_clkin_hz = SC_PM5_CLKIN_HZ;
+static uint32_t s_card_clk_hz = SC_PM5_DEFAULT_CARD_CLK_HZ;
+static uint8_t s_clk_div = SC_PM5_CLK_DIV_2;
+static uint32_t s_etu = SC_PM5_DEFAULT_ETU;
+static uint32_t s_baud = SC_PM5_DEFAULT_CARD_CLK_HZ / SC_PM5_DEFAULT_ETU;
 static smartcard_vcc_t s_vcc = SC_VCC_3V0;
 
 // A T=0 exchange is a dialogue, not a send followed by a read, so the answer is
@@ -102,6 +106,20 @@ static uint8_t vcc_register(smartcard_vcc_t v) {
     }
 }
 
+static uint8_t clk_div_register(uint8_t div) {
+    switch (div) {
+        case 8:
+            return 0;
+        case 4:
+            return 1;
+        case 2:
+            return 2;
+        case 1:
+        default:
+            return 3;
+    }
+}
+
 // --- card I/O line ---------------------------------------------------------
 
 static void uart_pins_init(void) {
@@ -117,6 +135,23 @@ static void uart_pins_init(void) {
     g.gpio_pull = GPIO_PULL_UP;
     gpio_init(SC_PM5_GPIO, &g);
     gpio_pin_mux_config(SC_PM5_GPIO, SC_PM5_IO_SRC, SC_PM5_IO_MUX);
+}
+
+// Drive the front end's clock input. The timer clock is twice APB1, so a
+// 288 MHz core gives 7.2 MHz at period 40.
+static void clock_pwm_set(uint32_t hz) {
+    if (hz == 0) {
+        return;
+    }
+    uint32_t period = system_core_clock / hz;
+    if (period < 2) {
+        return;
+    }
+
+    tmr_counter_enable(SC_PM5_CLK_TMR, FALSE);
+    tmr_base_init(SC_PM5_CLK_TMR, period - 1, 0);
+    tmr_channel_value_set(SC_PM5_CLK_TMR, SC_PM5_CLK_CH, period / 2);
+    tmr_counter_enable(SC_PM5_CLK_TMR, TRUE);
 }
 
 // Clock into the front end. Push-pull and no pull, because this pin is an
@@ -136,8 +171,6 @@ static void clock_pwm_init(void) {
 
     tmr_internal_clock_set(SC_PM5_CLK_TMR);
     tmr_reset(SC_PM5_CLK_TMR);
-    // The timer clock is twice APB1, so 288 MHz / 40 = 7.2 MHz out.
-    tmr_base_init(SC_PM5_CLK_TMR, (system_core_clock / SC_PM5_CLKIN_HZ) - 1, 0);
 
     tmr_output_config_type o;
     tmr_output_default_para_init(&o);
@@ -145,9 +178,7 @@ static void clock_pwm_init(void) {
     o.oc_polarity = TMR_OUTPUT_ACTIVE_HIGH;
     o.oc_output_state = TRUE;
     tmr_output_channel_config(SC_PM5_CLK_TMR, SC_PM5_CLK_CH, &o);
-    tmr_channel_value_set(SC_PM5_CLK_TMR, SC_PM5_CLK_CH,
-                          (system_core_clock / SC_PM5_CLKIN_HZ) / 2);
-    tmr_counter_enable(SC_PM5_CLK_TMR, TRUE);
+    clock_pwm_set(s_clkin_hz);
 }
 
 // The frame-format bits are locked while the smartcard mode is on, so it has
@@ -379,7 +410,8 @@ void SmartCard_HwOpen(void) {
     uart_pins_init();
     clock_pwm_init();
     // A link reset puts the card back on its default rate.
-    s_baud = SC_PM5_CARD_CLK_HZ / SC_PM5_DEFAULT_ETU;
+    s_etu = SC_PM5_DEFAULT_ETU;
+    s_baud = s_card_clk_hz / s_etu;
     s_resp_ready = false;
     uart_init(s_baud);
 }
@@ -404,9 +436,9 @@ bool SmartCard_HwATR(uint8_t *atr, uint16_t *len, uint32_t wait) {
     if (ctrl_write(SC_PM5_REG_VCC, vcc_register(s_vcc)) == false) {
         return false;
     }
-    // The card clock is the front end's clock input divided by two, which is
-    // what the default rate below is worked out against.
-    if (ctrl_write(SC_PM5_REG_CLK_DIV, SC_PM5_CLK_DIV_2) == false) {
+    // The card clock is the front end's clock input divided down; keep the
+    // divider the host selected.
+    if (ctrl_write(SC_PM5_REG_CLK_DIV, clk_div_register(s_clk_div)) == false) {
         return false;
     }
     if (ctrl_write(SC_PM5_REG_CARD_CTRL, 1) == false) {
@@ -417,7 +449,8 @@ bool SmartCard_HwATR(uint8_t *atr, uint16_t *len, uint32_t wait) {
     // released, and a slow one is normal on an adapter card.
     WaitMS(50);
 
-    s_baud = SC_PM5_CARD_CLK_HZ / SC_PM5_DEFAULT_ETU;
+    s_etu = SC_PM5_DEFAULT_ETU;
+    s_baud = s_card_clk_hz / s_etu;
     uart_apply_baud(s_baud);
     uart_flush();
 
@@ -629,7 +662,8 @@ bool SmartCard_HwPPS(const uint8_t *req, uint8_t req_len, uint8_t out[3], uint32
     if (has_ta1) {
         uint16_t etu = SmartCard_RateEtu(ta1);
         if (etu != 0) {
-            s_baud = SC_PM5_CARD_CLK_HZ / etu;
+            s_etu = etu;
+            s_baud = s_card_clk_hz / s_etu;
             uart_apply_baud(s_baud);
         }
     }
@@ -640,15 +674,44 @@ bool SmartCard_HwSetReload(uint16_t reload) {
     if (reload == 0) {
         return false;
     }
-    s_baud = SC_PM5_CARD_CLK_HZ / (16u * reload);
+    s_etu = 16u * reload;
+    s_baud = s_card_clk_hz / s_etu;
     uart_apply_baud(s_baud);
     return true;
 }
 
 void SmartCard_HwSetClock(uint64_t f) {
-    // The card clock is the front end's crystal divided down; there is no
-    // arbitrary frequency to program here.
-    (void)f;
+    // The client's selector is 0/1/2 for 16/8/4 MHz. The front end reaches
+    // those directly with its /1 divider, so only the timer changes.
+    uint32_t hz;
+    switch (f) {
+        case 0:
+            hz = 16000000u;
+            break;
+        case 1:
+            hz = 8000000u;
+            break;
+        case 2:
+            hz = 4000000u;
+            break;
+        default:
+            if (g_dbglevel >= DBG_ERROR) {
+                Dbprintf("SC: unsupported card clock selector %u", (unsigned)f);
+            }
+            return;
+    }
+
+    s_clk_div = SC_PM5_CLK_DIV_1;
+    s_clkin_hz = hz;
+    s_card_clk_hz = hz;
+    clock_pwm_set(s_clkin_hz);
+
+    // The front end takes its divider from the register; write it now so a
+    // running card follows too.
+    ctrl_write(SC_PM5_REG_CLK_DIV, clk_div_register(s_clk_div));
+
+    s_baud = s_card_clk_hz / s_etu;
+    uart_apply_baud(s_baud);
 }
 
 bool SmartCard_HwSetVoltage(smartcard_vcc_t v) {

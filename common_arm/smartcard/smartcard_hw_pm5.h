@@ -38,11 +38,12 @@
 #define SC_PM5_REG_CLK_DIV      0x05    // 0 = /8, 1 = /4, 2 = /2, 3 = /1
 #define SC_PM5_REG_FW_VERSION   0xFF    // [major, minor]
 
-// Card clock as it reaches the card. A timer drives 7.2 MHz into the front
-// end, which halves it by default; a PPS moves Fi/Di, not this clock.
-#define SC_PM5_CARD_CLK_HZ      3600000
+// Card clock as it reaches the card by default. The timer can drive the front
+// end faster; SmartCard_HwSetClock() picks one of the card-side rates.
+#define SC_PM5_DEFAULT_CARD_CLK_HZ  3600000
 
-// Divider the front end applies to its clock input: /2.
+// Divider the front end applies to its clock input.
+#define SC_PM5_CLK_DIV_1        1
 #define SC_PM5_CLK_DIV_2        2
 
 #endif // SMARTCARD_HW_PM5_H
