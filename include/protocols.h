@@ -409,6 +409,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO14443B_XEROX_WUP2            0x5D
 #define ISO14443B_XEROX_EXT_READ_BLK    0x20
 #define ISO14443B_XEROX_READ_BLK        0x30
+#define ISO14443B_XEROX_WRITE_BLK       0x31
 
 // ASK C-ticket
 #define ASK_REQT               0x10
