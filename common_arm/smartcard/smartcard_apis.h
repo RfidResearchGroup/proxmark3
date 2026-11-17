@@ -37,6 +37,7 @@ typedef enum {
 // Reset the card and hand back the ATR bytes it answered with. Done together
 // because on some boards the answer only exists inside the reset window.
 bool SmartCard_HwATR(uint8_t *atr, uint16_t *len, uint32_t wait);
+
 bool SmartCard_HwSend(smartcard_mode_t mode, const uint8_t *data, uint16_t len);
 bool SmartCard_HwRecv(uint8_t *dest, uint16_t *len, uint32_t wait);
 

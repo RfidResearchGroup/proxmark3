@@ -16,6 +16,7 @@
 // The main i2c code, for communications with smart card module
 //-----------------------------------------------------------------------------
 #include "i2c.h"
+#include "smartcard_rate.h"
 
 #include "proxmark3_arm.h"
 #include "cmd.h"
@@ -251,50 +252,6 @@ static uint8_t atr_first_proto(const uint8_t *atr, uint8_t len) {
     return (i < len) ? (uint8_t)(atr[i] & 0x0F) : 0;
 }
 
-// The fastest rate worth proposing to a card, or 0 for none.
-//
-// Two rules keep this safe, both learned on the bench rather than assumed:
-//
-//   - Keep the Fi the card advertised and only lower Di. Proposing a different
-//     Fi is refused: a SAM advertising Fi=512 took the whole Fi=512 family and
-//     rejected every Fi=768/1024/1536/2048 offer.
-//   - R = Fi / (16 * Di) is the module's UART reload. It has to be a whole
-//     number or the sampling point drifts - that is the +3.2% which makes
-//     Fi=372 unusable beyond Di=1 - and it must not fall below the floor.
-//
-// The floor is measured, not guessed. It was 8 while the module still waited
-// out a turnaround guard before listening, which cost it the second byte of
-// every answer above 31250 bit/s. With that guard applied only before
-// transmitting (module v4.62), R=2 (125000 bit/s) is clean over repeated runs
-// and R=1 still is not: at 16 clocks per etu a character is 192 instruction
-// cycles, and the receive loop does not fit in that.
-//
-// A card with no TA1 offers nothing but the default, so nothing is proposed.
-#define SC_PPS_MIN_RELOAD  2
-
-// ISO/IEC 7816-3 tables 7 and 8. 0 marks an RFU entry, which nothing may use.
-static const uint16_t s_fi_tab[16] = {372, 372, 558, 744, 1116, 1488, 1860, 0,
-                                      0, 512, 768, 1024, 1536, 2048, 0, 0
-                                     };
-static const uint8_t s_di_tab[16] = {0, 1, 2, 4, 8, 16, 32, 64, 12, 20, 0, 0, 0, 0, 0, 0};
-
-// The module's UART reload for a TA1, or 0 when the pair is unusable. Same
-// arithmetic as UART_Set_FiDi() in the module firmware: R = Fi / (16 * Di),
-// which has to come out whole or the sampling point drifts across a character.
-static uint16_t sc_ta1_reload(uint8_t ta1) {
-
-    uint16_t f = s_fi_tab[(ta1 >> 4) & 0x0F];
-    uint8_t  d = s_di_tab[ta1 & 0x0F];
-
-    if ((f == 0) || (d == 0)) {
-        return 0;
-    }
-    if ((f % (uint16_t)(16u * d)) != 0) {
-        return 0;
-    }
-    return (uint16_t)(f / (uint16_t)(16u * d));
-}
-
 // Put the module back on the negotiated rate without touching the card.
 //
 // A module reset returns its UART to the default divisor, but the card keeps
@@ -313,7 +270,7 @@ static void sc_rate_restore(void) {
         return;                         // nothing negotiated, the default is right
     }
 
-    uint16_t r = sc_ta1_reload(s_pps.ta1);
+    uint16_t r = SmartCard_RateReload(s_pps.ta1);
     if (r == 0) {
         return;
     }
@@ -328,45 +285,6 @@ static void sc_rate_restore(void) {
     if (g_dbglevel >= DBG_INFO) {
         Dbprintf("SC: module rate restored without a card reset, TA1 %02X (R=%u)", s_pps.ta1, r);
     }
-}
-
-static uint8_t sc_pps_best_ta1(const uint8_t *atr, uint8_t len) {
-
-    if ((len < 3) || ((atr[1] & 0x10) == 0)) {
-        return 0;                       // no TA1 - default only
-    }
-
-    uint8_t fi_idx = (uint8_t)((atr[2] >> 4) & 0x0F);
-    uint16_t f = s_fi_tab[fi_idx];
-    if (f == 0) {
-        return 0;                       // RFU
-    }
-
-    uint8_t best = 0;
-    uint16_t best_clocks = 372;         // has to beat the default to be worth it
-
-    for (uint8_t di_idx = 1; di_idx < 16; di_idx++) {
-
-        uint8_t d = s_di_tab[di_idx];
-        if (d == 0) {
-            continue;
-        }
-        if ((f % (uint16_t)(16u * d)) != 0) {
-            continue;                   // divisor is not exact, the etu would drift
-        }
-        if ((f / (uint16_t)(16u * d)) < SC_PPS_MIN_RELOAD) {
-            continue;                   // faster than the module can receive
-        }
-
-        uint16_t clocks = (uint16_t)(f / d);
-        if (clocks >= best_clocks) {
-            continue;
-        }
-        best_clocks = clocks;
-        best = (uint8_t)((fi_idx << 4) | di_idx);
-    }
-
-    return best;
 }
 
 static bool sc_pps(uint8_t proto, uint8_t ta1) {
@@ -525,7 +443,7 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
         if (s_pps.reapply && (s_pps.tried == false)) {
 
             uint8_t want_proto = atr_first_proto(card_ptr->atr, card_ptr->atr_len);
-            uint8_t want = sc_pps_best_ta1(card_ptr->atr, card_ptr->atr_len);
+            uint8_t want = SmartCard_RateBestTa1(card_ptr->atr, card_ptr->atr_len);
 
 #if SAM_SC_FORCE_T1_PROFILE
             if (request_sam_t1 && (s_card_protocols & SC_PROTO_T1)) {
