@@ -19,6 +19,11 @@
 #include <inttypes.h>
 
 #include "smartcard.h"
+
+#ifndef PM5
+#include "smartcard_hw_rdv4.h"
+#endif
+
 #include "smartcard_atr.h"
 #include "smartcard_rate.h"
 

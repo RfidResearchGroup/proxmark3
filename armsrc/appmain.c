@@ -287,6 +287,9 @@ static void pm5_autooff_sprint(char *dst) {
 
 #ifdef WITH_SMARTCARD
 #include "smartcard.h"
+#ifndef PM5
+#include "smartcard_hw_rdv4.h"
+#endif
 #endif
 
 #ifdef WITH_FPC_USART

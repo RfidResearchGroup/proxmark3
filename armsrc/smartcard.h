@@ -20,7 +20,6 @@
 #include "i2c_apis.h"
 #include "pm3_cmd.h"
 #include "smartcard_apis.h"
-#include "smartcard_hw_rdv4.h"
 
 // SAM secure-channel transport policy for the performance build.  Artemis
 // offers T=0 first in its ATR; request its advertised T=1 service explicitly
@@ -69,7 +68,6 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose);
 // generice functions
 void SmartCardATR(void);
 void SmartCardRaw(const smart_card_raw_t *p);
-void SmartCardAdapterUpgrade(uint64_t arg0);
 void SmartCardSetClock(uint64_t arg0);
 void SmartCardPPS(const smart_card_pps_t *p);
 void SmartCard_PrintStatus(void);
