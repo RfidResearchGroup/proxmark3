@@ -189,6 +189,12 @@ void SmartCard_HwSetClock(uint64_t f) {
     I2C_WriteByte((uint8_t)f, I2C_DEVICE_CMD_SIM_CLC, I2C_DEVICE_ADDRESS_MAIN);
 }
 
+bool SmartCard_HwSetVoltage(smartcard_vcc_t v) {
+    // The adapter's card supply is fixed; there is nothing to select here.
+    (void)v;
+    return false;
+}
+
 static bool sim_module_at_least(uint8_t major, uint8_t minor, uint8_t want_major, uint8_t want_minor) {
     return ((major > want_major) || ((major == want_major) && (minor >= want_minor)));
 }

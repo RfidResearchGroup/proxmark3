@@ -56,7 +56,6 @@
 #define SC_PM5_CLKIN_HZ     7200000u
 
 #define SC_PM5_DEFAULT_ETU  372
-#define SC_PM5_VCC_3V       1
 #define SC_PM5_GUARD_ETU    2
 
 // Timeouts, in milliseconds. T=0 allows 960 etu of work waiting time, about
@@ -73,6 +72,7 @@
 #define SC_PM5_TICKS_PER_MS     1500u
 
 static uint32_t s_baud = SC_PM5_CARD_CLK_HZ / SC_PM5_DEFAULT_ETU;
+static smartcard_vcc_t s_vcc = SC_VCC_3V0;
 
 // A T=0 exchange is a dialogue, not a send followed by a read, so the answer is
 // collected here and handed back through SmartCard_HwRecv().
@@ -88,6 +88,18 @@ static bool ctrl_write(uint8_t reg, uint8_t val) {
 
 static bool ctrl_read(uint8_t reg, uint8_t *buf, uint16_t len) {
     return I2C_BufferRead(buf, len, reg, SC_PM5_CTRL_ADDR) == (int16_t)len;
+}
+
+static uint8_t vcc_register(smartcard_vcc_t v) {
+    switch (v) {
+        case SC_VCC_1V8:
+            return 0;
+        case SC_VCC_5V0:
+            return 2;
+        case SC_VCC_3V0:
+        default:
+            return 1;
+    }
 }
 
 // --- card I/O line ---------------------------------------------------------
@@ -389,7 +401,7 @@ bool SmartCard_HwATR(uint8_t *atr, uint16_t *len, uint32_t wait) {
     if (ctrl_write(SC_PM5_REG_RST, 0) == false) {
         return false;
     }
-    if (ctrl_write(SC_PM5_REG_VCC, SC_PM5_VCC_3V) == false) {
+    if (ctrl_write(SC_PM5_REG_VCC, vcc_register(s_vcc)) == false) {
         return false;
     }
     // The card clock is the front end's clock input divided by two, which is
@@ -637,6 +649,15 @@ void SmartCard_HwSetClock(uint64_t f) {
     // The card clock is the front end's crystal divided down; there is no
     // arbitrary frequency to program here.
     (void)f;
+}
+
+bool SmartCard_HwSetVoltage(smartcard_vcc_t v) {
+    if ((v != SC_VCC_1V8) && (v != SC_VCC_3V0) && (v != SC_VCC_5V0)) {
+        return false;
+    }
+    // Recorded here and applied by the next reset, where the card is off.
+    s_vcc = v;
+    return true;
 }
 
 int SmartCard_HwAdapterInfo(uint8_t *major, uint8_t *minor, void *info) {

@@ -34,6 +34,14 @@ typedef enum {
     SC_MODE_T1,
 } smartcard_mode_t;
 
+// Card supply voltage. Not every board can select one; the porting layer says
+// so rather than pretending.
+typedef enum {
+    SC_VCC_1V8 = 0,
+    SC_VCC_3V0,
+    SC_VCC_5V0,
+} smartcard_vcc_t;
+
 // Reset the card and hand back the ATR bytes it answered with. Done together
 // because on some boards the answer only exists inside the reset window.
 bool SmartCard_HwATR(uint8_t *atr, uint16_t *len, uint32_t wait);
@@ -58,5 +66,9 @@ bool SmartCard_HwSetReload(uint16_t reload);
 
 // Card clock.
 void SmartCard_HwSetClock(uint64_t f);
+
+// Select the card supply voltage. Applied by the next reset, so this does not
+// disturb a running card. Returns false when the board cannot select it.
+bool SmartCard_HwSetVoltage(smartcard_vcc_t v);
 
 #endif // SMARTCARD_APIS_H
