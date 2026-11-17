@@ -19,6 +19,9 @@
 
 #include "smartcard_apis.h"
 
+#include "BigBuf.h"
+#include "cmd.h"
+#include "string.h"
 #include "i2c_apis.h"
 #include "proxmark3_arm.h"
 #include "ticks_apis.h"
@@ -322,4 +325,68 @@ bool SmartCard_HwModuleWrite(const uint8_t *data, uint8_t len, uint8_t msb, uint
         return false;
     }
     return true;
+}
+
+// Replaces the firmware of the adapter itself, not of the card. Called from the
+// adapter upgrade command; the image is expected in BigBuf already.
+void SmartCardAdapterUpgrade(uint64_t arg0) {
+
+    LED_C_ON();
+
+#define SC_FW_BLOCK_SIZE 128
+    // write.   Sector0,  with 11,22,33,44
+    // erase is 128bytes, and takes 50ms to execute
+
+    SmartCard_HwOpenBootloader();
+
+    bool isOK = true;
+    uint16_t length = (uint16_t)arg0, pos = 0;
+    const uint8_t *fwdata = BigBuf_get_addr();
+    uint8_t *verifydata = BigBuf_calloc(SC_FW_BLOCK_SIZE);
+    if (verifydata == NULL) {
+        reply_ng(CMD_SMART_UPGRADE, PM3_EMALLOC, NULL, 0);
+        LED_C_OFF();
+        return;
+    }
+
+    while (length) {
+
+        uint8_t msb = (pos >> 8) & 0xFF;
+        uint8_t lsb = pos & 0xFF;
+
+        Dbprintf("FW %02X%02X", msb, lsb);
+
+        uint8_t size = (uint8_t)MIN(SC_FW_BLOCK_SIZE, length);
+
+        // write
+        if (SmartCard_HwModuleWrite(fwdata + pos, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT) == false) {
+            Dbprintf("Writing failed at offset 0x%04X", pos);
+            isOK = false;
+            break;
+        }
+
+        // writing takes time.
+        WaitMS(50);
+
+        // read
+        if (SmartCard_HwModuleRead(verifydata, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT) <= 0) {
+            Dbprintf("Reading back failed at offset 0x%04X", pos);
+            isOK = false;
+            break;
+        }
+
+        // cmp
+        if (0 != memcmp(fwdata + pos, verifydata, size)) {
+            Dbprintf("Verify mismatch at offset 0x%04X", pos);
+            isOK = false;
+            break;
+        }
+
+        length -= size;
+        pos += size;
+    }
+
+    reply_ng(CMD_SMART_UPGRADE, (isOK) ? PM3_SUCCESS : PM3_ESOFT, NULL, 0);
+    LED_C_OFF();
+    BigBuf_free();
 }

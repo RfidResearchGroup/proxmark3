@@ -70,7 +70,7 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose);
 // generice functions
 void SmartCardATR(void);
 void SmartCardRaw(const smart_card_raw_t *p);
-void SmartCardUpgrade(uint64_t arg0);
+void SmartCardAdapterUpgrade(uint64_t arg0);
 void SmartCardSetClock(uint64_t arg0);
 void SmartCardPPS(const smart_card_pps_t *p);
 void SmartCard_PrintStatus(void);

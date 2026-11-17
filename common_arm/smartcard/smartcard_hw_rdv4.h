@@ -72,9 +72,12 @@ void SmartCard_HwSetAdapterLines(uint8_t LineRST, uint8_t LineSCK, uint8_t LineS
 // Raw sequential access to the adapter's byte address space, used to write and
 // verify its firmware. Only this board exposes an update path today, so these
 // do not belong to the shared interface.
-#define SC_HW_MODULE_UPDATE         1
 void SmartCard_HwOpenBootloader(void);
 int16_t SmartCard_HwModuleRead(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address);
 bool SmartCard_HwModuleWrite(const uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address);
+
+// Replaces the firmware of the adapter itself, keeping the image that BigBuf
+// already holds. Belongs here because no other board can do it.
+void SmartCardAdapterUpgrade(uint64_t arg0);
 
 #endif // SMARTCARD_HW_RDV4_H

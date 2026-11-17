@@ -3312,7 +3312,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 Dbprintf("CRC Failed, 0x[%04x] != 0x[%02x%02x]", payload->crc, a, b);
                 reply_ng(CMD_SMART_UPGRADE, PM3_ESOFT, NULL, 0);
             } else {
-                SmartCardUpgrade(payload->fw_size);
+                SmartCardAdapterUpgrade(payload->fw_size);
             }
             fwdata = NULL;
             break;
