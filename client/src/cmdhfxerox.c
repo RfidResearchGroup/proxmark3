@@ -151,6 +151,56 @@ static const char *xerox_c_type[] = { "drum", "yellow", "magenta", "cyan", "blac
 static const uint8_t FACTORY_SOLD[]    = { 0xDB, 0x3A, 0xDB, 0x3A };
 static const uint8_t FACTORY_METERED[] = { 0xD8, 0x3A, 0xD8, 0x3A };
 
+
+// -----------------------------------------------------------------------------
+// Part-number pattern knowledge.
+// Only XXXRXXXXX (e.g. 013R00646) is currently supported by the remap generator.
+// -----------------------------------------------------------------------------
+typedef struct {
+    const char *name;
+    const char *pattern;   // human-readable, X=digit A=letter
+    bool        writable;  // true if remap is supported for this shape
+} xerox_part_pattern_t;
+
+static const xerox_part_pattern_t xerox_part_patterns[] = {
+    { "Xerox R-code (5)", "XXXRXXXXX", true  },  // 013R00646  <-- only writable
+    { "Xerox R-code (3)", "XXXRXXX",   false },  // 113R315
+    { "9-digit numeric",  "XXXXXXXXX", false },  // 016188300
+    { "CT + 6 digits",    "AAXXXXXX",  false },  // CT350574
+    { "CT + 5 digits",    "AAXXXXX",   false },  // CT50413
+    { "CTI + 5 digits",   "AAIXXXXX",  false },  // CTI50285
+    { "Dell XXX-XXXX",    "XXX-XXXX",  false },  // 330-3111
+    { "Fujitsu AAXXXA",   "AAXXXA",    false },  // LB322B
+    { NULL, NULL, false }
+};
+
+static bool xerox_pattern_match(const char *pattern, const char *pn) {
+    // pattern uses X=digit, A=letter; pn must match exactly
+    for (const char *p = pattern, *s = pn; ; p++, s++) {
+        if (*p == 0)   return (*s == 0);
+        if (*s == 0)   return false;
+        if (*p == 'X' && !(*s >= '0' && *s <= '9')) return false;
+        if (*p == 'A' && !(*s >= 'A' && *s <= 'Z')) return false;
+        if (*p != 'X' && *p != 'A' && *p != *s)     return false;
+    }
+}
+
+// Returns the matching pattern entry, or the last (sentinel) entry.
+static const xerox_part_pattern_t *xerox_part_pattern_of(const char *pn) {
+    if (!pn || !*pn) return &xerox_part_patterns[ARRAYLEN(xerox_part_patterns) - 1];
+    for (int i = 0; xerox_part_patterns[i].name; i++) {
+        if (xerox_pattern_match(xerox_part_patterns[i].pattern, pn))
+            return &xerox_part_patterns[i];
+    }
+    return &xerox_part_patterns[ARRAYLEN(xerox_part_patterns) - 1]; // unknown -> not writable
+}
+
+static bool xerox_part_is_writable(const char *pn) {
+    const xerox_part_pattern_t *pp = xerox_part_pattern_of(pn);
+    return pp->writable;
+}
+
+
 static int CmdHelp(const char *Cmd);
 void RC2_set_key(RC2_KEY *key, int len, const unsigned char *data, int bits);
 void RC2_encrypt(unsigned long *d, RC2_KEY *key);
@@ -560,8 +610,11 @@ static void consumables_print(json_t *consumables) {
         if (zone == NULL || strlen(zone) == 0) zone = "-";
         if (ms   == NULL || strlen(ms)   == 0) ms   = "-";
 
-        PrintAndLogEx(NORMAL, "  %zu.  %-6s  %-8s  %-14s  %6s pages  %-7s  %-7s",
-                      k + 1, type, color, part, yield, zone, ms);
+        const xerox_part_pattern_t *pp = xerox_part_pattern_of(part);
+        const char *flag = pp->writable ? _GREEN_("[W]") : _YELLOW_("[R]");
+
+        PrintAndLogEx(NORMAL, "  %zu.  %s  %-6s  %-8s  %-14s  %6s pages  %-7s  %-7s  %s",
+                      k + 1, flag, type, color, part, yield, zone, ms, pp->pattern);
     }
 }
 
@@ -1296,32 +1349,50 @@ static json_t* filter_xerox_database(json_t *db, const char *filter_values[9]) {
     return matches;
 }
 
-// Helper function for user selection of Printermodel or Consumable
+// Returns the 0-based index of the chosen item, or -1 on cancel/error.
+// If writable_flags is non-NULL, picking a non-writable row is refused
+// and the user is re-prompted (up to 3 times).
+static int get_user_selection_ex(size_t max_value, const char *prompt,
+                                 const bool *writable_flags) {
+
+    if (max_value == 0) return -1;
+    if (max_value == 1 && (writable_flags == NULL || writable_flags[0]))
+        return 0;   // single writable item -> auto-select
+
+    for (int attempt = 0; attempt < 3; attempt++) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(NORMAL, "%s (1-%zu, 0 to cancel): ", prompt, max_value);
+
+        int selection = 0;
+        if (scanf(" %d", &selection) != 1) {
+            PrintAndLogEx(FAILED, "Invalid input - not a number");
+            return -1;
+        }
+        if (selection == 0) {
+            PrintAndLogEx(INFO, "Cancelled");
+            return -1;
+        }
+        if (selection < 1 || selection > (int)max_value) {
+            PrintAndLogEx(FAILED, "Invalid selection - must be between 0 and %zu", max_value);
+            continue;
+        }
+
+        int idx = selection - 1;
+        if (writable_flags && !writable_flags[idx]) {
+            PrintAndLogEx(WARNING,
+                "That entry is read-only (pattern not yet supported for remap). "
+                "Pick a " _GREEN_("[W]") " item, or 0 to cancel.");
+            continue;
+        }
+        return idx;
+    }
+    PrintAndLogEx(FAILED, "Too many invalid selections, aborting");
+    return -1;
+}
+
+// Backwards-compatible wrapper (no writable check)
 static int get_user_selection(size_t max_value, const char *prompt) {
-    if (max_value <= 1) {
-        return 0;  // Auto-select the only item
-    }
-
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "%s (1-%zu, 0 to cancel): ", prompt, max_value);
-
-    int selection = 0;
-    if (scanf(" %d", &selection) != 1) {
-        PrintAndLogEx(FAILED, "Invalid input - not a number");
-        return -1;
-    }
-
-    if (selection == 0) {
-        PrintAndLogEx(INFO, "Cancelled");
-        return -1;
-    }
-
-    if (selection < 1 || selection > (int)max_value) {
-        PrintAndLogEx(FAILED, "Invalid selection - must be between 0 and %zu", max_value);
-        return -1;
-    }
-
-    return selection - 1;
+    return get_user_selection_ex(max_value, prompt, NULL);
 }
 
 static uint8_t xerox_color_code(const char *color) {
@@ -1394,22 +1465,71 @@ static json_t *map_selector(const char *filter_values[9]) {
  
     const char *selected_model = json_string_value(json_array_get(models, model_idx));
     if (!selected_model) goto cleanup;
- 
+
     // Filter consumables for the chosen model
     consumables = json_array();
     if (!consumables) goto cleanup;
- 
+
     json_array_foreach(matches, i, entry) {
         const char *m = json_string_value(json_object_get(entry, "printer_model"));
         if (m && strcmp(m, selected_model) == 0) {
             json_array_append(consumables, entry);
         }
     }
- 
-    PrintAndLogEx(INFO, "Consumables for %s:", selected_model);
+
+    // --- Build writable flags + stable partition: writable first ---
+    size_t n_cons = json_array_size(consumables);
+    bool  *wflags = (bool *)calloc(n_cons, sizeof(bool));
+    json_t **sorted = (json_t **)calloc(n_cons, sizeof(json_t *));
+    if (!wflags || !sorted) {
+        free(wflags); free(sorted);
+        goto cleanup;
+    }
+
+    size_t w_idx = 0, r_idx = n_cons;   // fill writable from front, read-only from back
+    for (size_t k = 0; k < n_cons; k++) {
+        json_t *e = json_array_get(consumables, k);
+        const char *pn = json_string_value(json_object_get(e, "part_number"));
+        bool w = xerox_part_is_writable(pn);
+        if (w) sorted[w_idx++] = e;
+        else   sorted[--r_idx] = e;
+    }
+    // writable_flags for the sorted order
+    for (size_t k = 0; k < n_cons; k++) {
+        const char *pn = json_string_value(json_object_get(sorted[k], "part_number"));
+        wflags[k] = xerox_part_is_writable(pn);
+    }
+
+    json_t *sorted_arr = json_array();
+    if (!sorted_arr) { free(wflags); free(sorted); goto cleanup; }
+    for (size_t k = 0; k < n_cons; k++)
+        json_array_append(sorted_arr, sorted[k]);
+    json_decref(consumables);
+    consumables = sorted_arr;
+    free(sorted);
+
+    size_t n_writable = 0;
+    for (size_t k = 0; k < n_cons; k++) if (wflags[k]) n_writable++;
+
+    PrintAndLogEx(INFO, "Consumables for %s  ("
+                  _GREEN_("%zu writable")
+                  ", " _YELLOW_("%zu read-only") "):",
+                  selected_model, n_writable, n_cons - n_writable);
+
+    if (n_writable == 0) {
+        PrintAndLogEx(WARNING,
+            "No writable consumables for this model.\n"
+            "Only the " _GREEN_("XXXRXXXXX") " pattern (e.g. " _YELLOW_("013R00646") ") "
+            "is currently supported for remap.\n"
+            "Other patterns are shown for reference but cannot be written.");
+    } else {
+        PrintAndLogEx(NORMAL, "  [W] = writable (XXXRXXXXX)    [R] = read-only (view only)");
+    }
+
     consumables_print(consumables);
- 
-    int cons_idx = get_user_selection(json_array_size(consumables), "Select consumable");
+
+    int cons_idx = get_user_selection_ex(n_cons, "Select consumable", wflags);
+    free(wflags);
     if (cons_idx < 0) goto cleanup;
  
     json_t *candidate = json_array_get(consumables, cons_idx);
@@ -1458,6 +1578,15 @@ static int map_generator(const json_t *selected) {
 
     if (!part_number) {
         PrintAndLogEx(FAILED, "Selected consumable has no part_number");
+        return PM3_EINVARG;
+    }
+
+    if (!xerox_part_is_writable(part_number)) {
+        const xerox_part_pattern_t *pp = xerox_part_pattern_of(part_number);
+        PrintAndLogEx(FAILED,
+            "Part number " _YELLOW_("%s") " uses pattern %s (" _YELLOW_("%s") ").\n"
+            "Only " _GREEN_("XXXRXXXXX") " (e.g. 013R00646) is currently supported for remap.",
+            part_number, pp->pattern, pp->name);
         return PM3_EINVARG;
     }
 
@@ -1666,7 +1795,9 @@ static int CmdHFXeroxMap(const char *Cmd) {
  
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf xerox remap",
-                  "Remap a Xerox tag by selecting a consumable from the database\n",
+                  "Remap a Xerox tag by selecting a consumable from the database\n"
+                  "note: only " _GREEN_("XXXRXXXXX") " part-number patterns (e.g. 013R00646)\n"
+                  "      are currently supported; other patterns are shown as [R] read-only.",
                   "hf xerox remap -m 4110 -t toner");
  
     void *argtable[] = {
