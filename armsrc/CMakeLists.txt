@@ -49,6 +49,7 @@ set(INC_DIRS
         ../common_arm/flash_code
         ../common_arm/gpio
         ../common_arm/i2c
+        ../common_arm/smartcard
         ../common_arm/sys
         ../common_arm/fpga
         ../common_arm/wdt
@@ -177,7 +178,7 @@ else ()
 endif ()
 
 if ("${APP_CFLAGS}" MATCHES "WITH_SMARTCARD")
-    set(SRC_SMARTCARD i2c.c i2c_direct.c emvsim.c)
+    set(SRC_SMARTCARD i2c.c i2c_direct.c emvsim.c ../common_arm/smartcard/smartcard_hw_rdv4.c)
 else ()
     set(SRC_SMARTCARD)
 endif ()
