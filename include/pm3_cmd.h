@@ -1063,6 +1063,17 @@ typedef struct {
     // not yet merged): a cep_attached byte distinguishing "physically
     // present, handshake not yet complete" from "active".
 } PACKED cep_status_t;
+// PM5 USB host CDC (ICSD): send an arbitrary command line to the attached
+// ICS/ICSD device and return its response. req: NUL-terminated command string.
+// resp: device response bytes.
+#define CMD_PM5_ICSD_RAW 0x0186
+// PM5 USB host CDC (ICSD): send "RD\r\n" and return the card frame data.
+#define CMD_PM5_ICSD_RD 0x0187
+// PM5 USB host CDC (ICSD): force CEP lines into USB host CDC mode.
+#define CMD_PM5_ICSD_INIT 0x0188
+// PM5 USB host CDC (ICSD): return host CDC debug/telemetry state.
+// resp: 7 bytes [initialized, connected, global_state, enum_state, req_state, conn_sts, port_enable].
+#define CMD_PM5_ICSD_STATUS 0x0189
 #define BWM_OTA_ACTION_BEGIN 0x00
 #define BWM_OTA_ACTION_WRITE 0x01
 #define BWM_OTA_ACTION_END   0x02

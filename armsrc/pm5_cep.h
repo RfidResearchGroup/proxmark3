@@ -52,6 +52,15 @@ bool cep_is_attached(void);
 // attach, runs the one-shot UART handshake. Safe no-op the rest of the time.
 void cep_attach_poll(void);
 
+// Force CEP lines into OTGFS1 USB host CDC mode (releases USART1/SPI role).
+void cep_usb_host_enter(void);
+
+// Ensure USB host CDC mode is active for ICSD access (idempotent).
+void cep_ensure_usb_host_mode(void);
+
+// True while CEP has OTGFS1 USB host CDC mode active.
+bool cep_is_usb_host_active(void);
+
 // Gate for receive_ng(): true once the length header of an inbound SPI frame
 // has been seen. Blocks (with an internal timeout) waiting for the 2-byte
 // length header - mirrors usart_rxdata_available()'s call shape, not a

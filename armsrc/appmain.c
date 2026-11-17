@@ -93,6 +93,9 @@
 #include "buzzer.h"        // PM5 mainboard buzzer API
 #include "rgb_indicator.h" // PM5 antenna-RGB power/battery indicator (WITH_PM5_PWR_LED)
 #include "pm5_power.h"     // PM5 power-save idle (clock scaling + WFI)
+#ifdef PM5
+#include "pm5_usb_host_cdc.h" // PM5 USB host CDC (ICSD) driver
+#endif
 
 
 #ifdef WITH_PM5_AUTOOFF
@@ -4732,6 +4735,56 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_ng(CMD_PM5_POWERSAVE, PM3_SUCCESS, &state, 1);
             break;
         }
+        case CMD_PM5_ICSD_INIT: {
+            cep_ensure_usb_host_mode();
+            reply_ng(CMD_PM5_ICSD_INIT, PM3_SUCCESS, NULL, 0);
+            break;
+        }
+        case CMD_PM5_ICSD_RAW: {
+            // Forward raw command to pm5_icsd_send_cmd, then read the reply.
+            // static, not on the stack: PacketReceived is already deep in the
+            // call chain on a device with a small stack (see g_dl_chunkbuf)
+            static char payload[256] = {0};
+            static char rx_buf[512] = {0};
+            size_t n = packet->length;
+            if (n >= sizeof(payload)) n = sizeof(payload) - 1;
+            memcpy(payload, packet->data.asBytes, n);
+            payload[n] = '\0';
+            int res = pm5_icsd_send_cmd(payload);
+            if (res < 0) {
+                reply_ng(CMD_PM5_ICSD_RAW, PM3_EIO, NULL, 0);
+                break;
+            }
+            int rn = pm5_icsd_read_response(rx_buf, sizeof(rx_buf), 500);
+            if (rn > 0) {
+                reply_ng(CMD_PM5_ICSD_RAW, PM3_SUCCESS, (const uint8_t *)rx_buf, (size_t)rn);
+            } else {
+                reply_ng(CMD_PM5_ICSD_RAW, PM3_SUCCESS, NULL, 0);
+            }
+            break;
+        }
+        case CMD_PM5_ICSD_RD: {
+            // static, not on the stack (see g_dl_chunkbuf)
+            static char rx_buf[512] = {0};
+            // The device only answers RD once it has been sent the command.
+            if (pm5_icsd_send_cmd("RD\r\n") < 0) {
+                reply_ng(CMD_PM5_ICSD_RD, PM3_EIO, NULL, 0);
+                break;
+            }
+            int n = pm5_icsd_read_response(rx_buf, sizeof(rx_buf), 500);
+            if (n > 0) {
+                reply_ng(CMD_PM5_ICSD_RD, PM3_SUCCESS, (const uint8_t *)rx_buf, (size_t)n);
+            } else {
+                reply_ng(CMD_PM5_ICSD_RD, PM3_EIO, NULL, 0);
+            }
+            break;
+        }
+        case CMD_PM5_ICSD_STATUS: {
+            uint8_t dbg[7];
+            pm5_icsd_get_debug_state(&dbg[0], &dbg[1], &dbg[2], &dbg[3], &dbg[4], &dbg[5], &dbg[6]);
+            reply_ng(CMD_PM5_ICSD_STATUS, PM3_SUCCESS, dbg, sizeof(dbg));
+            break;
+        }
 #endif // PM5
         default: {
             Dbprintf("%s: 0x%04x", "unknown command:", packet->cmd);
@@ -4847,7 +4900,7 @@ void __attribute__((noreturn)) AppMain(void) {
         bwm_lowbatt_check();
 #endif
 #ifdef WITH_CEP
-        cep_attach_poll();
+    cep_attach_poll();
 #endif
 #ifdef WITH_BWM_FORWARD
         bwm_fwd_tag_poll();
@@ -4972,18 +5025,21 @@ void __attribute__((noreturn)) AppMain(void) {
         }
 
 #ifdef PM5
-        // WFI sleep adds ~40-50ms of latency before the main loop notices a
-        // fresh byte on CEP's SPI1 - fine at idle, but it's what made the
-        // original attach handshake miss bytes (see cep_attach_poll()'s own
-        // comment on the attach-edge bug this caused, GH #3667). Skip the
-        // sleep entirely while a Flipper is attached so the loop polls as
-        // fast as the hardware allows; cep_is_attached() drops back to false
-        // within CEP_ACTIVITY_TIMEOUT_MS of the FAP going away, so this
-        // isn't a permanent always-on cost.
+    // Pump the USB host CDC (ICSD) state machine. Safe no-op when the host
+    // port isn't up (pm5_usb_host_cdc_poll() returns early if so).
+    pm5_usb_host_cdc_poll();
+    // WFI sleep adds ~40-50ms of latency before the main loop notices a
+    // fresh byte on CEP's SPI1 - fine at idle, but it's what made the
+    // original attach handshake miss bytes (see cep_attach_poll()'s own
+    // comment on the attach-edge bug this caused, GH #3667). Skip the
+    // sleep entirely while a Flipper is attached so the loop polls as
+    // fast as the hardware allows; cep_is_attached() drops back to false
+    // within CEP_ACTIVITY_TIMEOUT_MS of the FAP going away, so this
+    // isn't a permanent always-on cost.
 #ifdef WITH_CEP
-        if (!cep_is_attached())
+    if (!cep_is_attached())
 #endif
-            pm5_power_idle();
+        pm5_power_idle();
 #endif
     }
 }
