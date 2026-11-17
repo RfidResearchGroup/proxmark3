@@ -16,6 +16,7 @@
 // The main i2c code, for communications with smart card module
 //-----------------------------------------------------------------------------
 #include "i2c.h"
+#include "smartcard_atr.h"
 #include "smartcard_rate.h"
 
 #include "proxmark3_arm.h"
@@ -163,45 +164,6 @@ void sc_log_trace(const uint8_t *d, uint16_t len, bool reader2tag) {
     s_trace_tick = now;
 }
 
-// ISO 7816-3 clause 8: offered protocols are the low nibbles of the TDi bytes.
-// No TD1 means T=0 only. T=15 is global interface bytes, not a protocol.
-static uint8_t atr_protocols(const uint8_t *atr, uint8_t len) {
-
-    if (len < 2) {
-        return 0;
-    }
-
-    uint8_t y = (uint8_t)(atr[1] >> 4);      // T0
-    uint8_t i = 2;
-    uint8_t mask = 0;
-
-    while (y) {
-
-        if (y & 0x01) i++;                   // TA(i)
-        if (y & 0x02) i++;                   // TB(i)
-        if (y & 0x04) i++;                   // TC(i)
-
-        if ((y & 0x08) == 0) {
-            break;                           // no TD(i), nothing further named
-        }
-        if (i >= len) {
-            break;                           // truncated ATR
-        }
-
-        uint8_t td = atr[i++];
-        uint8_t t = (uint8_t)(td & 0x0F);
-        if (t < 8) {
-            mask |= (uint8_t)(1u << t);
-        }
-        y = (uint8_t)(td >> 4);
-    }
-
-    if (mask == 0) {
-        mask = SC_PROTO_T0;                  // clause 8.2.3
-    }
-    return mask;
-}
-
 smartcard_mode_t SmartCard_ModeForFlags(smartcard_command_t flags) {
 
     // an explicit T=1 request is an override, honoured even if the ATR disagrees
@@ -238,18 +200,6 @@ smartcard_mode_t SmartCard_ModeForFlags(smartcard_command_t flags) {
 
     // Raw pass through: the host owns the framing, so never second guess it.
     return SC_MODE_RAW;
-}
-
-// The protocol of TD1, which is what the card runs if nothing is negotiated.
-static uint8_t atr_first_proto(const uint8_t *atr, uint8_t len) {
-    if ((len < 2) || ((atr[1] & 0x80) == 0)) {
-        return 0;
-    }
-    uint8_t i = 2;
-    if (atr[1] & 0x10) i++;
-    if (atr[1] & 0x20) i++;
-    if (atr[1] & 0x40) i++;
-    return (i < len) ? (uint8_t)(atr[i] & 0x0F) : 0;
 }
 
 // Put the module back on the negotiated rate without touching the card.
@@ -358,33 +308,13 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
         len = sizeof(card_ptr->atr);
     }
 
-    uint8_t pos_td = 1;
-    if ((card_ptr->atr[1] & 0x10) == 0x10) pos_td++;
-    if ((card_ptr->atr[1] & 0x20) == 0x20) pos_td++;
-    if ((card_ptr->atr[1] & 0x40) == 0x40) pos_td++;
-
-    // T0 indicate presence T=0 vs T=1.  T=1 has checksum TCK
-    if ((card_ptr->atr[1] & 0x80) == 0x80) {
-
-        pos_td++;
-
-        // 1 == T1 ,  presence of checksum TCK
-        if ((card_ptr->atr[pos_td] & 0x01) == 0x01) {
-
-            uint8_t chksum = 0;
-            // xor property.  will be zero when xored with chksum.
-            for (uint16_t i = 1; i < len; ++i)
-                chksum ^= card_ptr->atr[i];
-
-            if (chksum) {
-                if (g_dbglevel > DBG_INFO) DbpString("Wrong ATR checksum");
-            }
-        }
+    if (SmartCard_ATRCheckTCK(card_ptr->atr, (uint8_t)len) == false) {
+        if (g_dbglevel > DBG_INFO) DbpString("Wrong ATR checksum");
     }
 
     card_ptr->atr_len = (uint8_t)(len & 0xff);
 
-    s_card_protocols = atr_protocols(card_ptr->atr, card_ptr->atr_len);
+    s_card_protocols = SmartCard_ATRProtocols(card_ptr->atr, card_ptr->atr_len);
     s_proto_announced = false;
 #if SAM_SC_FORCE_T1_PROFILE
     const bool request_sam_t1 = s_sam_t1_profile_requested;
@@ -402,7 +332,7 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
         Dbprintf("SC: ATR offers%s%s, card runs T=%u"
                  , (s_card_protocols & SC_PROTO_T0) ? " T=0" : ""
                  , (s_card_protocols & SC_PROTO_T1) ? " T=1" : ""
-                 , atr_first_proto(card_ptr->atr, card_ptr->atr_len)
+                 , SmartCard_ATRFirstProto(card_ptr->atr, card_ptr->atr_len)
                 );
     }
 
@@ -442,7 +372,7 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
         // once - a refusal is remembered so every later ATR does not retry it.
         if (s_pps.reapply && (s_pps.tried == false)) {
 
-            uint8_t want_proto = atr_first_proto(card_ptr->atr, card_ptr->atr_len);
+            uint8_t want_proto = SmartCard_ATRFirstProto(card_ptr->atr, card_ptr->atr_len);
             uint8_t want = SmartCard_RateBestTa1(card_ptr->atr, card_ptr->atr_len);
 
 #if SAM_SC_FORCE_T1_PROFILE
@@ -687,7 +617,7 @@ void SmartCardPPS(const smart_card_pps_t *p) {
     uint16_t reqlen = 1;
     uint8_t want_proto = p->protocol;
     if (want_proto == SC_PPS_PROTO_CARD_DEFAULT) {
-        want_proto = atr_first_proto(card.atr, card.atr_len);
+        want_proto = SmartCard_ATRFirstProto(card.atr, card.atr_len);
     }
 
     req[0] = (uint8_t)(want_proto & 0x0F);
@@ -714,7 +644,7 @@ void SmartCardPPS(const smart_card_pps_t *p) {
     // Leave it to this session and do not cache it.
     if (resp[0] == 1) {
 
-        uint8_t card_proto = atr_first_proto(card.atr, card.atr_len);
+        uint8_t card_proto = SmartCard_ATRFirstProto(card.atr, card.atr_len);
 
         if (resp[2] == 0x11) {
             sc_pps_forget();                    // back to the default rate
