@@ -3298,6 +3298,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_SMART_UPGRADE: {
+#ifndef PM5
             struct p {
                 uint16_t fw_size;
                 uint16_t crc;
@@ -3316,6 +3317,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             }
             fwdata = NULL;
             break;
+#else
+            // Only the RDV4 adapter has firmware to replace over the link.
+            reply_ng(CMD_SMART_UPGRADE, PM3_EDEVNOTSUPP, NULL, 0);
+            break;
+#endif
         }
 
         case CMD_HF_SAM_PICOPASS: {
