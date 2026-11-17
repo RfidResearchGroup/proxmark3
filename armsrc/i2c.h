@@ -42,7 +42,6 @@ I2C_BUILD_ASSERT(SIM_WAIT_MS >= 3000, sim_wait_covers_bwt);
 I2C_BUILD_ASSERT((uint64_t)I2C_WAIT_MAX_MS * I2C_ITERS_PER_MS <= 0xFFFFFFFFULL, wait_fits_u32);
 
 void I2C_Reset_EnterMainProgram(void);
-void I2C_Reset_EnterBootloader(void);
 
 // Which SIM module opcode a set of SC_RAW* flags asks for.
 smartcard_mode_t SmartCard_ModeForFlags(smartcard_command_t flags);

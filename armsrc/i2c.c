@@ -89,13 +89,6 @@ void I2C_Reset_EnterMainProgram(void) {
     SmartCard_HwOpen();
 }
 
-// Reset the SIM_Adapter, then enter the bootloader program
-// Reserve for firmware update.
-void I2C_Reset_EnterBootloader(void) {
-    StartTicks();
-    SmartCard_HwOpenBootloader();
-}
-
 void SmartCard_PrintStatus(void) {
     DbpString(_CYAN_("Smart card module (ISO 7816)"));
 

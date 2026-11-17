@@ -337,6 +337,8 @@ void SmartCardAdapterUpgrade(uint64_t arg0) {
     // write.   Sector0,  with 11,22,33,44
     // erase is 128bytes, and takes 50ms to execute
 
+    // I2C_init() and the waits below need the tick timer running.
+    StartTicks();
     SmartCard_HwOpenBootloader();
 
     bool isOK = true;
