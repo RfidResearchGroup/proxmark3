@@ -111,7 +111,7 @@ static void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint
 
         // read bytes from module
         len = ISO7816_MAX_FRAME;
-        res = sc_rx_bytes(&resp[1], &len, wait);
+        res = SmartCard_RxBytes(&resp[1], &len, wait);
         if (res) {
             LogTrace(&resp[1], len, 0, 0, NULL, false);
         } else {

@@ -231,13 +231,13 @@ int sam_rxtx(const uint8_t *data, uint16_t n, uint8_t *resp, uint16_t *resplen) 
 
     *resplen = ISO7816_MAX_FRAME;
 
-    res = sc_rx_bytes(resp, resplen, SIM_WAIT_DELAY);
+    res = SmartCard_RxBytes(resp, resplen, SIM_WAIT_DELAY);
 
     if (res == false) {
         for (uint8_t attempt = 1; attempt <= 15; attempt++) {
             SpinDelay(200);
             *resplen = ISO7816_MAX_FRAME;
-            res = sc_rx_bytes(resp, resplen, SIM_WAIT_DELAY);
+            res = SmartCard_RxBytes(resp, resplen, SIM_WAIT_DELAY);
             if (res) {
                 if (g_dbglevel >= DBG_INFO)
                     Dbprintf("SAM slow first-reply recovered after %u re-poll(s)", attempt);
@@ -300,7 +300,7 @@ int sam_rxtx(const uint8_t *data, uint16_t n, uint8_t *resp, uint16_t *resplen) 
 
     more_len = 255 - *resplen;
 
-    res = sc_rx_bytes(resp + *resplen, &more_len, SIM_WAIT_DELAY);
+    res = SmartCard_RxBytes(resp + *resplen, &more_len, SIM_WAIT_DELAY);
     if (res == false) {
         DbpString("failed to receive from SIM CARD 2");
         goto out;

@@ -75,24 +75,6 @@ static struct {
 // first in this file.
 static void sc_rate_restore(void);
 
-// set the reset state
-static void sim_set_lines(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA) {
-    if (LineRST)
-        RST_H;
-    else
-        RST_L;
-
-    if (LineSCK)
-        SCL_H;
-    else
-        SCL_L;
-
-    if (LineSDA)
-        SDA_H;
-    else
-        SDA_L;
-}
-
 // Reset the SIM_Adapter, then  enter the main program
 // Note: the SIM_Adapter will not enter the main program after power up. Please run this function before use SIM_Adapter.
 void I2C_Reset_EnterMainProgram(void) {
@@ -103,11 +85,11 @@ void I2C_Reset_EnterMainProgram(void) {
     StartTicks();
     sc_log_trace_reset();
     I2C_init(true);
-    sim_set_lines(0, 0, 0);
+    SmartCard_HwSetLines(0, 0, 0);
     WaitMS(30);
-    sim_set_lines(1, 0, 0);
+    SmartCard_HwSetLines(1, 0, 0);
     WaitMS(30);
-    sim_set_lines(1, 1, 1);
+    SmartCard_HwSetLines(1, 1, 1);
     WaitMS(10);
 }
 
@@ -116,45 +98,10 @@ void I2C_Reset_EnterMainProgram(void) {
 void I2C_Reset_EnterBootloader(void) {
     StartTicks();
     I2C_init(true);
-    sim_set_lines(0, 1, 1);
+    SmartCard_HwSetLines(0, 1, 1);
     WaitMS(100);
-    sim_set_lines(1, 1, 1);
+    SmartCard_HwSetLines(1, 1, 1);
     WaitMS(10);
-}
-
-// How long to allow the SIM module to *start* an operation, i.e. to pull SCL
-// low after it has taken a command.
-//
-// This used to be 1200 ms, which is three orders of magnitude more than the
-// module needs - its interrupt hands the command to the main loop and SCL goes
-// low within microseconds of the STOP.  The only thing that long allowance ever
-// bought was dead time: every caller that arrives when the module has *already*
-// finished (SCL back high, and it is never going to go low again) sat here for
-// the full 1200 ms before doing the read.  sc_rx_bytes() does exactly that on
-// every call that follows a completed operation, which is why an ordinary
-// `smart info` took about one and a half seconds.
-//
-// The result is ignored by sc_rx_bytes() anyway - reaching the end of this
-// simply means the module is idle and the data is ready to read.
-#define SIM_START_TIMEOUT_MS  50
-
-static bool WaitSCL_L_timeout(void) {
-    // How long the module may take to *start* stretching, not how long it may
-    // hold. Polled at bus granularity: a command the module already finished
-    // never shows SCL low at all, and at 1 ms a step that cost the full
-    // timeout on every fast exchange.
-    return I2C_WaitSCL_L(I2C_ITERS_FOR_MS(SIM_START_TIMEOUT_MS));
-}
-
-static bool I2C_WaitForSim(uint32_t wait) {
-
-    // wait for data from card
-    if (WaitSCL_L_timeout() == false) {
-        return false;
-    }
-
-    // wait is an iteration count; build it with I2C_ITERS_FOR_MS().
-    return I2C_WaitSCL_H(wait);
 }
 
 static bool sim_module_at_least(uint8_t major, uint8_t minor, uint8_t want_major, uint8_t want_minor) {
@@ -224,31 +171,6 @@ void sc_log_trace(const uint8_t *d, uint16_t len, bool reader2tag) {
     }
     LogTrace(d, len, s_trace_tick, now, NULL, reader2tag);
     s_trace_tick = now;
-}
-
-bool sc_rx_bytes(uint8_t *dest, uint16_t *destlen, uint32_t wait) {
-
-    uint8_t i = 10;
-    int16_t len = 0;
-    while (i--) {
-
-        I2C_WaitForSim(wait);
-
-        len = I2C_AdaptiveRead(dest, *destlen, I2C_DEVICE_CMD_READ, I2C_DEVICE_ADDRESS_MAIN);
-
-        LED_C_ON();
-
-        if (len > 1) {
-            break;
-        } else if (len == 1) {
-            continue;
-        } else {
-            return false;
-        }
-    }
-
-    *destlen = len;
-    return true;
 }
 
 // ISO 7816-3 clause 8: offered protocols are the low nibbles of the TDi bytes.
@@ -469,7 +391,7 @@ static bool sc_pps(uint8_t proto, uint8_t ta1) {
     }
     uint8_t resp[8] = {0};
     uint16_t len = sizeof(resp);
-    if ((sc_rx_bytes(resp, &len, SIM_WAIT_DELAY) == false) || (len < 3)) {
+    if ((SmartCard_RxBytes(resp, &len, SIM_WAIT_DELAY) == false) || (len < 3)) {
         return false;
     }
     // resp is [ok][active protocol][ta1 in force]
@@ -534,13 +456,13 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
 
     // wait for sim card to answer.
     // 1byte = 1ms ,  max frame 256bytes.  Should wait 256ms atleast just in case.
-    if (I2C_WaitForSim(SIM_WAIT_DELAY) == false) {
+    if (SmartCard_HwWaitForSim(SIM_WAIT_DELAY) == false) {
         return false;
     }
 
     // read bytes from module
     uint16_t len = sizeof(card_ptr->atr);
-    if (sc_rx_bytes(card_ptr->atr, &len, SIM_WAIT_DELAY) == false) {
+    if (SmartCard_RxBytes(card_ptr->atr, &len, SIM_WAIT_DELAY) == false) {
         return false;
     }
 
@@ -769,7 +691,7 @@ void SmartCardRaw(const smart_card_raw_t *p) {
 
         // read bytes from module
         len = ISO7816_MAX_FRAME;
-        res = sc_rx_bytes(resp, &len, wait);
+        res = SmartCard_RxBytes(resp, &len, wait);
         if (res) {
             sc_log_trace(resp, len, false);
         } else {
@@ -1019,7 +941,7 @@ void SmartCardPPS(const smart_card_pps_t *p) {
 
     uint8_t resp[8] = {0};
     uint16_t len = sizeof(resp);
-    if ((sc_rx_bytes(resp, &len, SIM_WAIT_DELAY) == false) || (len < 3)) {
+    if ((SmartCard_RxBytes(resp, &len, SIM_WAIT_DELAY) == false) || (len < 3)) {
         reply_ng(CMD_SMART_PPS, PM3_ETIMEOUT, NULL, 0);
         goto out;
     }

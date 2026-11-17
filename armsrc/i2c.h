@@ -19,42 +19,7 @@
 #include "common.h"
 #include "i2c_apis.h"
 #include "pm3_cmd.h"
-
-#define I2C_DEVICE_ADDRESS_BOOT     0xB0
-#define I2C_DEVICE_ADDRESS_MAIN     0xC0
-
-#define I2C_DEVICE_CMD_GENERATE_ATR 0x01
-#define I2C_DEVICE_CMD_SEND         0x02
-#define I2C_DEVICE_CMD_READ         0x03
-#define I2C_DEVICE_CMD_SETBAUD      0x04
-#define I2C_DEVICE_CMD_SIM_CLC      0x05
-#define I2C_DEVICE_CMD_GETVERSION   0x06
-#define I2C_DEVICE_CMD_SEND_T0      0x07
-// SIM module firmware v4.51 and up.  SEND_T1 takes a plain APDU and runs the
-// whole T=1 block layer on the module - chaining, R block recovery, S(WTX),
-// LRC/CRC - the same way SEND_T0 handles the T=0 procedure bytes.
-#define I2C_DEVICE_CMD_SEND_T1      0x08
-#define I2C_DEVICE_CMD_PPS          0x09
-// SIM module firmware v4.65 and up.  A compatibility alias for T=0 in the
-// current SIM_C build.  Grace response assembly remains PM3-side.
-#define I2C_DEVICE_CMD_SEND_T0_AUTORESP 0x0A
-
-// Disabled: live testing showed that opcode 0x0A itself is not reliable on the
-// PM3<->SIM I2C path, even when the SIM handler is an exact SEND_T0 pass-through.
-// Keep T=0 traffic on the established 0x07 transport until that low-level issue
-// is understood.
-#define SAM_T0_AUTORESP             0
-
-// SIM module firmware versions this build knows about.
-//
-//   v4.42 - the stock firmware, T=0 only
-//   v4.51 - adds SEND_T1 (0x08) and PPS (0x09)
-//   v4.56 - T=0 reads to the expected length instead of an idle timeout
-//   v4.57 - the ATR does too
-#define SIM_MODULE_VERS_MIN_HI      4
-#define SIM_MODULE_VERS_MIN_LO      57
-#define SIM_MODULE_VERS_T1_HI       4
-#define SIM_MODULE_VERS_T1_LO       51
+#include "smartcard_hw_rdv4.h"
 
 // SAM secure-channel transport policy for the performance build.  Artemis
 // offers T=0 first in its ATR; request its advertised T=1 service explicitly
@@ -97,8 +62,6 @@ void sc_request_sam_t1_profile(void);
 void sc_log_trace(const uint8_t *d, uint16_t len, bool reader2tag);
 void sc_log_trace_span(const uint8_t *d, uint16_t len, bool reader2tag, uint32_t start);
 void sc_log_trace_reset(void);
-
-bool sc_rx_bytes(uint8_t *dest, uint16_t *destlen, uint32_t wait);
 
 //
 bool GetATR(smart_card_atr_t *card_ptr, bool verbose);
