@@ -68,7 +68,7 @@ void sc_log_trace_reset(void);
 bool GetATR(smart_card_atr_t *card_ptr, bool verbose);
 
 // generice functions
-void SmartCardAtr(void);
+void SmartCardATR(void);
 void SmartCardRaw(const smart_card_raw_t *p);
 void SmartCardUpgrade(uint64_t arg0);
 void SmartCardSetClock(uint64_t arg0);

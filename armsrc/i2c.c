@@ -399,7 +399,7 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
     return true;
 }
 
-void SmartCardAtr(void) {
+void SmartCardATR(void) {
     LED_D_ON();
     set_tracing(true);
     I2C_Reset_EnterMainProgram();
@@ -524,6 +524,13 @@ void SmartCardUpgrade(uint64_t arg0) {
 
     LED_C_ON();
 
+#ifndef SC_HW_MODULE_UPDATE
+    // This board's adapter has no firmware update path over the link.
+    (void)arg0;
+    reply_ng(CMD_SMART_UPGRADE, PM3_EDEVNOTSUPP, NULL, 0);
+    LED_C_OFF();
+#else
+
 #define I2C_BLOCK_SIZE 128
     // write.   Sector0,  with 11,22,33,44
     // erase is 128bytes, and takes 50ms to execute
@@ -582,6 +589,7 @@ void SmartCardUpgrade(uint64_t arg0) {
     reply_ng(CMD_SMART_UPGRADE, (isOK) ? PM3_SUCCESS : PM3_ESOFT, NULL, 0);
     LED_C_OFF();
     BigBuf_free();
+#endif // SC_HW_MODULE_UPDATE
 }
 
 /*

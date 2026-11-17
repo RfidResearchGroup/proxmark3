@@ -3247,7 +3247,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 
 #ifdef WITH_SMARTCARD
         case CMD_SMART_ATR: {
-            SmartCardAtr();
+            SmartCardATR();
             break;
         }
         case CMD_SMART_PPS: {
