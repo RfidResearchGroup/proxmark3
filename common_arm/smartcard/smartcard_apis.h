@@ -42,6 +42,13 @@ typedef enum {
     SC_VCC_5V0,
 } smartcard_vcc_t;
 
+// Card-detect result. SC_CHK_UNSUPPORTED means the board has no way to tell.
+typedef enum {
+    SC_CHK_PRESENT = 0,
+    SC_CHK_NONE,
+    SC_CHK_UNSUPPORTED, // There is no card-insertion detection feature.
+} smartcard_present_t;
+
 // Reset the card and hand back the ATR bytes it answered with. Done together
 // because on some boards the answer only exists inside the reset window.
 bool SmartCard_HwATR(uint8_t *atr, uint16_t *len, uint32_t wait);
@@ -71,6 +78,10 @@ void SmartCard_HwOpen(void);
 // Power the card down. The adapter stays up; a later open or ATR powers the
 // card again. Boards without card power control do nothing.
 void SmartCard_HwClose(void);
+
+// Ask whether a card is inserted. A board without card-detect hardware reports
+// SC_CHK_UNSUPPORTED rather than pretending the card is absent.
+smartcard_present_t SmartCard_HwGetPresent(void);
 
 // Put the link back on a rate negotiated earlier, in 16x clocks per etu.
 bool SmartCard_HwSetReload(uint16_t reload);

@@ -429,6 +429,11 @@ void SmartCard_HwClose(void) {
     s_resp_ready = false;
 }
 
+smartcard_present_t SmartCard_HwGetPresent(void) {
+    // TODO: read SC_PM5_REG_OFFN; bit0 is 1 when the card is present.
+    return SC_CHK_UNSUPPORTED;
+}
+
 bool SmartCard_HwATR(uint8_t *atr, uint16_t *len, uint32_t wait) {
 
     if ((atr == NULL) || (len == NULL)) {
