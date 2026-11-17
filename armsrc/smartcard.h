@@ -18,8 +18,8 @@
 
 #include "common.h"
 #include "i2c_apis.h"
-#include "pm3_cmd.h"
 #include "smartcard_apis.h"
+#include "pm3_cmd.h"
 
 // SAM secure-channel transport policy for the performance build.  Artemis
 // offers T=0 first in its ATR; request its advertised T=1 service explicitly

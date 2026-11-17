@@ -51,6 +51,7 @@ ifeq ($(PLATFORM),PM5)
     SRC_FPGA       = ../common_arm/fpga/fpga_hw_at32.c ../common_arm/fpga/fpga_gw_jtag.c
     SRC_USB_CDC    = ../common_arm/usb/usb_cdc_at32.c
     SRC_FLASH_DATA = ../common_arm/flash_data/flashmem_hw_at32.c
+    SRC_SC_HW      = ../common_arm/smartcard/smartcard_hw_pm5.c
     APP_CFLAGS     += -mcpu=cortex-m4
     CROSS_LDFLAGS  += -mcpu=cortex-m4
     LD_SCRIPT      = ldscript.osimage.at32
@@ -71,15 +72,8 @@ else
     SRC_FPGA       = ../common_arm/fpga/fpga_hw_at91.c
     SRC_USB_CDC    = ../common_arm/usb/usb_cdc_at91.c
     SRC_FLASH_DATA = ../common_arm/flash_data/flashmem_hw_at91.c
+    SRC_SC_HW      = ../common_arm/smartcard/smartcard_hw_rdv4.c
     LD_SCRIPT      = ldscript.osimage.at91
-endif
-
-# The card side is board specific: the RDV4 reaches the card through its SIM
-# adapter, PM5 drives the card's I/O line from a USART.
-ifeq ($(PLATFORM),PM5)
-    SRC_SMARTCARD_HW = ../common_arm/smartcard/smartcard_hw_pm5.c
-else
-    SRC_SMARTCARD_HW = ../common_arm/smartcard/smartcard_hw_rdv4.c
 endif
 
 SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c lfadc.c
@@ -120,7 +114,7 @@ else
 endif
 
 ifneq (,$(findstring WITH_SMARTCARD,$(APP_CFLAGS)))
-    SRC_SMARTCARD = smartcard.c emvsim.c $(SRC_SMARTCARD_HW) ../common_arm/smartcard/smartcard_rate.c ../common_arm/smartcard/smartcard_atr.c
+    SRC_SMARTCARD = smartcard.c emvsim.c $(SRC_SC_HW) ../common_arm/smartcard/smartcard_rate.c ../common_arm/smartcard/smartcard_atr.c
 else
     SRC_SMARTCARD =
 endif
