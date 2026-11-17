@@ -61,6 +61,17 @@ uint16_t SmartCard_RateReload(uint8_t ta1) {
     return (uint16_t)(f / (uint16_t)(16u * d));
 }
 
+uint16_t SmartCard_RateEtu(uint8_t ta1) {
+
+    uint16_t f = s_fi_tab[(ta1 >> 4) & 0x0F];
+    uint8_t  d = s_di_tab[ta1 & 0x0F];
+
+    if ((f == 0) || (d == 0) || ((f % d) != 0)) {
+        return 0;
+    }
+    return (uint16_t)(f / d);
+}
+
 uint8_t SmartCard_RateBestTa1(const uint8_t *atr, uint8_t len) {
 
     if ((len < 3) || ((atr[1] & 0x10) == 0)) {

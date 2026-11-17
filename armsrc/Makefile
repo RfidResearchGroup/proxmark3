@@ -74,6 +74,14 @@ else
     LD_SCRIPT      = ldscript.osimage.at91
 endif
 
+# The card side is board specific: the RDV4 reaches the card through its SIM
+# adapter, PM5 drives the card's I/O line from a USART.
+ifeq ($(PLATFORM),PM5)
+    SRC_SMARTCARD_HW = ../common_arm/smartcard/smartcard_hw_pm5.c
+else
+    SRC_SMARTCARD_HW = ../common_arm/smartcard/smartcard_hw_rdv4.c
+endif
+
 SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c lfadc.c
 SRC_HF = hfops.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
@@ -112,7 +120,7 @@ else
 endif
 
 ifneq (,$(findstring WITH_SMARTCARD,$(APP_CFLAGS)))
-    SRC_SMARTCARD = i2c.c i2c_direct.c emvsim.c ../common_arm/smartcard/smartcard_hw_rdv4.c ../common_arm/smartcard/smartcard_rate.c ../common_arm/smartcard/smartcard_atr.c
+    SRC_SMARTCARD = i2c.c i2c_direct.c emvsim.c $(SRC_SMARTCARD_HW) ../common_arm/smartcard/smartcard_rate.c ../common_arm/smartcard/smartcard_atr.c
 else
     SRC_SMARTCARD =
 endif
