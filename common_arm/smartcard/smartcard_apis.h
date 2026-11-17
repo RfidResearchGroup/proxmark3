@@ -48,7 +48,7 @@ bool SmartCard_HwPPS(const uint8_t *req, uint8_t req_len, uint8_t out[3], uint32
 // Adapter identity. Both boards carry an adapter, so the version is what says
 // whether one is connected at all. Anything else the board can tell us about it
 // goes through info, whose layout belongs to that board - see its header.
-int SmartCard_HwModuleInfo(uint8_t *major, uint8_t *minor, void *info);
+int SmartCard_HwAdapterInfo(uint8_t *major, uint8_t *minor, void *info);
 
 // Bring the adapter up.
 void SmartCard_HwOpen(void);

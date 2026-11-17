@@ -73,8 +73,8 @@ void SmartCard_HwSetAdapterLines(uint8_t LineRST, uint8_t LineSCK, uint8_t LineS
 // verify its firmware. Only this board exposes an update path today, so these
 // do not belong to the shared interface.
 void SmartCard_HwOpenBootloader(void);
-int16_t SmartCard_HwModuleRead(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address);
-bool SmartCard_HwModuleWrite(const uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address);
+int16_t SmartCard_HwAdapterFirmwareRead(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address);
+bool SmartCard_HwAdapterFirmwareWrite(const uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address);
 
 // Replaces the firmware of the adapter itself, keeping the image that BigBuf
 // already holds. Belongs here because no other board can do it.

@@ -135,7 +135,7 @@ int SmartCard_GetModuleInfo(uint8_t *major, uint8_t *minor, void *info) {
     // restore, reconnecting a client leaves the module on the default rate and
     // an already negotiated card unreachable.
     sc_rate_restore();
-    return SmartCard_HwModuleInfo(major, minor, info);
+    return SmartCard_HwAdapterInfo(major, minor, info);
 }
 
 static uint32_t s_trace_tick = 0;
