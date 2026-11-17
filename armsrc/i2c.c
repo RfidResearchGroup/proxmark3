@@ -372,7 +372,7 @@ static uint8_t sc_pps_best_ta1(const uint8_t *atr, uint8_t len) {
 static bool sc_pps(uint8_t proto, uint8_t ta1) {
     uint8_t req[2] = { (uint8_t)(proto & 0x0F), ta1 };
     uint8_t resp[3] = {0};
-    if (SmartCard_HwPps(req, sizeof(req), resp, SIM_WAIT_DELAY) == false) {
+    if (SmartCard_HwPPS(req, sizeof(req), resp, SIM_WAIT_DELAY) == false) {
         return false;
     }
     // resp is [ok][active protocol][ta1 in force]
@@ -432,7 +432,7 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
     memset(card_ptr->atr, 0, sizeof(card_ptr->atr));
 
     uint16_t len = sizeof(card_ptr->atr);
-    if (SmartCard_HwAtr(card_ptr->atr, &len, SIM_WAIT_DELAY) == false) {
+    if (SmartCard_HwATR(card_ptr->atr, &len, SIM_WAIT_DELAY) == false) {
         return false;
     }
 
@@ -779,7 +779,7 @@ void SmartCardPPS(const smart_card_pps_t *p) {
     }
 
     uint8_t resp[3] = {0};
-    if (SmartCard_HwPps(req, reqlen, resp, SIM_WAIT_DELAY) == false) {
+    if (SmartCard_HwPPS(req, reqlen, resp, SIM_WAIT_DELAY) == false) {
         if (g_dbglevel > DBG_DEBUG) {
             DbpString(I2C_ERROR);
         }

@@ -102,7 +102,7 @@ bool SmartCard_HwRecv(uint8_t *dest, uint16_t *destlen, uint32_t wait) {
     return true;
 }
 
-bool SmartCard_HwAtr(uint8_t *atr, uint16_t *len, uint32_t wait) {
+bool SmartCard_HwATR(uint8_t *atr, uint16_t *len, uint32_t wait) {
     // start [C0 01] stop start C1 len aa bb cc stop]
     I2C_WriteCmd(I2C_DEVICE_CMD_GENERATE_ATR, I2C_DEVICE_ADDRESS_MAIN);
 
@@ -138,7 +138,7 @@ bool SmartCard_HwSend(smartcard_mode_t mode, const uint8_t *data, uint16_t len) 
     return I2C_BufferWrite(data, len, cmd, I2C_DEVICE_ADDRESS_MAIN);
 }
 
-bool SmartCard_HwPps(const uint8_t *req, uint8_t req_len, uint8_t out[3], uint32_t wait) {
+bool SmartCard_HwPPS(const uint8_t *req, uint8_t req_len, uint8_t out[3], uint32_t wait) {
     if (I2C_BufferWrite(req, req_len, I2C_DEVICE_CMD_PPS, I2C_DEVICE_ADDRESS_MAIN) == false) {
         return false;
     }
