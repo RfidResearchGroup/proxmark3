@@ -57,8 +57,11 @@ ifeq ($(PLATFORM),PM5)
     ARMLIB_OBJ     = $(OBJDIR)/$(ARMLIB_EXPORT_LIBNAME)
     LIBS           += $(ARMLIB_OBJ)
 else
-	SRC_STARTUP    =
-	SRC_I2C        = ../common_arm/i2c/i2c_core.c
+    SRC_STARTUP    =
+    # Compile I2C HAL module if Smartcard enable(for RDV4).
+    ifneq (,$(findstring WITH_SMARTCARD,$(APP_CFLAGS)))
+        SRC_I2C    = ../common_arm/i2c/i2c_core.c
+    endif
     SRC_TICKS      = ../common_arm/ticks/ticks_hw_at91.c
     SRC_GPIO       = ../common_arm/gpio/gpio_hw_at91.c
     SRC_WDT        = ../common_arm/wdt/wdt_hw_at91.c
@@ -68,7 +71,7 @@ else
     SRC_FPGA       = ../common_arm/fpga/fpga_hw_at91.c
     SRC_USB_CDC    = ../common_arm/usb/usb_cdc_at91.c
     SRC_FLASH_DATA = ../common_arm/flash_data/flashmem_hw_at91.c
-	LD_SCRIPT      = ldscript.osimage.at91
+    LD_SCRIPT      = ldscript.osimage.at91
 endif
 
 SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c lfadc.c
@@ -109,7 +112,7 @@ else
 endif
 
 ifneq (,$(findstring WITH_SMARTCARD,$(APP_CFLAGS)))
-    SRC_SMARTCARD = i2c.c i2c_direct.c emvsim.c $(SRC_I2C)
+    SRC_SMARTCARD = i2c.c i2c_direct.c emvsim.c
 else
     SRC_SMARTCARD =
 endif
@@ -243,6 +246,7 @@ THUMBSRC = start.c \
 	$(SRC_GPIO) \
 	$(SRC_WDT) \
 	$(SRC_SYS) \
+	$(SRC_I2C) \
     appmain.c \
     printf.c \
     dbprint.c \
