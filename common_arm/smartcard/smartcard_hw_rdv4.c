@@ -211,7 +211,7 @@ int SmartCard_HwAdapterInfo(uint8_t *major, uint8_t *minor, void *info) {
 
 // Raw sequential access to the adapter's byte address space, used to read back
 // the firmware image for verification.
-int16_t SmartCard_HwAdapterFirmwareRead(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address) {
+int16_t SmartCard_HwAdapterFWRead(uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address) {
     //START, 0xB0, 0x00, 0x00, START, 0xB1, xx, yy, zz, ......, STOP
     bool _break = true;
     uint8_t readcount = 0;
@@ -278,7 +278,7 @@ int16_t SmartCard_HwAdapterFirmwareRead(uint8_t *data, uint8_t len, uint8_t msb,
     return readcount;
 }
 
-bool SmartCard_HwAdapterFirmwareWrite(const uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address) {
+bool SmartCard_HwAdapterFWWrite(const uint8_t *data, uint8_t len, uint8_t msb, uint8_t lsb, uint8_t device_address) {
     //START, 0xB0, 0x00, 0x00, xx, yy, zz, ......, STOP
     bool _break = true;
 
@@ -359,7 +359,7 @@ void SmartCardAdapterUpgrade(uint64_t arg0) {
         uint8_t size = (uint8_t)MIN(SC_FW_BLOCK_SIZE, length);
 
         // write
-        if (SmartCard_HwAdapterFirmwareWrite(fwdata + pos, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT) == false) {
+        if (SmartCard_HwAdapterFWWrite(fwdata + pos, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT) == false) {
             Dbprintf("Writing failed at offset 0x%04X", pos);
             isOK = false;
             break;
@@ -369,7 +369,7 @@ void SmartCardAdapterUpgrade(uint64_t arg0) {
         WaitMS(50);
 
         // read
-        if (SmartCard_HwAdapterFirmwareRead(verifydata, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT) <= 0) {
+        if (SmartCard_HwAdapterFWRead(verifydata, size, msb, lsb, I2C_DEVICE_ADDRESS_BOOT) <= 0) {
             Dbprintf("Reading back failed at offset 0x%04X", pos);
             isOK = false;
             break;
