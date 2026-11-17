@@ -50,11 +50,11 @@ void SmartCard_HwSetAdapterLines(uint8_t LineRST, uint8_t LineSCK, uint8_t LineS
 // low within microseconds of the STOP.  The only thing that long allowance ever
 // bought was dead time: every caller that arrives when the module has *already*
 // finished (SCL back high, and it is never going to go low again) sat here for
-// the full 1200 ms before doing the read.  SmartCard_RxBytes() does exactly that on
+// the full 1200 ms before doing the read.  SmartCard_HwRecv() does exactly that on
 // every call that follows a completed operation, which is why an ordinary
 // `smart info` took about one and a half seconds.
 //
-// The result is ignored by SmartCard_RxBytes() anyway - reaching the end of this
+// The result is ignored by SmartCard_HwRecv() anyway - reaching the end of this
 // simply means the module is idle and the data is ready to read.
 #define SIM_START_TIMEOUT_MS  50
 
@@ -66,7 +66,7 @@ static bool WaitSCL_L_timeout(void) {
     return I2C_WaitSCL_L(I2C_ITERS_FOR_MS(SIM_START_TIMEOUT_MS));
 }
 
-bool SmartCard_HwWaitForSim(uint32_t wait) {
+static bool SmartCard_HwWaitForSim(uint32_t wait) {
 
     // wait for data from card
     if (WaitSCL_L_timeout() == false) {
@@ -77,7 +77,7 @@ bool SmartCard_HwWaitForSim(uint32_t wait) {
     return I2C_WaitSCL_H(wait);
 }
 
-bool SmartCard_RxBytes(uint8_t *dest, uint16_t *destlen, uint32_t wait) {
+bool SmartCard_HwRecv(uint8_t *dest, uint16_t *destlen, uint32_t wait) {
 
     uint8_t i = 10;
     int16_t len = 0;
@@ -99,6 +99,57 @@ bool SmartCard_RxBytes(uint8_t *dest, uint16_t *destlen, uint32_t wait) {
     }
 
     *destlen = len;
+    return true;
+}
+
+bool SmartCard_HwAtr(uint8_t *atr, uint16_t *len, uint32_t wait) {
+    // start [C0 01] stop start C1 len aa bb cc stop]
+    I2C_WriteCmd(I2C_DEVICE_CMD_GENERATE_ATR, I2C_DEVICE_ADDRESS_MAIN);
+
+    // wait for sim card to answer.
+    // 1byte = 1ms ,  max frame 256bytes.  Should wait 256ms atleast just in case.
+    if (SmartCard_HwWaitForSim(wait) == false) {
+        return false;
+    }
+
+    return SmartCard_HwRecv(atr, len, wait);
+}
+
+bool SmartCard_HwSend(smartcard_mode_t mode, const uint8_t *data, uint16_t len) {
+
+    uint8_t cmd;
+    switch (mode) {
+        case SC_MODE_T0:
+#if SAM_T0_AUTORESP
+            cmd = I2C_DEVICE_CMD_SEND_T0_AUTORESP;
+#else
+            cmd = I2C_DEVICE_CMD_SEND_T0;
+#endif
+            break;
+        case SC_MODE_T1:
+            cmd = I2C_DEVICE_CMD_SEND_T1;
+            break;
+        case SC_MODE_RAW:
+        default:
+            // Raw pass through: the host owns the framing.
+            cmd = I2C_DEVICE_CMD_SEND;
+            break;
+    }
+    return I2C_BufferWrite(data, len, cmd, I2C_DEVICE_ADDRESS_MAIN);
+}
+
+bool SmartCard_HwPps(const uint8_t *req, uint8_t req_len, uint8_t out[3], uint32_t wait) {
+    if (I2C_BufferWrite(req, req_len, I2C_DEVICE_CMD_PPS, I2C_DEVICE_ADDRESS_MAIN) == false) {
+        return false;
+    }
+    uint8_t resp[8] = {0};
+    uint16_t len = sizeof(resp);
+    if ((SmartCard_HwRecv(resp, &len, wait) == false) || (len < 3)) {
+        return false;
+    }
+    out[0] = resp[0];
+    out[1] = resp[1];
+    out[2] = resp[2];
     return true;
 }
 

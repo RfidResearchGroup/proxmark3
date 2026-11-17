@@ -95,12 +95,7 @@ static void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint
 
         LogTrace(p->data, p->len, 0, 0, NULL, true);
 
-        bool res = I2C_BufferWrite(
-                       p->data,
-                       p->len,
-                       sc_raw_device_cmd(flags),
-                       I2C_DEVICE_ADDRESS_MAIN
-                   );
+        bool res = SmartCard_HwSend(SmartCard_ModeForFlags(flags), p->data, p->len);
 
         if (res == false) {
             if (g_dbglevel > 3) {
@@ -111,7 +106,7 @@ static void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint
 
         // read bytes from module
         len = ISO7816_MAX_FRAME;
-        res = SmartCard_RxBytes(&resp[1], &len, wait);
+        res = SmartCard_HwRecv(&resp[1], &len, wait);
         if (res) {
             LogTrace(&resp[1], len, 0, 0, NULL, false);
         } else {

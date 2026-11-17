@@ -45,12 +45,12 @@ void I2C_Reset_EnterMainProgram(void);
 void I2C_Reset_EnterBootloader(void);
 
 // Which SIM module opcode a set of SC_RAW* flags asks for.
-uint8_t sc_raw_device_cmd(smartcard_command_t flags);
+smartcard_mode_t SmartCard_ModeForFlags(smartcard_command_t flags);
 
 // Which SIM module opcode matches the protocol the card is currently running,
 // for callers that carry no SC_RAW* flags of their own. T=0 until a PPS says
 // otherwise.
-uint8_t sc_active_device_cmd(void);
+smartcard_mode_t SmartCard_ActiveMode(void);
 
 // Request the configured T=1 profile for the next SAM-only GetATR().  The
 // request is consumed once, so unrelated SmartCardRaw traffic still follows

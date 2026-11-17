@@ -30,12 +30,12 @@
 
 // protocols the last ATR offered, (1 << T). 0 = no ATR read since reset
 static uint8_t s_card_protocols = 0;
-// sc_raw_device_cmd() runs per APDU, so report the choice once per card
+// SmartCard_ModeForFlags() runs per APDU, so report the choice once per card
 static bool s_proto_announced = false;
 
 // The module opcode matching the protocol the card is actually running, taken
 // from the active-protocol byte of a PPS response. 0 = nothing negotiated, so
-// sc_active_device_cmd() falls back to T=0.
+// SmartCard_ActiveMode() falls back to T=0.
 //
 // Only a successful PPS sets this, which is what makes it safe to hand back
 // SEND_T1 without probing the module version: I2C_DEVICE_CMD_PPS and
@@ -43,7 +43,7 @@ static bool s_proto_announced = false;
 // (SIM_MODULE_VERS_T1_*), so a module that answered a PPS at all is known to
 // understand T=1 too. An older module never answers, this stays 0, and callers
 // keep the T=0 they had before.
-static uint8_t s_pps_proto_cmd = 0;
+static smartcard_mode_t s_active_mode = 0;
 
 #if SAM_SC_FORCE_T1_PROFILE
 // One-shot request used by the SAM secure-channel path.  Keep it separate
@@ -81,7 +81,7 @@ void I2C_Reset_EnterMainProgram(void) {
     // whatever we knew about the card is no longer trustworthy
     s_card_protocols = 0;
     s_proto_announced = false;
-    s_pps_proto_cmd = 0;
+    s_active_mode = 0;
     StartTicks();
     sc_log_trace_reset();
     SmartCard_HwOpen();
@@ -201,7 +201,7 @@ static uint8_t atr_protocols(const uint8_t *atr, uint8_t len) {
     return mask;
 }
 
-uint8_t sc_raw_device_cmd(smartcard_command_t flags) {
+smartcard_mode_t SmartCard_ModeForFlags(smartcard_command_t flags) {
 
     // an explicit T=1 request is an override, honoured even if the ATR disagrees
     if ((flags & SC_RAW_T1) == SC_RAW_T1) {
@@ -212,7 +212,7 @@ uint8_t sc_raw_device_cmd(smartcard_command_t flags) {
                 DbpString("SC: " _YELLOW_("card offers no T=1") ", sending it anyway");
             }
         }
-        return I2C_DEVICE_CMD_SEND_T1;
+        return SC_MODE_T1;
     }
 
     if ((flags & SC_RAW_T0) == SC_RAW_T0) {
@@ -229,14 +229,14 @@ uint8_t sc_raw_device_cmd(smartcard_command_t flags) {
                 s_proto_announced = true;
                 DbpString("SC: card offers no T=0, sending as T=1");
             }
-            return I2C_DEVICE_CMD_SEND_T1;
+            return SC_MODE_T1;
         }
 
-        return I2C_DEVICE_CMD_SEND_T0;
+        return SC_MODE_T0;
     }
 
     // Raw pass through: the host owns the framing, so never second guess it.
-    return I2C_DEVICE_CMD_SEND;
+    return SC_MODE_RAW;
 }
 
 // The protocol of TD1, which is what the card runs if nothing is negotiated.
@@ -371,12 +371,8 @@ static uint8_t sc_pps_best_ta1(const uint8_t *atr, uint8_t len) {
 
 static bool sc_pps(uint8_t proto, uint8_t ta1) {
     uint8_t req[2] = { (uint8_t)(proto & 0x0F), ta1 };
-    if (I2C_BufferWrite(req, sizeof(req), I2C_DEVICE_CMD_PPS, I2C_DEVICE_ADDRESS_MAIN) == false) {
-        return false;
-    }
-    uint8_t resp[8] = {0};
-    uint16_t len = sizeof(resp);
-    if ((SmartCard_RxBytes(resp, &len, SIM_WAIT_DELAY) == false) || (len < 3)) {
+    uint8_t resp[3] = {0};
+    if (SmartCard_HwPps(req, sizeof(req), resp, SIM_WAIT_DELAY) == false) {
         return false;
     }
     // resp is [ok][active protocol][ta1 in force]
@@ -386,8 +382,8 @@ static bool sc_pps(uint8_t proto, uint8_t ta1) {
 
     // Take the protocol from the module rather than from the request: the
     // caller asked for one, this is the one that ended up in force.
-    s_pps_proto_cmd = ((resp[1] & 0x0f) == 1) ? I2C_DEVICE_CMD_SEND_T1
-                      : I2C_DEVICE_CMD_SEND_T0;
+    s_active_mode = ((resp[1] & 0x0f) == 1) ? SC_MODE_T1
+                      : SC_MODE_T0;
     return true;
 }
 
@@ -395,12 +391,12 @@ static bool sc_pps(uint8_t proto, uint8_t ta1) {
 // preference of their own and just want to talk to the card the way it is
 // currently configured - the SAM path, which has no CLI flags to carry one.
 //
-// sc_raw_device_cmd() is the other half of this: it starts from a caller's
+// SmartCard_ModeForFlags() is the other half of this: it starts from a caller's
 // explicit SC_RAW_T0 / SC_RAW_T1 and only overrides it when the ATR says that
 // choice cannot work. Here there is nothing to override, so follow what PPS
 // actually negotiated and default to T=0 when nothing has been.
-uint8_t sc_active_device_cmd(void) {
-    return (s_pps_proto_cmd != 0) ? s_pps_proto_cmd : I2C_DEVICE_CMD_SEND_T0;
+smartcard_mode_t SmartCard_ActiveMode(void) {
+    return (s_active_mode != 0) ? s_active_mode : SC_MODE_T0;
 }
 
 void sc_request_sam_t1_profile(void) {
@@ -423,7 +419,7 @@ static void sc_pps_forget(void) {
     s_pps.atr_len = 0;
     s_pps.ta1 = 0;
     s_pps.tried = false;
-    s_pps_proto_cmd = 0;
+    s_active_mode = 0;
 }
 
 bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
@@ -435,19 +431,8 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
     card_ptr->atr_len = 0;
     memset(card_ptr->atr, 0, sizeof(card_ptr->atr));
 
-    // Send ATR
-    // start [C0 01] stop start C1 len aa bb cc stop]
-    I2C_WriteCmd(I2C_DEVICE_CMD_GENERATE_ATR, I2C_DEVICE_ADDRESS_MAIN);
-
-    // wait for sim card to answer.
-    // 1byte = 1ms ,  max frame 256bytes.  Should wait 256ms atleast just in case.
-    if (SmartCard_HwWaitForSim(SIM_WAIT_DELAY) == false) {
-        return false;
-    }
-
-    // read bytes from module
     uint16_t len = sizeof(card_ptr->atr);
-    if (SmartCard_RxBytes(card_ptr->atr, &len, SIM_WAIT_DELAY) == false) {
+    if (SmartCard_HwAtr(card_ptr->atr, &len, SIM_WAIT_DELAY) == false) {
         return false;
     }
 
@@ -627,7 +612,7 @@ void SmartCardRaw(const smart_card_raw_t *p) {
     // Do the switch here rather than making every caller run `smart pps --t1`
     // first. PPS is only legal straight after an ATR, so take one; the exchange
     // could not have worked without the switch anyway, so nothing is lost.
-    if (((flags & SC_RAW_T1) == SC_RAW_T1) && (s_pps_proto_cmd != I2C_DEVICE_CMD_SEND_T1)) {
+    if (((flags & SC_RAW_T1) == SC_RAW_T1) && (SmartCard_ActiveMode() != SC_MODE_T1)) {
 
         smart_card_atr_t card;
         s_pps.reapply = false;              // this is the negotiation
@@ -659,12 +644,7 @@ void SmartCardRaw(const smart_card_raw_t *p) {
 
         sc_log_trace(p->data, p->len, true);
 
-        bool res = I2C_BufferWrite(
-                       p->data,
-                       p->len,
-                       sc_raw_device_cmd(flags),
-                       I2C_DEVICE_ADDRESS_MAIN
-                   );
+        bool res = SmartCard_HwSend(SmartCard_ModeForFlags(flags), p->data, p->len);
 
         if (res == false) {
             if (g_dbglevel > 3) {
@@ -676,7 +656,7 @@ void SmartCardRaw(const smart_card_raw_t *p) {
 
         // read bytes from module
         len = ISO7816_MAX_FRAME;
-        res = SmartCard_RxBytes(resp, &len, wait);
+        res = SmartCard_HwRecv(resp, &len, wait);
         if (res) {
             sc_log_trace(resp, len, false);
         } else {
@@ -798,18 +778,12 @@ void SmartCardPPS(const smart_card_pps_t *p) {
         reqlen = 2;
     }
 
-    if (I2C_BufferWrite(req, reqlen, I2C_DEVICE_CMD_PPS, I2C_DEVICE_ADDRESS_MAIN) == false) {
+    uint8_t resp[3] = {0};
+    if (SmartCard_HwPps(req, reqlen, resp, SIM_WAIT_DELAY) == false) {
         if (g_dbglevel > DBG_DEBUG) {
             DbpString(I2C_ERROR);
         }
         reply_ng(CMD_SMART_PPS, PM3_ESOFT, NULL, 0);
-        goto out;
-    }
-
-    uint8_t resp[8] = {0};
-    uint16_t len = sizeof(resp);
-    if ((SmartCard_RxBytes(resp, &len, SIM_WAIT_DELAY) == false) || (len < 3)) {
-        reply_ng(CMD_SMART_PPS, PM3_ETIMEOUT, NULL, 0);
         goto out;
     }
 

@@ -26,6 +26,24 @@
 
 // --- porting layer: one implementation per board -----------------------------
 
+// How a frame goes on the wire. Which controller opcode this becomes is the
+// board's business, so no opcode appears in the shared interface.
+typedef enum {
+    SC_MODE_RAW = 0,    // the host owns the framing
+    SC_MODE_T0,
+    SC_MODE_T1,
+} smartcard_mode_t;
+
+// Reset the card and hand back the ATR bytes it answered with. Done together
+// because on some boards the answer only exists inside the reset window.
+bool SmartCard_HwAtr(uint8_t *atr, uint16_t *len, uint32_t wait);
+bool SmartCard_HwSend(smartcard_mode_t mode, const uint8_t *data, uint16_t len);
+bool SmartCard_HwRecv(uint8_t *dest, uint16_t *len, uint32_t wait);
+
+// ISO 7816-3 clause 9. req is PPS0, optionally followed by PPS1; out is
+// [ok][protocol in force][TA1 in force].
+bool SmartCard_HwPps(const uint8_t *req, uint8_t req_len, uint8_t out[3], uint32_t wait);
+
 // Adapter identity. Both boards carry an adapter, so the version is what says
 // whether one is connected at all. Anything else the board can tell us about it
 // goes through info, whose layout belongs to that board - see its header.

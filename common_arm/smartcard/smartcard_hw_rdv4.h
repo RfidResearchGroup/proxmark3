@@ -69,14 +69,6 @@ typedef struct {
 // Reset and line control of the adapter.
 void SmartCard_HwSetAdapterLines(uint8_t LineRST, uint8_t LineSCK, uint8_t LineSDA);
 
-// Wait until the adapter has taken the command and stopped stretching SCL,
-// then until it has an answer ready. wait is an iteration count, build it with
-// I2C_ITERS_FOR_MS().
-bool SmartCard_HwWaitForSim(uint32_t wait);
-
-// Read one answer frame from the adapter.
-bool SmartCard_RxBytes(uint8_t *dest, uint16_t *destlen, uint32_t wait);
-
 // Raw sequential access to the adapter's byte address space, used to write and
 // verify its firmware. Only this board exposes an update path today, so these
 // do not belong to the shared interface.
