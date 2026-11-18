@@ -252,7 +252,7 @@ static bool cep_do_handshake(void) {
         while (spi_i2s_flag_get(SPI1, SPI_I2S_TDBE_FLAG) == RESET) {
             if (GetTicks() - wait_start > CEP_SPI_RESPONSE_TIMEOUT_US) {
                 // Bound this: "still attached" isn't "still working" forever,
-                // and I2C_BufferReadRaw() needs the ticks timer running like
+                // and I2C_BufferRead() needs the ticks timer running like
                 // every other call site (see cep_attach_poll()'s comment).
                 if (++recovery_attempts > CEP_HANDSHAKE_REPLY_MAX_RETRIES) {
                     return false;

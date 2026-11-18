@@ -1089,7 +1089,7 @@ void test_bat_coulometer(void) {
         while (!is_btn_pressed()) {
         }
 
-        // 用 I2C_BufferReadRaw 读取
+        // 用 I2C_BufferRead 读取
         // 用 I2C_BufferWrite 写入
 
         uint8_t addr = 0xAA; // 最高位为 1010101（地址位） [0|1]（读写位），所以我们给出的整字节地址就是 0xAA 即可
@@ -1121,7 +1121,7 @@ void test_bat_charger(void) {
         while (!is_btn_pressed()) {
         }
 
-        // 用 I2C_BufferReadRaw 读取
+        // 用 I2C_BufferRead 读取
         // 用 I2C_BufferWrite 写入
 
         uint8_t addr = 0x93; // 最高位为 1001001（地址位） [0|1]（读写位），所以我们给出的整字节地址就是 0x92 即可
@@ -1261,7 +1261,7 @@ void test_coulometer_charger_int(void) {
         while (!is_btn_pressed()) {
         }
 
-        // 用 I2C_BufferReadRaw 读取
+        // 用 I2C_BufferRead 读取
         // 用 I2C_BufferWrite 写入
 
         bool ret;
@@ -1691,7 +1691,7 @@ void test_24c02(void) {
         while (!is_btn_pressed()) {
         } // 等待按下按钮
 
-        // 用 I2C_BufferReadRaw 读取
+        // 用 I2C_BufferRead 读取
         // 用 I2C_BufferWrite 写入
 
         uint8_t data[256];
