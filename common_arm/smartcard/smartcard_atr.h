@@ -13,10 +13,23 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
+// ATR decoding: what the answer to reset says about the card.
+//-----------------------------------------------------------------------------
 
-#ifndef __I2C_DIRECT_H
-#define __I2C_DIRECT_H
+#ifndef SMARTCARD_ATR_H
+#define SMARTCARD_ATR_H
 
-int CmdSmartRaw(const uint8_t prepend, const uint8_t *data, int dlen, uint8_t *output, uint16_t *olen);
+#include <stdbool.h>
+#include <stdint.h>
 
-#endif
+// Protocols an ATR offers, as (1 << T). 0 when the ATR is too short to tell.
+uint8_t SmartCard_ATRProtocols(const uint8_t *atr, uint8_t len);
+
+// The protocol named by TD1, which is what the card runs until a PPS changes
+// it. 0 when the ATR does not name one.
+uint8_t SmartCard_ATRFirstProto(const uint8_t *atr, uint8_t len);
+
+// True when the ATR carries no checksum, or its checksum is correct.
+bool SmartCard_ATRCheckTCK(const uint8_t *atr, uint8_t len);
+
+#endif // SMARTCARD_ATR_H

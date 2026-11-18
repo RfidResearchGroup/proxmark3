@@ -26,7 +26,7 @@
 #include "commonutil.h"
 #include "ticks_apis.h"
 #include "dbprint.h"
-#include "i2c.h"
+#include "smartcard.h"
 #include "iso15693.h"
 #include "protocols.h"
 #include "crc16.h"
@@ -206,22 +206,11 @@ int sam_rxtx(const uint8_t *data, uint16_t n, uint8_t *resp, uint16_t *resplen) 
     // Whatever protocol GetATR()/PPS left the card on, rather than an assumed
     // T=0. Resolved once per exchange so the GET RESPONSE round below cannot
     // end up on a different protocol than the command it belongs to.
-    const uint8_t active_cmd = sc_active_device_cmd();
-    const bool t1 = (active_cmd == I2C_DEVICE_CMD_SEND_T1);
-    // Use the v4.65+ compatibility T=0 opcode when available. Grace responses
-    // still assemble their 61xx/9Fxx continuations below on the PM3: they may
-    // carry material response data before the continuation status. T=1 already
-    // returns its whole APDU response through the module's block layer.
-#if SAM_T0_AUTORESP
-    const uint8_t dev_cmd = (active_cmd == I2C_DEVICE_CMD_SEND_T0)
-                            ? I2C_DEVICE_CMD_SEND_T0_AUTORESP
-                            : active_cmd;
-#else
-    const uint8_t dev_cmd = active_cmd;
-#endif
+    const smartcard_mode_t active_cmd = SmartCard_ActiveMode();
+    const bool t1 = (active_cmd == SC_MODE_T1);
 
     uint32_t tx_start = GetTicks();
-    bool res = I2C_BufferWrite(data, n, dev_cmd, I2C_DEVICE_ADDRESS_MAIN);
+    bool res = SmartCard_HwSend(active_cmd, data, n);
     sc_log_trace_span(data, n, true, tx_start);
 
     if (res == false) {
@@ -231,13 +220,13 @@ int sam_rxtx(const uint8_t *data, uint16_t n, uint8_t *resp, uint16_t *resplen) 
 
     *resplen = ISO7816_MAX_FRAME;
 
-    res = sc_rx_bytes(resp, resplen, SIM_WAIT_DELAY);
+    res = SmartCard_HwRecv(resp, resplen, SIM_WAIT_DELAY);
 
     if (res == false) {
         for (uint8_t attempt = 1; attempt <= 15; attempt++) {
             SpinDelay(200);
             *resplen = ISO7816_MAX_FRAME;
-            res = sc_rx_bytes(resp, resplen, SIM_WAIT_DELAY);
+            res = SmartCard_HwRecv(resp, resplen, SIM_WAIT_DELAY);
             if (res) {
                 if (g_dbglevel >= DBG_INFO)
                     Dbprintf("SAM slow first-reply recovered after %u re-poll(s)", attempt);
@@ -290,7 +279,7 @@ int sam_rxtx(const uint8_t *data, uint16_t n, uint8_t *resp, uint16_t *resplen) 
     const uint16_t cmd_getresp_len = t1 ? sizeof(cmd_getresp_t1) : sizeof(cmd_getresp_t0);
 
     tx_start = GetTicks();
-    res = I2C_BufferWrite(cmd_getresp, cmd_getresp_len, active_cmd, I2C_DEVICE_ADDRESS_MAIN);
+    res = SmartCard_HwSend(active_cmd, cmd_getresp, cmd_getresp_len);
     sc_log_trace_span(cmd_getresp, cmd_getresp_len, true, tx_start);
 
     if (res == false) {
@@ -300,7 +289,7 @@ int sam_rxtx(const uint8_t *data, uint16_t n, uint8_t *resp, uint16_t *resplen) 
 
     more_len = 255 - *resplen;
 
-    res = sc_rx_bytes(resp + *resplen, &more_len, SIM_WAIT_DELAY);
+    res = SmartCard_HwRecv(resp + *resplen, &more_len, SIM_WAIT_DELAY);
     if (res == false) {
         DbpString("failed to receive from SIM CARD 2");
         goto out;
@@ -361,7 +350,7 @@ int sam_send_payload_ex(
 
     uint8_t *buf = response;
     const uint16_t inner_len = (uint16_t)(SAM_TX_ASN1_PREFIX_LENGTH + *payload_len);
-    const bool t1 = (sc_active_device_cmd() == I2C_DEVICE_CMD_SEND_T1);
+    const bool t1 = (SmartCard_ActiveMode() == SC_MODE_T1);
     uint16_t payload_offset = SAM_TX_APDU_PREFIX_LENGTH;
 
     if ((uint32_t)inner_len + (t1 ? 9u : 5u) > ISO7816_MAX_FRAME) {
@@ -475,7 +464,7 @@ int sam_get_version(bool info) {
     // bare 9000 (unlike the T=0 endpoint, it does not return the version TLV).
     // It is only a link-settling ping here, so a successful status is enough;
     // the following InitAuth exchange performs the actual authentication.
-    if ((sc_active_device_cmd() == I2C_DEVICE_CMD_SEND_T1) &&
+    if ((SmartCard_ActiveMode() == SC_MODE_T1) &&
             (response_len >= 2) &&
             (response[response_len - 2] == 0x90) &&
             (response[response_len - 1] == 0x00)) {

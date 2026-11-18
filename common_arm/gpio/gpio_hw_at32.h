@@ -230,11 +230,11 @@ STATIC_FORCE_INLINE void Gpio_I2C_SDA_Low(void) {
 }
 
 STATIC_FORCE_INLINE void Gpio_I2C_RST_High(void) {
-    // TODO DXL 待实现
+    // Unsupported
 }
 
 STATIC_FORCE_INLINE void Gpio_I2C_RST_Low(void) {
-    // TODO DXL 待实现
+    // Unsupported
 }
 
 STATIC_FORCE_INLINE bool Gpio_I2C_SCL_Read(void) {

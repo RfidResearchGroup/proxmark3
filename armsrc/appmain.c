@@ -88,7 +88,8 @@
 #include "sam_mfc.h"
 #include "sam_sc.h"
 #include "cmac_calc.h"
-#include "i2c.h"
+#include "smartcard.h"
+#include "i2c_apis.h"
 #include "bwm_charger.h"   // BWM charger / fuel-gauge + low-batt warning (WITH_BWM_*)
 #include "buzzer.h"        // PM5 mainboard buzzer API
 #include "rgb_indicator.h" // PM5 antenna-RGB power/battery indicator (WITH_PM5_PWR_LED)
@@ -285,7 +286,10 @@ static void pm5_autooff_sprint(char *dst) {
 #endif
 
 #ifdef WITH_SMARTCARD
-#include "i2c.h"
+#include "smartcard.h"
+#ifndef PM5
+#include "smartcard_hw_rdv4.h"
+#endif
 #endif
 
 #ifdef WITH_FPC_USART
@@ -716,7 +720,7 @@ static void SendStatus(uint32_t wait) {
     Flashmem_print_status();
 #endif
 #ifdef WITH_SMARTCARD
-    I2C_print_status();
+    SmartCard_PrintStatus();
 #endif
 #ifdef WITH_LF
     printLFConfig();      // LF Sampling config
@@ -1005,7 +1009,7 @@ static void SendCapabilities(void) {
     // command then said it was not available in this mode.
     capabilities.hw_available_smartcard = false;
     for (uint8_t i = 0; i < 3; i++) {
-        if (I2C_get_version(&maj, &min) == PM3_SUCCESS) {
+        if (SmartCard_GetModuleInfo(&maj, &min, NULL) == PM3_SUCCESS) {
             capabilities.hw_available_smartcard = true;
             break;
         }
@@ -1350,7 +1354,7 @@ static bool QCTestPM5(uint8_t *failed_item, uint32_t timeout_ms) {
     bool data_u8_valid = false;
 
     // 读取天线当前MAP配置，如果读取不到，则认为天线的控制芯片可能有问题
-    isok = I2C_BufferReadRaw(&data_u8, 1, 0x02, addr_ant << 1);
+    isok = I2C_BufferRead(&data_u8, 1, 0x02, addr_ant << 1);
     if (!isok) {
         *failed_item = 0;
         result = false;
@@ -3246,7 +3250,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 
 #ifdef WITH_SMARTCARD
         case CMD_SMART_ATR: {
-            SmartCardAtr();
+            SmartCardATR();
             break;
         }
         case CMD_SMART_PPS: {
@@ -3297,6 +3301,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_SMART_UPGRADE: {
+#ifndef PM5
             struct p {
                 uint16_t fw_size;
                 uint16_t crc;
@@ -3311,10 +3316,15 @@ static void PacketReceived(PacketCommandNG *packet) {
                 Dbprintf("CRC Failed, 0x[%04x] != 0x[%02x%02x]", payload->crc, a, b);
                 reply_ng(CMD_SMART_UPGRADE, PM3_ESOFT, NULL, 0);
             } else {
-                SmartCardUpgrade(payload->fw_size);
+                SmartCardAdapterUpgrade(payload->fw_size);
             }
             fwdata = NULL;
             break;
+#else
+            // Only the RDV4 adapter has firmware to replace over the link.
+            reply_ng(CMD_SMART_UPGRADE, PM3_EDEVNOTSUPP, NULL, 0);
+            break;
+#endif
         }
 
         case CMD_HF_SAM_PICOPASS: {
@@ -4306,7 +4316,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint8_t cmd = payload->reg_type == 0 ? 0x01 : 0x02;
             uint8_t data;
 
-            bool isok = I2C_BufferReadRaw(&data, 1, cmd, addr << 1);
+            bool isok = I2C_BufferRead(&data, 1, cmd, addr << 1);
             reply_ng(CMD_ANT_CONTROL_READ, isok ? PM3_SUCCESS : PM3_EFAILED, &data, sizeof(data));
             break;
         }
@@ -4316,7 +4326,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             uint8_t addr = 0x50; // TODO DXL define move to header?
             uint8_t data[256]; // 24c02: 256byte
-            bool isok = I2C_BufferReadRaw(data, sizeof(data), 0x00, addr << 1);
+            bool isok = I2C_BufferRead(data, sizeof(data), 0x00, addr << 1);
             reply_ng(CMD_EEPROM_FACTORY_INFO_READ, isok ? PM3_SUCCESS : PM3_EFAILED, data, sizeof(data));
             break;
         }

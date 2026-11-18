@@ -31,7 +31,7 @@
 #include "commonutil.h"
 #include "ticks_apis.h"
 #include "dbprint.h"
-#include "i2c.h"
+#include "smartcard.h"
 #include "fpga_loader.h"
 #include "fpga_apis.h"
 #include "pm3_cmd.h"
@@ -218,7 +218,7 @@ int sam_mfc_get_pacs(PacketCommandNG *c) {
     clear_trace();
     sam_capture_reset();
     sam_sc_session_invalidate();
-    I2C_Reset_EnterMainProgram();
+    SmartCard_ResetAdapter();
 
     set_tracing(true);
     StartTicks();
