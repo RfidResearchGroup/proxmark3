@@ -189,8 +189,9 @@
 
 #define CTS512B_POWER_ON_DELAY_US 500
 
-// 4sample
-#define SEND4STUFFBIT(x) tosend_stuffbit(!(x));tosend_stuffbit(!(x));tosend_stuffbit(!(x));tosend_stuffbit(!(x));
+// 4sample: one ETU, logic 1 sent as 0000 and logic 0 as 1111, written as a
+// nibble: coded bit by bit, an answer made on the fly left 0.5 ms late
+#define SEND4STUFFBIT(x) tosend_etu14b(ts, (x))
 
 static void iso14b_set_timeout(uint32_t timeout_etu);
 static void iso14b_set_maxframesize(uint16_t size);
@@ -380,6 +381,22 @@ hf14b_config_t *getHf14bConfig(void) {
 // a response.
 //=============================================================================
 
+// one ETU is a nibble of the send buffer
+static void tosend_etu14b(tosend_t *ts, int one) {
+    if (ts->bit >= 8) {
+        if (ts->max >= TOSEND_BUFFER_SIZE - 1) {
+            return;
+        }
+        ts->max++;
+        ts->buf[ts->max] = 0;
+        ts->bit = 0;
+    }
+    if (one == 0) {
+        ts->buf[ts->max] |= (0xF0 >> ts->bit);
+    }
+    ts->bit += 4;
+}
+
 //-----------------------------------------------------------------------------
 // Code up a string of octets at layer 2 (including CRC, we don't generate
 // that here) so that they can be transmitted to the reader. Doesn't transmit
@@ -388,6 +405,7 @@ hf14b_config_t *getHf14bConfig(void) {
 static void CodeIso14443bAsTag(const uint8_t *cmd, int len) {
 
     tosend_reset();
+    tosend_t *ts = get_tosend();
 
     // Transmit a burst of ones, as the initial thing that lets the
     // reader get phase sync.
@@ -396,11 +414,15 @@ static void CodeIso14443bAsTag(const uint8_t *cmd, int len) {
     // TR1 maximum 200/fs
     // 80/fs < TR1 < 200/fs
     // 10 ETU < TR1 < 24 ETU
+    // 11 ETU: the subcarrier comes on about 0.3 ETU into the first one (the
+    // FPGA takes the mode word only then) and the transmitter holds it off
+    // another 0.4 ETU, so about 10.3 ETU (82/fs) are on air. The PN532 of the
+    // ACR122U takes fewer frames the longer TR1 is
 
     int i;
     // Send TR1.
-    // 10-11 ETU * 4times samples ONES
-    for (i = 0; i < 10; i++) {
+    // 11 ETU * 4times samples ONES
+    for (i = 0; i < 11; i++) {
         SEND4STUFFBIT(1);
     }
 
@@ -442,12 +464,12 @@ static void CodeIso14443bAsTag(const uint8_t *cmd, int len) {
         SEND4STUFFBIT(0);
     }
 
-    // why this? push out transfers between arm and fpga?
-    //for (i = 0; i < 2; i++) {
-    //    SEND4STUFFBIT(1);
-    //}
+    // 2 ETU of padding, the subcarrier goes off in them: the EOF ends in
+    // logic 0, the PN532 drops a frame whose EOF is followed by logic 1
+    for (i = 0; i < 2; i++) {
+        SEND4STUFFBIT(0);
+    }
 
-    tosend_t *ts = get_tosend();
     // Convert from last byte pos to length
     ts->max++;
 }
@@ -703,13 +725,15 @@ static RAMFUNC int Handle14443bSampleFromReader(uint8_t bit) {
 //-----------------------------------------------------------------------------
 // Receive a command (from the reader to us, where we are the simulated tag),
 // and store it in the given buffer, up to the given maximum length. Keeps
-// spinning, waiting for a well-framed command, until either we get one
-// (returns true) or someone presses the pushbutton on the board (false).
+// spinning, waiting for a well-framed command, until we get one (returns
+// true), someone presses the pushbutton on the board, the client sends a
+// command such as CMD_BREAK_LOOP, or the reader field has been gone for more
+// than 4 ms (all return false, the last one with *field_lost set).
 //
 // Assume that we're called with the SSC (to the FPGA) and ADC path set
 // correctly.
 //-----------------------------------------------------------------------------
-static bool GetIso14443bCommandFromReader(uint8_t *received, uint16_t *len) {
+static bool GetIso14443bCommandFromReader(uint8_t *received, uint16_t *len, bool *field_lost) {
     // Set FPGA mode to "simulated ISO 14443B tag", no modulation (listen
     // only, since we are receiving, not transmitting).
     // Signal field is off with the appropriate LED
@@ -719,8 +743,45 @@ static bool GetIso14443bCommandFromReader(uint8_t *received, uint16_t *len) {
     // Now run a `software UART' on the stream of incoming samples.
     Uart14bInit(received);
 
+    *field_lost = false;
+    AdcSetupRssiChannel(ADC_RSSI_CH_HF);
+    uint32_t analog_sum = 0;
+    uint8_t analog_cnt = 0;
+    uint32_t nofield_since = 0;
+
+    // kept across calls, a reader that never pauses would reset it with every frame
+    static uint16_t counter = 0;
+
     while (BUTTON_PRESS() == false) {
         WDT_HIT();
+
+        // otherwise a reader sending no 14443-B frame keeps us here for ever
+        if (++counter >= 2000 && Uart.state == STATE_14B_UNSYNCD) {
+            counter = 0;
+            if (data_available()) {
+                return false;
+            }
+        }
+
+        // the field is sampled without stopping the decoder, as EmGetCmd() does
+        if (AdcRssiDataReady(ADC_RSSI_CH_HF)) {
+            analog_sum += AdcRssiDataRead(ADC_RSSI_CH_HF);
+            AdcRssiConversionStart();
+            if (++analog_cnt >= 32) {
+                if (AdcRssiDataToMilliVolt(analog_sum / analog_cnt, ADC_RSSI_CH_HF) < MF_MINFIELDV) {
+                    if (nofield_since == 0) {
+                        nofield_since = GetTickCount();
+                    } else if (GetTickCountDelta(nofield_since) > 4) {
+                        *field_lost = true;
+                        return false;
+                    }
+                } else {
+                    nofield_since = 0;
+                }
+                analog_sum = 0;
+                analog_cnt = 0;
+            }
+        }
 
         if (FPGA_SSC_RX_Ready()) {
             uint8_t b = (uint8_t)FPGA_SSC_RX_Value();
@@ -735,31 +796,74 @@ static bool GetIso14443bCommandFromReader(uint8_t *received, uint16_t *len) {
     return false;
 }
 
-static void TransmitFor14443b_AsTag(const uint8_t *response, uint16_t len) {
+// TR0 in SSP clock ticks (32 carrier periods, 2.36 us each) from the end of
+// the reader's frame as the decoder saw it: min 1024 cycles = 75.52 us, max
+// 4096 = 302.08 us. The EOF is seen up to 14 us before its end, so 38 ticks
+// (90 us) keep the minimum. The time an answer takes to be coded counts in it
+#define SIM14B_TR0_TICKS 38
+
+// returns the SSP clock count when the subcarrier comes on, the answer's start;
+// <ref> is the SSP clock count the TR0 is counted from (the reader's EOF)
+static uint32_t TransmitFor14443b_AsTag(const uint8_t *response, uint16_t len, uint32_t ref) {
 
     // Signal field is off with the appropriate LED
     LED_D_OFF();
 
-    // TR0: min - 1024 cycles = 75.52 us - max 4096 cycles = 302.08 us
-    SpinDelayUs(76);
+    // TR0, what is left of it
+    while (GetCountSspClk() - ref < SIM14B_TR0_TICKS) {};
+
+    // first TR1 byte loaded before BPSK is on; no SSC reset, it would drop this byte
+    while (FPGA_SSC_TX_Ready() == false) {};
+    FPGA_SSC_TX_Value(response[0]);
+    while (FPGA_SSC_TX_Ready() == false) {};
+
+    // the first TR1 ETU is already shifting out: 0.4 ETU more of it go without
+    // subcarrier, see CodeIso14443bAsTag() for the TR1 on air
+    SpinDelayUs(4);
 
     // Modulate BPSK
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_BPSK);
+    uint32_t start = GetCountSspClk();
 
-    // Transmit the response.
-    for (uint16_t i = 0; i < len;) {
+    // Transmit the rest of the response.
+    for (uint16_t i = 1; i < len;) {
 
         // Put byte into tx holding register as soon as it is ready
         if (FPGA_SSC_TX_Ready()) {
             FPGA_SSC_TX_Value(response[i++]);
-
-            // Start-up SSC once first byte is in SSC_THR
-            if (i == 1) {
-                FpgaSetupSsc(FPGA_MAJOR_MODE_HF_SIMULATOR);
-            }
         }
     }
+
+    // The last byte is padding. Once it has moved to the shift register the
+    // ten ETU of EOF are on air: switch the subcarrier off now, during the
+    // padding, so the EOF is complete and ends in logic 0
+    while (FPGA_SSC_TX_Ready() == false) {};
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_NO_MODULATION);
+    return start;
 }
+// Trace helpers for the simulator, in carrier periods: an SSP clock tick is 32
+// of them in simulator mode. A reader frame has just been decoded, its start is
+// estimated from its length (10 ETU a byte, 22 ETU of SOF and EOF at least)
+// returns the SSP clock count of the frame's end, the TR0 of the answer counts from it
+static uint32_t sim14b_log_reader(const uint8_t *cmd, uint16_t len) {
+    uint32_t end = GetCountSspClk();
+    uint32_t start = (end << 5) - ((uint32_t)len * 10 + 22) * 128;
+    LogTrace(cmd, len, start, end << 5, NULL, true);
+    return end;
+}
+
+// an answer traced from the subcarrier's start, after TR0 from <ref>
+static void sim14b_send(const uint8_t *encoded, uint16_t encoded_len, const uint8_t *plain, uint16_t plain_len, uint32_t ref) {
+    uint32_t start = TransmitFor14443b_AsTag(encoded, encoded_len, ref) << 5;
+    LogTrace(plain, plain_len, start, GetCountSspClk() << 5, NULL, false);
+}
+
+// a block for this PICC: with no CID only when it has CID 0
+static bool sim14b_block_is_ours(const uint8_t *cmd, uint8_t cid) {
+    uint8_t frame_cid = (cmd[0] & 0x08) ? (cmd[1] & 0x0F) : 0;
+    return frame_cid == cid;
+}
+
 //-----------------------------------------------------------------------------
 // Main loop of simulated tag: receive commands from reader, decide what
 // response to send, and send it.
@@ -787,6 +891,10 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
     // Set up the synchronous serial port
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_SIMULATOR);
 
+    // StartCountSspClk() syncs on ssp_frame, which the FPGA drives only in simulator mode
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_NO_MODULATION);
+    StartCountSspClk();
+
     // allocate command receive buffer
     BigBuf_free_keep_EM();
     BigBuf_Clear_keep_EM();
@@ -811,7 +919,7 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
         AddCrc14B(respATQB, 12);
     }
 
-    // response to HLTB and ATTRIB
+    // response to HLTB
     static const uint8_t respOK[] = {0x00, 0x78, 0xF0};
 
     uint16_t len, cmdsReceived = 0;
@@ -830,6 +938,7 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
     if (receivedCmd == NULL || encodedATQB == NULL) {
         if (g_dbglevel >= DBG_ERROR) DbpString("14b sim: failed to allocate buffers");
         switch_off();
+        reply_ng(CMD_HF_ISO14443B_SIMULATE, PM3_EMALLOC, NULL, 0);
         return;
     }
 
@@ -844,10 +953,18 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
     if (encodedOK == NULL) {
         if (g_dbglevel >= DBG_ERROR) DbpString("14b sim: failed to allocate buffers");
         switch_off();
+        reply_ng(CMD_HF_ISO14443B_SIMULATE, PM3_EMALLOC, NULL, 0);
         return;
     }
 
     memcpy(encodedOK, ts->buf, ts->max);
+
+    // the CRC table is built now, not while a reader waits for the first ATQB
+    init_table(CRC_14443_B);
+
+    // the CID ATTRIB assigns, and an R(ACK) sent since: the last block for rule 11
+    uint8_t cid = 0;
+    bool rack_sent = false;
 
     // Simulation loop
     while (BUTTON_PRESS() == false) {
@@ -858,107 +975,107 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
             break;
         }
 
-        // find reader field
-        vHf = AdcRssiAvgToMilliVolt(ADC_RSSI_CH_HF);
-        if (vHf > MF_MINFIELDV) {
-            if (cardSTATE == SIM_POWER_OFF) {
+        // find reader field while unpowered, the receiver watches it afterwards
+        if (cardSTATE == SIM_POWER_OFF) {
+            vHf = AdcRssiAvgToMilliVolt(ADC_RSSI_CH_HF);
+            if (vHf > MF_MINFIELDV) {
                 cardSTATE = SIM_IDLE;
                 LED_A_ON();
+            } else {
+                continue;
             }
-        } else {
-            cardSTATE = SIM_POWER_OFF;
-            LED_A_OFF();
-        }
-
-        if (cardSTATE == SIM_POWER_OFF) {
-            continue;
         }
 
         // Get reader command
-        if (GetIso14443bCommandFromReader(receivedCmd, &len) == false) {
-            Dbprintf("button pressed, received %d commands", cmdsReceived);
+        bool field_lost = false;
+        if (GetIso14443bCommandFromReader(receivedCmd, &len, &field_lost) == false) {
+            if (field_lost) {
+                // the PICC lost its power, a halted one included
+                cardSTATE = SIM_POWER_OFF;
+                LED_A_OFF();
+                continue;
+            }
+            Dbprintf("aborted, received %d commands", cmdsReceived);
             break;
         }
 
-        LogTrace(receivedCmd, len, 0, 0, NULL, true);
+        uint32_t cmd_end = sim14b_log_reader(receivedCmd, len);
+
+        // a frame that did not survive the air is not a command: a PICC stays silent.
+        // Every Type B frame carries a CRC
+        if (len < 3 || check_crc(CRC_14443_B, receivedCmd, len) == false) {
+            continue;
+        }
 
         if ((len == 5) && (receivedCmd[0] == ISO14443B_REQB) && (receivedCmd[2] & 0x08)) {
-            // WUPB
+            // WUPB, an ACTIVE PICC only listens to ISO/IEC 14443-4 blocks
             switch (cardSTATE) {
                 case SIM_IDLE:
                 case SIM_READY:
                 case SIM_HALT: {
-                    TransmitFor14443b_AsTag(encodedATQB, encodedATQBLen);
-                    LogTrace(respATQB, sizeof(respATQB), 0, 0, NULL, false);
+                    sim14b_send(encodedATQB, encodedATQBLen, respATQB, sizeof(respATQB), cmd_end);
                     cardSTATE = SIM_READY;
                     break;
                 }
                 case SIM_ACTIVE:
                 default: {
-                    TransmitFor14443b_AsTag(encodedATQB, encodedATQBLen);
-                    LogTrace(respATQB, sizeof(respATQB), 0, 0, NULL, false);
                     break;
                 }
             }
         } else if ((len == 5) && (receivedCmd[0] == ISO14443B_REQB) && !(receivedCmd[2] & 0x08)) {
-            // REQB
+            // REQB, ignored by an ACTIVE or halted PICC
             switch (cardSTATE) {
                 case SIM_IDLE:
                 case SIM_READY: {
-                    TransmitFor14443b_AsTag(encodedATQB, encodedATQBLen);
-                    LogTrace(respATQB, sizeof(respATQB), 0, 0, NULL, false);
+                    sim14b_send(encodedATQB, encodedATQBLen, respATQB, sizeof(respATQB), cmd_end);
                     cardSTATE = SIM_READY;
                     break;
                 }
-                case SIM_ACTIVE: {
-                    TransmitFor14443b_AsTag(encodedATQB, encodedATQBLen);
-                    LogTrace(respATQB, sizeof(respATQB), 0, 0, NULL, false);
-                    break;
-                }
+                case SIM_ACTIVE:
                 case SIM_HALT:
                 default: {
                     break;
                 }
             }
-        } else if ((len == 7) && (receivedCmd[0] == ISO14443B_HALT)) {
-            // HLTB
-            switch (cardSTATE) {
-                case SIM_READY: {
-                    TransmitFor14443b_AsTag(encodedOK, encodedOKLen);
-                    LogTrace(respOK, sizeof(respOK), 0, 0, NULL, false);
-                    cardSTATE = SIM_HALT;
-                    break;
-                }
-                case SIM_IDLE:
-                case SIM_ACTIVE: {
-                    TransmitFor14443b_AsTag(encodedOK, encodedOKLen);
-                    LogTrace(respOK, sizeof(respOK), 0, 0, NULL, false);
-                    break;
-                }
-                case SIM_HALT:
-                default: {
-                    break;
-                }
+        } else if ((len == 7) && (receivedCmd[0] == ISO14443B_HALT) && (memcmp(receivedCmd + 1, respATQB + 1, 4) == 0)) {
+            // HLTB for this PUPI, from READY only: after ATTRIB the PICC is in
+            // PROTOCOL, which ignores it (ISO/IEC 14443-3 7.4.7, Figure 19)
+            if (cardSTATE == SIM_READY) {
+                sim14b_send(encodedOK, encodedOKLen, respOK, sizeof(respOK), cmd_end);
+                cardSTATE = SIM_HALT;
             }
-        } else if (len == 11 && receivedCmd[0] == ISO14443B_ATTRIB) {
-            // ATTRIB
-            switch (cardSTATE) {
-                case SIM_READY: {
-                    TransmitFor14443b_AsTag(encodedOK, encodedOKLen);
-                    LogTrace(respOK, sizeof(respOK), 0, 0, NULL, false);
-                    cardSTATE = SIM_ACTIVE;
-                    break;
-                }
-                case SIM_IDLE:
-                case SIM_ACTIVE: {
-                    TransmitFor14443b_AsTag(encodedOK, encodedOKLen);
-                    LogTrace(respOK, sizeof(respOK), 0, 0, NULL, false);
-                    break;
-                }
-                case SIM_HALT:
-                default: {
-                    break;
-                }
+        } else if (len == 11 && receivedCmd[0] == ISO14443B_ATTRIB && memcmp(receivedCmd + 1, respATQB + 1, 4) == 0) {
+            // ATTRIB for this PUPI, from READY, answered with the CID the reader assigns (MBLI 0)
+            if (cardSTATE == SIM_READY) {
+                cid = receivedCmd[8] & 0x0F;
+                rack_sent = false;
+                uint8_t resp[3] = { cid, 0x00, 0x00 };
+                AddCrc14B(resp, 1);
+                CodeIso14443bAsTag(resp, sizeof(resp));
+                sim14b_send(ts->buf, ts->max, resp, sizeof(resp), cmd_end);
+                cardSTATE = SIM_ACTIVE;
+            }
+        } else if (cardSTATE == SIM_ACTIVE && (receivedCmd[0] & 0xF7) == 0xC2
+                   && len == ((receivedCmd[0] & 0x08) ? 4 : 3) && sim14b_block_is_ours(receivedCmd, cid)) {
+            // S(DESELECT), answered with the same block, then HALT
+            uint8_t resp[4] = { receivedCmd[0], receivedCmd[1], 0x00, 0x00 };
+            AddCrc14B(resp, len - 2);
+            CodeIso14443bAsTag(resp, len);
+            sim14b_send(ts->buf, ts->max, resp, len, cmd_end);
+            cardSTATE = SIM_HALT;
+        } else if (cardSTATE == SIM_ACTIVE && (receivedCmd[0] & 0xE6) == 0xA2
+                   && len == ((receivedCmd[0] & 0x08) ? 4 : 3) && sim14b_block_is_ours(receivedCmd, cid)) {
+            // ISO/IEC 14443-4 R-block. This PICC sends no I-block, its block number
+            // stays 1: an R(NAK) with the reader's number gets an R(ACK), the presence
+            // check (rule 12), one with the PICC's number the last R(ACK) again (rule 11)
+            // or, before any block, an R(ACK) all the same (note to rule 6)
+            bool own = (receivedCmd[0] & 0x01) == 0x01;
+            if ((receivedCmd[0] & 0x10) || (own && rack_sent)) {
+                uint8_t resp[4] = { (uint8_t)(0xA3 | (receivedCmd[0] & 0x08)), receivedCmd[1], 0x00, 0x00 };
+                AddCrc14B(resp, len - 2);
+                CodeIso14443bAsTag(resp, len);
+                sim14b_send(ts->buf, ts->max, resp, len, cmd_end);
+                rack_sent = true;
             }
         }
 
@@ -969,6 +1086,9 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
     if (g_dbglevel >= DBG_DEBUG) {
         Dbprintf("Emulator stopped. Trace length: %d ", BigBuf_get_traceLen());
     }
+
+    // lets a client wait for the end of the simulation
+    reply_ng(CMD_HF_ISO14443B_SIMULATE, PM3_SUCCESS, NULL, 0);
 }
 
 /*

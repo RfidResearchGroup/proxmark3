@@ -3,6 +3,13 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 14b sim` - the answer left after a fixed 76 us instead of a TR0 counted from the reader's EOF, an SSC reset dropped the first TR1 byte and the subcarrier stayed on after the EOF (@matrix)
+- Fixed `hf 14b sim` - the field was measured with 32 ADC readings before every listen, a reader frame sent meanwhile was not received (@matrix)
+- Fixed `hf 14b sim` - ATTRIB was answered with CID 0 whatever CID the reader assigned (@matrix)
+- Fixed `hf 14b sim` - REQB, WUPB, HLTB and ATTRIB were answered in states and for PUPIs a PICC stays silent in, and frames with a wrong CRC were answered (@matrix)
+- Fixed `hf 14b sim` - R(NAK) presence checks and S(DESELECT) got no answer, a PC/SC reader lost the tag right after reading it (@matrix)
+- Fixed `hf 14b sim` - a client command stops the simulation at once, it used to go on until the button or the next reader frame (@matrix)
+- Fixed `hf 14b sim` - the trace has the times of the reader frames and of the answers, they were all 0 (@matrix)
 - Fixed `hf iclass dump` - the emulator memory is kept, a dump no longer wipes what `hf iclass eload` loaded (@matrix)
 - Fixed `hf 14a raw --topaz` - the answer's CRC was checked as a CRC_A instead of the CRC_B Topaz uses, so a valid answer showed its CRC in red (@matrix)
 - Fixed `hf 15 writeafi` and `hf 15 writedsfid` - a UID given with `-u` was sent in the wrong byte order, so no tag answered (@matrix)
