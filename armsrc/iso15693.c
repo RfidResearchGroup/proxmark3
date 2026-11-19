@@ -414,6 +414,11 @@ void TransmitTo15693Reader(const uint8_t *cmd, size_t len, uint32_t *start_time,
             }
         }
     }
+#if defined PM5
+    // the SPI port keeps sending after an answer: end on a zero byte and wait until it is taken
+    FPGA_SSC_TX_Clear();
+    while (!FPGA_SSC_TX_Ready()) {};
+#endif
     LED_C_OFF();
 }
 

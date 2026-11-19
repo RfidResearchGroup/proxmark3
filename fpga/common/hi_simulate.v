@@ -70,7 +70,8 @@ begin
     if (& adc_d[7:5]) after_hysteresis <= 1'b1;           // if (adc_d >= 224)
     else if (~(| adc_d[7:5])) after_hysteresis <= 1'b0;   // if (adc_d <= 31)
 
-    if (adc_d >= 224)
+    // the ADC can idle below 224: time the low state, not the ADC level
+    if (after_hysteresis)
     begin
         has_been_low_for <= 12'd0;
     end

@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed PM3 `hf 14b sim` - the timer of the FPGA simulator ran on while the ADC idled below its high level and cut the SOF of reader frames short, needs rebuilt FPGA images (@matrix)
+- Fixed PM5 `hf 14b sim` - a timer of the FPGA simulator forced the receive line high every 302 us and cut the SOF of reader frames short, needs a rebuilt FPGA image (@matrix)
+- Fixed PM5 `hf 15 sim`, `hf iclass sim` and `hf 14b sim` - the FPGA simulator read the inverting HF ADC with the PM3 levels and received no reader command, needs a rebuilt FPGA image (@matrix)
+- Fixed PM5 `hf iclass sim` - a byte left in the SPI port was modulated ahead of the answer to IDENTIFY, so the tag was selected only after up to 19 tries instead of 2 (@matrix)
 - Fixed `hf iclass dump` - the emulator memory is kept, a dump no longer wipes what `hf iclass eload` loaded (@matrix)
 - Fixed `hf 14a raw --topaz` - the answer's CRC was checked as a CRC_A instead of the CRC_B Topaz uses, so a valid answer showed its CRC in red (@matrix)
 - Fixed `hf 15 writeafi` and `hf 15 writedsfid` - a UID given with `-u` was sent in the wrong byte order, so no tag answered (@matrix)
