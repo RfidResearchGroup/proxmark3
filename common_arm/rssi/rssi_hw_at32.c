@@ -24,7 +24,9 @@ void AdcSetupRssiChannel(adc_rssi_ch_t ch) {
     // Full setup blocks for tens of us (reset, calibration, vref read), too slow
     // for the 14a tag sim turnaround. Same channel and ADC still up: just restart.
     if ((s_rssi_ch == (int)ch) && adc_flag_get(AT32_RSSI_ADC, ADC_RDY_FLAG)) {
-        adc_flag_clear(AT32_RSSI_ADC, ADC_OCCE_FLAG); // drop a stale result
+        // drop a stale result: left unread, the next one is an overflow, which stops the ADC
+        (void)adc_ordinary_conversion_data_get(AT32_RSSI_ADC);
+        adc_flag_clear(AT32_RSSI_ADC, ADC_OCCE_FLAG | ADC_OCCO_FLAG);
         AdcRssiConversionStart();
         return;
     }
