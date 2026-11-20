@@ -69,6 +69,8 @@ static uint32_t last_frame_end; /* ts of last bit of previews rx or tx frame */
 #define RWD_PULSE             1 /* Pulse is signaled with GPIO_SSC_DIN high */
 #define RWD_PAUSE             0 /* Pause is signaled with GPIO_SSC_DIN low */
 
+#define SIM_HOST_POLL     42375 /* 200ms between data_available() calls */
+
 //-----------------------------------------------------------------------------
 // Demodulation
 //-----------------------------------------------------------------------------
@@ -489,19 +491,19 @@ void LegicRfSimulate(uint8_t tagtype, bool send_reply) {
 
     Dbprintf("Legic Prime, simulating MCD... " _YELLOW_("%02X") " MSN... " _YELLOW_("%02X%02X%02X"), legic_mem[0], legic_mem[1], legic_mem[2], legic_mem[3]);
 
-    uint16_t counter = 0;
+    uint32_t last_poll = GetCountSspClk();
     while (BUTTON_PRESS() == false) {
 
         WDT_HIT();
 
-        if (counter >= 2000) {
+        // by time, a pass takes anything from 99us to 40ms
+        if (GetCountSspClk() - last_poll >= SIM_HOST_POLL) {
             if (data_available()) {
                 res = PM3_EOPABORTED;
                 goto OUT;
             }
-            counter = 0;
+            last_poll = GetCountSspClk();
         }
-        counter++;
 
         // wait for carrier, restart after timeout
         if (wait_for(RWD_PULSE, GetCountSspClk() + TAG_BIT_PERIOD) == false) {
@@ -519,7 +521,7 @@ void LegicRfSimulate(uint8_t tagtype, bool send_reply) {
             WDT_HIT();
         }
 
-        if (phase_res != PM3_SUCCESS) {
+        if ((phase_res != PM3_SUCCESS) && (g_dbglevel >= DBG_DEBUG)) {
             Dbprintf("LEGIC sim session ended: res=%d len=%u cmd=%05x", phase_res, last_rx_len, (unsigned int)last_rx_cmd);
         }
     }
