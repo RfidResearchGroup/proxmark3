@@ -467,8 +467,9 @@ static void topaz_print_hdr(uint8_t blockno) {
     PrintAndLogEx(INFO, "----+-------------------------+---------");
 }
 
-// return type, length and value of a TLV, starting at memory position *TLV_ptr
-static void get_TLV(uint8_t **TLV_ptr, uint8_t *TLV_type, uint16_t *TLV_length, uint8_t **TLV_value) {
+// return type, length and value of a TLV, starting at memory position *TLV_ptr.
+// False when the TLV does not fit before end
+static bool get_TLV(uint8_t **TLV_ptr, const uint8_t *end, uint8_t *TLV_type, uint16_t *TLV_length, uint8_t **TLV_value) {
     *TLV_length = 0;
     *TLV_value = NULL;
 
@@ -482,13 +483,22 @@ static void get_TLV(uint8_t **TLV_ptr, uint8_t *TLV_type, uint16_t *TLV_length, 
         case 0x02:          // Reserved Memory TLV
         case 0x03:          // NDEF message TLV
         case 0xFD:          // proprietary TLV
+            if (*TLV_ptr >= end) {
+                return false;
+            }
             *TLV_length = **TLV_ptr;
             *TLV_ptr += 1;
             if (*TLV_length == 0xff) {
+                if (end - *TLV_ptr < 2) {
+                    return false;
+                }
                 *TLV_length = **TLV_ptr << 8;
                 *TLV_ptr += 1;
                 *TLV_length |= **TLV_ptr;
                 *TLV_ptr += 1;
+            }
+            if (end - *TLV_ptr < *TLV_length) {
+                return false;
             }
             *TLV_value = *TLV_ptr;
             *TLV_ptr += *TLV_length;
@@ -496,6 +506,7 @@ static void get_TLV(uint8_t **TLV_ptr, uint8_t *TLV_type, uint16_t *TLV_length, 
         default:            // RFU
             break;
     }
+    return true;
 }
 
 // lock area TLVs contain no information on the start of the respective lockable area. Lockable areas
@@ -511,9 +522,10 @@ static void adjust_lock_areas(uint16_t block_start, uint16_t block_size) {
     }
 }
 
-// read and print the lock area and reserved memory TLVs
-static void topaz_print_control_TLVs(uint8_t *memory) {
+// read and print the lock area and reserved memory TLVs, in the len bytes from memory
+static void topaz_print_control_TLVs(uint8_t *memory, size_t len) {
     uint8_t *TLV_ptr = memory;
+    const uint8_t *end = memory + len;
     uint8_t TLV_type = 0;
     uint16_t TLV_length;
     uint8_t *TLV_value;
@@ -521,12 +533,16 @@ static void topaz_print_control_TLVs(uint8_t *memory) {
     bool reserved_memory_control_TLV_present = false;
     uint16_t next_lockable_byte = 0x0f * 8; // first byte after static memory area
 
-    while (*TLV_ptr != 0x03 && *TLV_ptr != 0xFD && *TLV_ptr != 0xFE) {
+    // without an NDEF message, proprietary or terminator TLV the search ends with the area
+    while ((TLV_ptr < end) && *TLV_ptr != 0x03 && *TLV_ptr != 0xFD && *TLV_ptr != 0xFE) {
 
         // all Lock Control TLVs shall be present before the NDEF message TLV, the proprietary TLV (and the Terminator TLV)
-        get_TLV(&TLV_ptr, &TLV_type, &TLV_length, &TLV_value);
+        if (get_TLV(&TLV_ptr, end, &TLV_type, &TLV_length, &TLV_value) == false) {
+            break;
+        }
 
-        if (TLV_type == 0x01) { // a Lock Control TLV
+        // the value of a control TLV is three bytes
+        if ((TLV_type == 0x01) && (TLV_length >= 3)) { // a Lock Control TLV
             uint8_t pages_addr = TLV_value[0] >> 4;
             uint8_t byte_offset = TLV_value[0] & 0x0f;
             uint16_t size_in_bits = TLV_value[1] ? TLV_value[1] : 256;
@@ -572,7 +588,7 @@ static void topaz_print_control_TLVs(uint8_t *memory) {
             next_lockable_byte += size_in_bits * bytes_locked_per_bit;
         }
 
-        if (TLV_type == 0x02) { // a Reserved Memory Control TLV
+        if ((TLV_type == 0x02) && (TLV_length >= 3)) { // a Reserved Memory Control TLV
             uint8_t pages_addr = TLV_value[0] >> 4;
             uint8_t byte_offset = TLV_value[0] & 0x0f;
             uint16_t size_in_bytes = TLV_value[1] ? TLV_value[1] : 256;
@@ -782,7 +798,8 @@ int CmdHFTopazInfo(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    topaz_print_control_TLVs(&topaz_tag.data_blocks[1][4]);
+    // the TLVs are in blocks 1 - C, after the capability container
+    topaz_print_control_TLVs(&topaz_tag.data_blocks[1][4], (0x0C * TOPAZ_BLOCK_SIZE) - 4);
 
     PrintAndLogEx(NORMAL, "");
     topaz_switch_off_field();
