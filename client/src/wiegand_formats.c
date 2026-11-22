@@ -1931,7 +1931,7 @@ int HIDDumpPACSBits(const uint8_t *const data, const uint8_t length, bool verbos
 
         // HID Prox II
         PrintAndLogEx(INFO, "Downgrade to " _YELLOW_("HID Prox II"));
-        PrintAndLogEx(SUCCESS, "    lf hid clone -w H10301 --bin %s", binstr);
+        PrintAndLogEx(SUCCESS, "    lf hid clone --bin %s", binstr);
         PrintAndLogEx(NORMAL, "");
 
         // MIFARE DESFire

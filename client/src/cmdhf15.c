@@ -403,7 +403,7 @@ static int iso15_error_handling_card_response(uint8_t *d, uint16_t n) {
     return PM3_SUCCESS;
 }
 
-// hf 15 info requests: also report the 0F and 10 errors that block reads take as the end of the memory
+// single requests: also report the 0F and 10 errors that block reads take as the end of the memory
 static int iso15_info_error_handling(uint8_t *d, uint16_t n) {
     int res = iso15_error_handling_card_response(d, n);
     if (res == PM3_EOUTOFBOUND) {
@@ -441,11 +441,20 @@ static bool iso15_tag_size_ok(const iso15_tag_t *tag) {
 }
 
 
+// true when the tag answered with ISO15693 error 0x01 (command not supported)
+static bool iso15_is_cmd_not_supported(const uint8_t *d, uint16_t n) {
+    return (n >= 4 &&
+            CheckCrc15(d, n) &&
+            ((d[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) &&
+            (d[1] == ISO15_ERROR_CMD_NOT_SUP));
+}
+
 // fast method to just read the UID of a tag (collision detection not supported)
 //  *buf should be large enough to fit the 64bit uid
+//  *dsfid receives DSFID when non-NULL
 //  fast: true for high-speed (1 out of 4), false for low-speed (1 out of 256)
 // returns 1 if succeeded
-static int getUID(bool fast, bool verbose, bool loop, uint8_t *buf) {
+static int getUID_ex(bool fast, bool verbose, bool loop, uint8_t *buf, uint8_t *dsfid) {
 
     uint8_t approxlen = 5;
     iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
@@ -480,6 +489,10 @@ static int getUID(bool fast, bool verbose, bool loop, uint8_t *buf) {
                     memcpy(buf, resp.data.asBytes + 2, 8);
                 }
 
+                if (dsfid) {
+                    *dsfid = resp.data.asBytes[1];
+                }
+
                 if (verbose) {
                     PrintAndLogEx(NORMAL, "");
                     PrintAndLogEx(SUCCESS, "UID.... " _GREEN_("%s"), iso15693_sprintUID(NULL, buf));
@@ -498,6 +511,10 @@ static int getUID(bool fast, bool verbose, bool loop, uint8_t *buf) {
 
     free(packet);
     return res;
+}
+
+static int getUID(bool fast, bool verbose, bool loop, uint8_t *buf) {
+    return getUID_ex(fast, verbose, loop, buf, NULL);
 }
 
 // used with 'hf search'
@@ -1232,10 +1249,11 @@ static int CmdHF15Info(const char *Cmd) {
     packet->raw[packet->rawlen++] = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
     packet->raw[packet->rawlen++] = ISO15693_GET_SYSTEM_INFO;
 
+    uint8_t dsfid = 0;
     if (unaddressed == false) {
         if (scan) {
             PrintAndLogEx(INFO, "Using scan mode");
-            if (getUID(fast, false, false, uid) != PM3_SUCCESS) {
+            if (getUID_ex(fast, false, false, uid, &dsfid) != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "no tag found");
                 free(packet);
                 return PM3_EINVARG;
@@ -1278,6 +1296,19 @@ static int CmdHF15Info(const char *Cmd) {
     }
 
     uint8_t *d = resp.data.asBytes;
+
+    if (iso15_is_cmd_not_supported(d, resp.length) && uidlen == ISO15693_UID_LENGTH) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
+        PrintAndLogEx(SUCCESS, "UID....... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
+        printTagInfo_15(uid);
+        if (scan) {
+            PrintAndLogEx(SUCCESS, "DSFID..... 0x%02X", dsfid);
+        }
+        PrintAndLogEx(WARNING, "Tag does not support GET_SYSTEM_INFO (0x2B)");
+        PrintAndLogEx(NORMAL, "");
+        return PM3_SUCCESS;
+    }
 
     int res = iso15_info_error_handling(d, resp.length);
     if (res != PM3_SUCCESS) {
@@ -1751,13 +1782,16 @@ static int CmdHF15Reader(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static void hf15EmlClear(void) {
+static int hf15EmlClear(void) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_EML_CLEAR, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO15693_EML_CLEAR, &resp, 2500) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        return PM3_ETIMEOUT;
     }
+    PrintEmulatorAllocError(resp.status);
+    return resp.status;
 }
 
 static int hf15EmlSetMem(const uint8_t *data, uint16_t count, size_t offset) {
@@ -1785,7 +1819,7 @@ static int hf15EmlSetMem(const uint8_t *data, uint16_t count, size_t offset) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_EML_SETMEM, (uint8_t *)payload, paylen);
     free(payload);
-    return PM3_SUCCESS;
+    return WaitForEmulatorWrite(CMD_HF_ISO15693_EML_SETMEM);
 }
 
 static int CmdHF15ELoad(const char *Cmd) {
@@ -1840,7 +1874,11 @@ static int CmdHF15ELoad(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Clearing emulator memory");
     fflush(stdout);
-    hf15EmlClear();
+    // a timeout is not fatal, the upload below reports its own result
+    if (hf15EmlClear() == PM3_EMALLOC) {
+        free(tag);
+        return PM3_EMALLOC;
+    }
 
     PrintAndLogEx(INFO, "Uploading to emulator memory");
     PrintAndLogEx(INFO, "." NOLF);
@@ -1858,10 +1896,12 @@ static int CmdHF15ELoad(const char *Cmd) {
         }
 
         uint16_t bytestosend = MIN(chuncksize, bytes_read);
-        if (hf15EmlSetMem((uint8_t *)tag + offset, bytestosend, offset) != PM3_SUCCESS) {
+        res = hf15EmlSetMem((uint8_t *)tag + offset, bytestosend, offset);
+        if (res != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Can't set emulator memory at offest: %zu / 0x%zx", offset, offset);
+            g_conn.block_after_ACK = false;
             free(tag);
-            return PM3_ESOFT;
+            return res;
         }
         PrintAndLogEx(NORMAL, "." NOLF);
         fflush(stdout);
@@ -2460,8 +2500,8 @@ static int CmdHF15Dump(const char *Cmd) {
         scan = true;
     }
 
-    // request to be sent to device/card
-    uint16_t approxlen = 2 + ISO15693_UID_LENGTH + 1 + 2;
+    // request to be sent to device/card (room for READ_MULTI_BLOCK fallback: blk + cnt)
+    uint16_t approxlen = 2 + ISO15693_UID_LENGTH + 2 + 2;
     iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
     if (packet == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
@@ -2481,11 +2521,12 @@ static int CmdHF15Dump(const char *Cmd) {
     packet->raw[packet->rawlen++] = ISO15693_GET_SYSTEM_INFO;
 
     bool used_uid = false;
+    uint8_t dsfid = 0;
     if (unaddressed == false) {
         // default fallback to scan for tag. Overriding unaddress parameter
         if (scan) {
             PrintAndLogEx(INFO, "Using scan mode");
-            if (getUID(fast, verbose, false, uid) != PM3_SUCCESS) {
+            if (getUID_ex(fast, verbose, false, uid, &dsfid) != PM3_SUCCESS) {
                 free(packet);
                 free(tag);
                 PrintAndLogEx(WARNING, "no tag found");
@@ -2534,19 +2575,24 @@ static int CmdHF15Dump(const char *Cmd) {
     uint8_t *d = resp.data.asBytes;
     uint8_t dCpt = 10;
 
-    int res = iso15_error_handling_card_response(d, resp.length);
-    if (res == PM3_ECRC) {
-        free(tag);
-        free(packet);
-        DropField();
-        return res;
-    }
+    bool sysinfo_ok = false;
+    if (iso15_is_cmd_not_supported(d, resp.length)) {
+        PrintAndLogEx(INFO, "Tag does not support GET_SYSTEM_INFO, using defaults");
+    } else {
+        int res = iso15_error_handling_card_response(d, resp.length);
+        if (res == PM3_ECRC) {
+            free(tag);
+            free(packet);
+            DropField();
+            return res;
+        }
 
-    bool sysinfo_ok = (res == PM3_SUCCESS);
-    uint16_t need = iso15_sysinfo_min_len(d[1]);
-    if (sysinfo_ok && (resp.length < need)) {
-        PrintAndLogEx(WARNING, "systeminfo answer too short ( %d bytes, expected %u ), using defaults", resp.length, need);
-        sysinfo_ok = false;
+        sysinfo_ok = (res == PM3_SUCCESS);
+        uint16_t need = iso15_sysinfo_min_len(d[1]);
+        if (sysinfo_ok && (resp.length < need)) {
+            PrintAndLogEx(WARNING, "systeminfo answer too short ( %d bytes, expected %u ), using defaults", resp.length, need);
+            sysinfo_ok = false;
+        }
     }
 
     if (sysinfo_ok) {
@@ -2555,6 +2601,8 @@ static int CmdHF15Dump(const char *Cmd) {
         // optional fields follow the UID in flag order, only when their flag is set
         if (d[1] & 0x01) {
             tag->dsfid = d[dCpt++];
+        } else {
+            tag->dsfid = dsfid;
         }
 
         if (d[1] & 0x02) {
@@ -2578,8 +2626,12 @@ static int CmdHF15Dump(const char *Cmd) {
         }
 
     } else {
-        tag->uid[0] = 0xE0;
-        tag->dsfid = 0;
+        if (used_uid) {
+            memcpy(tag->uid, uid, sizeof(tag->uid));
+        } else {
+            tag->uid[7] = 0xE0;
+        }
+        tag->dsfid = dsfid;
         tag->afi = 0;
         // Set tag memory layout values (if can't be read in SYSINFO)
         tag->bytesPerPage = blocksize;
@@ -2593,10 +2645,9 @@ static int CmdHF15Dump(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    // add length for blockno (1)
-    packet->rawlen++;
     packet->raw[0] |= ISO15_REQ_OPTION; // Add option to dump lock status
-    packet->raw[1] = ISO15693_READBLOCK;
+    uint8_t blk_offset = used_uid ? (2 + ISO15693_UID_LENGTH) : 2;
+    bool use_read_multi = false;
 
     packet->flags = (ISO15_READ_RESPONSE | ISO15_NO_DISCONNECT);
     if (fast) {
@@ -2609,13 +2660,14 @@ static int CmdHF15Dump(const char *Cmd) {
     bool end_of_memory = false;
 
     for (int retry = 0; (retry < 2 && blocknum < tag->pagesCount); retry++) {
-        if (used_uid) {
-            packet->raw[10] = (uint8_t)blocknum & 0xFF;
-            AddCrc15(packet->raw, 11);
-        } else {
-            packet->raw[2] = (uint8_t)blocknum & 0xFF;
-            AddCrc15(packet->raw, 3);
+        packet->raw[1] = use_read_multi ? ISO15693_READ_MULTI_BLOCK : ISO15693_READBLOCK;
+        packet->raw[blk_offset] = (uint8_t)blocknum & 0xFF;
+        uint16_t cmdlen = blk_offset + 1;
+        if (use_read_multi) {
+            packet->raw[cmdlen++] = 0; // 0 = 1 block
         }
+        AddCrc15(packet->raw, cmdlen);
+        packet->rawlen = cmdlen + 2;
 
         clearCommandBuffer();
         SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
@@ -2637,6 +2689,14 @@ static int CmdHF15Dump(const char *Cmd) {
             }
 
             if ((d[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) {
+
+                // EM4034 lacks READ_SINGLE_BLOCK; fall back to READ_MULTI_BLOCK (1 block)
+                if (blocknum == 0 && use_read_multi == false && resp.length >= 4 && d[1] == ISO15_ERROR_CMD_NOT_SUP) {
+                    PrintAndLogEx(INFO, "Tag does not support READ_SINGLE_BLOCK, falling back to READ_MULTI_BLOCK");
+                    use_read_multi = true;
+                    retry = -1;
+                    continue;
+                }
 
                 // heuristic determine end of available memory
                 if (d[1] == 0x0F || d[1] == 0x10) {
@@ -2667,7 +2727,7 @@ static int CmdHF15Dump(const char *Cmd) {
             // copy read data
             memcpy(&tag->data[blocknum * tag->bytesPerPage], d + 2, tag->bytesPerPage);
 
-            retry = 0;
+            retry = -1;
             blocknum++;
 
             PrintAndLogEx(INPLACE, "blk %3d", blocknum);
@@ -2720,7 +2780,7 @@ static int CmdHF15Dump(const char *Cmd) {
         char *fptr = filename;
         PrintAndLogEx(INFO, "Using UID as filename");
         fptr += snprintf(fptr, sizeof(filename), "hf-15-");
-        FillFileNameByUID(fptr, SwapEndian64(uid, sizeof(uid), 8), "-dump", sizeof(uid));
+        FillFileNameByUID(fptr, SwapEndian64(tag->uid, sizeof(tag->uid), 8), "-dump", sizeof(tag->uid));
     }
 
     pm3_save_dump_json(filename, (uint8_t *)tag, sizeof(iso15_tag_t), jsf15_v5);
@@ -2925,8 +2985,18 @@ static int CmdHF15Readmulti(const char *Cmd) {
     CLIParserFree(ctx);
 
     // sanity checks
-    if (blockcnt > 6) {
-        PrintAndLogEx(WARNING, "Page count must be 6 or less, got ( " _RED_("%d") " )", blockcnt);
+    if ((blockno < 0) || (blockno > 255)) {
+        PrintAndLogEx(WARNING, "Page number must be 0-255, got ( " _RED_("%d") " )", blockno);
+        return PM3_EINVARG;
+    }
+
+    if ((blockcnt < 1) || (blockcnt > 6)) {
+        PrintAndLogEx(WARNING, "Page count must be 1-6, got ( " _RED_("%d") " )", blockcnt);
+        return PM3_EINVARG;
+    }
+
+    if ((blockno + blockcnt) > 256) {
+        PrintAndLogEx(WARNING, "Last page must be 255 or less, got ( " _RED_("%d") " )", blockno + blockcnt - 1);
         return PM3_EINVARG;
     }
 
@@ -2935,9 +3005,20 @@ static int CmdHF15Readmulti(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    if (uidlen != 0 && uidlen != ISO15693_UID_LENGTH) {
+        PrintAndLogEx(WARNING, "UID must include 8 hex bytes, got ( " _RED_("%i") " )", uidlen);
+        return PM3_EINVARG;
+    }
+
     if (blocksize < 4) {
         PrintAndLogEx(WARNING, "Blocksize too small, using default 4 bytes");
         blocksize = 4;
+    }
+
+    // ISO15693 block size field is 5 bits
+    if (blocksize > 32) {
+        PrintAndLogEx(WARNING, "Blocksize too large, using maximum 32 bytes");
+        blocksize = 32;
     }
 
     // enforcing add_option in order to get lock-info
@@ -3014,11 +3095,29 @@ static int CmdHF15Readmulti(const char *Cmd) {
 
     uint8_t *d = resp.data.asBytes;
 
-    ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length)
+    int res = iso15_info_error_handling(d, resp.length);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
 
     // 1 byte cmd,  1 lock byte,  4 / 8 bytes block size,  2 crc
     if (resp.length > (1 + ((blockcnt + 1) * (blocksize + 1)) + 2)) {
         PrintAndLogEx(WARNING, "got longer response. Check block size!");
+    }
+
+    // print only the blocks the tag sent
+    int got = (resp.length - 3) / (blocksize + 1);
+    if (got < (blockcnt + 1)) {
+        if (((resp.length - 3) % (blocksize + 1)) != 0) {
+            PrintAndLogEx(WARNING, "got shorter response. Check block size!");
+        } else {
+            PrintAndLogEx(WARNING, "got shorter response, %d of %d pages", got, blockcnt + 1);
+        }
+
+        if (got == 0) {
+            return PM3_EWRONGANSWER;
+        }
+        blockcnt = got - 1;
     }
 
     // skip status byte
@@ -3085,8 +3184,18 @@ static int CmdHF15Readblock(const char *Cmd) {
     CLIParserFree(ctx);
 
     // sanity checks
+    if ((blockno < 0) || (blockno > 255)) {
+        PrintAndLogEx(WARNING, "Page number must be 0-255, got ( " _RED_("%d") " )", blockno);
+        return PM3_EINVARG;
+    }
+
     if ((scan + unaddressed + uid_set) > 1) {
         PrintAndLogEx(WARNING, "Select only one option /scan/unaddress/uid");
+        return PM3_EINVARG;
+    }
+
+    if (uidlen != 0 && uidlen != ISO15693_UID_LENGTH) {
+        PrintAndLogEx(WARNING, "UID must include 8 hex bytes, got ( " _RED_("%i") " )", uidlen);
         return PM3_EINVARG;
     }
 
@@ -3103,8 +3212,8 @@ static int CmdHF15Readblock(const char *Cmd) {
         add_option = true;
     }
 
-    // request to be sent to device/card
-    uint16_t approxlen = 2 + ISO15693_UID_LENGTH + 1 + 2;
+    // request to be sent to device/card (room for READ_MULTI_BLOCK fallback: blk + cnt)
+    uint16_t approxlen = 2 + ISO15693_UID_LENGTH + 2 + 2;
     iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
     if (packet == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
@@ -3141,10 +3250,11 @@ static int CmdHF15Readblock(const char *Cmd) {
 
     // block no
     packet->raw[packet->rawlen++] = (uint8_t)blockno;
+    uint16_t cmdlen = packet->rawlen;
 
     // crc
-    AddCrc15(packet->raw,  packet->rawlen);
-    packet->rawlen += 2;
+    AddCrc15(packet->raw, cmdlen);
+    packet->rawlen = cmdlen + 2;
 
     packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE);
     if (fast) {
@@ -3153,18 +3263,51 @@ static int CmdHF15Readblock(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
-    free(packet);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
+        free(packet);
         PrintAndLogEx(DEBUG, "iso15693 timeout");
         return PM3_ETIMEOUT;
     }
+
+    if (resp.status == PM3_ETEAROFF) {
+        free(packet);
+        return resp.status;
+    }
+
+    // EM4034 lacks READ_SINGLE_BLOCK; fall back to READ_MULTI_BLOCK (1 block)
+    if (iso15_is_cmd_not_supported(resp.data.asBytes, resp.length)) {
+        PrintAndLogEx(INFO, "Tag does not support READ_SINGLE_BLOCK, falling back to READ_MULTI_BLOCK");
+        packet->raw[1] = ISO15693_READ_MULTI_BLOCK;
+        packet->raw[cmdlen++] = 0; // 0 = 1 block
+        AddCrc15(packet->raw, cmdlen);
+        packet->rawlen = cmdlen + 2;
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
+        if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
+            free(packet);
+            PrintAndLogEx(DEBUG, "iso15693 timeout");
+            return PM3_ETIMEOUT;
+        }
+    }
+    free(packet);
 
     ISO15_ERROR_HANDLING_RESPONSE
 
     uint8_t *d = resp.data.asBytes;
 
-    ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length)
+    int res = iso15_info_error_handling(d, resp.length);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    // flags, lock status, data, CRC
+    int datalen = resp.length - 4;
+    if (datalen < 1) {
+        PrintAndLogEx(FAILED, "iso15693 block answer too short ( %d bytes )", resp.length);
+        return PM3_EWRONGANSWER;
+    }
 
     // print response
     char lck[16] = {0};
@@ -3178,28 +3321,14 @@ static int CmdHF15Readblock(const char *Cmd) {
 
     uint8_t offset = 2;
 
-    bool got_blocksize8 = (resp.length > 8);
-
-    if (got_blocksize8)  {
-        PrintAndLogEx(INFO, "#%3d        |lck| ascii", blockno);
-        PrintAndLogEx(INFO, "------------+---+------");
-        PrintAndLogEx(INFO, "%s| %s | %s"
-                      , sprint_hex(d + offset, 8)
-                      , lck
-                      , sprint_ascii(d + offset, 8)
-                     );
-        PrintAndLogEx(INFO, "------------+---+------");
-
-    } else {
-        PrintAndLogEx(INFO, "#%3d        |lck| ascii", blockno);
-        PrintAndLogEx(INFO, "------------+---+------");
-        PrintAndLogEx(INFO, "%s| %s | %s"
-                      , sprint_hex(d + offset, 4)
-                      , lck
-                      , sprint_ascii(d + offset, 4)
-                     );
-        PrintAndLogEx(INFO, "------------+---+------");
-    }
+    PrintAndLogEx(INFO, "#%3d        |lck| ascii", blockno);
+    PrintAndLogEx(INFO, "------------+---+------");
+    PrintAndLogEx(INFO, "%s| %s | %s"
+                  , sprint_hex(d + offset, datalen)
+                  , lck
+                  , sprint_ascii(d + offset, datalen)
+                 );
+    PrintAndLogEx(INFO, "------------+---+------");
 
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
@@ -3277,7 +3406,7 @@ static int CmdHF15Write(const char *Cmd) {
     void *argtable[6 + 4] = {0};
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_int1("b", "blk", "<dec>", "page number (0-255)");
-    argtable[arglen++] = arg_str1("d", "data", "<hex>", "data, 4 bytes");
+    argtable[arglen++] = arg_str1("d", "data", "<hex>", "data, 4 or 8 bytes");
     argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3301,8 +3430,18 @@ static int CmdHF15Write(const char *Cmd) {
     CLIParserFree(ctx);
 
     // sanity checks
+    if ((blockno < 0) || (blockno > 255)) {
+        PrintAndLogEx(WARNING, "Page number must be 0-255, got ( " _RED_("%d") " )", blockno);
+        return PM3_EINVARG;
+    }
+
     if ((scan + unaddressed + uid_set) > 1) {
         PrintAndLogEx(WARNING, "Select only one option /scan/unaddress/uid");
+        return PM3_EINVARG;
+    }
+
+    if (uidlen != 0 && uidlen != ISO15693_UID_LENGTH) {
+        PrintAndLogEx(WARNING, "UID must include 8 hex bytes, got ( " _RED_("%i") " )", uidlen);
         return PM3_EINVARG;
     }
 
