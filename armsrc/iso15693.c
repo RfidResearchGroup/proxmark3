@@ -1529,9 +1529,11 @@ static int RAMFUNC Handle15693SampleFromReader(bool bit, DecodeReader_t *reader)
 //
 // Assume that we're called with the SSC (to the FPGA) and ADC path set
 // correctly.
+//
+// RAMFUNC: from flash it needs ~24 us per DMA byte, the FPGA sends one every 18.9 us
 //-----------------------------------------------------------------------------
 
-int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eof_time, bool allow_usb_interrupt) {
+int RAMFUNC GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eof_time, bool allow_usb_interrupt) {
     int samples = 0;
     bool gotFrame = false;
 
@@ -1563,8 +1565,7 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
     uint16_t poll_countdown = 0;
     uint32_t dma_start_time = GetCountSspClk() & 0xfffffff8;
 
-    // This loop has to consume one DMA byte per ~0.66 us
-    // ~31 CPU cycles at 48 MHz
+    // This loop has to consume one DMA byte per 18.9 us (8 samples at 423.75 kHz)
     // or the 512 byte circular buffer overruns
     for (;;) {
         volatile uint16_t behindBy = ((uint8_t *)FPGA_SSC_DMA_RX_Current_Address() - upTo) & (DMA_BUFFER_SIZE - 1);
@@ -1590,13 +1591,28 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
             FPGA_SSC_DMA_RX_Refresh_Single(dma->buf, DMA_BUFFER_SIZE);
         }
 
-        for (int i = 7; i >= 0; i--) {
-            if (Handle15693SampleFromReader((b >> i) & 0x01, dr)) {
-                *eof_time = dma_start_time + samples - DELAY_READER_TO_ARM; // end of EOF
-                gotFrame = true;
-                break;
+        if (b == 0xFF && dr->state <= STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF) {
+            // unmodulated carrier while waiting for a SOF, the usual byte: eight
+            // samples of 1 only move UNSYNCD to AWAIT_1ST_FALLING_EDGE_OF_SOF
+            dr->state = STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF;
+            samples += 8;
+        } else if (b == 0x00 && dr->state <= STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF) {
+            // no carrier: eight samples of 0 end in UNSYNCD from both states
+            dr->state = STATE_READER_UNSYNCD;
+            samples += 8;
+        } else if (b == 0xFF && dr->state == STATE_READER_RECEIVE_DATA_1_OUT_OF_4 && dr->sum1 == 0 && dr->posCount <= 22) {
+            // idle samples between 1-of-4 pauses only move posCount; from <= 22 it cannot pass 30
+            dr->posCount += 8;
+            samples += 8;
+        } else {
+            for (int i = 7; i >= 0; i--) {
+                if (Handle15693SampleFromReader((b >> i) & 0x01, dr)) {
+                    *eof_time = dma_start_time + samples - DELAY_READER_TO_ARM; // end of EOF
+                    gotFrame = true;
+                    break;
+                }
+                samples++;
             }
-            samples++;
         }
 
         if (gotFrame) {

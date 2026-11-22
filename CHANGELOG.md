@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 15 sim`, `hf iclass sim` - the command receiver was slower than the FPGA's samples, answers left up to 30 ms late and `hf 15 sim` was not read (@matrix)
 - Fixed `hf 15 raw` - without `-a` right after power-up or after an LF command it hung the device until the watchdog reset it (@matrix)
 - Fixed `hf 15 raw` - a frame too long for the device's send buffer overwrote the stack and halted the device, it is now refused (@matrix)
 - Fixed `hf 15 rdmulti` - the tag errors 0x0F and 0x10, as past the end of the memory, are shown instead of nothing (@matrix)
