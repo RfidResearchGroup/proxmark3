@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf topaz rdbl`, `hf topaz wrbl` - a block number above 255 was cut to 8 bits, so `--blk 256` read or wrote block 0 (@matrix)
 - Fixed `hf mf nack` - a sync period computed below 8 hung the firmware until the watchdog reset the device (@matrix)
 - Fixed `hf topaz view` - a json dump was loaded with its blocks 8 blocks apart, past the buffer, and then refused (@matrix)
 - Fixed the Topaz json dump loader - it did not check that the tag fits the buffer: a Topaz json given to a command with a smaller one, `lf hitag view` for one, overflowed it (@matrix)
