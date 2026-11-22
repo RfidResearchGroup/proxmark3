@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mfu pwdgen` - the Philips Toothbrush row had a stray column separator and sat out of line with the other rows (@pkilar)
 - Fixed `hf topaz rdbl`, `hf topaz reader`, `hf topaz info`, `hf topaz dump` - a tag answer that was missing or short was taken as read, so the UID or the blocks came out as zeros (@matrix)
 - Changed `mem spiffs remove`, `rename` and `copy` - they now report what the device ran into, instead of a bare `errno -10002`, and no longer print `Done!` when nothing happened (@iceman1001)
 - Fixed `mem spiffs remove`, `rename` and `copy` - the file name was sent with uninitialized bytes behind it, so the device looked for a name with stack garbage appended and failed with `SPIFFS_ERR_NOT_FOUND` (@iceman1001)
