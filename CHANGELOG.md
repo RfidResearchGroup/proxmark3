@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `lf hitag hts reader` / `lf hitag htu reader` - `hitag_setup_fpga()` idled for tens of ms with the reader field already up, so a tag in public (TTF) mode was mid transmission when the first command went out and never answered (@mishamyte)
+- Fixed `lf search` / `lf t55xx p1detect` - the bare 8-bit ACL anchor matched unrelated LF signals by chance, so EM4100 reads gained a bogus `Chipset... T55xx` line and Hitag 2 / Hitag S / Hitag micro were reported as T55xx instead of their real chipset (@mishamyte)
+- Fixed `lf em 410x` / `lf search` - EM410x decode could read past the end of the demod buffer (@mishamyte)
 - Fixed `hf 15 rdbl` - the tag errors 0x0F and 0x10, as past the end of the memory, are shown instead of nothing (@matrix)
 - Fixed `hf 15 rdbl` - blocks of more than 8 bytes are printed in full instead of their first 8 bytes (@matrix)
 - Fixed `hf 15 sim` - a request of flags and command only, such as an unaddressed GET SYSTEM INFORMATION, failed the CRC check and got no answer (@matrix)
