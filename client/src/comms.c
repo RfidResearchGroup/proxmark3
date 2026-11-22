@@ -30,6 +30,7 @@
 #include "util_posix.h" // msclock
 #include "util_darwin.h" // en/dis-ableNapp();
 #include "usart_defs.h"
+#include "commonutil.h"   // sprint_bitrate
 
 // #define COMMS_DEBUG
 // #define COMMS_DEBUG_RAW
@@ -970,7 +971,8 @@ int TestProxmark(pm3_device_t *dev) {
                   g_conn.em_size,
                   (g_pm3_capabilities.em_allocated) ? " ( in use )" : "");
     if (g_conn.send_via_fpc_usart) {
-        PrintAndLogEx(SUCCESS, "PM3 UART serial baudrate: " _GREEN_("%u") "\n", g_conn.uart_speed);
+        char baud[SPRINT_BITRATE_LEN];
+        PrintAndLogEx(SUCCESS, "PM3 UART serial baudrate: " _GREEN_("%s") "\n", sprint_bitrate(baud, g_conn.uart_speed));
     } else {
         int res;
         if (g_conn.send_via_local_ip) {

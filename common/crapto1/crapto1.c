@@ -19,12 +19,17 @@
 #include "bucketsort.h"
 
 #include <stdlib.h>
+#include <string.h>
+#if !defined(__arm__) || defined(__linux__) || defined(_WIN32) || defined(__APPLE__) // bare metal ARM Proxmark lacks pthreads
+#include <pthread.h>
+#endif
 #include "parity.h"
 
 
 #if !defined LOWMEM
 #define CONSTRUCTOR
 static uint8_t filterlut[0x100000];
+static uint64_t filterbits[0x100000 / 64];
 static uint8_t uc_evenparity32_lut[0x10E100A];
 
 // GUNC
@@ -37,6 +42,7 @@ static void CONSTRUCTOR init_lut(void) {
 
     for (uint32_t i = 0; i < 1 << 20; ++i) {
         filterlut[i] = filter(i);
+        filterbits[i >> 6] |= (uint64_t)filter(i) << (i & 63);
     }
 
     for (uint32_t i = 0; i < 0x10E100A; i++) {
@@ -56,6 +62,51 @@ __declspec(allocate(".CRT$XCG")) PF f[] = { init_lut };
 #define filter(x) (filterlut[(x) & 0xfffff])
 #define even32(x) (uc_evenparity32_lut[(x)])
 #endif
+
+#if !defined LOWMEM
+// filter of the 64 states x << 6 | 0..63, as bits
+#define filter_word(x) (filterbits[(x)])
+// filter of states x, x | 1 (x even), as 2 bits
+#define filter_pair(x) ((filterbits[((x) & 0xfffff) >> 6] >> ((x) & 62)) & 3)
+#else
+static uint64_t filter_word(uint32_t x) {
+    uint64_t w = 0;
+    for (uint32_t i = 0; i < 64; i++)
+        w |= (uint64_t)filter(x << 6 | i) << i;
+    return w;
+}
+#define filter_pair(x) (filter((x) & ~1) | filter((x) | 1) << 1)
+#endif
+
+#if defined __GNUC__
+#define ctz64(x) __builtin_ctzll(x)
+#else
+static inline int ctz64(uint64_t x) {
+    int n = 0;
+    while (!(x & 1)) {
+        x >>= 1;
+        n++;
+    }
+    return n;
+}
+#endif
+
+#define DUAL_THREADS 4
+#define DUAL_CHUNK   4096
+
+/** spread2
+ * every bit of x doubled
+ */
+static inline uint64_t spread2(uint32_t x) {
+    uint64_t v = x;
+    v = (v | v << 16) & 0x0000FFFF0000FFFFULL;
+    v = (v | v << 8) & 0x00FF00FF00FF00FFULL;
+    v = (v | v << 4) & 0x0F0F0F0F0F0F0F0FULL;
+    v = (v | v << 2) & 0x3333333333333333ULL;
+    v = (v | v << 1) & 0x5555555555555555ULL;
+    return v | v << 1;
+}
+
 
 /** update_contribution helper,
  *  calculates the partial linear feedback contributions and puts in MSB
@@ -108,17 +159,164 @@ static inline void extend_table_simple(uint32_t *tbl, uint32_t **end, int bit) {
         }
     }
 }
+/** extend_table_dual
+ * as extend_table, each new state must also give bit2 when xored with z
+ */
+static inline void extend_table_dual(uint32_t *tbl, uint32_t **end, int bit, int bit2, uint32_t z, int m1, int m2, uint32_t in) {
+    in <<= 24;
+    for (*tbl <<= 1; tbl <= *end; *++tbl <<= 1) {
+        uint8_t ok0 = (filter(*tbl) == bit) && (filter(*tbl ^ z) == bit2);
+        uint8_t ok1 = (filter(*tbl | 1) == bit) && (filter((*tbl | 1) ^ z) == bit2);
+        if (ok0 && ok1) {                   // insert
+            *++*end = tbl[1];
+            tbl[1] = tbl[0] | 1;
+            update_contribution(tbl, m1, m2);
+            *tbl++ ^= in;
+            update_contribution(tbl, m1, m2);
+            *tbl ^= in;
+        } else if (ok0 || ok1) {            // replace
+            *tbl |= ok1;
+            update_contribution(tbl, m1, m2);
+            *tbl ^= in;
+        } else {                            // drop
+            *tbl-- = *(*end)--;
+        }
+    }
+}
+
+/** counting_sort_intersect
+ * as bucket_sort_intersect, stable counting sort through one contiguous tmp area
+ */
+static void counting_sort_intersect(uint32_t *estart, uint32_t *estop, uint32_t *ostart, uint32_t *ostop,
+                                    bucket_info_t *bucket_info, uint32_t *tmp) {
+    uint32_t cnt[2][0x100] = {{0}};
+    uint32_t *start[2] = {estart, ostart}, *stop[2] = {estop, ostop};
+
+    for (int i = 0; i < 2; i++)
+        for (uint32_t *p = start[i]; p <= stop[i]; p++)
+            cnt[i][*p >> 24]++;
+
+    for (int i = 0; i < 2; i++) {
+        uint32_t off[0x100], n = 0, nb = 0;
+        for (uint32_t j = 0; j <= 0xff; j++) {
+            if (cnt[0][j] && cnt[1][j]) {
+                bucket_info->bucket_info[i][nb].head = start[i] + n;
+                off[j] = n;
+                n += cnt[i][j];
+                bucket_info->bucket_info[i][nb].tail = start[i] + n - 1;
+                nb++;
+            } else {
+                off[j] = UINT32_MAX;
+            }
+        }
+        for (uint32_t *p = start[i]; p <= stop[i]; p++) {
+            uint32_t o = off[*p >> 24];
+            if (o != UINT32_MAX) {
+                tmp[o] = *p;
+                off[*p >> 24]++;
+            }
+        }
+        memcpy(start[i], tmp, n * sizeof(uint32_t));
+        bucket_info->numbuckets = nb;
+    }
+}
+
+#define DUAL_SCRATCH (1 << 21)
+
+// short segments skip the 256 bucket sweep
+#define SMALL_INTERSECT 64
+
+/** extend_table_fast
+ * as extend_table, branch free into dst. Returns the new count.
+ * The two children differ only in bit 0, so one parity pair derives the other.
+ */
+static uint32_t extend_table_fast(const uint32_t *src, uint32_t n, uint32_t *dst, uint32_t bit,
+                                  uint32_t m1, uint32_t m2, uint32_t in) {
+    in <<= 24;
+    uint32_t d1 = m1 & 1, d2 = m2 & 1;
+    uint32_t cnt = 0;
+    for (uint32_t k = 0; k < n; k++) {
+        uint32_t v = src[k] << 1;
+        uint32_t m = filter_pair(v) ^ ((bit - 1) & 3);
+        uint32_t top = (v >> 25) << 2;
+        uint32_t low = v & 0xffffff;
+        uint32_t p = even32(v & m1), q = even32(v & m2);
+        dst[cnt] = (((top | p << 1 | q) << 24) | low) ^ in;
+        cnt += m & 1;
+        dst[cnt] = (((top | (p ^ d1) << 1 | (q ^ d2)) << 24) | (low | 1)) ^ in;
+        cnt += m >> 1;
+    }
+    return cnt;
+}
+
+/** sort_small_msb
+ * insertion sort by the contribution byte, for short lists
+ */
+static void sort_small_msb(uint32_t *a, uint32_t n) {
+    for (uint32_t i = 1; i < n; i++) {
+        uint32_t v = a[i], k = v >> 24, j = i;
+        while (j && (a[j - 1] >> 24) > k) {
+            a[j] = a[j - 1];
+            j--;
+        }
+        a[j] = v;
+    }
+}
+
+/** small_intersect
+ * as counting_sort_intersect for short lists, without the 256 bucket sweep.
+ * Groups each list by contribution byte in place and keeps the common bytes.
+ */
+static void small_intersect(uint32_t *e, uint32_t ne, uint32_t *o, uint32_t no, bucket_info_t *bucket_info) {
+    sort_small_msb(e, ne);
+    sort_small_msb(o, no);
+
+    uint32_t i = 0, j = 0, nb = 0;
+    while (i < ne && j < no) {
+        uint32_t be = e[i] >> 24, bo = o[j] >> 24;
+        if (be < bo) {
+            while (i < ne && (e[i] >> 24) == be) i++;
+            continue;
+        }
+        if (bo < be) {
+            while (j < no && (o[j] >> 24) == bo) j++;
+            continue;
+        }
+        uint32_t i0 = i, j0 = j;
+        while (i < ne && (e[i] >> 24) == be) i++;
+        while (j < no && (o[j] >> 24) == bo) j++;
+        bucket_info->bucket_info[0][nb].head = e + i0;
+        bucket_info->bucket_info[0][nb].tail = e + i - 1;
+        bucket_info->bucket_info[1][nb].head = o + j0;
+        bucket_info->bucket_info[1][nb].tail = o + j - 1;
+        nb++;
+    }
+    bucket_info->numbuckets = nb;
+}
+
+// extra recover state, NULL for the plain single keystream path
+typedef struct {
+    const uint32_t *z;              // difference trajectory, NULL when there is no second keystream
+    uint32_t *tmp;                  // counting sort scratch
+    struct Crypto1State *sl_end;    // statelist limit
+} dual_rec_t;
+
 /** recover
  * recursively narrow down the search space, 4 bits of keystream at a time
  */
 static struct Crypto1State *
-recover(uint32_t *o_head, uint32_t *o_tail, uint32_t oks,
-        uint32_t *e_head, uint32_t *e_tail, uint32_t eks, int rem,
-        struct Crypto1State *sl, uint32_t in, bucket_array_t bucket) {
+recover(uint32_t *o_head, uint32_t *o_tail, uint32_t oks, uint32_t aoks,
+        uint32_t *e_head, uint32_t *e_tail, uint32_t eks, uint32_t aeks, int rem,
+        struct Crypto1State *sl, uint32_t in, bucket_array_t bucket, const dual_rec_t *d) {
     bucket_info_t bucket_info;
+
+    if (d && sl >= d->sl_end)
+        return sl;
 
     if (rem == -1) {
         for (uint32_t *e = e_head; e <= e_tail; ++e) {
+            if (d && sl + (o_tail - o_head + 1) >= d->sl_end)
+                return d->sl_end;
             *e = *e << 1 ^ (even32(*e & LF_POLY_EVEN)) ^ (!!(in & 4));
             for (uint32_t *o = o_head; o <= o_tail; ++o, ++sl) {
                 sl->even = *o;
@@ -129,30 +327,175 @@ recover(uint32_t *o_head, uint32_t *o_tail, uint32_t oks,
         return sl;
     }
 
-    for (uint32_t i = 0; i < 4 && rem--; i++) {
-        oks >>= 1;
-        eks >>= 1;
-        in >>= 2;
-        extend_table(o_head, &o_tail, oks & 1, LF_POLY_EVEN << 1 | 1, LF_POLY_ODD << 1, 0);
-        if (o_head > o_tail)
-            return sl;
+    uint32_t n_o = o_tail - o_head + 1, n_e = e_tail - e_head + 1;
+    if (d && d->z == NULL && n_o <= DUAL_SCRATCH / 2 && n_e <= DUAL_SCRATCH / 2) {
+        // single keystream: branch free levels, ping ponging with the scratch area
+        uint32_t *osrc = o_head, *odst = d->tmp;
+        uint32_t *esrc = e_head, *edst = d->tmp + DUAL_SCRATCH;
+        for (uint32_t i = 0; i < 4 && rem--; i++) {
+            oks >>= 1;
+            eks >>= 1;
+            in >>= 2;
+            n_o = extend_table_fast(osrc, n_o, odst, oks & 1, LF_POLY_EVEN << 1 | 1, LF_POLY_ODD << 1, 0);
+            uint32_t *t = osrc;
+            osrc = odst;
+            odst = t;
+            if (n_o == 0)
+                return sl;
 
-        extend_table(e_head, &e_tail, eks & 1, LF_POLY_ODD, LF_POLY_EVEN << 1 | 1, in & 3);
-        if (e_head > e_tail)
-            return sl;
+            n_e = extend_table_fast(esrc, n_e, edst, eks & 1, LF_POLY_ODD, LF_POLY_EVEN << 1 | 1, in & 3);
+            t = esrc;
+            esrc = edst;
+            edst = t;
+            if (n_e == 0)
+                return sl;
+
+            if (n_o > DUAL_SCRATCH / 2 || n_e > DUAL_SCRATCH / 2)
+                return sl;
+        }
+        if (osrc != o_head)
+            memcpy(o_head, osrc, n_o * sizeof(uint32_t));
+        if (esrc != e_head)
+            memcpy(e_head, esrc, n_e * sizeof(uint32_t));
+        o_tail = o_head + n_o - 1;
+        e_tail = e_head + n_e - 1;
+    } else {
+        for (uint32_t i = 0; i < 4 && rem--; i++) {
+            oks >>= 1;
+            eks >>= 1;
+            in >>= 2;
+            if (d && d->z) {
+                // keystream bit times 31 - 2 * rem (odd) and 30 - 2 * rem (even)
+                aoks >>= 1;
+                aeks >>= 1;
+                extend_table_dual(o_head, &o_tail, oks & 1, aoks & 1, d->z[31 - 2 * rem], LF_POLY_EVEN << 1 | 1, LF_POLY_ODD << 1, 0);
+                if (o_head > o_tail)
+                    return sl;
+
+                extend_table_dual(e_head, &e_tail, eks & 1, aeks & 1, d->z[30 - 2 * rem], LF_POLY_ODD, LF_POLY_EVEN << 1 | 1, in & 3);
+                if (e_head > e_tail)
+                    return sl;
+                continue;
+            }
+            extend_table(o_head, &o_tail, oks & 1, LF_POLY_EVEN << 1 | 1, LF_POLY_ODD << 1, 0);
+            if (o_head > o_tail)
+                return sl;
+
+            extend_table(e_head, &e_tail, eks & 1, LF_POLY_ODD, LF_POLY_EVEN << 1 | 1, in & 3);
+            if (e_head > e_tail)
+                return sl;
+        }
     }
 
-    bucket_sort_intersect(e_head, e_tail, o_head, o_tail, &bucket_info, bucket);
+    if (d && (uint32_t)(e_tail - e_head) < SMALL_INTERSECT && (uint32_t)(o_tail - o_head) < SMALL_INTERSECT)
+        small_intersect(e_head, e_tail - e_head + 1, o_head, o_tail - o_head + 1, &bucket_info);
+    else if (d)
+        counting_sort_intersect(e_head, e_tail, o_head, o_tail, &bucket_info, d->tmp);
+    else
+        bucket_sort_intersect(e_head, e_tail, o_head, o_tail, &bucket_info, bucket);
 
     for (int i = bucket_info.numbuckets - 1; i >= 0; i--) {
-        sl = recover(bucket_info.bucket_info[1][i].head, bucket_info.bucket_info[1][i].tail, oks,
-                     bucket_info.bucket_info[0][i].head, bucket_info.bucket_info[0][i].tail, eks,
-                     rem, sl, in, bucket);
+        sl = recover(bucket_info.bucket_info[1][i].head, bucket_info.bucket_info[1][i].tail, oks, aoks,
+                     bucket_info.bucket_info[0][i].head, bucket_info.bucket_info[0][i].tail, eks, aeks,
+                     rem, sl, in, bucket, d);
     }
 
     return sl;
 }
 
+
+
+/** single_children
+ * 2 bit mask of the states v, v | 1 (v even) giving keystream bit k
+ */
+static inline uint32_t single_children(uint32_t v, uint32_t k) {
+    return filter_pair(v) ^ ((k - 1) & 3);
+}
+
+typedef struct {
+    const uint8_t *kb;
+    uint32_t in;    // byte swapped in << 1
+} single_ctx_t;
+
+typedef struct {
+    const single_ctx_t *c;
+    uint32_t *buf;
+    uint32_t *out;
+    uint32_t n;
+} single_sink_t;
+
+/** single_expand
+ * as dual_expand against one keystream
+ */
+static void single_expand(single_sink_t *sk, const uint32_t *src, uint32_t n, int t, int d) {
+    const single_ctx_t *c = sk->c;
+    if (t > 17) {
+        memcpy(sk->out + sk->n, src, n * sizeof(uint32_t));
+        sk->n += n;
+        return;
+    }
+    if (2 * n > DUAL_CHUNK) {
+        single_expand(sk, src, n / 2, t, d);
+        single_expand(sk, src + n / 2, n - n / 2, t, d);
+        return;
+    }
+    uint32_t *dst = sk->buf + (d + 1) * DUAL_CHUNK;
+    uint32_t cnt = 0;
+    uint32_t k = c->kb[t];
+    int contrib = t >= 10;
+    uint32_t m1 = (t & 1) ? (LF_POLY_EVEN << 1 | 1) : LF_POLY_ODD;
+    uint32_t m2 = (t & 1) ? (LF_POLY_ODD << 1) : (LF_POLY_EVEN << 1 | 1);
+    uint32_t in = (!contrib || (t & 1)) ? 0 : ((c->in >> (t - 8)) & 3) << 24;
+    for (uint32_t j = 0; j < n; j++) {
+        uint32_t v = src[j] << 1;
+        uint32_t m = single_children(v, k);
+        uint32_t w0 = v, w1 = v | 1;
+        if (contrib) {
+            update_contribution(&w0, m1, m2);
+            update_contribution(&w1, m1, m2);
+            w0 ^= in;
+            w1 ^= in;
+        }
+        dst[cnt] = w0;
+        cnt += m & 1;
+        dst[cnt] = w1;
+        cnt += m >> 1;
+    }
+    if (cnt)
+        single_expand(sk, dst, cnt, t + 2, d + 1);
+}
+
+/** single_build
+ * all states for keystream bit times t..17, appended to out.
+ * Times t and t + 2 as bitmasks, 64 states per word, the rest per state.
+ */
+static uint32_t single_build(uint32_t *out, uint32_t *buf, int t, const single_ctx_t *c) {
+    single_sink_t sk = {c, buf, out, 0};
+    uint64_t inv0 = c->kb[t] ? 0 : ~0ULL, inv1 = c->kb[t + 2] ? 0 : ~0ULL;
+    uint32_t n = 0;
+    for (uint32_t x = 0; x < 1 << 14; x++) {
+        uint64_t v = filter_word(x) ^ inv0;
+        if (!v)
+            continue;
+        uint32_t base = (x << 1) & 0x3fff;
+        uint64_t m[2];
+        m[0] = (uint32_t)v ? spread2((uint32_t)v) & (filter_word(base) ^ inv1) : 0;
+        m[1] = (v >> 32) ? spread2((uint32_t)(v >> 32)) & (filter_word(base + 1) ^ inv1) : 0;
+        for (uint32_t u = 0; u < 2; u++) {
+            while (m[u]) {
+                buf[n++] = x << 7 | u << 6 | ctz64(m[u]);
+                m[u] &= m[u] - 1;
+            }
+        }
+        if (n > DUAL_CHUNK - 128) {
+            single_expand(&sk, buf, n, t + 4, 0);
+            n = 0;
+        }
+    }
+    if (n)
+        single_expand(&sk, buf, n, t + 4, 0);
+    return sk.n;
+}
 
 #if !defined(__arm__) || defined(__linux__) || defined(_WIN32) || defined(__APPLE__) // bare metal ARM Proxmark lacks malloc()/free()
 /** lfsr_recovery
@@ -161,10 +504,11 @@ recover(uint32_t *o_head, uint32_t *o_tail, uint32_t oks,
  * that was fed into the lfsr at the time the keystream was generated
  */
 struct Crypto1State *lfsr_recovery32(uint32_t ks2, uint32_t in) {
-    struct Crypto1State *statelist;
-    uint32_t *odd_head = 0, *odd_tail = 0, oks = 0;
-    uint32_t *even_head = 0, *even_tail = 0, eks = 0;
-    register int i;
+    struct Crypto1State *statelist, *sl;
+    uint32_t *odd_head, *even_head, *bucket_mem;
+    uint32_t oks = 0, eks = 0;
+    uint8_t kb[18];
+    int i;
 
     // split the keystream into an odd and even part
     for (i = 31; i >= 0; i -= 2)
@@ -172,59 +516,349 @@ struct Crypto1State *lfsr_recovery32(uint32_t ks2, uint32_t in) {
     for (i = 30; i >= 0; i -= 2)
         eks = eks << 1 | BEBIT(ks2, i);
 
-    odd_head = odd_tail = calloc(1, sizeof(uint32_t) << 21);
-    even_head = even_tail = calloc(1, sizeof(uint32_t) << 21);
-    statelist =  calloc(1, sizeof(struct Crypto1State) << 18);
-    if (!odd_tail-- || !even_tail-- || !statelist) {
+    for (i = 0; i < 18; i++)
+        kb[i] = BEBIT(ks2, i);
+
+    statelist = calloc(1 << 18, sizeof(struct Crypto1State));
+    // one block above the mmap threshold, so calloc gets fresh zero pages without a memset
+    odd_head = calloc((1 << 21) * 2 + (1 << 23), sizeof(uint32_t));
+    if (!statelist || !odd_head) {
         free(statelist);
-        statelist = 0;
-        goto out;
+        free(odd_head);
+        return NULL;
+    }
+    even_head = odd_head + (1 << 21);
+    bucket_mem = even_head + (1 << 21);
+
+    in = (in >> 16 & 0xff) | (in << 16) | (in & 0xff00); // Byte swapping
+    single_ctx_t ctx = {kb, in << 1};
+
+    // states which could have generated the first 18 bits of the keystream
+    uint32_t no = single_build(odd_head, bucket_mem, 1, &ctx);
+    uint32_t ne = single_build(even_head, bucket_mem, 0, &ctx);
+
+    if (no && ne) {
+        // 14 bits to go to recover 32 bits in total
+        dual_rec_t rec = {NULL, bucket_mem, statelist + (1 << 18) - 1};
+        bucket_array_t bucket = {{{0}}};
+        bucket_info_t bucket_info;
+        counting_sort_intersect(even_head, even_head + ne - 1, odd_head, odd_head + no - 1, &bucket_info, bucket_mem);
+
+        sl = statelist;
+        for (i = bucket_info.numbuckets - 1; i >= 0; i--) {
+            sl = recover(bucket_info.bucket_info[1][i].head, bucket_info.bucket_info[1][i].tail, oks >> 8, 0,
+                         bucket_info.bucket_info[0][i].head, bucket_info.bucket_info[0][i].tail, eks >> 8, 0,
+                         7, sl, (in << 1) >> 8, bucket, &rec);
+        }
+        sl->odd = sl->even = 0;
     }
 
-    statelist->odd = statelist->even = 0;
+    free(odd_head);
+    return statelist;
+}
 
-    // allocate memory for out of place bucket_sort
-    bucket_array_t bucket;
+typedef struct {
+    const uint8_t *kb1, *kb2;
+    const uint32_t *z;
+    uint32_t in;    // byte swapped in1 << 1
+    int s;          // first keystream bit time used
+} dual_ctx_t;
 
-    for (i = 0; i < 2; i++) {
-        for (uint32_t j = 0; j <= 0xff; j++) {
-            bucket[i][j].head = calloc(1, sizeof(uint32_t) << 14);
-            if (!bucket[i][j].head) {
-                goto out;
+/** dual_children
+ * 2 bit mask of states v, v | 1 (v even) giving k1, and k2 when xored with z
+ */
+static inline uint32_t dual_children(uint32_t v, uint32_t z, uint32_t k1, uint32_t k2) {
+    uint32_t m1 = filter_pair(v);
+    uint32_t m2 = filter_pair(v ^ z);
+    if (z & 1)
+        m2 = (m2 >> 1) | ((m2 & 1) << 1);
+    m1 ^= (k1 - 1) & 3;
+    m2 ^= (k2 - 1) & 3;
+    return m1 & m2;
+}
+
+typedef struct {
+    const dual_ctx_t *c;
+    uint32_t *buf;      // one DUAL_CHUNK buffer per level
+    uint32_t *out;
+    uint32_t n;
+} dual_sink_t;
+
+/** dual_expand
+ * extend n states through bit times t, t + 2, .. s + 17 and append the survivors to the sink.
+ * Branch free, one level at a time, halved when a level could overflow its buffer.
+ */
+static void dual_expand(dual_sink_t *sk, const uint32_t *src, uint32_t n, int t, int d) {
+    const dual_ctx_t *c = sk->c;
+    if (t > c->s + 17) {
+        memcpy(sk->out + sk->n, src, n * sizeof(uint32_t));
+        sk->n += n;
+        return;
+    }
+    if (2 * n > DUAL_CHUNK) {
+        dual_expand(sk, src, n / 2, t, d);
+        dual_expand(sk, src + n / 2, n - n / 2, t, d);
+        return;
+    }
+    uint32_t *dst = sk->buf + (d + 1) * DUAL_CHUNK;
+    uint32_t cnt = 0;
+    uint32_t z = c->z[t], k1 = c->kb1[t], k2 = c->kb2[t];
+    int contrib = t >= c->s + 10;
+    uint32_t m1 = (t & 1) ? (LF_POLY_EVEN << 1 | 1) : LF_POLY_ODD;
+    uint32_t m2 = (t & 1) ? (LF_POLY_ODD << 1) : (LF_POLY_EVEN << 1 | 1);
+    uint32_t in = (!contrib || (t & 1)) ? 0 : ((c->in >> (t - 8)) & 3) << 24;
+    for (uint32_t k = 0; k < n; k++) {
+        uint32_t v = src[k] << 1;
+        uint32_t m = dual_children(v, z, k1, k2);
+        uint32_t w0 = v, w1 = v | 1;
+        if (contrib) {
+            update_contribution(&w0, m1, m2);
+            update_contribution(&w1, m1, m2);
+            w0 ^= in;
+            w1 ^= in;
+        }
+        dst[cnt] = w0;
+        cnt += m & 1;
+        dst[cnt] = w1;
+        cnt += m >> 1;
+    }
+    if (cnt)
+        dual_expand(sk, dst, cnt, t + 2, d + 1);
+}
+
+/** xor_permute64
+ * bit k of the result is bit k ^ x of w
+ */
+static inline uint64_t xor_permute64(uint64_t w, uint32_t x) {
+    static const uint64_t m[6] = {
+        0x5555555555555555ULL, 0x3333333333333333ULL, 0x0F0F0F0F0F0F0F0FULL,
+        0x00FF00FF00FF00FFULL, 0x0000FFFF0000FFFFULL, 0x00000000FFFFFFFFULL
+    };
+    for (int k = 0; k < 6; k++) {
+        if (x >> k & 1) {
+            w = ((w & m[k]) << (1 << k)) | ((w >> (1 << k)) & m[k]);
+        }
+    }
+    return w;
+}
+
+/** dual_word
+ * bit i set when state w << 6 | i gives keystream bit time t for both inputs
+ */
+static inline uint64_t dual_word(uint32_t w, int t, const dual_ctx_t *c) {
+    uint32_t z = c->z[t];
+    uint64_t inv1 = c->kb1[t] ? 0 : ~0ULL, inv2 = c->kb2[t] ? 0 : ~0ULL;
+    return (filter_word(w) ^ inv1) & (xor_permute64(filter_word(w ^ (z >> 6)), z & 63) ^ inv2);
+}
+
+/** dual_build
+ * all states for bit times t..s+17 from 20 bit states in [lo << 6, hi << 6), appended to out.
+ * Times t and t + 2 as bitmasks, 64 states per word, the rest per state.
+ */
+static uint32_t dual_build(uint32_t *out, uint32_t *buf, int t, uint32_t lo, uint32_t hi, const dual_ctx_t *c) {
+    dual_sink_t sk = {c, buf, out, 0};
+    uint32_t n = 0;
+    for (uint32_t x = lo; x < hi; x++) {
+        uint64_t v = dual_word(x, t, c);
+        if (!v)
+            continue;
+        uint32_t base = (x << 1) & 0x3fff;
+        uint64_t m[2];
+        m[0] = (uint32_t)v ? spread2((uint32_t)v) & dual_word(base, t + 2, c) : 0;
+        m[1] = (v >> 32) ? spread2((uint32_t)(v >> 32)) & dual_word(base + 1, t + 2, c) : 0;
+        for (uint32_t u = 0; u < 2; u++) {
+            while (m[u]) {
+                buf[n++] = x << 7 | u << 6 | ctz64(m[u]);
+                m[u] &= m[u] - 1;
             }
+        }
+        if (n > DUAL_CHUNK - 128) {
+            dual_expand(&sk, buf, n, t + 4, 0);
+            n = 0;
+        }
+    }
+    if (n)
+        dual_expand(&sk, buf, n, t + 4, 0);
+    return sk.n;
+}
+
+typedef struct {
+    uint32_t lo, hi;
+    uint32_t *odd, *even, *buf;
+    uint32_t no, ne;
+    const dual_ctx_t *c;
+} dual_job_t;
+
+static void *dual_worker(void *arg) {
+    dual_job_t *j = arg;
+    j->no = dual_build(j->odd, j->buf, j->c->s + 1, j->lo, j->hi, j->c);
+    j->ne = dual_build(j->even, j->buf, j->c->s, j->lo, j->hi, j->c);
+    return NULL;
+}
+
+/** dual_match
+ * P(filter(x ^ z) == k2 | filter(x) == k1), exact over the filter's nibble functions
+ */
+static double dual_match(uint32_t z, uint32_t k1, uint32_t k2) {
+    static const uint32_t fn[5] = {0xf22c0, 0x6c9c0, 0x3c8b0, 0x1e458, 0x0d938};
+    uint32_t cnt[5][2][2] = {{{0}}};
+    for (int i = 0; i < 5; i++) {
+        uint32_t zi = (z >> (4 * i)) & 0xf;
+        for (uint32_t n = 0; n < 16; n++)
+            cnt[i][!!(fn[i] >> n & (16 >> i))][!!(fn[i] >> (n ^ zi) & (16 >> i))]++;
+    }
+    double hit = 0, all = 0;
+    for (uint32_t a = 0; a < 32; a++) {
+        for (uint32_t b = 0; b < 32; b++) {
+            if (BIT(0xEC57E80A, a) != k1)
+                continue;
+            double w = 1;
+            for (int i = 0; i < 5; i++)
+                w *= cnt[i][a >> (4 - i) & 1][b >> (4 - i) & 1];
+            all += w;
+            if (BIT(0xEC57E80A, b) == k2)
+                hit += w;
+        }
+    }
+    return all ? hit / all : 0;
+}
+
+/** lfsr_recovery32_dual
+ * as lfsr_recovery32(ks1, in1), keeping only states that also produce ks2
+ * when in2 is fed from the same key instead. States are after feeding in1.
+ * Same key set as intersecting two lfsr_recovery32 runs, far fewer candidates.
+ */
+struct Crypto1State *lfsr_recovery32_dual(uint32_t ks1, uint32_t in1, uint32_t ks2, uint32_t in2) {
+    struct Crypto1State *statelist, *sl;
+    uint32_t *odd_head, *even_head, *bucket_mem;
+    uint32_t oks = 0, aoks = 0, eks = 0, aeks = 0;
+    uint32_t z[32];
+    uint8_t kb1[32], kb2[32];
+    double pm[32];
+    int i;
+
+    // fb=0 is linear: the in2 trajectory is the in1 one xor the one of in1 ^ in2 from zero state
+    struct Crypto1State d = {0, 0};
+    for (i = 0; i < 32; i++) {
+        z[i] = d.odd & 0xfffff;
+        crypto1_bit(&d, BEBIT(in1 ^ in2, i), 0);
+        kb1[i] = BEBIT(ks1, i);
+        kb2[i] = BEBIT(ks2, i);
+    }
+
+    statelist = calloc(1 << 18, sizeof(struct Crypto1State));
+    if (!statelist)
+        return NULL;
+
+    // pruning per bit time, a zero means no key can give both keystreams
+    for (i = 0; i < 32; i++) {
+        pm[i] = dual_match(z[i], kb1[i], kb2[i]);
+        if (pm[i] == 0)
+            return statelist;
+    }
+
+    // latest start with ~2^(16 + s) * prod(p) <= 2^12 candidates left to verify
+    int st = 12;
+    for (; st > 0; st -= 2) {
+        double e = (double)(1u << (16 + st));
+        for (i = st; i < 32; i++)
+            e *= pm[i];
+        if (e <= 4096)
+            break;
+    }
+
+    // split the keystreams into an odd and even part
+    for (i = 31; i >= 0; i -= 2) {
+        oks = oks << 1 | BEBIT(ks1, i);
+        aoks = aoks << 1 | BEBIT(ks2, i);
+    }
+    for (i = 30; i >= 0; i -= 2) {
+        eks = eks << 1 | BEBIT(ks1, i);
+        aeks = aeks << 1 | BEBIT(ks2, i);
+    }
+
+    // one block above the mmap threshold, so calloc gets fresh zero pages without a memset
+    odd_head = calloc((1 << 21) * 2 + (1 << 23), sizeof(uint32_t));
+    if (!odd_head) {
+        free(statelist);
+        return NULL;
+    }
+    even_head = odd_head + (1 << 21);
+    bucket_mem = even_head + (1 << 21);
+
+    uint32_t in = (in1 >> 16 & 0xff) | (in1 << 16) | (in1 & 0xff00); // Byte swapping
+
+retry:
+    sl = statelist;
+    dual_ctx_t ctx = {kb1, kb2, z, in << 1, st};
+
+    // states giving keystream bit times s..s+17, per x range and table segment
+    pthread_t tid[DUAL_THREADS];
+    dual_job_t job[DUAL_THREADS];
+    bool started[DUAL_THREADS] = {false};
+    for (i = 0; i < DUAL_THREADS; i++) {
+        job[i] = (dual_job_t) {
+            (1 << 14) * i / DUAL_THREADS, (1 << 14) * (i + 1) / DUAL_THREADS,
+            odd_head + i * ((1 << 21) / DUAL_THREADS), even_head + i * ((1 << 21) / DUAL_THREADS),
+            bucket_mem + i * ((1 << 23) / DUAL_THREADS), 0, 0, &ctx
+        };
+        if (i)
+            started[i] = (pthread_create(&tid[i], NULL, dual_worker, &job[i]) == 0);
+    }
+    dual_worker(&job[0]);
+    uint32_t no = job[0].no, ne = job[0].ne;
+    for (i = 1; i < DUAL_THREADS; i++) {
+        if (started[i])
+            pthread_join(tid[i], NULL);
+        else
+            dual_worker(&job[i]);
+        memmove(odd_head + no, job[i].odd, job[i].no * sizeof(uint32_t));
+        memmove(even_head + ne, job[i].even, job[i].ne * sizeof(uint32_t));
+        no += job[i].no;
+        ne += job[i].ne;
+    }
+
+    if (no && ne) {
+        dual_rec_t rec = {z, bucket_mem, statelist + (1 << 18) - 1};
+        bucket_array_t bucket = {{{0}}};
+        bucket_info_t bucket_info;
+        counting_sort_intersect(even_head, even_head + ne - 1, odd_head, odd_head + no - 1, &bucket_info, bucket_mem);
+
+        int sh = st / 2 + 8;
+        for (i = bucket_info.numbuckets - 1; i >= 0; i--) {
+            sl = recover(bucket_info.bucket_info[1][i].head, bucket_info.bucket_info[1][i].tail, oks >> sh, aoks >> sh,
+                         bucket_info.bucket_info[0][i].head, bucket_info.bucket_info[0][i].tail, eks >> sh, aeks >> sh,
+                         7 - st / 2, sl, (in << 1) >> (st + 8), bucket, &rec);
+        }
+
+        // statelist full, start from bit time 0 where the tables are subsets of lfsr_recovery32's
+        if (sl >= rec.sl_end && st) {
+            st = 0;
+            goto retry;
         }
     }
 
-    // initialize statelists: add all possible states which would result into the rightmost 2 bits of the keystream
-    uint8_t oks_b1 = oks & 1;
-    uint8_t eks_b1 = eks & 1;
-    register uint8_t tbl_filter;
-    for (i = 1 << 20; i >= 0; --i) {
-        tbl_filter = filter(i);
-        if (tbl_filter == oks_b1)
-            *++odd_tail = i;
-        if (tbl_filter == eks_b1)
-            *++even_tail = i;
+    // check the skipped bit times, first on ks1 while rolling back
+    struct Crypto1State *w = st ? statelist : sl;
+    for (struct Crypto1State *p = statelist; st && p < sl; p++) {
+        struct Crypto1State k1 = *p;
+        int b = 31;
+        for (; b >= st; b--)
+            lfsr_rollback_bit(&k1, BEBIT(in1, b), 0);
+        for (; b >= 0; b--)
+            if (lfsr_rollback_bit(&k1, BEBIT(in1, b), 0) != kb1[b])
+                break;
+        if (b >= 0)
+            continue;
+        k1 = *p;
+        lfsr_rollback_word(&k1, in1, 0);
+        struct Crypto1State k2 = k1;
+        if (crypto1_word(&k1, in1, 0) == ks1 && crypto1_word(&k2, in2, 0) == ks2)
+            *w++ = *p;
     }
+    w->odd = w->even = 0;
 
-    // extend the statelists. Look at the next 8 Bits of the keystream (4 Bit each odd and even):
-    for (i = 0; i < 4; i++) {
-        extend_table_simple(odd_head,  &odd_tail, (oks >>= 1) & 1);
-        extend_table_simple(even_head, &even_tail, (eks >>= 1) & 1);
-    }
-
-    // the statelists now contain all states which could have generated the last 10 Bits of the keystream.
-    // 22 bits to go to recover 32 bits in total. From now on, we need to take the "in"
-    // parameter into account.
-    in = (in >> 16 & 0xff) | (in << 16) | (in & 0xff00); // Byte swapping
-    recover(odd_head, odd_tail, oks, even_head, even_tail, eks, 11, statelist, in << 1, bucket);
-
-out:
-    for (i = 0; i < 2; i++)
-        for (uint32_t j = 0; j <= 0xff; j++)
-            free(bucket[i][j].head);
     free(odd_head);
-    free(even_head);
     return statelist;
 }
 

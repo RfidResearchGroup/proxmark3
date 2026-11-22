@@ -199,7 +199,13 @@ cd proxmark3
 ## Compile the project
 ^[Top](#top)
 
-Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
+First, `./configure_environment.sh` checks that the Homebrew or MacPorts packages
+above are all in place, tells you which `PLATFORM` you are about to build for, and
+names the missing ones as a `brew install` / `sudo port install` line. See the
+[Linux installation instructions](Linux-Installation-Instructions.md#check-your-build-environment)
+for what it covers; the device access checks in it are Linux only and get skipped.
+
+Then you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
 From there, you can follow the original compilation instructions. 
 _Take extra note to instructions if you don't have a Proxmark3 RDV4 device._
 

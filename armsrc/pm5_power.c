@@ -227,15 +227,17 @@ static uint32_t pm5_power_permille(uint32_t ms, uint32_t uptime_ms) {
     return (uint32_t)(((uint64_t)ms * 1000) / uptime_ms);
 }
 
-void pm5_power_print_status(void) {
+void pm5_power_print_status(const char *extra) {
+    DbpString(_CYAN_("Power"));
+    Dbprintf("  Power save.......... %s%s", s_powersave ? _GREEN_("on") : _YELLOW_("off"), extra);
+}
+
+void pm5_power_print_stats(void) {
     uint32_t uptime = GetTickCount();
     uint32_t low = pm5_power_permille(s_low_ms, uptime);
     uint32_t asleep = pm5_power_permille(s_asleep_ms, uptime);
 
-    DbpString(_CYAN_("Power"));
-    Dbprintf("  Power-save idle..... %s", s_powersave ? _GREEN_("enabled") : _YELLOW_("disabled"));
     DbpString("  Core clock.......... 288 MHz active, 48 MHz idle ( PLL off, LDO 1.1 V )");
-    Dbprintf("  Uptime.............. %u ms", uptime);
-    Dbprintf("  Idle at 48 MHz...... %u.%u %% ( %u downclocks )", low / 10, low % 10, s_downclocks);
-    Dbprintf("  Halted in WFI....... %u.%u %% ( %u sleeps )", asleep / 10, asleep % 10, s_sleeps);
+    Dbprintf("  Uptime.............. %u s, idle at 48 MHz %u.%u %% (%u downclocks), WFI %u.%u %% (%u sleeps)",
+             uptime / 1000, low / 10, low % 10, s_downclocks, asleep / 10, asleep % 10, s_sleeps);
 }

@@ -50,7 +50,7 @@
 
 #define CLIGetHexWithReturn(ctx, paramnum, data, datalen) if (CLIParamHexToBuf(arg_get_str((ctx), (paramnum)), (data), sizeof((data)), (datalen))) {CLIParserFree((ctx)); return PM3_ESOFT;}
 
-#define CLIGetStrWithReturn(ctx, paramnum, data, datalen) if (CLIParamStrToBuf(arg_get_str((ctx), (paramnum)), (data), (*datalen), (datalen))) {CLIParserFree((ctx)); return PM3_ESOFT;}
+#define CLIGetStrWithReturn(ctx, paramnum, data, datalen) if (CLIParamStrToBuf(arg_get_str((ctx), (paramnum)), (data), (*datalen) + 1, (datalen))) {CLIParserFree((ctx)); return PM3_ESOFT;}
 
 #define CLIGetOptionListWithReturn(ctx, paramnum, option_array, option_array_len, value) if (CLIGetOptionList(arg_get_str((ctx), (paramnum)), (option_array), (option_array_len), (value))) {CLIParserFree((ctx)); return PM3_ESOFT;}
 

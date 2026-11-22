@@ -39,7 +39,7 @@ void CodeIso15693AsReader(const uint8_t *cmd, int n);
 void CodeIso15693AsTag(const uint8_t *cmd, size_t len);
 
 void TransmitTo15693Reader(const uint8_t *cmd, size_t len, uint32_t *start_time, uint32_t slot_time, bool slow);
-int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eof_time, bool allow_usb_interrupt);
+int RAMFUNC GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eof_time, bool allow_usb_interrupt);
 void TransmitTo15693Tag(const uint8_t *cmd, int len, uint32_t *start_time, bool shallow_mod);
 int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeout, uint32_t *eof_time, bool fsk, bool recv_speed, uint16_t *resp_len);
 
@@ -50,7 +50,7 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size); // simulate an ISO1
 void BruteforceIso15693Afi(uint32_t flags); // find an AFI of a tag
 void SendRawCommand15693(iso15_raw_cmd_t *packet); // send arbitrary commands from CLI
 
-void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool iclass);
+void RAMFUNC SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool iclass);
 
 int SendDataTag(const uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t *recv,
                 uint16_t max_recv_len, uint32_t start_time, uint16_t timeout, uint32_t *eof_time, uint16_t *resp_len);

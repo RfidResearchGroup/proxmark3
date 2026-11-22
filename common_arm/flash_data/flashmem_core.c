@@ -5,6 +5,7 @@
 
 #ifndef AS_BOOTROM
 #include "dbprint.h"
+#include "commonutil.h"   // sprint_bytes
 #endif // AS_BOOTROM
 
 // default is 0, first set when FlashInit() call.
@@ -165,7 +166,8 @@ void Flashmem_print_status(void) {
                 );
     }
 
-    Dbprintf("  Memory size............. " _YELLOW_("%d Kb") " ( %d pages * 64k )", spi_flash_pages64k * 64, spi_flash_pages64k);
+    char size[SPRINT_BYTES_LEN];
+    Dbprintf("  Memory size............. " _YELLOW_("%s") " ( %d pages * 64 KB )", sprint_bytes(size, spi_flash_pages64k * 64 * 1024), spi_flash_pages64k);
 
     uint8_t uid[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     Flash_UniqueID(uid);

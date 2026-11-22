@@ -59,9 +59,10 @@ int ble_connect(const char *mac, uint16_t chr_uuid16, ble_conn_t *conn);
 int ble_send(ble_conn_t *conn, const uint8_t *data, size_t len);
 
 // Receive up to maxlen payload bytes (drains leftover first, then waits up to
-// timeout_ms for notifications). *out_len set to bytes copied. Returns 0 on
-// success (including 0 bytes on timeout), negative on error/disconnect.
-int ble_recv(ble_conn_t *conn, uint8_t *buf, size_t maxlen, size_t *out_len, int timeout_ms);
+// timeout_ms for notifications; returns early with 0 bytes when wake_fd (if >= 0)
+// becomes readable before any byte arrived). *out_len set to bytes copied. Returns 0
+// on success (including 0 bytes on timeout), negative on error/disconnect.
+int ble_recv(ble_conn_t *conn, uint8_t *buf, size_t maxlen, size_t *out_len, int timeout_ms, int wake_fd);
 
 void ble_close(ble_conn_t *conn);
 

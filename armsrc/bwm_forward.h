@@ -58,8 +58,9 @@
 int bwm_fwd_writebuffer_sync(const uint8_t *data, size_t len);
 
 // De-framed read: returns up to `len` raw NG bytes recovered from inbound
-// DATA_FORWARD frames, blocking-with-timeout exactly like usart_read_ng().
+// DATA_FORWARD frames, blocking-with-timeout like usart_read_ng().
 // Drop-in for usart_read_ng() as the receive_ng() read callback.
+#define BWM_RX_GAP_MS   500   // max wait for the next byte of a frame (BLE: per connection event)
 uint32_t bwm_read_ng(uint8_t *data, size_t len);
 
 // >0 when de-framed bytes are waiting (gate for receive_ng()). With per-host
@@ -99,5 +100,9 @@ void bwm_fwd_link_seed_ble(bool connected);
 // `target`; false (left at the boot baud) if no ESP answered or the switch
 // could not be verified. Call once after bwm_uart_init().
 bool bwm_fwd_negotiate_baud(uint32_t target);
+
+// Before an AT32 reset: bring the ESP back to BWM_UART_BAUD_TARGET, which the
+// bootrom and older OS builds can find (the ESP keeps its baud across our reset).
+void bwm_fwd_prepare_reset(void);
 
 #endif // __BWM_FORWARD_H

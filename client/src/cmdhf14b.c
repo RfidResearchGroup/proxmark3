@@ -2390,9 +2390,7 @@ static int CmdHF14BDump(const char *Cmd) {
 
         if (total == 0) {
             PrintAndLogEx(WARNING, "No data could be read directly or via SFI.");
-            PrintAndLogEx(HINT, "Hint: tag requires application-specific APDUs.");
-            PrintAndLogEx(HINT, "      Try `hf 14b apdu -d 00A4040007D2760000850101 00` to select NDEF,");
-            PrintAndLogEx(HINT, "      or `hf 14b ndefread` if the tag holds NFC content.");
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 14b ndefread") "` if the tag holds NFC content");
             free(data);
             return PM3_ESOFT;
         }
@@ -3346,7 +3344,7 @@ int CmdHF14BNdefRead(const char *Cmd) {
     }
 
     if (verbose == false) {
-        PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf 14b ndefread -v`") " for more details"); // So far this prints absolutely nothing
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 14b ndefread -v") "` for more details"); // So far this prints absolutely nothing
     }
 
 

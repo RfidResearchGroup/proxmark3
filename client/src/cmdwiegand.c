@@ -374,7 +374,7 @@ static int CmdWiegandDowngrade(const char *Cmd) {
 
     int blen = 0;
     char bin[121] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)bin, sizeof(bin) - 1, &blen);
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)bin, sizeof(bin), &blen);
 
     int plen = 0;
     uint8_t pacs[16] = {0};

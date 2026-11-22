@@ -7526,7 +7526,7 @@ static int CmdHFFelicaDiscoverNodes(const char *Cmd) {
     uint32_t retry_count = arg_get_u32_def(ctx, 1, FELICA_DISCOVER_DEFAULT_RETRY_COUNT);
     char method_str[64] = {0};
     int method_len = 0;
-    int method_str_status = CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)method_str, sizeof(method_str) - 1, &method_len);
+    int method_str_status = CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)method_str, sizeof(method_str), &method_len);
     uint8_t idm[8] = {0};
     int ilen = 0;
     int res = CLIParamHexToBuf(arg_get_str(ctx, 3), idm, sizeof(idm), &ilen);

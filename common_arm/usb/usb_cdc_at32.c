@@ -387,6 +387,11 @@ void usb_enable(void) {
     usbd_init(&otg_core_struct, USB_FULL_SPEED_CORE_ID, USB_ID, &cdc_class_handler, &cdc_desc_handler); // init usb
 
 #ifndef AS_BOOTROM
+    // usbd_core_init() unmasks start of frame, a 1 kHz interrupt the CDC class
+    // has no handler for.  The HF reader loops move one SSC word per bit-time
+    // through a one word SPI buffer and lose bits whenever it lands mid frame
+    usb_global_interrupt_enable(udev->usb_reg, USB_OTG_SOF_INT, FALSE);
+
     usb_read_ng_init(&g_usb_read_ng_config);
 #endif
 }

@@ -398,7 +398,7 @@ int clipper_parser_parse(const desfire_dump_t *dump) {
     clipper_print_refills(app);
 
     if (any == false) {
-        PrintAndLogEx(HINT, "Hint: the Clipper files are free to read, try `" _YELLOW_("hf mfdes dump --no-auth") "`");
+        PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mfdes dump --no-auth") "`");
     }
     return PM3_SUCCESS;
 }

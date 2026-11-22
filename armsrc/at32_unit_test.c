@@ -1338,6 +1338,8 @@ void EXINT9_5_IRQHandler(void) {
 
 #include "dbprint.h"
 
+// pm5_cep.c provides these with WITH_CEP
+#ifndef WITH_CEP
 bool cep_spi_data_available(void) {
     uint8_t len_header[2] = {0x00};
     for (size_t i = 0; i < sizeof(len_header); ++i) {
@@ -1395,6 +1397,7 @@ int cep_spi_write_sync(uint8_t *data, size_t len) {
 
     return PM3_SUCCESS;
 }
+#endif // WITH_CEP
 
 void test_f0_com_by_usb_cep(void) {
 #define TEST_F0_PRINT      0

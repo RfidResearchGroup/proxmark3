@@ -65,18 +65,33 @@ static int att_write_pdu(int fd, const uint8_t *pdu, size_t len) {
     return (n == (ssize_t)len) ? 0 : -1;
 }
 
-// Wait up to timeout_ms for one PDU; returns length (>0), 0 on timeout, -1 error.
-static int att_read_pdu(int fd, uint8_t *buf, size_t maxlen, int timeout_ms) {
+// Wait up to timeout_ms for one PDU; returns length (>0), 0 on timeout or when
+// wake_fd (if >= 0) became readable first, -1 error.
+static int att_read_pdu_wake(int fd, int wake_fd, uint8_t *buf, size_t maxlen, int timeout_ms) {
     fd_set rfds;
     FD_ZERO(&rfds);
     FD_SET(fd, &rfds);
+    int maxfd = fd;
+    if (wake_fd >= 0) {
+        FD_SET(wake_fd, &rfds);
+        if (wake_fd > maxfd) maxfd = wake_fd;
+    }
     struct timeval tv = { .tv_sec = timeout_ms / 1000, .tv_usec = (timeout_ms % 1000) * 1000 };
-    int r = select(fd + 1, &rfds, NULL, NULL, &tv);
+    int r = select(maxfd + 1, &rfds, NULL, NULL, &tv);
     if (r < 0) return -1;
     if (r == 0) return 0;
+    if ((wake_fd >= 0) && FD_ISSET(wake_fd, &rfds)) {
+        uint8_t drain[64];
+        while (read(wake_fd, drain, sizeof(drain)) > 0) { };
+        if (FD_ISSET(fd, &rfds) == 0) return 0;    // only a send waiting
+    }
     ssize_t n = recv(fd, buf, maxlen, 0);
     if (n <= 0) return -1;
     return (int)n;
+}
+
+static int att_read_pdu(int fd, uint8_t *buf, size_t maxlen, int timeout_ms) {
+    return att_read_pdu_wake(fd, -1, buf, maxlen, timeout_ms);
 }
 
 // Send a request PDU and read PDUs until we get one starting with want_op (or an
@@ -498,7 +513,7 @@ int ble_send(ble_conn_t *conn, const uint8_t *data, size_t len) {
     return 0;
 }
 
-int ble_recv(ble_conn_t *conn, uint8_t *buf, size_t maxlen, size_t *out_len, int timeout_ms) {
+int ble_recv(ble_conn_t *conn, uint8_t *buf, size_t maxlen, size_t *out_len, int timeout_ms, int wake_fd) {
     if (conn->fd < 0) return -1;
     size_t got = 0;
 
@@ -522,7 +537,8 @@ int ble_recv(ble_conn_t *conn, uint8_t *buf, size_t maxlen, size_t *out_len, int
     // frames still return immediately.
     uint8_t pdu[3 + 517];
     for (;;) {
-        int n = att_read_pdu(conn->fd, pdu, sizeof(pdu), timeout_ms);
+        // wake only while no part of a frame is in hand (same rule as uart_receive)
+        int n = att_read_pdu_wake(conn->fd, (got == 0) ? wake_fd : -1, pdu, sizeof(pdu), timeout_ms);
         if (n < 0) { *out_len = got; return (got > 0) ? 0 : -1; }
         if (n == 0) break;                                  // real timeout / no more
         if ((pdu[0] != ATT_OP_HANDLE_NOTIFY && pdu[0] != ATT_OP_HANDLE_INDICATE) || n < 3)

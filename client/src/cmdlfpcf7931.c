@@ -364,7 +364,7 @@ static void pcf7931_print_blocks(const pcf7931_read_t *rd, int user_rfb) {
             }
         }
         PrintAndLogEx(INFO, "-------+-------------------------------------------------");
-        PrintAndLogEx(HINT, "Hint: blocks are in transmission order, use `" _YELLOW_("--rfb <n>") "` to number them");
+        PrintAndLogEx(HINT, "Hint: Blocks are in transmission order, use `" _YELLOW_("--rfb <n>") "` to number them");
         return;
     }
 
@@ -566,7 +566,8 @@ static int CmdLFPCF7931Write(const char *Cmd) {
             PrintAndLogEx(FAILED, "Tag sent block %u back without the new byte... " _RED_("%s"), block, sprint_hex(resp.data.asBytes, PCF7931_BLOCK_SIZE));
         } else {
             PrintAndLogEx(FAILED, "Write not confirmed by the tag");
-            PrintAndLogEx(HINT, "Hint: wrong password, write protected block or init delay off. Check with " _YELLOW_("`lf pcf7931 reader`"));
+            PrintAndLogEx(HINT, "Hint: Wrong password, write protected block or init delay off");
+            PrintAndLogEx(HINT, "      Try `" _YELLOW_("lf pcf7931 reader") "`");
         }
         return PM3_EFAILED;
     }
@@ -574,7 +575,7 @@ static int CmdLFPCF7931Write(const char *Cmd) {
     if (has_block) {
         PrintAndLogEx(SUCCESS, "Write confirmed, block %u now... " _GREEN_("%s"), block, sprint_hex(resp.data.asBytes, PCF7931_BLOCK_SIZE));
     } else {
-        PrintAndLogEx(SUCCESS, "Write confirmed by tag timing (read after write block not decoded)");
+        PrintAndLogEx(SUCCESS, "Write confirmed by tag timing");
     }
     return PM3_SUCCESS;
 }

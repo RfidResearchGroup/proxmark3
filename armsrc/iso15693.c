@@ -209,6 +209,7 @@ static int get_uid_slix(uint32_t start_time, uint32_t *eof_time, uint8_t *uid) {
     SendDataTag(cmd, sizeof(cmd), false, true, answer, ISO15693_MAX_RESPONSE_LENGTH, start_time, ISO15693_READER_TIMEOUT, eof_time, &recvlen);
 
     if (recvlen != 12) {
+        BigBuf_free_keep_EM();
         return PM3_ETIMEOUT;
     }
 
@@ -221,7 +222,7 @@ static int get_uid_slix(uint32_t start_time, uint32_t *eof_time, uint8_t *uid) {
     uid[6] = answer[8];
     uid[7] = answer[9];
 
-    BigBuf_free();
+    BigBuf_free_keep_EM();
     return PM3_SUCCESS;
 }
 
@@ -505,7 +506,12 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
 
         case STATE_TAG_SOF_HIGH: {
             // waiting for 10 times high. Take average over the last 8
-            if (amplitude > tag->threshold_sof) {
+            if (tag->threshold_sof < NOISE_THRESHOLD && amplitude > 4 * tag->threshold_sof) {
+                // the edge taken was noise-sized and this one is far above it: the SOF starts here
+                tag->posCount = 1;
+                tag->threshold_sof = amplitude / 2;
+                tag->threshold_half = 0;
+            } else if (amplitude > tag->threshold_sof) {
                 tag->posCount++;
                 if (tag->posCount > 2) {
                     tag->threshold_half += amplitude; // keep track of average high value
@@ -516,7 +522,8 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
                 }
             } else { // high phase was too short
                 tag->signal_activity = true; // signal detected but SOF failed (possible collision)
-                tag->posCount = 1;
+                // noise: the low phase it started from still counts
+                tag->posCount = 11;
                 tag->previous_amplitude = amplitude;
                 tag->state = STATE_TAG_SOF_LOW;
             }
@@ -525,7 +532,8 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
 
         case STATE_TAG_SOF_HIGH_END: {
             // check for falling edge
-            if (tag->posCount == (recv_speed ? 13 : 52) && amplitude < tag->threshold_sof) {
+            // the bits start at the first low sample: a slow rising edge leaves the high phase a sample short
+            if (tag->posCount >= (recv_speed ? 11 : 44) && amplitude < tag->threshold_sof) {
                 tag->lastBit = SOF_PART1;  // detected 1st part of SOF (12 samples low and 12 samples high)
                 tag->shiftReg = 0;
                 tag->bitCount = 0;
@@ -581,14 +589,14 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
                         tag->shiftReg |= 0x80;
                         tag->bitCount++;
                         if (tag->bitCount == 8) {
-                            tag->output[tag->len] = tag->shiftReg & 0xFF;
-                            tag->len++;
-
-                            if (tag->len > tag->max_len) {
-                                // buffer overflow, give up
+                            if (tag->len >= tag->max_len) {
+                                // buffer overflow, give up: a len past max_len tells the caller
+                                tag->len = tag->max_len + 1;
                                 LED_C_OFF();
                                 return true;
                             }
+                            tag->output[tag->len] = tag->shiftReg & 0xFF;
+                            tag->len++;
                             tag->bitCount = 0;
                             tag->shiftReg = 0;
                         }
@@ -606,16 +614,14 @@ static RAMFUNC int Handle15693SamplesFromTag(uint16_t amplitude, DecodeTag_t *ta
                         tag->bitCount++;
 
                         if (tag->bitCount == 8) {
+                            if (tag->len >= tag->max_len) {
+                                // buffer overflow, give up: a len past max_len tells the caller
+                                tag->len = tag->max_len + 1;
+                                LED_C_OFF();
+                                return true;
+                            }
                             tag->output[tag->len] = (tag->shiftReg & 0xFF);
                             tag->len++;
-
-                            if (tag->len > tag->max_len) {
-                                // buffer overflow, give up
-                                tag->posCount = 0;
-                                tag->previous_amplitude = amplitude;
-                                tag->state = STATE_TAG_SOF_LOW;
-                                LED_C_OFF();
-                            }
                             tag->bitCount = 0;
                             tag->shiftReg = 0;
                         }
@@ -860,12 +866,13 @@ static int RAMFUNC Handle15693FSKSamplesFromTag(uint8_t freq, DecodeTagFSK_t *De
                     DecodeTag->shiftReg |= 0x80;
                     DecodeTag->bitCount++;
                     if (DecodeTag->bitCount == 8) {
-                        DecodeTag->output[DecodeTag->len++] = DecodeTag->shiftReg;
-                        if (DecodeTag->len > DecodeTag->max_len) {
-                            // buffer overflow, give up
+                        if (DecodeTag->len >= DecodeTag->max_len) {
+                            // buffer overflow, give up: a len past max_len tells the caller
+                            DecodeTag->len = DecodeTag->max_len + 1;
                             LED_C_OFF();
                             return true;
                         }
+                        DecodeTag->output[DecodeTag->len++] = DecodeTag->shiftReg;
                         DecodeTag->bitCount = 0;
                         DecodeTag->shiftReg = 0;
                     }
@@ -884,12 +891,13 @@ static int RAMFUNC Handle15693FSKSamplesFromTag(uint8_t freq, DecodeTagFSK_t *De
                 DecodeTag->shiftReg |= 0x80;
                 DecodeTag->bitCount++;
                 if (DecodeTag->bitCount == 8) {
-                    DecodeTag->output[DecodeTag->len++] = DecodeTag->shiftReg;
-                    if (DecodeTag->len > DecodeTag->max_len) {
-                        // buffer overflow, give up
+                    if (DecodeTag->len >= DecodeTag->max_len) {
+                        // buffer overflow, give up: a len past max_len tells the caller
+                        DecodeTag->len = DecodeTag->max_len + 1;
                         LED_C_OFF();
                         return true;
                     }
+                    DecodeTag->output[DecodeTag->len++] = DecodeTag->shiftReg;
                     DecodeTag->bitCount = 0;
                     DecodeTag->shiftReg = 0;
                 }
@@ -931,12 +939,13 @@ static int RAMFUNC Handle15693FSKSamplesFromTag(uint8_t freq, DecodeTagFSK_t *De
                     DecodeTag->shiftReg >>= 1;
                     DecodeTag->bitCount++;
                     if (DecodeTag->bitCount == 8) {
-                        DecodeTag->output[DecodeTag->len++] = DecodeTag->shiftReg;
-                        if (DecodeTag->len > DecodeTag->max_len) {
-                            // buffer overflow, give up
+                        if (DecodeTag->len >= DecodeTag->max_len) {
+                            // buffer overflow, give up: a len past max_len tells the caller
+                            DecodeTag->len = DecodeTag->max_len + 1;
                             LED_C_OFF();
                             return true;
                         }
+                        DecodeTag->output[DecodeTag->len++] = DecodeTag->shiftReg;
                         DecodeTag->bitCount = 0;
                         DecodeTag->shiftReg = 0;
                     }
@@ -954,12 +963,13 @@ static int RAMFUNC Handle15693FSKSamplesFromTag(uint8_t freq, DecodeTagFSK_t *De
                 DecodeTag->shiftReg >>= 1;
                 DecodeTag->bitCount++;
                 if (DecodeTag->bitCount == 8) {
-                    DecodeTag->output[DecodeTag->len++] = DecodeTag->shiftReg;
-                    if (DecodeTag->len > DecodeTag->max_len) {
-                        // buffer overflow, give up
+                    if (DecodeTag->len >= DecodeTag->max_len) {
+                        // buffer overflow, give up: a len past max_len tells the caller
+                        DecodeTag->len = DecodeTag->max_len + 1;
                         LED_C_OFF();
                         return true;
                     }
+                    DecodeTag->output[DecodeTag->len++] = DecodeTag->shiftReg;
                     DecodeTag->bitCount = 0;
                     DecodeTag->shiftReg = 0;
                 }
@@ -1519,9 +1529,11 @@ static int RAMFUNC Handle15693SampleFromReader(bool bit, DecodeReader_t *reader)
 //
 // Assume that we're called with the SSC (to the FPGA) and ADC path set
 // correctly.
+//
+// RAMFUNC: from flash it needs ~24 us per DMA byte, the FPGA sends one every 18.9 us
 //-----------------------------------------------------------------------------
 
-int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eof_time, bool allow_usb_interrupt) {
+int RAMFUNC GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eof_time, bool allow_usb_interrupt) {
     int samples = 0;
     bool gotFrame = false;
 
@@ -1553,8 +1565,7 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
     uint16_t poll_countdown = 0;
     uint32_t dma_start_time = GetCountSspClk() & 0xfffffff8;
 
-    // This loop has to consume one DMA byte per ~0.66 us
-    // ~31 CPU cycles at 48 MHz
+    // This loop has to consume one DMA byte per 18.9 us (8 samples at 423.75 kHz)
     // or the 512 byte circular buffer overruns
     for (;;) {
         volatile uint16_t behindBy = ((uint8_t *)FPGA_SSC_DMA_RX_Current_Address() - upTo) & (DMA_BUFFER_SIZE - 1);
@@ -1580,13 +1591,28 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
             FPGA_SSC_DMA_RX_Refresh_Single(dma->buf, DMA_BUFFER_SIZE);
         }
 
-        for (int i = 7; i >= 0; i--) {
-            if (Handle15693SampleFromReader((b >> i) & 0x01, dr)) {
-                *eof_time = dma_start_time + samples - DELAY_READER_TO_ARM; // end of EOF
-                gotFrame = true;
-                break;
+        if (b == 0xFF && dr->state <= STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF) {
+            // unmodulated carrier while waiting for a SOF, the usual byte: eight
+            // samples of 1 only move UNSYNCD to AWAIT_1ST_FALLING_EDGE_OF_SOF
+            dr->state = STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF;
+            samples += 8;
+        } else if (b == 0x00 && dr->state <= STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF) {
+            // no carrier: eight samples of 0 end in UNSYNCD from both states
+            dr->state = STATE_READER_UNSYNCD;
+            samples += 8;
+        } else if (b == 0xFF && dr->state == STATE_READER_RECEIVE_DATA_1_OUT_OF_4 && dr->sum1 == 0 && dr->posCount <= 22) {
+            // idle samples between 1-of-4 pauses only move posCount; from <= 22 it cannot pass 30
+            dr->posCount += 8;
+            samples += 8;
+        } else {
+            for (int i = 7; i >= 0; i--) {
+                if (Handle15693SampleFromReader((b >> i) & 0x01, dr)) {
+                    *eof_time = dma_start_time + samples - DELAY_READER_TO_ARM; // end of EOF
+                    gotFrame = true;
+                    break;
+                }
+                samples++;
             }
-            samples++;
         }
 
         if (gotFrame) {
@@ -1636,9 +1662,9 @@ void AcquireRawAdcSamplesIso15693(void) {
 
     LEDsoff();
     DbpString("Starting to acquire data...");
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
+    FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF_15);
 
-    BigBuf_free();
+    BigBuf_free_keep_EM();
     clear_trace();
 
     // Start from off (no field generated)
@@ -1696,7 +1722,8 @@ void AcquireRawAdcSamplesIso15693(void) {
     LEDsoff();
 }
 
-void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool iclass) {
+// RAMFUNC and the carrier shortcut below keep up with the 211.9k samples/s the FPGA sends (from flash: 77%)
+void RAMFUNC SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool iclass) {
 
     LEDsoff();
     LED_A_ON();
@@ -1801,8 +1828,13 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
         if (tag_is_active == false) {
 
             int extra_8s = 1;
-            if (Handle15693SampleFromReader((sniffdata & 0x02) >> 1, &dreader) ||
-                    (++extra_8s && Handle15693SampleFromReader(sniffdata & 0x01, &dreader))) {
+            if ((sniffdata & 0x03) == 0x03 && dreader.state <= STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF) {
+                // unmodulated carrier while waiting for a SOF, the usual pair of samples: two
+                // samples of 1 only move UNSYNCD to AWAIT_1ST_FALLING_EDGE_OF_SOF
+                dreader.state = STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF;
+                reader_is_active = false;
+            } else if (Handle15693SampleFromReader((sniffdata & 0x02) >> 1, &dreader) ||
+                       (++extra_8s && Handle15693SampleFromReader(sniffdata & 0x01, &dreader))) {
 
                 if (dreader.byteCount > 0) {
                     // sof/eof_times are in ssp_clk, which is 13.56MHz / 4
@@ -1846,13 +1878,15 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
                         eof_time -= (8 * 16); // needed 8 additional samples to confirm single SOF (iCLASS)
                     }
 
+                    // a len past max_len marks an overflow, the buffer holds max_len bytes
+                    uint16_t len = MIN(dtag.len, dtag.max_len);
                     uint32_t sof_time = eof_time
-                                        - dtag.len * 1024 // time for byte transfers (4096/fc / 4)
+                                        - len * 1024      // time for byte transfers (4096/fc / 4)
                                         - 512             // time for SOF transfer (2048/fc / 4)
                                         - (dtag.lastBit != SOF_PART2 ? 512 : 0); // time for EOF transfer (2048/fc / 4)
 
                     // sof/eof_times * 4 here to bring from ssp_clk freq to RF carrier freq
-                    LogTrace_ISO15693(dtag.output, dtag.len, (sof_time * 4), (eof_time * 4), NULL, false);
+                    LogTrace_ISO15693(dtag.output, len, (sof_time * 4), (eof_time * 4), NULL, false);
 
                     // And ready to receive another response.
                     DecodeTagReset(&dtag);
@@ -1879,13 +1913,15 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
                             eof_time -= (8 * 16); // needed 8 additional samples to confirm single SOF (iCLASS)
                         }
 
+                        // a len past max_len marks an overflow, the buffer holds max_len bytes
+                        uint16_t len = MIN(dtagfsk.len, dtagfsk.max_len);
                         uint32_t sof_time = eof_time
-                                            - dtagfsk.len * 1016 // time for byte transfers (4064/fc / 4) - FSK is slightly different
+                                            - len * 1016         // time for byte transfers (4064/fc / 4) - FSK is slightly different
                                             - 512                // time for SOF transfer (2048/fc / 4)
                                             - (dtagfsk.lastBit != SOF ? 512 : 0); // time for EOF transfer (2048/fc / 4)
 
                         // sof/eof_times * 4 here to bring from ssp_clk freq to RF carrier freq
-                        LogTrace_ISO15693(dtagfsk.output, dtagfsk.len, (sof_time * 4), (eof_time * 4), NULL, false);
+                        LogTrace_ISO15693(dtagfsk.output, len, (sof_time * 4), (eof_time * 4), NULL, false);
                     }
 
                     DecodeTagFSKReset(&dtagfsk);
@@ -1925,7 +1961,7 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
 void Iso15693InitReader(void) {
 
     LEDsoff();
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
+    FpgaDownloadAndGo_keep_EM(FPGA_BITSTREAM_HF_15);
 
     // Start from off (no field generated)
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1976,6 +2012,13 @@ static void BuildIdentifyRequest(uint8_t *cmd) {
 // logging enabled
 int SendDataTag(const uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t *recv,
                 uint16_t max_recv_len, uint32_t start_time, uint16_t timeout, uint32_t *eof_time, uint16_t *resp_len) {
+
+    // SOF, EOF and 4 (1 out of 4) or 64 (1 out of 256) bytes per byte must fit the ToSend buffer
+    if (sendlen > ((TOSEND_BUFFER_SIZE - 2) / (speed_fast ? 4 : 64))) {
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("ISO15693 frame too long ( %d bytes )", sendlen);
+        *resp_len = 0;
+        return PM3_EOVFLOW;
+    }
 
     if (init) {
         Iso15693InitReader();
@@ -2292,6 +2335,10 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
     uint8_t nbPages = 0;
     uint8_t pwdId = 0;
 
+    // the first CRC of a type builds its table, which takes longer than the
+    // reader waits for an answer: build it now rather than on the first command
+    init_table(CRC_15693);
+
     while (exit_loop == false) {
 
         button_pressed = BUTTON_PRESS();
@@ -2339,16 +2386,19 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
             Dbhexdump(cmd_len, cmd, false);
         }
 
-        if (cmd_len < 3) {
+        // flags, command and CRC
+        if (cmd_len < 4) {
             continue;
         }
 
         // Check CRC and drop received cmd with bad CRC
         // Iceman: we should already removed bad received commands with 0x00 in the check above
-        uint16_t crc = CalculateCrc15(cmd, cmd_len - 2);
-        if (((crc & 0xff) != cmd[cmd_len - 2]) || ((crc >> 8) != cmd[cmd_len - 1])) {
+        // over the whole frame: Crc16ex() gives 0 for the two bytes of a request without parameters
+        if (CheckCrc15(cmd, cmd_len) == false) {
             if (g_dbglevel >= DBG_DEBUG) {
-                Dbprintf("CrcFail!, expected CRC=%02X%02X", crc & 0xff, crc >> 8);
+                uint8_t crc[2] = {0};
+                compute_crc(CRC_15693, cmd, cmd_len - 2, &crc[0], &crc[1]);
+                Dbprintf("CrcFail!, expected CRC=%02X%02X", crc[0], crc[1]);
             }
             continue;
         }
@@ -2924,6 +2974,14 @@ void SendRawCommand15693(iso15_raw_cmd_t *packet) {
     bool keep_field_on = ((packet->flags & ISO15_NO_DISCONNECT) == ISO15_NO_DISCONNECT);
     bool read_respone = ((packet->flags & ISO15_READ_RESPONSE) == ISO15_READ_RESPONSE);
     bool init = ((packet->flags & ISO15_CONNECT) == ISO15_CONNECT);
+
+    // without ISO15_CONNECT the reader must be up already, kept by ISO15_NO_DISCONNECT
+    if (init == false && FpgaGetCurrent() != FPGA_BITSTREAM_HF_15) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("ISO15693 reader is not active");
+        reply_ng(CMD_HF_ISO15693_COMMAND, PM3_EINIT, NULL, 0);
+        LED_A_OFF();
+        return;
+    }
 
     // Detect 16-slot inventory mode from protocol flags
     bool is_inventory = (packet->raw[0] & ISO15_REQ_INVENTORY) != 0;

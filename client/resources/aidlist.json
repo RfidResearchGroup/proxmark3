@@ -3161,6 +3161,22 @@
         ]
     },
     {
+        "AID": "A0000003820013000101",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "HID configuration card",
+        "Description": "Seen on physical HID reader configuration cards",
+        "Type": "configuration"
+    },
+    {
+        "AID": "A0000003820017000101",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "HID configuration card",
+        "Description": "Seen on physical HID reader configuration cards",
+        "Type": "configuration"
+    },
+    {
         "AID": "A0000003820021000101",
         "Vendor": "HID Global",
         "Country": "",
