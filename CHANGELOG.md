@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `mem spiffs remove`, `rename` and `copy` - they now report what the device ran into, instead of a bare `errno -10002`, and no longer print `Done!` when nothing happened (@iceman1001)
+- Fixed `mem spiffs remove`, `rename` and `copy` - the file name was sent with uninitialized bytes behind it, so the device looked for a name with stack garbage appended and failed with `SPIFFS_ERR_NOT_FOUND` (@iceman1001)
 - Fixed `hf topaz rdbl`, `hf topaz wrbl` - a block number above 255 was cut to 8 bits, so `--blk 256` read or wrote block 0 (@matrix)
 - Fixed `hf mf nack` - a sync period computed below 8 hung the firmware until the watchdog reset the device (@matrix)
 - Fixed `hf topaz view` - a json dump was loaded with its blocks 8 blocks apart, past the buffer, and then refused (@matrix)
