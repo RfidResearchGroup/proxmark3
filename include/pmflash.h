@@ -101,7 +101,20 @@ typedef struct {
 } PACKED spi_flash_t;
 
 // SPIFFS errno values the client has to name when the device reports a failed
-// write.  Mirrors armsrc/spiffs.h, which is device side only
-#define SPIFFS_ERR_FULL_RDV     (-10001)
+// operation.  Mirrors armsrc/spiffs.h, which is device side only
+#define SPIFFS_ERR_NOT_MOUNTED_RDV       (-10000)
+#define SPIFFS_ERR_FULL_RDV              (-10001)
+#define SPIFFS_ERR_NOT_FOUND_RDV         (-10002)
+#define SPIFFS_ERR_OUT_OF_FILE_DESCS_RDV (-10007)
+#define SPIFFS_ERR_NOT_WRITABLE_RDV      (-10021)
+#define SPIFFS_ERR_NOT_READABLE_RDV      (-10022)
+#define SPIFFS_ERR_CONFLICTING_NAME_RDV  (-10023)
+#define SPIFFS_ERR_NOT_CONFIGURED_RDV    (-10024)
+#define SPIFFS_ERR_NOT_A_FS_RDV          (-10025)
+#define SPIFFS_ERR_ERASE_FAIL_RDV        (-10027)
+#define SPIFFS_ERR_FILE_EXISTS_RDV       (-10030)
+#define SPIFFS_ERR_NOT_A_FILE_RDV        (-10031)
+#define SPIFFS_ERR_NAME_TOO_LONG_RDV     (-10036)
+#define SPIFFS_ERR_INTERNAL_RDV          (-10050)
 
 #endif // __PMFLASH_H

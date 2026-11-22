@@ -42,7 +42,7 @@ amiibo_tools.db =
       name = "Tom"
     },
     ["0x0101030004140902"] = {
-      name = "Zelda & Loftwing"
+      name = "Zelda and Loftwing"
     },
     ["0x04e6000100820502"] = {
       name = "Mint"
@@ -64,6 +64,15 @@ amiibo_tools.db =
     },
     ["0x0809000004350402"] = {
       name = "Big Man"
+    },
+    ["0x0807000004f70402"] = {
+      name = "Shiver - Splatoon Raiders"
+    },
+    ["0x0808000004f80402"] = {
+      name = "Frye - Splatoon Raiders"
+    },
+    ["0x0809000004f90402"] = {
+      name = "Big Man - Splatoon Raiders"
     },
     ["0x0a1d000103d40502"] = {
       name = "Frett"
@@ -293,8 +302,38 @@ amiibo_tools.db =
     ["0x0252000100fe0502"] = {
       name = "Vic"
     },
+    ["0x35050000040c0f02"] = {
+      name = "Razewing Ratha"
+    },
+    ["0x35060000040d0f02"] = {
+      name = "Ena"
+    },
+    ["0x3509000004101802"] = {
+      name = "Palico"
+    },
     ["0x35090100042b1802"] = {
       name = "Palico"
+    },
+    ["0x350b0000042d1802"] = {
+      name = "Malzeno"
+    },
+    ["0x350c000004fa0f02"] = {
+      name = "Ratha"
+    },
+    ["0x350d000004fb0f02"] = {
+      name = "Ratha V"
+    },
+    ["0x350e000004fc0f02"] = {
+      name = "Rudy"
+    },
+    ["0x3580000005062102"] = {
+      name = "Diana"
+    },
+    ["0x3540000005032002"] = {
+      name = "Grace Ashcroft"
+    },
+    ["0x3541000005042002"] = {
+      name = "Leon S. Kennedy"
     },
     ["0x000000030430ff02"] = {
       name = "Golden - Power Up Band"
@@ -395,6 +434,9 @@ amiibo_tools.db =
     ["0x0004000002620102"] = {
       name = "Rosalina"
     },
+    ["0x0004010004ea0102"] = {
+      name = "Rosalina and Lumas"
+    },
     ["0x018b000002460502"] = {
       name = "Cyrus"
     },
@@ -475,9 +517,6 @@ amiibo_tools.db =
     },
     ["0x00090000000d0002"] = {
       name = "Diddy Kong"
-    },
-    ["0x35050000040c0f02"] = {
-      name = "Razewing Ratha"
     },
     ["0x01ac0001017f0502"] = {
       name = "Zipper"
@@ -669,7 +708,7 @@ amiibo_tools.db =
       name = "Gakuto Sōgetsu"
     },
     ["0x3c80000003a40002"] = {
-      name = "Terry"
+      name = "Terry Bogard"
     },
     ["0x09c30501027c0e02"] = {
       name = "Daisy - Horse Racing"
@@ -905,6 +944,9 @@ amiibo_tools.db =
     ["0x0109000004a30902"] = {
       name = "Riju"
     },
+    ["0x010d000004a70902"] = {
+      name = "Mineru's Construct"
+    },
     ["0x0486000100fc0502"] = {
       name = "Chops"
     },
@@ -1055,6 +1097,9 @@ amiibo_tools.db =
     ["0x1f01000000270002"] = {
       name = "Meta Knight"
     },
+    ["0x1f01000004c61e03"] = {
+      name = "Meta Knight (& Shadow Star)"
+    },
     ["0x04e1000101be0502"] = {
       name = "Nibbles"
     },
@@ -1153,6 +1198,9 @@ amiibo_tools.db =
     },
     ["0x00000004043f1c02"] = {
       name = "Mario - My Mario Wooden Blocks"
+    },
+    ["0x0000000404431c02"] = {
+      name = "Mario (Melody Car) - My Mario Wooden Blocks"
     },
     ["0x07c0020000230002"] = {
       name = "Mii Gunner"
@@ -1604,11 +1652,20 @@ amiibo_tools.db =
     ["0x1f02000000280002"] = {
       name = "King Dedede"
     },
+    ["0x1f02000004c71e03"] = {
+      name = "King Dedede (& Tank Star)"
+    },
+    ["0x1f04000004ca1e03"] = {
+      name = "Chef Kawasaki (& Hop Star)"
+    },
+    ["0x1f02010004c81e03"] = {
+      name = "Noir Dedede (& Hydra)"
+    },
+    ["0x1f00010004c51e03"] = {
+      name = "Sword Kirby (& Dragoon)"
+    },
     ["0x2104000002520002"] = {
       name = "Roy"
-    },
-    ["0x350b0000042d1802"] = {
-      name = "Malzeno"
     },
     ["0x0000000003710102"] = {
       name = "Mario - Wedding"
@@ -1829,8 +1886,17 @@ amiibo_tools.db =
     ["0x0008000000030002"] = {
       name = "Donkey Kong"
     },
+    ["0x0000040004c10102"] = {
+      name = "Elephant Mario"
+    },
     ["0x000a000303a0ff02"] = {
       name = "Toad - Power Up Band"
+    },
+    ["0x000a010004c20102"] = {
+      name = "Captain Toad & Talking Flower"
+    },
+    ["0x0025010004c30102"] = {
+      name = "Poplin & Prince Florian"
     },
     ["0x03ed000101a30502"] = {
       name = "Rory"
@@ -2477,9 +2543,6 @@ amiibo_tools.db =
     ["0x1f02000002560c02"] = {
       name = "King Dedede"
     },
-    ["0x35060000040d0f02"] = {
-      name = "Ena"
-    },
     ["0x09c10201026f0e02"] = {
       name = "Luigi - Baseball"
     },
@@ -2615,6 +2678,9 @@ amiibo_tools.db =
     ["0x0000000002380602"] = {
       name = "8-Bit Mario Classic Color"
     },
+    ["0x0000050004e90102"] = {
+      name = "Mario and Luma"
+    },
     ["0x0260000100d20502"] = {
       name = "Olivia"
     },
@@ -2717,6 +2783,9 @@ amiibo_tools.db =
     ["0x000a000000380102"] = {
       name = "Toad"
     },
+    ["0x000a000404451c02"] = {
+      name = "Toad - My Mario Wooden Blocks"
+    },
     ["0x04000001006f0502"] = {
       name = "Shari"
     },
@@ -2749,9 +2818,6 @@ amiibo_tools.db =
     },
     ["0x09d0020102ba0e02"] = {
       name = "Metal Mario - Baseball"
-    },
-    ["0x3509000004101802"] = {
-      name = "Palico"
     },
     ["0x09c00201026a0e02"] = {
       name = "Mario - Baseball"
@@ -2796,168 +2862,172 @@ amiibo_tools.db =
       name = "Sora"
     },
     ["0x1f00000004c41e03"] = {
-      name = "Kirby"
+      name = "Kirby (& Warp Star)"
     },
     ["0x1f03010004c91e03"] = {
-      name = "Bandana Waddle Dee"
+      name = "Bandana Waddle Dee (& Winged Star)"
     }
   },
   amiibo_series = {
+    ["0x00"] = "Super Smash Bros.",
+    ["0x01"] = "Super Mario Bros.",
+    ["0x02"] = "Chibi-Robo!",
+    ["0x03"] = "Yoshi's Woolly World",
+    ["0x04"] = "Splatoon",
+    ["0x05"] = "Animal Crossing",
+    ["0x06"] = "8-bit Mario",
+    ["0x07"] = "Skylanders",
+    ["0x09"] = "Legend Of Zelda",
     ["0x0a"] = "Shovel Knight",
     ["0x0c"] = "Kirby",
-    ["0x0e"] = "Mario Sports Superstars",
     ["0x0d"] = "Pokemon",
+    ["0x0e"] = "Mario Sports Superstars",
     ["0x0f"] = "Monster Hunter",
-    ["0x06"] = "8-bit Mario",
-    ["0x12"] = "Fire Emblem",
-    ["0x13"] = "Metroid",
     ["0x10"] = "BoxBoy!",
     ["0x11"] = "Pikmin",
-    ["0x05"] = "Animal Crossing",
-    ["0x04"] = "Splatoon",
+    ["0x12"] = "Fire Emblem",
+    ["0x13"] = "Metroid",
     ["0x14"] = "Others",
     ["0x15"] = "Mega Man",
-    ["0x09"] = "Legend Of Zelda",
-    ["0x18"] = "Monster Hunter Rise",
-    ["0x19"] = "Yu-Gi-Oh!",
-    ["0x01"] = "Super Mario Bros.",
-    ["0xff"] = "Super Nintendo World",
-    ["0x00"] = "Super Smash Bros.",
-    ["0x03"] = "Yoshi's Woolly World",
-    ["0x02"] = "Chibi-Robo!",
-    ["0x07"] = "Skylanders",
     ["0x16"] = "Diablo",
     ["0x17"] = "Power Pros",
+    ["0x18"] = "Monster Hunter Rise",
+    ["0x19"] = "Yu-Gi-Oh!",
     ["0x1a"] = "Donkey Kong",
     ["0x1b"] = "Xenoblade Chronicles 3",
     ["0x1c"] = "My Mario Wooden Blocks",
     ["0x1d"] = "Street Fighter 6",
-    ["0x1e"] = "Kirby Air Riders"
+    ["0x1e"] = "Kirby Air Riders",
+    ["0x20"] = "Resident Evil",
+    ["0x21"] = "Pragmata",
+    ["0xff"] = "Super Nintendo World"
   },
   game_series = {
-    ["0x338"] = "Dark Souls",
-    ["0x364"] = "Dragon Quest",
-    ["0x3c8"] = "Fatal Fury",
-    ["0x224"] = "Xenoblade",
-    ["0x080"] = "Splatoon",
-    ["0x35c"] = "Shovel Knight",
-    ["0x38c"] = "Diablo",
-    ["0x09c"] = "Mario Sports Superstars",
+    ["0x000"] = "Super Mario",
+    ["0x001"] = "Super Mario",
+    ["0x002"] = "Super Mario",
+    ["0x008"] = "Yoshi's Woolly World",
+    ["0x00c"] = "Donkey Kong",
+    ["0x010"] = "The Legend of Zelda",
+    ["0x014"] = "The Legend of Zelda",
     ["0x018"] = "Animal Crossing",
-    ["0x09d"] = "Mario Sports Superstars",
-    ["0x01c"] = "Animal Crossing",
-    ["0x01b"] = "Animal Crossing",
+    ["0x019"] = "Animal Crossing",
     ["0x01a"] = "Animal Crossing",
-    ["0x048"] = "Animal Crossing",
-    ["0x049"] = "Animal Crossing",
-    ["0x044"] = "Animal Crossing",
-    ["0x045"] = "Animal Crossing",
-    ["0x046"] = "Animal Crossing",
-    ["0x047"] = "Animal Crossing",
+    ["0x01b"] = "Animal Crossing",
+    ["0x01c"] = "Animal Crossing",
+    ["0x020"] = "Animal Crossing",
+    ["0x021"] = "Animal Crossing",
+    ["0x022"] = "Animal Crossing",
+    ["0x023"] = "Animal Crossing",
+    ["0x024"] = "Animal Crossing",
+    ["0x025"] = "Animal Crossing",
+    ["0x026"] = "Animal Crossing",
+    ["0x027"] = "Animal Crossing",
+    ["0x028"] = "Animal Crossing",
+    ["0x029"] = "Animal Crossing",
+    ["0x02a"] = "Animal Crossing",
+    ["0x02b"] = "Animal Crossing",
+    ["0x02c"] = "Animal Crossing",
+    ["0x02d"] = "Animal Crossing",
+    ["0x02e"] = "Animal Crossing",
+    ["0x02f"] = "Animal Crossing",
+    ["0x030"] = "Animal Crossing",
+    ["0x031"] = "Animal Crossing",
+    ["0x032"] = "Animal Crossing",
+    ["0x033"] = "Animal Crossing",
+    ["0x034"] = "Animal Crossing",
+    ["0x035"] = "Animal Crossing",
+    ["0x036"] = "Animal Crossing",
+    ["0x037"] = "Animal Crossing",
+    ["0x038"] = "Animal Crossing",
+    ["0x039"] = "Animal Crossing",
+    ["0x03a"] = "Animal Crossing",
+    ["0x03b"] = "Animal Crossing",
+    ["0x03c"] = "Animal Crossing",
+    ["0x03d"] = "Animal Crossing",
+    ["0x03e"] = "Animal Crossing",
+    ["0x03f"] = "Animal Crossing",
     ["0x040"] = "Animal Crossing",
     ["0x041"] = "Animal Crossing",
     ["0x042"] = "Animal Crossing",
     ["0x043"] = "Animal Crossing",
-    ["0x000"] = "Super Mario",
-    ["0x001"] = "Super Mario",
-    ["0x002"] = "Super Mario",
-    ["0x350"] = "Monster Hunter",
-    ["0x1ac"] = "Pokemon",
-    ["0x008"] = "Yoshi's Woolly World",
-    ["0x1f0"] = "Kirby",
-    ["0x05c"] = "Metroid",
-    ["0x02f"] = "Animal Crossing",
-    ["0x07c"] = "Mii",
-    ["0x074"] = "Kid Icarus",
-    ["0x192"] = "Pokemon",
-    ["0x02d"] = "Animal Crossing",
-    ["0x190"] = "Pokemon",
-    ["0x191"] = "Pokemon",
-    ["0x02e"] = "Animal Crossing",
-    ["0x384"] = "Yu-Gi-Oh!",
-    ["0x1f4"] = "BoxBoy!",
-    ["0x334"] = "Pac-man",
-    ["0x02c"] = "Animal Crossing",
-    ["0x00c"] = "Donkey Kong",
-    ["0x210"] = "Fire Emblem",
-    ["0x058"] = "Star Fox",
-    ["0x02a"] = "Animal Crossing",
-    ["0x360"] = "Final Fantasy",
-    ["0x051"] = "Animal Crossing",
-    ["0x050"] = "Animal Crossing",
-    ["0x010"] = "The Legend of Zelda",
-    ["0x014"] = "The Legend of Zelda",
-    ["0x04d"] = "Animal Crossing",
-    ["0x04e"] = "Animal Crossing",
-    ["0x04f"] = "Animal Crossing",
-    ["0x03f"] = "Animal Crossing",
+    ["0x044"] = "Animal Crossing",
+    ["0x045"] = "Animal Crossing",
+    ["0x046"] = "Animal Crossing",
+    ["0x047"] = "Animal Crossing",
+    ["0x048"] = "Animal Crossing",
+    ["0x049"] = "Animal Crossing",
     ["0x04a"] = "Animal Crossing",
     ["0x04b"] = "Animal Crossing",
     ["0x04c"] = "Animal Crossing",
-    ["0x3a0"] = "Persona",
-    ["0x034"] = "Animal Crossing",
-    ["0x3dc"] = "Minecraft",
-    ["0x3b4"] = "Banjo Kazooie",
+    ["0x04d"] = "Animal Crossing",
+    ["0x04e"] = "Animal Crossing",
+    ["0x04f"] = "Animal Crossing",
+    ["0x050"] = "Animal Crossing",
+    ["0x051"] = "Animal Crossing",
+    ["0x058"] = "Star Fox",
+    ["0x05c"] = "Metroid",
     ["0x060"] = "F-Zero",
-    ["0x33c"] = "Tekken",
-    ["0x228"] = "Earthbound",
     ["0x064"] = "Pikmin",
-    ["0x320"] = "Sonic",
-    ["0x19a"] = "Pokemon",
+    ["0x06c"] = "Punch Out",
+    ["0x070"] = "Wii Fit",
+    ["0x074"] = "Kid Icarus",
+    ["0x078"] = "Classic Nintendo",
+    ["0x07c"] = "Mii",
+    ["0x080"] = "Splatoon",
+    ["0x09c"] = "Mario Sports Superstars",
+    ["0x09d"] = "Mario Sports Superstars",
+    ["0x0a0"] = "Animal Crossing",
+    ["0x0a1"] = "Animal Crossing",
+    ["0x0a2"] = "Animal Crossing",
+    ["0x0a4"] = "ARMS",
+    ["0x190"] = "Pokemon",
+    ["0x191"] = "Pokemon",
+    ["0x192"] = "Pokemon",
     ["0x199"] = "Pokemon",
-    ["0x374"] = "Kellogs",
-    ["0x026"] = "Animal Crossing",
-    ["0x027"] = "Animal Crossing",
-    ["0x024"] = "Animal Crossing",
-    ["0x025"] = "Animal Crossing",
-    ["0x022"] = "Animal Crossing",
-    ["0x023"] = "Animal Crossing",
-    ["0x020"] = "Animal Crossing",
-    ["0x021"] = "Animal Crossing",
-    ["0x03a"] = "Animal Crossing",
-    ["0x03c"] = "Animal Crossing",
-    ["0x03b"] = "Animal Crossing",
-    ["0x03e"] = "Animal Crossing",
-    ["0x03d"] = "Animal Crossing",
-    ["0x028"] = "Animal Crossing",
-    ["0x029"] = "Animal Crossing",
-    ["0x380"] = "Power Pros",
+    ["0x19a"] = "Pokemon",
+    ["0x1ac"] = "Pokemon",
+    ["0x1b9"] = "Pokemon",
     ["0x1bd"] = "Pokemon",
-    ["0x378"] = "Metal Gear Solid",
-    ["0x3f0"] = "Kingdom Hearts",
-    ["0x1d4"] = "Pokemon",
     ["0x1d0"] = "Pokemon",
+    ["0x1d4"] = "Pokemon",
+    ["0x1f0"] = "Kirby",
+    ["0x1f4"] = "BoxBoy!",
+    ["0x210"] = "Fire Emblem",
+    ["0x224"] = "Xenoblade",
+    ["0x228"] = "Earthbound",
+    ["0x22c"] = "Chibi Robo",
+    ["0x320"] = "Sonic",
+    ["0x324"] = "Bayonetta",
+    ["0x334"] = "Pac-man",
+    ["0x338"] = "Dark Souls",
+    ["0x33c"] = "Tekken",
+    ["0x348"] = "Megaman",
     ["0x34c"] = "Street Fighter",
     ["0x34d"] = "Street Fighter",
-    ["0x038"] = "Animal Crossing",
-    ["0x019"] = "Animal Crossing",
-    ["0x039"] = "Animal Crossing",
-    ["0x0a2"] = "Animal Crossing",
-    ["0x0a1"] = "Animal Crossing",
-    ["0x0a0"] = "Animal Crossing",
-    ["0x02b"] = "Animal Crossing",
-    ["0x070"] = "Wii Fit",
-    ["0x0a4"] = "ARMS",
-    ["0x031"] = "Animal Crossing",
-    ["0x030"] = "Animal Crossing",
-    ["0x033"] = "Animal Crossing",
-    ["0x032"] = "Animal Crossing",
-    ["0x035"] = "Animal Crossing",
-    ["0x078"] = "Classic Nintendo",
-    ["0x037"] = "Animal Crossing",
-    ["0x036"] = "Animal Crossing",
-    ["0x06c"] = "Punch Out",
-    ["0x324"] = "Bayonetta",
+    ["0x350"] = "Monster Hunter",
+    ["0x354"] = "Resident Evil",
+    ["0x358"] = "Pragmata",
+    ["0x35c"] = "Shovel Knight",
+    ["0x360"] = "Final Fantasy",
+    ["0x364"] = "Dragon Quest",
+    ["0x374"] = "Kellogs",
+    ["0x378"] = "Metal Gear Solid",
     ["0x37c"] = "Castlevania",
-    ["0x348"] = "Megaman",
-    ["0x1b9"] = "Pokemon",
-    ["0x22c"] = "Chibi Robo"
+    ["0x380"] = "Power Pros",
+    ["0x384"] = "Yu-Gi-Oh!",
+    ["0x38c"] = "Diablo",
+    ["0x3a0"] = "Persona",
+    ["0x3b4"] = "Banjo Kazooie",
+    ["0x3c8"] = "Fatal Fury",
+    ["0x3dc"] = "Minecraft",
+    ["0x3f0"] = "Kingdom Hearts"
   },
   types = {
-    ["0x01"] = "Card",
     ["0x00"] = "Figure",
-    ["0x03"] = "Band",
+    ["0x01"] = "Card",
     ["0x02"] = "Yarn",
+    ["0x03"] = "Band",
     ["0x04"] = "Block"
   }
 }
