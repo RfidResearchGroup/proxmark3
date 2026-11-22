@@ -5,6 +5,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 - Fixed `hf topaz dump` - the json of a dynamic memory tag held a wrong UID, HR and size, the blocks shifted and no dynamic memory (@matrix)
 - Fixed `hf topaz dump` - a capability container giving more than 512 bytes of memory overflowed the buffer the dump is saved from (@matrix)
+- Changed `hf topaz dump` - the .bin of a static memory tag is its memory, as for a dynamic memory tag, not the client's topaz_tag_t (@matrix)
+- Fixed `lf hitag htu dump` - the json had no UID and ICR, the save callback that adds them was never called (@matrix)
 - Fixed PM5 as a HF reader - the sample stream from the FPGA could come back one bit off after a mode switch (@Msprg)
 - Fixed PM3 `hf 14b sim` - the timer of the FPGA simulator ran on while the ADC idled below its high level and cut the SOF of reader frames short, needs rebuilt FPGA images (@matrix)
 - Fixed `lf hid demod` - a few extra bits ahead of a preamble decoded as another card, the frame shifted by those bits (@mfcarroll)

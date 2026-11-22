@@ -1629,26 +1629,24 @@ int prepareJSON(json_t *root, JSONFileType ftype, uint8_t *data, size_t datalen,
             (*callback)(root);
             break;
         }
+        // The memory of a Topaz tag. HR0 HR1 are not in it, the caller supplies
+        // them through the save callback, see pm3_save_dump_cb().
         case jsfTopaz: {
-            topaz_tag_t *tag = (topaz_tag_t *)(void *) data;
+            if ((datalen < TOPAZ_STATIC_MEMORY) || (datalen % TOPAZ_BLOCK_SIZE)) {
+                return PM3_EINVARG;
+            }
+
             JsonSaveStr(root, "FileType", "topaz");
-            JsonSaveBufAsHexCompact(root, "$.Card.UID", tag->uid, sizeof(tag->uid));
-            JsonSaveBufAsHexCompact(root, "$.Card.H0R1", tag->HR01, sizeof(tag->HR01));
-            JsonSaveBufAsHexCompact(root, "$.Card.Size", (uint8_t *) & (tag->size), 2);
+            // UID0 - UID6, the first 7 bytes of block 0
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", data, 7);
+            // two bytes, little endian, as it has always been written
+            uint8_t size[2] = { (uint8_t)(datalen & 0xFF), (uint8_t)((datalen >> 8) & 0xFF) };
+            JsonSaveBufAsHexCompact(root, "$.Card.Size", size, sizeof(size));
 
-            for (size_t i = 0; i < TOPAZ_STATIC_MEMORY / 8; i++) {
+            for (size_t i = 0; i < datalen / TOPAZ_BLOCK_SIZE; i++) {
                 snprintf(path, sizeof(path), "$.blocks.%zu", i);
-                JsonSaveBufAsHexCompact(root, path, &tag->data_blocks[i][0], TOPAZ_BLOCK_SIZE);
+                JsonSaveBufAsHexCompact(root, path, data + (i * TOPAZ_BLOCK_SIZE), TOPAZ_BLOCK_SIZE);
             }
-
-            // the dynamic memory, block 0x0F and up
-            if ((tag->size > TOPAZ_STATIC_MEMORY) && (tag->dynamic_memory != NULL)) {
-                for (size_t i = TOPAZ_STATIC_MEMORY / TOPAZ_BLOCK_SIZE; i < tag->size / TOPAZ_BLOCK_SIZE; i++) {
-                    snprintf(path, sizeof(path), "$.blocks.%zu", i);
-                    JsonSaveBufAsHexCompact(root, path, &tag->dynamic_memory[(i * TOPAZ_BLOCK_SIZE) - TOPAZ_STATIC_MEMORY], TOPAZ_BLOCK_SIZE);
-                }
-            }
-
             break;
         }
         case jsfLto: {
@@ -1739,6 +1737,11 @@ int prepareJSON(json_t *root, JSONFileType ftype, uint8_t *data, size_t datalen,
         case jsfLegic:
         default:
             break;
+    }
+
+    // the fields the dump does not hold, see pm3_save_dump_cb(). jsfCustom has called it already
+    if ((callback != NULL) && (ftype != jsfCustom)) {
+        (*callback)(root);
     }
     return PM3_SUCCESS;
 }
