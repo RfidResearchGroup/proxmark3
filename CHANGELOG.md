@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf topaz dump`, `hf topaz info` - without a tag `dump` printed nothing and `info` only its title, now `no tag found` (@matrix)
+- Fixed `hf topaz info` - the minor version of the capability container was always printed as 0 (@matrix)
+- Fixed `hf topaz info` - the access byte of the capability container was also printed as feature bits that a Type 1 tag does not have (@matrix)
+- Fixed `hf topaz raw` - its message named `hf 14 raw --topaz`, a command that does not exist, instead of `hf 14a raw --topaz` (@matrix)
 - Fixed `hf iclass/seos/mf/mfdes sam -v` - the hint `lf hid clone -w H10301 --bin` is refused, now `lf hid clone --bin` (@matrix)
 - Fixed `hf mf view`, `hf mf dump` and `hf mf mad -f` - a HID credential was decoded with its sentinel bit, so the wrong Wiegand formats were listed (@matrix)
 - Use updated fork of AmiiboAPI and update amiibo database (@tpglitch)
