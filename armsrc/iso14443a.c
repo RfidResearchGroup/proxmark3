@@ -5211,7 +5211,8 @@ void DetectNACKbug(void) {
 
                 sync_cycles = (sync_cycles - nt_distance) / elapsed_prng_sequences;
 
-                if (sync_cycles <= 0) {
+                // as in ReaderMifare(): below 8 the loop above never moves sync_time on
+                if (sync_cycles <= 10) {
                     sync_cycles += PRNG_SEQUENCE_LENGTH;
                 }
 
