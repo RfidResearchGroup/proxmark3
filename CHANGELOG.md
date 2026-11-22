@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 15 sim` - the first answer left 17 ms late, the CRC table was built on the first command (@matrix)
 - Fixed `hf iclass eload` - a failed emulator memory write, for example with the device memory full, is reported instead of `Done!` (@matrix)
 - Fixed `hf iclass eload` - only the first 620 bytes of the file were written when the device had to load the FPGA bitstream first, as after power-up (@matrix)
 - Fixed `hf 15 sim`, `hf iclass sim` - the command receiver was slower than the FPGA's samples, answers left up to 30 ms late and `hf 15 sim` was not read (@matrix)
