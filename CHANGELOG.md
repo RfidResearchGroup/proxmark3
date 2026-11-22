@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `lf t55xx` commands - the help texts of the downlink options leaked on every call (@matrix)
+- Fixed `lf t55xx dump` - when page 0 was not read in full it returned success, without saving or saying so (@matrix)
 - Fixed `hf 14b dump` - an SR dump whose system block could not be read was saved with zeros in its place instead of failing (@matrix)
 - Fixed `hf 14b dump` - a saved SR dump returned an error (@matrix)
 - Fixed `hf legic esave` - its buffer was never freed (@matrix)
