@@ -8402,7 +8402,7 @@ static int CmdHFiClassLiberate(const char *Cmd) {
             uint8_t key[PICOPASS_BLOCK_SIZE];
             memcpy(key, iClass_Key_Table[0], PICOPASS_BLOCK_SIZE);
 
-            int res = iclass_write_block(MKF_KNOWN_BLOCK, zeros, NULL, key, false, false, false, false, verbose, false, shallow_mod);
+            int res = iclass_write_block(MKF_KNOWN_BLOCK, zeros, NULL, key, false, false, false, false, verbose, true, shallow_mod);
             if (res == PM3_SUCCESS) {
                 PrintAndLogEx(SUCCESS, "MFK block %u write ( %s )", MKF_KNOWN_BLOCK, _GREEN_("ok"));
             } else {
@@ -8443,7 +8443,7 @@ static int CmdHFiClassLiberate(const char *Cmd) {
             uint8_t auth_key[PICOPASS_BLOCK_SIZE];
             memcpy(auth_key, drm_key, PICOPASS_BLOCK_SIZE);
 
-            int res = iclass_write_block(3, xor_div_key, NULL, auth_key, false, false, false, false, verbose, false, shallow_mod);
+            int res = iclass_write_block(3, xor_div_key, NULL, auth_key, false, false, false, false, verbose, true, shallow_mod);
             if (res == PM3_SUCCESS) {
                 PrintAndLogEx(SUCCESS, "Change to default key ( %s )", _GREEN_("ok"));
             } else {
