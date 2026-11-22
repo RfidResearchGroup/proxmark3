@@ -4,6 +4,13 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Fixed `hf 15 raw` - without `-a` right after power-up or after an LF command it hung the device until the watchdog reset it (@matrix)
+- Fixed `hf 15 raw` - a frame too long for the device's send buffer overwrote the stack and halted the device, it is now refused (@matrix)
+- Fixed `hf 15 rdmulti` - the tag errors 0x0F and 0x10, as past the end of the memory, are shown instead of nothing (@matrix)
+- Fixed `hf 15 rdmulti` - printed bytes the tag never sent, past the answer buffer for a large `--bs`, now only received blocks, `--bs` capped at 32 (@matrix)
+- Fixed `hf 15 rdbl`, `hf 15 wrbl` and `hf 15 rdmulti` - a page number outside 0-255 is refused instead of using its low byte (`wrbl -b 256` wrote page 0) (@matrix)
+- Fixed `hf 15 rdbl`, `hf 15 wrbl` and `hf 15 rdmulti` - a `-u` that is not 8 bytes is refused instead of falling back to the tag found by a scan (@matrix)
+- Fixed `hf 15 rdmulti` - `--cnt` must be 1-6, `--cnt -1` asked for 256 pages (@matrix)
+- Fixed `hf 15 wrbl` - the help of `-d` says 4 or 8 bytes, as accepted, instead of 4 (@matrix)
 - Fixed `hf iclass dump` - the emulator memory is kept, a dump no longer wipes what `hf iclass eload` loaded (@matrix)
 - Fixed `hf 14a raw --topaz` - the answer's CRC was checked as a CRC_A instead of the CRC_B Topaz uses, so a valid answer showed its CRC in red (@matrix)
 - Fixed `hf 15 writeafi` and `hf 15 writedsfid` - a UID given with `-u` was sent in the wrong byte order, so no tag answered (@matrix)
