@@ -65,19 +65,19 @@ int hid_parser_parse(const uint8_t *dump, size_t dumplen) {
 
     PrintAndLogEx(SUCCESS, "Raw...... " _GREEN_("%s"), sprint_hex_inrow(pacs_sector + 24, 8));
 
-    //todo:  remove preamble/sentinel
-    uint32_t top = 0, mid = 0, bot = 0;
-    char hexstr[16 + 1] = {0};
-    hex_to_buffer((uint8_t *)hexstr, pacs_sector + 24, 8, sizeof(hexstr) - 1, 0, 0, true);
-    hexstring_to_u96(&top, &mid, &bot, hexstr);
+    // sentinel bit and Wiegand bits, right-aligned after the marker
+    char binstr[((MFBLOCK_SIZE - 1) * 8) + 1] = {0};
+    if (wiegand_raw_to_binstr(pacs_sector + MFBLOCK_SIZE + 1, MFBLOCK_SIZE - 1, binstr, sizeof(binstr)) == false) {
+        return PM3_ESOFT;
+    }
 
-    char binstr[64 + 1];
-    hextobinstring(binstr, hexstr);
-    char *pbin = binstr;
-    while (strlen(pbin) && *(++pbin) == '0');
+    PrintAndLogEx(SUCCESS, "Binary... " _GREEN_("%s"), binstr);
 
-    PrintAndLogEx(SUCCESS, "Binary... " _GREEN_("%s"), pbin);
-
-    decode_wiegand(top, mid, bot, 0);
+    size_t n = strlen(binstr);
+    if (n <= 96) {
+        uint32_t top = 0, mid = 0, bot = 0;
+        binstring_to_u96(&top, &mid, &bot, binstr);
+        decode_wiegand(top, mid, bot, (int)n);
+    }
     return PM3_SUCCESS;
 }

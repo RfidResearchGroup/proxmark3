@@ -137,7 +137,7 @@ hi_reader hr(
 //   HF simulated tag
 hi_simulate hs(
     .ck_1356meg (ck_1356meg),
-    .adc_d      (adc_d),
+    .adc_d      (~adc_d),       // the PM5's ADC is inverting (for HF)
     .mod_type   (conf_word[3:0]),
     .ssp_dout   (ssp_dout),
 
