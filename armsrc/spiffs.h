@@ -64,8 +64,8 @@ int rdv40_spiffs_remove(const char *filename, RDV40SpiFFSSafetyLevel level);
 int rdv40_spiffs_read_as_symlink(const char *filename, uint8_t *dst, uint32_t size, RDV40SpiFFSSafetyLevel level);
 void write_to_spiffs(const char *filename, const uint8_t *src, uint32_t size);
 
-// SPIFFS_OK, or the SPIFFS errno of the last write_to_spiffs()/append_to_spiffs()
-int rdv40_spiffs_write_status(void);
+// SPIFFS_OK, or the SPIFFS errno of the last write / append / rename / remove / copy
+int rdv40_spiffs_op_status(void);
 void read_from_spiffs(const char *filename, uint8_t *dst, uint32_t size);
 void test_spiffs(void);
 void rdv40_spiffs_safe_print_tree(void);
