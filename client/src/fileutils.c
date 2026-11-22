@@ -3248,6 +3248,13 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
     if (!strcmp(ctype, "topaz")) {
 
+        // the reader fills a topaz_tag_t
+        if (maxdatalen < sizeof(topaz_tag_t)) {
+            PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu, a topaz dump takes %zu -- exceeded maxdatalen", maxdatalen, sizeof(topaz_tag_t));
+            retval = PM3_EMALLOC;
+            goto out;
+        }
+
         JsonLoadBufAsHex(root, "$.Card.UID", udata.topaz->uid, sizeof(udata.topaz->uid), datalen);
         JsonLoadBufAsHex(root, "$.Card.HR01", udata.topaz->HR01, sizeof(udata.topaz->HR01), datalen);
         JsonLoadBufAsHex(root, "$.Card.Size", (uint8_t *) & (udata.topaz->size), 2, datalen);
@@ -3255,14 +3262,8 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
         size_t sptr = 0;
         for (int i = 0; i < (TOPAZ_STATIC_MEMORY / 8); i++) {
 
-            if (sptr + TOPAZ_BLOCK_SIZE > maxdatalen) {
-                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
-                retval = PM3_EMALLOC;
-                goto out;
-            }
-
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
-            JsonLoadBufAsHex(root, blocks, &udata.topaz->data_blocks[sptr][0], TOPAZ_BLOCK_SIZE, &len);
+            JsonLoadBufAsHex(root, blocks, &udata.topaz->data_blocks[i][0], TOPAZ_BLOCK_SIZE, &len);
             if (load_file_sanity(ctype, TOPAZ_BLOCK_SIZE, i, len) == false) {
                 break;
             }
@@ -3273,7 +3274,8 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
             // uint8_t *dynamic_memory;
         }
 
-        *datalen += sptr;
+        // with all its blocks loaded, the topaz_tag_t is filled
+        *datalen = (sptr == TOPAZ_STATIC_MEMORY) ? sizeof(topaz_tag_t) : sptr;
         goto out;
     }
 

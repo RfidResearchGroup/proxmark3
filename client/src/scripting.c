@@ -246,7 +246,7 @@ static int l_GetFromFlashMemSpiffs(lua_State *L) {
     if (n >= 1) {
         const char *p_filename = luaL_checklstring(L, 1, &size);
         if (size != 0)
-            memcpy(destfilename, p_filename, 31);
+            memcpy(destfilename, p_filename, MIN(size, sizeof(destfilename) - 1));
     }
 
     if (destfilename[0] == '\0')
