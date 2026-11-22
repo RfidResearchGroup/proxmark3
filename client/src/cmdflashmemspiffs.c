@@ -27,6 +27,49 @@
 
 static int CmdHelp(const char *Cmd);
 
+// a bare "errno -10002" tells a user nothing, name what the device ran into
+static const char *spiffs_err_str(int32_t err) {
+    switch (err) {
+        case 0:
+            return "no error";
+        case SPIFFS_ERR_NOT_MOUNTED_RDV:
+            return "filesystem not mounted";
+        case SPIFFS_ERR_FULL_RDV:
+            return "filesystem full";
+        case SPIFFS_ERR_NOT_FOUND_RDV:
+            return "no such file";
+        case SPIFFS_ERR_OUT_OF_FILE_DESCS_RDV:
+            return "out of file descriptors";
+        case SPIFFS_ERR_NOT_WRITABLE_RDV:
+            return "flash not writable";
+        case SPIFFS_ERR_NOT_READABLE_RDV:
+            return "flash not readable";
+        case SPIFFS_ERR_CONFLICTING_NAME_RDV:
+            return "conflicting file name";
+        case SPIFFS_ERR_NOT_CONFIGURED_RDV:
+            return "filesystem not configured";
+        case SPIFFS_ERR_NOT_A_FS_RDV:
+            return "not a filesystem, needs `mem spiffs wipe`";
+        case SPIFFS_ERR_ERASE_FAIL_RDV:
+            return "flash erase failed";
+        case SPIFFS_ERR_FILE_EXISTS_RDV:
+            return "file exists";
+        case SPIFFS_ERR_NOT_A_FILE_RDV:
+            return "not a file";
+        case SPIFFS_ERR_NAME_TOO_LONG_RDV:
+            return "file name too long";
+        case SPIFFS_ERR_INTERNAL_RDV:
+            return "internal filesystem error";
+        default:
+            return "unknown error";
+    }
+}
+
+// the device sends the SPIFFS errno along with a failed status
+static int32_t spiffs_resp_err(const PacketResponseNG *resp) {
+    return (resp->length >= sizeof(int32_t)) ? (int32_t)resp->data.asDwords[0] : 0;
+}
+
 int flashmem_spiffs_load(const char *destfn, const uint8_t *data, size_t datalen) {
 
     int ret_val = PM3_SUCCESS;
@@ -98,11 +141,11 @@ int flashmem_spiffs_load(const char *destfn, const uint8_t *data, size_t datalen
 
         // the device only counts a packet once SPIFFS took it
         if (resp.status != PM3_SUCCESS) {
-            int32_t serr = (resp.length >= sizeof(int32_t)) ? (int32_t)resp.data.asDwords[0] : 0;
+            int32_t serr = spiffs_resp_err(&resp);
             if (show_progress) {
                 PrintAndLogEx(NORMAL, "");
             }
-            PrintAndLogEx(FAILED, "device refused the write at " _YELLOW_("%u") " / " _YELLOW_("%zu") " bytes (spiffs errno %d)", bytes_sent, datalen, serr);
+            PrintAndLogEx(FAILED, "device refused the write at " _YELLOW_("%u") " / " _YELLOW_("%zu") " bytes, %s (spiffs errno %d)", bytes_sent, datalen, spiffs_err_str(serr), serr);
             if (serr == SPIFFS_ERR_FULL_RDV) {
                 PrintAndLogEx(HINT, "Hint: filesystem is full, try `" _YELLOW_("mem spiffs tree") "` and remove what you don't need");
             }
@@ -299,20 +342,31 @@ static int CmdFlashMemSpiFFSRemove(const char *Cmd) {
     CLIParserFree(ctx);
 
     PrintAndLogEx(DEBUG, "Removing `" _YELLOW_("%s") "`", filename);
+
+    // zero initialised: the device reads the name field as a string, stack
+    // leftovers behind the name turn into part of the file name it looks for
     struct {
         uint8_t len;
         uint8_t fn[32];
-    } PACKED payload;
+    } PACKED payload = {0};
     payload.len = fnlen;
     memcpy(payload.fn, filename, fnlen);
 
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_SPIFFS_REMOVE, (uint8_t *)&payload, sizeof(payload));
-    WaitForResponse(CMD_SPIFFS_REMOVE, &resp);
-    if (resp.status == PM3_SUCCESS) {
-        PrintAndLogEx(INFO, "Done!");
+    if (WaitForResponse(CMD_SPIFFS_REMOVE, &resp) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        return PM3_ETIMEOUT;
     }
+
+    if (resp.status != PM3_SUCCESS) {
+        int32_t serr = spiffs_resp_err(&resp);
+        PrintAndLogEx(FAILED, "failed to remove `" _YELLOW_("%s") "`, %s (spiffs errno %d)", filename, spiffs_err_str(serr), serr);
+        return PM3_EFLASH;
+    }
+
+    PrintAndLogEx(SUCCESS, "Removed `" _YELLOW_("%s") "`", filename);
     return PM3_SUCCESS;
 }
 
@@ -342,12 +396,13 @@ static int CmdFlashMemSpiFFSRename(const char *Cmd) {
 
     PrintAndLogEx(DEBUG, "Rename from `" _YELLOW_("%s") "` -> `" _YELLOW_("%s") "`", src, dest);
 
+    // zero initialised, see CmdFlashMemSpiFFSRemove()
     struct {
         uint8_t slen;
         uint8_t src[32];
         uint8_t dlen;
         uint8_t dest[32];
-    } PACKED payload;
+    } PACKED payload = {0};
     payload.slen = slen;
     payload.dlen = dlen;
 
@@ -357,11 +412,18 @@ static int CmdFlashMemSpiFFSRename(const char *Cmd) {
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_SPIFFS_RENAME, (uint8_t *)&payload, sizeof(payload));
-    WaitForResponse(CMD_SPIFFS_RENAME, &resp);
-    if (resp.status == PM3_SUCCESS) {
-        PrintAndLogEx(INFO, "Done!");
+    if (WaitForResponse(CMD_SPIFFS_RENAME, &resp) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        return PM3_ETIMEOUT;
     }
 
+    if (resp.status != PM3_SUCCESS) {
+        int32_t serr = spiffs_resp_err(&resp);
+        PrintAndLogEx(FAILED, "failed to rename `" _YELLOW_("%s") "`, %s (spiffs errno %d)", src, spiffs_err_str(serr), serr);
+        return PM3_EFLASH;
+    }
+
+    PrintAndLogEx(SUCCESS, "Renamed `" _YELLOW_("%s") "` -> `" _YELLOW_("%s") "`", src, dest);
     PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("mem spiffs tree") "` to verify");
     return PM3_SUCCESS;
 }
@@ -391,12 +453,13 @@ static int CmdFlashMemSpiFFSCopy(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)dest, 32, &dlen);
     CLIParserFree(ctx);
 
+    // zero initialised, see CmdFlashMemSpiFFSRemove()
     struct {
         uint8_t slen;
         uint8_t src[32];
         uint8_t dlen;
         uint8_t dest[32];
-    } PACKED payload;
+    } PACKED payload = {0};
     payload.slen = slen;
     payload.dlen = dlen;
 
@@ -406,11 +469,18 @@ static int CmdFlashMemSpiFFSCopy(const char *Cmd) {
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_SPIFFS_COPY, (uint8_t *)&payload, sizeof(payload));
-    WaitForResponse(CMD_SPIFFS_COPY, &resp);
-    if (resp.status == PM3_SUCCESS) {
-        PrintAndLogEx(INFO, "Done!");
+    if (WaitForResponse(CMD_SPIFFS_COPY, &resp) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        return PM3_ETIMEOUT;
     }
 
+    if (resp.status != PM3_SUCCESS) {
+        int32_t serr = spiffs_resp_err(&resp);
+        PrintAndLogEx(FAILED, "failed to copy `" _YELLOW_("%s") "`, %s (spiffs errno %d)", src, spiffs_err_str(serr), serr);
+        return PM3_EFLASH;
+    }
+
+    PrintAndLogEx(SUCCESS, "Copied `" _YELLOW_("%s") "` -> `" _YELLOW_("%s") "`", src, dest);
     PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("mem spiffs tree") "` to verify");
     return PM3_SUCCESS;
 }
