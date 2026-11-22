@@ -3172,7 +3172,13 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t data[];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            emlSet(payload->data, payload->offset, payload->len);
+            // the data the packet holds
+            if (packet->length < sizeof(struct p) || payload->len > packet->length - sizeof(struct p)) {
+                reply_ng(CMD_HF_ICLASS_EML_MEMSET, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            int res = emlSet(payload->data, payload->offset, payload->len);
+            reply_ng(CMD_HF_ICLASS_EML_MEMSET, res, NULL, 0);
             break;
         }
         case CMD_HF_ICLASS_WRITEBL: {
