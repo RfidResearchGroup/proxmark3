@@ -39,7 +39,7 @@ from jq import jq
 def fetch_data():
     print("Fetching amiibo.json")
     # Perform the curl command
-    curl_command = "curl https://raw.githubusercontent.com/N3evin/AmiiboAPI/master/database/amiibo.json"
+    curl_command = "curl https://raw.githubusercontent.com/8bitdream/AmiiboAPI/master/database/amiibo.json"
     curl_process = subprocess.Popen(curl_command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, error = curl_process.communicate()
 
@@ -52,7 +52,7 @@ def filter_data(data):
     print("Filtering downloaded data")
     # Convert the output to JSON and use jq to filter data
     data_json = json.loads(data)
-    filtered_data_json = jq('del(.amiibos[].release) | del(.characters)').transform(data_json)
+    filtered_data_json = jq('del(.amiibos[].release) | del(.characters) | del(.machine)').transform(data_json)
     # Convert the filtered JSON data back to a string, preserving Unicode characters
     filtered_data = json.dumps(filtered_data_json, indent=2, ensure_ascii=False)
     return filtered_data
