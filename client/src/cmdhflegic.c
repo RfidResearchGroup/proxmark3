@@ -1684,6 +1684,7 @@ static int CmdLegicESave(const char *Cmd) {
     }
 
     pm3_save_dump(filename, data, numofbytes, jsfLegic_v2);
+    free(data);
     return PM3_SUCCESS;
 }
 
