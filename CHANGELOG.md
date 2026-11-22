@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 15 rdbl` - the tag errors 0x0F and 0x10, as past the end of the memory, are shown instead of nothing (@matrix)
+- Fixed `hf 15 rdbl` - blocks of more than 8 bytes are printed in full instead of their first 8 bytes (@matrix)
 - Fixed `hf 15 sim` - a request of flags and command only, such as an unaddressed GET SYSTEM INFORMATION, failed the CRC check and got no answer (@matrix)
 - Fixed `hf 15 sim` - the first answer left 17 ms late, the CRC table was built on the first command (@matrix)
 - Fixed `hf iclass eload` - a failed emulator memory write, for example with the device memory full, is reported instead of `Done!` (@matrix)
