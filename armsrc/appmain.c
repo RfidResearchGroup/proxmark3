@@ -2214,8 +2214,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             // Resetting the bitstream also frees the BigBuf memory, so we do this here to prevent
             // an inconvenient reset in the future by Iso15693InitTag
             FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
-            BigBuf_Clear_EM();
-            reply_ng(CMD_HF_ISO15693_EML_CLEAR, PM3_SUCCESS, NULL, 0);
+            int res = BigBuf_Clear_EM();
+            reply_ng(CMD_HF_ISO15693_EML_CLEAR, res, NULL, 0);
             break;
         }
         case CMD_HF_ISO15693_EML_SETMEM: {
@@ -2233,7 +2233,13 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t data[];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            emlSet(payload->data, payload->offset, payload->count);
+            // the data the packet holds
+            if (packet->length < sizeof(struct p) || payload->count > packet->length - sizeof(struct p)) {
+                reply_ng(CMD_HF_ISO15693_EML_SETMEM, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            int res = emlSet(payload->data, payload->offset, payload->count);
+            reply_ng(CMD_HF_ISO15693_EML_SETMEM, res, NULL, 0);
             break;
         }
         case CMD_HF_ISO15693_EML_GETMEM: {
@@ -3176,7 +3182,13 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t data[];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            emlSet(payload->data, payload->offset, payload->len);
+            // the data the packet holds
+            if (packet->length < sizeof(struct p) || payload->len > packet->length - sizeof(struct p)) {
+                reply_ng(CMD_HF_ICLASS_EML_MEMSET, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            int res = emlSet(payload->data, payload->offset, payload->len);
+            reply_ng(CMD_HF_ICLASS_EML_MEMSET, res, NULL, 0);
             break;
         }
         case CMD_HF_ICLASS_WRITEBL: {

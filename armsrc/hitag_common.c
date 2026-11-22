@@ -149,8 +149,13 @@ void hitag_setup_fpga(uint16_t conf, uint8_t threshold, bool ledcontrol) {
     // Set up the SSC so the ADC samples actually stream to the FPGA.
     FpgaSetupSsc(FPGA_MAJOR_MODE_LF_READER);
 
-    // Give the front end a moment to settle before anything reads from it.
-    hitag_settle();
+    // Second settle, for the edge detector the conf word above just configured.
+    // Skipped with the reader field up: that puts us inside T_ttf (280..565 T0
+    // from field up) and any idle here deafens a tag in TTF mode.
+    const bool reader_field = ((conf & FPGA_LF_EDGE_DETECT_READER_FIELD) != 0);
+    if (reader_field == false) {
+        hitag_settle();
+    }
 
     // Configure the timers via the HAL: a precision counter (T0 timing), an
     // input capture (tag frame edges) and a timestamp counter (trace timing).
