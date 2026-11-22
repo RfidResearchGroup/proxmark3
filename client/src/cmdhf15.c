@@ -403,7 +403,7 @@ static int iso15_error_handling_card_response(uint8_t *d, uint16_t n) {
     return PM3_SUCCESS;
 }
 
-// hf 15 info requests: also report the 0F and 10 errors that block reads take as the end of the memory
+// single requests: also report the 0F and 10 errors that block reads take as the end of the memory
 static int iso15_info_error_handling(uint8_t *d, uint16_t n) {
     int res = iso15_error_handling_card_response(d, n);
     if (res == PM3_EOUTOFBOUND) {
@@ -2925,8 +2925,18 @@ static int CmdHF15Readmulti(const char *Cmd) {
     CLIParserFree(ctx);
 
     // sanity checks
-    if (blockcnt > 6) {
-        PrintAndLogEx(WARNING, "Page count must be 6 or less, got ( " _RED_("%d") " )", blockcnt);
+    if ((blockno < 0) || (blockno > 255)) {
+        PrintAndLogEx(WARNING, "Page number must be 0-255, got ( " _RED_("%d") " )", blockno);
+        return PM3_EINVARG;
+    }
+
+    if ((blockcnt < 1) || (blockcnt > 6)) {
+        PrintAndLogEx(WARNING, "Page count must be 1-6, got ( " _RED_("%d") " )", blockcnt);
+        return PM3_EINVARG;
+    }
+
+    if ((blockno + blockcnt) > 256) {
+        PrintAndLogEx(WARNING, "Last page must be 255 or less, got ( " _RED_("%d") " )", blockno + blockcnt - 1);
         return PM3_EINVARG;
     }
 
@@ -2935,9 +2945,20 @@ static int CmdHF15Readmulti(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    if (uidlen != 0 && uidlen != ISO15693_UID_LENGTH) {
+        PrintAndLogEx(WARNING, "UID must include 8 hex bytes, got ( " _RED_("%i") " )", uidlen);
+        return PM3_EINVARG;
+    }
+
     if (blocksize < 4) {
         PrintAndLogEx(WARNING, "Blocksize too small, using default 4 bytes");
         blocksize = 4;
+    }
+
+    // ISO15693 block size field is 5 bits
+    if (blocksize > 32) {
+        PrintAndLogEx(WARNING, "Blocksize too large, using maximum 32 bytes");
+        blocksize = 32;
     }
 
     // enforcing add_option in order to get lock-info
@@ -3014,11 +3035,29 @@ static int CmdHF15Readmulti(const char *Cmd) {
 
     uint8_t *d = resp.data.asBytes;
 
-    ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length)
+    int res = iso15_info_error_handling(d, resp.length);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
 
     // 1 byte cmd,  1 lock byte,  4 / 8 bytes block size,  2 crc
     if (resp.length > (1 + ((blockcnt + 1) * (blocksize + 1)) + 2)) {
         PrintAndLogEx(WARNING, "got longer response. Check block size!");
+    }
+
+    // print only the blocks the tag sent
+    int got = (resp.length - 3) / (blocksize + 1);
+    if (got < (blockcnt + 1)) {
+        if (((resp.length - 3) % (blocksize + 1)) != 0) {
+            PrintAndLogEx(WARNING, "got shorter response. Check block size!");
+        } else {
+            PrintAndLogEx(WARNING, "got shorter response, %d of %d pages", got, blockcnt + 1);
+        }
+
+        if (got == 0) {
+            return PM3_EWRONGANSWER;
+        }
+        blockcnt = got - 1;
     }
 
     // skip status byte
@@ -3085,8 +3124,18 @@ static int CmdHF15Readblock(const char *Cmd) {
     CLIParserFree(ctx);
 
     // sanity checks
+    if ((blockno < 0) || (blockno > 255)) {
+        PrintAndLogEx(WARNING, "Page number must be 0-255, got ( " _RED_("%d") " )", blockno);
+        return PM3_EINVARG;
+    }
+
     if ((scan + unaddressed + uid_set) > 1) {
         PrintAndLogEx(WARNING, "Select only one option /scan/unaddress/uid");
+        return PM3_EINVARG;
+    }
+
+    if (uidlen != 0 && uidlen != ISO15693_UID_LENGTH) {
+        PrintAndLogEx(WARNING, "UID must include 8 hex bytes, got ( " _RED_("%i") " )", uidlen);
         return PM3_EINVARG;
     }
 
@@ -3273,7 +3322,7 @@ static int CmdHF15Write(const char *Cmd) {
     void *argtable[6 + 4] = {0};
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_int1("b", "blk", "<dec>", "page number (0-255)");
-    argtable[arglen++] = arg_str1("d", "data", "<hex>", "data, 4 bytes");
+    argtable[arglen++] = arg_str1("d", "data", "<hex>", "data, 4 or 8 bytes");
     argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3297,8 +3346,18 @@ static int CmdHF15Write(const char *Cmd) {
     CLIParserFree(ctx);
 
     // sanity checks
+    if ((blockno < 0) || (blockno > 255)) {
+        PrintAndLogEx(WARNING, "Page number must be 0-255, got ( " _RED_("%d") " )", blockno);
+        return PM3_EINVARG;
+    }
+
     if ((scan + unaddressed + uid_set) > 1) {
         PrintAndLogEx(WARNING, "Select only one option /scan/unaddress/uid");
+        return PM3_EINVARG;
+    }
+
+    if (uidlen != 0 && uidlen != ISO15693_UID_LENGTH) {
+        PrintAndLogEx(WARNING, "UID must include 8 hex bytes, got ( " _RED_("%i") " )", uidlen);
         return PM3_EINVARG;
     }
 
