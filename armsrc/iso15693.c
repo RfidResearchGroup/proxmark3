@@ -1529,9 +1529,11 @@ static int RAMFUNC Handle15693SampleFromReader(bool bit, DecodeReader_t *reader)
 //
 // Assume that we're called with the SSC (to the FPGA) and ADC path set
 // correctly.
+//
+// RAMFUNC: from flash it needs ~24 us per DMA byte, the FPGA sends one every 18.9 us
 //-----------------------------------------------------------------------------
 
-int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eof_time, bool allow_usb_interrupt) {
+int RAMFUNC GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eof_time, bool allow_usb_interrupt) {
     int samples = 0;
     bool gotFrame = false;
 
@@ -1563,8 +1565,7 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
     uint16_t poll_countdown = 0;
     uint32_t dma_start_time = GetCountSspClk() & 0xfffffff8;
 
-    // This loop has to consume one DMA byte per ~0.66 us
-    // ~31 CPU cycles at 48 MHz
+    // This loop has to consume one DMA byte per 18.9 us (8 samples at 423.75 kHz)
     // or the 512 byte circular buffer overruns
     for (;;) {
         volatile uint16_t behindBy = ((uint8_t *)FPGA_SSC_DMA_RX_Current_Address() - upTo) & (DMA_BUFFER_SIZE - 1);
@@ -1590,13 +1591,28 @@ int GetIso15693CommandFromReader(uint8_t *received, size_t max_len, uint32_t *eo
             FPGA_SSC_DMA_RX_Refresh_Single(dma->buf, DMA_BUFFER_SIZE);
         }
 
-        for (int i = 7; i >= 0; i--) {
-            if (Handle15693SampleFromReader((b >> i) & 0x01, dr)) {
-                *eof_time = dma_start_time + samples - DELAY_READER_TO_ARM; // end of EOF
-                gotFrame = true;
-                break;
+        if (b == 0xFF && dr->state <= STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF) {
+            // unmodulated carrier while waiting for a SOF, the usual byte: eight
+            // samples of 1 only move UNSYNCD to AWAIT_1ST_FALLING_EDGE_OF_SOF
+            dr->state = STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF;
+            samples += 8;
+        } else if (b == 0x00 && dr->state <= STATE_READER_AWAIT_1ST_FALLING_EDGE_OF_SOF) {
+            // no carrier: eight samples of 0 end in UNSYNCD from both states
+            dr->state = STATE_READER_UNSYNCD;
+            samples += 8;
+        } else if (b == 0xFF && dr->state == STATE_READER_RECEIVE_DATA_1_OUT_OF_4 && dr->sum1 == 0 && dr->posCount <= 22) {
+            // idle samples between 1-of-4 pauses only move posCount; from <= 22 it cannot pass 30
+            dr->posCount += 8;
+            samples += 8;
+        } else {
+            for (int i = 7; i >= 0; i--) {
+                if (Handle15693SampleFromReader((b >> i) & 0x01, dr)) {
+                    *eof_time = dma_start_time + samples - DELAY_READER_TO_ARM; // end of EOF
+                    gotFrame = true;
+                    break;
+                }
+                samples++;
             }
-            samples++;
         }
 
         if (gotFrame) {
@@ -1997,6 +2013,13 @@ static void BuildIdentifyRequest(uint8_t *cmd) {
 int SendDataTag(const uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t *recv,
                 uint16_t max_recv_len, uint32_t start_time, uint16_t timeout, uint32_t *eof_time, uint16_t *resp_len) {
 
+    // SOF, EOF and 4 (1 out of 4) or 64 (1 out of 256) bytes per byte must fit the ToSend buffer
+    if (sendlen > ((TOSEND_BUFFER_SIZE - 2) / (speed_fast ? 4 : 64))) {
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("ISO15693 frame too long ( %d bytes )", sendlen);
+        *resp_len = 0;
+        return PM3_EOVFLOW;
+    }
+
     if (init) {
         Iso15693InitReader();
         start_time = GetCountSspClk();
@@ -2312,6 +2335,10 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
     uint8_t nbPages = 0;
     uint8_t pwdId = 0;
 
+    // the first CRC of a type builds its table, which takes longer than the
+    // reader waits for an answer: build it now rather than on the first command
+    init_table(CRC_15693);
+
     while (exit_loop == false) {
 
         button_pressed = BUTTON_PRESS();
@@ -2359,16 +2386,19 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
             Dbhexdump(cmd_len, cmd, false);
         }
 
-        if (cmd_len < 3) {
+        // flags, command and CRC
+        if (cmd_len < 4) {
             continue;
         }
 
         // Check CRC and drop received cmd with bad CRC
         // Iceman: we should already removed bad received commands with 0x00 in the check above
-        uint16_t crc = CalculateCrc15(cmd, cmd_len - 2);
-        if (((crc & 0xff) != cmd[cmd_len - 2]) || ((crc >> 8) != cmd[cmd_len - 1])) {
+        // over the whole frame: Crc16ex() gives 0 for the two bytes of a request without parameters
+        if (CheckCrc15(cmd, cmd_len) == false) {
             if (g_dbglevel >= DBG_DEBUG) {
-                Dbprintf("CrcFail!, expected CRC=%02X%02X", crc & 0xff, crc >> 8);
+                uint8_t crc[2] = {0};
+                compute_crc(CRC_15693, cmd, cmd_len - 2, &crc[0], &crc[1]);
+                Dbprintf("CrcFail!, expected CRC=%02X%02X", crc[0], crc[1]);
             }
             continue;
         }
@@ -2944,6 +2974,14 @@ void SendRawCommand15693(iso15_raw_cmd_t *packet) {
     bool keep_field_on = ((packet->flags & ISO15_NO_DISCONNECT) == ISO15_NO_DISCONNECT);
     bool read_respone = ((packet->flags & ISO15_READ_RESPONSE) == ISO15_READ_RESPONSE);
     bool init = ((packet->flags & ISO15_CONNECT) == ISO15_CONNECT);
+
+    // without ISO15_CONNECT the reader must be up already, kept by ISO15_NO_DISCONNECT
+    if (init == false && FpgaGetCurrent() != FPGA_BITSTREAM_HF_15) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("ISO15693 reader is not active");
+        reply_ng(CMD_HF_ISO15693_COMMAND, PM3_EINIT, NULL, 0);
+        LED_A_OFF();
+        return;
+    }
 
     // Detect 16-slot inventory mode from protocol flags
     bool is_inventory = (packet->raw[0] & ISO15_REQ_INVENTORY) != 0;
