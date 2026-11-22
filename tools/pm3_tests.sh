@@ -475,7 +475,7 @@ while true; do
       if ! CheckExecute "data rawdemod ar samples"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_keri.pm3; data setdebugmode -1; data rawdemod --ar --samples 1000' 2>&1" "maxLen 1000"; then break; fi
       if ! CheckExecute "data rawdemod am max errors"            "$CLIENTBIN -c 'data load -f traces/lf_EM4102-1.pm3; data setdebugmode -1; data rawdemod --am --max 300' 2>&1" "maxErr 300"; then break; fi
       if ! CheckExecute "mfu pwdgen test"         "$CLIENTBIN -c 'hf mfu pwdgen --test'" "Selftest ok"; then break; fi
-      if ! CheckExecute "mfu pwdgen philips"      "$CLIENTBIN -c 'hf mfu pwdgen --uid 040D4B5AC57181 --mfg 3231303632382035324D'" "Philips Toothbrush \\| FBCFACC1"; then break; fi
+      if ! CheckExecute "mfu pwdgen philips"      "$CLIENTBIN -c 'hf mfu pwdgen --uid 040D4B5AC57181 --mfg 3231303632382035324D'" "Philips Toothbrush\\.{2} FBCFACC1"; then break; fi
       if ! CheckExecute "mfu keygen test"         "$CLIENTBIN -c 'hf mfu keygen --uid 11223344556677'" "80 B1 C2 71 D8 A0"; then break; fi
       if ! CheckExecute "jooki encode test"       "$CLIENTBIN -c 'hf jooki encode --test'" "04 28 F4 DA F0 4A 81  \( ok \)"; then break; fi
       if ! CheckExecute "vigik signature selftest" "$CLIENTBIN -c 'hf mf view --selftest'" "selftest \\( ok \\)"; then break; fi
@@ -772,7 +772,11 @@ while true; do
       if ! CheckExecute "lf t55xx cfg watchnet"             "$CLIENTBIN -c 'lf t55xx info -c 00107060'" "WatchNET"; then break; fi
       if ! CheckExecute "lf t55xx cfg keri nxt"             "$CLIENTBIN -c 'lf t55xx info -c 00107080'" "Keri NXT"; then break; fi
       if ! CheckExecute "lf t55xx cfg ict"                  "$CLIENTBIN -c 'lf t55xx info -c 001070E0'" "Config block match\\.\\.\\. ICT"; then break; fi
-      # block 0 reads saved after 'lf t55xx detect --r0'. info -1 decodes block 0 with the config detect found
+
+      if ! CheckExecute "lf T55 p1detect test"              "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_page1_trace.pm3; lf t55xx p1detect -1'" "T55xx chip found"; then break; fi
+      if ! CheckExecute "lf T55 p1detect reject hitag s"    "if ! $CLIENTBIN -c 'data load -f traces/lf_hitag_s_page1.pm3; lf t55xx p1detect -1' 2>&1 | grep -q 'T55xx chip found'; then echo OK; fi" "OK"; then break; fi
+
+# block 0 reads saved after 'lf t55xx detect --r0'. info -1 decodes block 0 with the config detect found
       if ! CheckExecute "lf T55 detect ask rf32"            "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_ask_rf32.pm3; lf t55xx detect -1; lf t55xx info -1'" "000880E0 - "; then break; fi
       if ! CheckExecute "lf T55 detect ask rf32 st"         "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_ask_rf32_st.pm3; lf t55xx detect -1; lf t55xx info -1'" "000880E8 - "; then break; fi
       if ! CheckExecute "lf T55 detect fsk2a rf50"          "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_fsk2a_rf50.pm3; lf t55xx detect -1; lf t55xx info -1'" "001070E0 - "; then break; fi
