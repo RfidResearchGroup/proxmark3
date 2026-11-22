@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 15 rdmulti` - the tag errors 0x0F and 0x10, as past the end of the memory, are shown instead of nothing (@matrix)
+- Fixed `hf 15 rdmulti` - printed bytes the tag never sent, past the answer buffer for a large `--bs`, now only received blocks, `--bs` capped at 32 (@matrix)
 - Fixed `hf 15 rdbl`, `hf 15 wrbl` and `hf 15 rdmulti` - a page number outside 0-255 is refused instead of using its low byte (`wrbl -b 256` wrote page 0) (@matrix)
 - Fixed `hf 15 rdbl`, `hf 15 wrbl` and `hf 15 rdmulti` - a `-u` that is not 8 bytes is refused instead of falling back to the tag found by a scan (@matrix)
 - Fixed `hf 15 rdmulti` - `--cnt` must be 1-6, `--cnt -1` asked for 256 pages (@matrix)
