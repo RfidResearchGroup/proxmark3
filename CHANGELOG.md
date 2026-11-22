@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Use updated fork of AmiiboAPI and update amiibo database (@tpglitch)
 - Fixed `hf 14b sim` - the answer left after a fixed 76 us instead of a TR0 counted from the reader's EOF, an SSC reset dropped the first TR1 byte and the subcarrier stayed on after the EOF (@matrix)
 - Fixed `hf 14b sim` - the field was measured with 32 ADC readings before every listen, a reader frame sent meanwhile was not received (@matrix)
 - Fixed `hf 14b sim` - ATTRIB was answered with CID 0 whatever CID the reader assigned (@matrix)
