@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf topaz view` - a json dump was loaded with its blocks 8 blocks apart, past the buffer, and then refused (@matrix)
+- Fixed the Topaz json dump loader - it did not check that the tag fits the buffer: a Topaz json given to a command with a smaller one, `lf hitag view` for one, overflowed it (@matrix)
 - Fixed `hf topaz info` - the search for the lock and reserved memory TLVs had no end, so on a tag without an NDEF message TLV it read past the tag memory (@matrix)
 - Fixed `hf 15 sim` - without `-u` and with no emulator memory, it printed a UID of zeros and `Done!` instead of an error (@matrix)
 - Fixed emulator memory reads and writes - an offset and length whose sum wrapped at 32 bits passed the bound check and accessed memory outside the emulator memory (@matrix)
