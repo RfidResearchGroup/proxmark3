@@ -163,6 +163,11 @@ miss_note() {
     res_skip "$2"
 }
 
+# need_pkg KEY - add to the install list without a result line of its own
+need_pkg() {
+    [ "$1" = "-" ] || MISSING_REQ="$MISSING_REQ $1"
+}
+
 # ask QUESTION - true on yes. Never blocks when there is no terminal.
 ask() {
     if [ "$ASSUME_YES" = "true" ]; then
@@ -438,6 +443,20 @@ cc_probe() {
     shift
     printf '#include <%s>\nint main(void) { return 0; }\n' "$hdr" > "$PROBE_DIR/probe.c"
     "$CC" "$PROBE_DIR/probe.c" -o "$PROBE_DIR/probe.out" "$@" >/dev/null 2>&1
+}
+
+# arm_probe HEADER - can the ARM compiler find it? Compile only, the firmware
+# links -nodefaultlibs so a missing ARM libc.a is not a build error.
+arm_probe() {
+    have "${CROSS}gcc" || return 2
+
+    if [ -z "$PROBE_DIR" ]; then
+        PROBE_DIR="$(mktemp -d 2>/dev/null)" || return 2
+    fi
+
+    printf '#include <%s>\nint probe;\n' "$1" > "$PROBE_DIR/arm_probe.c"
+    "${CROSS}gcc" -c "$PROBE_DIR/arm_probe.c" -o "$PROBE_DIR/arm_probe.o" \
+        >/dev/null 2>&1
 }
 
 pc_exists() { have pkg-config && pkg-config --exists "$@" 2>/dev/null; }
@@ -759,15 +778,24 @@ CROSS="${CROSS:-arm-none-eabi-}"
 if have "${CROSS}gcc"; then
     res_ok "${CROSS}gcc - $(first_line "${CROSS}gcc" -dumpversion)"
 
-    ARM_LIBC="$("${CROSS}gcc" -print-file-name=libc.a 2>/dev/null)"
-    if [ -n "$ARM_LIBC" ] && [ "$ARM_LIBC" != "libc.a" ] && [ -f "$ARM_LIBC" ]; then
-        res_ok "ARM C library - $ARM_LIBC"
+    # -nodefaultlibs means libgcc.a is the only library the firmware links
+    ARM_LIBGCC="$("${CROSS}gcc" -print-file-name=libgcc.a 2>/dev/null)"
+    if [ -n "$ARM_LIBGCC" ] && [ "$ARM_LIBGCC" != "libgcc.a" ] && [ -f "$ARM_LIBGCC" ]; then
+        res_ok "ARM libgcc - $ARM_LIBGCC"
     else
-        miss_req "armlibc" "ARM C library not found - ${CROSS}gcc cannot link"
+        miss_req "armgcc" "ARM libgcc not found - ${CROSS}gcc cannot link"
+    fi
+
+    # armsrc includes <stdio.h> and friends, those come from newlib
+    if arm_probe stdio.h; then
+        res_ok "ARM C headers"
+    else
+        miss_req "armlibc" "ARM C headers not found - ${CROSS}gcc cannot compile <stdio.h>"
         res_hint "install newlib, or picolibc where newlib conflicts with the compiler"
     fi
 else
     miss_req "armgcc" "${CROSS}gcc - not found, firmware cannot be built"
+    need_pkg "armlibc"
     res_hint "the host client alone still builds with 'make client'"
 fi
 

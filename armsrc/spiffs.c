@@ -293,34 +293,35 @@ int rdv40_spiffs_check(void) {
 ///// Base RDV40_SPIFFS_SAFETY_NORMAL operations////////////////////////////////
 
 // RDV40_SPIFFS_SAFE_FUNCTION() returns the mount-change flag, not a result, so a
-// failed write had no way of reaching the caller - the client happily reported
-// "Wrote N bytes" for a file the device never stored.  The last write result is
-// kept here instead, see rdv40_spiffs_write_status()
-static int g_spiffs_write_res = SPIFFS_OK;
+// failed operation had no way of reaching the caller - the client happily reported
+// "Wrote N bytes" for a file the device never stored, and "Done!" for a file it
+// never removed.  The last operation result is kept here instead, see
+// rdv40_spiffs_op_status()
+static int g_spiffs_op_res = SPIFFS_OK;
 
-int rdv40_spiffs_write_status(void) {
-    return g_spiffs_write_res;
+int rdv40_spiffs_op_status(void) {
+    return g_spiffs_op_res;
 }
 
 void write_to_spiffs(const char *filename, const uint8_t *src, uint32_t size) {
-    g_spiffs_write_res = SPIFFS_OK;
+    g_spiffs_op_res = SPIFFS_OK;
     spiffs_close_cached();
     spiffs_file fd = SPIFFS_open(&fs, filename, SPIFFS_CREAT | SPIFFS_TRUNC | SPIFFS_RDWR, 0);
     if (fd < 0) {
-        g_spiffs_write_res = SPIFFS_errno(&fs);
-        Dbprintf("open errno %i\n", g_spiffs_write_res);
+        g_spiffs_op_res = SPIFFS_errno(&fs);
+        Dbprintf("spiffs open `%s` failed, errno %i", filename, g_spiffs_op_res);
         return;
     }
     // Note: SPIFFS_write() doesn't declare third parameter as const (but should)
     if (SPIFFS_write(&fs, fd, (void *)src, size) < 0) {
-        g_spiffs_write_res = SPIFFS_errno(&fs);
-        Dbprintf("wr errno %i\n", g_spiffs_write_res);
+        g_spiffs_op_res = SPIFFS_errno(&fs);
+        Dbprintf("spiffs write `%s` failed, errno %i", filename, g_spiffs_op_res);
     }
     SPIFFS_close(&fs, fd);
 }
 
 void append_to_spiffs(const char *filename, const uint8_t *src, uint32_t size) {
-    g_spiffs_write_res = SPIFFS_OK;
+    g_spiffs_op_res = SPIFFS_OK;
 
     // reuse the descriptor when this is another packet of the same file
     if ((g_cached_fd < 0) || (strncmp(filename, g_cached_fn, sizeof(g_cached_fn)) != 0)) {
@@ -329,8 +330,8 @@ void append_to_spiffs(const char *filename, const uint8_t *src, uint32_t size) {
 
         spiffs_file fd = SPIFFS_open(&fs, filename, SPIFFS_APPEND | SPIFFS_RDWR, 0);
         if (fd < 0) {
-            g_spiffs_write_res = SPIFFS_errno(&fs);
-            Dbprintf("open errno %i\n", g_spiffs_write_res);
+            g_spiffs_op_res = SPIFFS_errno(&fs);
+            Dbprintf("spiffs open `%s` failed, errno %i", filename, g_spiffs_op_res);
             return;
         }
 
@@ -341,8 +342,8 @@ void append_to_spiffs(const char *filename, const uint8_t *src, uint32_t size) {
 
     // Note: SPIFFS_write() doesn't declare third parameter as const (but should)
     if (SPIFFS_write(&fs, g_cached_fd, (void *)src, size) < 0) {
-        g_spiffs_write_res = SPIFFS_errno(&fs);
-        Dbprintf("errno %i\n", g_spiffs_write_res);
+        g_spiffs_op_res = SPIFFS_errno(&fs);
+        Dbprintf("spiffs append `%s` failed, errno %i", filename, g_spiffs_op_res);
         // do not hold on to a descriptor that just failed
         spiffs_close_cached();
     }
@@ -352,22 +353,26 @@ void read_from_spiffs(const char *filename, uint8_t *dst, uint32_t size) {
     spiffs_close_cached();
     spiffs_file fd = SPIFFS_open(&fs, filename, SPIFFS_RDWR, 0);
     if (SPIFFS_read(&fs, fd, dst, size) < 0) {
-        Dbprintf("errno %i\n", SPIFFS_errno(&fs));
+        Dbprintf("spiffs read `%s` failed, errno %i", filename, SPIFFS_errno(&fs));
     }
     SPIFFS_close(&fs, fd);
 }
 
 static void rename_in_spiffs(const char *old_filename, const char *new_filename) {
+    g_spiffs_op_res = SPIFFS_OK;
     spiffs_close_cached();
     if (SPIFFS_rename(&fs, old_filename, new_filename) < 0) {
-        Dbprintf("errno %i\n", SPIFFS_errno(&fs));
+        g_spiffs_op_res = SPIFFS_errno(&fs);
+        Dbprintf("spiffs rename `%s` -> `%s` failed, errno %i", old_filename, new_filename, g_spiffs_op_res);
     }
 }
 
 static void remove_from_spiffs(const char *filename) {
+    g_spiffs_op_res = SPIFFS_OK;
     spiffs_close_cached();
     if (SPIFFS_remove(&fs, filename) < 0) {
-        Dbprintf("errno %i\n", SPIFFS_errno(&fs));
+        g_spiffs_op_res = SPIFFS_errno(&fs);
+        Dbprintf("spiffs remove `%s` failed, errno %i", filename, g_spiffs_op_res);
     }
 }
 
@@ -375,7 +380,7 @@ uint32_t size_in_spiffs(const char *filename) {
     spiffs_close_cached();
     spiffs_stat s;
     if (SPIFFS_stat(&fs, filename, &s) < 0) {
-        Dbprintf("errno %i\n", SPIFFS_errno(&fs));
+        Dbprintf("spiffs stat `%s` failed, errno %i", filename, SPIFFS_errno(&fs));
         return 0;
     }
     return s.size;
@@ -390,7 +395,7 @@ static rdv40_spiffs_fsinfo info_of_spiffs(void) {
     fsinfo.maxPathLength = SPIFFS_OBJ_NAME_LEN;
 
     if (SPIFFS_info(&fs, &fsinfo.totalBytes, &fsinfo.usedBytes) < 0) {
-        Dbprintf("errno %i\n", SPIFFS_errno(&fs));
+        Dbprintf("spiffs info failed, errno %i", SPIFFS_errno(&fs));
     }
 
     fsinfo.freeBytes = fsinfo.totalBytes - fsinfo.usedBytes;
@@ -446,6 +451,7 @@ static RDV40SpiFFSFileType filetype_in_spiffs(const char *filename) {
 
 static void copy_in_spiffs(const char *src, const char *dst) {
 
+    g_spiffs_op_res = SPIFFS_OK;
     spiffs_close_cached();
 
     // no BigBuf_calloc(filesize) here: a file can be bigger than BigBuf.  Copy it
@@ -454,12 +460,14 @@ static void copy_in_spiffs(const char *src, const char *dst) {
     uint8_t *mem = BigBuf_calloc(SPIFFS_WRITE_CHUNK_SIZE);
     if (mem == NULL) {
         Dbprintf("error, cannot allocate copy buffer");
+        g_spiffs_op_res = SPIFFS_ERR_INTERNAL;
         return;
     }
 
     spiffs_file fd = SPIFFS_open(&fs, src, SPIFFS_RDONLY, 0);
     if (fd < 0) {
-        Dbprintf("errno %i\n", SPIFFS_errno(&fs));
+        g_spiffs_op_res = SPIFFS_errno(&fs);
+        Dbprintf("spiffs open `%s` failed, errno %i", src, g_spiffs_op_res);
         return;
     }
 
@@ -468,7 +476,8 @@ static void copy_in_spiffs(const char *src, const char *dst) {
 
         s32_t len = SPIFFS_read(&fs, fd, mem, SPIFFS_WRITE_CHUNK_SIZE);
         if (len < 0) {
-            Dbprintf("errno %i\n", SPIFFS_errno(&fs));
+            g_spiffs_op_res = SPIFFS_errno(&fs);
+            Dbprintf("spiffs read `%s` failed, errno %i", src, g_spiffs_op_res);
             break;
         }
 
@@ -482,6 +491,11 @@ static void copy_in_spiffs(const char *src, const char *dst) {
             first = false;
         } else {
             append_to_spiffs(dst, mem, (uint32_t)len);
+        }
+
+        // a half copied file is not a copy, stop at the first failed chunk
+        if (g_spiffs_op_res != SPIFFS_OK) {
+            break;
         }
     }
 
@@ -811,12 +825,12 @@ static int stream_from_spiffs(const char *filename, uint32_t offset, uint32_t si
 
     spiffs_file fd = SPIFFS_open(&fs, target, SPIFFS_RDONLY, 0);
     if (fd < 0) {
-        Dbprintf("errno %i\n", SPIFFS_errno(&fs));
+        Dbprintf("spiffs open `%s` failed, errno %i", target, SPIFFS_errno(&fs));
         return PM3_EFILE;
     }
 
     if (offset && (SPIFFS_lseek(&fs, fd, offset, SPIFFS_SEEK_SET) < 0)) {
-        Dbprintf("errno %i\n", SPIFFS_errno(&fs));
+        Dbprintf("spiffs seek `%s` failed, errno %i", target, SPIFFS_errno(&fs));
         SPIFFS_close(&fs, fd);
         return PM3_EFILE;
     }
@@ -829,7 +843,7 @@ static int stream_from_spiffs(const char *filename, uint32_t offset, uint32_t si
         // SPIFFS_read clamps to the end of the file and returns 0 once there
         s32_t len = SPIFFS_read(&fs, fd, chunkbuf, MIN(size - sent, (uint32_t)chunklen));
         if (len < 0) {
-            Dbprintf("errno %i\n", SPIFFS_errno(&fs));
+            Dbprintf("spiffs read `%s` failed, errno %i", target, SPIFFS_errno(&fs));
             res = PM3_EFILE;
             break;
         }
