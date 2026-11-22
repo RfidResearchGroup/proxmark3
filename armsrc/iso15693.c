@@ -2013,6 +2013,13 @@ static void BuildIdentifyRequest(uint8_t *cmd) {
 int SendDataTag(const uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t *recv,
                 uint16_t max_recv_len, uint32_t start_time, uint16_t timeout, uint32_t *eof_time, uint16_t *resp_len) {
 
+    // SOF, EOF and 4 (1 out of 4) or 64 (1 out of 256) bytes per byte must fit the ToSend buffer
+    if (sendlen > ((TOSEND_BUFFER_SIZE - 2) / (speed_fast ? 4 : 64))) {
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("ISO15693 frame too long ( %d bytes )", sendlen);
+        *resp_len = 0;
+        return PM3_EOVFLOW;
+    }
+
     if (init) {
         Iso15693InitReader();
         start_time = GetCountSspClk();
@@ -2960,6 +2967,14 @@ void SendRawCommand15693(iso15_raw_cmd_t *packet) {
     bool keep_field_on = ((packet->flags & ISO15_NO_DISCONNECT) == ISO15_NO_DISCONNECT);
     bool read_respone = ((packet->flags & ISO15_READ_RESPONSE) == ISO15_READ_RESPONSE);
     bool init = ((packet->flags & ISO15_CONNECT) == ISO15_CONNECT);
+
+    // without ISO15_CONNECT the reader must be up already, kept by ISO15_NO_DISCONNECT
+    if (init == false && FpgaGetCurrent() != FPGA_BITSTREAM_HF_15) {
+        if (g_dbglevel >= DBG_ERROR) DbpString("ISO15693 reader is not active");
+        reply_ng(CMD_HF_ISO15693_COMMAND, PM3_EINIT, NULL, 0);
+        LED_A_OFF();
+        return;
+    }
 
     // Detect 16-slot inventory mode from protocol flags
     bool is_inventory = (packet->raw[0] & ISO15_REQ_INVENTORY) != 0;
