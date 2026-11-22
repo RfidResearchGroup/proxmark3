@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 14b dump` - an SR dump whose system block could not be read was saved with zeros in its place instead of failing (@matrix)
+- Fixed `hf 14b dump` - a saved SR dump returned an error (@matrix)
 - Fixed `hf legic esave` - its buffer was never freed (@matrix)
 - Fixed `lf hitag hts reader` / `lf hitag htu reader` - `hitag_setup_fpga()` idled for tens of ms with the reader field already up, so a tag in public (TTF) mode was mid transmission when the first command went out and never answered (@mishamyte)
 - Fixed `lf search` / `lf t55xx p1detect` - the bare 8-bit ACL anchor matched unrelated LF signals by chance, so EM4100 reads gained a bogus `Chipset... T55xx` line and Hitag 2 / Hitag S / Hitag micro were reported as T55xx instead of their real chipset (@mishamyte)
