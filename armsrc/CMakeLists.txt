@@ -199,6 +199,13 @@ else ()
     set(SRC_CEP)
 endif ()
 
+# PM5 USB host CDC (OTGFS1) driver
+if (PM5)
+    set(SRC_PM5_USB_HOST_CDC pm5_usb_host_cdc.c)
+else ()
+    set(SRC_PM5_USB_HOST_CDC)
+endif ()
+
 # BWM charger (AW32001) + fuel gauge (BQ27427), incl. the optional low-batt beep
 if ("${APP_CFLAGS}" MATCHES "WITH_BWM_STATUS" OR "${APP_CFLAGS}" MATCHES "WITH_BWM_CHARGERKICK")
     set(SRC_BWM_CHARGER bwm_charger.c)
@@ -285,6 +292,7 @@ set(THUMBSRC
         ${SRC_FPC}
         ${SRC_BWM}
         ${SRC_CEP}
+        ${SRC_PM5_USB_HOST_CDC}
         ${SRC_HITAG}
         ${SRC_EM4x50}
         ${SRC_EM4x70}

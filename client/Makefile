@@ -117,7 +117,7 @@ else
 endif
 
 ## Winsock2
-ifdef IS_MINGW
+ifdef IS_WINDOWS
     LDLIBS += -lws2_32
 endif
 
