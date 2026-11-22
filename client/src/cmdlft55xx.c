@@ -221,26 +221,13 @@ void Set_t55xx_Config(t55xx_conf_block_t conf) {
 static int CmdHelp(const char *Cmd);
 
 static void arg_add_t55xx_downloadlink(void *at[], uint8_t *idx, uint8_t show, uint8_t dl_mode_def) {
-    const size_t r_count = 56;
-    const size_t r_len = r_count * sizeof(uint8_t);
+    // argtable keeps these help texts and never frees them
+    static char r0[56], r1[56], r2[56], r3[56], r4[56];
 
-    char *r0 = (char *)calloc(r_count, sizeof(uint8_t));
-    char *r1 = (char *)calloc(r_count, sizeof(uint8_t));
-    char *r2 = (char *)calloc(r_count, sizeof(uint8_t));
-    char *r3 = (char *)calloc(r_count, sizeof(uint8_t));
-
-    if (r0 == NULL || r1 == NULL || r2 == NULL || r3 == NULL) {
-        PrintAndLogEx(WARNING, "Failed to allocate memory");
-        free(r0);
-        free(r1);
-        free(r2);
-        free(r3);
-        return;
-    }
-    snprintf(r0, r_len, "downlink - fixed bit length %s", (dl_mode_def == 0) ? "(detected def)" : "");
-    snprintf(r1, r_len, "downlink - long leading reference %s", (dl_mode_def == 1) ? "(detected def)" : "");
-    snprintf(r2, r_len, "downlink - leading zero %s", (dl_mode_def == 2) ? "(detected def)" : "");
-    snprintf(r3, r_len, "downlink - 1 of 4 coding reference %s", (dl_mode_def == 3) ? "(detected def)" : "");
+    snprintf(r0, sizeof(r0), "downlink - fixed bit length %s", (dl_mode_def == 0) ? "(detected def)" : "");
+    snprintf(r1, sizeof(r1), "downlink - long leading reference %s", (dl_mode_def == 1) ? "(detected def)" : "");
+    snprintf(r2, sizeof(r2), "downlink - leading zero %s", (dl_mode_def == 2) ? "(detected def)" : "");
+    snprintf(r3, sizeof(r3), "downlink - 1 of 4 coding reference %s", (dl_mode_def == 3) ? "(detected def)" : "");
 
     uint8_t n = *idx;
     at[n++] = arg_lit0(NULL, "r0", r0);
@@ -249,16 +236,7 @@ static void arg_add_t55xx_downloadlink(void *at[], uint8_t *idx, uint8_t show, u
     at[n++] = arg_lit0(NULL, "r3", r3);
 
     if (show == T55XX_DLMODE_ALL) {
-        char *r4 = (char *)calloc(r_count, sizeof(uint8_t));
-        if (r4 == NULL) {
-            PrintAndLogEx(WARNING, "Failed to allocate memory");
-            free(r0);
-            free(r1);
-            free(r2);
-            free(r3);
-            return;
-        }
-        snprintf(r4, r_len, "try all downlink modes %s", (dl_mode_def == 4) ? "(def)" : "");
+        snprintf(r4, sizeof(r4), "try all downlink modes %s", (dl_mode_def == 4) ? "(def)" : "");
         at[n++] = arg_lit0(NULL, "all", r4);
     }
     at[n++] = arg_param_end;
@@ -4008,6 +3986,11 @@ static int CmdT55xxDump(const char *Cmd) {
         }
     }
 
+    if (success == false) {
+        PrintAndLogEx(FAILED, "Page 0 not read in full");
+        return PM3_ESOFT;
+    }
+
     if (nosave) {
         PrintAndLogEx(INFO, "Called with no save option");
         PrintAndLogEx(NORMAL, "");
@@ -4015,31 +3998,27 @@ static int CmdT55xxDump(const char *Cmd) {
     }
 
     // all ok, save dump to file
-    if (success) {
-
-        // set default filename, if not set by user
-        if (strlen(filename) == 0) {
-            strcpy(filename, "lf-t55xx");
-            for (uint8_t i = 1; i <= 7; i++) {
-                if ((cardmem[i].blockdata != 0x00) && (cardmem[i].blockdata != 0xFFFFFFFF)) {
-                    snprintf(filename + strlen(filename), sizeof(filename) - strlen(filename), "-%08X", cardmem[i].blockdata);
-                } else {
-                    break;
-                }
+    // set default filename, if not set by user
+    if (strlen(filename) == 0) {
+        strcpy(filename, "lf-t55xx");
+        for (uint8_t i = 1; i <= 7; i++) {
+            if ((cardmem[i].blockdata != 0x00) && (cardmem[i].blockdata != 0xFFFFFFFF)) {
+                snprintf(filename + strlen(filename), sizeof(filename) - strlen(filename), "-%08X", cardmem[i].blockdata);
+            } else {
+                break;
             }
-            strcat(filename, "-dump");
         }
-
-        // Swap endian so the files match the txt display
-        uint32_t data[T55x7_BLOCK_COUNT] = {0};
-
-        for (int i = 0; i < T55x7_BLOCK_COUNT; i++) {
-            data[i] = BSWAP_32(cardmem[i].blockdata);
-        }
-
-        pm3_save_dump(filename, (uint8_t *)data, (T55x7_BLOCK_COUNT * sizeof(uint32_t)), jsfT55x7);
+        strcat(filename, "-dump");
     }
 
+    // Swap endian so the files match the txt display
+    uint32_t data[T55x7_BLOCK_COUNT] = {0};
+
+    for (int i = 0; i < T55x7_BLOCK_COUNT; i++) {
+        data[i] = BSWAP_32(cardmem[i].blockdata);
+    }
+
+    pm3_save_dump(filename, (uint8_t *)data, (T55x7_BLOCK_COUNT * sizeof(uint32_t)), jsfT55x7);
     return PM3_SUCCESS;
 }
 
@@ -5215,31 +5194,43 @@ out:
     return PM3_SUCCESS;
 }
 
-// Page-1 trace data opens with allocation class ACL = 0xE0, then a manufacturer code.
-// Genuine Atmel silicon carries manufacturer 0x15 / 0x39 (the atmel / silicon preambles).
-// Cloned T5577s keep the 0xE0 ACL but use another manufacturer byte,
-// also accept a bare 8-bit ACL match
+// Page-1 trace: ACL 0xE0 then an ISO/IEC 7816-6 manufacturer code.  The 8 bit
+// ACL alone matches unrelated LF signals, so match all 16 bits.
+static const uint8_t t55xx_trace_mfc[] = {
+    0x15,   // Atmel
+    0x39,   // Silicon Craft
+    0x65,   // Tendyron, clone
+};
+
+// true if an ACL + manufacturer preamble is found with a 32 or 64 bit size.
+// Fresh size per search - preambleSearchEx() writes the period back through it.
 static bool t55xx_trace_preamble_match(void) {
-    uint8_t preamble_atmel[]   = {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1};
-    uint8_t preamble_silicon[] = {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1};
-    uint8_t preamble_acl[]     = {1, 1, 1, 0, 0, 0, 0, 0};
-    size_t startIdx = 0;
 
-    if (preambleSearchEx(g_DemodBuffer, preamble_atmel, sizeof(preamble_atmel), &g_DemodBufferLen, &startIdx, false) &&
-            (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-        return true;
+    for (size_t i = 0; i < ARRAYLEN(t55xx_trace_mfc); i++) {
+
+        uint8_t preamble[16] = {1, 1, 1, 0, 0, 0, 0, 0};
+        num_to_bytebits(t55xx_trace_mfc[i], 8, preamble + 8);
+
+        size_t size = g_DemodBufferLen;
+        size_t start_idx = 0;
+        if (preambleSearchEx(g_DemodBuffer, preamble, sizeof(preamble), &size, &start_idx, false) &&
+                (size == 32 || size == 64)) {
+            return true;
+        }
     }
 
-    startIdx = 0;
-    if (preambleSearchEx(g_DemodBuffer, preamble_silicon, sizeof(preamble_silicon), &g_DemodBufferLen, &startIdx, false) &&
-            (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-        return true;
-    }
-
-    startIdx = 0;
-    if (preambleSearchEx(g_DemodBuffer, preamble_acl, sizeof(preamble_acl), &g_DemodBufferLen, &startIdx, false) &&
-            (g_DemodBufferLen == 32 || g_DemodBufferLen == 64)) {
-        return true;
+    // unrelated LF signals open with the 0xE0 ACL too, so this is not a clone
+    // candidate - it only shows what the 16 bit match was compared against
+    uint8_t preamble_acl[8] = {1, 1, 1, 0, 0, 0, 0, 0};
+    size_t size = g_DemodBufferLen;
+    size_t start_idx = 0;
+    if (preambleSearchEx(g_DemodBuffer, preamble_acl, sizeof(preamble_acl), &size, &start_idx, false) &&
+            (size == 32 || size == 64) && (start_idx + 16 <= g_DemodBufferLen)) {
+        PrintAndLogEx(DEBUG, "DEBUG: (t55xx) page-1 ACL at %zu period %zu, manufacturer " _YELLOW_("0x%02X")
+                      , start_idx
+                      , size
+                      , (uint8_t)bytebits_to_byte(g_DemodBuffer + start_idx + 8, 8)
+                     );
     }
 
     return false;
@@ -5416,6 +5407,10 @@ static int CmdT55xxDetectPage1(const char *Cmd) {
 
     if (downlink_mode > 3)
         downlink_mode = 0;
+
+    // sanity check.
+    if (SanityOfflineCheck(use_graphbuf) != PM3_SUCCESS)
+        return PM3_ESOFT;
 
     bool found = false;
     uint8_t found_mode = 0;
@@ -6146,7 +6141,7 @@ static command_t CommandTable[] = {
     {"deviceconfig", CmdT55xxSetDeviceConfig, IfPm3Lf,         "Set/Get T55XX device configuration"},
     {"dump",         CmdT55xxDump,            IfPm3Lf,         "Dump T55xx card Page 0 block 0-7"},
     {"info",         CmdT55xxInfo,            AlwaysAvailable, "Show T55x7 configuration data (page 0/ blk 0)"},
-    {"p1detect",     CmdT55xxDetectPage1,     IfPm3Lf,         "Try detecting if this is a t55xx tag by reading page 1"},
+    {"p1detect",     CmdT55xxDetectPage1,     AlwaysAvailable, "Try detecting if this is a t55xx tag by reading page 1"},
     {"read",         CmdT55xxReadBlock,       IfPm3Lf,         "Read T55xx block data"},
     {"resetread",    CmdResetRead,            IfPm3Lf,         "Send Reset Cmd then lf read the stream to attempt to identify the start"},
     {"restore",      CmdT55xxRestore,         IfPm3Lf,         "Restore T55xx card Page 0 / Page 1 blocks"},
