@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed PM3 `hf 15 sim` and `hf iclass sim` - the FPGA set the frame on the edge that samples it, needs rebuilt images (@matrix)
 - Fixed PM5 `hf tune` and other HF field measurements after a 14a simulation - the RSSI ADC was left stopped on an overflow and the device hung (@matrix)
 - Fixed `hf mf sim` and `hf mfdes sim` - a stop command timed out while a reader kept polling or dropped its field (@matrix)
 - Fixed `hf mfu pwdgen` - the Philips Toothbrush row had a stray column separator and sat out of line with the other rows (@pkilar)
