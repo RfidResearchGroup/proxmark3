@@ -2261,9 +2261,13 @@ static void PacketReceived(PacketCommandNG *packet) {
                 reply_ng(CMD_HF_ISO15693_EML_GETMEM, PM3_EMALLOC, NULL, 0);
                 return;
             }
-            emlGet(buf, payload->offset, payload->length);
+            int res = emlGet(buf, payload->offset, payload->length);
             LED_B_ON();
-            reply_ng(CMD_HF_ISO15693_EML_GETMEM, PM3_SUCCESS, buf, payload->length);
+            if (res == PM3_SUCCESS) {
+                reply_ng(CMD_HF_ISO15693_EML_GETMEM, PM3_SUCCESS, buf, payload->length);
+            } else {
+                reply_ng(CMD_HF_ISO15693_EML_GETMEM, res, NULL, 0);
+            }
             LED_B_OFF();
             BigBuf_free_keep_EM();
             break;
