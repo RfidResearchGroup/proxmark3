@@ -288,7 +288,7 @@ static inline uint32_t leadingzeros(uint64_t a) {
 #endif
 }
 
-static void iclass_upload_emul(uint8_t *d, uint16_t n, uint16_t offset, uint16_t *bytes_sent) {
+static int iclass_upload_emul(uint8_t *d, uint16_t n, uint16_t offset, uint16_t *bytes_sent) {
 
     struct p {
         uint16_t offset;
@@ -316,7 +316,8 @@ static void iclass_upload_emul(uint8_t *d, uint16_t n, uint16_t offset, uint16_t
         struct p *payload = calloc(4 + bytes_in_packet, sizeof(uint8_t));
         if (payload == NULL) {
             PrintAndLogEx(WARNING, "Failed to allocate memory");
-            break;
+            g_conn.block_after_ACK = false;
+            return PM3_EMALLOC;
         }
 
         payload->offset = offset + *bytes_sent;
@@ -327,6 +328,13 @@ static void iclass_upload_emul(uint8_t *d, uint16_t n, uint16_t offset, uint16_t
         SendCommandNG(CMD_HF_ICLASS_EML_MEMSET, (uint8_t *)payload, 4 + bytes_in_packet);
         free(payload);
 
+        int res = WaitForEmulatorWrite(CMD_HF_ICLASS_EML_MEMSET);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Can't set emulator memory at offset: %u", offset + *bytes_sent);
+            g_conn.block_after_ACK = false;
+            return res;
+        }
+
         bytes_remaining -= bytes_in_packet;
         *bytes_sent += bytes_in_packet;
 
@@ -334,6 +342,7 @@ static void iclass_upload_emul(uint8_t *d, uint16_t n, uint16_t offset, uint16_t
         fflush(stdout);
     }
     PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
 }
 
 static const char *card_types[] = {
@@ -1987,8 +1996,11 @@ static int CmdHFiClassELoad(const char *Cmd) {
 
     //Send to device
     uint16_t bytes_sent = 0;
-    iclass_upload_emul(dump, bytes_read, 0, &bytes_sent);
+    res = iclass_upload_emul(dump, bytes_read, 0, &bytes_sent);
     free(dump);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
     PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%d") " bytes to emulator memory", bytes_sent);
     PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf iclass sim -h") "`");
     PrintAndLogEx(INFO, "Done!");
