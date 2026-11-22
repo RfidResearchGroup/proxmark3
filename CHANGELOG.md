@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `lf hid demod` - a few extra bits ahead of a preamble decoded as another card, the frame shifted by those bits (@mfcarroll)
 - Fixed `hf iclass liberate` - its writes were sent without authentication, so an iCopy-X card kept its key (@matrix)
 - Fixed `hf topaz dump`, `hf topaz info` - without a tag `dump` printed nothing and `info` only its title, now `no tag found` (@matrix)
 - Fixed `hf topaz info` - the minor version of the capability container was always printed as 0 (@matrix)

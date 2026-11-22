@@ -2363,6 +2363,29 @@ int Em410xDecode(uint8_t *bits, size_t *size, size_t *start_idx, uint32_t *hi, u
     return -6;
 }
 
+// manchester decode the bits between two HID preambles, false if not manchester
+static bool HIDdecodeManchester(const uint8_t *bits, size_t len, uint32_t *hi2, uint32_t *hi, uint32_t *lo) {
+    uint32_t h2 = 0, h = 0, l = 0;
+    // final loop, go over previously decoded FSK data and manchester decode into usable tag ID
+    for (size_t idx = 0; idx < len; idx += 2) {
+        if (bits[idx] == bits[idx + 1]) {
+            return false; //not manchester data
+        }
+        h2 = (h2 << 1) | (h >> 31);
+        h = (h << 1) | (l >> 31);
+        //Then, shift in a 0 or one into low
+        l <<= 1;
+        if (bits[idx] && !bits[idx + 1]) // 1 0
+            l |= 1;
+        else // 0 1
+            l |= 0;
+    }
+    *hi2 = h2;
+    *hi = h;
+    *lo = l;
+    return true;
+}
+
 // loop to get raw HID waveform then FSK demodulate the TAG ID from it
 int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo, int *waveStartIdx) {
     //make sure buffer has data
@@ -2377,30 +2400,26 @@ int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32
     if (*size < 96 * 2) return -3;
 
     // 00011101 bit pattern represent start of frame, 01 pattern represents a 0 and 10 represents a 1
+    size_t bits_len = *size;
     size_t start_idx = 0;
     uint8_t preamble[] = {0, 0, 0, 1, 1, 1, 0, 1};
-    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &start_idx))
+    if (!preambleSearchEx(dest, preamble, sizeof(preamble), size, &start_idx, true))
         return -4; //preamble not found
 
     // wrong size?  (between to preambles)
-    //if (*size != 96) return -5;
+    // a frame is 96 bits, 192 for long formats, else try from the next preamble
+    for (size_t next_idx = start_idx + 1; next_idx < bits_len - sizeof(preamble); next_idx++) {
+        if (memcmp(dest + next_idx, preamble, sizeof(preamble)) != 0)
+            continue;
 
-    size_t num_start = start_idx + sizeof(preamble);
-    // final loop, go over previously decoded FSK data and manchester decode into usable tag ID
-    for (size_t idx = num_start; (idx - num_start) < *size - sizeof(preamble); idx += 2) {
-        if (dest[idx] == dest[idx + 1]) {
-            return -5; //not manchester data
-        }
-        *hi2 = (*hi2 << 1) | (*hi >> 31);
-        *hi = (*hi << 1) | (*lo >> 31);
-        //Then, shift in a 0 or one into low
-        *lo <<= 1;
-        if (dest[idx] && !dest[idx + 1]) // 1 0
-            *lo |= 1;
-        else // 0 1
-            *lo |= 0;
+        *size = next_idx - start_idx;
+        if ((*size == 96 || *size == 192) &&
+                HIDdecodeManchester(dest + start_idx + sizeof(preamble), *size - sizeof(preamble), hi2, hi, lo))
+            return (int)start_idx;
+
+        start_idx = next_idx;
     }
-    return (int)start_idx;
+    return -5;
 }
 
 int detectIOProx(uint8_t *dest, size_t *size, int *waveStartIdx) {
