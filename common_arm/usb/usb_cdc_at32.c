@@ -572,7 +572,7 @@ static uint8_t async_write_index = 0;
  * @return
  */
 static uint8_t is_write_completed(otg_eptin_type *ept_in) {
-    if (ept_in->dieptsiz_bit.xfersize != 0) {
+    if (ept_in->dieptsiz_bit.xfersize != 0 || ept_in->dieptsiz_bit.pktcnt != 0) {
         return FALSE;
     }
     return TRUE;
