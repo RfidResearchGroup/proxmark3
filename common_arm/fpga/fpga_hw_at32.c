@@ -5,6 +5,7 @@
 #include "gpio_apis.h"
 #include "dbprint.h"
 #include "pm3_cmd.h"
+#include "fpga_loader.h"
 
 uint16_t g_ssc_dma_rx_count;
 uint8_t g_ssc_data_byte_width;
@@ -109,6 +110,20 @@ static void spi_ssc_gpio_setup(void) {
     gpio_pin_mux_config(AT32_GPIO_SSC_DIN, AT32_GPIO_SSC_DIN_SOURCE, AT32_GPIO_SSC_DIN_MUX);
 }
 
+// Enabled close to a frame pulse, SPI_SSC can start one bit off and stays so.
+// hi_reader sends a pulse every 4.7us: enable right behind one.
+#define SSC_FRAME_WAIT 250 /* loops, about two frame periods */
+static bool s_ssc_wait_frame = false;
+
+static void ssc_enable(void) {
+    if (s_ssc_wait_frame) {
+        uint32_t n = SSC_FRAME_WAIT;
+        while (n && Gpio_SSC_FRAME_Read() == false) n--;
+        while (n && Gpio_SSC_FRAME_Read()) n--;
+    }
+    SPI_SSC->ctrl1_bit.spien = TRUE;
+}
+
 void FpgaSetupSsc(uint16_t fpga_mode) {
     spi_init_type spi_init_struct;
 
@@ -138,7 +153,7 @@ void FpgaSetupSsc(uint16_t fpga_mode) {
     spi_init(SPI_SSC, &spi_init_struct);
     spi_ti_mode_enable(SPI_SSC, TRUE); // enable ti mode(Somewhat similar to SSC of AT91)
     spi_i2s_dma_receiver_enable(SPI_SSC, TRUE); // RX DMA enabled.
-    spi_enable(SPI_SSC, TRUE);
+    ssc_enable();
 }
 
 void FpgaUpdateFrameMode(uint8_t bits, bool rx_msb, bool tx_msb) {
@@ -274,8 +289,12 @@ void FpgaSendCommand(uint16_t cmd, uint16_t v) {
     while (spi_i2s_flag_get(SPI_CMD, SPI_I2S_BF_FLAG) != RESET) {} // Waiting for SPI transmit finish.
     gpio_bits_set(AT32_GPIO_SPI_CS, AT32_GPIO_SPI_CS_PIN); // CS HIGH
 
+    if (cmd == FPGA_CMD_SET_CONFREG) {
+        s_ssc_wait_frame = (FpgaGetCurrent() != FPGA_BITSTREAM_LF) && ((v & FPGA_MAJOR_MODE_MASK) == FPGA_MAJOR_MODE_HF_READER);
+    }
+
     // Re-enable SPI_SSC after sending the command
-    SPI_SSC->ctrl1_bit.spien = TRUE;
+    ssc_enable();
 }
 
 // Gowin USERCODE of the running image, read while the JTAG link is up

@@ -21,6 +21,7 @@
 
 #include <dirent.h>
 #include <ctype.h>
+#include <stddef.h>
 
 #include "pm3_cmd.h"
 #include "commonutil.h"
@@ -1629,22 +1630,24 @@ int prepareJSON(json_t *root, JSONFileType ftype, uint8_t *data, size_t datalen,
             (*callback)(root);
             break;
         }
+        // The memory of a Topaz tag. HR0 HR1 are not in it, the caller supplies
+        // them through the save callback, see pm3_save_dump_cb().
         case jsfTopaz: {
-            topaz_tag_t *tag = (topaz_tag_t *)(void *) data;
-            JsonSaveStr(root, "FileType", "topaz");
-            JsonSaveBufAsHexCompact(root, "$.Card.UID", tag->uid, sizeof(tag->uid));
-            JsonSaveBufAsHexCompact(root, "$.Card.H0R1", tag->HR01, sizeof(tag->HR01));
-            JsonSaveBufAsHexCompact(root, "$.Card.Size", (uint8_t *) & (tag->size), 2);
-
-            for (size_t i = 0; i < TOPAZ_STATIC_MEMORY / 8; i++) {
-                snprintf(path, sizeof(path), "$.blocks.%zu", i);
-                JsonSaveBufAsHexCompact(root, path, &tag->data_blocks[i][0], TOPAZ_BLOCK_SIZE);
+            if ((datalen < TOPAZ_STATIC_MEMORY) || (datalen % TOPAZ_BLOCK_SIZE)) {
+                return PM3_EINVARG;
             }
 
-            // ICEMAN todo:  add dynamic memory.
-            // uint16_z Size
-            // uint8_t *dynamic_memory;
+            JsonSaveStr(root, "FileType", "topaz");
+            // UID0 - UID6, the first 7 bytes of block 0
+            JsonSaveBufAsHexCompact(root, "$.Card.UID", data, 7);
+            // two bytes, little endian, as it has always been written
+            uint8_t size[2] = { (uint8_t)(datalen & 0xFF), (uint8_t)((datalen >> 8) & 0xFF) };
+            JsonSaveBufAsHexCompact(root, "$.Card.Size", size, sizeof(size));
 
+            for (size_t i = 0; i < datalen / TOPAZ_BLOCK_SIZE; i++) {
+                snprintf(path, sizeof(path), "$.blocks.%zu", i);
+                JsonSaveBufAsHexCompact(root, path, data + (i * TOPAZ_BLOCK_SIZE), TOPAZ_BLOCK_SIZE);
+            }
             break;
         }
         case jsfLto: {
@@ -1735,6 +1738,11 @@ int prepareJSON(json_t *root, JSONFileType ftype, uint8_t *data, size_t datalen,
         case jsfLegic:
         default:
             break;
+    }
+
+    // the fields the dump does not hold, see pm3_save_dump_cb(). jsfCustom has called it already
+    if ((callback != NULL) && (ftype != jsfCustom)) {
+        (*callback)(root);
     }
     return PM3_SUCCESS;
 }
@@ -2094,6 +2102,8 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
 
             fclose(f);
             PrintAndLogEx(FAILED, "file reading error");
+            free(*pdata);
+            *pdata = NULL;
             return PM3_EFILE;
         }
 
@@ -2113,6 +2123,12 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
     fclose(f);
     PrintAndLogEx(SUCCESS, "Loaded " _YELLOW_("%zu") " bytes from text file `" _YELLOW_("%s") "`", counter, preferredName);
 
+    // a line that is not hex fails the load, and the caller gets no buffer
+    if (retval != PM3_SUCCESS) {
+        free(*pdata);
+        *pdata = NULL;
+        return retval;
+    }
 
     uint8_t *newdump = realloc(*pdata, counter);
     if (newdump == NULL) {
@@ -3244,32 +3260,75 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
 
     if (!strcmp(ctype, "topaz")) {
 
-        JsonLoadBufAsHex(root, "$.Card.UID", udata.topaz->uid, sizeof(udata.topaz->uid), datalen);
-        JsonLoadBufAsHex(root, "$.Card.HR01", udata.topaz->HR01, sizeof(udata.topaz->HR01), datalen);
-        JsonLoadBufAsHex(root, "$.Card.Size", (uint8_t *) & (udata.topaz->size), 2, datalen);
+        // the reader fills a topaz_tag_t
+        if (maxdatalen < sizeof(topaz_tag_t)) {
+            PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu, a topaz dump takes %zu -- exceeded maxdatalen", maxdatalen, sizeof(topaz_tag_t));
+            retval = PM3_EMALLOC;
+            goto out;
+        }
+
+        topaz_tag_t *tag = udata.topaz;
+        memset(tag, 0, sizeof(topaz_tag_t));
+
+        JsonLoadBufAsHex(root, "$.Card.UID", tag->uid, sizeof(tag->uid), &len);
+
+        // H0R1 is the key the writer uses
+        JsonLoadBufAsHex(root, "$.Card.H0R1", tag->HR01, sizeof(tag->HR01), &len);
+        if (len != sizeof(tag->HR01)) {
+            PrintAndLogEx(ERR, "loadFileJSONex: `" _YELLOW_("$.Card.H0R1") "` is missing");
+            retval = PM3_EFILE;
+            goto out;
+        }
+
+        uint8_t size[2] = {0};
+        JsonLoadBufAsHex(root, "$.Card.Size", size, sizeof(size), &len);
+        tag->size = (len == sizeof(size)) ? MemLeToUint2byte(size) : 0;
+
+        // the json of a dynamic memory tag written from its memory, as if it were
+        // a topaz_tag_t, came out shifted and has the size of no Topaz memory
+        if ((tag->size < TOPAZ_STATIC_MEMORY) || (tag->size % TOPAZ_BLOCK_SIZE)) {
+            PrintAndLogEx(ERR, "loadFileJSONex: `" _YELLOW_("$.Card.Size") "` is %u, not the size of a Topaz memory", tag->size);
+            PrintAndLogEx(HINT, "Hint: such a json of a dynamic memory tag is unusable, use its .bin");
+            retval = PM3_EFILE;
+            goto out;
+        }
+
+        // the dynamic memory, block 0x0F and up, follows the topaz_tag_t
+        size_t dynlen = tag->size - TOPAZ_STATIC_MEMORY;
+        if (maxdatalen < sizeof(topaz_tag_t) + dynlen) {
+            PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu, a topaz dump takes %zu -- exceeded maxdatalen", maxdatalen, sizeof(topaz_tag_t) + dynlen);
+            retval = PM3_EMALLOC;
+            goto out;
+        }
+        uint8_t *dynamic = udata.bytes + sizeof(topaz_tag_t);
 
         size_t sptr = 0;
-        for (int i = 0; i < (TOPAZ_STATIC_MEMORY / 8); i++) {
+        for (int i = 0; i < (tag->size / TOPAZ_BLOCK_SIZE); i++) {
 
-            if (sptr + TOPAZ_BLOCK_SIZE > maxdatalen) {
-                PrintAndLogEx(ERR, "loadFileJSONex: maxdatalen=%zu (%04zx)   block (i)=%4d (%04x)   sptr=%zu (%04zx) -- exceeded maxdatalen", maxdatalen, maxdatalen, i, i, sptr, sptr);
-                retval = PM3_EMALLOC;
-                goto out;
+            uint8_t *block;
+            if (i < (TOPAZ_STATIC_MEMORY / TOPAZ_BLOCK_SIZE)) {
+                block = &tag->data_blocks[i][0];
+            } else {
+                block = &dynamic[(i * TOPAZ_BLOCK_SIZE) - TOPAZ_STATIC_MEMORY];
             }
 
             snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
-            JsonLoadBufAsHex(root, blocks, &udata.topaz->data_blocks[sptr][0], TOPAZ_BLOCK_SIZE, &len);
+            JsonLoadBufAsHex(root, blocks, block, TOPAZ_BLOCK_SIZE, &len);
             if (load_file_sanity(ctype, TOPAZ_BLOCK_SIZE, i, len) == false) {
                 break;
             }
 
             sptr += len;
-            // ICEMAN todo:  add dynamic memory.
-            // uint16_z Size
-            // uint8_t *dynamic_memory;
         }
 
-        *datalen += sptr;
+        if (sptr != tag->size) {
+            PrintAndLogEx(ERR, "loadFileJSONex: %zu bytes of blocks, `" _YELLOW_("$.Card.Size") "` says %u", sptr, tag->size);
+            retval = PM3_EFILE;
+            goto out;
+        }
+
+        // the topaz_tag_t, then the dynamic memory
+        *datalen = sizeof(topaz_tag_t) + dynlen;
         goto out;
     }
 
@@ -4327,6 +4386,77 @@ int convert_15_dump_format(uint8_t **dump, size_t *dumplen, bool verbose) {
                      );
     }
 
+    return PM3_SUCCESS;
+}
+
+// a topaz_tag_t saved as it is, as the .bin of a static memory tag: 152 bytes
+// with 64 bit pointers, 140 with 32 bit ones. The fields before them are the same
+#define TOPAZ_TAG_BIN_LEN64     152
+#define TOPAZ_TAG_BIN_LEN32     140
+
+int convert_topaz_dump_format(uint8_t **dump, size_t *dumplen, bool verbose) {
+
+    if ((dump == NULL) || (*dump == NULL) || (dumplen == NULL)) {
+        return PM3_EINVARG;
+    }
+
+    size_t len = *dumplen;
+    const size_t head = offsetof(topaz_tag_t, dynamic_memory);
+
+    uint16_t size = 0;
+    if (len >= head) {
+        size = MemLeToUint2byte(*dump + offsetof(topaz_tag_t, size));
+    }
+    bool size_ok = (size >= TOPAZ_STATIC_MEMORY) && (size <= TOPAZ_DUMP_MAX_SIZE) && ((size % TOPAZ_BLOCK_SIZE) == 0);
+
+    // already a topaz_tag_t and its dynamic memory: a json, or a .bin of this client
+    if (size_ok && (len == sizeof(topaz_tag_t) + size - TOPAZ_STATIC_MEMORY)) {
+        // the pointers it was saved with mean nothing here
+        memset(*dump + head, 0, sizeof(topaz_tag_t) - head);
+        if (verbose) {
+            PrintAndLogEx(INFO, "Topaz dump, " _YELLOW_("%u") " bytes of memory", size);
+        }
+        return PM3_SUCCESS;
+    }
+
+    const uint8_t *mem = *dump;
+    size_t memlen = len;
+    uint8_t hr01[2] = {0};
+
+    if ((size == TOPAZ_STATIC_MEMORY) && ((len == TOPAZ_TAG_BIN_LEN64) || (len == TOPAZ_TAG_BIN_LEN32))) {
+        // a topaz_tag_t of a client with the other pointer size
+        memcpy(hr01, *dump, sizeof(hr01));
+        mem = *dump + offsetof(topaz_tag_t, data_blocks);
+        memlen = TOPAZ_STATIC_MEMORY;
+    } else if ((len < TOPAZ_STATIC_MEMORY) || (len > TOPAZ_DUMP_MAX_SIZE) || (len % TOPAZ_BLOCK_SIZE)) {
+        PrintAndLogEx(FAILED, "Unsupported Topaz dump length ( %zu bytes )", len);
+        PrintAndLogEx(HINT, "Hint: A Topaz memory is %u to %u bytes, in steps of %u",
+                      TOPAZ_STATIC_MEMORY, TOPAZ_DUMP_MAX_SIZE, TOPAZ_BLOCK_SIZE);
+        return PM3_ESOFT;
+    }
+
+    // the memory alone has no HR0 HR1, they stay zero
+    size_t newlen = sizeof(topaz_tag_t) + memlen - TOPAZ_STATIC_MEMORY;
+    uint8_t *conv = calloc(newlen, sizeof(uint8_t));
+    if (conv == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    topaz_tag_t *tag = (topaz_tag_t *)(void *)conv;
+    memcpy(tag->HR01, hr01, sizeof(tag->HR01));
+    memcpy(tag->uid, mem, sizeof(tag->uid));
+    tag->size = (uint16_t)memlen;
+    memcpy(tag->data_blocks, mem, TOPAZ_STATIC_MEMORY);
+    memcpy(conv + sizeof(topaz_tag_t), mem + TOPAZ_STATIC_MEMORY, memlen - TOPAZ_STATIC_MEMORY);
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "Topaz dump of " _YELLOW_("%zu") " bytes, " _YELLOW_("%zu") " bytes of memory", len, memlen);
+    }
+
+    free(*dump);
+    *dump = conv;
+    *dumplen = newlen;
     return PM3_SUCCESS;
 }
 

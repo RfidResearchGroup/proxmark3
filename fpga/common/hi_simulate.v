@@ -70,7 +70,8 @@ begin
     if (& adc_d[7:5]) after_hysteresis <= 1'b1;           // if (adc_d >= 224)
     else if (~(| adc_d[7:5])) after_hysteresis <= 1'b0;   // if (adc_d <= 31)
 
-    if (adc_d >= 224)
+    // the ADC can idle below 224: time the low state, not the ADC level
+    if (after_hysteresis)
     begin
         has_been_low_for <= 12'd0;
     end
@@ -112,10 +113,13 @@ end
 // This means an 8-bit transfer; in SSP mode, the frame signal is driven high at bit 1 (clock rising edge) and low at bit 5 (clock falling edge).
 // To switch to TI mode, this must be changed to the rising edge of the final cycle: driving high at bit 14 (rising edge) and low at bit 0 (falling edge).
 `ifdef WITH_TIMODE
-`define HI_SIMULATE_FRAME_SET_212K  4'd14
+`define HI_SIMULATE_FRAME_SET_212K  (ssp_clk_divider[8:5] == 4'd14)
+`define HI_SIMULATE_FRAME_SET_424K  (ssp_clk_divider[7:4] == 4'd14)
 `define HI_SIMULATE_FRAME_CLR_212K  4'd0
 `else
-`define HI_SIMULATE_FRAME_SET_212K  4'd1
+// the ARM samples the frame on the falling edge of ssp_clk: set it one adc_clk before
+`define HI_SIMULATE_FRAME_SET_212K  (ssp_clk_divider[8:0] == 9'd31)
+`define HI_SIMULATE_FRAME_SET_424K  (ssp_clk_divider[7:0] == 8'd15)
 `define HI_SIMULATE_FRAME_CLR_212K  4'd5
 `endif
 
@@ -125,14 +129,14 @@ always @(negedge adc_clk)
 begin
     if (mod_type == `FPGA_HF_SIMULATOR_MODULATE_212K)
     begin
-        if (ssp_clk_divider[8:5] == `HI_SIMULATE_FRAME_SET_212K)
+        if (`HI_SIMULATE_FRAME_SET_212K)
             ssp_frame <= 1'b1;
         if (ssp_clk_divider[8:5] == `HI_SIMULATE_FRAME_CLR_212K)
             ssp_frame <= 1'b0;
     end
     else
     begin
-        if (ssp_clk_divider[7:4] == `HI_SIMULATE_FRAME_SET_212K)
+        if (`HI_SIMULATE_FRAME_SET_424K)
             ssp_frame <= 1'b1;
         if (ssp_clk_divider[7:4] == `HI_SIMULATE_FRAME_CLR_212K)
             ssp_frame <= 1'b0;

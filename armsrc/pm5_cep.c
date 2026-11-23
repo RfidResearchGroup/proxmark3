@@ -33,7 +33,7 @@
 #include "at32f435_437_usart.h"
 #include "at32f435_437_spi.h"
 #include "gpio_apis.h"
-#include "i2c.h"
+#include "i2c_apis.h"
 #include "ticks_apis.h"
 #include "dbprint.h"
 #include "pm3_cmd.h"
@@ -252,7 +252,7 @@ static bool cep_do_handshake(void) {
         while (spi_i2s_flag_get(SPI1, SPI_I2S_TDBE_FLAG) == RESET) {
             if (GetTicks() - wait_start > CEP_SPI_RESPONSE_TIMEOUT_US) {
                 // Bound this: "still attached" isn't "still working" forever,
-                // and I2C_BufferReadRaw() needs the ticks timer running like
+                // and I2C_BufferRead() needs the ticks timer running like
                 // every other call site (see cep_attach_poll()'s comment).
                 if (++recovery_attempts > CEP_HANDSHAKE_REPLY_MAX_RETRIES) {
                     return false;
@@ -260,7 +260,7 @@ static bool cep_do_handshake(void) {
                 StartTicks();
                 I2C_init(true);
                 uint8_t cc_ctrl_data;
-                bool ret = I2C_BufferReadRaw(&cc_ctrl_data, 1, CEP_CC_STATUS_REG, CEP_CC_CONTROLLER_ADDR << 1);
+                bool ret = I2C_BufferRead(&cc_ctrl_data, 1, CEP_CC_STATUS_REG, CEP_CC_CONTROLLER_ADDR << 1);
                 if (!ret || ((cc_ctrl_data >> 6 & 0x03) == 0)) {
                     return false;   // disconnected mid-reply, or can't tell - bail either way
                 }
@@ -292,7 +292,7 @@ void cep_attach_poll(void) {
     I2C_init(true);
 
     uint8_t cc_ctrl_data;
-    bool ret = I2C_BufferReadRaw(&cc_ctrl_data, 1, CEP_CC_STATUS_REG, CEP_CC_CONTROLLER_ADDR << 1);
+    bool ret = I2C_BufferRead(&cc_ctrl_data, 1, CEP_CC_STATUS_REG, CEP_CC_CONTROLLER_ADDR << 1);
     if (!ret) {
         return;
     }

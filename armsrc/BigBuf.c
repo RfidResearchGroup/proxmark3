@@ -376,12 +376,13 @@ int emlSet(const uint8_t *data, uint32_t offset, uint32_t length) {
         return PM3_EMALLOC;
     }
 
-    if (offset + length <= CARD_MEMORY_SIZE) {
+    // offset + length could wrap at 32 bits
+    if (offset <= CARD_MEMORY_SIZE && length <= CARD_MEMORY_SIZE - offset) {
         memcpy(mem + offset, data, length);
         return PM3_SUCCESS;
     }
 
-    Dbprintf("Error, trying to set memory outside of bounds! " _RED_("%d") " > %d", (offset + length), CARD_MEMORY_SIZE);
+    Dbprintf("Error, trying to set memory outside of bounds! offset " _RED_("%u") " length " _RED_("%u") " > %d", offset, length, CARD_MEMORY_SIZE);
     return PM3_EOUTOFBOUND;
 }
 
@@ -391,12 +392,13 @@ int emlGet(uint8_t *out, uint32_t offset, uint32_t length) {
         return PM3_EMALLOC;
     }
 
-    if (offset + length <= CARD_MEMORY_SIZE) {
+    // offset + length could wrap at 32 bits
+    if (offset <= CARD_MEMORY_SIZE && length <= CARD_MEMORY_SIZE - offset) {
         memcpy(out, mem + offset, length);
         return PM3_SUCCESS;
     }
 
-    Dbprintf("Error, trying to read memory outside of bounds! " _RED_("%d") " > %d", (offset + length), CARD_MEMORY_SIZE);
+    Dbprintf("Error, trying to read memory outside of bounds! offset " _RED_("%u") " length " _RED_("%u") " > %d", offset, length, CARD_MEMORY_SIZE);
     return PM3_EOUTOFBOUND;
 }
 
