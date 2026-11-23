@@ -2152,13 +2152,29 @@ static int CmdHF15Sim(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Start simulating UID... " _YELLOW_("%s"), iso15693_sprintUID(NULL, resp.data.asBytes));
     }
 
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_SIMULATE, (uint8_t *)&payload, sizeof(payload));
-    WaitForResponseTimeout(CMD_HF_ISO15693_SIMULATE, &resp, timeout);
-    if (timeout != (size_t) - 1) {
-        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+
+    uint64_t t0 = msclock();
+    uint64_t t_break = 0;
+    for (;;) {
+        bool expired = (timeout != (size_t) - 1) && (msclock() - t0 >= timeout);
+        if (t_break == 0 && (expired || kbd_enter_pressed())) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            t_break = msclock();
+        }
+
+        if (WaitForResponseTimeout(CMD_HF_ISO15693_SIMULATE, &resp, 500)) {
+            break;
+        }
+
+        // older firmware only stops on the button while a reader field is on
+        if (t_break && (msclock() - t_break > 3000)) {
+            PrintAndLogEx(WARNING, "pm3 did not stop, press the " _GREEN_("pm3 button"));
+            break;
+        }
     }
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
