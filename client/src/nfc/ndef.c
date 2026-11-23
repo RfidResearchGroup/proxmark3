@@ -126,17 +126,28 @@ static const char *URI_s[] = {
 static int ndefRecordDecodeAndPrint(uint8_t *ndefRecord, size_t ndefRecordLen, bool verbose);
 static int ndefDecodePayload(NDEFHeader_t *ndef, bool verbose);
 
-static uint16_t ndefTLVGetLength(const uint8_t *data, size_t *indx) {
-    uint16_t len = 0;
-    if (data[0] == 0xFF) {
-        len = MemBeToUint2byte(data + 1);
+// the length of the TLV whose L field starts at ndef[*indx], *indx moved past the L field.
+// PM3_ESOFT when the L field or the value runs past the ndeflen bytes
+static int ndefTLVGetLength(const uint8_t *ndef, size_t ndeflen, size_t *indx, uint16_t *len) {
+    if (*indx >= ndeflen) {
+        return PM3_ESOFT;
+    }
+
+    if (ndef[*indx] == 0xFF) {
+        if (ndeflen - *indx < 3) {
+            return PM3_ESOFT;
+        }
+        *len = MemBeToUint2byte(ndef + *indx + 1);
         *indx += 3;
     } else {
-        len = data[0];
+        *len = ndef[*indx];
         *indx += 1;
     }
 
-    return len;
+    if (*len > ndeflen - *indx) {
+        return PM3_ESOFT;
+    }
+    return PM3_SUCCESS;
 }
 
 static int ndefDecodeHeader(uint8_t *data, size_t datalen, NDEFHeader_t *header) {
@@ -1438,7 +1449,19 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
     PrintAndLogEx(INFO, "--- " _CYAN_("NDEF parsing") " ----------------");
     while (indx < ndefLen) {
 
-        switch (ndef[indx]) {
+        uint8_t type = ndef[indx];
+        uint16_t len = 0;
+        if ((type == 0x01) || (type == 0x02) || (type == 0x03) || (type == 0xFD)) {
+            indx++;
+            if (ndefTLVGetLength(ndef, ndefLen, &indx, &len) != PM3_SUCCESS) {
+                if (verbose) {
+                    PrintAndLogEx(ERR, "TLV 0x%02x runs past the end of the data", type);
+                }
+                return PM3_ESOFT;
+            }
+        }
+
+        switch (type) {
             case 0x00: {
                 // a NULL TLV is the T byte alone, without length
                 size_t run = 0;
@@ -1454,8 +1477,6 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                 break;
             }
             case 0x01: {
-                indx++;
-                uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(SUCCESS, "--- " _CYAN_("NDEF Lock Control") " ---");
                 if (len != 3) {
@@ -1478,8 +1499,6 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                 break;
             }
             case 0x02: {
-                indx++;
-                uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(SUCCESS, "--- " _CYAN_("NDEF Memory Control") " ---");
                 if (len != 3) {
@@ -1499,8 +1518,6 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                 break;
             }
             case 0x03: {
-                indx++;
-                uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(SUCCESS, "--- " _CYAN_("NDEF Message") " ---");
                 if (len == 0) {
@@ -1518,8 +1535,6 @@ int NDEFDecodeAndPrint(uint8_t *ndef, size_t ndefLen, bool verbose) {
                 break;
             }
             case 0xFD: {
-                indx++;
-                uint16_t len = ndefTLVGetLength(&ndef[indx], &indx);
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(SUCCESS, "--- " _CYAN_("Proprietary info") " ---");
                 PrintAndLogEx(SUCCESS, "  Can't decode, skipping %d bytes", len);
@@ -1559,7 +1574,13 @@ int NDEFGetTotalLength(uint8_t *ndef, size_t ndeflen, size_t *outlen) {
                 ndef[idx] == 0x03 ||
                 ndef[idx] == 0xFD) {
             idx++;
-            idx += ndefTLVGetLength(&ndef[idx], &idx);
+            uint16_t len = 0;
+            if (ndefTLVGetLength(ndef, ndeflen, &idx, &len) != PM3_SUCCESS) {
+                // the TLV runs past the end of the data
+                *outlen = 0;
+                return PM3_ESOFT;
+            }
+            idx += len;
             continue;
         }
 
