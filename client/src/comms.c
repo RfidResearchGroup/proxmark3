@@ -1050,9 +1050,10 @@ static size_t communication_delay(void) {
  * @param len The maximum receive byte size
  * @param ms_timeout the maximum timeout
  * @param show_process print how many bytes are received
+ * @param wait_for_first_data wait without a timeout until data arrives
  * @return the number of received bytes
  */
-size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, bool show_process, bool keep_raw_mode) {
+size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, bool show_process, bool wait_for_first_data) {
     size_t last_pos = 0;
     uint64_t last_update = 0;
     bool printed_progress = false;
@@ -1076,7 +1077,7 @@ size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, boo
 
             // For ms_timeout == -1, pos < len might always be true
             // so user need a spectial way to break this loop
-            if (ms_timeout == (size_t) - 1) {
+            if (ms_timeout == (size_t) - 1 || (wait_for_first_data && pos == 0)) {
                 break;
             }
         }
@@ -1087,7 +1088,7 @@ size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, boo
         if (last_pos == pos) {
             uint64_t tmp_clk = __atomic_load_n(&timeout_start_time, __ATOMIC_SEQ_CST);
             // If ms_timeout == -1, the loop can only be breaked by pressing Enter or receiving enough data
-            if ((ms_timeout != (size_t) - 1) && (msclock() - tmp_clk > ms_timeout)) {
+            if ((!wait_for_first_data || pos != 0) && (ms_timeout != (size_t) - 1) && (msclock() - tmp_clk > ms_timeout)) {
                 break;
             }
         } else {
@@ -1107,19 +1108,12 @@ size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, boo
         msleep(10);
     }
 
-    if ((ms_timeout != (size_t) - 1) && (keep_raw_mode == false)) {
+    if (ms_timeout != (size_t) - 1) {
         SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
         msleep(ms_timeout);
     }
 
-    // Caller is about to chain another raw read: keep raw-receive mode
-    // on so the comm thread never drops back into normal framed-packet
-    // parsing in between the two reads. Doing so lets it
-    // misparse in-flight sample bytes as a PacketResponseNG preamble and
-    // corrupts every USB exchange that follows.
-    if (keep_raw_mode == false) {
-        SetCommunicationReceiveMode(false);
-    }
+    SetCommunicationReceiveMode(false);
 
     pos = __atomic_load_n(&comm_raw_pos, __ATOMIC_SEQ_CST);
 

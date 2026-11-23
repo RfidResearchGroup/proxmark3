@@ -18,6 +18,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed `hf legic sim` on PM5 - the tail of the tag's own last bit on `ssp_din` was taken for the start of the next reader command (@Msprg)
 - Fixed `hf 15 sim` - `<Enter>` now aborts it (@Msprg)
 - Fixed `lf read` and `lf sniff` streaming - now gives correct lengths for packed or decimated captures (@adrian-stepien)
+- Fixed triggered `lf read` and `lf sniff` - samples were discarded while switching between the first 32-byte read and the rest of the capture (@adrian-stepien)
 - Fixed packed LF sample streaming - reused packet buffers kept old bits and corrupted subsequent samples (@adrian-stepien)
 - Fixed `hf mfu dump` - a bad read CRC was ignored when debug logging was disabled (@adrian-stepien)
 - Fixed NDEF TLV parsing - a TLV longer than the data was decoded past the buffer, and `ndefread -f` saved bytes past it (@matrix)
