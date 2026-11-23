@@ -4,6 +4,11 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Fixed `script list` - preserve complete directory paths and free skipped directory entries
+- Fixed `lf read` and `lf sniff` streaming - now gives correct lengths for packed or decimated captures (@adrian-stepien)
+- Fixed packed LF sample streaming - reused packet buffers kept old bits and corrupted subsequent samples (@adrian-stepien)
+- Fixed `hf mfu dump` - a bad read CRC was ignored when debug logging was disabled (@adrian-stepien)
+- Fixed NDEF TLV parsing - a TLV longer than the data was decoded past the buffer, and `ndefread -f` saved bytes past it (@matrix)
+- Fixed PM5 USB sample streaming - the buffer index became 255 after the first packet and wrote outside the two buffers (@adrian-stepien)
 - Changed the PM3, PM3 Ultimate and iCopy-X FPGA images - rebuilt from the current sources (@matrix)
 - Fixed `hf legic sim` - a host abort stopped it only after up to 80 s(@Msprg)
 - Fixed `hf topaz dump` - the NDEF was decoded over 476 bytes from block 1, past the static memory, instead of over the data area of the tag (@matrix)
