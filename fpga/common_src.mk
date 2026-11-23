@@ -30,7 +30,7 @@ RMDIR = rm -rf
 MAKE = make
 
 # Echo (Q=) or not echo (Q=@) build commands to the terminal
-Q =
+Q ?= @
 
 # HDL shared by every target, in synthesis order
 COMMON_HDL  = $(COMMON_DIR)/define.v

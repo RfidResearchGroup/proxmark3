@@ -25,6 +25,7 @@
 #define TOPAZ_STATIC_MEMORY (0x0F * 8)  // 15 blocks with 8 Bytes each
 #define TOPAZ_BLOCK_SIZE    8
 #define TOPAZ_MAX_SIZE      512
+#define TOPAZ_DUMP_MAX_SIZE 2048  // the largest memory a capability container gives, (0xFF + 1) * 8 bytes
 
 // a struct to describe a memory area which contains lock bits and the corresponding lockable memory area
 typedef struct dynamic_lock_area_s {

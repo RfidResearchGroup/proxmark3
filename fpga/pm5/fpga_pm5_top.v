@@ -49,6 +49,7 @@ module fpga_top (
 
     wire ce_lf = ~module_sel; // enable, active high; a low level holds the module in reset
     wire ce_hf = module_sel;  // enable, active high; a low level holds the module in reset
+    wire gate_en;             // HF pwr_hi, drives the external gate
     //-----------------------------------------GATE-------------------------
     // Synchronise the gate enable into the input clock domain against metastability
     reg gate_en_sync1, gate_en_sync2;
@@ -62,6 +63,7 @@ module fpga_top (
 
     // CLKOUT is 200 MHz: 4096 steps at 5 ns keep the resolution, at a 20.48 us
     // period. 400 MHz does not close the 12 bit carry chain at 2.5 ns.
+    wire pwr_pwm_pll_clko;
     Gowin_rPLL pwr_pwm_pll(
         .clkout(pwr_pwm_pll_clko), //output clkout
         .clkin(ck_1356meg) //input clkin
@@ -95,6 +97,11 @@ module fpga_top (
     assign pwr_hi = 1'bZ;  // PWRHI is replaced by the external gate; the two are wired in parallel, so float it
     assign dbgled = 1'b1;
     assign dbg2   = 1'bZ;  // not used
+
+    wire ssp_din_lf, ssp_frame_lf, ssp_clk_lf, adc_clk_lf, miso_lf;
+    wire pwr_lo_lf, pwr_oe1_lf, pwr_oe2_lf, pwr_oe4_lf, dbg_lf;
+    wire ssp_din_hf, ssp_frame_hf, ssp_clk_hf, adc_clk_hf, miso_hf;
+    wire pwr_lo_hf, pwr_oe1_hf, pwr_oe2_hf, pwr_oe4_hf, dbg_hf;
 
     fpga_lf uut_lf (
         .pck0(pck0),

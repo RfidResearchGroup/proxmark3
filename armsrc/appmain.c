@@ -2218,8 +2218,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             // Resetting the bitstream also frees the BigBuf memory, so we do this here to prevent
             // an inconvenient reset in the future by Iso15693InitTag
             FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
-            BigBuf_Clear_EM();
-            reply_ng(CMD_HF_ISO15693_EML_CLEAR, PM3_SUCCESS, NULL, 0);
+            int res = BigBuf_Clear_EM();
+            reply_ng(CMD_HF_ISO15693_EML_CLEAR, res, NULL, 0);
             break;
         }
         case CMD_HF_ISO15693_EML_SETMEM: {
@@ -2237,7 +2237,13 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t data[];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            emlSet(payload->data, payload->offset, payload->count);
+            // the data the packet holds
+            if (packet->length < sizeof(struct p) || payload->count > packet->length - sizeof(struct p)) {
+                reply_ng(CMD_HF_ISO15693_EML_SETMEM, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            int res = emlSet(payload->data, payload->offset, payload->count);
+            reply_ng(CMD_HF_ISO15693_EML_SETMEM, res, NULL, 0);
             break;
         }
         case CMD_HF_ISO15693_EML_GETMEM: {
@@ -2259,9 +2265,13 @@ static void PacketReceived(PacketCommandNG *packet) {
                 reply_ng(CMD_HF_ISO15693_EML_GETMEM, PM3_EMALLOC, NULL, 0);
                 return;
             }
-            emlGet(buf, payload->offset, payload->length);
+            int res = emlGet(buf, payload->offset, payload->length);
             LED_B_ON();
-            reply_ng(CMD_HF_ISO15693_EML_GETMEM, PM3_SUCCESS, buf, payload->length);
+            if (res == PM3_SUCCESS) {
+                reply_ng(CMD_HF_ISO15693_EML_GETMEM, PM3_SUCCESS, buf, payload->length);
+            } else {
+                reply_ng(CMD_HF_ISO15693_EML_GETMEM, res, NULL, 0);
+            }
             LED_B_OFF();
             BigBuf_free_keep_EM();
             break;
@@ -3176,7 +3186,13 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t data[];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            emlSet(payload->data, payload->offset, payload->len);
+            // the data the packet holds
+            if (packet->length < sizeof(struct p) || payload->len > packet->length - sizeof(struct p)) {
+                reply_ng(CMD_HF_ICLASS_EML_MEMSET, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            int res = emlSet(payload->data, payload->offset, payload->len);
+            reply_ng(CMD_HF_ICLASS_EML_MEMSET, res, NULL, 0);
             break;
         }
         case CMD_HF_ICLASS_WRITEBL: {
@@ -3800,15 +3816,18 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_SPIFFS_STAT: {
             LED_B_ON();
-            uint8_t filename[32];
-            uint8_t *pfilename = packet->data.asBytes;
-            memcpy(filename, pfilename, SPIFFS_OBJ_NAME_LEN);
+
+            // the client's name field is not required to be terminated, keep room
+            // for the terminator
+            char filename[SPIFFS_OBJ_NAME_LEN] = {0};
+            uint16_t fnlen = MIN(packet->length, (uint16_t)(SPIFFS_OBJ_NAME_LEN - 1));
+            memcpy(filename, packet->data.asBytes, fnlen);
             if (g_dbglevel >= DBG_DEBUG) {
                 Dbprintf("Filename received for spiffs STAT : %s", filename);
             }
 
             int changed = rdv40_spiffs_lazy_mount();
-            uint32_t size = size_in_spiffs((char *)filename);
+            uint32_t size = size_in_spiffs(filename);
             if (changed) {
                 rdv40_spiffs_lazy_unmount();
             }
@@ -3824,14 +3843,30 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t len;
                 uint8_t fn[32];
             } PACKED;
-            struct p *payload = (struct p *) packet->data.asBytes;
 
-            if (g_dbglevel >= DBG_DEBUG) {
-                Dbprintf("Filename received for spiffs REMOVE : %s", payload->fn);
+            if (packet->length < sizeof(struct p)) {
+                reply_ng(CMD_SPIFFS_REMOVE, PM3_EINVARG, NULL, 0);
+                LED_B_OFF();
+                break;
             }
 
-            rdv40_spiffs_remove((char *)payload->fn, RDV40_SPIFFS_SAFETY_SAFE);
-            reply_ng(CMD_SPIFFS_REMOVE, PM3_SUCCESS, NULL, 0);
+            const struct p *payload = (const struct p *) packet->data.asBytes;
+
+            // the name field is not required to be terminated, bound it by the
+            // length the client sent
+            char filename[SPIFFS_OBJ_NAME_LEN] = {0};
+            memcpy(filename, payload->fn, MIN(payload->len, (uint8_t)(SPIFFS_OBJ_NAME_LEN - 1)));
+
+            if (g_dbglevel >= DBG_DEBUG) {
+                Dbprintf("Filename received for spiffs REMOVE : %s", filename);
+            }
+
+            rdv40_spiffs_remove(filename, RDV40_SPIFFS_SAFETY_SAFE);
+
+            // tell the client whether the file is really gone.  The SPIFFS errno
+            // rides along so it can name the reason, ie: -10002 no such file
+            int32_t res = rdv40_spiffs_op_status();
+            reply_ng(CMD_SPIFFS_REMOVE, (res == SPIFFS_OK) ? PM3_SUCCESS : PM3_EFLASH, (uint8_t *)&res, sizeof(res));
             LED_B_OFF();
             break;
         }
@@ -3843,15 +3878,31 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t dlen;
                 uint8_t dest[32];
             } PACKED;
-            struct p *payload = (struct p *) packet->data.asBytes;
+
+            if (packet->length < sizeof(struct p)) {
+                reply_ng(CMD_SPIFFS_RENAME, PM3_EINVARG, NULL, 0);
+                LED_B_OFF();
+                break;
+            }
+
+            const struct p *payload = (const struct p *) packet->data.asBytes;
+
+            // neither name field is required to be terminated
+            char src[SPIFFS_OBJ_NAME_LEN] = {0};
+            char dest[SPIFFS_OBJ_NAME_LEN] = {0};
+            memcpy(src, payload->src, MIN(payload->slen, (uint8_t)(SPIFFS_OBJ_NAME_LEN - 1)));
+            memcpy(dest, payload->dest, MIN(payload->dlen, (uint8_t)(SPIFFS_OBJ_NAME_LEN - 1)));
 
             if (g_dbglevel >= DBG_DEBUG) {
                 Dbprintf("SPIFFS RENAME");
-                Dbprintf("Source........ %s", payload->src);
-                Dbprintf("Destination... %s", payload->dest);
+                Dbprintf("Source........ %s", src);
+                Dbprintf("Destination... %s", dest);
             }
-            rdv40_spiffs_rename((char *)payload->src, (char *)payload->dest, RDV40_SPIFFS_SAFETY_SAFE);
-            reply_ng(CMD_SPIFFS_RENAME, PM3_SUCCESS, NULL, 0);
+
+            rdv40_spiffs_rename(src, dest, RDV40_SPIFFS_SAFETY_SAFE);
+
+            int32_t res = rdv40_spiffs_op_status();
+            reply_ng(CMD_SPIFFS_RENAME, (res == SPIFFS_OK) ? PM3_SUCCESS : PM3_EFLASH, (uint8_t *)&res, sizeof(res));
             LED_B_OFF();
             break;
         }
@@ -3863,16 +3914,32 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t dlen;
                 uint8_t dest[32];
             } PACKED;
-            struct p *payload = (struct p *) packet->data.asBytes;
+
+            if (packet->length < sizeof(struct p)) {
+                reply_ng(CMD_SPIFFS_COPY, PM3_EINVARG, NULL, 0);
+                LED_B_OFF();
+                break;
+            }
+
+            const struct p *payload = (const struct p *) packet->data.asBytes;
+
+            // neither name field is required to be terminated
+            char src[SPIFFS_OBJ_NAME_LEN] = {0};
+            char dest[SPIFFS_OBJ_NAME_LEN] = {0};
+            memcpy(src, payload->src, MIN(payload->slen, (uint8_t)(SPIFFS_OBJ_NAME_LEN - 1)));
+            memcpy(dest, payload->dest, MIN(payload->dlen, (uint8_t)(SPIFFS_OBJ_NAME_LEN - 1)));
 
             if (g_dbglevel >= DBG_DEBUG) {
                 Dbprintf("SPIFFS COPY");
-                Dbprintf("Source........ %s", payload->src);
-                Dbprintf("Destination... %s", payload->dest);
+                Dbprintf("Source........ %s", src);
+                Dbprintf("Destination... %s", dest);
             }
-            rdv40_spiffs_copy((char *)payload->src, (char *)payload->dest, RDV40_SPIFFS_SAFETY_SAFE);
+
+            rdv40_spiffs_copy(src, dest, RDV40_SPIFFS_SAFETY_SAFE);
             BigBuf_free();
-            reply_ng(CMD_SPIFFS_COPY, PM3_SUCCESS, NULL, 0);
+
+            int32_t res = rdv40_spiffs_op_status();
+            reply_ng(CMD_SPIFFS_COPY, (res == SPIFFS_OK) ? PM3_SUCCESS : PM3_EFLASH, (uint8_t *)&res, sizeof(res));
             LED_B_OFF();
             break;
         }
@@ -3907,7 +3974,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             // tell the client whether the bytes actually landed.  The SPIFFS errno
             // rides along so it can name the reason, ie: -10001 filesystem full
-            int32_t res = rdv40_spiffs_write_status();
+            int32_t res = rdv40_spiffs_op_status();
             reply_ng(CMD_SPIFFS_WRITE, (res == SPIFFS_OK) ? PM3_SUCCESS : PM3_EFLASH, (uint8_t *)&res, sizeof(res));
             LED_B_OFF();
             break;
