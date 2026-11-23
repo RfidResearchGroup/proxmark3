@@ -4483,22 +4483,30 @@ static int filelist(const char *path, const char *ext, uint8_t last, bool tentat
 
     PrintAndLogEx(NORMAL, "%s── "_GREEN_("%s"), last ? "└" : "├", &path[strip]);
 
+    int res = PM3_SUCCESS;
+    size_t path_len = strlen(path);
     for (int i = 0; i < n; i++) {
 
-        char tmp_fullpath[1024] = {0};
-        snprintf(tmp_fullpath, sizeof(tmp_fullpath), "%s%s", path, namelist[i]->d_name);
+        if (strcmp(namelist[i]->d_name, ".") == 0 || strcmp(namelist[i]->d_name, "..") == 0) {
+            continue;
+        }
 
-        if (path_is_directory(tmp_fullpath)) {
+        size_t name_len = strlen(namelist[i]->d_name);
+        char *fullpath = calloc(path_len + name_len + 2, sizeof(char));
+        if (fullpath == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            res = PM3_EMALLOC;
+            break;
+        }
+        memcpy(fullpath, path, path_len);
+        memcpy(fullpath + path_len, namelist[i]->d_name, name_len + 1);
 
-            char newpath[1024];
-            if (strcmp(namelist[i]->d_name, ".") == 0 || strcmp(namelist[i]->d_name, "..") == 0)
-                continue;
+        if (path_is_directory(fullpath)) {
 
-            snprintf(newpath, sizeof(newpath), "%s", path);
-            strncat(newpath, namelist[i]->d_name, sizeof(newpath) - strlen(newpath) - 1);
-            strncat(newpath, "/", sizeof(newpath) - strlen(newpath) - 1);
+            fullpath[path_len + name_len] = '/';
+            fullpath[path_len + name_len + 1] = '\0';
 
-            filelist(newpath, ext, last + ((i == n - 1) << (indent + 1)), tentative, indent + 1, strlen(path));
+            filelist(fullpath, ext, last + ((i == n - 1) << (indent + 1)), tentative, indent + 1, path_len);
         } else {
 
             if ((ext == NULL) || ((str_endswith(namelist[i]->d_name, ext)))) {
@@ -4509,10 +4517,13 @@ static int filelist(const char *path, const char *ext, uint8_t last, bool tentat
                 PrintAndLogEx(NORMAL, "%s── %-21s", i == n - 1 ? "└" : "├", namelist[i]->d_name);
             }
         }
+        free(fullpath);
+    }
+    for (int i = 0; i < n; i++) {
         free(namelist[i]);
     }
     free(namelist);
-    return PM3_SUCCESS;
+    return res;
 }
 
 int searchAndList(const char *pm3dir, const char *ext) {

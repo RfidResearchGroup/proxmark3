@@ -3,8 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-- Fixed `lf t55xx read`, `lf t55xx dump` - a block 0 write, `lf t55xx config -c`, `chk`, `bruteforce` and `recoverpw` end the password confirmation from `lf t55xx detect`, and a read with `-o` does not bring it back (@mfcarroll)
-- Changed `lf t55xx read`, `lf t55xx dump` - warn if run without `-p` while the password confirmation from `lf t55xx detect` holds, and say how to read the blocks (@mfcarroll)
+- Fixed `lf t55xx read`, `lf t55xx dump` - a block 0 write, `lf t55xx config -c`, `chk`, `bruteforce` and `recoverpw` end the password confirmation from `lf t55xx detect` (@mfcarroll)
+- Changed `lf t55xx read`, `lf t55xx dump` - warn if run without `-p` while the password confirmation from `lf t55xx detect` holds (@mfcarroll)
+- Fixed `script list` - preserve complete directory paths and free skipped directory entries
 - Fixed `hf legic sim` on PM5 - the tail of the tag's own last bit on `ssp_din` was taken for the start of the next reader command (@Msprg)
 - Fixed `hf 15 sim` - `<Enter>` now aborts it (@Msprg)
 - Fixed `lf read` and `lf sniff` streaming - now gives correct lengths for packed or decimated captures (@adrian-stepien)
