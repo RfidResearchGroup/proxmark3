@@ -4487,11 +4487,12 @@ static int filelist(const char *path, const char *ext, uint8_t last, bool tentat
     size_t path_len = strlen(path);
     for (int i = 0; i < n; i++) {
 
-        if (strcmp(namelist[i]->d_name, ".") == 0 || strcmp(namelist[i]->d_name, "..") == 0)
+        if (strcmp(namelist[i]->d_name, ".") == 0 || strcmp(namelist[i]->d_name, "..") == 0) {
             continue;
+        }
 
         size_t name_len = strlen(namelist[i]->d_name);
-        char *fullpath = malloc(path_len + name_len + 2);
+        char *fullpath = calloc(path_len + name_len + 2, sizeof(char));
         if (fullpath == NULL) {
             PrintAndLogEx(WARNING, "Failed to allocate memory");
             res = PM3_EMALLOC;
@@ -4518,8 +4519,9 @@ static int filelist(const char *path, const char *ext, uint8_t last, bool tentat
         }
         free(fullpath);
     }
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n; i++) {
         free(namelist[i]);
+    }
     free(namelist);
     return res;
 }
