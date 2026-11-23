@@ -713,6 +713,32 @@ static size_t topaz_ndef_area(uint8_t *area) {
     return n;
 }
 
+// save the NDEF TLVs up to the terminator, the dynamic memory read in first
+static int topaz_save_ndef(const char *filename) {
+    int res = PM3_SUCCESS;
+    if ((topaz_set_cc_dynamic(&topaz_tag.data_blocks[1][0]) == PM3_SUCCESS) && (topaz_tag.size > TOPAZ_STATIC_MEMORY)) {
+        res = topaz_read_dynamic_data();
+    }
+
+    uint8_t area[TOPAZ_NDEF_AREA_MAX] = {0};
+    size_t n = topaz_ndef_area(area);
+    free(topaz_tag.dynamic_memory);
+    topaz_tag.dynamic_memory = NULL;
+
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Dynamic memory not read, nothing saved");
+        return res;
+    }
+
+    // the whole area when the TLVs don't parse
+    size_t total = 0;
+    if (NDEFGetTotalLength(area, n, &total) != PM3_SUCCESS) {
+        total = n;
+    }
+    pm3_save_dump(filename, area, total, jsfNDEF);
+    return PM3_SUCCESS;
+}
+
 static void topaz_print_lifecycle_state(uint8_t *data) {
     // to be done
 }
@@ -847,9 +873,13 @@ int CmdHFTopazInfo(const char *Cmd) {
     // the TLVs are in blocks 1 - C, after the capability container
     topaz_print_control_TLVs(&topaz_tag.data_blocks[1][4], (0x0C * TOPAZ_BLOCK_SIZE) - 4);
 
+    if (fnlen > 0) {
+        status = topaz_save_ndef(filename);
+    }
+
     PrintAndLogEx(NORMAL, "");
     topaz_switch_off_field();
-    return PM3_SUCCESS;
+    return status;
 }
 
 static int CmdHFTopazSim(const char *Cmd) {
