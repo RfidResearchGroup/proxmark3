@@ -571,6 +571,7 @@ int ReadLF_realtime(bool reader_field, bool cotag, uint32_t sample_limit) {
                 }
 
                 // Reset sample
+                memset(data.buffer, 0, sample_buffer_len);
                 last_byte = 0;
                 data.numbits = 0;
                 samples.counter = size_threshold;
