@@ -538,6 +538,16 @@ int convert_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose);
  * @return PM3_SUCCESS for ok, PM3_ESOFT for an unrecognised length
 */
 int convert_15_dump_format(uint8_t **dump, size_t *dumplen, bool verbose);
+
+/**
+ * @brief Convert a Topaz dump to a topaz_tag_t followed by its dynamic memory, as the json loader fills it.
+ * A .bin or an .eml holds the memory alone, or a topaz_tag_t saved as it is.
+ * @param dump pointer to loaded dump, replaced on conversion
+ * @param dumplen the number of bytes loaded, updated on conversion
+ * @param verbose - extra debug output
+ * @return PM3_SUCCESS for ok, PM3_ESOFT for an unrecognised length
+*/
+int convert_topaz_dump_format(uint8_t **dump, size_t *dumplen, bool verbose);
 mfu_df_e detect_mfu_dump_format(uint8_t **dump, bool verbose);
 int detect_nfc_dump_format(const char *preferredName, nfc_df_e *dump_type, bool verbose);
 
