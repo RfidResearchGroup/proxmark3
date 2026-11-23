@@ -33,7 +33,7 @@
 #endif
 #include "BigBuf.h"        // trace_restart_timeline
 #ifdef WITH_SMARTCARD
-#include "i2c.h"           // sc_log_trace_reset
+#include "smartcard.h"      // sc_log_trace_reset
 #endif
 
 size_t nbytes(size_t nbits) {

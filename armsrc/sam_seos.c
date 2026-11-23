@@ -33,7 +33,7 @@
 #include "commonutil.h"
 #include "ticks_apis.h"
 #include "dbprint.h"
-#include "i2c.h"
+#include "smartcard.h"
 #include "protocols.h"
 #include "optimized_cipher.h"
 #include "fpga_loader.h"
@@ -248,7 +248,7 @@ int sam_seos_get_pacs(PacketCommandNG *c) {
     // Mark it stale so the next CMD_HF_SAM_SC call performs its reset/ATR
     // synchronization path before sending a secured APDU.
     sam_sc_session_invalidate();
-    I2C_Reset_EnterMainProgram();
+    SmartCard_ResetAdapter();
 
     set_tracing(true);
     StartTicks();

@@ -1132,8 +1132,11 @@ static int hfgal_read_site_specific_sector(uint8_t sector_num, GallagherCredenti
     }
 
     GallagherCredentials_t MES_cred = {0};
-    int res = mf_read_sector(sector_num * 4, 0, keyA, data);
+    int res = mf_read_sector(sector_num, 0, keyA, data);
     if (res != PM3_SUCCESS) {
+        if (verbose) {
+            PrintAndLogEx(FAILED, "Failed reading sector %d", sector_num);
+        }
         return res;
     }
     // check if block1 is an ascii string containing "www.cardax.com  "
@@ -1154,12 +1157,17 @@ static int hfgal_read_site_specific_sector(uint8_t sector_num, GallagherCredenti
             PrintAndLogEx(INFO, "Sector %d contains a MIFARE Enhanced Security block", sector_num);
         }
         if (csn != NULL && diversified_site_key != NULL) {
-            gallagher_decode_mes(block2, &MES_cred);
-            if (cred.card_number == MES_cred.card_number &&
+            memcpy(MES_cred.csn, csn, 4);
+            MES_cred.csn_len = 4;
+            memcpy(MES_cred.site_key, diversified_site_key, sizeof(MES_cred.site_key));
+            if (gallagher_decode_mes(block2, &MES_cred) == PM3_SUCCESS &&
+                    cred.card_number == MES_cred.card_number &&
                     cred.facility_code == MES_cred.facility_code &&
                     cred.issue_level == MES_cred.issue_level &&
                     cred.region_code == MES_cred.region_code) {
                 PrintAndLogEx(INFO, "MIFARE Enhanced Security block matches Site Specific block\nSite Key is correct");
+            } else {
+                PrintAndLogEx(INFO, "MIFARE Enhanced Security block does not match Site Specific block: wrong Site Key or UID");
             }
         } else {
             PrintAndLogEx(INFO, "No Site Key or CSN provided, cannot verify MIFARE Enhanced Security block");
@@ -1199,14 +1207,50 @@ static int hfgal_read_classic_card(uint8_t *site_key, bool verbose, bool quiet) 
 
     if (select_status == 0) {
         if (!quiet) {
-            PrintAndLogEx(DEBUG, "iso14443a card select failed");
+            PrintAndLogEx(ERR, "Card select failed");
         }
-        return select_status;
+        return PM3_EFAILED;
     }
 
-    // Brute Force reading all blocks and printing credentials,
-    for (uint8_t i = 0; i < MIFARE_1K_MAXSECTOR; i++) {
-        hfgal_read_site_specific_sector(i, creds, card.uid, site_key, true);
+    // the MES holds the 4-byte UID reversed as CSN
+    uint8_t csn[4] = {0};
+    if (card.uidlen == 4) {
+        reverse_array_copy(card.uid, 4, csn);
+    }
+
+    // the MAD lists the credential sectors with AID 0x4812
+    mad1_sector_t sector0 = {0};
+    if (mf_read_sector(MF_MAD1_SECTOR, MF_KEY_A, g_mifare_mad_key, (uint8_t *)&sector0) != PM3_SUCCESS) {
+        if (!quiet) {
+            PrintAndLogEx(ERR, "Failed reading MAD sector 0");
+        }
+        return PM3_ESOFT;
+    }
+
+    mad2_sector_t mad2_sector = {0};
+    const mad2_sector_t *pmad2 = NULL;
+    if (mf_read_sector(MF_MAD2_SECTOR, MF_KEY_A, g_mifare_mad_key, (uint8_t *)&mad2_sector) == PM3_SUCCESS) {
+        pmad2 = &mad2_sector;
+    }
+
+    mad_entry_list_t mad_list = {0};
+    if (MADDecode(&sector0, pmad2, &mad_list, false, false) != PM3_SUCCESS) {
+        if (!quiet) {
+            PrintAndLogEx(ERR, "can't decode MAD");
+        }
+        return PM3_ESOFT;
+    }
+
+    int listed = 0;
+    for (size_t i = 0; i < mad_list.len; i++) {
+        if (mad_list.entries[i].aid == CLASSIC_CRED_AID) {
+            listed++;
+            hfgal_read_site_specific_sector(mad_list.entries[i].sector, creds, (card.uidlen == 4) ? csn : NULL, site_key, true);
+        }
+    }
+
+    if (listed == 0 && !quiet) {
+        PrintAndLogEx(WARNING, "No Gallagher credential sector (AID 0x4812) in the MAD");
     }
     return PM3_SUCCESS;
 }
@@ -1258,11 +1302,14 @@ static int CmdGallagherReader(const char *cmd) {
     bool read_classic_card = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
+    // the MES of a classic card is checked only against a site key given with --sitekey
+    uint8_t *mes_site_key = (site_key_len > 0) ? site_key : NULL;
+
     if (continuous_mode == false) {
         // Read single card
         if (read_classic_card) {
             // Read classic card
-            return hfgal_read_classic_card(site_key, verbose, false);
+            return hfgal_read_classic_card(mes_site_key, verbose, false);
         } else {
             // Read DESFire card
             return hfgal_read_desfire_card(aid, site_key, verbose, false);
@@ -1274,10 +1321,10 @@ static int CmdGallagherReader(const char *cmd) {
     while (kbd_enter_pressed() == false) {
         if (read_classic_card) {
             // Read classic card
-            return hfgal_read_classic_card(site_key, verbose, !verbose);
+            hfgal_read_classic_card(mes_site_key, verbose, !verbose);
         } else {
             // Read DESFire card
-            return hfgal_read_desfire_card(aid, site_key, verbose, !verbose);
+            hfgal_read_desfire_card(aid, site_key, verbose, !verbose);
         }
     }
     return PM3_SUCCESS;
