@@ -472,9 +472,6 @@ int ReadLF_realtime(bool reader_field, bool cotag, uint32_t sample_limit) {
     int32_t samples_to_skip = config.samples_to_skip;
     const uint8_t decimation = config.decimation;
 
-    const int8_t size_threshold_table[9] = {0, 64, 64, 60, 64, 60, 60, 56, 64};
-    const int8_t size_threshold = size_threshold_table[bits_per_sample];
-
     // DoAcquisition() start
     uint8_t last_byte = 0;
     uint8_t curr_byte = 0;
@@ -484,11 +481,13 @@ int ReadLF_realtime(bool reader_field, bool cotag, uint32_t sample_limit) {
 
     uint32_t usb_buffer_len = 0, sample_buffer_len;
     usb_get_ep_size(NULL, &usb_buffer_len, NULL);
+    const uint32_t size_threshold = usb_buffer_len;
     sample_buffer_len = usb_buffer_len; // If sample_buffer_len is not specified, a buffer of random length may be requested.
     initSampleBuffer(&sample_buffer_len);
     if (sample_buffer_len != usb_buffer_len) {
         return PM3_EFAILED;
     }
+    samples.counter = UINT32_MAX;
 
     bool trigger_hit = false;
     int16_t checked = 0;
@@ -542,13 +541,14 @@ int ReadLF_realtime(bool reader_field, bool cotag, uint32_t sample_limit) {
                 continue;
             }
 
+            uint32_t previous_saved = samples.total_saved;
             logSample(sample, decimation, bits_per_sample, false);
+            total_logged += samples.total_saved - previous_saved;
 
             // Write to USB FIFO if byte changed
             curr_byte = data.numbits >> 3;
             if (curr_byte > last_byte) {
                 async_usb_write_pushByte(data.buffer[last_byte]);
-                total_logged++;
             }
             last_byte = curr_byte;
 
@@ -571,9 +571,10 @@ int ReadLF_realtime(bool reader_field, bool cotag, uint32_t sample_limit) {
                 }
 
                 // Reset sample
+                memset(data.buffer, 0, sample_buffer_len);
                 last_byte = 0;
                 data.numbits = 0;
-                samples.counter = size_threshold;
+                samples.counter = UINT32_MAX;
                 samples.total_saved = 0;
 
             } else if (samples.total_saved == 1) {
@@ -590,6 +591,9 @@ int ReadLF_realtime(bool reader_field, bool cotag, uint32_t sample_limit) {
     }
 
 out:
+    if ((data.numbits & 7) != 0) {
+        async_usb_write_pushByte(data.buffer[data.numbits >> 3]);
+    }
     // Always close the async write down, error paths included. Leaving it open
     // strands the IN endpoint with a half filled FIFO, and every later usb_write() fails
     {
