@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf gallagher reader -c` - it read sector N * 4 instead of the sectors the MAD lists with AID 0x4812  (@matrix)
+- Fixed `hf gallagher reader` - with `-@` it stopped after one read, with `-c` it checked the MES block with a zeroed site key and no CSN (@matrix)
 - Added HAL for I2C and SmartCard
 - Fixed `hf topaz dump` - the json of a dynamic memory tag held a wrong UID, HR and size, the blocks shifted and no dynamic memory (@matrix)
 - Fixed `hf topaz dump` - a capability container giving more than 512 bytes of memory overflowed the buffer the dump is saved from (@matrix)
