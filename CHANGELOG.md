@@ -3,7 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-- Fixed `hf legic sim` - a host abort stopped it only after up to 80 s and `<Enter>` was not seen while a reader kept reading, the host is now polled every 200 ms; the `session ended` line needs debug level 3 (@Msprg)
+- Fixed `hf legic sim` - a host abort stopped it only after up to 80 s(@Msprg)
+- Fixed `hf topaz dump` - the NDEF was decoded over 476 bytes from block 1, past the static memory, instead of over the data area of the tag (@matrix)
+- Fixed `hf topaz dump` - when the dynamic memory could not be read, the file was still saved, with zeros for the blocks not read, and the command returned success (@matrix)
+- Fixed `hf topaz dump` - the error for a dynamic memory segment that could not be read printed the segment number as a block number (@matrix)
 - Fixed `hf gallagher reader -c` - it read sector N * 4 instead of the sectors the MAD lists with AID 0x4812  (@matrix)
 - Fixed `hf gallagher reader` - with `-@` it stopped after one read, with `-c` it checked the MES block with a zeroed site key and no CSN (@matrix)
 - Added HAL for I2C and SmartCard
