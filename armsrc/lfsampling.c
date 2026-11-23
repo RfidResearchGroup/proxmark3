@@ -549,6 +549,7 @@ int ReadLF_realtime(bool reader_field, bool cotag, uint32_t sample_limit) {
             curr_byte = data.numbits >> 3;
             if (curr_byte > last_byte) {
                 async_usb_write_pushByte(data.buffer[last_byte]);
+                data.buffer[last_byte] = 0;
             }
             last_byte = curr_byte;
 
@@ -571,7 +572,9 @@ int ReadLF_realtime(bool reader_field, bool cotag, uint32_t sample_limit) {
                 }
 
                 // Reset sample
-                memset(data.buffer, 0, sample_buffer_len);
+                if (data.numbits & 7) {
+                    data.buffer[curr_byte] = 0;
+                }
                 last_byte = 0;
                 data.numbits = 0;
                 samples.counter = UINT32_MAX;
