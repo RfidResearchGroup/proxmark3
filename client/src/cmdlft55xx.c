@@ -858,7 +858,7 @@ int T55xxReadBlockEx(uint8_t block, bool page1, bool usepwd, uint8_t override, u
 
 static void t55xx_warn_no_pwd(void) {
     if (config.pwd_known && config.pwd_bit) {
-        PrintAndLogEx(WARNING, _YELLOW_("lf t55xx detect") " found the PWD bit set. Without the password, a tag in password mode does not return its blocks");
+        PrintAndLogEx(WARNING, _YELLOW_("lf t55xx detect") " found the PWD bit set. In PWD mode no blocks are returned");
         PrintAndLogEx(HINT, "Hint: to read the blocks, run " _YELLOW_("lf t55xx detect -p %08X -o") ", then this command with " _YELLOW_("-p %08X"), config.pwd, config.pwd);
     }
 }
