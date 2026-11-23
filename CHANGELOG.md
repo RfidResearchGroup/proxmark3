@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 15 sim` - `<Enter>` now aborts it (@Msprg)
 - Fixed `lf read` and `lf sniff` streaming - now gives correct lengths for packed or decimated captures (@adrian-stepien)
 - Fixed packed LF sample streaming - reused packet buffers kept old bits and corrupted subsequent samples (@adrian-stepien)
 - Fixed `hf mfu dump` - a bad read CRC was ignored when debug logging was disabled (@adrian-stepien)
