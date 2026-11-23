@@ -24,7 +24,7 @@
 
 #if defined(WITH_BWM_CHARGERKICK) || defined(WITH_BWM_STATUS)
 
-#include "i2c.h"
+#include "i2c_apis.h"
 #include "dbprint.h"
 #include "printf.h"        // sprintf
 #include "ticks_apis.h"   // WaitMS / GetTickCount / GetTickCountDelta
@@ -87,7 +87,7 @@ void bwm_charger_kick(void) {
 
     uint8_t v = 0;
     // No ACK -> BWM absent or charger dead. Nothing to do; leave the bus and return.
-    if (I2C_BufferReadRaw(&v, 1, BWM_CHG_REG_MAINCTL, BWM_CHG_ADDR) <= 0) {
+    if (I2C_BufferRead(&v, 1, BWM_CHG_REG_MAINCTL, BWM_CHG_ADDR) <= 0) {
         return;
     }
 
@@ -114,7 +114,7 @@ static bool g_bwm_present = false;
 
 static bool bwm_gauge_read16(uint8_t cmd, uint16_t *out) {
     uint8_t d[2] = {0};
-    if (I2C_BufferReadRaw(d, 2, cmd, BWM_GAUGE_ADDR) <= 0) {
+    if (I2C_BufferRead(d, 2, cmd, BWM_GAUGE_ADDR) <= 0) {
         return false;
     }
     *out = (uint16_t)(d[0] | (d[1] << 8)); // little-endian
@@ -144,19 +144,19 @@ void bwm_print_battery_status(void) {
     // not faults, so mask to 0x3F. Fault bit map (AW32001E REG09H):
     //   b5 VIN_FAULT  b4 THERM_SD  b3 BAT_OVP  b2 SAFETY_TMR  b1 NTC_HOT  b0 NTC_COLD
     uint8_t mainctl = 0, f1 = 0, fault = 0, sysstat = 0;
-    bool chg_ok = (I2C_BufferReadRaw(&mainctl, 1, BWM_CHG_REG_MAINCTL, BWM_CHG_ADDR) > 0);
+    bool chg_ok = (I2C_BufferRead(&mainctl, 1, BWM_CHG_REG_MAINCTL, BWM_CHG_ADDR) > 0);
     bool stat_ok = false;
     char line[150] = {0};    // charger detail, printed last
     char setup[100] = {0};   // charge profile, debug level
     if (chg_ok) {
         char *p = line;
 
-        I2C_BufferReadRaw(&f1,    1, BWM_CHG_REG_FAULT, BWM_CHG_ADDR); // 1st = latched history
-        I2C_BufferReadRaw(&fault, 1, BWM_CHG_REG_FAULT, BWM_CHG_ADDR); // 2nd = current state
+        I2C_BufferRead(&f1,    1, BWM_CHG_REG_FAULT, BWM_CHG_ADDR); // 1st = latched history
+        I2C_BufferRead(&fault, 1, BWM_CHG_REG_FAULT, BWM_CHG_ADDR); // 2nd = current state
         fault &= 0x3F;
 
         // Live charge state from REG08 (System Status): CHG_STAT[4:3], PG_STAT[1], THERM_STAT[0]
-        stat_ok = (I2C_BufferReadRaw(&sysstat, 1, BWM_CHG_REG_SYSSTAT, BWM_CHG_ADDR) > 0);
+        stat_ok = (I2C_BufferRead(&sysstat, 1, BWM_CHG_REG_SYSSTAT, BWM_CHG_ADDR) > 0);
         if (stat_ok) {
             static const char *cs[] = { "not charging", "pre-charge", "charging", "charge done" };
             p += sprintf(p, "%s%s%s", cs[(sysstat >> 3) & 0x03],
@@ -188,23 +188,23 @@ void bwm_print_battery_status(void) {
         //   ICHG    (REG02[5:0]): 8mA * (code+1)                        [63=512mA]
         p = setup;
         uint8_t reg00 = 0, reg01 = 0, reg02 = 0;
-        if (I2C_BufferReadRaw(&reg01, 1, 0x01, BWM_CHG_ADDR) > 0) {
+        if (I2C_BufferRead(&reg01, 1, 0x01, BWM_CHG_ADDR) > 0) {
             p += sprintf(p, "%s", (reg01 & (1u << 3)) ? _YELLOW_("disabled") : _GREEN_("enabled"));
         }
 
-        if (I2C_BufferReadRaw(&reg02, 1, 0x02, BWM_CHG_ADDR) > 0) {
+        if (I2C_BufferRead(&reg02, 1, 0x02, BWM_CHG_ADDR) > 0) {
             uint16_t ichg_ma = 8 * ((reg02 & 0x3F) + 1);
             p += sprintf(p, "%s%u mA", (p == setup) ? "" : ", ", ichg_ma);
         }
 
         uint8_t reg04 = 0;
-        if (I2C_BufferReadRaw(&reg04, 1, BWM_CHG_REG_VCHG, BWM_CHG_ADDR) > 0) {
+        if (I2C_BufferRead(&reg04, 1, BWM_CHG_REG_VCHG, BWM_CHG_ADDR) > 0) {
             // VBAT_REG (REG04[7:2]): 3600mV + 15mV*code  [101000=4.200V default]
             uint16_t vchg_mv = BWM_CHG_VCHG_BASE_MV + ((reg04 >> BWM_CHG_VCHG_SHIFT) & 0x3F) * BWM_CHG_VCHG_STEP_MV;
             p += sprintf(p, "%s%u mV", (p == setup) ? "" : " to ", vchg_mv);
         }
 
-        if (I2C_BufferReadRaw(&reg00, 1, 0x00, BWM_CHG_ADDR) > 0) {
+        if (I2C_BufferRead(&reg00, 1, 0x00, BWM_CHG_ADDR) > 0) {
             uint8_t iin = reg00 & 0x0F;
             uint8_t vdpm = (reg00 >> 4) & 0x0F;
             uint16_t iin_ma = (iin == 0) ? 50 : (80 + 30 * (iin - 1));
@@ -329,11 +329,11 @@ bool bwm_read_battery_info(bwm_battery_info_t *out) {
         // Charger fault (REG09): read-on-clear, latched history on the 1st read,
         // live state on the 2nd - see bwm_print_battery_status()'s fuller comment.
         uint8_t f1 = 0, fault = 0, sysstat = 0;
-        I2C_BufferReadRaw(&f1, 1, BWM_CHG_REG_FAULT, BWM_CHG_ADDR);
-        if (I2C_BufferReadRaw(&fault, 1, BWM_CHG_REG_FAULT, BWM_CHG_ADDR) > 0) {
+        I2C_BufferRead(&f1, 1, BWM_CHG_REG_FAULT, BWM_CHG_ADDR);
+        if (I2C_BufferRead(&fault, 1, BWM_CHG_REG_FAULT, BWM_CHG_ADDR) > 0) {
             info.charger_fault = fault & 0x3F;
         }
-        if (I2C_BufferReadRaw(&sysstat, 1, BWM_CHG_REG_SYSSTAT, BWM_CHG_ADDR) > 0) {
+        if (I2C_BufferRead(&sysstat, 1, BWM_CHG_REG_SYSSTAT, BWM_CHG_ADDR) > 0) {
             info.charge_status = (sysstat >> 3) & 0x03;
         }
 
@@ -379,7 +379,7 @@ static bool bq_control(uint16_t sub) {
 }
 static bool bq_flags(uint16_t *f) {
     uint8_t d[2] = {0};
-    if (I2C_BufferReadRaw(d, 2, 0x06, BWM_GAUGE_ADDR) <= 0) return false;
+    if (I2C_BufferRead(d, 2, 0x06, BWM_GAUGE_ADDR) <= 0) return false;
     *f = (uint16_t)(d[0] | (d[1] << 8));                      // Flags() 0x06
     return true;
 }
@@ -399,21 +399,21 @@ static bool bq_read_control(uint16_t sub, uint16_t *val) {
     if (bq_control(sub) == false) return false;
     WaitMS(2);
     uint8_t d[2] = {0};
-    if (I2C_BufferReadRaw(d, 2, 0x00, BWM_GAUGE_ADDR) <= 0) return false;
+    if (I2C_BufferRead(d, 2, 0x00, BWM_GAUGE_ADDR) <= 0) return false;
     *val = (uint16_t)(d[0] | (d[1] << 8));
     return true;
 }
 static bool bq_read_design_cap(uint16_t *cap) {
     if (!bq_select_state_block()) return false;
     uint8_t d[2] = {0};
-    if (I2C_BufferReadRaw(d, 2, 0x46, BWM_GAUGE_ADDR) <= 0) return false;
+    if (I2C_BufferRead(d, 2, 0x46, BWM_GAUGE_ADDR) <= 0) return false;
     *cap = (uint16_t)((d[0] << 8) | d[1]);                    // big-endian
     return true;
 }
 static bool bq_read_terminate(uint16_t *mv) {
     if (!bq_select_state_block()) return false;
     uint8_t d[2] = {0};
-    if (I2C_BufferReadRaw(d, 2, 0x4A, BWM_GAUGE_ADDR) <= 0) return false;
+    if (I2C_BufferRead(d, 2, 0x4A, BWM_GAUGE_ADDR) <= 0) return false;
     *mv = (uint16_t)((d[0] << 8) | d[1]);                     // Terminate Voltage, offset 10
     return true;
 }
@@ -425,7 +425,7 @@ static bool bq_read_terminate(uint16_t *mv) {
 // serviced (REG02[6]=1) or disabled (REG05[6:5]=00), so treat it as a one-shot.
 bool bwm_charger_set_charge(bool enable) {
     uint8_t reg01 = 0;
-    if (I2C_BufferReadRaw(&reg01, 1, 0x01, BWM_CHG_ADDR) <= 0) {
+    if (I2C_BufferRead(&reg01, 1, 0x01, BWM_CHG_ADDR) <= 0) {
         return false;
     }
     if (enable) {
@@ -453,7 +453,7 @@ uint16_t bwm_charger_set_vchg(uint16_t mv) {
         code = 0x3F;   // 6-bit field
     }
     uint8_t reg04 = 0;
-    if (I2C_BufferReadRaw(&reg04, 1, BWM_CHG_REG_VCHG, BWM_CHG_ADDR) <= 0) {
+    if (I2C_BufferRead(&reg04, 1, BWM_CHG_REG_VCHG, BWM_CHG_ADDR) <= 0) {
         return 0;
     }
     reg04 = (uint8_t)((reg04 & ~BWM_CHG_VCHG_MASK) | ((code << BWM_CHG_VCHG_SHIFT) & BWM_CHG_VCHG_MASK));
@@ -503,7 +503,7 @@ bool bwm_gauge_provision_capacity(uint16_t cap_mah) {
     if (!bq_select_state_block()) return false;
 
     uint8_t blk[32] = {0};
-    if (I2C_BufferReadRaw(blk, 32, 0x40, BWM_GAUGE_ADDR) <= 0) return false;
+    if (I2C_BufferRead(blk, 32, 0x40, BWM_GAUGE_ADDR) <= 0) return false;
 
     blk[6] = (uint8_t)(cap_mah >> 8);
     blk[7] = (uint8_t)(cap_mah & 0xFF);      // DesignCapacity
@@ -572,7 +572,7 @@ void bwm_detect_and_init(void) {
 
     // Single bounded probe. Any non-ACK => no BWM fitted; skip everything.
     uint8_t v = 0;
-    if (I2C_BufferReadRaw(&v, 1, 0x01, BWM_CHG_ADDR) <= 0) {
+    if (I2C_BufferRead(&v, 1, 0x01, BWM_CHG_ADDR) <= 0) {
         g_bwm_present = false;
         return;
     }
@@ -658,7 +658,7 @@ static void bwm_lowbatt_poll(void) {
     I2C_init(true);
 
     uint8_t sysstat = 0;
-    if (I2C_BufferReadRaw(&sysstat, 1, BWM_CHG_REG_SYSSTAT, BWM_CHG_ADDR) <= 0) {
+    if (I2C_BufferRead(&sysstat, 1, BWM_CHG_REG_SYSSTAT, BWM_CHG_ADDR) <= 0) {
         return;   // no BWM / I2C error - stay quiet
     }
     if (sysstat & 0x02) {

@@ -69,7 +69,7 @@ void gpio_inter_usb_spi_role_setup(void) {
     gpio_output_init(&gpio_init_struct, AT32_GPIO_INTER_USB_SPI_ROLE, AT32_GPIO_INTER_USB_SPI_ROLE_PIN);
 }
 
-void gpio_sw_i2c_rst_setup(void) {
+void gpio_i2c_sw_bus_setup(void) {
     gpio_init_type gpio_init_struct;
     gpio_default_para_init(&gpio_init_struct);
 
@@ -78,6 +78,10 @@ void gpio_sw_i2c_rst_setup(void) {
 
     crm_periph_clock_enable(AT32_GPIO_I2C_SW_CLK, TRUE);
     gpio_output_init(&gpio_init_struct, AT32_GPIO_I2C_SW, AT32_GPIO_I2C_SCL_PIN | AT32_GPIO_I2C_SDA_PIN);
+}
+
+void gpio_i2c_hw_rst_setup(void) {
+    // Unsupported
 }
 
 void gpio_fpga_switch_setup(void) {

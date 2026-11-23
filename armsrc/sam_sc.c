@@ -22,7 +22,7 @@
 #include "appmain.h"
 #include "cmd.h"
 #include "dbprint.h"
-#include "i2c.h"          // ISO7816_MAX_FRAME, I2C_Reset_EnterMainProgram
+#include "smartcard.h"      // ISO7816_MAX_FRAME, SmartCard_ResetAdapter
 #include "proxmark3_arm.h"
 #include "sam_common.h"
 #include "ticks_apis.h"
@@ -454,12 +454,14 @@ static int sam_sc_card_api_loop(uint8_t *response, uint16_t *response_len,
 }
 
 void sam_sc_handler_no_trace(const PacketCommandNG *c) {
-    const bool app_timing = sc_set_app_i2c_timing(true);
+    // SAM exchanges are latency bound and the module is a known peer, so the
+    // tighter SDA delay earns its smaller margin here and nowhere else.
+    const bool fast_sda = I2C_SetFastSDATiming(true);
     const bool tracing = get_tracing();
     const bool blocked = set_tracing_blocked(true);
     clear_trace();
     sam_sc_handler(c);
-    sc_set_app_i2c_timing(app_timing);
+    I2C_SetFastSDATiming(fast_sda);
     set_tracing_blocked(blocked);
     set_tracing(tracing);
 }
@@ -540,7 +542,7 @@ void sam_sc_handler(const PacketCommandNG *c) {
         // leave it marked live if ATR recovery or the warmup subsequently
         // fails.
         s_sam_sc_session_active = false;
-        I2C_Reset_EnterMainProgram();
+        SmartCard_ResetAdapter();
         StartTicks();
 #if SAM_SC_FORCE_T1_PROFILE
         sc_request_sam_t1_profile();
@@ -674,7 +676,7 @@ void sam_sc_handler(const PacketCommandNG *c) {
             // Caller requested an explicit teardown after this op (typically
             // after a samCommandSecureChannelTerminate). Do a full reset to
             // bring the SAM back to a clean idle state.
-            I2C_Reset_EnterMainProgram();
+            SmartCard_ResetAdapter();
             s_sam_sc_session_active = false;
         }
 
@@ -711,7 +713,7 @@ void sam_sc_handler(const PacketCommandNG *c) {
 
     // SAM_SC_FLAG_NO_PAYLOAD path: caller wants to manage session state only.
     if (release) {
-        I2C_Reset_EnterMainProgram();
+        SmartCard_ResetAdapter();
         s_sam_sc_session_active = false;
     }
 

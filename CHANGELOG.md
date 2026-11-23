@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added HAL for I2C and SmartCard
 - Fixed `hf topaz dump` - the json of a dynamic memory tag held a wrong UID, HR and size, the blocks shifted and no dynamic memory (@matrix)
 - Fixed `hf topaz dump` - a capability container giving more than 512 bytes of memory overflowed the buffer the dump is saved from (@matrix)
 - Changed `hf topaz dump` - the .bin of a static memory tag is its memory, as for a dynamic memory tag, not the client's topaz_tag_t (@matrix)
