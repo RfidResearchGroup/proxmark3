@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed PM5 USB sample streaming - the buffer index became 255 after the first packet and wrote outside the two buffers (@adrian-stepien)
 - Changed the PM3, PM3 Ultimate and iCopy-X FPGA images - rebuilt from the current sources (@matrix)
 - Fixed `hf legic sim` - a host abort stopped it only after up to 80 s(@Msprg)
 - Fixed `hf topaz dump` - the NDEF was decoded over 476 bytes from block 1, past the static memory, instead of over the data area of the tag (@matrix)
