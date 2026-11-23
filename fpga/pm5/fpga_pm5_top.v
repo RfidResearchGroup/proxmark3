@@ -52,13 +52,15 @@ module fpga_top (
     wire gate_en;             // HF pwr_hi, drives the external gate
     //-----------------------------------------GATE-------------------------
     // Synchronise the gate enable into the input clock domain against metastability
-    reg gate_en_sync1, gate_en_sync2;
+    reg gate_en_sync1, gate_en_sync2, gate_en_sync3;
     always @(posedge ck_1356meg) begin
         gate_en_sync1 <= gate_en;
         gate_en_sync2 <= gate_en_sync1;
+        gate_en_sync3 <= gate_en_sync2;
     end
 
-    assign clk_gate = ~gate_en_sync2; // inverted, the external gate is active low
+    // a single low sample of gate_en does not close the gate
+    assign clk_gate = ~(gate_en_sync2 | gate_en_sync3); // inverted, the external gate is active low
     //-----------------------------------------PWM--------------------------
 
     // CLKOUT is 200 MHz: 4096 steps at 5 ns keep the resolution, at a 20.48 us
