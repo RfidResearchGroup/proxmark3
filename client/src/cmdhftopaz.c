@@ -653,7 +653,7 @@ static int topaz_read_dynamic_data(void) {
     uint8_t max = topaz_tag.size / 128 - 1;
     for (uint8_t segment = 1; segment <= max; segment++) {
         if (topaz_read_segment(segment, &topaz_tag.dynamic_memory[(segment - 1) * 128 + 8]) != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Error while reading dynamic memory block " _YELLOW_("%02x") ". Aborting...", segment);
+            PrintAndLogEx(ERR, "Error while reading dynamic memory segment " _YELLOW_("%u") ". Aborting...", segment);
             return PM3_ESOFT;
         }
     }
@@ -683,17 +683,19 @@ static void topaz_print_dynamic_blocks(void) {
 }
 
 // read and print the dynamic memory
-static void topaz_print_dynamic_data(void) {
+static int topaz_print_dynamic_data(void) {
 
     if (topaz_tag.size <= TOPAZ_STATIC_MEMORY) {
-        return;
+        return PM3_SUCCESS;
     }
 
     PrintAndLogEx(SUCCESS, "Dynamic Data blocks:");
 
-    if (topaz_read_dynamic_data() == PM3_SUCCESS) {
+    int res = topaz_read_dynamic_data();
+    if (res == PM3_SUCCESS) {
         topaz_print_dynamic_blocks();
     }
+    return res;
 }
 
 // the NDEF data area of topaz_tag in one piece, its length back
@@ -952,14 +954,18 @@ static int CmdHFTopazDump(const char *Cmd) {
     if (topaz_set_cc_dynamic(&topaz_tag.data_blocks[1][0]) == PM3_SUCCESS) {
         set_dynamic = true;
 
-        topaz_print_dynamic_data();
+        status = topaz_print_dynamic_data();
+        if (status != PM3_SUCCESS) {
+            topaz_switch_off_field();
+            PrintAndLogEx(FAILED, "Dynamic memory not read, nothing saved");
+            free(topaz_tag.dynamic_memory);
+            return status;
+        }
 
         topaz_print_lifecycle_state(&topaz_tag.data_blocks[1][0]);
 
-        NDEFDecodeAndPrint(&topaz_tag.data_blocks[1][4],
-                           (topaz_tag.HR01[0] == 1) ? (12 * 8) : 476
-                           , true
-                          );
+        uint8_t area[TOPAZ_NDEF_AREA_MAX] = {0};
+        NDEFDecodeAndPrint(area, topaz_ndef_area(area), true);
     }
 
     topaz_switch_off_field();

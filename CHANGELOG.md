@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf topaz dump` - the NDEF was decoded over 476 bytes from block 1, past the static memory, instead of over the data area of the tag (@matrix)
+- Fixed `hf topaz dump` - when the dynamic memory could not be read, the file was still saved, with zeros for the blocks not read, and the command returned success (@matrix)
+- Fixed `hf topaz dump` - the error for a dynamic memory segment that could not be read printed the segment number as a block number (@matrix)
 - Fixed `hf topaz dump` - the json of a dynamic memory tag held a wrong UID, HR and size, the blocks shifted and no dynamic memory (@matrix)
 - Fixed `hf topaz dump` - a capability container giving more than 512 bytes of memory overflowed the buffer the dump is saved from (@matrix)
 - Changed `hf topaz dump` - the .bin of a static memory tag is its memory, as for a dynamic memory tag, not the client's topaz_tag_t (@matrix)
