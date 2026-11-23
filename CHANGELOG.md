@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf legic sim` - a host abort stopped it only after up to 80 s(@Msprg)
 - Fixed `hf topaz dump` - the NDEF was decoded over 476 bytes from block 1, past the static memory, instead of over the data area of the tag (@matrix)
 - Fixed `hf topaz dump` - when the dynamic memory could not be read, the file was still saved, with zeros for the blocks not read, and the command returned success (@matrix)
 - Fixed `hf topaz dump` - the error for a dynamic memory segment that could not be read printed the segment number as a block number (@matrix)
