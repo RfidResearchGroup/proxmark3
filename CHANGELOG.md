@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf topaz dump` - the json of a dynamic memory tag held a wrong UID, HR and size, the blocks shifted and no dynamic memory (@matrix)
+- Fixed `hf topaz dump` - a capability container giving more than 512 bytes of memory overflowed the buffer the dump is saved from (@matrix)
+- Changed `hf topaz dump` - the .bin of a static memory tag is its memory, as for a dynamic memory tag, not the client's topaz_tag_t (@matrix)
+- Fixed `lf hitag htu dump` - the json had no UID and ICR, the save callback that adds them was never called (@matrix)
 - Fixed `hf topaz view` - the `.bin` of a dynamic memory tag was read as the one of a static memory tag: its blocks came out shifted by 12 bytes, without the dynamic memory (@matrix)
 - Fixed `hf topaz view` - the lock bits, the capability container and the NDEF it printed were those of the last tag read, and the dynamic memory was read from the tag on the antenna (@matrix)
 - Fixed `hf topaz view` - the NDEF was decoded over 476 bytes from block 1, past the static memory, instead of over the data area of the tag (@matrix)

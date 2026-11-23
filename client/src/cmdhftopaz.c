@@ -913,6 +913,11 @@ static int CmdHFTopazSniff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// HR0 HR1 of the tag read last, for the json of its memory
+static void topaz_json_callback(json_t *root) {
+    JsonSaveBufAsHexCompact(root, "$.Card.H0R1", topaz_tag.HR01, sizeof(topaz_tag.HR01));
+}
+
 static int CmdHFTopazDump(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -976,14 +981,26 @@ static int CmdHFTopazDump(const char *Cmd) {
         FillFileNameByUID(filename, topaz_tag.uid, "-dump", sizeof(topaz_tag.uid));
     }
 
-    if (topaz_tag.size > TOPAZ_STATIC_MEMORY) {
-        uint8_t mem[TOPAZ_MAX_SIZE];
-        memcpy(mem, topaz_tag.data_blocks, TOPAZ_STATIC_MEMORY);
-        memcpy(mem + TOPAZ_STATIC_MEMORY, topaz_tag.dynamic_memory, topaz_tag.size - TOPAZ_STATIC_MEMORY);
-        pm3_save_dump(filename, mem, topaz_tag.size, jsfTopaz);
-    } else {
-        pm3_save_dump(filename, (uint8_t *)&topaz_tag, sizeof(topaz_tag_t), jsfTopaz);
+    // the capability container gives the size, up to 2048 bytes
+    size_t memlen = TOPAZ_STATIC_MEMORY;
+    if ((topaz_tag.size > TOPAZ_STATIC_MEMORY) && (topaz_tag.dynamic_memory != NULL)) {
+        memlen = topaz_tag.size;
     }
+
+    uint8_t *mem = calloc(memlen, sizeof(uint8_t));
+    if (mem == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        free(topaz_tag.dynamic_memory);
+        return PM3_EMALLOC;
+    }
+    memcpy(mem, topaz_tag.data_blocks, TOPAZ_STATIC_MEMORY);
+    if (memlen > TOPAZ_STATIC_MEMORY) {
+        memcpy(mem + TOPAZ_STATIC_MEMORY, topaz_tag.dynamic_memory, memlen - TOPAZ_STATIC_MEMORY);
+    }
+
+    // the .bin and the json are the memory, the callback adds HR0 HR1 to the json
+    pm3_save_dump_cb(filename, mem, memlen, jsfTopaz, topaz_json_callback);
+    free(mem);
 
     if (set_dynamic) {
         free(topaz_tag.dynamic_memory);
