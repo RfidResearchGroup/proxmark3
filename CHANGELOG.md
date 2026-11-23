@@ -4,6 +4,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Fixed `script list` - preserve complete directory paths and free skipped directory entries
+- Fixed `hf legic sim` on PM5 - the tail of the tag's own last bit on `ssp_din` was taken for the start of the next reader command (@Msprg)
+- Fixed `hf 15 sim` - `<Enter>` now aborts it (@Msprg)
 - Fixed `lf read` and `lf sniff` streaming - now gives correct lengths for packed or decimated captures (@adrian-stepien)
 - Fixed packed LF sample streaming - reused packet buffers kept old bits and corrupted subsequent samples (@adrian-stepien)
 - Fixed `hf mfu dump` - a bad read CRC was ignored when debug logging was disabled (@adrian-stepien)

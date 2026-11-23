@@ -2367,9 +2367,10 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
 
         // Listen to reader
         uint32_t reader_eof_time = 0;
-        int cmd_len = GetIso15693CommandFromReader(cmd, sizeof(cmd), &reader_eof_time, false);
+        int cmd_len = GetIso15693CommandFromReader(cmd, sizeof(cmd), &reader_eof_time, true);
         if (cmd_len < 0) {
-            button_pressed = true;
+            // -2: host command while waiting for the reader
+            button_pressed = (cmd_len != -2);
             break;
         }
 
