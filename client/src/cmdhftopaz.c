@@ -713,32 +713,6 @@ static size_t topaz_ndef_area(uint8_t *area) {
     return n;
 }
 
-// save the NDEF TLVs up to the terminator, the dynamic memory read in first
-static int topaz_save_ndef(const char *filename) {
-    int res = PM3_SUCCESS;
-    if ((topaz_set_cc_dynamic(&topaz_tag.data_blocks[1][0]) == PM3_SUCCESS) && (topaz_tag.size > TOPAZ_STATIC_MEMORY)) {
-        res = topaz_read_dynamic_data();
-    }
-
-    uint8_t area[TOPAZ_NDEF_AREA_MAX] = {0};
-    size_t n = topaz_ndef_area(area);
-    free(topaz_tag.dynamic_memory);
-    topaz_tag.dynamic_memory = NULL;
-
-    if (res != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "Dynamic memory not read, nothing saved");
-        return res;
-    }
-
-    // the whole area when the TLVs don't parse
-    size_t total = 0;
-    if (NDEFGetTotalLength(area, n, &total) != PM3_SUCCESS) {
-        total = n;
-    }
-    pm3_save_dump(filename, area, total, jsfNDEF);
-    return PM3_SUCCESS;
-}
-
 static void topaz_print_lifecycle_state(uint8_t *data) {
     // to be done
 }
@@ -813,22 +787,16 @@ int CmdHFTopazInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf topaz info",
                   "Get info from Topaz tags",
-                  "hf topaz info\n"
-                  "hf topaz info -f myfilename -> save raw NDEF to file\n"
-                 );
+                  "hf topaz info");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "save raw NDEF to file"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    int fnlen = 0;
-    char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-    bool verbose = arg_get_lit(ctx, 2);
+    bool verbose = arg_get_lit(ctx, 1);
 
     CLIParserFree(ctx);
 
@@ -873,13 +841,9 @@ int CmdHFTopazInfo(const char *Cmd) {
     // the TLVs are in blocks 1 - C, after the capability container
     topaz_print_control_TLVs(&topaz_tag.data_blocks[1][4], (0x0C * TOPAZ_BLOCK_SIZE) - 4);
 
-    if (fnlen > 0) {
-        status = topaz_save_ndef(filename);
-    }
-
     PrintAndLogEx(NORMAL, "");
     topaz_switch_off_field();
-    return status;
+    return PM3_SUCCESS;
 }
 
 static int CmdHFTopazSim(const char *Cmd) {

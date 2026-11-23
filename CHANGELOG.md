@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-- Fixed `hf topaz info -f` - nothing was saved, now it saves the NDEF TLVs of the tag (@matrix)
+- Removed `-f` from `hf topaz info` - it saved nothing, `hf topaz dump` saves the tag (@matrix)
 - Fixed `hf legic sim` on PM5 - the tail of the tag's own last bit on `ssp_din` was taken for the start of the next reader command (@Msprg)
 - Fixed `hf 15 sim` - `<Enter>` now aborts it (@Msprg)
 - Fixed `lf read` and `lf sniff` streaming - now gives correct lengths for packed or decimated captures (@adrian-stepien)
