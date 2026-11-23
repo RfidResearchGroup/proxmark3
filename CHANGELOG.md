@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf topaz view` - the `.bin` of a dynamic memory tag was read as the one of a static memory tag: its blocks came out shifted by 12 bytes, without the dynamic memory (@matrix)
+- Fixed `hf topaz view` - the lock bits, the capability container and the NDEF it printed were those of the last tag read, and the dynamic memory was read from the tag on the antenna (@matrix)
+- Fixed `hf topaz view` - the NDEF was decoded over 476 bytes from block 1, past the static memory, instead of over the data area of the tag (@matrix)
+- Fixed `hf topaz view` - a json lost its dynamic memory and HR, the broken json of a dynamic memory tag is refused (@matrix)
 - Fixed PM5 as a HF reader - the sample stream from the FPGA could come back one bit off after a mode switch (@Msprg)
 - Fixed PM3 `hf 14b sim` - the timer of the FPGA simulator ran on while the ADC idled below its high level and cut the SOF of reader frames short, needs rebuilt FPGA images (@matrix)
 - Fixed `lf hid demod` - a few extra bits ahead of a preamble decoded as another card, the frame shifted by those bits (@mfcarroll)
