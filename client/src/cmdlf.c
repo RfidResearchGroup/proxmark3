@@ -833,7 +833,7 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples, bool 
         } else {
             sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true, false);
         }
-        samples = sample_bytes * 8 / bits_per_sample;
+        samples = MIN(samples, sample_bytes * 8 / bits_per_sample);
         // the inline "Received x / y bytes" counter already says the transfer is
         // done, so only repeat it in samples when asked
         if (verbose) {
@@ -991,7 +991,7 @@ int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
         } else {
             sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true, false);
         }
-        samples = sample_bytes * 8 / bits_per_sample;
+        samples = MIN(samples, sample_bytes * 8 / bits_per_sample);
         // the inline "Received x / y bytes" counter already says the transfer is
         // done, so only repeat it in samples when asked
         if (verbose) {

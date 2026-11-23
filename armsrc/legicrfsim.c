@@ -56,6 +56,7 @@ static uint32_t last_rx_cmd;
 static uint32_t last_frame_end; /* ts of last bit of previews rx or tx frame */
 
 #define TAG_FRAME_WAIT       70 /* 330us from READER frame end to TAG frame start */
+#define TAG_DIN_SETTLE        8 /* 38us, ssp_din shows our own modulation 1-2 ticks late */
 #define TAG_ACK_WAIT        758 /* 3.57ms from READER frame end to TAG write ACK */
 #define TAG_BIT_PERIOD       21 /* 99.1us */
 
@@ -189,6 +190,9 @@ static void tx_frame(uint32_t frame, uint8_t len) {
     // log
     uint8_t cmdbytes[] = {len, BYTEx(frame, 0), BYTEx(frame, 1)};
     LogTrace(cmdbytes, sizeof(cmdbytes), last_frame_start, last_frame_end, NULL, false);
+
+    // the tail of our last bit is not a reader pause
+    while (GetCountSspClk() < last_frame_end + TAG_DIN_SETTLE) { };
 }
 
 static void tx_ack(void) {
@@ -210,6 +214,9 @@ static void tx_ack(void) {
     // log
     uint8_t cmdbytes[] = {1, 1};
     LogTrace(cmdbytes, sizeof(cmdbytes), last_frame_start, last_frame_end, NULL, false);
+
+    // the tail of our last bit is not a reader pause
+    while (GetCountSspClk() < last_frame_end + TAG_DIN_SETTLE) { };
 }
 
 // Returns a demodulated frame or -1 on code violation

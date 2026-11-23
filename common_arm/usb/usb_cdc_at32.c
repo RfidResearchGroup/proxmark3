@@ -661,7 +661,7 @@ bool async_usb_write_requestWrite(void) {
         USBD_CDC_BULK_IN_EPT & 0x7F,
         async_write_index
     );
-    async_write_buf_select = ~async_write_buf_select; // after data write, we can change buffer, 0 or 1
+    async_write_buf_select ^= 1; // after data write, we can change buffer, 0 or 1
     async_write_index = 0; // don't forget reset write index, next write will write to other buffer and from 0 start.
 
     return TRUE;
