@@ -334,10 +334,13 @@ static int topaz_write_nonerase8_block(uint8_t blockno, uint8_t *block_data) {
         return PM3_EFAILED;
     }
 
-    if (memcmp(block_data, response + 1, 8) == 0) {
-        return PM3_SUCCESS;
+    // no erase: bits set before stay set, the ones written must be set now
+    for (uint8_t i = 0; i < 8; i++) {
+        if ((response[1 + i] & block_data[i]) != block_data[i]) {
+            return PM3_ESOFT;
+        }
     }
-    return PM3_ESOFT;
+    return PM3_SUCCESS;
 }
 
 // search for the lock area descriptor for the lockable area including byteno
@@ -830,22 +833,16 @@ int CmdHFTopazInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf topaz info",
                   "Get info from Topaz tags",
-                  "hf topaz info\n"
-                  "hf topaz info -f myfilename -> save raw NDEF to file\n"
-                 );
+                  "hf topaz info");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "save raw NDEF to file"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    int fnlen = 0;
-    char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-    bool verbose = arg_get_lit(ctx, 2);
+    bool verbose = arg_get_lit(ctx, 1);
 
     CLIParserFree(ctx);
 
