@@ -404,21 +404,30 @@ static bool topaz_byte_is_locked(uint16_t byteno) {
     }
 }
 
-static int topaz_set_cc_dynamic(const uint8_t *data) {
+// the memory size, and room for the dynamic memory. HR0 tells a Topaz 512 from a
+// Topaz 96, a tag with another HR0 gets the size its capability container gives
+static int topaz_set_size(void) {
 
-    if (data[0] != 0xE1) {
-        topaz_tag.size = TOPAZ_STATIC_MEMORY;
-        PrintAndLogEx(WARNING, "No Type 1 NDEF capability container found");
-        return PM3_ESOFT; // no NDEF message
+    uint16_t memsize = TOPAZ_STATIC_MEMORY;
+    if (topaz_tag.HR01[0] == 0x12) {
+        memsize = TOPAZ_MAX_SIZE;
+    } else if ((topaz_tag.HR01[0] != 0x11) && (topaz_tag.data_blocks[1][0] == 0xE1)) {
+        memsize = (topaz_tag.data_blocks[1][2] + 1) * 8;
+        if (memsize < TOPAZ_STATIC_MEMORY) {
+            PrintAndLogEx(WARNING, "Capability container gives %u bytes of memory, reading %u", memsize, TOPAZ_STATIC_MEMORY);
+            memsize = TOPAZ_STATIC_MEMORY;
+        }
     }
-
-    // setting of dynamic memory and allocation of such memory.
-    uint16_t memsize = (data[2] + 1) * 8;
     topaz_tag.size = memsize;
-    topaz_tag.dynamic_memory = calloc(memsize - TOPAZ_STATIC_MEMORY, sizeof(uint8_t));
-    if (topaz_tag.dynamic_memory == NULL) {
-        PrintAndLogEx(WARNING, "Failed to allocate memory");
-        return PM3_EMALLOC;
+
+    free(topaz_tag.dynamic_memory);
+    topaz_tag.dynamic_memory = NULL;
+    if (memsize > TOPAZ_STATIC_MEMORY) {
+        topaz_tag.dynamic_memory = calloc(memsize - TOPAZ_STATIC_MEMORY, sizeof(uint8_t));
+        if (topaz_tag.dynamic_memory == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            return PM3_EMALLOC;
+        }
     }
     return PM3_SUCCESS;
 }
@@ -750,8 +759,13 @@ static int topaz_print_dynamic_data(void) {
     return res;
 }
 
-// the NDEF data area of topaz_tag in one piece, its length back
+// the NDEF data area of an NDEF formatted tag, in one piece. Its length back,
+// 0 for a tag without the capability container
 static size_t topaz_ndef_area(uint8_t *area) {
+
+    if (topaz_tag.data_blocks[1][0] != 0xE1) {
+        return 0;
+    }
 
     size_t n = TOPAZ_NDEF_STATIC_AREA;
     memcpy(area, &topaz_tag.data_blocks[1][4], n);
@@ -763,6 +777,14 @@ static size_t topaz_ndef_area(uint8_t *area) {
         n += len;
     }
     return n;
+}
+
+static void topaz_decode_ndef(void) {
+    uint8_t area[TOPAZ_NDEF_AREA_MAX] = {0};
+    size_t n = topaz_ndef_area(area);
+    if (n) {
+        NDEFDecodeAndPrint(area, n, true);
+    }
 }
 
 static void topaz_print_lifecycle_state(uint8_t *data) {
@@ -994,6 +1016,13 @@ static int CmdHFTopazDump(const char *Cmd) {
         PrintAndLogEx(WARNING, "no tag found");
         return status;
     }
+
+    status = topaz_set_size();
+    if (status != PM3_SUCCESS) {
+        topaz_switch_off_field();
+        return status;
+    }
+
     printTopazDumpContents(&topaz_tag);
 
     // the lock areas of the dynamic memory, before it is printed
@@ -1001,32 +1030,24 @@ static int CmdHFTopazDump(const char *Cmd) {
         topaz_print_control_TLVs(&topaz_tag.data_blocks[1][4], TOPAZ_NDEF_STATIC_AREA);
     }
 
-    bool set_dynamic = false;
-    if (topaz_set_cc_dynamic(&topaz_tag.data_blocks[1][0]) == PM3_SUCCESS) {
-        set_dynamic = true;
-
-        status = topaz_print_dynamic_data();
-        if (status != PM3_SUCCESS) {
-            topaz_switch_off_field();
-            PrintAndLogEx(FAILED, "Dynamic memory not read, nothing saved");
-            free(topaz_tag.dynamic_memory);
-            return status;
-        }
-
-        topaz_print_lifecycle_state(&topaz_tag.data_blocks[1][0]);
-
-        uint8_t area[TOPAZ_NDEF_AREA_MAX] = {0};
-        NDEFDecodeAndPrint(area, topaz_ndef_area(area), true);
-    }
+    status = topaz_print_dynamic_data();
 
     topaz_switch_off_field();
+
+    if (status != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Dynamic memory not read, nothing saved");
+        free(topaz_tag.dynamic_memory);
+        return status;
+    }
+
+    topaz_print_lifecycle_state(&topaz_tag.data_blocks[1][0]);
+
+    topaz_decode_ndef();
 
     // Skip saving card data to file
     if (nosave) {
         PrintAndLogEx(INFO, "Called with no save option");
-        if (set_dynamic) {
-            free(topaz_tag.dynamic_memory);
-        }
+        free(topaz_tag.dynamic_memory);
         return PM3_SUCCESS;
     }
 
@@ -1038,7 +1059,7 @@ static int CmdHFTopazDump(const char *Cmd) {
         FillFileNameByUID(filename, topaz_tag.uid, "-dump", sizeof(topaz_tag.uid));
     }
 
-    // the capability container gives the size, up to 2048 bytes
+    // the size topaz_set_size() found, up to 2048 bytes
     size_t memlen = TOPAZ_STATIC_MEMORY;
     if ((topaz_tag.size > TOPAZ_STATIC_MEMORY) && (topaz_tag.dynamic_memory != NULL)) {
         memlen = topaz_tag.size;
@@ -1059,9 +1080,7 @@ static int CmdHFTopazDump(const char *Cmd) {
     pm3_save_dump_cb(filename, mem, memlen, jsfTopaz, topaz_json_callback);
     free(mem);
 
-    if (set_dynamic) {
-        free(topaz_tag.dynamic_memory);
-    }
+    free(topaz_tag.dynamic_memory);
 
     return PM3_SUCCESS;
 }
