@@ -25,6 +25,6 @@
 #define HF_SNOOP_SKIP_MIN  (3)
 #define HF_SNOOP_SKIP_AVG  (4)
 
-int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len, uint8_t skipMode, uint8_t skipRatio);
+int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint32_t *len, uint8_t skipMode, uint8_t skipRatio);
 void HfPlotDownload(void);
 #endif

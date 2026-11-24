@@ -552,12 +552,21 @@ int CmdHFSniff(const char *Cmd) {
 
             if (resp.status == PM3_SUCCESS) {
 
-                struct r {
-                    uint16_t len;
-                } PACKED;
-                struct r *retval = (struct r *)resp.data.asBytes;
+                uint32_t len;
+                if (resp.length == sizeof(uint16_t)) {
+                    len = resp.data.asDwords[0] & 0xFFFF;
+                } else if (resp.length == sizeof(uint32_t)) {
+                    len = resp.data.asDwords[0];
+                } else {
+                    PrintAndLogEx(WARNING, "Invalid HF sniff response length");
+                    return PM3_ESOFT;
+                }
+                if (len == 0 || len > g_pm3_capabilities.bigbuf_size) {
+                    PrintAndLogEx(WARNING, "Invalid HF sniff sample count");
+                    return PM3_ESOFT;
+                }
 
-                PrintAndLogEx(INFO, "HF sniff (%u samples)", retval->len);
+                PrintAndLogEx(INFO, "HF sniff (%u samples)", len);
 
                 PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("data hpf") "` to remove offset");
                 PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("data plot") "` to view");
@@ -567,8 +576,8 @@ int CmdHFSniff(const char *Cmd) {
                 // it reserve memory from the higher end.
                 // At the moment, sniff takes all free memory in bigbuff. If this changes,
                 // we can't start from beginning idx 0 but from that hi-to-start-of-allocated.
-                uint32_t start = g_pm3_capabilities.bigbuf_size - retval->len;
-                int res = getSamplesEx(start, start, false, true);
+                uint32_t start = g_pm3_capabilities.bigbuf_size - len;
+                int res = getSamplesEx(start, start + len, false, true);
                 if (res != PM3_SUCCESS) {
                     PrintAndLogEx(WARNING, "failed to download samples to client");
                     return res;

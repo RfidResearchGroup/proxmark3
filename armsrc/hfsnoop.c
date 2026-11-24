@@ -27,17 +27,17 @@
 #include "appmain.h"
 #include "cmd.h"
 
-static void RAMFUNC optimizedSniff(uint16_t *dest, uint16_t dsize) {
+static void RAMFUNC optimizedSniff(uint16_t *dest, uint32_t dsize) {
     while (dsize > 0) {
         if (FPGA_SSC_RX_Ready()) {
             *dest = (uint16_t)(FPGA_SSC_RX_Value());
             dest++;
-            dsize -= sizeof(dsize);
+            dsize -= sizeof(*dest);
         }
     }
 }
 
-static void RAMFUNC skipSniff(uint8_t *dest, uint16_t dsize, uint8_t skipMode, uint8_t skipRatio) {
+static void RAMFUNC skipSniff(uint8_t *dest, uint32_t dsize, uint8_t skipMode, uint8_t skipRatio) {
     uint32_t accum = (skipMode == HF_SNOOP_SKIP_MIN) ? 0xffffffff : 0;
     uint8_t ratioindx = 0;
     while (dsize > 0) {
@@ -86,7 +86,7 @@ static void RAMFUNC skipSniff(uint8_t *dest, uint16_t dsize, uint8_t skipMode, u
     }
 }
 
-int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len, uint8_t skipMode, uint8_t skipRatio) {
+int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint32_t *len, uint8_t skipMode, uint8_t skipRatio) {
     BigBuf_free();
     BigBuf_Clear_ext(false);
 
