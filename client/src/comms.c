@@ -1088,7 +1088,7 @@ size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, boo
         if (last_pos == pos) {
             uint64_t tmp_clk = __atomic_load_n(&timeout_start_time, __ATOMIC_SEQ_CST);
             // If ms_timeout == -1, the loop can only be breaked by pressing Enter or receiving enough data
-            if ((!wait_for_first_data || pos != 0) && (ms_timeout != (size_t) - 1) && (msclock() - tmp_clk > ms_timeout)) {
+            if ((wait_for_first_data == false || pos) && (ms_timeout != (size_t) - 1) && (msclock() - tmp_clk > ms_timeout)) {
                 break;
             }
         } else {
