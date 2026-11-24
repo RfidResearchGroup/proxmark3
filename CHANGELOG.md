@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Removed `-f` from `hf topaz info` - it saved nothing, `hf topaz dump` saves the tag (@matrix)
 - Fixed `hf topaz wrbl` - a write to block 14 was reported failed when the block already had a bit that the data does not set (@matrix)
 - Fixed `lf t55xx read`, `lf t55xx dump` - a block 0 write, `lf t55xx config -c`, `chk`, `bruteforce` and `recoverpw` end the password confirmation from `lf t55xx detect` (@mfcarroll)
 - Changed `lf t55xx read`, `lf t55xx dump` - warn if run without `-p` while the password confirmation from `lf t55xx detect` holds (@mfcarroll)

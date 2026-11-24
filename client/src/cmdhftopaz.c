@@ -790,22 +790,16 @@ int CmdHFTopazInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf topaz info",
                   "Get info from Topaz tags",
-                  "hf topaz info\n"
-                  "hf topaz info -f myfilename -> save raw NDEF to file\n"
-                 );
+                  "hf topaz info");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("f", "file", "<fn>", "save raw NDEF to file"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    int fnlen = 0;
-    char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-    bool verbose = arg_get_lit(ctx, 2);
+    bool verbose = arg_get_lit(ctx, 1);
 
     CLIParserFree(ctx);
 
