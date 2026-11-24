@@ -16,6 +16,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed `hf 14a sim` and `hf 14a antifuzz` - a stop command was not seen while a reader kept polling (@matrix)
 - Fixed `hf 14a sim` - the ATQA and the ATS could keep bytes of the simulation run before (@matrix)
 - Fixed `hf 14a simaid` - `<Enter>` did not stop the simulation, only the button did (@matrix)
+- Fixed `hf mfu info` - my-d type names no longer print a stray byte for the trademark sign (@iceman1001)
 - Fixed Nextfare / Go card parser - taps and top ups sorted by date, newest first; Go card journey shown as its tap on time, which is what the field holds (@iceman1001)
 - Changed transit parsers - section headers padded to one width so the dashes line up (@iceman1001)
 - Changed Nextfare / Go card parser - money in red when negative, green when positive, ticket type in yellow, cyan section headers; tap amounts are shown from the card side, the held back fare negative and the refund positive (@iceman1001)
