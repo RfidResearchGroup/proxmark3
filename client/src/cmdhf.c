@@ -473,8 +473,8 @@ typedef enum {
 const CLIParserOption HFSnoopSkipModeOpts[] = {
     {HF_SNOOP_SKIP_NONE, "none"},
     {HF_SNOOP_SKIP_DROP, "drop"},
-    {HF_SNOOP_SKIP_MAX,  "min"},
-    {HF_SNOOP_SKIP_MIN,  "max"},
+    {HF_SNOOP_SKIP_MIN,  "min"},
+    {HF_SNOOP_SKIP_MAX,  "max"},
     {HF_SNOOP_SKIP_AVG,  "avg"},
     {0,    NULL},
 };
@@ -520,7 +520,13 @@ int CmdHFSniff(const char *Cmd) {
     }
 
     params.skipMode = smode;
-    params.skipRatio = arg_get_int_def(ctx, 4, 0);
+    int sratio = arg_get_int_def(ctx, 4, (smode == HF_SNOOP_SKIP_NONE) ? 0 : 1);
+    if (smode != HF_SNOOP_SKIP_NONE && (sratio < 1 || sratio > UINT8_MAX)) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Skip ratio must be between 1 and 255");
+        return PM3_EINVARG;
+    }
+    params.skipRatio = sratio;
 
     CLIParserFree(ctx);
 
