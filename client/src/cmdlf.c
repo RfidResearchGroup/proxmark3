@@ -2011,34 +2011,37 @@ int CmdLFfind(const char *Cmd) {
         // The improved noise detection will find Cotag.
         if (getSignalProperties()->isnoise) {
 
-            PrintAndLogEx(INPLACE, "Searching for MOTOROLA tag...");
-            if (readMotorolaUid()) {
-                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Motorola FlexPass ID") " found!");
-                if (search_cont) {
-                    found++;
-                } else {
-                    return PM3_SUCCESS;
-                }
-            }
-
-            PrintAndLogEx(INPLACE, "Searching for COTAG tag...");
-            if (readCOTAGUid()) {
-                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("COTAG ID") " found!");
-                if (search_cont) {
-                    found++;
-                } else {
-                    return PM3_SUCCESS;
-                }
-            }
-
-            PrintAndLogEx(NORMAL, "");
-
-            // identify chipset
+            // identify chipset first, the Motorola and COTAG reads are slow
             bool lf_special_search = check_chiptype(is_online);
             if (lf_special_search) {
                 found++;
             } else {
                 PrintAndLogEx(DEBUG, "Automatic chip type detection " _RED_("failed"));
+            }
+
+            if ((lf_special_search == false) || search_cont) {
+
+                PrintAndLogEx(INPLACE, "Searching for MOTOROLA tag...");
+                if (readMotorolaUid()) {
+                    PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Motorola FlexPass ID") " found!");
+                    if (search_cont) {
+                        found++;
+                    } else {
+                        return PM3_SUCCESS;
+                    }
+                }
+
+                PrintAndLogEx(INPLACE, "Searching for COTAG tag...");
+                if (readCOTAGUid()) {
+                    PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("COTAG ID") " found!");
+                    if (search_cont) {
+                        found++;
+                    } else {
+                        return PM3_SUCCESS;
+                    }
+                }
+
+                PrintAndLogEx(NORMAL, "");
             }
 
             if (found == 0) {
