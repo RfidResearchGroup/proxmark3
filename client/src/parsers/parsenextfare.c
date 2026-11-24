@@ -264,7 +264,7 @@ int nextfare_parser_parse(const uint8_t *dump, size_t dumplen) {
     transit_print_kv("Expiry", "%s", s);
 
     PrintAndLogEx(INFO, "");
-    PrintAndLogEx(INFO, "Top ups, times local");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Top ups, times local") " ---");
     for (uint8_t i = 0; i < 3; i++) {
         const uint8_t *b = dump + NF_BLK(2, i);
         if (transit_is_zero(b + 2, 6)) {
@@ -310,7 +310,7 @@ int nextfare_parser_parse(const uint8_t *dump, size_t dumplen) {
     }
 
     PrintAndLogEx(INFO, "");
-    PrintAndLogEx(INFO, "Taps, times local");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Taps, times local") " ---");
     for (uint8_t i = 0; i < n; i++) {
         char amt[64];
         nf_date_str(taps[i].raw + 2, s, sizeof(s));
