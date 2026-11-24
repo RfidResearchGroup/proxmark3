@@ -194,6 +194,21 @@ static const char *nf_seqgo_ticket(uint16_t t) {
     }
 }
 
+// card side amount padded to width, red when negative, green when positive
+static void nf_money_col(char *out, size_t outlen, int32_t minor, const char *cur, bool plus, int width) {
+    char m[32], p[40];
+    transit_money_str(m, sizeof(m), minor, 2, cur);
+    snprintf(p, sizeof(p), "%s%s", (plus && minor > 0) ? "+" : "", m);
+
+    if (minor < 0) {
+        snprintf(out, outlen, _RED_("%*s"), width, p);
+    } else if (minor > 0) {
+        snprintf(out, outlen, _GREEN_("%*s"), width, p);
+    } else {
+        snprintf(out, outlen, "%*s", width, p);
+    }
+}
+
 int nextfare_parser_parse(const uint8_t *dump, size_t dumplen) {
     if (is_valid_nextfare_card(dump, dumplen) == false) {
         return PM3_EINVARG;
@@ -232,8 +247,8 @@ int nextfare_parser_parse(const uint8_t *dump, size_t dumplen) {
     const nf_balance_t *hi = (b1.version > b0.version) ? &b1 : &b0;
     const nf_balance_t *lo = (hi == &b0) ? &b1 : &b0;
     const nf_balance_t *bal = (hi->version >= 240 && lo->version <= 10) ? lo : hi;
-    transit_money_str(s, sizeof(s), bal->balance, 2, cur);
-    transit_print_kv("Balance", _GREEN_("%s"), s);
+    nf_money_col(s, sizeof(s), bal->balance, cur, false, 0);
+    transit_print_kv("Balance", "%s", s);
     if (bal->travel_pass) {
         transit_print_kv("Travel pass", "available");
     }
@@ -241,7 +256,7 @@ int nextfare_parser_parse(const uint8_t *dump, size_t dumplen) {
     const uint8_t *cfg = dump + NF_BLK(1, 2);
     uint16_t ticket = MemLeToUint2byte(cfg + 8);
     if (sys == NF_SEQGO) {
-        transit_print_kv("Ticket type", "0x%04X ( %s )", ticket, nf_seqgo_ticket(ticket));
+        transit_print_kv("Ticket type", "0x%04X ( " _YELLOW_("%s") " )", ticket, nf_seqgo_ticket(ticket));
     } else {
         transit_print_kv("Ticket type", "0x%04X", ticket);
     }
@@ -255,10 +270,10 @@ int nextfare_parser_parse(const uint8_t *dump, size_t dumplen) {
         if (transit_is_zero(b + 2, 6)) {
             continue;
         }
-        char amt[32];
+        char amt[64];
         nf_date_str(b + 2, s, sizeof(s));
-        transit_money_str(amt, sizeof(amt), MemLeToUint2byte(b + 6) & 0x7FFF, 2, cur);
-        PrintAndLogEx(INFO, "  %s  +%-12s  station %5u%s", s, amt, MemLeToUint2byte(b + 12),
+        nf_money_col(amt, sizeof(amt), MemLeToUint2byte(b + 6) & 0x7FFF, cur, true, -13);
+        PrintAndLogEx(INFO, "  %s  %s  station %5u%s", s, amt, MemLeToUint2byte(b + 12),
                       (b[0] == 0x31) ? "  automatic" : "");
     }
 
@@ -297,10 +312,11 @@ int nextfare_parser_parse(const uint8_t *dump, size_t dumplen) {
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, "Taps, times local");
     for (uint8_t i = 0; i < n; i++) {
-        char amt[32];
+        char amt[64];
         nf_date_str(taps[i].raw + 2, s, sizeof(s));
-        transit_money_str(amt, sizeof(amt), -taps[i].value, 2, cur);
-        PrintAndLogEx(INFO, "  %s  journey %4u%s  mode %3u  station %5u  %12s  %s", s,
+        // tap on holds back the default fare, tap off refunds the rest
+        nf_money_col(amt, sizeof(amt), taps[i].value, cur, true, 12);
+        PrintAndLogEx(INFO, "  %s  journey %4u%s  mode %3u  station %5u  %s  %s", s,
                       taps[i].journey, taps[i].continuation ? "+" : " ", taps[i].mode,
                       taps[i].station, amt, nf_tap_type(taps[i].type));
     }

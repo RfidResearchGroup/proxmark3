@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed Nextfare / Go card parser - money in red when negative, green when positive, ticket type in yellow; tap amounts are shown from the card side, the held back fare negative and the refund positive (@iceman1001)
 - Changed `hf mf autopwn` - execution time is printed before the transit parser output; elapsed times in autopwn, nested, darkside, chk, brute and similar commands are shown in minutes / hours when long (@iceman1001)
 - Fixed `hf mfdes dump` - without arguments it printed the help instead of dumping, `chk -j` now hints at `dump --keys` and a card without applications says so (@iceman1001)
 - Added `Tecom26` Wiegand format, H10301 layout as found on TECOM Hitag 2 cards (@iceman1001)
