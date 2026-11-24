@@ -4006,6 +4006,12 @@ static void PacketReceived(PacketCommandNG *packet) {
                 break;
             }
 
+            if (size > BigBuf_get_EM_size()) {
+                reply_ng(CMD_SPIFFS_ELOAD, PM3_EOVFLOW, NULL, 0);
+                LED_B_OFF();
+                break;
+            }
+
             // a dump smaller than the emulator memory must not leave the tail of a
             // previous one behind
             BigBuf_Clear_EM();
