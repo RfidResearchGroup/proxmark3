@@ -4625,13 +4625,44 @@ static int CmdResetRead(const char *Cmd) {
         return PM3_ETIMEOUT;
     }
 
-    if (resp.status == PM3_SUCCESS) {
-        PrintAndLogEx(INFO, "Downloading samples...");
-        int res = getSamplesEx(0, g_pm3_capabilities.bigbuf_size - 1, false, true);
-        if (res != PM3_SUCCESS) {
-            return res;
-        }
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Reset capture failed (status %d)", resp.status);
+        return resp.status;
     }
+
+    uint32_t size = g_pm3_capabilities.bigbuf_size;
+    if (size == 0) {
+        PrintAndLogEx(WARNING, "Device did not report its sample buffer size");
+        return PM3_ESOFT;
+    }
+    uint32_t count;
+    if (resp.length == sizeof(count)) {
+        count = resp.data.asDwords[0];
+    } else if (resp.length == 0) {
+        // Older firmware did not report a sample count.
+        count = size - 1;
+    } else {
+        PrintAndLogEx(WARNING, "Unexpected reset capture response length: %u", resp.length);
+        return PM3_ESOFT;
+    }
+    if (count == 0 || count > size) {
+        PrintAndLogEx(WARNING, "Invalid reset capture sample count: %" PRIu32, count);
+        return PM3_ESOFT;
+    }
+
+    uint8_t *samples = calloc(count, sizeof(uint8_t));
+    if (samples == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+    PrintAndLogEx(INFO, "Downloading samples...");
+    if (!GetFromDevice(BIG_BUF, samples, count, 0, NULL, 0, NULL, 10000, false)) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        free(samples);
+        return PM3_ETIMEOUT;
+    }
+    setGraphBuffer(samples, count);
+    free(samples);
 
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;

@@ -1888,11 +1888,11 @@ void T55xxResetRead(uint8_t flags, bool ledcontrol) {
     turn_read_lf_on(T55xx_Timing.m[downlink_mode].read_gap);
 
     // Acquisition
-    DoAcquisition(1, 8, false, 0, false, BigBuf_max_traceLen(), 0, 0, ledcontrol);
+    uint32_t samples = DoAcquisition(1, 8, false, 0, false, BigBuf_max_traceLen(), 0, 0, ledcontrol) / 8;
 
     // Turn the field off
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    reply_ng(CMD_LF_T55XX_RESET_READ, PM3_SUCCESS, NULL, 0);
+    reply_ng(CMD_LF_T55XX_RESET_READ, samples ? PM3_SUCCESS : PM3_ENODATA, (uint8_t *)&samples, sizeof(samples));
     if (ledcontrol) LED_A_OFF();
 }
 
