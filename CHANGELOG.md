@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf topaz dump` - the trace kept only the read of the last segment, it now holds the whole dump (@matrix)
+- Changed `hf topaz dump`, `hf topaz view` - the dynamic blocks are printed in upper case, as the static ones (@matrix)
 - Fixed `hf topaz dump`, `hf topaz view` - the dynamic lock marks come from the tag's Lock Control TLVs, they were always `n` or came from an earlier `hf topaz info` (@matrix)
 - Fixed `hf topaz info`, `hf topaz dump` - the lock areas of a tag read before no longer carry over (@matrix)
 - Fixed `hf topaz dump`, `hf topaz view` - a lockable area starts past the lock bits and the reserved memory, on a Topaz 512 at block 10h (@matrix)

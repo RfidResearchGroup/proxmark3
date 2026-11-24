@@ -78,8 +78,13 @@ static int topaz_tag_from_dump(const uint8_t *dump) {
     return PM3_SUCCESS;
 }
 
-static void topaz_switch_on_field(void) {
-    SendIso14aReader(ISO14A_CONNECT | ISO14A_CLEARTRACE | ISO14A_NO_SELECT | ISO14A_NO_DISCONNECT | ISO14A_TOPAZMODE | ISO14A_NO_RATS, NULL, 0);
+// clear_trace false: the trace keeps what the command has sent so far
+static void topaz_switch_on_field(bool clear_trace) {
+    uint32_t flags = ISO14A_CONNECT | ISO14A_NO_SELECT | ISO14A_NO_DISCONNECT | ISO14A_TOPAZMODE | ISO14A_NO_RATS;
+    if (clear_trace) {
+        flags |= ISO14A_CLEARTRACE;
+    }
+    SendIso14aReader(flags, NULL, 0);
 }
 
 static void topaz_switch_off_field(void) {
@@ -121,14 +126,14 @@ static int topaz_send_cmd(uint8_t *cmd, uint8_t len, uint8_t *response, uint16_t
 }
 
 // select a topaz tag. Send WUPA and RID.
-static int topaz_select(uint8_t *atqa, uint8_t atqa_len, uint8_t *rid_response,  uint8_t rid_len, bool verbose) {
+static int topaz_select(uint8_t *atqa, uint8_t atqa_len, uint8_t *rid_response,  uint8_t rid_len, bool verbose, bool clear_trace) {
     // ToDo: implement anticollision
 
     uint16_t resp_len;
     uint8_t wupa_cmd[] = {TOPAZ_WUPA};
     uint8_t rid_cmd[] = {TOPAZ_RID, 0, 0, 0, 0, 0, 0, 0, 0};
 
-    topaz_switch_on_field();
+    topaz_switch_on_field(clear_trace);
 
     resp_len = atqa_len;
     int status = topaz_send_cmd(wupa_cmd, sizeof(wupa_cmd), atqa, &resp_len, verbose);
@@ -163,10 +168,10 @@ static int topaz_rall(const uint8_t *uid, uint8_t *response) {
 }
 
 // read a block (8 Bytes) of a selected Topaz tag.
-static int topaz_read_block(uint8_t blockno, uint8_t *block_data) {
+static int topaz_read_block(uint8_t blockno, uint8_t *block_data, bool clear_trace) {
     uint8_t atqa[2] = {0};
     uint8_t rid_response[8] = {0};
-    int res = topaz_select(atqa, sizeof(atqa), rid_response, sizeof(rid_response), true);
+    int res = topaz_select(atqa, sizeof(atqa), rid_response, sizeof(rid_response), true, clear_trace);
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -202,7 +207,8 @@ static int topaz_read_segment(uint8_t segno, uint8_t *segment_data) {
 
     uint8_t atqa[2] = {0};
     uint8_t rid_response[8] = {0};
-    int res = topaz_select(atqa, sizeof(atqa), rid_response, sizeof(rid_response), true);
+    // a step of a dump: the trace goes on
+    int res = topaz_select(atqa, sizeof(atqa), rid_response, sizeof(rid_response), true, false);
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -239,7 +245,7 @@ static int topaz_write_erase8_block(uint8_t blockno, uint8_t *block_data) {
 
     uint8_t atqa[2] = {0};
     uint8_t rid_response[8] = {0};
-    int res = topaz_select(atqa, sizeof(atqa), rid_response, sizeof(rid_response), true);
+    int res = topaz_select(atqa, sizeof(atqa), rid_response, sizeof(rid_response), true, true);
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -289,7 +295,7 @@ static int topaz_write_nonerase8_block(uint8_t blockno, uint8_t *block_data) {
 
     uint8_t atqa[2] = {0};
     uint8_t rid_response[8] = {0};
-    int res = topaz_select(atqa, sizeof(atqa), rid_response, sizeof(rid_response), true);
+    int res = topaz_select(atqa, sizeof(atqa), rid_response, sizeof(rid_response), true, true);
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -690,7 +696,7 @@ static void topaz_print_control_TLVs(uint8_t *memory, size_t len) {
 // read all of the dynamic memory
 static int topaz_read_dynamic_data(void) {
     // first read the remaining block of segment 0
-    if (topaz_read_block(0x0F, &topaz_tag.dynamic_memory[0]) != PM3_SUCCESS) {
+    if (topaz_read_block(0x0F, &topaz_tag.dynamic_memory[0], false) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error while reading dynamic memory block " _YELLOW_("%02x") ". Aborting...", 0x0F);
         return PM3_ESOFT;
     }
@@ -719,7 +725,7 @@ static void topaz_print_dynamic_blocks(void) {
         char lockbits[9];
         for (uint16_t j = 0; j < 8; j++) {
             int offset = 3 * j;
-            snprintf(line + offset, sizeof(line) - offset, "%02x ", block_data[j]);
+            snprintf(line + offset, sizeof(line) - offset, "%02X ", block_data[j]);
             lockbits[j] = topaz_byte_is_locked(blockno * 8 + j) ? 'y' : 'n';
         }
         lockbits[8] = '\0';
@@ -1150,7 +1156,7 @@ static int CmdHFTopazRdBl(const char *Cmd) {
 
     // send read block
     uint8_t data[8] = {0};
-    int res = topaz_read_block(blockno, data);
+    int res = topaz_read_block(blockno, data, true);
     if (res == PM3_SUCCESS) {
 
         topaz_print_hdr(blockno);
@@ -1270,7 +1276,7 @@ int readTopazUid(bool loop, bool verbose) {
         uint8_t *uid_echo = &rid_response[2];
         uint8_t rall_response[124] = {0};
 
-        int status = topaz_select(atqa, sizeof(atqa), rid_response, sizeof(rid_response), verbose);
+        int status = topaz_select(atqa, sizeof(atqa), rid_response, sizeof(rid_response), verbose, true);
         if (status == PM3_ESOFT) {
             if (verbose) PrintAndLogEx(ERR, "Error: couldn't receive ATQA");
 
