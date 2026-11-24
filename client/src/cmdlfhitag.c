@@ -33,6 +33,7 @@
 #include "pm3_cmd.h"    // return codes
 #include "hitag2/hitag2_crypto.h"
 #include "util_posix.h"             // msclock
+#include "wiegand_formats.h"        // Tecom26
 
 static int CmdHelp(const char *Cmd);
 
@@ -278,6 +279,77 @@ static void print_hitag2_paxton(bool show_header, const uint8_t *data) {
     if (show_header) {
         PrintAndLogEx(INFO, "");
     }
+}
+
+// TECOM, pages 4-7.  Byte i is XOR'ed with a per card byte rotated left by i,
+// then nibble swapped.  Byte 0 checksum, 1-11 zero, 12-13 card, 14-15 site
+static bool decode_hitag2_tecom(const uint8_t *data, uint16_t *site, uint16_t *cn, uint8_t *key) {
+
+    const uint8_t *d = data + (HITAG_BLOCK_SIZE * 4);
+
+    // byte 1 holds zero data, so it is the key rotated left by one
+    uint8_t k = (d[1] >> 1) | (d[1] << 7);
+
+    uint8_t v[16] = {0};
+    uint8_t sum = 0;
+    for (uint8_t i = 0; i < sizeof(v); i++) {
+        uint8_t n = i % 8;
+        uint8_t kr = (n) ? (uint8_t)((k << n) | (k >> (8 - n))) : k;
+        uint8_t x = d[i] ^ kr;
+        v[i] = (x << 4) | (x >> 4);
+
+        if (i > 0) {
+            sum += v[i];
+        }
+
+        if ((i > 0) && (i < 12) && v[i]) {
+            return false;
+        }
+    }
+
+    // blank pages pass the checks above
+    if ((v[0] != sum) || (sum == 0)) {
+        return false;
+    }
+
+    *cn = (v[12] << 8) | v[13];
+    *site = (v[14] << 8) | v[15];
+    *key = k;
+    return true;
+}
+
+static bool print_hitag2_tecom(const uint8_t *data) {
+
+    uint16_t site = 0, cn = 0;
+    uint8_t key = 0;
+    if (decode_hitag2_tecom(data, &site, &cn, &key) == false) {
+        return false;
+    }
+
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("TECOM") " -------------------------------------");
+    PrintAndLogEx(SUCCESS, "Site code... " _GREEN_("%u"), site);
+    PrintAndLogEx(SUCCESS, "Card no..... " _GREEN_("%u"), cn);
+    PrintAndLogEx(INFO, "Key......... %02X, checksum ( " _GREEN_("ok") " )", key);
+
+    wiegand_card_t card = {
+        .FacilityCode = site,
+        .CardNumber = cn,
+    };
+    wiegand_message_t packed;
+    // no HID header bit
+    if (HIDPack(HIDFindCardFormat("Tecom26"), &card, &packed, false)) {
+        char bin[27] = {0};
+        for (uint8_t i = 0; i < 26; i++) {
+            bin[i] = ((packed.Bot >> (25 - i)) & 1) ? '1' : '0';
+        }
+        PrintAndLogEx(SUCCESS, "Wiegand..... " _GREEN_("%07X") " ( Tecom 26-bit )", packed.Bot);
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("wiegand decode --bin %s") "`", bin);
+    } else {
+        PrintAndLogEx(INFO, "Wiegand..... n/a, site code over 255");
+    }
+    PrintAndLogEx(INFO, "");
+    return true;
 }
 
 static void print_hitag2_configuration(uint32_t uid, uint8_t config) {
@@ -1168,6 +1240,7 @@ static int CmdLFHitagRd(const char *Cmd) {
     if (use_ht2) {
         print_hitag2_blocks(data, HITAG2_MAX_BYTE_SIZE);
         print_hitag2_paxton(true, data);
+        print_hitag2_tecom(data);
     } else {
         print_hex_break(data, HITAG_MAX_BYTE_SIZE, HITAG_BLOCK_SIZE);
     }
@@ -1872,6 +1945,7 @@ out:
         print_hitag2_configuration(uid, data[HITAG_BLOCK_SIZE * 3]);
         print_hitag2_blocks(data, HITAG2_MAX_BYTE_SIZE);
         print_hitag2_paxton(true, data);
+        print_hitag2_tecom(data);
     } else {
         PrintAndLogEx(INFO, "No memory printing available");
     }
@@ -1933,6 +2007,7 @@ static int CmdLFHitagView(const char *Cmd) {
         uint32_t uid = bytes_to_num(dump, HITAG_UID_SIZE);
         print_hitag2_configuration(uid, config);
         print_hitag2_paxton(true, dump);
+        print_hitag2_tecom(dump);
     }
     print_hitag2_blocks(dump, HITAG2_MAX_BYTE_SIZE);
     free(dump);
@@ -2112,6 +2187,7 @@ static int CmdLFHitagEview(const char *Cmd) {
         uint32_t uid = bytes_to_num(dump, HITAG_UID_SIZE);
         print_hitag2_configuration(uid, config);
         print_hitag2_paxton(true, dump);
+        print_hitag2_tecom(dump);
     }
     print_hitag2_blocks(dump, bytes);
     free(dump);

@@ -35,9 +35,8 @@
 static int CmdHelp(const char *Cmd);
 
 int demodMotorola(bool verbose) {
-    (void) verbose; // unused so far
     //PSK1
-    if (PSKDemod(32, 1, 100, false) != PM3_SUCCESS) {
+    if (PSKDemod(32, 1, 100, verbose) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - Motorola: PSK Demod failed");
         return PM3_ESOFT;
     }
@@ -54,6 +53,9 @@ int demodMotorola(bool verbose) {
         else
             PrintAndLogEx(DEBUG, "DEBUG: Error - Motorola: ans: %d", ans);
 
+        if (verbose) {
+            PrintAndLogEx(FAILED, "No Motorola tag found");
+        }
         return PM3_ESOFT;
     }
     setDemodBuff(g_DemodBuffer, 64, ans);
@@ -141,6 +143,39 @@ static int CmdMotorolaDemod(const char *Cmd) {
     return demodMotorola(true);
 }
 
+static int motorola_reader(bool cm, bool verbose) {
+
+    // Motorola Flexpass seems to work at 74 kHz
+    // and take about 4400 samples too before modulating
+    sample_config sc = {
+        .decimation = -1,
+        .bits_per_sample = -1,
+        .averaging = false,
+        .divisor = LF_FREQ2DIV(74),
+        .trigger_threshold = -1,
+        .samples_to_skip = 4500,
+        .verbose = false
+    };
+    lf_setconfig(&sc);
+
+    int res;
+    do {
+        // 64 bits * RF/32, four frames so two whole preambles always fit
+        res = lf_read(false, 64 * 32 * 4);
+        if (res != PM3_SUCCESS) {
+            break;
+        }
+        res = demodMotorola(verbose);
+    } while (cm && (kbd_enter_pressed() == false));
+
+    // reset back to 125 kHz
+    sc.divisor = LF_DIVISOR_125;
+    sc.samples_to_skip = 0;
+    lf_setconfig(&sc);
+
+    return res;
+}
+
 static int CmdMotorolaReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf motorola reader",
@@ -161,32 +196,7 @@ static int CmdMotorolaReader(const char *Cmd) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
 
-    // Motorola Flexpass seems to work at 74 kHz
-    // and take about 4400 samples too before modulating
-    sample_config sc = {
-        .decimation = -1,
-        .bits_per_sample = -1,
-        .averaging = false,
-        .divisor = LF_FREQ2DIV(74),
-        .trigger_threshold = -1,
-        .samples_to_skip = 4500,
-        .verbose = false
-    };
-    lf_setconfig(&sc);
-
-    int res;
-    do {
-        // 64 * 32 * 2 * n-ish
-        lf_read(false, 5000);
-        res = demodMotorola(!cm);
-    } while (cm && (kbd_enter_pressed() == false));
-
-    // reset back to 125 kHz
-    sc.divisor = LF_DIVISOR_125;
-    sc.samples_to_skip = 0;
-    lf_setconfig(&sc);
-
-    return res;
+    return motorola_reader(cm, (cm == false));
 }
 
 static int CmdMotorolaClone(const char *Cmd) {
@@ -341,5 +351,5 @@ int detectMotorola(uint8_t *dest, size_t *size) {
 }
 
 int readMotorolaUid(void) {
-    return (CmdMotorolaReader("") == PM3_SUCCESS);
+    return (motorola_reader(false, false) == PM3_SUCCESS);
 }

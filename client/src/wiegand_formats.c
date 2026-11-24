@@ -1619,6 +1619,7 @@ static void hid_print_card(wiegand_card_t *card, const cardformat_t format) {
 static const cardformat_t FormatTable[] = {                                              // bits  CN FC IL OEM Parity  MaxFC (32u), MaxCN (64u),         MaxIL (32u)  MaxOEM (32u)
     {"H10301",    Pack_H10301,      Unpack_H10301,      "HID H10301 26-bit",                 26,  {1, 1, 0,  0,     1, 0x000000FFu, 0x000000000000FFFFu, 0x00000000u, 0x00000000u}}, // imported from old pack/unpack
     {"ind26",     Pack_ind26,       Unpack_ind26,       "Indala 26-bit",                     26,  {1, 1, 0,  0,     1, 0x00000FFFu, 0x0000000000000FFFu, 0x00000000u, 0x00000000u}}, // from cardinfo.barkweb.com.au
+    {"Tecom26",   Pack_H10301,      Unpack_H10301,      "Tecom 26-bit",                      26,  {1, 1, 0,  0,     1, 0x000000FFu, 0x000000000000FFFFu, 0x00000000u, 0x00000000u}}, // H10301 layout, seen on TECOM Hitag 2 cards
     {"ind27",     Pack_ind27,       Unpack_ind27,       "Indala 27-bit",                     27,  {1, 1, 0,  0,     0, 0x00001FFFu, 0x0000000000003FFFu, 0x00000000u, 0x00000000u}}, // from cardinfo.barkweb.com.au
     {"indasc27",  Pack_indasc27,    Unpack_indasc27,    "Indala ASC 27-bit",                 27,  {1, 1, 0,  0,     0, 0x00001FFFu, 0x0000000000003FFFu, 0x00000000u, 0x00000000u}}, // from cardinfo.barkweb.com.au
     {"Tecom27",   Pack_Tecom27,     Unpack_Tecom27,     "Tecom 27-bit",                      27,  {1, 1, 0,  0,     0, 0x000007FFu, 0x000000000000FFFFu, 0x00000000u, 0x00000000u}}, // from cardinfo.barkweb.com.au
