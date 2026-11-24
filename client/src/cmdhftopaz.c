@@ -333,10 +333,13 @@ static int topaz_write_nonerase8_block(uint8_t blockno, uint8_t *block_data) {
         return PM3_EFAILED;
     }
 
-    if (memcmp(block_data, response + 1, 8) == 0) {
-        return PM3_SUCCESS;
+    // no erase: bits set before stay set, the ones written must be set now
+    for (uint8_t i = 0; i < 8; i++) {
+        if ((response[1 + i] & block_data[i]) != block_data[i]) {
+            return PM3_ESOFT;
+        }
     }
-    return PM3_ESOFT;
+    return PM3_SUCCESS;
 }
 
 // search for the lock area descriptor for the lockable area including byteno
