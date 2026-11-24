@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Removed `-f` from `hf topaz info` - it saved nothing, `hf topaz dump` saves the tag (@matrix)
+- Fixed `hf topaz wrbl` - a write to block 14 was reported failed when the block already had a bit that the data does not set (@matrix)
 - Fixed `lf t55xx read`, `lf t55xx dump` - a block 0 write, `lf t55xx config -c`, `chk`, `bruteforce` and `recoverpw` end the password confirmation from `lf t55xx detect` (@mfcarroll)
 - Changed `lf t55xx read`, `lf t55xx dump` - warn if run without `-p` while the password confirmation from `lf t55xx detect` holds (@mfcarroll)
 - Fixed `script list` - preserve complete directory paths and free skipped directory entries
