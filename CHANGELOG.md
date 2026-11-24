@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hw timeout` on macOS and Linux - keep POSIX timeouts valid at 1000 ms and above
 - Fixed Nextfare / Go card parser - taps and top ups sorted by date, newest first; Go card journey shown as its tap on time, which is what the field holds (@iceman1001)
 - Changed transit parsers - section headers padded to one width so the dashes line up (@iceman1001)
 - Changed Nextfare / Go card parser - money in red when negative, green when positive, ticket type in yellow, cyan section headers; tap amounts are shown from the card side, the held back fare negative and the refund positive (@iceman1001)
