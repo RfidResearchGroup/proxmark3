@@ -1351,7 +1351,7 @@ static int CmdHF14AMfDarkside(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "Found valid key [ "_GREEN_("%012" PRIX64) " ]", key);
-    PrintAndLogEx(SUCCESS, "Time in darkside " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+    PrintAndLogEx(SUCCESS, "Time in darkside " _YELLOW_("%s") "\n", sprint_duration(t1));
     return PM3_SUCCESS;
 }
 
@@ -1794,7 +1794,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
         return res;
     }
 
-    PrintAndLogEx(SUCCESS, "time: %" PRIu64 " seconds\n", (msclock() - t1) / 1000);
+    PrintAndLogEx(SUCCESS, "time: %s\n", sprint_duration(msclock() - t1));
 
     mf_view_dump(mem, bytes, block_cnt, verbose, save_keys);
 
@@ -2350,7 +2350,7 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
         }
 
         t2 = msclock() - t1;
-        PrintAndLogEx(SUCCESS, "Time in check keys " _YELLOW_("%.0f") " seconds\n", (float)t2 / 1000.0);
+        PrintAndLogEx(SUCCESS, "Time in check keys " _YELLOW_("%s") "\n", sprint_duration(t2));
         PrintAndLogEx(SUCCESS, "--- " _CYAN_("Enter nested key recovery mode") " ---------------");
 
         // nested sectors
@@ -2410,7 +2410,7 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
         }
 
         t1 = msclock() - t1;
-        PrintAndLogEx(SUCCESS, "Time in nested " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+        PrintAndLogEx(SUCCESS, "Time in nested " _YELLOW_("%s") "\n", sprint_duration(t1));
 
 
         // 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
@@ -2637,7 +2637,7 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
     }
 
     uint64_t t2 = msclock() - t1;
-    PrintAndLogEx(SUCCESS, "Time in check keys " _YELLOW_("%.0f") " seconds\n", (float)t2 / 1000.0);
+    PrintAndLogEx(SUCCESS, "Time in check keys " _YELLOW_("%s") "\n", sprint_duration(t2));
     PrintAndLogEx(SUCCESS, "--- " _CYAN_("Enter static nested key recovery") " --------------");
 
     // Decryption backup logic for special card 0x009080A2(keyB NT1 dist is 160 & 320, not 161 & 321).
@@ -2686,7 +2686,7 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
     }
 
     t1 = msclock() - t1;
-    PrintAndLogEx(SUCCESS, "time in static nested " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+    PrintAndLogEx(SUCCESS, "time in static nested " _YELLOW_("%s") "\n", sprint_duration(t1));
 
 
     // 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
@@ -4344,7 +4344,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
     }
 out:
     t1 = msclock() - t1;
-    PrintAndLogEx(INFO, "Time in checkkeys (fast) " _YELLOW_("%.1fs") "\n", (float)(t1 / 1000.0));
+    PrintAndLogEx(INFO, "Time in checkkeys (fast) " _YELLOW_("%s") "\n", sprint_duration(t1));
 
     if ((blockn != -1) && (transferToEml == false) && (createDumpFile == false)) {
         goto out2;
@@ -4615,7 +4615,7 @@ static int CmdHF14AMfSmartBrute(const char *Cmd) {
     }
 
 out:
-    PrintAndLogEx(INFO, "Time in brute mode: " _YELLOW_("%.1fs") "\n", (float)((msclock() - t0) / 1000.0));
+    PrintAndLogEx(INFO, "Time in brute mode: " _YELLOW_("%s") "\n", sprint_duration(msclock() - t0));
     PrintAndLogEx(INFO, "Total keys checked: " _YELLOW_("%" PRIu64) "\n", total_keys_checked);
     // check..
     uint8_t found_keys = 0;
@@ -4883,7 +4883,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
     }
 
     t1 = msclock() - t1;
-    PrintAndLogEx(INFO, "\nTime in checkkeys " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+    PrintAndLogEx(INFO, "\nTime in checkkeys " _YELLOW_("%s") "\n", sprint_duration(t1));
 
     // 20160116 If Sector A is found, but not Sector B,  try just reading it of the tag?
     if (keyType != MF_KEY_B) {
@@ -5348,7 +5348,7 @@ static int CmdHF14AMfKeyBrute(const char *Cmd) {
         PrintAndLogEx(FAILED, "key not found");
 
     t1 = msclock() - t1;
-    PrintAndLogEx(SUCCESS, "\ntime in keybrute " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+    PrintAndLogEx(SUCCESS, "\ntime in keybrute " _YELLOW_("%s") "\n", sprint_duration(t1));
     return PM3_SUCCESS;
 }
 */

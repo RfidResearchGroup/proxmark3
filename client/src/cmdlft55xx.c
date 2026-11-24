@@ -4975,7 +4975,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
 out:
     t1 = msclock() - t1;
-    PrintAndLogEx(SUCCESS, "\ntime in check pwd " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+    PrintAndLogEx(SUCCESS, "\ntime in check pwd " _YELLOW_("%s") "\n", sprint_duration(t1));
     return PM3_SUCCESS;
 }
 
@@ -5081,7 +5081,7 @@ static int CmdT55xxBruteForce(const char *Cmd) {
         PrintAndLogEx(WARNING, "Bruteforce failed, last tried: [ " _YELLOW_("%08X") " ]", curr);
 
     t1 = msclock() - t1;
-    PrintAndLogEx(SUCCESS, "\ntime in bruteforce " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+    PrintAndLogEx(SUCCESS, "\ntime in bruteforce " _YELLOW_("%s") "\n", sprint_duration(t1));
     return PM3_SUCCESS;
 }
 

@@ -3004,7 +3004,7 @@ static int CmdHFeMRTDDump(const char *Cmd) {
 
     int res = dumpHF_EMRTD(&auth, (const char *)path);
 
-    PrintAndLogEx(SUCCESS, "time: %" PRIu64 " seconds\n", (msclock() - t1) / 1000);
+    PrintAndLogEx(SUCCESS, "time: %s\n", sprint_duration(msclock() - t1));
 
     SetAPDULogging(restore_apdu_logging);
     return res;

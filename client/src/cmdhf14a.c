@@ -1064,7 +1064,7 @@ static int CmdHF14ACUIDs(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "%s", sprint_hex_inrow(card->uid, card->uidlen));
         }
     }
-    PrintAndLogEx(SUCCESS, "end: %" PRIu64 " seconds", (msclock() - t1) / 1000);
+    PrintAndLogEx(SUCCESS, "end: %s", sprint_duration(msclock() - t1));
     return PM3_SUCCESS;
 }
 
@@ -4016,7 +4016,7 @@ retry_ins:
     } while (cla != cla_arg[0]);
 
 out:
-    PrintAndLogEx(SUCCESS, "Runtime: %" PRIu64 " seconds\n", (msclock() - t_start) / 1000);
+    PrintAndLogEx(SUCCESS, "Runtime: %s\n", sprint_duration(msclock() - t_start));
     DropField();
     return PM3_SUCCESS;
 }

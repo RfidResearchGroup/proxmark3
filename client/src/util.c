@@ -610,6 +610,12 @@ char *sprint_ascii(const uint8_t *data, const size_t len) {
 
 char *sprint_duration(uint64_t ms) {
     static char buf[32] = {0};
+    uint64_t tenths = (ms + 50) / 100;
+    if (tenths < 600) {
+        snprintf(buf, sizeof(buf), "%" PRIu64 ".%" PRIu64 "s", tenths / 10, tenths % 10);
+        return buf;
+    }
+
     uint64_t sec = (ms + 500) / 1000;
     uint64_t h = sec / 3600;
     uint64_t m = (sec / 60) % 60;
@@ -617,10 +623,8 @@ char *sprint_duration(uint64_t ms) {
 
     if (h) {
         snprintf(buf, sizeof(buf), "%" PRIu64 "h %02" PRIu64 "m %02" PRIu64 "s", h, m, s);
-    } else if (m) {
-        snprintf(buf, sizeof(buf), "%" PRIu64 "m %02" PRIu64 "s", m, s);
     } else {
-        snprintf(buf, sizeof(buf), "%" PRIu64 "s", s);
+        snprintf(buf, sizeof(buf), "%" PRIu64 "m %02" PRIu64 "s", m, s);
     }
     return buf;
 }
