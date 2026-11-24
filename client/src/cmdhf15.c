@@ -449,6 +449,29 @@ static bool iso15_is_cmd_not_supported(const uint8_t *d, uint16_t n) {
             (d[1] == ISO15_ERROR_CMD_NOT_SUP));
 }
 
+// true when the tag answered with ISO15693 error 0x03 (option not supported)
+static bool iso15_is_option_not_supported(const uint8_t *d, uint16_t n) {
+    return (n >= 4 &&
+            CheckCrc15(d, n) &&
+            ((d[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) &&
+            (d[1] == ISO15_ERROR_CMD_OPTION));
+}
+
+// sends a READ again without OPTION, packet->rawlen includes the crc
+static int iso15_resend_without_option(iso15_raw_cmd_t *packet, PacketResponseNG *resp) {
+    PrintAndLogEx(INFO, "Tag does not support OPTION flag, reading without it");
+    packet->raw[0] &= ~ISO15_REQ_OPTION;
+    AddCrc15(packet->raw, packet->rawlen - 2);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
+    if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, resp, 2000) == false) {
+        PrintAndLogEx(DEBUG, "iso15693 timeout");
+        return PM3_ETIMEOUT;
+    }
+    return PM3_SUCCESS;
+}
+
 // fast method to just read the UID of a tag (collision detection not supported)
 //  *buf should be large enough to fit the 64bit uid
 //  *dsfid receives DSFID when non-NULL
@@ -2780,6 +2803,14 @@ static int CmdHF15Dump(const char *Cmd) {
                     continue;
                 }
 
+                // option not supported, read without lock status
+                if (blocknum == 0 && (packet->raw[0] & ISO15_REQ_OPTION) && iso15_is_option_not_supported(d, resp.length)) {
+                    PrintAndLogEx(INFO, "Tag does not support OPTION flag, reading without it");
+                    packet->raw[0] &= ~ISO15_REQ_OPTION;
+                    retry = -1;
+                    continue;
+                }
+
                 // heuristic determine end of available memory
                 if (d[1] == 0x0F || d[1] == 0x10) {
                     end_of_memory = true;
@@ -2870,7 +2901,7 @@ static int CmdHF15Dump(const char *Cmd) {
     print_tag_15693(tag, dense_output, verbose);
 
     if (no_lock) {
-        PrintAndLogEx(INFO, "Tag ignored OPTION flag and has no security status command, lock status not read");
+        PrintAndLogEx(INFO, "Tag sent no lock status and has no security status command, lock status not read");
     }
 
     if (incomplete) {
@@ -3197,12 +3228,22 @@ static int CmdHF15Readmulti(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
-    free(packet);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
+        free(packet);
         PrintAndLogEx(FAILED, "iso15693 card timeout");
         return PM3_ETIMEOUT;
     }
+
+    if (iso15_is_option_not_supported(resp.data.asBytes, resp.length)) {
+        if (iso15_resend_without_option(packet, &resp) != PM3_SUCCESS) {
+            free(packet);
+            return PM3_ETIMEOUT;
+        }
+    }
+
+    bool sent_option = ((packet->raw[0] & ISO15_REQ_OPTION) == ISO15_REQ_OPTION);
+    free(packet);
 
     ISO15_ERROR_HANDLING_RESPONSE
 
@@ -3214,7 +3255,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
     }
 
     // some tags ignore OPTION and leave out the lock bytes
-    bool has_lock = ((resp.length - 3) != ((blockcnt + 1) * blocksize));
+    bool has_lock = sent_option && ((resp.length - 3) != ((blockcnt + 1) * blocksize));
     int lcklen = (has_lock) ? 1 : 0;
     int stride = blocksize + lcklen;
 
@@ -3257,9 +3298,9 @@ static int CmdHF15Readmulti(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
 
     if (lock_ok == false) {
-        PrintAndLogEx(INFO, "Tag ignored OPTION flag and has no security status command, no lock status");
+        PrintAndLogEx(INFO, "Tag sent no lock status and has no security status command");
     } else if ((has_lock == false) && verbose) {
-        PrintAndLogEx(INFO, "Tag ignored OPTION flag, lock status from security status command");
+        PrintAndLogEx(INFO, "Tag sent no lock status, read it with security status command");
     }
 
     PrintAndLogEx(INFO, " #       | data         |lck| ascii");
@@ -3431,6 +3472,15 @@ static int CmdHF15Readblock(const char *Cmd) {
             return PM3_ETIMEOUT;
         }
     }
+
+    if (iso15_is_option_not_supported(resp.data.asBytes, resp.length)) {
+        if (iso15_resend_without_option(packet, &resp) != PM3_SUCCESS) {
+            free(packet);
+            return PM3_ETIMEOUT;
+        }
+    }
+
+    bool sent_option = ((packet->raw[0] & ISO15_REQ_OPTION) == ISO15_REQ_OPTION);
     free(packet);
 
     ISO15_ERROR_HANDLING_RESPONSE
@@ -3444,7 +3494,7 @@ static int CmdHF15Readblock(const char *Cmd) {
 
     // flags, lock status, data, CRC
     // some tags ignore OPTION and leave out the lock status
-    bool has_lock = ((resp.length - 3) != blocksize);
+    bool has_lock = sent_option && ((resp.length - 3) != blocksize);
     uint8_t offset = (has_lock) ? 2 : 1;
     int datalen = resp.length - offset - 2;
     if (datalen < 1) {
@@ -3476,9 +3526,9 @@ static int CmdHF15Readblock(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
 
     if (lock_ok == false) {
-        PrintAndLogEx(INFO, "Tag ignored OPTION flag and has no security status command, no lock status");
+        PrintAndLogEx(INFO, "Tag sent no lock status and has no security status command");
     } else if ((has_lock == false) && verbose) {
-        PrintAndLogEx(INFO, "Tag ignored OPTION flag, lock status from security status command");
+        PrintAndLogEx(INFO, "Tag sent no lock status, read it with security status command");
     }
 
     PrintAndLogEx(INFO, "#%3d        |lck| ascii", blockno);
