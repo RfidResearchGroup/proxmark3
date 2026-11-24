@@ -2158,35 +2158,29 @@ static int CmdHF15Sim(const char *Cmd) {
     SendCommandNG(CMD_HF_ISO15693_SIMULATE, (uint8_t *)&payload, sizeof(payload));
 
     uint64_t t0 = msclock();
-    uint64_t t_break = 0;
     for (;;) {
-        uint64_t elapsed = msclock() - t0;
-        bool expired = (timeout != (size_t) - 1) && (elapsed >= timeout);
-        if (t_break == 0 && (expired || kbd_enter_pressed() > 0)) {
-            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            t_break = msclock();
-        }
-
-        // poll the keyboard every 500 ms, sooner if the timeout comes first
-        size_t wait = 500;
-        if (t_break == 0 && timeout != (size_t) - 1 && (timeout - elapsed) < wait) {
-            wait = timeout - elapsed;
-        }
-
-        if (WaitForResponseTimeout(CMD_HF_ISO15693_SIMULATE, &resp, wait)) {
-            break;
+        if (WaitForResponseTimeout(CMD_HF_ISO15693_SIMULATE, &resp, 100)) {
+            PrintAndLogEx(INFO, "Done!");
+            return PM3_SUCCESS;
         }
 
         if (IsCommunicationThreadDead()) {
             return PM3_EIO;
         }
 
-        // older firmware only stops on the button while a reader field is on
-        if (t_break && (msclock() - t_break > 3000)) {
-            PrintAndLogEx(WARNING, "pm3 did not stop, press the " _GREEN_("pm3 button"));
-            return PM3_ETIMEOUT;
+        if (kbd_enter_pressed() || ((timeout != (size_t) - 1) && (msclock() - t0 >= timeout))) {
+            break;
         }
     }
+
+    SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+
+    // older firmware only stops on the button while a reader field is on
+    if (WaitForResponseTimeout(CMD_HF_ISO15693_SIMULATE, &resp, 3000) == false) {
+        PrintAndLogEx(WARNING, "pm3 did not stop, press the " _GREEN_("pm3 button"));
+        return PM3_ETIMEOUT;
+    }
+
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
