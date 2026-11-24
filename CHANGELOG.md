@@ -5,6 +5,12 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 - Fixed `hf topaz dump` - the trace kept only the read of the last segment, it now holds the whole dump (@matrix)
 - Changed `hf topaz dump`, `hf topaz view` - the dynamic blocks are printed in upper case, as the static ones (@matrix)
+- Fixed `hf topaz dump`, `hf topaz view` - the dynamic lock marks come from the tag's Lock Control TLVs, they were always `n` or came from an earlier `hf topaz info` (@matrix)
+- Fixed `hf topaz info`, `hf topaz dump` - the lock areas of a tag read before no longer carry over (@matrix)
+- Fixed `hf topaz dump`, `hf topaz view` - a lockable area starts past the lock bits and the reserved memory, on a Topaz 512 at block 10h (@matrix)
+- Fixed `hf topaz dump`, `hf topaz view` - a lock bit is read only inside its lock area and the tag memory, a Lock Control TLV could point outside the memory (@matrix)
+- Removed `-f` from `hf topaz info` - it saved nothing, `hf topaz dump` saves the tag (@matrix)
+- Fixed `hf topaz wrbl` - a write to block 14 was reported failed when the block already had a bit that the data does not set (@matrix)
 - Fixed `lf t55xx read`, `lf t55xx dump` - a block 0 write, `lf t55xx config -c`, `chk`, `bruteforce` and `recoverpw` end the password confirmation from `lf t55xx detect` (@mfcarroll)
 - Changed `lf t55xx read`, `lf t55xx dump` - warn if run without `-p` while the password confirmation from `lf t55xx detect` holds (@mfcarroll)
 - Fixed `script list` - preserve complete directory paths and free skipped directory entries
