@@ -3480,6 +3480,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // Start the timer
     uint64_t t1 = msclock();
     int autopwn_res = PM3_SUCCESS;
+    uint8_t *dump = NULL;
 
     // If we use the dictionary in flash memory, we don't want to load keys
     // from hard drive dictionary as it could exceed BigBuf capacity
@@ -4091,7 +4092,7 @@ all_found:
     }
 
     bytes = block_cnt * MFBLOCK_SIZE;
-    uint8_t *dump = calloc(bytes, sizeof(uint8_t));
+    dump = calloc(bytes, sizeof(uint8_t));
     if (dump == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(e_sector);
@@ -4132,13 +4133,15 @@ all_found:
         autopwn_res = res;
     }
 
-    (void)transit_mfc_parse(dump, bytes);
-    free(dump);
-
 out:
     // Generate and show statistics
     t1 = msclock() - t1;
-    PrintAndLogEx(INFO, "Autopwn execution time: " _YELLOW_("%.0f") " seconds", (float)t1 / 1000.0);
+    PrintAndLogEx(INFO, "Autopwn execution time: " _YELLOW_("%s"), sprint_duration(t1));
+
+    if (dump != NULL) {
+        (void)transit_mfc_parse(dump, bytes);
+        free(dump);
+    }
 
     DropField();
     free(e_sector);

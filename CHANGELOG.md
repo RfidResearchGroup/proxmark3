@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf mf autopwn` - execution time is printed before the transit parser output and shown in minutes / hours when long (@iceman1001)
 - Fixed `hf mfdes dump` - without arguments it printed the help instead of dumping, `chk -j` now hints at `dump --keys` and a card without applications says so (@iceman1001)
 - Added `Tecom26` Wiegand format, H10301 layout as found on TECOM Hitag 2 cards (@iceman1001)
 - Added TECOM Hitag 2 decoding to `lf hitag read`, `dump`, `view`, `eview` - site code, card number and Tecom 26-bit Wiegand (@iceman1001)

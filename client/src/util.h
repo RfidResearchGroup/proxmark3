@@ -99,6 +99,9 @@ char *sprint_ascii_ex(const uint8_t *data, const size_t len, const size_t min_st
 
 char *sprint_breakdown_bin(color_t color, const char *bs, int width, int padn, int bits, const char *msg);
 
+// milliseconds as "42s", "16m 16s" or "1h 02m 05s", static buffer
+char *sprint_duration(uint64_t ms);
+
 void print_buffer_with_offset(const uint8_t *data, const size_t len, int offset, bool print_header);
 void print_buffer(const uint8_t *data, const size_t len, int level);
 void print_blocks(uint32_t *data, size_t len);
