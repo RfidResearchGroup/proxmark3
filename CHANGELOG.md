@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed sample downloads - bound offset reads to remaining device memory and use heap buffers for large PM5 captures
 - Fixed `hw timeout` on macOS and Linux - keep POSIX timeouts valid at 1000 ms and above
 - Fixed `hf 14a sim` - a SELECT by AID got `90 00` whatever the AID, it now gets file not found, `6A 82` (@matrix)
 - Fixed `hf 14a sim` - an R-block without a CID got no answer and one with a CID a fixed one, they now follow rules 11 and 12 of ISO/IEC 14443-4 (@matrix)
