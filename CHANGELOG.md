@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `lf motorola reader` - it printed nothing when no tag was found and sampled too short to always see two preambles (@iceman1001)
 - Fixed `hf 15 sim` - GET_MULTIPLE_BLOCK_SECURITY_STATUS for all 256 blocks of a 256 page tag looped forever past the reply buffer (@iceman1001)
 - Changed `hf 15 rdbl`, `rdmulti` and `dump` - a tag that answers error 0x03 to the OPTION flag is read again without it (@iceman1001)
 - Changed `hf 15 rdbl`, `rdmulti` and `dump` - a tag that ignores the OPTION flag gets its lock status from GET_MULTIPLE_BLOCK_SECURITY_STATUS (0x2C) (@iceman1001)
