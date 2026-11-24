@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed PM5 CEP handshakes - receive Flipper bytes even while the attach check is waiting for its next poll (@adrian-stepien)
 - Fixed PM5 power save - keep the CEP and BWM UARTs and the timing counter at their configured rates when the core changes speed (@adrian-stepien)
 - Fixed Nextfare / Go card parser - taps and top ups sorted by date, newest first; Go card journey shown as its tap on time, which is what the field holds (@iceman1001)
 - Changed transit parsers - section headers padded to one width so the dashes line up (@iceman1001)

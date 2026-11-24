@@ -49,10 +49,8 @@ bool cep_is_active(void);
 // any handshake has even started.
 bool cep_is_attached(void);
 
-// Rate-limited (see PM5_CEP_ATTACH_POLL_MS), non-blocking. Call once per
-// AppMain() main-loop iteration, alongside bwm_autooff_check(). Detects the
-// Flipper attach/detach transition via the CC controller and, on a fresh
-// attach, runs the one-shot UART handshake. Safe no-op the rest of the time.
+// Rate-limited CC polling. Responds to complete UART handshake requests
+// while the CC controller reports a Flipper attached.
 void cep_attach_poll(void);
 
 // Gate for receive_ng(): true once the length header of an inbound SPI frame
