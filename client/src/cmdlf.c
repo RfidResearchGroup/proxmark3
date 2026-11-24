@@ -1992,6 +1992,15 @@ int CmdLFfind(const char *Cmd) {
                     goto out;
                 }
             }
+
+            if (ht2_read_tecom() == PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, "Valid " _GREEN_("TECOM ID") " found!");
+                if (search_cont) {
+                    found++;
+                } else {
+                    goto out;
+                }
+            }
         }
 
 #if !defined ICOPYX
