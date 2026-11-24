@@ -84,6 +84,14 @@ bool cep_is_attached(void) {
 // One-time peripheral bring-up
 // ---------------------------------------------------------------------------
 
+void cep_usart_clock_update(void) {
+    // USART_BAUDR is set with the USART disabled (AT32F435 manual 12.6.2).
+    confirm_state enabled = USART1->ctrl1_bit.uen ? TRUE : FALSE;
+    usart_enable(USART1, FALSE);
+    usart_init(USART1, 2400, USART_DATA_8BITS, USART_STOP_1_BIT);
+    usart_enable(USART1, enabled);
+}
+
 static void cep_usart_init(void) {
     crm_periph_clock_enable(CRM_USART1_PERIPH_CLOCK, TRUE);
     crm_periph_clock_enable(CRM_GPIOA_PERIPH_CLOCK, TRUE);
@@ -98,7 +106,7 @@ static void cep_usart_init(void) {
     gpio_init(GPIOA, &gpio_init_struct);
     gpio_pin_mux_config(GPIOA, GPIO_PINS_SOURCE9, GPIO_MUX_7);
 
-    usart_init(USART1, 2400, USART_DATA_8BITS, USART_STOP_1_BIT);
+    cep_usart_clock_update();
     usart_parity_selection_config(USART1, USART_PARITY_NONE);
     usart_transmitter_enable(USART1, FALSE);   // RX only - the reply goes over SPI, not this UART
     usart_receiver_enable(USART1, TRUE);

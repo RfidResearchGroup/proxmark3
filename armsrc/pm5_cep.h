@@ -33,6 +33,9 @@
 // after usb_enable() (mirrors bwm_uart_init() placement). Never blocks.
 void cep_init(void);
 
+// Refresh the handshake baud divider after an APB2 clock change.
+void cep_usart_clock_update(void);
+
 // True once the Flipper handshake has completed and the SPI transport is
 // expected to be live. Gate for receive_ng()/reply_ng_internal() so they
 // don't pay an SPI-timeout poll on every idle main-loop iteration when no
