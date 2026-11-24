@@ -4572,7 +4572,9 @@ static void PacketReceived(PacketCommandNG *packet) {
                     if (packet->length >= 5) {
                         memcpy(&total_size, packet->data.asBytes + 1, sizeof(total_size));
                     }
-                    res = bwm_esp_ota_begin(total_size);
+                    // On older modules an untagged BWM request may be from BLE.
+                    bool stop_ble = !g_reply_via_fpc || bwm_fwd_reply_is_wifi();
+                    res = bwm_esp_ota_begin(total_size, stop_ble);
                     break;
                 }
                 case BWM_OTA_ACTION_WRITE:

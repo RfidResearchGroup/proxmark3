@@ -72,6 +72,8 @@ void bwm_fwd_latch_reply_ep(void);
 void bwm_fwd_tag_poll(void);
 // true while the ESP tags forward data per endpoint
 bool bwm_fwd_tagged(void);
+// False when the endpoint is BLE or unknown.
+bool bwm_fwd_reply_is_wifi(void);
 // Run waiting RX bytes through the app_com parser (acks, forward data, replies).
 void bwm_fwd_pump(void);
 
