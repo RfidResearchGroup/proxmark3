@@ -2679,6 +2679,7 @@ static int CmdHF15Dump(const char *Cmd) {
 
     int blocknum = 0;
     bool end_of_memory = false;
+    bool no_lock = false;
 
     for (int retry = 0; (retry < 2 && blocknum < tag->pagesCount); retry++) {
         packet->raw[1] = use_read_multi ? ISO15693_READ_MULTI_BLOCK : ISO15693_READBLOCK;
@@ -2731,7 +2732,9 @@ static int CmdHF15Dump(const char *Cmd) {
             }
 
             // flags, lock status, block data, CRC
-            if (resp.length != (2 + tag->bytesPerPage + 2)) {
+            // some tags ignore OPTION and leave out the lock status
+            bool has_lock = (resp.length == (2 + tag->bytesPerPage + 2));
+            if ((has_lock == false) && (resp.length != (1 + tag->bytesPerPage + 2))) {
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(FAILED, "block %d answer is %d bytes, expected %d for a %u byte block",
                               blocknum, resp.length, 2 + tag->bytesPerPage + 2, tag->bytesPerPage);
@@ -2743,10 +2746,15 @@ static int CmdHF15Dump(const char *Cmd) {
                 continue;
             }
 
-            tag->locks[blocknum] = d[1];
+            if (has_lock) {
+                tag->locks[blocknum] = d[1];
+            } else {
+                tag->locks[blocknum] = 0;
+                no_lock = true;
+            }
 
             // copy read data
-            memcpy(&tag->data[blocknum * tag->bytesPerPage], d + 2, tag->bytesPerPage);
+            memcpy(&tag->data[blocknum * tag->bytesPerPage], d + ((has_lock) ? 2 : 1), tag->bytesPerPage);
 
             retry = -1;
             blocknum++;
@@ -2780,6 +2788,10 @@ static int CmdHF15Dump(const char *Cmd) {
     }
 
     print_tag_15693(tag, dense_output, verbose);
+
+    if (no_lock) {
+        PrintAndLogEx(INFO, "Tag ignored OPTION flag, lock status not read");
+    }
 
     if (incomplete) {
         PrintAndLogEx(WARNING, "Dump " _RED_("incomplete") ", read %d of %u blocks, not saved", blocknum, expected);
@@ -3121,15 +3133,20 @@ static int CmdHF15Readmulti(const char *Cmd) {
         return res;
     }
 
+    // some tags ignore OPTION and leave out the lock bytes
+    bool has_lock = ((resp.length - 3) != ((blockcnt + 1) * blocksize));
+    int lcklen = (has_lock) ? 1 : 0;
+    int stride = blocksize + lcklen;
+
     // 1 byte cmd,  1 lock byte,  4 / 8 bytes block size,  2 crc
-    if (resp.length > (1 + ((blockcnt + 1) * (blocksize + 1)) + 2)) {
+    if (resp.length > (1 + ((blockcnt + 1) * stride) + 2)) {
         PrintAndLogEx(WARNING, "got longer response. Check block size!");
     }
 
     // print only the blocks the tag sent
-    int got = (resp.length - 3) / (blocksize + 1);
+    int got = (resp.length - 3) / stride;
     if (got < (blockcnt + 1)) {
-        if (((resp.length - 3) % (blocksize + 1)) != 0) {
+        if (((resp.length - 3) % stride) != 0) {
             PrintAndLogEx(WARNING, "got shorter response. Check block size!");
         } else {
             PrintAndLogEx(WARNING, "got shorter response, %d of %d pages", got, blockcnt + 1);
@@ -3143,23 +3160,30 @@ static int CmdHF15Readmulti(const char *Cmd) {
 
     // skip status byte
     int start = 1;
-    int stop = ((blockcnt + 1) * (blocksize + 1));
+    int stop = ((blockcnt + 1) * stride);
     int currblock = blockno;
 
     PrintAndLogEx(NORMAL, "");
+
+    if (has_lock == false) {
+        PrintAndLogEx(INFO, "Tag ignored OPTION flag, no lock status");
+    }
+
     PrintAndLogEx(INFO, " #       | data         |lck| ascii");
     PrintAndLogEx(INFO, "---------+--------------+---+----------");
 
-    for (int i = start; i < stop; i += (blocksize + 1)) {
+    for (int i = start; i < stop; i += stride) {
 
         char lck[16] = {0};
-        if (d[i]) {
+        if (has_lock == false) {
+            snprintf(lck, sizeof(lck), "-");
+        } else if (d[i]) {
             snprintf(lck, sizeof(lck), _RED_("%d"), d[i]);
         } else {
             snprintf(lck, sizeof(lck), "%d", d[i]);
         }
 
-        PrintAndLogEx(INFO, "%3d/0x%02X | %s | %s | %s", currblock, currblock, sprint_hex(d + i + 1, blocksize), lck, sprint_ascii(d + i + 1, blocksize));
+        PrintAndLogEx(INFO, "%3d/0x%02X | %s | %s | %s", currblock, currblock, sprint_hex(d + i + lcklen, blocksize), lck, sprint_ascii(d + i + lcklen, blocksize));
 
         currblock++;
     }
@@ -3324,7 +3348,10 @@ static int CmdHF15Readblock(const char *Cmd) {
     }
 
     // flags, lock status, data, CRC
-    int datalen = resp.length - 4;
+    // some tags ignore OPTION and leave out the lock status
+    bool has_lock = ((resp.length - 3) != blocksize);
+    uint8_t offset = (has_lock) ? 2 : 1;
+    int datalen = resp.length - offset - 2;
     if (datalen < 1) {
         PrintAndLogEx(FAILED, "iso15693 block answer too short ( %d bytes )", resp.length);
         return PM3_EWRONGANSWER;
@@ -3332,7 +3359,9 @@ static int CmdHF15Readblock(const char *Cmd) {
 
     // print response
     char lck[16] = {0};
-    if (d[1]) {
+    if (has_lock == false) {
+        snprintf(lck, sizeof(lck), "-");
+    } else if (d[1]) {
         snprintf(lck, sizeof(lck), _RED_("%d"), d[1]);
     } else {
         snprintf(lck, sizeof(lck), "%d", d[1]);
@@ -3340,7 +3369,9 @@ static int CmdHF15Readblock(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
 
-    uint8_t offset = 2;
+    if (has_lock == false) {
+        PrintAndLogEx(INFO, "Tag ignored OPTION flag, no lock status");
+    }
 
     PrintAndLogEx(INFO, "#%3d        |lck| ascii", blockno);
     PrintAndLogEx(INFO, "------------+---+------");
