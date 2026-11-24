@@ -2773,7 +2773,7 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
                     } else {
                         recv[0] = ISO15_NOERROR;
                         recvLen = 1;
-                        for (uint8_t i = 0 ; i < nbPages + 1 ; i++) {
+                        for (uint16_t i = 0 ; i < nbPages + 1 ; i++) {
                             recv[recvLen++] = tag->locks[pageNum + i];
                         }
                     }
