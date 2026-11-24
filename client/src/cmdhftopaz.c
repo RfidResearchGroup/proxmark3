@@ -32,6 +32,7 @@
 #include "protocols.h"
 #include "nfc/ndef.h"
 #include "fileutils.h"     // saveFile
+#include "commonutil.h"    // ARRAYLEN
 
 
 #ifndef AddCrc14B
@@ -369,7 +370,14 @@ static bool topaz_byte_is_locked(uint16_t byteno) {
             return false;
         } else {
 
-            if ((lock_area->byte_offset - TOPAZ_STATIC_MEMORY) < 0) {
+            if ((lock_area->byte_offset - TOPAZ_STATIC_MEMORY) < 0 || topaz_tag.dynamic_memory == NULL) {
+                return false;
+            }
+
+            // a bit of the area, in the memory read: the offset comes from the tag's TLV
+            uint16_t bit = (byteno - lock_area->first_locked_byte) / lock_area->bytes_locked_per_bit;
+            if (bit >= lock_area->size_in_bits ||
+                    lock_area->byte_offset + bit / 8 >= topaz_tag.size) {
                 return false;
             }
 
@@ -545,6 +553,23 @@ static void adjust_lock_areas(uint16_t block_start, uint16_t block_size) {
     }
 }
 
+// byteno inside a lock area's bits or a reserved memory area: the end of that area, else 0
+static uint16_t topaz_control_area_end(uint16_t byteno, const uint16_t *reserved, uint8_t n_reserved) {
+    for (dynamic_lock_area_t *a = topaz_tag.dynamic_lock_areas; a != NULL; a = a->next) {
+        uint16_t end = a->byte_offset + (a->size_in_bits + 7) / 8;
+        if (byteno >= a->byte_offset && byteno < end) {
+            return end;
+        }
+    }
+    for (uint8_t i = 0; i < n_reserved; i++) {
+        uint16_t end = reserved[2 * i] + reserved[2 * i + 1];
+        if (byteno >= reserved[2 * i] && byteno < end) {
+            return end;
+        }
+    }
+    return 0;
+}
+
 // read and print the lock area and reserved memory TLVs, in the len bytes from memory
 static void topaz_print_control_TLVs(uint8_t *memory, size_t len) {
     uint8_t *TLV_ptr = memory;
@@ -555,6 +580,9 @@ static void topaz_print_control_TLVs(uint8_t *memory, size_t len) {
     bool lock_TLV_present = false;
     bool reserved_memory_control_TLV_present = false;
     uint16_t next_lockable_byte = 0x0f * 8; // first byte after static memory area
+    // the reserved memory areas, start and size
+    uint16_t reserved[2 * 8] = {0};
+    uint8_t n_reserved = 0;
 
     // without an NDEF message, proprietary or terminator TLV the search ends with the area
     while ((TLV_ptr < end) && *TLV_ptr != 0x03 && *TLV_ptr != 0xFD && *TLV_ptr != 0xFE) {
@@ -623,12 +651,27 @@ static void topaz_print_control_TLVs(uint8_t *memory, size_t len) {
                           area_start);
 
             reserved_memory_control_TLV_present = true;
+            if (n_reserved < ARRAYLEN(reserved) / 2) {
+                reserved[2 * n_reserved] = area_start;
+                reserved[2 * n_reserved + 1] = size_in_bytes;
+                n_reserved++;
+            }
 
             // reserved memory areas are not lockable
             adjust_lock_areas(area_start, size_in_bytes);
             if (area_start <= next_lockable_byte) {
                 next_lockable_byte += size_in_bytes;
             }
+        }
+    }
+
+    // a lockable area leaves out the lock bits and the reserved memory wherever
+    // they are (Topaz 512: reserved 78h-79h, lock bits 7Ah-7Fh, LOCK-2 b0 locks
+    // block 10h): one that starts in them starts past them
+    for (dynamic_lock_area_t *a = topaz_tag.dynamic_lock_areas; a != NULL; a = a->next) {
+        uint16_t area_end;
+        while ((area_end = topaz_control_area_end(a->first_locked_byte, reserved, n_reserved)) != 0) {
+            a->first_locked_byte = area_end;
         }
     }
 
@@ -950,6 +993,11 @@ static int CmdHFTopazDump(const char *Cmd) {
     }
     printTopazDumpContents(&topaz_tag);
 
+    // the lock areas of the dynamic memory, before it is printed
+    if (topaz_tag.data_blocks[1][0] == 0xE1) {
+        topaz_print_control_TLVs(&topaz_tag.data_blocks[1][4], TOPAZ_NDEF_STATIC_AREA);
+    }
+
     bool set_dynamic = false;
     if (topaz_set_cc_dynamic(&topaz_tag.data_blocks[1][0]) == PM3_SUCCESS) {
         set_dynamic = true;
@@ -1051,6 +1099,11 @@ static int CmdHFTopazView(const char *Cmd) {
         return res;
     }
     printTopazDumpContents(&topaz_tag);
+
+    // the lock areas of the dynamic memory, before it is printed
+    if (topaz_tag.data_blocks[1][0] == 0xE1) {
+        topaz_print_control_TLVs(&topaz_tag.data_blocks[1][4], TOPAZ_NDEF_STATIC_AREA);
+    }
 
     if (topaz_tag.size > TOPAZ_STATIC_MEMORY) {
         PrintAndLogEx(SUCCESS, "Dynamic Data blocks:");
@@ -1210,6 +1263,9 @@ int CmdHFTopaz(const char *Cmd) {
 int readTopazUid(bool loop, bool verbose) {
 
     int res = PM3_SUCCESS;
+
+    // nothing of a tag read before carries over
+    topaz_clear_tag();
 
     do {
         uint8_t atqa[2] = {0};
