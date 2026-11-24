@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mfdes dump` - without arguments it printed the help instead of dumping, `chk -j` now hints at `dump --keys` and a card without applications says so (@iceman1001)
 - Added `Tecom26` Wiegand format, H10301 layout as found on TECOM Hitag 2 cards (@iceman1001)
 - Added TECOM Hitag 2 decoding to `lf hitag read`, `dump`, `view`, `eview` - site code, card number and Tecom 26-bit Wiegand (@iceman1001)
 - Changed `lf search` - chip type detection runs before the slow Motorola and COTAG reads, a Hitag 2 is found in 1.4 s instead of 7 s (@iceman1001)

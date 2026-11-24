@@ -2217,7 +2217,10 @@ static int CmdHF14aDesChk(const char *Cmd) {
             memcpy(&dump->card_info, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
         }
 
-        saveFileJSON((char *)jsonname, jsfMfDesfireKeys_v2, (uint8_t *)dump, sizeof(desfire_keys_dump_t), NULL);
+        if (saveFileJSON((char *)jsonname, jsfMfDesfireKeys_v2, (uint8_t *)dump, sizeof(desfire_keys_dump_t), NULL) == PM3_SUCCESS) {
+            // the saved name may carry a -NNN suffix, it is printed above
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfdes dump --keys <fn>") "` with the saved file");
+        }
     }
 
     free(dump);
@@ -9005,7 +9008,7 @@ static int CmdHF14ADesDump(const char *Cmd) {
         arg_lit0(NULL, "ns",      "No save to file"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
@@ -9224,6 +9227,10 @@ static int CmdHF14ADesDump(const char *Cmd) {
         }
 
         dump->appcount = appcount;
+
+        if (appcount == 0) {
+            PrintAndLogEx(INFO, "No applications on the card, only PICC level data to dump");
+        }
 
         // the key we authenticated the PICC with is the fallback for every
         // application, so keep a copy -- picking a key out of the key file for
