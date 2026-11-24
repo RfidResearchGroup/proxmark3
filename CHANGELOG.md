@@ -3,6 +3,13 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 14a sim` - a SELECT by AID got `90 00` whatever the AID, it now gets file not found, `6A 82` (@matrix)
+- Fixed `hf 14a sim` - an R-block without a CID got no answer and one with a CID a fixed one, they now follow rules 11 and 12 of ISO/IEC 14443-4 (@matrix)
+- Fixed `hf 14a sim` - a chained I-block without a CID got no answer, it now gets an R(ACK), as one with a CID does (@matrix)
+- Fixed `hf 14a sim` - S(DESELECT) was answered with `CA 00`, it is now answered with the block received (@matrix)
+- Fixed `hf 14a sim` - any frame starting with `D0` got the PPS answer, now only a PPS request right after the ATS gets it (@matrix)
+- Fixed `hf 14a sim` - a PPS request with a CID got no answer, it is now answered with the same CID (@matrix)
+- Fixed `hf 14a sim` and `hf 14a simaid` - the ATS of `-t 3` offered bit rates above 106 kbit/s, which the simulation cannot do, they are no longer offered (@matrix)
 - Fixed Nextfare / Go card parser - taps and top ups sorted by date, newest first; Go card journey shown as its tap on time, which is what the field holds (@iceman1001)
 - Changed transit parsers - section headers padded to one width so the dashes line up (@iceman1001)
 - Changed Nextfare / Go card parser - money in red when negative, green when positive, ticket type in yellow, cyan section headers; tap amounts are shown from the card side, the held back fare negative and the refund positive (@iceman1001)
