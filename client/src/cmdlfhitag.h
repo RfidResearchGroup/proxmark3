@@ -29,7 +29,6 @@ int CmdLFHitag(const char *Cmd);
 
 int ht2_read_uid(void);
 int ht2_read_paxton(void);
-int ht2_read_tecom(void);
 void annotateHitag1(char *exp, size_t size, const uint8_t *cmd, uint16_t cmdsize, bool is_response);
 void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint16_t cmdsize, uint8_t bits, bool is_response, const uint64_t *keys, uint32_t keycount, bool isdecrypted);
 

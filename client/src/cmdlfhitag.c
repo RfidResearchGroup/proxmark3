@@ -41,10 +41,6 @@ static const uint8_t ht2_default_keys[] = {
     0xBD, 0xF5, 0xE8, 0x46      // PAXTON
 };
 
-static const uint8_t ht2_tecom_pwd[] = {
-    0x7A, 0x7A, 0x7A, 0x7B      // TECOM
-};
-
 static const char *getHitagTypeStr(uint32_t uid) {
     //uid s/n        ********
     uint8_t type = (uid >> 4) & 0xF;
@@ -288,10 +284,6 @@ static void print_hitag2_paxton(bool show_header, const uint8_t *data) {
 // TECOM, pages 4-7.  Byte i is XOR'ed with a per card byte rotated left by i,
 // then nibble swapped.  Byte 0 checksum, 1-11 zero, 12-13 card, 14-15 site
 static bool decode_hitag2_tecom(const uint8_t *data, uint16_t *site, uint16_t *cn, uint8_t *key) {
-
-    if (memcmp(data + HITAG_BLOCK_SIZE, ht2_tecom_pwd, sizeof(ht2_tecom_pwd))) {
-        return false;
-    }
 
     const uint8_t *d = data + (HITAG_BLOCK_SIZE * 4);
 
@@ -2983,34 +2975,6 @@ int ht2_read_paxton(void) {
 
     uint8_t *data = resp.data.asBytes;
     print_hitag2_paxton(false, data);
-    return PM3_SUCCESS;
-}
-
-int ht2_read_tecom(void) {
-
-    lf_hitag_data_t packet;
-    memset(&packet, 0, sizeof(packet));
-
-    packet.cmd = HT2F_PASSWORD;
-    memcpy(packet.pwd, ht2_tecom_pwd, sizeof(packet.pwd));
-
-    clearCommandBuffer();
-    SendCommandNG(CMD_LF_HITAG_READER, (uint8_t *)&packet, sizeof(packet));
-
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_LF_HITAG_READER, &resp, 2000) == false) {
-        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-        return PM3_ETIMEOUT;
-    }
-
-    if (resp.status != PM3_SUCCESS) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - hitag failed");
-        return PM3_ESOFT;
-    }
-
-    if (print_hitag2_tecom(resp.data.asBytes) == false) {
-        return PM3_ESOFT;
-    }
     return PM3_SUCCESS;
 }
 
