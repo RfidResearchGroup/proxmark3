@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `Tecom26` Wiegand format, H10301 layout as found on TECOM Hitag 2 cards (@iceman1001)
 - Added TECOM Hitag 2 decoding to `lf search` and `lf hitag read`, `dump`, `view`, `eview` - site code, card number and Tecom 26-bit Wiegand (@iceman1001)
 - Changed `lf search` - chip type detection runs before the slow Motorola and COTAG reads, a Hitag 2 is found in 1.4 s instead of 7 s (@iceman1001)
 - Fixed `lf motorola reader` - it printed nothing when no tag was found and sampled too short to always see two preambles (@iceman1001)

@@ -33,7 +33,7 @@
 #include "pm3_cmd.h"    // return codes
 #include "hitag2/hitag2_crypto.h"
 #include "util_posix.h"             // msclock
-#include "wiegand_formats.h"        // H10301
+#include "wiegand_formats.h"        // Tecom26
 
 static int CmdHelp(const char *Cmd);
 
@@ -345,8 +345,8 @@ static bool print_hitag2_tecom(const uint8_t *data) {
         .CardNumber = cn,
     };
     wiegand_message_t packed;
-    // Tecom 26-bit is laid out as H10301, no HID header bit
-    if (HIDPack(HIDFindCardFormat("H10301"), &card, &packed, false)) {
+    // no HID header bit
+    if (HIDPack(HIDFindCardFormat("Tecom26"), &card, &packed, false)) {
         char bin[27] = {0};
         for (uint8_t i = 0; i < 26; i++) {
             bin[i] = ((packed.Bot >> (25 - i)) & 1) ? '1' : '0';

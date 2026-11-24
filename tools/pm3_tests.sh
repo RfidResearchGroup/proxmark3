@@ -522,6 +522,7 @@ while true; do
       if ! CheckExecute "wiegand encode new bin bin"      "$CLIENTBIN -c 'wiegand encode --bin 1 --new --verbose'" "Without Sentinel\\. 0b 1 \\(1-bit\\)"; then break; fi
       if ! CheckExecute "wiegand encode bin 96-bit"         "PAT=\$(printf '01%.0s' {1..48}); $CLIENTBIN -c \"wiegand encode --bin \$PAT\"" "Wiegand raw\\.{4} 01555555555555555555555555"; then break; fi
       if ! CheckExecute "wiegand encode new bin 96-bit"     "PAT=\$(printf '01%.0s' {1..48}); $CLIENTBIN -c \"wiegand encode --bin \$PAT --new\"" "New PACS\\.{9} 0x 00555555555555555555555555"; then break; fi
+      if ! CheckExecute "wiegand decode tecom26"          "$CLIENTBIN -c 'wiegand decode --bin 10001011000000000100001100'" "Tecom 26-bit +FC: 22  CN: 134  parity"; then break; fi
       if ! CheckExecute "wiegand encode new bin 96-bit pad" "PAT=\$(printf '01%.0s' {1..48}); $CLIENTBIN -c \"wiegand encode --bin \$PAT --new --verbose\"" "With Sentinel\\.{4} 0b 00000001010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101 \\(104-bit\\)"; then break; fi
       if ! CheckExecute "wiegand encode new bin 96-bit raw" "PAT=\$(printf '01%.0s' {1..48}); $CLIENTBIN -c \"wiegand encode --bin \$PAT --new --verbose\"" "Wiegand --raw\\.{4} 0x 01555555555555555555555555"; then break; fi
       if ! CheckExecute "wiegand encode new 48-bit"       "$CLIENTBIN -c 'wiegand encode -w C1k48s --fc 42069 --cn 42069 --new'" "New PACS\\.{9} 0x 0000A4550148AB"; then break; fi
