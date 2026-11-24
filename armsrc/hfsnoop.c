@@ -122,14 +122,16 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint32_t *len, uint
     uint32_t trigger_cnt = 0;
     uint16_t r = 0, interval = 0;
 
-    bool pressed = false;
-    while (pressed == false) {
+    bool aborted = false;
+    while (aborted == false) {
         WDT_HIT();
 
         // cancel w usb command.
         if (interval == 2000) {
-            if (data_available())
+            if (data_available()) {
+                aborted = true;
                 break;
+            }
 
             interval = 0;
         } else {
@@ -151,10 +153,10 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint32_t *len, uint
             }
         }
 
-        pressed = BUTTON_PRESS();
+        aborted = BUTTON_PRESS();
     }
 
-    if (pressed == false) {
+    if (aborted == false) {
 
         // skip samples loop
         while (samplesToSkip != 0) {
@@ -180,7 +182,10 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint32_t *len, uint
     LED_D_OFF();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     BigBuf_free();
-    return (pressed) ? PM3_EOPABORTED : PM3_SUCCESS;
+    if (aborted) {
+        *len = 0;
+    }
+    return (aborted) ? PM3_EOPABORTED : PM3_SUCCESS;
 }
 
 void HfPlotDownload(void) {
