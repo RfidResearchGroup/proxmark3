@@ -435,15 +435,9 @@ The client refuses to flash anything that is not an ESP32-C2 app image (it check
 the ESP image magic `0xE9` and `chip_id 0x000C`), so a wrong-chip image can't
 brick the module.
 
-It prints the running version first, uploads the image, then reboots the ESP into
-the new image and confirms by reading the version back:
-
-```
-[=] Current BWM firmware..... v1.2.3
-[=] Uploading 812345 bytes of ESP firmware over the BWM link...
-[=] BWM rebooting into the new image (link drops briefly)...
-[+] BWM firmware updated: v1.2.3 -> v1.3.0
-```
+The client prints the running version before uploading the image. After the BWM
+finalizes the upload, the client requests a PM5 reset to resync the UART.
+Reconnect and run `hw status` to check the running BWM version.
 
 > [!NOTE]
 > There is **no resume**: a chunk dropped mid-transfer restarts the whole upload,
@@ -451,9 +445,9 @@ the new image and confirms by reading the version back:
 > on the slow link, raise the pacing, e.g. `--delay 40`.
 
 > [!NOTE]
-> The link drops briefly while the ESP reboots into the new image. Over BLE the
-> post-reboot version read sometimes can't complete even though the flash
-> succeeded — reconnect and run `hw status` to confirm the running version.
+> If the final reply is missing or times out, the command reports that the
+> result is unknown. The BWM may already have finalized the upload. Check the
+> running version after reconnecting before trying the upgrade again.
 
 ---
 

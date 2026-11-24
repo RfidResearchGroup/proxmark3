@@ -530,10 +530,8 @@ static int CmdBwmSetCap(const char *Cmd) {
 }
 
 
-// One full OTA attempt: BEGIN -> WRITE... -> END. The BWM OTA has no resume
-// (DEV.md 8.4): a dropped chunk can't be re-sent, so any failure here means the
-// caller must restart the whole thing.
-// PM3_SUCCESS: END acked. PM3_ETIMEOUT: all data sent, END ack lost. Else: not uploaded.
+// One OTA attempt: BEGIN -> WRITE... -> END. There is no resume (DEV.md 8.4).
+// A timeout after END leaves the result unknown.
 static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms) {
     PacketResponseNG resp;
 
@@ -622,17 +620,15 @@ static int bwm_ota_once(const uint8_t *fw, size_t fwlen, uint32_t write_delay_ms
     clearCommandBuffer();
     SendCommandNG(CMD_PM5_BWM_ESP_OTA, end, sizeof(end));
     bool got_end = WaitForResponseTimeout(CMD_PM5_BWM_ESP_OTA, &resp, 30000);
-    if (got_end && (resp.status == PM3_SUCCESS)) {
-        return PM3_SUCCESS;
+    if (!got_end || resp.status == PM3_ETIMEOUT) {
+        return PM3_ETIMEOUT;
     }
-
-    if (got_end) {
-        PrintAndLogEx(WARNING, "OTA finalize rejected (status %d) - data was lost in transit", resp.status);
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "OTA finalize rejected (status %d)", resp.status);
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hw bwm upgrade --delay 20 -f <fw>") "`");
         return PM3_EFAILED;
     }
-
-    return PM3_ETIMEOUT;
+    return PM3_SUCCESS;
 }
 
 // Query the BWM's running firmware version string (APP_CMD_GET_VERSION_INFO).
@@ -738,12 +734,9 @@ static int CmdBWMUpgrade(const char *Cmd) {
         return PM3_EFILE;
     }
 
-    // Record the running version first, so we can confirm the update actually took
-    // even when the finalize ack is lost (the case that used to discard a completed
-    // flash and restart from scratch).
+    // Show the running version before the upload.
     char ver_before[64] = {0};
-    bool have_before = (bwm_get_version(ver_before, sizeof(ver_before)) == PM3_SUCCESS);
-    if (have_before) {
+    if (bwm_get_version(ver_before, sizeof(ver_before)) == PM3_SUCCESS) {
         PrintAndLogEx(INFO, "Current BWM firmware..... " _YELLOW_("%s") "%s", ver_before, bwm_ver_tag(ver_before, fw, fwlen));
     } else {
         PrintAndLogEx(INFO, "Current BWM firmware..... unknown%s", bwm_ver_tag(NULL, fw, fwlen));
@@ -777,26 +770,18 @@ static int CmdBWMUpgrade(const char *Cmd) {
             continue;
         }
 
-        // Reached OTA_END (acked, or ack lost). The image is written and the boot
-        // partition is set - reboot into it and confirm by version.
         if (res == PM3_ETIMEOUT) {
-            PrintAndLogEx(INFO, "finalize ack not seen - all data was sent, confirming by version...");
+            PrintAndLogEx(WARNING, "No confirmation from BWM after the upload. The update result is unknown.");
+        } else {
+            PrintAndLogEx(SUCCESS, "BWM firmware upload finalized.");
         }
 
-        // Upload is complete and the ESP is rebooting into the new image. The
-        // AT32<->ESP link is now desynced (the ESP comes back at its boot-default
-        // baud), and the AT32 only re-negotiates on its own reset - so reset the PM5
-        // to re-sync the link cleanly rather than trying to re-link in place. This
-        // drops the client link; the user reconnects to a cleanly re-linked PM5.
-        (void)have_before;
-
-        PrintAndLogEx(SUCCESS, "BWM firmware uploaded; resetting the PM5 to re-sync the link...");
-
+        // Resync the AT32 UART with the ESP after the ESP reboots.
         free(fw);
         clearCommandBuffer();
         SendCommandNG(CMD_HARDWARE_RESET, NULL, 0);
-        PrintAndLogEx(INFO, "PM5 has been reset - reconnect, then run " _YELLOW_("hw status") " to confirm the new BWM version.");
-        return PM3_SUCCESS;
+        PrintAndLogEx(INFO, "PM5 reset requested. Reconnect, then run " _YELLOW_("hw status") " to check the running BWM version.");
+        return res;
     }
     free(fw);
 
