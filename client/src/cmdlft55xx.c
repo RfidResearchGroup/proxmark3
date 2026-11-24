@@ -4618,28 +4618,19 @@ static int CmdResetRead(const char *Cmd) {
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_LF_T55XX_RESET_READ, &flags, sizeof(flags));
-    if (WaitForResponseTimeout(CMD_LF_T55XX_RESET_READ, &resp, 2500) == false) {
+    // At 125 kHz each raw sample takes 8 us, plus setup time.
+    uint32_t timeout = MAX(2500u, 1000 + ((uint64_t)g_pm3_capabilities.bigbuf_size * 8 + 999) / 1000);
+    if (WaitForResponseTimeout(CMD_LF_T55XX_RESET_READ, &resp, timeout) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
     if (resp.status == PM3_SUCCESS) {
-
-        uint16_t gotsize = g_pm3_capabilities.bigbuf_size - 1;
-        uint8_t *got = calloc(gotsize, sizeof(uint8_t));
-        if (got == NULL) {
-            PrintAndLogEx(WARNING, "Failed to allocate memory");
-            return PM3_EMALLOC;
-        }
-
         PrintAndLogEx(INFO, "Downloading samples...");
-        if (!GetFromDevice(BIG_BUF, got, gotsize, 0, NULL, 0, NULL, 2500, false)) {
-            PrintAndLogEx(WARNING, "command execution time out");
-            free(got);
-            return PM3_ETIMEOUT;
+        int res = getSamplesEx(0, g_pm3_capabilities.bigbuf_size - 1, false, true);
+        if (res != PM3_SUCCESS) {
+            return res;
         }
-        setGraphBuffer(got, gotsize);
-        free(got);
     }
 
     PrintAndLogEx(INFO, "Done!");

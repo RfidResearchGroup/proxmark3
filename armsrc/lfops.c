@@ -1888,7 +1888,7 @@ void T55xxResetRead(uint8_t flags, bool ledcontrol) {
     turn_read_lf_on(T55xx_Timing.m[downlink_mode].read_gap);
 
     // Acquisition
-    DoPartialAcquisition(0, false, BigBuf_max_traceLen(), 0, ledcontrol);
+    DoAcquisition(1, 8, false, 0, false, BigBuf_max_traceLen(), 0, 0, ledcontrol);
 
     // Turn the field off
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
