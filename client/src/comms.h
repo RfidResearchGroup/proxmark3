@@ -111,7 +111,7 @@ int TestProxmark(pm3_device_t *dev);
 void CloseProxmark(pm3_device_t *dev);
 void StartReconnectProxmark(void);
 
-size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, bool show_process, bool keep_raw_mode);
+size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, bool show_process, bool wait_for_first_data);
 bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms_timeout, bool show_warning);
 bool WaitForResponseTimeout(uint32_t cmd, PacketResponseNG *response, size_t ms_timeout);
 bool WaitForTxIdle(uint32_t ms_timeout);
