@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf 15 rdbl`, `rdmulti` and `dump` - a tag that ignores the OPTION flag gets its lock status from GET_MULTIPLE_BLOCK_SECURITY_STATUS (0x2C) (@iceman1001)
 - Fixed `hf 15 rdbl`, `rdmulti` and `dump` - a tag that ignores the OPTION flag and sends no lock status had its first data byte shown as lock and `dump` rejected every block (@iceman1001)
 - Fixed `hf gallagher clone` - the client took the value of `-n`, `--sector` and `--cadsector` from the next option, crashed with `-n` and could read past a heap buffer (@matrix)
 - Fixed `hf gallagher clone -c` - the MES had the UID unreversed, a blank card got no readable MAD, a Gallagher MAD was not updated, sectors 17-31 were left out of MAD2 and no CAD was written (@matrix)
