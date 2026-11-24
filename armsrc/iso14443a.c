@@ -1179,15 +1179,17 @@ bool GetIso14443aCommandFromReader(uint8_t *received, uint16_t received_maxlen, 
     uint8_t b = (uint8_t)FPGA_SSC_RX_Value();
     (void)b;
 
-    uint8_t flip = 0;
-    uint16_t checker = 4000;
+    // kept across calls: a call ends at every reader frame, so local
+    // counters may never reach the client check
+    static uint8_t flip = 0;
+    static uint16_t checker = 4000;
     for (;;) {
 
         WDT_HIT();
 
         // ever 3 * 4000,  check if we got any data from client
-        // takes long time,  usually messes with simualtion
-        if (flip == 3) {
+        // takes long time,  usually messes with simualtion: only between frames
+        if (flip >= 3 && Uart.state == STATE_14A_UNSYNCD) {
             if (data_available()) {
                 return false;
             }
@@ -1197,12 +1199,13 @@ bool GetIso14443aCommandFromReader(uint8_t *received, uint16_t received_maxlen, 
 
         // button press, takes a bit time, might mess with simualtion
         if (checker-- == 0) {
+            // reloaded first: a return below leaves it ready for the next call
+            checker = 4000;
             if (BUTTON_PRESS()) {
                 return false;
             }
 
             flip++;
-            checker = 4000;
         }
 
         if (FPGA_SSC_RX_Ready()) {
@@ -1358,6 +1361,12 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
     static uint8_t rPPS[3] = { 0xD0 };
 
     static uint8_t rPACK[4] = { 0x00, 0x00, 0x00, 0x00 };
+
+    // rATQA and rATS are static: start from their initial values, or a
+    // previous simulation's bytes leak into this one
+    rATQA[0] = 0x00;
+    rATQA[1] = 0x00;
+    memcpy(rATS, "\x06\x75\x80\x60\x02\x00\x00\x00", 8);
 
     switch (tagType) {
         case 1: { // MIFARE Classic 1k
@@ -1910,8 +1919,6 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
     // compatible write block number
     uint8_t wrblock = 0;
 
-    bool odd_reply = true;
-
     set_tracing(true);
     LED_A_ON();
 
@@ -2019,11 +2026,8 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
             order = ORDER_NONE; // back to work state
             p_response = NULL;
 
-        } else if (receivedCmd[0] == ISO14443A_CMD_REQA && len == 1) { // Received a REQUEST, but in HALTED, skip
-            odd_reply = !odd_reply;
-            if (odd_reply) {
-                p_response = &responses[RESP_INDEX_ATQA];
-            }
+        } else if (receivedCmd[0] == ISO14443A_CMD_REQA && len == 1) { // Received a REQUEST
+            p_response = &responses[RESP_INDEX_ATQA];
         } else if (receivedCmd[0] == ISO14443A_CMD_WUPA && len == 1) { // Received a WAKEUP
             p_response = &responses[RESP_INDEX_ATQA];
         } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 2) {    // Received request for UID (cascade 1)
@@ -5390,7 +5394,6 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
     int len = 0;
     int retval = PM3_SUCCESS;
     int sentCount = 0;
-    bool odd_reply = true;
 
     set_tracing(true);
     LED_A_ON();
@@ -5411,11 +5414,8 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
             break;
         }
 
-        if (receivedCmd[0] == ISO14443A_CMD_REQA && len == 1) { // Received a REQUEST, but in HALTED, skip
-            odd_reply = !odd_reply;
-            if (odd_reply) {
-                p_response = &responses[RESP_INDEX_ATQA];
-            }
+        if (receivedCmd[0] == ISO14443A_CMD_REQA && len == 1) { // Received a REQUEST
+            p_response = &responses[RESP_INDEX_ATQA];
         } else if (receivedCmd[0] == ISO14443A_CMD_WUPA && len == 1) { // Received a WAKEUP
             p_response = &responses[RESP_INDEX_ATQA];
         } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 2) {    // Received request for UID (cascade 1)

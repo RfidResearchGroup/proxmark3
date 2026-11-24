@@ -4826,9 +4826,10 @@ int CmdHF14AAIDSim(const char *Cmd) {
     SendCommandNG(CMD_HF_ISO14443A_SIM_AID, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp = {0};
 
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
     bool keypress = kbd_enter_pressed();
     while (keypress == false) {
+        keypress = kbd_enter_pressed();
 
         if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == false) {
             continue;
@@ -4841,15 +4842,11 @@ int CmdHF14AAIDSim(const char *Cmd) {
         if ((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK) {
             break;
         }
-
-        keypress = kbd_enter_pressed();
     }
 
     if (keypress) {
-        if ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
-            // inform device to break the sim loop since client has exited
-            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-        }
+        // inform device to break the sim loop since client has exited
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
     }
 
 
