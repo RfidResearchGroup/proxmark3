@@ -436,8 +436,9 @@ the ESP image magic `0xE9` and `chip_id 0x000C`), so a wrong-chip image can't
 brick the module.
 
 The client prints the running version before uploading the image. After the BWM
-finalizes the upload, the client requests a PM5 reset to resync the UART.
-Reconnect and run `hw status` to check the running BWM version.
+finalizes the upload, the client requests a PM5 reset. The PM5 reboots the BWM
+into the new image and resyncs the UART. Reconnect and run `hw status` to check
+the running BWM version.
 
 > [!NOTE]
 > There is **no resume**: a chunk dropped mid-transfer restarts the whole upload,

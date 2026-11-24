@@ -96,6 +96,10 @@
 #include "pm5_power.h"     // PM5 power-save idle (clock scaling + WFI)
 
 
+#ifdef WITH_BWM_FORWARD
+static bool s_bwm_ota_reboot_pending;
+#endif
+
 #ifdef WITH_PM5_AUTOOFF
 // Automatic power-off, through the same latch release as the long-press shutdown
 // (Gpio_ARM_Power_ON_Low); button power-ON is hardware and unaffected. Two
@@ -4294,6 +4298,9 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_HARDWARE_RESET: {
 #ifdef WITH_BWM_FORWARD
             bwm_fwd_prepare_reset();
+            if (s_bwm_ota_reboot_pending) {
+                (void)bwm_esp_reboot();
+            }
 #endif
             usb_disable();
 
@@ -4568,6 +4575,10 @@ static void PacketReceived(PacketCommandNG *packet) {
                     break;
                 }
                 case BWM_OTA_ACTION_BEGIN: {
+                    if (s_bwm_ota_reboot_pending) {
+                        res = PM3_EFAILED;
+                        break;
+                    }
                     uint32_t total_size = 0;
                     if (packet->length >= 5) {
                         memcpy(&total_size, packet->data.asBytes + 1, sizeof(total_size));
@@ -4589,14 +4600,9 @@ static void PacketReceived(PacketCommandNG *packet) {
                     }
                     break;
                 case BWM_OTA_ACTION_END:
-                    res = bwm_esp_ota_end();
-                    if (res == PM3_SUCCESS) {
-                        // Finalize succeeded and the new partition is now marked
-                        // bootable; the ESP won't switch to it on its own, so
-                        // kick the reboot here (DEV.md 12.8). Best-effort: don't
-                        // fail the whole OTA over a lost reboot ack.
-                        (void)bwm_esp_reboot();
-                    }
+                    // Keep the reply link up until the client requests a reset.
+                    res = s_bwm_ota_reboot_pending ? PM3_SUCCESS : bwm_esp_ota_end();
+                    s_bwm_ota_reboot_pending = (res == PM3_SUCCESS);
                     break;
                 case BWM_OTA_ACTION_ABORT:
                     res = bwm_esp_ota_abort();

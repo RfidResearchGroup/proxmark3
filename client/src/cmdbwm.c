@@ -776,7 +776,7 @@ static int CmdBWMUpgrade(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "BWM firmware upload finalized.");
         }
 
-        // Resync the AT32 UART with the ESP after the ESP reboots.
+        // Activate the finalized BWM image and resync the UART.
         free(fw);
         clearCommandBuffer();
         SendCommandNG(CMD_HARDWARE_RESET, NULL, 0);
