@@ -279,6 +279,10 @@ void cep_attach_poll(void) {
     if ((last_tick != 0) && (GetTickCountDelta(last_tick) < CEP_ATTACH_POLL_MS)) {
         return;
     }
+    // A long command kept the main loop from seeing the Flipper's polls.
+    if ((last_tick != 0) && (GetTickCountDelta(last_tick) > CEP_ACTIVITY_TIMEOUT_MS)) {
+        s_last_spi_activity_tick = GetTickCount();
+    }
     last_tick = GetTickCount();
 
     // I2C_init() must be preceded by StartTicks(), like everywhere else -
