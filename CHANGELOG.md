@@ -37,7 +37,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed triggered `lf read` and `lf sniff` - samples were discarded while switching between the first 32-byte read and the rest of the capture (@adrian-stepien)
 - Fixed packed LF sample streaming - reused packet buffers kept old bits and corrupted subsequent samples (@adrian-stepien)
 - Fixed `hf mfu dump` - a bad read CRC was ignored when debug logging was disabled (@adrian-stepien)
-- Fixed loading dumps from SPIFFS into emulator memory - oversized files wrote past the emulator buffer (@adrian-stepien)
+- Fixed loading dumps from SPIFFS into emulator memory - mount SPIFFS before loading and reject files larger than the emulator buffer (@adrian-stepien)
 - Fixed NDEF TLV parsing - a TLV longer than the data was decoded past the buffer, and `ndefread -f` saved bytes past it (@matrix)
 - Fixed PM5 USB sample streaming - the buffer index became 255 after the first packet and wrote outside the two buffers (@adrian-stepien)
 - Changed the PM3, PM3 Ultimate and iCopy-X FPGA images - rebuilt from the current sources (@matrix)
