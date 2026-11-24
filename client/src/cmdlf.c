@@ -822,17 +822,7 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples, bool 
         }
 
         SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
-        if (is_trigger_threshold_set) {
-            size_t first_receive_len = 32;
-            // Wait until a bunch of data arrives. Keep raw mode on across both
-            // calls so the comm thread doesn't briefly fall back to parsing
-            // framed packets out of the still-arriving sample stream.
-            first_receive_len = WaitForRawDataTimeout(realtimeBuf, first_receive_len, -1, false, true);
-            sample_bytes = WaitForRawDataTimeout(realtimeBuf + first_receive_len, sample_bytes - first_receive_len, 1000, true, false);
-            sample_bytes += first_receive_len;
-        } else {
-            sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true, false);
-        }
+        sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true, is_trigger_threshold_set);
         samples = MIN(samples, sample_bytes * 8 / bits_per_sample);
         // the inline "Received x / y bytes" counter already says the transfer is
         // done, so only repeat it in samples when asked
@@ -980,17 +970,7 @@ int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
         }
 
         SendCommandNG(CMD_LF_SNIFF_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
-        if (is_trigger_threshold_set) {
-            size_t first_receive_len = 32;
-            // Wait until a bunch of data arrives. Keep raw mode on across both
-            // calls so the comm thread doesn't briefly fall back to parsing
-            // framed packets out of the still-arriving sample stream.
-            first_receive_len = WaitForRawDataTimeout(realtimeBuf, first_receive_len, -1, false, true);
-            sample_bytes = WaitForRawDataTimeout(realtimeBuf + first_receive_len, sample_bytes - first_receive_len, 1000, true, false);
-            sample_bytes += first_receive_len;
-        } else {
-            sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true, false);
-        }
+        sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true, is_trigger_threshold_set);
         samples = MIN(samples, sample_bytes * 8 / bits_per_sample);
         // the inline "Received x / y bytes" counter already says the transfer is
         // done, so only repeat it in samples when asked

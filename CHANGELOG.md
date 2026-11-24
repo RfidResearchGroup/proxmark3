@@ -4,12 +4,22 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Fixed `hf 15 sim` - a short `-t` ended up to 500 ms late, a lost connection kept the client waiting and a pm3 that did not stop was reported as done (@Msprg)
+- Fixed `hf topaz dump` - the memory size comes from HR0 as the data sheets say, the capability container made it read less or more than the tag holds (@matrix)
+- Fixed `hf topaz dump` - the trace kept only the read of the last segment, it now holds the whole dump (@matrix)
+- Changed `hf topaz dump`, `hf topaz view` - the dynamic blocks are printed in upper case, as the static ones (@matrix)
+- Fixed `hf topaz dump`, `hf topaz view` - the dynamic lock marks come from the tag's Lock Control TLVs, they were always `n` or came from an earlier `hf topaz info` (@matrix)
+- Fixed `hf topaz info`, `hf topaz dump` - the lock areas of a tag read before no longer carry over (@matrix)
+- Fixed `hf topaz dump`, `hf topaz view` - a lockable area starts past the lock bits and the reserved memory, on a Topaz 512 at block 10h (@matrix)
+- Fixed `hf topaz dump`, `hf topaz view` - a lock bit is read only inside its lock area and the tag memory, a Lock Control TLV could point outside the memory (@matrix)
+- Removed `-f` from `hf topaz info` - it saved nothing, `hf topaz dump` saves the tag (@matrix)
+- Fixed `hf topaz wrbl` - a write to block 14 was reported failed when the block already had a bit that the data does not set (@matrix)
 - Fixed `lf t55xx read`, `lf t55xx dump` - a block 0 write, `lf t55xx config -c`, `chk`, `bruteforce` and `recoverpw` end the password confirmation from `lf t55xx detect` (@mfcarroll)
 - Changed `lf t55xx read`, `lf t55xx dump` - warn if run without `-p` while the password confirmation from `lf t55xx detect` holds (@mfcarroll)
 - Fixed `script list` - preserve complete directory paths and free skipped directory entries
 - Fixed `hf legic sim` on PM5 - the tail of the tag's own last bit on `ssp_din` was taken for the start of the next reader command (@Msprg)
 - Fixed `hf 15 sim` - `<Enter>` now aborts it (@Msprg)
 - Fixed `lf read` and `lf sniff` streaming - now gives correct lengths for packed or decimated captures (@adrian-stepien)
+- Fixed triggered `lf read` and `lf sniff` - samples were discarded while switching between the first 32-byte read and the rest of the capture (@adrian-stepien)
 - Fixed packed LF sample streaming - reused packet buffers kept old bits and corrupted subsequent samples (@adrian-stepien)
 - Fixed `hf mfu dump` - a bad read CRC was ignored when debug logging was disabled (@adrian-stepien)
 - Fixed NDEF TLV parsing - a TLV longer than the data was decoded past the buffer, and `ndefread -f` saved bytes past it (@matrix)
