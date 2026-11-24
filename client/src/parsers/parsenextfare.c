@@ -273,7 +273,7 @@ int nextfare_parser_parse(const uint8_t *dump, size_t dumplen) {
         char amt[64];
         nf_date_str(b + 2, s, sizeof(s));
         nf_money_col(amt, sizeof(amt), MemLeToUint2byte(b + 6) & 0x7FFF, cur, true, -13);
-        PrintAndLogEx(INFO, "  %s  %s  station %5u%s", s, amt, MemLeToUint2byte(b + 12),
+        PrintAndLogEx(INFO, " %s  %s  station %5u%s", s, amt, MemLeToUint2byte(b + 12),
                       (b[0] == 0x31) ? "  automatic" : "");
     }
 
@@ -316,7 +316,7 @@ int nextfare_parser_parse(const uint8_t *dump, size_t dumplen) {
         nf_date_str(taps[i].raw + 2, s, sizeof(s));
         // tap on holds back the default fare, tap off refunds the rest
         nf_money_col(amt, sizeof(amt), taps[i].value, cur, true, 12);
-        PrintAndLogEx(INFO, "  %s  journey %4u%s  mode %3u  station %5u  %s  %s", s,
+        PrintAndLogEx(INFO, " %s  journey %4u%s  mode %3u  station %5u  %s  %s", s,
                       taps[i].journey, taps[i].continuation ? "+" : " ", taps[i].mode,
                       taps[i].station, amt, nf_tap_type(taps[i].type));
     }
