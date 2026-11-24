@@ -669,7 +669,7 @@ static int DesfirePCRun(DesfireContext_t *dctx, const uint8_t proximity_key[MFDE
     uint8_t prepare_resp[APDU_RES_LEN] = {0};
     size_t prepare_resp_len = 0;
     uint8_t respcode = 0xFF;
-    res = DesfireExchangeEx(activate_field, dctx, MFDES_PREPARE_PC, NULL, 0, &respcode, prepare_resp, &prepare_resp_len, true, 0);
+    res = DesfireExchangeEx(activate_field, dctx, MFDES_PREPARE_PC, NULL, 0, &respcode, prepare_resp, sizeof(prepare_resp), &prepare_resp_len, true, 0);
     if (res != PM3_SUCCESS || respcode != MFDES_S_OPERATION_OK) {
         // DesfireExchangeEx reports the transport result; the card's own status
         // comes back in respcode and an error there still reads as success. It
@@ -730,7 +730,7 @@ static int DesfirePCRun(DesfireContext_t *dctx, const uint8_t proximity_key[MFDE
         size_t round_resp_len = 0;
         respcode = 0xFF;
 
-        res = DesfireExchange(dctx, MFDES_PROXIMITY_CHECK, round_payload, challenge_part_len + 1, &respcode, round_resp, &round_resp_len);
+        res = DesfireExchange(dctx, MFDES_PROXIMITY_CHECK, round_payload, challenge_part_len + 1, &respcode, round_resp, sizeof(round_resp), &round_resp_len);
         if (res != PM3_SUCCESS || respcode != MFDES_S_OPERATION_OK) {
             if (res == PM3_SUCCESS) {
                 res = PM3_EAPDU_FAIL;
@@ -786,7 +786,7 @@ static int DesfirePCRun(DesfireContext_t *dctx, const uint8_t proximity_key[MFDE
     uint8_t verify_resp[APDU_RES_LEN] = {0};
     size_t verify_resp_len = 0;
     respcode = 0xFF;
-    res = DesfireExchange(dctx, MFDES_VERIFY_PC, verify_cmd_mac, sizeof(verify_cmd_mac), &respcode, verify_resp, &verify_resp_len);
+    res = DesfireExchange(dctx, MFDES_VERIFY_PC, verify_cmd_mac, sizeof(verify_cmd_mac), &respcode, verify_resp, sizeof(verify_resp), &verify_resp_len);
     if (res != PM3_SUCCESS || respcode != MFDES_S_OPERATION_OK) {
         if (res == PM3_SUCCESS) {
             res = PM3_EAPDU_FAIL;
@@ -1130,7 +1130,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
 
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
-        res = DesfireReadSignature(&dctx, 0x00, signature, &signature_len);
+        res = DesfireReadSignature(&dctx, 0x00, signature, sizeof(signature), &signature_len);
         if (res == PM3_SUCCESS) {
             if (signature_len == 56)
                 desfire_print_signature(info.uid, info.uidlen, signature, signature_len);
@@ -1145,7 +1145,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
 
     uint8_t aidbuf[250] = {0};
     size_t aidbuflen = 0;
-    res = DesfireGetAIDList(&dctx, aidbuf, &aidbuflen);
+    res = DesfireGetAIDList(&dctx, aidbuf, sizeof(aidbuf), &aidbuflen);
     if (res == PM3_SUCCESS) {
         PICCInfo.appCount = aidbuflen / 3;
     }
@@ -1297,7 +1297,7 @@ static int CmdHF14ADesGetVersion(const char *Cmd) {
     if (dfnamelen > 0) {
         uint8_t select_resp[250] = {0};
         size_t select_resplen = 0;
-        res = DesfireISOSelect(&dctx, ISSDFName, dfname, (uint8_t)dfnamelen, select_resp, &select_resplen);
+        res = DesfireISOSelect(&dctx, ISSDFName, dfname, (uint8_t)dfnamelen, select_resp, sizeof(select_resp), &select_resplen);
         if (res != PM3_SUCCESS) {
             DropField();
             PrintAndLogEx(ERR, "Select DF name %s " _RED_("failed") ". Result: %d", sprint_hex_inrow(dfname, dfnamelen), res);
@@ -1318,7 +1318,7 @@ static int CmdHF14ADesGetVersion(const char *Cmd) {
     mfdes_info_res_t info = {0};
     uint8_t version[sizeof(info.versionHW) + sizeof(info.versionSW) + sizeof(info.details)] = {0};
     size_t version_len = 0;
-    res = DesfireGetVersion(&dctx, version, &version_len);
+    res = DesfireGetVersion(&dctx, version, sizeof(version), &version_len);
     if (res != PM3_SUCCESS) {
         DropField();
         PrintAndLogEx(ERR, "Desfire GetVersion command " _RED_("error") ". Result: %d", res);
@@ -1605,7 +1605,7 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
     uint8_t data[250] = {0};
     size_t datalen = 0;
 
-    res = DesfireGetKeySettings(dctx, data, &datalen);
+    res = DesfireGetKeySettings(dctx, data, sizeof(data), &datalen);
     if (res == PM3_SUCCESS && datalen >= 2) {
 
         numkeys = data[1] & 0x0F;
@@ -1699,7 +1699,7 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
             uint8_t kvbuf[250] = {0};
             size_t kvbuflen = 0;
 
-            if (DesfireGetKeyVersion(dctx, &keyno, 1, kvbuf, &kvbuflen) == PM3_SUCCESS) {
+            if (DesfireGetKeyVersion(dctx, &keyno, 1, kvbuf, sizeof(kvbuf), &kvbuflen) == PM3_SUCCESS) {
                 usedkeys[k] = 1;
                 keyvercount++;
             }
@@ -1978,7 +1978,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     uint8_t aidbuf[250] = {0};
     size_t aidbuflen = 0;
-    res = DesfireGetAIDList(&dctx, aidbuf, &aidbuflen);
+    res = DesfireGetAIDList(&dctx, aidbuf, sizeof(aidbuf), &aidbuflen);
     if (res == PM3_SUCCESS) {
 
         if (aidbuflen > sizeof(app_ids) - 3) {
@@ -2346,7 +2346,7 @@ static int CmdHF14aDesDetect(const char *Cmd) {
     uint8_t data[250] = {0};
     size_t datalen = 0;
 
-    res = DesfireGetKeySettings(&dctx, data, &datalen);
+    res = DesfireGetKeySettings(&dctx, data, sizeof(data), &datalen);
     if (res == PM3_SUCCESS && datalen >= 2) {
 
         uint8_t num_keys = data[1];
@@ -2795,7 +2795,7 @@ static int CmdHF14aDesMAD(const char *Cmd) {
             uint8_t data[250] = {0};
             size_t datalen = 0;
 
-            res = DesfireReadFile(&dctx, 01, 0x000000, 0, data, &datalen);
+            res = DesfireReadFile(&dctx, 01, 0x000000, 0, data, sizeof(data), &datalen);
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(SUCCESS, "Card Holder... " _RED_("n/a"));
             } else {
@@ -2812,7 +2812,7 @@ static int CmdHF14aDesMAD(const char *Cmd) {
                 }
             }
 
-            res = DesfireReadFile(&dctx, 02, 0x000000, 0, data, &datalen);
+            res = DesfireReadFile(&dctx, 02, 0x000000, 0, data, sizeof(data), &datalen);
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(SUCCESS, "Card Publisher: " _RED_("n/a"));
             } else {
@@ -2844,7 +2844,7 @@ static int CmdHF14aDesMAD(const char *Cmd) {
                 uint8_t buf[APDU_RES_LEN] = {0};
                 size_t buflen = 0;
 
-                res = DesfireGetFileIDList(&dctx, buf, &buflen);
+                res = DesfireGetFileIDList(&dctx, buf, sizeof(buf), &buflen);
                 if (res != PM3_SUCCESS) {
                     PrintAndLogEx(ERR, "Desfire GetFileIDList command " _RED_("error") ". Result: %d", res);
                     DropField();
@@ -2943,7 +2943,7 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
     size_t resplen = 0;
 
     if (selectmf) {
-        res = DesfireISOSelect(&dctx, ISSMFDFEF, NULL, 0, resp, &resplen);
+        res = DesfireISOSelect(&dctx, ISSMFDFEF, NULL, 0, resp, sizeof(resp), &resplen);
         if (res != PM3_SUCCESS) {
             DropField();
             PrintAndLogEx(FAILED, "ISO Select MF " _RED_("failed"));
@@ -2957,7 +2957,7 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
     } else if (isoidpresent) {
         uint8_t data[2] = {0};
         Uint2byteToMemLe(data, isoid);
-        res = DesfireISOSelect(&dctx, ISSMFDFEF, data, 2, resp, &resplen);
+        res = DesfireISOSelect(&dctx, ISSMFDFEF, data, 2, resp, sizeof(resp), &resplen);
         if (res != PM3_SUCCESS) {
             DropField();
             PrintAndLogEx(FAILED, "ISO Select DF 0x%04x " _RED_("failed"), isoid);
@@ -2970,9 +2970,9 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "PICC DF 0x%04x selected " _GREEN_("succesfully"), isoid);
     } else if (dctx.cmdSet == DCCISO || dfnamelen > 0) {
         if (dfnamelen > 0)
-            res = DesfireISOSelectDF(&dctx, (char *)dfname, resp, &resplen);
+            res = DesfireISOSelectDF(&dctx, (char *)dfname, resp, sizeof(resp), &resplen);
         else
-            res = DesfireISOSelect(&dctx, ISSMFDFEF, NULL, 0, resp, &resplen);
+            res = DesfireISOSelect(&dctx, ISSMFDFEF, NULL, 0, resp, sizeof(resp), &resplen);
         if (res != PM3_SUCCESS) {
             DropField();
             PrintAndLogEx(FAILED, "ISO Select application `%s` " _RED_("failed"), (char *)dfname);
@@ -3012,12 +3012,12 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
     return res;
 }
 
-static int CmdHF14ADesISOSelectISOFID(DesfireContext_t *dctx, uint16_t fileid, uint8_t *resp, size_t *resplen, bool fieldon) {
+static int CmdHF14ADesISOSelectISOFID(DesfireContext_t *dctx, uint16_t fileid, uint8_t *resp, size_t resp_max_len, size_t *resplen, bool fieldon) {
     // ISO 7816 SELECT FILE command: CLA=00, INS=A4, P1=00, P2=00, Lc=2
     uint8_t data[2] = {0};
     Uint2byteToMemBe(data, fileid);
 
-    return DesfireISOSelectEx(dctx, fieldon, ISSMFDFEF, data, sizeof(data), resp, resplen);
+    return DesfireISOSelectEx(dctx, fieldon, ISSMFDFEF, data, sizeof(data), resp, resp_max_len, resplen);
 }
 
 static int CmdHF14ADesSelectISOFID(const char *Cmd) {
@@ -3082,7 +3082,7 @@ static int CmdHF14ADesSelectISOFID(const char *Cmd) {
         }
     }
 
-    res = CmdHF14ADesISOSelectISOFID(&dctx, isoid, resp, &resplen, !preselect);
+    res = CmdHF14ADesISOSelectISOFID(&dctx, isoid, resp, sizeof(resp), &resplen, !preselect);
     if (res != PM3_SUCCESS) {
         DropField();
         PrintAndLogEx(FAILED, "ISO Select file 0x%04x " _RED_("failed"), isoid);
@@ -3459,7 +3459,7 @@ static bool mfdesBruteAIDGeneratorNext(mfdes_bruteaid_generator_t *gen, uint32_t
     return mfdesBruteAIDGeneratorFullNext(&gen->g.full, id, progress);
 }
 
-static int DesfireGetDelegatedInfoNoFieldOn(DesfireContext_t *dctx, uint16_t damslot, uint8_t *resp, size_t *resplen) {
+static int DesfireGetDelegatedInfoNoFieldOn(DesfireContext_t *dctx, uint16_t damslot, uint8_t *resp, size_t resp_max_len, size_t *resplen) {
     uint8_t data[2] = {0};
     Uint2byteToMemLe(data, damslot);
 
@@ -3467,7 +3467,7 @@ static int DesfireGetDelegatedInfoNoFieldOn(DesfireContext_t *dctx, uint16_t dam
     size_t xresplen = 0;
     uint8_t respcode = 0xFF;
 
-    int res = DesfireExchangeEx(false, dctx, MFDES_GET_DELEGATE_INFO, data, sizeof(data), &respcode, xresp, &xresplen, true, 0);
+    int res = DesfireExchangeEx(false, dctx, MFDES_GET_DELEGATE_INFO, data, sizeof(data), &respcode, xresp, sizeof(xresp), &xresplen, true, 0);
     if (res != PM3_SUCCESS) {
         if (res == PM3_EAPDU_FAIL && respcode == 0xFF && xresplen == 0) {
             return PM3_ECARDEXCHANGE;
@@ -3486,6 +3486,10 @@ static int DesfireGetDelegatedInfoNoFieldOn(DesfireContext_t *dctx, uint16_t dam
 
     if (xresplen != 8) {
         return PM3_EAPDU_FAIL;
+    }
+
+    if (resp && xresplen > resp_max_len) {
+        return PM3_EOVFLOW;
     }
 
     if (resplen) {
@@ -3763,7 +3767,7 @@ static int CmdHF14ADesBruteISOFIDs(const char *Cmd) {
         size_t resplen = 0;
         uint8_t *resp_p = verbose ? resp : NULL;
         size_t *resplen_p = verbose ? &resplen : NULL;
-        res = CmdHF14ADesISOSelectISOFID(&dctx, isofid, resp_p, resplen_p, false);
+        res = CmdHF14ADesISOSelectISOFID(&dctx, isofid, resp_p, (verbose) ? sizeof(resp) : 0, resplen_p, false);
 
         if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
             for (int attempt = 1; attempt <= MFDES_BRUTEFID_RESELECT_ATTEMPTS; attempt++) {
@@ -3778,7 +3782,7 @@ static int CmdHF14ADesBruteISOFIDs(const char *Cmd) {
                     continue;
                 }
 
-                res = CmdHF14ADesISOSelectISOFID(&dctx, isofid, resp_p, resplen_p, false);
+                res = CmdHF14ADesISOSelectISOFID(&dctx, isofid, resp_p, (verbose) ? sizeof(resp) : 0, resplen_p, false);
                 if (res == PM3_SUCCESS || res == PM3_EAPDU_FAIL ||
                         (res != PM3_ECARDEXCHANGE && res != PM3_ETIMEOUT && res != PM3_ERFTRANS)) {
                     break;
@@ -3920,7 +3924,7 @@ static int CmdHF14ADesBruteDAMSlots(const char *Cmd) {
 
         uint8_t resp[16] = {0};
         size_t resplen = 0;
-        res = DesfireGetDelegatedInfoNoFieldOn(&dctx, damslot & 0xffff, resp, &resplen);
+        res = DesfireGetDelegatedInfoNoFieldOn(&dctx, damslot & 0xffff, resp, sizeof(resp), &resplen);
 
         if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
             for (int attempt = 1; attempt <= MFDES_BRUTEDAMSLOT_RESELECT_ATTEMPTS; attempt++) {
@@ -3938,7 +3942,7 @@ static int CmdHF14ADesBruteDAMSlots(const char *Cmd) {
                     continue;
                 }
 
-                res = DesfireGetDelegatedInfoNoFieldOn(&dctx, damslot & 0xffff, resp, &resplen);
+                res = DesfireGetDelegatedInfoNoFieldOn(&dctx, damslot & 0xffff, resp, sizeof(resp), &resplen);
                 if (res == PM3_SUCCESS || res == PM3_EAPDU_FAIL ||
                         (res != PM3_ECARDEXCHANGE && res != PM3_ETIMEOUT && res != PM3_ERFTRANS)) {
                     break;
@@ -4952,7 +4956,7 @@ static int CmdHF14ADesGetDelegateAppInfo(const char *Cmd) {
 
     uint8_t resp[16] = {0};
     size_t resplen = 0;
-    res = DesfireGetDelegatedInfoNoFieldOn(&dctx, damslot & 0xffff, resp, &resplen);
+    res = DesfireGetDelegatedInfoNoFieldOn(&dctx, damslot & 0xffff, resp, sizeof(resp), &resplen);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire GetDelegatedInfo command " _RED_("error") ". Result: %d", res);
         DropField();
@@ -5090,7 +5094,7 @@ static int CmdHF14ADesGetUID(const char *Cmd) {
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t buflen = 0;
 
-    res = DesfireGetUID(&dctx, buf, &buflen);
+    res = DesfireGetUID(&dctx, buf, sizeof(buf), &buflen);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire GetUID command " _RED_("error") ". Result: %d", res);
         DropField();
@@ -5482,7 +5486,7 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
         data[1] = keysetnum32 & 0xff;
     }
 
-    res = DesfireGetKeyVersion(&dctx, data, (keysetpresent) ? 2 : 1, buf, &buflen);
+    res = DesfireGetKeyVersion(&dctx, data, (keysetpresent) ? 2 : 1, buf, sizeof(buf), &buflen);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire GetKeyVersion command " _RED_("error") ". Result: %d", res);
         DropField();
@@ -5555,7 +5559,7 @@ static int CmdHF14ADesGetKeySettings(const char *Cmd) {
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t buflen = 0;
 
-    res = DesfireGetKeySettings(&dctx, buf, &buflen);
+    res = DesfireGetKeySettings(&dctx, buf, sizeof(buf), &buflen);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire GetKeySettings command " _RED_("error") ". Result: %d", res);
         DropField();
@@ -5633,7 +5637,7 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t buflen = 0;
 
-    res = DesfireGetAIDList(&dctx, buf, &buflen);
+    res = DesfireGetAIDList(&dctx, buf, sizeof(buf), &buflen);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire GetAIDList command " _RED_("error") ". Result: %d", res);
         DropField();
@@ -5706,7 +5710,7 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
     size_t buflen = 0;
 
     // result bytes: 3, 2, 1-16. total record size = 24
-    res = DesfireGetDFList(&dctx, buf, &buflen);
+    res = DesfireGetDFList(&dctx, buf, sizeof(buf), &buflen);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire GetDFList command " _RED_("error") ". Result: %d", res);
         DropField();
@@ -5785,7 +5789,7 @@ static int CmdHF14ADesGetFileIDs(const char *Cmd) {
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t buflen = 0;
 
-    res = DesfireGetFileIDList(&dctx, buf, &buflen);
+    res = DesfireGetFileIDList(&dctx, buf, sizeof(buf), &buflen);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire GetFileIDList command " _RED_("error") ". Result: %d", res);
         DropField();
@@ -5860,7 +5864,7 @@ static int CmdHF14ADesGetFileISOIDs(const char *Cmd) {
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t buflen = 0;
 
-    res = DesfireGetFileISOIDList(&dctx, buf, &buflen);
+    res = DesfireGetFileISOIDList(&dctx, buf, sizeof(buf), &buflen);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire GetFileISOIDList command " _RED_("error") ". Result: %d", res);
         DropField();
@@ -5941,7 +5945,7 @@ static int CmdHF14ADesGetFileSettings(const char *Cmd) {
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t buflen = 0;
 
-    res = DesfireGetFileSettings(&dctx, fileid, buf, &buflen);
+    res = DesfireGetFileSettings(&dctx, fileid, buf, sizeof(buf), &buflen);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Desfire GetFileSettings command " _RED_("error") ". Result: %d", res);
         DropField();
@@ -6146,7 +6150,7 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
     // check current file settings
     DesfireCommunicationMode commMode = dctx.commMode;
     DesfireSetCommMode(&dctx, DCMMACed);
-    res = DesfireGetFileSettings(&dctx, fileid, buf, &buflen);
+    res = DesfireGetFileSettings(&dctx, fileid, buf, sizeof(buf), &buflen);
     if (res == PM3_SUCCESS && buflen > 5) {
         uint8_t chright = 0;
         DesfireDecodeFileAcessMode(&buf[2], NULL, NULL, NULL, &chright) ;
@@ -7638,7 +7642,7 @@ static int DesfileReadISOFileAndPrint(DesfireContext_t *dctx,
     int res;
 
     if (filetype == RFTData) {
-        res = DesfireISOReadBinary(dctx, !select_current_file, (select_current_file) ? 0x00 : fnum, offset, length, resp, &resplen);
+        res = DesfireISOReadBinary(dctx, !select_current_file, (select_current_file) ? 0x00 : fnum, offset, length, resp, sizeof(resp), &resplen);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire ISOReadBinary command " _RED_("error") ". Result: %d", res);
             DropField();
@@ -7661,7 +7665,7 @@ static int DesfileReadISOFileAndPrint(DesfireContext_t *dctx,
 
     if (filetype == RFTRecord) {
         size_t reclen = 0;
-        res = DesfireISOReadRecords(dctx, offset, false, (select_current_file) ? 0x00 : fnum, 0, resp, &resplen);
+        res = DesfireISOReadRecords(dctx, offset, false, (select_current_file) ? 0x00 : fnum, 0, resp, sizeof(resp), &resplen);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire ISOReadRecords (one record) command " _RED_("error") ". Result: %d", res);
             DropField();
@@ -7673,7 +7677,7 @@ static int DesfileReadISOFileAndPrint(DesfireContext_t *dctx,
             PrintAndLogEx(INFO, "Record length %zu", reclen);
 
         if (length != 1) {
-            res = DesfireISOReadRecords(dctx, offset, true, (select_current_file) ? 0x00 : fnum, 0, resp, &resplen);
+            res = DesfireISOReadRecords(dctx, offset, true, (select_current_file) ? 0x00 : fnum, 0, resp, sizeof(resp), &resplen);
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "Desfire ISOReadRecords (one record) command " _RED_("error") ". Result: %d", res);
                 DropField();
@@ -7806,7 +7810,7 @@ static int DesfileReadFileAndPrint(DesfireContext_t *dctx,
     size_t resplen = 0;
 
     if (filetype == RFTData) {
-        res = DesfireReadFile(dctx, fnum, offset, length, resp, &resplen);
+        res = DesfireReadFile(dctx, fnum, offset, length, resp, DESFIRE_BUFFER_SIZE, &resplen);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire ReadFile command " _RED_("error") ". Result: %d", res);
             DropField();
@@ -7837,7 +7841,7 @@ static int DesfileReadFileAndPrint(DesfireContext_t *dctx,
     if (filetype == RFTRecord) {
         resplen = 0;
         if (reclen == 0) {
-            res = DesfireReadRecords(dctx, fnum, offset, 1, resp, &resplen);
+            res = DesfireReadRecords(dctx, fnum, offset, 1, resp, DESFIRE_BUFFER_SIZE, &resplen);
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "Desfire ReadRecords (len=1) command " _RED_("error") ". Result: %d", res);
                 DropField();
@@ -7852,7 +7856,7 @@ static int DesfileReadFileAndPrint(DesfireContext_t *dctx,
 
         // if we got one record via the DesfireReadRecords before -- we not need to get it 2nd time
         if (length != 1 || resplen == 0) {
-            res = DesfireReadRecords(dctx, fnum, offset, length, resp, &resplen);
+            res = DesfireReadRecords(dctx, fnum, offset, length, resp, DESFIRE_BUFFER_SIZE, &resplen);
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "Desfire ReadRecords command " _RED_("error") ". Result: %d", res);
                 DropField();
@@ -7880,7 +7884,7 @@ static int DesfileReadFileAndPrint(DesfireContext_t *dctx,
     }
 
     if (filetype == RFTMAC) {
-        res = DesfireReadFile(dctx, fnum, 0, 0, resp, &resplen);
+        res = DesfireReadFile(dctx, fnum, 0, 0, resp, DESFIRE_BUFFER_SIZE, &resplen);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire ReadFile command " _RED_("error") ". Result: %d", res);
             DropField();
@@ -8316,7 +8320,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
 
         DesfireCommunicationMode commMode = dctx.commMode;
         DesfireSetCommMode(&dctx, DCMMACed);
-        res = DesfireCommitReaderID(&dctx, readerid, readeridlen, resp, &resplen);
+        res = DesfireCommitReaderID(&dctx, readerid, readeridlen, resp, sizeof(resp), &resplen);
         DesfireSetCommMode(&dctx, commMode);
 
         if (res == PM3_SUCCESS) {
@@ -8408,7 +8412,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         uint8_t resp[250] = {0};
         size_t resplen = 0;
         DesfireSetCommMode(&dctx, DCMMACed);
-        res = DesfireCommitTransactionEx(&dctx, readeridpushed, 0x01, resp, &resplen);
+        res = DesfireCommitTransactionEx(&dctx, readeridpushed, 0x01, resp, sizeof(resp), &resplen);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire CommitTransaction command " _RED_("error") ". Result: %d", res);
             DropField();
@@ -8812,7 +8816,7 @@ static int DesfireDumpReadFile(DesfireContext_t *dctx, const FileSettings_t *fs,
     if (filetype == RFTRecord) {
 
         size_t reclen = fs->recordSize;
-        res = DesfireReadRecords(dctx, f->num, 0, 0, resp, &resplen);
+        res = DesfireReadRecords(dctx, f->num, 0, 0, resp, DESFIRE_BUFFER_SIZE, &resplen);
         if (res != PM3_SUCCESS) {
             free(resp);
             return PM3_ESOFT;
@@ -8829,7 +8833,7 @@ static int DesfireDumpReadFile(DesfireContext_t *dctx, const FileSettings_t *fs,
             length = maxdatafilelength;
         }
 
-        res = DesfireReadFile(dctx, f->num, 0, length, resp, &resplen);
+        res = DesfireReadFile(dctx, f->num, 0, length, resp, DESFIRE_BUFFER_SIZE, &resplen);
         if (res != PM3_SUCCESS) {
             free(resp);
             return PM3_ESOFT;
@@ -9112,7 +9116,7 @@ static int CmdHF14ADesDump(const char *Cmd) {
         // them here rather than storing one blob: the third frame is not the
         // same shape across generations, and HW major/minor is what identifies
         // which generation we are impersonating
-        if (DesfireGetVersion(&plainctx, buf, &buflen) == PM3_SUCCESS) {
+        if (DesfireGetVersion(&plainctx, buf, sizeof(buf), &buflen) == PM3_SUCCESS) {
 
             size_t off = 0;
             struct {
@@ -9134,7 +9138,7 @@ static int CmdHF14ADesDump(const char *Cmd) {
         }
 
         buflen = 0;
-        if (DesfireReadSignature(&plainctx, 0x00, buf, &buflen) == PM3_SUCCESS && buflen <= sizeof(dump->signature)) {
+        if (DesfireReadSignature(&plainctx, 0x00, buf, sizeof(buf), &buflen) == PM3_SUCCESS && buflen <= sizeof(dump->signature)) {
             memcpy(dump->signature, buf, buflen);
             dump->signaturelen = buflen;
         }
@@ -10307,7 +10311,7 @@ static int MfdSelectionSelectApplicationEx(DesfireContext_t *dctx, const mfd_app
     if (select->dfname_present) {
         uint8_t resp[250] = {0};
         size_t resplen = 0;
-        if (DesfireISOSelectEx(dctx, fieldon, ISSDFName, (uint8_t *)select->dfname, select->dfname_len, resp, &resplen) != PM3_SUCCESS) {
+        if (DesfireISOSelectEx(dctx, fieldon, ISSDFName, (uint8_t *)select->dfname, select->dfname_len, resp, sizeof(resp), &resplen) != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Select DF name " _RED_("failed"));
             return PM3_ESOFT;
         }
@@ -10928,7 +10932,7 @@ static int mfdes_prepare_data_file_read(DesfireContext_t *dctx, uint8_t fnum, bo
 
 static int mfdes_read_cert_file_once(const DesfireContext_t *base_dctx, DesfireSecureChannel securechann,
                                      uint8_t fid, bool authenticate, bool verbose,
-                                     uint8_t *cert_buf, size_t *cert_buf_len, bool *auth_needed) {
+                                     uint8_t *cert_buf, size_t cert_max_len, size_t *cert_buf_len, bool *auth_needed) {
     if (base_dctx == NULL || cert_buf == NULL || cert_buf_len == NULL) {
         return PM3_EINVARG;
     }
@@ -10953,13 +10957,13 @@ static int mfdes_read_cert_file_once(const DesfireContext_t *base_dctx, DesfireS
     }
 
     *cert_buf_len = 0;
-    res = DesfireReadFile(&dctx, fid, 0, 0, cert_buf, cert_buf_len);
+    res = DesfireReadFile(&dctx, fid, 0, 0, cert_buf, cert_max_len, cert_buf_len);
     return res;
 }
 
 static int mfdes_read_cert_file_desfire(const DesfireContext_t *base_dctx, DesfireSecureChannel securechann,
                                         uint8_t fid, bool noauth, bool force_auth, bool verbose,
-                                        uint8_t *cert_buf, size_t *cert_buf_len) {
+                                        uint8_t *cert_buf, size_t cert_max_len, size_t *cert_buf_len) {
     if (base_dctx == NULL || cert_buf == NULL || cert_buf_len == NULL) {
         return PM3_EINVARG;
     }
@@ -10968,7 +10972,7 @@ static int mfdes_read_cert_file_desfire(const DesfireContext_t *base_dctx, Desfi
     int res = PM3_SUCCESS;
     if (noauth || !force_auth) {
         res = mfdes_read_cert_file_once(base_dctx, securechann, fid, false, verbose,
-                                        cert_buf, cert_buf_len, &auth_needed);
+                                        cert_buf, cert_max_len, cert_buf_len, &auth_needed);
         if (res == PM3_SUCCESS) {
             return PM3_SUCCESS;
         }
@@ -10983,7 +10987,7 @@ static int mfdes_read_cert_file_desfire(const DesfireContext_t *base_dctx, Desfi
     }
 
     res = mfdes_read_cert_file_once(base_dctx, securechann, fid, true, verbose,
-                                    cert_buf, cert_buf_len, NULL);
+                                    cert_buf, cert_max_len, cert_buf_len, NULL);
     return res;
 }
 
@@ -11660,7 +11664,7 @@ static int CmdHF14ADesVerifyCert(const char *Cmd) {
     field_active = true;
 
     res = mfdes_read_cert_file_desfire(&dctx, (DesfireSecureChannel)securechann, cert_fid,
-                                       noauth, force_auth, verbose, cert_buf, &cert_buf_len);
+                                       noauth, force_auth, verbose, cert_buf, DESFIRE_BUFFER_SIZE, &cert_buf_len);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Certificate file read " _RED_("failed") ". Result: %d", res);
         retval = res;
@@ -11690,7 +11694,7 @@ static int CmdHF14ADesVerifyCert(const char *Cmd) {
         DesfireSetKeyNoClear(&aes_dctx, aes_dctx.keyNum, T_AES, zero_key);
         cert_buf_len = 0;
         int read_res = mfdes_read_cert_file_desfire(&aes_dctx, (DesfireSecureChannel)securechann, cert_fid,
-                                                    false, true, verbose, cert_buf, &cert_buf_len);
+                                                    false, true, verbose, cert_buf, DESFIRE_BUFFER_SIZE, &cert_buf_len);
         if (read_res == PM3_SUCCESS && cert_buf_len > 0) {
             if (verbose) {
                 PrintAndLogEx(INFO, "  retry file size....: " _YELLOW_("%zu bytes"), cert_buf_len);

@@ -188,7 +188,7 @@ static bool hrt_read_and_parse_application_info(DesfireContext_t *dctx, hrt_trav
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t len = 0;
 
-    if (DesfireReadFile(dctx, HRT_APPLICATION_INFO_FILE_ID, 0, HRT_APPLICATION_INFO_LEN, buf, &len) != PM3_SUCCESS) {
+    if (DesfireReadFile(dctx, HRT_APPLICATION_INFO_FILE_ID, 0, HRT_APPLICATION_INFO_LEN, buf, sizeof(buf), &len) != PM3_SUCCESS) {
         return false;
     }
 
@@ -434,31 +434,31 @@ static bool hrt_read_card(DesfireContext_t *dctx, const hrt_application_t *appli
 
     // File 0x00: Control info
     len = 0;
-    if (DesfireReadFile(dctx, HRT_CONTROL_INFO_FILE_ID, 0, hrt_control_info_len(application->version), buf, &len) == PM3_SUCCESS) {
+    if (DesfireReadFile(dctx, HRT_CONTROL_INFO_FILE_ID, 0, hrt_control_info_len(application->version), buf, sizeof(buf), &len) == PM3_SUCCESS) {
         hrt_travelcard_set_control_info(card, buf, len);
     }
 
     // File 0x01: Period pass
     len = 0;
-    if (DesfireReadFile(dctx, HRT_PERIOD_PASS_FILE_ID, 0, hrt_period_pass_len(application->version), buf, &len) == PM3_SUCCESS) {
+    if (DesfireReadFile(dctx, HRT_PERIOD_PASS_FILE_ID, 0, hrt_period_pass_len(application->version), buf, sizeof(buf), &len) == PM3_SUCCESS) {
         hrt_travelcard_set_period_pass(card, buf, len);
     }
 
     // File 0x02: Stored value
     len = 0;
-    if (DesfireReadFile(dctx, HRT_STORED_VALUE_FILE_ID, 0, hrt_stored_value_len(application->version), buf, &len) == PM3_SUCCESS) {
+    if (DesfireReadFile(dctx, HRT_STORED_VALUE_FILE_ID, 0, hrt_stored_value_len(application->version), buf, sizeof(buf), &len) == PM3_SUCCESS) {
         hrt_travelcard_set_stored_value(card, buf, len);
     }
 
     // File 0x03: eTicket
     len = 0;
-    if (DesfireReadFile(dctx, HRT_ETICKET_FILE_ID, 0, hrt_eticket_len(application->version), buf, &len) == PM3_SUCCESS) {
+    if (DesfireReadFile(dctx, HRT_ETICKET_FILE_ID, 0, hrt_eticket_len(application->version), buf, sizeof(buf), &len) == PM3_SUCCESS) {
         hrt_travelcard_set_eticket(card, buf, len);
     }
 
     // File 0x04: History records
     len = 0;
-    if (DesfireReadRecords(dctx, HRT_HISTORY_FILE_ID, 0, 0, buf, &len) == PM3_SUCCESS) {
+    if (DesfireReadRecords(dctx, HRT_HISTORY_FILE_ID, 0, 0, buf, sizeof(buf), &len) == PM3_SUCCESS) {
         hrt_travelcard_set_history(card, buf, len);
     }
 

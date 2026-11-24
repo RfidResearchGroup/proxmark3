@@ -39,7 +39,7 @@ typedef struct {
 } CmdHeaderLengths_t;
 
 void DesfireSecureChannelEncode(DesfireContext_t *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen);
-void DesfireSecureChannelDecode(DesfireContext_t *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t respcode, uint8_t *dstdata, size_t *dstdatalen);
+int DesfireSecureChannelDecode(DesfireContext_t *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t respcode, uint8_t *dstdata, size_t dst_max_len, size_t *dstdatalen);
 
 bool PrintChannelModeWarning(uint8_t cmd, DesfireSecureChannel secureChannel, DesfireCommandSet cmdSet, DesfireCommunicationMode commMode);
 

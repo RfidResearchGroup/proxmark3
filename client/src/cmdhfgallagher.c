@@ -248,7 +248,7 @@ static uint32_t find_available_gallagher_aid(DesfireContext_t *ctx, bool verbose
     uint8_t aid_buf[DESFIRE_BUFFER_SIZE] = {0};
     size_t aid_buf_len = 0;
 
-    res = DesfireGetAIDList(ctx, aid_buf, &aid_buf_len);
+    res = DesfireGetAIDList(ctx, aid_buf, sizeof(aid_buf), &aid_buf_len);
     if (res != PM3_SUCCESS) {
         PM3_RET_ERR(0, "Failed retrieving AID list");
     }
@@ -337,7 +337,7 @@ static int hfgal_read_creds_app(DesfireContext_t *ctx, uint32_t aid, uint8_t *si
     uint8_t buf[16] = {0};
     size_t read_len = 0;
     DesfireSetCommMode(ctx, DCMEncrypted);
-    res = DesfireReadFile(ctx, 0, 0, 16, buf, &read_len);
+    res = DesfireReadFile(ctx, 0, 0, 16, buf, sizeof(buf), &read_len);
     PM3_RET_IF_ERR_WITH_MSG(res, "Failed reading file 0 in AID %06X", aid);
 
     // Check file contained 16 bytes of data
@@ -517,7 +517,7 @@ static int hfgal_read_desfire_cad(DesfireContext_t *ctx, uint8_t *dest_buf,
     // Read up to 3 files with 6x 6-byte entries each
     for (uint8_t i = 0; i < 3; i++) {
         size_t read_len;
-        res = DesfireReadFile(ctx, i, 0, 36, &dest_buf[i * 36], &read_len);
+        res = DesfireReadFile(ctx, i, 0, 36, &dest_buf[i * 36], dest_buf_len - i * 36, &read_len);
         if (res != PM3_SUCCESS && res != PM3_EAPDU_FAIL) {
             PM3_RET_ERR(res, "Failed reading file %d in Card Application Directory (AID %06X)", i, DESFIRE_CAD_AID);
         }

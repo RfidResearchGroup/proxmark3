@@ -836,10 +836,21 @@ static void DesfireISODecode(DesfireContext_t *ctx, uint8_t *srcdata, size_t src
     free(data);
 }
 
-void DesfireSecureChannelDecode(DesfireContext_t *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t respcode, uint8_t *dstdata, size_t *dstdatalen) {
+int DesfireSecureChannelDecode(DesfireContext_t *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t respcode, uint8_t *dstdata, size_t dst_max_len, size_t *dstdatalen) {
+    *dstdatalen = 0;
+
+    // Every decode path below writes at most srcdatalen bytes to dstdata: the
+    // plain channels memcpy the input, the MACed channels strip a trailer, and
+    // the encrypted channels decrypt in place into dstdata. So one check of the
+    // card-controlled input length against the destination capacity bounds all
+    // of them.
+    if (srcdatalen > dst_max_len) {
+        return PM3_EOVFLOW;
+    }
+
     if (ctx->cmdSet == DCCISO) {
         DesfireISODecode(ctx, srcdata, srcdatalen, dstdata, dstdatalen);
-        return;
+        return PM3_SUCCESS;
     }
 
     switch (ctx->secureChannel) {
@@ -860,6 +871,7 @@ void DesfireSecureChannelDecode(DesfireContext_t *ctx, uint8_t *srcdata, size_t 
             *dstdatalen = srcdatalen;
             break;
     }
+    return PM3_SUCCESS;
 }
 
 bool PrintChannelModeWarning(uint8_t cmd, DesfireSecureChannel secureChannel, DesfireCommandSet cmdSet, DesfireCommunicationMode commMode) {
