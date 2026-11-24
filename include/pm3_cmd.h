@@ -765,6 +765,12 @@ typedef struct {
     bool off;
 } PACKED tearoff_params_t;
 
+// CMD_HF_TOPAZ_SIMULATE. The tag memory is in emulator memory, block 0 first
+typedef struct {
+    uint8_t hr[2];      // header ROM, HR0 HR1
+    uint16_t size;      // 120 for a Topaz 96 (static memory), 512 for a Topaz 512 (dynamic memory)
+} PACKED topaz_sim_t;
+
 // when writing to SPIFFS
 typedef struct {
     bool append : 1;
@@ -1361,6 +1367,9 @@ typedef struct {
 
 // For Atmel CryptoRF
 #define CMD_HF_CRYPTORF_SIM 0x0820
+
+// For Topaz (NFC Forum Type 1 Tag)
+#define CMD_HF_TOPAZ_SIMULATE 0x0830
 
 // Gen 3 magic cards
 #define CMD_HF_MIFARE_GEN3UID 0x0850

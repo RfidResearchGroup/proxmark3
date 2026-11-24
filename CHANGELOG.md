@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hf topaz sim` - simulates a Topaz 96 or a Topaz 512 from a dump file (@matrix)
+- Fixed the ISO14443-A simulations and sniffing - the Miller decoder did not find a start bit whose pause shows in one sample, split or a sample late, and did not take a 3 tick pause shifted right (@matrix)
+- Fixed the ISO14443-A simulations on the PM3 boards with an XC2S30 - a reader frame read late by the ARM got a start time 128 carrier periods late (@matrix)
+- Fixed the trace of the ISO14443-A simulations - a reader frame of 57 bytes and more got wrong times (@matrix)
 - Fixed `hf gallagher clone` - the client took the value of `-n`, `--sector` and `--cadsector` from the next option, crashed with `-n` and could read past a heap buffer (@matrix)
 - Fixed `hf gallagher clone -c` - the MES had the UID unreversed, a blank card got no readable MAD, a Gallagher MAD was not updated, sectors 17-31 were left out of MAD2 and no CAD was written (@matrix)
 - Fixed `hf 15 sim` - a short `-t` ended up to 500 ms late, a lost connection kept the client waiting and a pm3 that did not stop was reported as done (@Msprg)

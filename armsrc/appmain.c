@@ -51,6 +51,7 @@
 #include "iso14443b.h"
 #include "iso15693.h"
 #include "thinfilm.h"
+#include "topazsim.h"
 #include "felica.h"
 #include "felicasim.h"
 #include "hitag2.h"
@@ -2642,6 +2643,14 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_HIDCONFIG_SIM: {
             SimulateHIDConfigCard((const hid_sim_payload_t *) packet->data.asBytes);
+            break;
+        }
+        case CMD_HF_TOPAZ_SIMULATE: {
+            if (packet->length < sizeof(topaz_sim_t)) {
+                reply_ng(CMD_HF_TOPAZ_SIMULATE, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            SimulateTopazTag((const topaz_sim_t *) packet->data.asBytes);
             break;
         }
         case CMD_HF_ISO14443A_ANTIFUZZ: {
