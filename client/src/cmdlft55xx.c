@@ -4271,7 +4271,9 @@ bool AcquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password, u
         return false;
     }
 
-    getSamples(12000, false);
+    if (getSamplesEx(0, 12000, false, true) != PM3_SUCCESS) {
+        return false;
+    }
     bool ok = !getSignalProperties()->isnoise;
 
     config.usepwd = pwdmode;
