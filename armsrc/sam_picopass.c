@@ -27,7 +27,7 @@
 #include "commonutil.h"
 #include "ticks_apis.h"
 #include "dbprint.h"
-#include "i2c.h"
+#include "smartcard.h"
 #include "iso15693.h"
 #include "protocols.h"
 #include "optimized_cipher.h"
@@ -650,7 +650,7 @@ int sam_picopass_get_pacs(PacketCommandNG *c) {
     // CMD_HF_SAM_SC. Ensure the next SC request reopens instead of sending
     // into a reset SAM with a stale routing/session flag.
     sam_sc_session_invalidate();
-    I2C_Reset_EnterMainProgram();
+    SmartCard_ResetAdapter();
 
     set_tracing(true);
     StartTicks();

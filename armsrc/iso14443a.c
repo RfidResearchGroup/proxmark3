@@ -2867,14 +2867,16 @@ int EmGetCmdTimeout(uint8_t *received, uint16_t received_max_len, uint16_t *len,
     uint8_t b = (uint8_t)FPGA_SSC_RX_Value();
     (void)b;
 
-    uint8_t flip = 0;
-    uint16_t checker = 4000;
+    // kept across calls: a call ends at every reader frame and when the
+    // field drops, so local counters may never reach the client check
+    static uint8_t flip = 0;
+    static uint16_t checker = 4000;
     for (;;) {
         WDT_HIT();
 
         // ever 3 * 4000,  check if we got any data from client
-        // takes long time,  usually messes with simualtion
-        if (flip == 3) {
+        // takes long time,  usually messes with simualtion: only between frames
+        if (flip >= 3 && Uart.state == STATE_14A_UNSYNCD) {
             if (data_available()) {
                 Dbprintf("----------- " _GREEN_("Breaking / Data") " ----------");
                 return 1;
@@ -2884,6 +2886,8 @@ int EmGetCmdTimeout(uint8_t *received, uint16_t received_max_len, uint16_t *len,
 
         // button press, takes a bit time, might mess with simualtion
         if (checker-- == 0) {
+            // reloaded first: a return below leaves it ready for the next call
+            checker = 4000;
             if (BUTTON_PRESS()) {
                 Dbprintf("----------- " _GREEN_("Button pressed, user aborted") " ----------");
                 return 1;
@@ -2898,7 +2902,6 @@ int EmGetCmdTimeout(uint8_t *received, uint16_t received_max_len, uint16_t *len,
             }
 
             flip++;
-            checker = 4000;
         }
 
 
@@ -5208,7 +5211,8 @@ void DetectNACKbug(void) {
 
                 sync_cycles = (sync_cycles - nt_distance) / elapsed_prng_sequences;
 
-                if (sync_cycles <= 0) {
+                // as in ReaderMifare(): below 8 the loop above never moves sync_time on
+                if (sync_cycles <= 10) {
                     sync_cycles += PRNG_SEQUENCE_LENGTH;
                 }
 

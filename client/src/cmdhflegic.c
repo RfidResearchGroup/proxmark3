@@ -899,13 +899,13 @@ static int CmdLegicSim(const char *Cmd) {
     bool abort_by_keyboard = false;
     for (;;) {
         if (abort_by_keyboard == false && kbd_enter_pressed()) {
-            PrintAndLogEx(INFO, "Key pressed, please wait about a minute for the pm3 to stop...");
+            PrintAndLogEx(INFO, "Key pressed, waiting for the pm3 to stop...");
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
             PrintAndLogEx(DEBUG, "Aborted via keyboard!");
             abort_by_keyboard = true;
         }
 
-        if (WaitForResponseTimeout(CMD_HF_LEGIC_SIMULATE, &resp, 1500)) {
+        if (WaitForResponseTimeout(CMD_HF_LEGIC_SIMULATE, &resp, 200)) {
             break;
         }
     }
@@ -1684,6 +1684,7 @@ static int CmdLegicESave(const char *Cmd) {
     }
 
     pm3_save_dump(filename, data, numofbytes, jsfLegic_v2);
+    free(data);
     return PM3_SUCCESS;
 }
 

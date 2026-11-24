@@ -271,7 +271,7 @@ size_t removeParity(uint8_t *bits, size_t startIdx, uint8_t pLen, uint8_t pType,
     return bitCnt;
 }
 
-static size_t removeEm410xParity(uint8_t *bits, size_t startIdx, size_t *size, bool *validShort, bool *validShortExtended, bool *validLong) {
+static size_t removeEm410xParity(uint8_t *bits, size_t startIdx, size_t fmt, size_t buflen, bool *validShort, bool *validShortExtended, bool *validLong) {
     uint32_t parityWd = 0;
     size_t bitCnt = 0;
     bool validColParity = false;
@@ -282,7 +282,7 @@ static size_t removeEm410xParity(uint8_t *bits, size_t startIdx, size_t *size, b
     *validLong = false;
 
     uint8_t blen = 55;
-    switch (*size) {
+    switch (fmt) {
         case 128:
             blen = 110;
             break;
@@ -292,6 +292,12 @@ static size_t removeEm410xParity(uint8_t *bits, size_t startIdx, size_t *size, b
         default:
             blen = 55;
             break;
+    }
+
+    // fmt selects the format, it does not bound the reads below
+    if (startIdx + blen > buflen) {
+        if (g_debugMode >= 1) prnt("DEBUG: (removeEm410xParity) need %u bits from %zu, buffer holds %zu", blen, startIdx, buflen);
+        return 0;
     }
 
     uint16_t parityCol[4] = { 0, 0, 0, 0 };
@@ -2284,17 +2290,24 @@ int Em410xDecode(uint8_t *bits, size_t *size, size_t *start_idx, uint32_t *hi, u
     if (bits[1] > 1) return -1;
     if (*size < 64) return -2;
 
+    // *size is the buffer length on entry and the decoded length on exit, and it
+    // gets reused in between - keep the one value that bounds the buffer
+    const size_t buflen = *size;
+
     *start_idx = 0;
 
     bool adjust = false;
-    if (*size < 128) {
+    if (buflen < 128) {
         adjust = true;
     }
 
     // preamble 0111111111
     // include 0 in front to help get start pos
     uint8_t preamble[] = {0, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-    if (!preambleSearch(bits, preamble, sizeof(preamble), size, start_idx))
+
+    // preambleSearch() reports the preamble repeat period back through this
+    size_t period = buflen;
+    if (!preambleSearch(bits, preamble, sizeof(preamble), &period, start_idx))
         return -4;
 
     bool validShort = false;
@@ -2304,7 +2317,7 @@ int Em410xDecode(uint8_t *bits, size_t *size, size_t *start_idx, uint32_t *hi, u
     // detect sledge of 0x05's
     int fix = -1;
     uint8_t fives[] = {0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
-    for (size_t x = 0; x < *size - sizeof(fives); x += 1) {
+    for (size_t x = 0; x + sizeof(fives) < period; x += 1) {
         if (memcmp(bits + x, fives, sizeof(fives)) == 0) {
             // save first occasion
             if (fix == -1) {
@@ -2319,8 +2332,9 @@ int Em410xDecode(uint8_t *bits, size_t *size, size_t *start_idx, uint32_t *hi, u
         sidx--;
     }
     // not 128 or 55..
+    size_t fmt = period;
     if (fix != -1) {
-        *size = 80;
+        fmt = 80;
     }
 
 #ifndef ON_DEVICE
@@ -2329,7 +2343,7 @@ int Em410xDecode(uint8_t *bits, size_t *size, size_t *start_idx, uint32_t *hi, u
 
 
     // HACK
-    *size = removeEm410xParity(bits, sidx, size, &validShort, &validShortExtended, &validLong);
+    *size = removeEm410xParity(bits, sidx, fmt, buflen, &validShort, &validShortExtended, &validLong);
 
     if (validShort) {
         // std em410x format
@@ -2349,6 +2363,29 @@ int Em410xDecode(uint8_t *bits, size_t *size, size_t *start_idx, uint32_t *hi, u
     return -6;
 }
 
+// manchester decode the bits between two HID preambles, false if not manchester
+static bool HIDdecodeManchester(const uint8_t *bits, size_t len, uint32_t *hi2, uint32_t *hi, uint32_t *lo) {
+    uint32_t h2 = 0, h = 0, l = 0;
+    // final loop, go over previously decoded FSK data and manchester decode into usable tag ID
+    for (size_t idx = 0; idx < len; idx += 2) {
+        if (bits[idx] == bits[idx + 1]) {
+            return false; //not manchester data
+        }
+        h2 = (h2 << 1) | (h >> 31);
+        h = (h << 1) | (l >> 31);
+        //Then, shift in a 0 or one into low
+        l <<= 1;
+        if (bits[idx] && !bits[idx + 1]) // 1 0
+            l |= 1;
+        else // 0 1
+            l |= 0;
+    }
+    *hi2 = h2;
+    *hi = h;
+    *lo = l;
+    return true;
+}
+
 // loop to get raw HID waveform then FSK demodulate the TAG ID from it
 int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32_t *lo, int *waveStartIdx) {
     //make sure buffer has data
@@ -2363,30 +2400,26 @@ int HIDdemodFSK(uint8_t *dest, size_t *size, uint32_t *hi2, uint32_t *hi, uint32
     if (*size < 96 * 2) return -3;
 
     // 00011101 bit pattern represent start of frame, 01 pattern represents a 0 and 10 represents a 1
+    size_t bits_len = *size;
     size_t start_idx = 0;
     uint8_t preamble[] = {0, 0, 0, 1, 1, 1, 0, 1};
-    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &start_idx))
+    if (!preambleSearchEx(dest, preamble, sizeof(preamble), size, &start_idx, true))
         return -4; //preamble not found
 
     // wrong size?  (between to preambles)
-    //if (*size != 96) return -5;
+    // a frame is 96 bits, 192 for long formats, else try from the next preamble
+    for (size_t next_idx = start_idx + 1; next_idx < bits_len - sizeof(preamble); next_idx++) {
+        if (memcmp(dest + next_idx, preamble, sizeof(preamble)) != 0)
+            continue;
 
-    size_t num_start = start_idx + sizeof(preamble);
-    // final loop, go over previously decoded FSK data and manchester decode into usable tag ID
-    for (size_t idx = num_start; (idx - num_start) < *size - sizeof(preamble); idx += 2) {
-        if (dest[idx] == dest[idx + 1]) {
-            return -5; //not manchester data
-        }
-        *hi2 = (*hi2 << 1) | (*hi >> 31);
-        *hi = (*hi << 1) | (*lo >> 31);
-        //Then, shift in a 0 or one into low
-        *lo <<= 1;
-        if (dest[idx] && !dest[idx + 1]) // 1 0
-            *lo |= 1;
-        else // 0 1
-            *lo |= 0;
+        *size = next_idx - start_idx;
+        if ((*size == 96 || *size == 192) &&
+                HIDdecodeManchester(dest + start_idx + sizeof(preamble), *size - sizeof(preamble), hi2, hi, lo))
+            return (int)start_idx;
+
+        start_idx = next_idx;
     }
-    return (int)start_idx;
+    return -5;
 }
 
 int detectIOProx(uint8_t *dest, size_t *size, int *waveStartIdx) {

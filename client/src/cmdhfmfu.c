@@ -6534,33 +6534,33 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(INFO, "-----------------------------------");
+    PrintAndLogEx(INFO, "-------------------------------------");
     PrintAndLogEx(INFO, " UID 4b... " _YELLOW_("%s"), sprint_hex(uid, 4));
     PrintAndLogEx(INFO, " UID 7b... " _YELLOW_("%s"), sprint_hex(uid, 7));
-    PrintAndLogEx(INFO, "-----------------------------------");
-    PrintAndLogEx(INFO, " algo               pwd       pack");
-    PrintAndLogEx(INFO, "-----------------------------+-----");
-    PrintAndLogEx(INFO, " Transport EV1..... %08X | %04X", ul_ev1_pwdgenA(uid), ul_ev1_packgenA(uid));
-    PrintAndLogEx(INFO, " Amiibo............ %08X | %04X", ul_ev1_pwdgenB(uid), ul_ev1_packgenB(uid));
-    PrintAndLogEx(INFO, " Lego Dimension.... %08X | %04X", ul_ev1_pwdgenC(uid), ul_ev1_packgenC(uid));
-    PrintAndLogEx(INFO, " XYZ 3D printer.... %08X | %04X", ul_ev1_pwdgenD(uid), ul_ev1_packgenD(uid));
-    PrintAndLogEx(INFO, " Xiaomi purifier... %08X | %04X", ul_ev1_pwdgenE(uid), ul_ev1_packgenE(uid));
-    PrintAndLogEx(INFO, " NTAG tools........ %08X | %04X", ul_ev1_pwdgenF(uid), ul_ev1_packgen_def(uid));
+    PrintAndLogEx(INFO, "-------------------------------------");
+    PrintAndLogEx(INFO, " algo                 pwd        pack");
+    PrintAndLogEx(INFO, "-------------------------------+-----");
+    PrintAndLogEx(INFO, " Transport EV1....... %08X | %04X", ul_ev1_pwdgenA(uid), ul_ev1_packgenA(uid));
+    PrintAndLogEx(INFO, " Amiibo.............. %08X | %04X", ul_ev1_pwdgenB(uid), ul_ev1_packgenB(uid));
+    PrintAndLogEx(INFO, " Lego Dimension...... %08X | %04X", ul_ev1_pwdgenC(uid), ul_ev1_packgenC(uid));
+    PrintAndLogEx(INFO, " XYZ 3D printer...... %08X | %04X", ul_ev1_pwdgenD(uid), ul_ev1_packgenD(uid));
+    PrintAndLogEx(INFO, " Xiaomi purifier..... %08X | %04X", ul_ev1_pwdgenE(uid), ul_ev1_packgenE(uid));
+    PrintAndLogEx(INFO, " NTAG tools.......... %08X | %04X", ul_ev1_pwdgenF(uid), ul_ev1_packgen_def(uid));
     if (philips_mfg[0] != 0) {
-        PrintAndLogEx(INFO, " Philips Toothbrush | %08X | %04X", ul_ev1_pwdgenG(uid, philips_mfg), ul_ev1_packgenG(uid, philips_mfg));
+        PrintAndLogEx(INFO, " Philips Toothbrush.. %08X | %04X", ul_ev1_pwdgenG(uid, philips_mfg), ul_ev1_packgenG(uid, philips_mfg));
     }
-    PrintAndLogEx(INFO, "-----------------------------+-----");
+    PrintAndLogEx(INFO, "-------------------------------+-----");
     PrintAndLogEx(INFO, _CYAN_("Vingcard"));
     uint64_t key = 0;
     mfc_algo_saflok_one(uid, 0, 0, &key);
-    PrintAndLogEx(INFO, " Saflok algo        | %012" PRIX64, key);
+    PrintAndLogEx(INFO, " Saflok algo......... %012" PRIX64, key);
     PrintAndLogEx(INFO, " SALTO algo");
     PrintAndLogEx(INFO, " Dorma Kaba algo");
     PrintAndLogEx(INFO, " STiD algo");
     PrintAndLogEx(INFO, "-------------------------------------");
     key = 0;
     mfc_algo_bambu_one(uid, 0, MF_KEY_A, &key);
-    PrintAndLogEx(INFO, " Bambu........ %012" PRIX64, key);
+    PrintAndLogEx(INFO, " Bambu............... %012" PRIX64, key);
     return PM3_SUCCESS;
 }
 

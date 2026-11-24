@@ -340,7 +340,7 @@ reg [3:0] sub_carrier_cnt;
 //       response window of 1128 - 774 = 354 ticks.
 
 // reset on a pause in listen mode. I.e. the counter starts when the pause is over:
-assign fdt_reset = ~after_hysteresis && mod_type == `FPGA_HF_ISO14443A_TAGSIM_LISTEN;
+wire fdt_reset = ~after_hysteresis && mod_type == `FPGA_HF_ISO14443A_TAGSIM_LISTEN;
 
 always @(negedge adc_clk)
 begin

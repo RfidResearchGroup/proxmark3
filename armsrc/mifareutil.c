@@ -686,8 +686,8 @@ static int mifare_ultra_readblockEx(uint8_t blockNo, uint8_t *blockData) {
         if (bt[0] != receivedAnswer[16] || bt[1] != receivedAnswer[17]) {
             if (g_dbglevel >= DBG_ERROR) {
                 Dbprintf("Cmd CRC response error.");
-                return PM3_ECRC;
             }
+            return PM3_ECRC;
         }
     }
 

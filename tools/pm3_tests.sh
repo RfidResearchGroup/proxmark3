@@ -475,7 +475,7 @@ while true; do
       if ! CheckExecute "data rawdemod ar samples"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_keri.pm3; data setdebugmode -1; data rawdemod --ar --samples 1000' 2>&1" "maxLen 1000"; then break; fi
       if ! CheckExecute "data rawdemod am max errors"            "$CLIENTBIN -c 'data load -f traces/lf_EM4102-1.pm3; data setdebugmode -1; data rawdemod --am --max 300' 2>&1" "maxErr 300"; then break; fi
       if ! CheckExecute "mfu pwdgen test"         "$CLIENTBIN -c 'hf mfu pwdgen --test'" "Selftest ok"; then break; fi
-      if ! CheckExecute "mfu pwdgen philips"      "$CLIENTBIN -c 'hf mfu pwdgen --uid 040D4B5AC57181 --mfg 3231303632382035324D'" "Philips Toothbrush \\| FBCFACC1"; then break; fi
+      if ! CheckExecute "mfu pwdgen philips"      "$CLIENTBIN -c 'hf mfu pwdgen --uid 040D4B5AC57181 --mfg 3231303632382035324D'" "Philips Toothbrush\\.{2} FBCFACC1"; then break; fi
       if ! CheckExecute "mfu keygen test"         "$CLIENTBIN -c 'hf mfu keygen --uid 11223344556677'" "80 B1 C2 71 D8 A0"; then break; fi
       if ! CheckExecute "jooki encode test"       "$CLIENTBIN -c 'hf jooki encode --test'" "04 28 F4 DA F0 4A 81  \( ok \)"; then break; fi
       if ! CheckExecute "vigik signature selftest" "$CLIENTBIN -c 'hf mf view --selftest'" "selftest \\( ok \\)"; then break; fi
@@ -506,7 +506,7 @@ while true; do
       if ! CheckExecute "nfc decode test vcard"           "$CLIENTBIN -c 'nfc decode -d d20ca3746578742f782d7643617264424547494e3a56434152440a56455253494f4e3a332e300a4e3a43687269733b4963656d616e3b3b3b0a464e3a476f7468656e627572670a5245563a323032312d30362d32345432303a31353a30385a0a6974656d322e582d4142444154453b747970653d707265663a323032302d30362d32340a4954454d322e582d41424c4142454c3a5f24213c416e6e69766572736172793e21245f0a454e443a56434152440a'" "END:VCARD"; then break; fi
       if ! CheckExecute "nfc decode test apple wallet"    "$CLIENTBIN -c 'nfc decode -d 031AD10116550077616C6C65743A2F2F61637469766174652F6E6663FE'" "activate/nfc"; then break; fi
       if ! CheckExecute "nfc decode test signature"       "$CLIENTBIN -c 'nfc decode -d 03FF010194113870696C65742E65653A656B616172743A3266195F26063132303832325904202020205F28033233335F2701316E1B5A13333038363439303039303030323636343030355304EBF2CE704103000000AC536967010200803A2448FCA7D354A654A81BD021150D1A152D1DF4D7A55D2B771F12F094EAB6E5E10F2617A2F8DAD4FD38AFF8EA39B71C19BD42618CDA86EE7E144636C8E0E7CFC4096E19C3680E09C78A0CDBC05DA2D698E551D5D709717655E56FE3676880B897D2C70DF5F06ECE07C71435255144F8EE41AF110E7B180DA0E6C22FB8FDEF61800025687474703A2F2F70696C65742E65652F6372742F33303836343930302D303030312E637274FE'" "30864900-0001.crt"; then break; fi
-      if ! CheckExecute "nfc decode test openprinter tag" "$CLIENTBIN -c 'nfc decode -d 03FF012F91013A55046E756D616B6572732E636F6D2F70726F64756374732F6162732D66696C616D656E743F76617269616E743D3436393434323937333836323932521CD26170706C69636174696F6E2F766E642E6F70656E7072696E74746167A10218AFBF041B000007D0FCAB45F9080009020A70414253204C656D6F6E2059656C6C6F770B684E756D616B6572730E1A69094200101903E81119041A1218F01343F9A800181DF93C29182218F01823190104182418AA1825185A18261864FF00'" "application/vnd.openprinttag"; then break; fi
+      if ! CheckExecute "nfc decode test openprinter tag" "$CLIENTBIN -c 'nfc decode -d 03FF012F91013A55046E756D616B6572732E636F6D2F70726F64756374732F6162732D66696C616D656E743F76617269616E743D3436393434323937333836323932521CD26170706C69636174696F6E2F766E642E6F70656E7072696E74746167A10218AFBF041B000007D0FCAB45F9080009020A70414253204C656D6F6E2059656C6C6F770B684E756D616B6572730E1A69094200101903E81119041A1218F01343F9A800181DF93C29182218F01823190104182418AA1825185A18261864FF00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000A000000000000000000000000000000000000000000000000000000000000000000000FE'" "application/vnd.openprinttag"; then break; fi
       if ! CheckExecute "nfc decode null tlv run"                "$CLIENTBIN -c 'nfc decode -d 0000000300FE'" "NDEF NULL block --- x 3"; then break; fi
       if ! CheckExecute "nfc decode lock control"                "$CLIENTBIN -c 'nfc decode -d 0103A01044FE'" "number of bytes that each dynamic lock bit locks\.\.\. 16"; then break; fi
       if ! CheckExecute "nfc decode lock control size 0"         "$CLIENTBIN -c 'nfc decode -d 0103A00044FE'" "Lock Area size in bits\.{10} 256 \( 32 bytes \)"; then break; fi
@@ -772,7 +772,11 @@ while true; do
       if ! CheckExecute "lf t55xx cfg watchnet"             "$CLIENTBIN -c 'lf t55xx info -c 00107060'" "WatchNET"; then break; fi
       if ! CheckExecute "lf t55xx cfg keri nxt"             "$CLIENTBIN -c 'lf t55xx info -c 00107080'" "Keri NXT"; then break; fi
       if ! CheckExecute "lf t55xx cfg ict"                  "$CLIENTBIN -c 'lf t55xx info -c 001070E0'" "Config block match\\.\\.\\. ICT"; then break; fi
-      # block 0 reads saved after 'lf t55xx detect --r0'. info -1 decodes block 0 with the config detect found
+
+      if ! CheckExecute "lf T55 p1detect test"              "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_page1_trace.pm3; lf t55xx p1detect -1'" "T55xx chip found"; then break; fi
+      if ! CheckExecute "lf T55 p1detect reject hitag s"    "if ! $CLIENTBIN -c 'data load -f traces/lf_hitag_s_page1.pm3; lf t55xx p1detect -1' 2>&1 | grep -q 'T55xx chip found'; then echo OK; fi" "OK"; then break; fi
+
+# block 0 reads saved after 'lf t55xx detect --r0'. info -1 decodes block 0 with the config detect found
       if ! CheckExecute "lf T55 detect ask rf32"            "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_ask_rf32.pm3; lf t55xx detect -1; lf t55xx info -1'" "000880E0 - "; then break; fi
       if ! CheckExecute "lf T55 detect ask rf32 st"         "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_ask_rf32_st.pm3; lf t55xx detect -1; lf t55xx info -1'" "000880E8 - "; then break; fi
       if ! CheckExecute "lf T55 detect fsk2a rf50"          "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_blk0_fsk2a_rf50.pm3; lf t55xx detect -1; lf t55xx info -1'" "001070E0 - "; then break; fi

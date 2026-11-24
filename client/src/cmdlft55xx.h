@@ -169,7 +169,8 @@ typedef struct {
     uint8_t psk_carrier;       // observed psk subcarrier in field clocks, 2/4/8. 0 = not measured
     uint8_t broadcast_blocks;  // measured blocks per regular-read cycle. 0 = not measured
     bool psk3_favoured;        // data blocks lean psk3, but do not settle it
-    bool pwd_known;            // usepwd below reflects a live detect, not a default
+    bool pwd_known;            // a live detect set pwd_bit. Clear it if pwd_bit or pwd may be wrong
+    bool pwd_bit;              // true if the last detect read block 0 in password mode
     bool usepwd;
     uint32_t pwd;
     enum {
