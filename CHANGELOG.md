@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `lf search` - stop on acquisition or sample download errors instead of decoding an earlier capture
 - Fixed sample downloads - bound offset reads to remaining device memory and use heap buffers for large PM5 captures
 - Fixed `hw timeout` on macOS and Linux - keep POSIX timeouts valid at 1000 ms and above
 - Fixed `hf 14a sim` - a SELECT by AID got `90 00` whatever the AID, it now gets file not found, `6A 82` (@matrix)
