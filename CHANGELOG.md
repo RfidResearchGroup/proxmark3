@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Fixed `hf felica` on PM5 - use shallow ASK modulation on `pwr_oe1`, sync TX timing to `ssp_cnt`, add post-TX RX blanking, and extend SSC frame sync (@ree-ce)
+- Fixed LF simulation uploads - lengths beyond device memory or the 16-bit wire format are capped with a warning (@adrian-stepien)
 - Fixed PM5 BWM settings - charge, voltage and capacity commands could hang if a preceding RF operation stopped the timing counter (@adrian-stepien)
 - Fixed `lf hitag reader` on PM5 - the first UID read could miss the tag after `hw tune` (@adrian-stepien)
 - Fixed `hw bwm upgrade` - send the final reply before rebooting the BWM so the client can request the PM5 reset over BLE or Wi-Fi (@adrian-stepien)
