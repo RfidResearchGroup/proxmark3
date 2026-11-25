@@ -1823,12 +1823,18 @@ static tag_response_info_t *iso14a_sim_rblock(iso14a_sim_dep_t *dep, const uint8
 }
 
 // The answer of the ISO/IEC 14443-4 types to an APDU, in out, and its length.
-// They hold no application, so a SELECT by DF name (ISO/IEC 7816-4, CLA 00
-// INS A4 P1 04) gets the file not found of a real card. Any other APDU keeps 90 00
-static uint8_t iso14a_sim_generic_answer(const uint8_t *apdu, int len, uint8_t *out) {
+// They hold no application, type 10 only its NDEF Tag Application: a SELECT by
+// DF name (ISO/IEC 7816-4, CLA 00 INS A4 P1 04) of any other gets the file not
+// found of a real card. Any other APDU keeps 90 00
+static uint8_t iso14a_sim_generic_answer(uint8_t tagType, const uint8_t *apdu, int len, uint8_t *out) {
     uint16_t sw = ISO7816_OK;
     if (len >= 5 && apdu[0] == 0x00 && apdu[1] == ISO7816_SELECT_FILE && apdu[2] == 0x04) {
-        sw = ISO7816_FILE_NOT_FOUND;
+        // ST25TA02KB (DS12365 Rev 2, 6.7.1): the NFC Forum Type 4 Tag AID, of
+        // version 2.0 or 1.0, the tag aligns to the reader's (Table 4 note 1)
+        static const uint8_t ndef_aid[] = {0xD2, 0x76, 0x00, 0x00, 0x85, 0x01};
+        if (tagType != 10 || len < 12 || apdu[4] != 7 || memcmp(apdu + 5, ndef_aid, sizeof(ndef_aid)) != 0 || apdu[11] > 0x01) {
+            sw = ISO7816_FILE_NOT_FOUND;
+        }
     }
     out[0] = sw >> 8;
     out[1] = sw & 0xFF;
@@ -2028,7 +2034,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
 
         // ISO/IEC 14443-4 R-block. Only it can ask for the last block again:
         // the answer to any other frame may overwrite the dynamic answer
-        bool rblock = iso4 && tagType != 10 && (receivedCmd[0] & 0xE6) == 0xA2;
+        bool rblock = iso4 && (receivedCmd[0] & 0xE6) == 0xA2;
         if (rblock == false) {
             dep.last_ok = false;
         }
@@ -2623,7 +2629,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
 
             // ST25TA512B  IKEA Rothult
             if (tagType == 10)  {
-                // we replay 90 00 for all commands but the read bin and we deny the verify cmd.
+                // the read bin and the two verify cmd of the lock. Any other block is answered as on the other types
 
                 static const uint8_t default_st25ta_ndef[] = {
                     0x00, 0x1b, 0xd1, 0x01, 0x17, 0x54, 0x02, 0x7a,
@@ -2655,12 +2661,12 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
                     dynamic_response_info.response[1] = 0x90;
                     dynamic_response_info.response[2] = 0x00;
                     dynamic_response_info.response_n = 3;
-                } else {
-                    dynamic_response_info.response[0] = receivedCmd[0];
-                    dynamic_response_info.response[1] = 0x90;
-                    dynamic_response_info.response[2] = 0x00;
-                    dynamic_response_info.response_n = 3;
                 }
+            }
+
+            if (dynamic_response_info.response_n > 0) {
+                // an I-block of the lock: the PICC's next block number (rule D)
+                iso14a_sim_dep_iblock(&dep, receivedCmd[0]);
             } else {
 
                 // Check for ISO 14443A-4 compliant commands, look at left nibble
@@ -2673,7 +2679,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
                         iso14a_sim_dep_iblock(&dep, receivedCmd[0]);
                         uint8_t inf = (receivedCmd[0] & 0x08) ? 2 : 1;
                         dynamic_response_info.response[0] = receivedCmd[0];
-                        dynamic_response_info.response_n = inf + iso14a_sim_generic_answer(receivedCmd + inf, len - 2 - inf, dynamic_response_info.response + inf);
+                        dynamic_response_info.response_n = inf + iso14a_sim_generic_answer(tagType, receivedCmd + inf, len - 2 - inf, dynamic_response_info.response + inf);
                     }
                     break;
 
@@ -2715,7 +2721,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
             if (dynamic_response_info.response_n > 0) {
 
                 // Copy the CID from the reader query (only when CID bit is set in PCB).
-                if (tagType != 10 && (receivedCmd[0] & 0x08))
+                if (receivedCmd[0] & 0x08)
                     dynamic_response_info.response[1] = receivedCmd[1];
 
                 // Add CRC bytes, always used in ISO 14443A-4 compliant cards

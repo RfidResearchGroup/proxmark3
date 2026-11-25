@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 14a sim -t 10` - a SELECT of an application the tag does not hold got `90 00`, it now gets file not found, `6A 82` (@matrix)
+- Fixed `hf 14a sim -t 10` - every block that is not one of the lock's three got `90 00`, R-blocks, chained I-blocks, S(DESELECT) and the CID are now handled as on the other types (@matrix)
 - Removed `sim011.bin` - `sim023.bin`, only the latest SIM module firmware `sim024.bin` is shipped. Older ones are in the git history (@iceman1001)
 - Fixed `hf search` AID hints - a decoy SELECT detects cards answering any AID (DESFire EV2) and shared hints print once (@iceman1001)
 - Fixed `lf t55xx resetread` on PM5 - wait for the full capture and download it without truncating its length to 16 bits (@adrian-stepien)
