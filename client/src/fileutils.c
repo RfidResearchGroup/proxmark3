@@ -31,6 +31,7 @@
 #include "iclass_cmd.h"
 #include "iso15.h"
 #include "hitag.h"
+#include "crypto/libpcrypto.h"  // sha512hash
 
 #ifdef _WIN32
 #include "scandir.h"
@@ -1995,6 +1996,56 @@ int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata,
         PrintAndLogEx(SUCCESS, "Loaded " _YELLOW_("%zu") " bytes from binary file `" _YELLOW_("%s") "`", bytes_read, preferredName);
     }
     return PM3_SUCCESS;
+}
+
+int checkFileSHA512(const char *sha512filename, uint8_t *data, size_t datalen) {
+
+    PrintAndLogEx(INPLACE, "Checking integrity  " _YELLOW_("%s"), sha512filename);
+
+    const char *err = NULL;
+    int res = PM3_ESOFT;
+    char *hashstring = NULL;
+    size_t sha512_size = 0;
+
+    // silent search, a missing file must not break the inplace line
+    char *sha512path = NULL;
+    if ((searchFile(&sha512path, RESOURCES_SUBDIR, sha512filename, "", true) != PM3_SUCCESS) ||
+            (loadFile_safeEx(sha512path, "", (void **)&hashstring, &sha512_size, false) != PM3_SUCCESS)) {
+        err = "SHA-512 file not found or locked.";
+        res = PM3_EFILE;
+    } else if (sha512_size < 128) {
+        err = "SHA-512 file wrong size";
+    } else {
+        // sha512sum format, the hash is the first 128 chars
+        char hexstr[129] = {0};
+        memcpy(hexstr, hashstring, 128);
+
+        int hash1n = 0;
+        uint8_t hash_1[64] = {0};
+        uint8_t hash_2[64] = {0};
+        if (param_gethex_ex(hexstr, 0, hash_1, &hash1n) || (hash1n != 128)) {
+            err = "Couldn't read SHA-512 file, expected 128 hex chars";
+        } else if (sha512hash(data, datalen, hash_2)) {
+            err = "Couldn't calculate SHA-512 of firmware";
+        } else if (memcmp(hash_1, hash_2, sizeof(hash_2))) {
+            err = "Couldn't verify integrity of firmware file " _RED_("(wrong SHA-512 hash)");
+        } else {
+            res = PM3_SUCCESS;
+        }
+    }
+    free(sha512path);
+    free(hashstring);
+
+    if (res == PM3_SUCCESS) {
+        PrintAndLogEx(INPLACE, "Checking integrity  " _YELLOW_("%s") " ( " _GREEN_("ok") " )", sha512filename);
+        PrintAndLogEx(NORMAL, "");
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(INPLACE, "Checking integrity  " _YELLOW_("%s") " ( " _RED_("fail") " )", sha512filename);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(FAILED, "%s", err);
+    return res;
 }
 
 int loadFile_TXTsafe(const char *preferredName, const char *suffix, void **pdata, size_t *datalen, bool verbose) {

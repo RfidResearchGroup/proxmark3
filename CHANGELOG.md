@@ -5,6 +5,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 - Fixed `hf sniff` - keep the full capture length, download every sample and stop on host abort while waiting for a trigger (@adrian-stepien)
 - Fixed `hf sniff` sample reduction - correct min, max and average, default to one sample pair and reject invalid skip ratios (@adrian-stepien)
+- Fixed `hf search` AID hints - a decoy SELECT detects cards answering any AID (DESFire EV2) and shared hints print once (@iceman1001)
 - Fixed `lf t55xx resetread` on PM5 - wait for the full capture and download it without truncating its length to 16 bits (@adrian-stepien)
 - Fixed T55xx reads - packed LF sampling settings were applied to raw block captures, corrupting detection and reads (@adrian-stepien)
 - Fixed `hf felica` on PM5 - use shallow ASK modulation on `pwr_oe1`, sync TX timing to `ssp_cnt`, add post-TX RX blanking, and extend SSC frame sync (@ree-ce)

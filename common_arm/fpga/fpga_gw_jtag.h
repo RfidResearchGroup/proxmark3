@@ -91,6 +91,7 @@ typedef enum {
     GOWIN_JTAG_ERROR_VLD_STATUS,
     GOWIN_JTAG_ERROR_ERASE_FAIL,
     GOWIN_JTAG_ERROR_ENABLE_CFG,
+    GOWIN_JTAG_ERROR_CONFIG_FAIL,
 } gowin_jtag_status_t;
 
 typedef enum {
