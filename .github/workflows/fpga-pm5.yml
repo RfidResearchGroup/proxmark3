@@ -86,4 +86,5 @@ jobs:
           path: |
             fpga/fpga_pm5.fs
             fpga/fpga_pm5.bin
+            fpga/fpga_pm5.sha512.txt
           if-no-files-found: error
