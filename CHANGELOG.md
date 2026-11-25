@@ -5,6 +5,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 - Fixed `lf t55xx resetread` on PM5 - wait for the full capture and download it without truncating its length to 16 bits (@adrian-stepien)
 - Fixed T55xx reads - packed LF sampling settings were applied to raw block captures, corrupting detection and reads (@adrian-stepien)
+- Fixed LF simulation uploads - reject lengths beyond device memory or the 16-bit wire format and stop simulation on upload errors
 - Fixed PM5 BWM settings - charge, voltage and capacity commands could hang if a preceding RF operation stopped the timing counter (@adrian-stepien)
 - Fixed `lf hitag reader` on PM5 - the first UID read could miss the tag after `hw tune` (@adrian-stepien)
 - Fixed `hw bwm upgrade` - send the final reply before rebooting the BWM so the client can request the PM5 reset over BLE or Wi-Fi (@adrian-stepien)

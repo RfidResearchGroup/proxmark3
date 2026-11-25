@@ -1094,6 +1094,15 @@ int lfsim_upload_gb(void) {
     // leaked by a previous run.
     g_conn.block_after_ACK = false;
 
+    size_t max_samples = MIN((size_t)UINT16_MAX, (size_t)g_pm3_capabilities.bigbuf_size);
+    if (g_GraphTraceLen > max_samples) {
+        PrintAndLogEx(ERR, "Graphbuffer too long for LF simulation (%zu > %zu samples)", g_GraphTraceLen, max_samples);
+        return PM3_EOVFLOW;
+    }
+    if (g_conn.max_cmd_data_size <= 3) {
+        return PM3_EINVARG;
+    }
+
     PacketResponseNG resp;
 
     //can send only 512 bits at a time (1 byte sent per bit...)
@@ -1108,10 +1117,13 @@ int lfsim_upload_gb(void) {
             payload_up.data[j] = g_GraphBuffer[i + j];
 
         SendCommandNG(CMD_LF_UPLOAD_SIM_SAMPLES, (uint8_t *)&payload_up, 3 + len);  // header (flag+offset) + actual samples, not the padded struct
-        WaitForResponse(CMD_LF_UPLOAD_SIM_SAMPLES, &resp);
+        if (WaitForResponse(CMD_LF_UPLOAD_SIM_SAMPLES, &resp) == false) {
+            PrintAndLogEx(WARNING, "No response while uploading LF samples");
+            return PM3_EIO;
+        }
         if (resp.status != PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "Bigbuf is full");
-            break;
+            PrintAndLogEx(ERR, "LF sample upload failed (status %d)", resp.status);
+            return resp.status;
         }
         PrintAndLogEx(NORMAL, "." NOLF);
         fflush(stdout);
@@ -1158,13 +1170,16 @@ int CmdLFSim(const char *Cmd) {
     // convert to bitstream if necessary
     lf_chk_bitstream();
 
-    lfsim_upload_gb();
+    int res = lfsim_upload_gb();
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
 
     struct p {
         uint16_t len;
         uint16_t gap;
     } PACKED payload;
-    payload.len = g_GraphTraceLen;
+    payload.len = (uint16_t)g_GraphTraceLen;
     payload.gap = gap;
 
     clearCommandBuffer();
@@ -1851,13 +1866,17 @@ static int lf_relay_rdr(const char *ip, uint16_t port) {
 
         g_GraphTraceLen = incoming_len;
         lf_chk_bitstream();
-        lfsim_upload_gb();
+        int res = lfsim_upload_gb();
+        if (res != PM3_SUCCESS) {
+            relay_close(sock);
+            return res;
+        }
 
         struct {
             uint16_t len;
             uint16_t gap;
         } PACKED payload;
-        payload.len = (g_GraphTraceLen > UINT16_MAX) ? UINT16_MAX : (uint16_t)g_GraphTraceLen;
+        payload.len = (uint16_t)g_GraphTraceLen;
         payload.gap = 0;
 
         clearCommandBuffer();
