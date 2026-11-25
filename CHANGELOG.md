@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf felica` on PM5 - use shallow ASK modulation on `pwr_oe1`, sync TX timing to `ssp_cnt`, add post-TX RX blanking, and extend SSC frame sync (@ree-ce)
 - Fixed `hw status` transfer rates - count successful sends and report the frame size for the active link (@adrian-stepien)
 - Fixed LF simulation uploads - lengths beyond device memory or the 16-bit wire format are capped with a warning, simulation stops on upload errors (@adrian-stepien)
 - Fixed PM5 BWM settings - charge, voltage and capacity commands could hang if a preceding RF operation stopped the timing counter (@adrian-stepien)

@@ -327,19 +327,20 @@ reg prv_s = 1'b0;
 reg [11:0] bit_counts = 12'd0; // for timeslots. only support ts=0 for now, at 212 speed  -512 fullbits from end of frame. One hopes.   might remove those?
 
 //we need some way to flush bit_counts triggers on mod_type changes don't compile
+`ifdef PM5
+reg [8:0] rx_blank = 9'd0;
+wire rx_active = disabl && (rx_blank == 9'd0);
+`else
+wire rx_active = disabl;
+`endif
 reg dlay;
 always @(negedge adc_clk) // every data ping?
 begin
-    // Watchdog clock, see `stalebit. It runs first so that the three places
-    // that clear it below - a clean desync, a successful Manchester lock, and
-    // the watchdog firing itself - all override it.
-    stale <= stale + 1'b1;
-
     //envelope follow code...
   ////////////
     if (fccount == bitmlen)
     begin
-        if ((~try_sync) && (adc_d < curminthres) && disabl )
+        if ((~try_sync) && (adc_d < curminthres) && rx_active )
         begin
             fccount <= 1;
         end
@@ -347,7 +348,9 @@ begin
         begin
             fccount <= 0;
         end
+`ifndef PM5
         dlay <= ssp_dout;
+`endif
         if (bit_counts > 768) // should be over ts0 now, without ARM interference... stop counting...
         begin
             bit_counts <= 0;
@@ -360,7 +363,7 @@ begin
     end
     else
     begin
-        if((~try_sync) && (adc_d < curminthres) && disabl)
+        if((~try_sync) && (adc_d < curminthres) && rx_active)
         begin
             fccount <= 1;
         end
@@ -369,6 +372,39 @@ begin
             fccount <= fccount + 1'b1;
         end
     end
+
+`ifdef PM5
+    if (~disabl)
+        rx_blank <= 9'd511;
+    else if (rx_blank != 9'd0)
+        rx_blank <= rx_blank - 9'd1;
+
+    if (~rx_active)
+    begin
+        // While TX modulation is active and while the antenna LC transient
+        // decays after NOMOD (~38 us, well under the 197 us FeliCa FDT),
+        // keep the RX slicer & envelope tracker reset so TX swings cannot
+        // latch curmin/curmax off the settled idle carrier or arm try_sync.
+        curmin <= adc_d;
+        curmax <= adc_d;
+        curminthres <= rc_lo;
+        curmaxthres <= rc_hi;
+        try_sync <= 1'b0;
+        did_sync <= 1'b0;
+        curbit_raw <= 1'b0;
+        after_hysteresis <= 1'b1;
+        tsinceedge <= 0;
+        state <= 0;
+        stale <= 0;
+        acc <= 0;
+    end
+    else
+    begin
+`endif
+    // Watchdog clock, see `stalebit. It runs first so that the three places
+    // that clear it below - a clean desync, a successful Manchester lock, and
+    // the watchdog firing itself - all override it.
+    stale <= stale + 1'b1;
 
     // rising edge
     if (adc_d > curmaxthres)
@@ -548,12 +584,33 @@ begin
         state <= 0;
         stale <= 0;
     end
+`ifdef PM5
+    end
+`endif
 //  sending <= 0;
 end
 
 //put modulation here to maintain the correct clock. Seems that some readers are sensitive to that
 
+`ifdef PM5
+reg tx_half = 1'b0;
+always @(negedge adc_clk)
+begin
+    if (((~speed) && (ssp_cnt[5:0] == 6'd32)) || (speed && (ssp_cnt[4:0] == 5'd16)))
+    begin
+        dlay <= ssp_dout;
+        tx_half <= 1'b0;
+    end
+    else if (((~speed) && (ssp_cnt[5:0] == 6'd0)) || (speed && (ssp_cnt[4:0] == 5'd0)))
+    begin
+        tx_half <= 1'b1;
+    end
+end
+
+wire mod = (tx_half ^ dlay) & (~disabl);
+`else
 wire mod = ((fccount >= bithalf) ^ dlay) & (~disabl);
+`endif
 
 always @(ck_1356meg or ssp_dout or power or disabl or mod)
 begin
@@ -561,14 +618,19 @@ begin
     begin
 `ifdef PM5 // pwr_hi is used to control the 1356 clk enable on PM5, not clk output.
         pwr_hi  <= 1'b1; // enable 1356 clk output
+        pwr_lo  <= 1'b0;
+        pwr_oe1 <= mod;
+        pwr_oe2 <= 1'b0;
+        pwr_oe3 <= 1'b0;
+        pwr_oe4 <= 1'b0;
 `else
         pwr_hi  <= ck_1356meg;
-`endif
         pwr_lo  <= 1'b0;
         pwr_oe1 <= 1'b0;//mod;
         pwr_oe2 <= 1'b0;//mod;
         pwr_oe3 <= 1'b0;//mod;
         pwr_oe4 <= mod;//1'b0;
+`endif
     end
     else
     begin
