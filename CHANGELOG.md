@@ -3,7 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-- Fixed `hw status` transfer rates - count successful sends and report the frame size for the active link. The BWM rate is measured up to the module (@adrian-stepien)
+- Fixed `hw status` transfer rates - count successful sends and report the frame size for the active link. (@adrian-stepien)
+- Fixed LF simulation uploads - lengths beyond device memory or the 16-bit wire format are capped with a warning (@adrian-stepien)
 - Fixed PM5 BWM settings - charge, voltage and capacity commands could hang if a preceding RF operation stopped the timing counter (@adrian-stepien)
 - Fixed `lf hitag reader` on PM5 - the first UID read could miss the tag after `hw tune` (@adrian-stepien)
 - Fixed `hw bwm upgrade` - send the final reply before rebooting the BWM so the client can request the PM5 reset over BLE or Wi-Fi (@adrian-stepien)

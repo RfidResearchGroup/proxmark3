@@ -83,11 +83,34 @@ module fpga_top (
         pwm_duty_sync <= pwm_duty_meta;
     end
 
-    // Register the output; the bare comparator glitches on every count edge.
+    // Register the output; pipeline the 12-bit comparison into 2-bit LUT4 stages
+    // so every stage is 1-2 LUT levels and closes 200 MHz timing across placements.
+    reg [5:1] pwm_eq2;
+    reg [5:0] pwm_gt2;
+    reg [2:1] pwm_eq4;
+    reg [2:0] pwm_gt4;
     reg pwr_pwm_r;
     always @(posedge pwr_pwm_pll_clko) begin
-        pwm_cnt   <= pwm_cnt + 1'b1;  // counter
-        pwr_pwm_r <= (pwm_cnt > pwm_duty_sync);  // PWM output
+        pwm_cnt    <= pwm_cnt + 1'b1;  // counter
+        pwm_eq2[5] <= (pwm_cnt[11:10] == pwm_duty_sync[11:10]);
+        pwm_eq2[4] <= (pwm_cnt[9:8]   == pwm_duty_sync[9:8]);
+        pwm_eq2[3] <= (pwm_cnt[7:6]   == pwm_duty_sync[7:6]);
+        pwm_eq2[2] <= (pwm_cnt[5:4]   == pwm_duty_sync[5:4]);
+        pwm_eq2[1] <= (pwm_cnt[3:2]   == pwm_duty_sync[3:2]);
+        pwm_gt2[5] <= (pwm_cnt[11:10] >  pwm_duty_sync[11:10]);
+        pwm_gt2[4] <= (pwm_cnt[9:8]   >  pwm_duty_sync[9:8]);
+        pwm_gt2[3] <= (pwm_cnt[7:6]   >  pwm_duty_sync[7:6]);
+        pwm_gt2[2] <= (pwm_cnt[5:4]   >  pwm_duty_sync[5:4]);
+        pwm_gt2[1] <= (pwm_cnt[3:2]   >  pwm_duty_sync[3:2]);
+        pwm_gt2[0] <= (pwm_cnt[1:0]   >  pwm_duty_sync[1:0]);
+
+        pwm_eq4[2] <= pwm_eq2[5] && pwm_eq2[4];
+        pwm_eq4[1] <= pwm_eq2[3] && pwm_eq2[2];
+        pwm_gt4[2] <= pwm_gt2[5] || (pwm_eq2[5] && pwm_gt2[4]);
+        pwm_gt4[1] <= pwm_gt2[3] || (pwm_eq2[3] && pwm_gt2[2]);
+        pwm_gt4[0] <= pwm_gt2[1] || (pwm_eq2[1] && pwm_gt2[0]);
+
+        pwr_pwm_r  <= pwm_gt4[2] || (pwm_eq4[2] && pwm_gt4[1]) || (pwm_eq4[2] && pwm_eq4[1] && pwm_gt4[0]);
     end
     assign pwr_pwm = pwr_pwm_r;
 
