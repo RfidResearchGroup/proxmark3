@@ -4003,19 +4003,22 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             char *fn = (char *)packet->data.asBytes;
 
+            int changed = rdv40_spiffs_lazy_mount();
             uint32_t size = size_in_spiffs(fn);
-            if (size == 0) {
-                reply_ng(CMD_SPIFFS_ELOAD, PM3_SUCCESS, NULL, 0);
-                LED_B_OFF();
-                break;
+            int status = PM3_SUCCESS;
+            if (size > BigBuf_get_EM_size()) {
+                status = PM3_EOVFLOW;
+            } else if (size > 0) {
+                // a dump smaller than the emulator memory must not leave the tail of a
+                // previous one behind
+                BigBuf_Clear_EM();
+                rdv40_spiffs_read_as_filetype(fn, em, size, RDV40_SPIFFS_SAFETY_NORMAL);
+            } else if (!exists_in_spiffs(fn)) {
+                status = PM3_EFILE;
             }
 
-            // a dump smaller than the emulator memory must not leave the tail of a
-            // previous one behind
-            BigBuf_Clear_EM();
-
-            rdv40_spiffs_read_as_filetype(fn, em, size, RDV40_SPIFFS_SAFETY_SAFE);
-            reply_ng(CMD_SPIFFS_ELOAD, PM3_SUCCESS, NULL, 0);
+            rdv40_spiffs_lazy_mount_rollback(changed);
+            reply_ng(CMD_SPIFFS_ELOAD, status, NULL, 0);
             LED_B_OFF();
             break;
         }

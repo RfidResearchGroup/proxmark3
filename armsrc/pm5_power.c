@@ -30,6 +30,9 @@
 #include "ticks_apis.h"
 #include "fpga_apis.h"
 #include "config_gpio_proxmark5.h"
+#ifdef WITH_CEP
+#include "pm5_cep.h"
+#endif
 #ifdef WITH_BWM_FORWARD
 #include "bwm_uart_at32.h"
 #endif
@@ -76,6 +79,7 @@ static void pm5_fpga_clk_park(void) {
 // The LDO is only writable while SCLK is on HICK/HEXT, which holds on both paths.
 // Runs with IRQs masked.
 static void pm5_clk_apply(bool high) {
+    uint32_t previous_clock = system_core_clock;
     uint32_t i;
     if (high) {
         pwc_ldo_output_voltage_set(PWC_LDO_OUTPUT_1V3);
@@ -111,6 +115,10 @@ static void pm5_clk_apply(bool high) {
         pwc_ldo_output_voltage_set(PWC_LDO_OUTPUT_1V1);
         system_core_clock_update();
     }
+    ticks_at32_clock_update(previous_clock);
+#ifdef WITH_CEP
+    cep_usart_clock_update();
+#endif
 #ifdef WITH_BWM_FORWARD
     bwm_uart_clock_update();   // UART4 baud follows APB1
 #endif

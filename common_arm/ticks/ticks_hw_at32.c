@@ -375,18 +375,28 @@ static void configCounter(const uint32_t frequency) {
     // AT32 has a 32-bit timer, perhaps we can achieve higher counting time without connecting the timer?
     tmr_32_bit_function_enable(AT32_TMR_32B_TIMER, TRUE);
 
-    // TODO DXL 注意，如果apb1的预分频系数不是1，那么TIMER5的时钟速度会是apb1的两倍，这里记录下来，后期开发可能会遇到，如果完成移植，可将此段注释删除
-    // See at32f435 manual reference 4.1.3
-    // The timer uses APB1/2 as the clock. In particular, when the APB pre division coefficient is 1,
-    // the clock frequency of the timer is equal to the clock frequency of APB1/2;
-    // When the APB prescaler coefficient is not 1, the clock frequency of the timer is equal to twice the APB1/2 clock frequency.
-    // So, if we are using not apb from ahb/1, must to div2.
-#define FREQUENCY_APB1          144000000UL // apb1 = ahb/2 = 144mhz, apb1*2 = TIMER_CLK, TIMER_CLK/192(divX) = 1.5mhz
-    const uint32_t divX = (FREQUENCY_APB1 / frequency) * 2 - 1;
-    tmr_base_init(AT32_TMR_32B_TIMER, UINT32_MAX - 1, divX);
+    // APB1 is AHB / 2, so TMR5 runs at 2 * APB1 = AHB (AT32F435 manual 4.1.3).
+    const uint32_t divider = system_core_clock / frequency - 1;
+    tmr_base_init(AT32_TMR_32B_TIMER, UINT32_MAX - 1, divider);
 
     tmr_cnt_dir_set(AT32_TMR_32B_TIMER, TMR_COUNT_UP);
     tmr_counter_enable(AT32_TMR_32B_TIMER, TRUE);
+}
+
+void ticks_at32_clock_update(uint32_t previous_clock) {
+    tmr_type *timer = AT32_TMR_32B_TIMER;
+    if (previous_clock == system_core_clock || !CRM->apb1en_bit.tmr5en || !timer->ctrl1_bit.tmren) {
+        return;
+    }
+
+    uint32_t frequency = previous_clock / (timer->div + 1);
+    tmr_counter_enable(timer, FALSE);
+    uint32_t count = tmr_counter_value_get(timer);
+    timer->div = system_core_clock / frequency - 1;
+    // The overflow event loads the divider and resets the counter.
+    tmr_event_sw_trigger(timer, TMR_OVERFLOW_SWTRIG);
+    tmr_counter_value_set(timer, count);
+    tmr_counter_enable(timer, TRUE);
 }
 
 //  -------------------------------------------------------------------------
