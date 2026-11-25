@@ -260,7 +260,7 @@ static bool sc_pps(uint8_t proto, uint8_t ta1) {
     // Take the protocol from the module rather than from the request: the
     // caller asked for one, this is the one that ended up in force.
     s_active_mode = ((resp[1] & 0x0f) == 1) ? SC_MODE_T1
-                      : SC_MODE_T0;
+                    : SC_MODE_T0;
     return true;
 }
 

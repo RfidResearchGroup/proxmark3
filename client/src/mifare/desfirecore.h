@@ -47,6 +47,7 @@
 #define DESFIRE_AUTH_SETKEY_DEC2      10    // mbedtls_aes_setkey_dec failed
 #define DESFIRE_AUTH_RNDA_MISMATCH    11    // session key can't be verified
 #define DESFIRE_AUTH_CMAC_FAIL        12    // CMAC can't be verified
+#define DESFIRE_AUTH_RESP_LEN         13    // answer length doesn't match the auth step
 // the application holds no key of this type
 #define DESFIRE_AUTH_NO_AES           50    // PICC didn't answer AES
 #define DESFIRE_AUTH_NO_LRP           51    // PICC didn't answer LRP

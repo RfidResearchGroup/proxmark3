@@ -269,6 +269,8 @@ const char *DesfireAuthErrorToStr(int error) {
             return "Authentication failed. Cannot verify Session Key.";
         case DESFIRE_AUTH_CMAC_FAIL:
             return "Authentication failed. Cannot verify CMAC.";
+        case DESFIRE_AUTH_RESP_LEN:
+            return "Authentication failed. Answer length doesn't match the auth step.";
         case DESFIRE_AUTH_NO_AES:
             return "PICC returned not an AES answer";
         case DESFIRE_AUTH_NO_LRP:
@@ -1527,6 +1529,10 @@ static int DesfireAuthenticateEV1(DesfireContext_t *dctx, DesfireSecureChannel s
     }
 
     // Part 4
+    if (recv_len != rndlen) {
+        return DESFIRE_AUTH_RESP_LEN;
+    }
+
     memcpy(encRndA, recv_data, rndlen);
 
     //PrintAndLogEx(INFO, "encRndA : %s", sprint_hex(encRndA, rndlen));
@@ -1664,6 +1670,11 @@ static int DesfireAuthenticateEV2(DesfireContext_t *dctx, DesfireSecureChannel s
 
     // Part 4
     uint8_t data[32] = {0};
+
+    // first auth: TI || RndA' || PDcap2 || PCDcap2, non-first: RndA'
+    if (recv_len != ((firstauth) ? CRYPTO_AES_BLOCK_SIZE * 2 : CRYPTO_AES_BLOCK_SIZE)) {
+        return DESFIRE_AUTH_RESP_LEN;
+    }
 
     if (aes_decode(IV, key, recv_data, data, recv_len))
         return DESFIRE_AUTH_SETKEY_DEC2;
@@ -1847,6 +1858,11 @@ static int DesfireAuthenticateLRP(DesfireContext_t *dctx, DesfireSecureChannel s
 
     // Part 4
     uint8_t data[64] = {0};
+
+    // first auth: encrypted TI/caps || CMAC, non-first: CMAC
+    if (recv_len != ((firstauth) ? CRYPTO_AES_BLOCK_SIZE * 2 : CRYPTO_AES_BLOCK_SIZE)) {
+        return DESFIRE_AUTH_RESP_LEN;
+    }
 
     // clear IV here
     DesfireClearIV(dctx);

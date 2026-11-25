@@ -4271,7 +4271,9 @@ bool AcquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password, u
         return false;
     }
 
-    getSamples(12000, false);
+    if (getSamplesEx(0, 12000, false, true) != PM3_SUCCESS) {
+        return false;
+    }
     bool ok = !getSignalProperties()->isnoise;
 
     config.usepwd = pwdmode;
@@ -4616,29 +4618,51 @@ static int CmdResetRead(const char *Cmd) {
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_LF_T55XX_RESET_READ, &flags, sizeof(flags));
-    if (WaitForResponseTimeout(CMD_LF_T55XX_RESET_READ, &resp, 2500) == false) {
+    // At 125 kHz each raw sample takes 8 us, plus setup time.
+    uint32_t timeout = MAX(2500u, 1000 + ((uint64_t)g_pm3_capabilities.bigbuf_size * 8 + 999) / 1000);
+    if (WaitForResponseTimeout(CMD_LF_T55XX_RESET_READ, &resp, timeout) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
-    if (resp.status == PM3_SUCCESS) {
-
-        uint16_t gotsize = g_pm3_capabilities.bigbuf_size - 1;
-        uint8_t *got = calloc(gotsize, sizeof(uint8_t));
-        if (got == NULL) {
-            PrintAndLogEx(WARNING, "Failed to allocate memory");
-            return PM3_EMALLOC;
-        }
-
-        PrintAndLogEx(INFO, "Downloading samples...");
-        if (!GetFromDevice(BIG_BUF, got, gotsize, 0, NULL, 0, NULL, 2500, false)) {
-            PrintAndLogEx(WARNING, "command execution time out");
-            free(got);
-            return PM3_ETIMEOUT;
-        }
-        setGraphBuffer(got, gotsize);
-        free(got);
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Reset capture failed (status %d)", resp.status);
+        return resp.status;
     }
+
+    uint32_t size = g_pm3_capabilities.bigbuf_size;
+    if (size == 0) {
+        PrintAndLogEx(WARNING, "Device did not report its sample buffer size");
+        return PM3_ESOFT;
+    }
+    uint32_t count;
+    if (resp.length == sizeof(count)) {
+        count = resp.data.asDwords[0];
+    } else if (resp.length == 0) {
+        // Older firmware did not report a sample count.
+        count = size - 1;
+    } else {
+        PrintAndLogEx(WARNING, "Unexpected reset capture response length: %u", resp.length);
+        return PM3_ESOFT;
+    }
+    if (count == 0 || count > size) {
+        PrintAndLogEx(WARNING, "Invalid reset capture sample count: %" PRIu32, count);
+        return PM3_ESOFT;
+    }
+
+    uint8_t *samples = calloc(count, sizeof(uint8_t));
+    if (samples == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+    PrintAndLogEx(INFO, "Downloading samples...");
+    if (!GetFromDevice(BIG_BUF, samples, count, 0, NULL, 0, NULL, 10000, false)) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        free(samples);
+        return PM3_ETIMEOUT;
+    }
+    setGraphBuffer(samples, count);
+    free(samples);
 
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;

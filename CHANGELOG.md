@@ -7,6 +7,19 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed the ISO14443-A simulations and sniffing - the Miller decoder did not find a start bit whose pause shows in one sample, split or a sample late, and did not take a 3 tick pause shifted right (@matrix)
 - Fixed the ISO14443-A simulations on the PM3 boards with an XC2S30 - a reader frame read late by the ARM got a start time 128 carrier periods late (@matrix)
 - Fixed the trace of the ISO14443-A simulations - a reader frame of 57 bytes and more got wrong times (@matrix)
+- Fixed `lf t55xx resetread` on PM5 - wait for the full capture and download it without truncating its length to 16 bits (@adrian-stepien)
+- Fixed T55xx reads - packed LF sampling settings were applied to raw block captures, corrupting detection and reads (@adrian-stepien)
+- Fixed `hf felica` on PM5 - use shallow ASK modulation on `pwr_oe1`, sync TX timing to `ssp_cnt`, add post-TX RX blanking, and extend SSC frame sync (@ree-ce)
+- Fixed `hw status` transfer rates - count successful sends and report the frame size for the active link (@adrian-stepien)
+- Fixed LF simulation uploads - lengths beyond device memory or the 16-bit wire format are capped with a warning, simulation stops on upload errors (@adrian-stepien)
+- Fixed PM5 BWM settings - charge, voltage and capacity commands could hang if a preceding RF operation stopped the timing counter (@adrian-stepien)
+- Fixed `lf hitag reader` on PM5 - the first UID read could miss the tag after `hw tune` (@adrian-stepien)
+- Fixed `hw bwm upgrade` - send the final reply before rebooting the BWM so the client can request the PM5 reset over BLE or Wi-Fi (@adrian-stepien)
+- Fixed `hw bwm upgrade` - report an unknown update result when the final reply times out (@adrian-stepien)
+- Fixed `hw bwm upgrade` - keep the BLE connection open during the upload (@adrian-stepien)
+- Fixed PM5 CEP - a long PM5 command could make the Flipper lose its connection even while it was still polling (@adrian-stepien)
+- Fixed PM5 CEP handshakes - receive Flipper bytes even while the attach check is waiting for its next poll (@adrian-stepien)
+- Fixed PM5 power save - keep the CEP and BWM UARTs and the timing counter at their configured rates when the core changes speed (@adrian-stepien)
 - Fixed `hw ping` - return errors for timeouts, device errors, wrong response lengths and mismatched echoes
 - Fixed `lf search` - stop on acquisition or sample download errors instead of decoding an earlier capture
 - Fixed sample downloads - bound offset reads to remaining device memory and use heap buffers for large PM5 captures
