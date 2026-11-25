@@ -1456,6 +1456,12 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
                     uint16_t s = Demod.shiftReg;
 
                     if ((s & 0x200) && !(s & 0x001)) { // stop bit == '1', start bit == '0'
+                        // buffer full: stop, the caller sees len > max_len and reports PM3_EOVFLOW
+                        if (Demod.len >= Demod.max_len) {
+                            Demod.len++;
+                            LED_C_OFF();
+                            return true;
+                        }
                         Demod.output[Demod.len] = (s >> 1);
                         Demod.len++;
                         Demod.bitCount = 0;
@@ -2864,7 +2870,7 @@ void SniffIso14443b(void) {
                                     - (32 * 16)             // time for SOF transfer
                                     - 0;                    // time for EOF transfer
 
-                LogTrace(Demod.output, Demod.len, (sof_time * 4), (eof_time * 4), NULL, false);
+                LogTrace(Demod.output, MIN(Demod.len, Demod.max_len), (sof_time * 4), (eof_time * 4), NULL, false);
                 // And ready to receive another response.
                 Uart14bReset();
                 Demod14bReset();
