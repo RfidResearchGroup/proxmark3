@@ -2007,7 +2007,10 @@ int checkFileSHA512(const char *sha512filename, uint8_t *data, size_t datalen) {
     char *hashstring = NULL;
     size_t sha512_size = 0;
 
-    if (loadFile_safeEx(sha512filename, "", (void **)&hashstring, &sha512_size, false) != PM3_SUCCESS) {
+    // silent search, a missing file must not break the inplace line
+    char *sha512path = NULL;
+    if ((searchFile(&sha512path, RESOURCES_SUBDIR, sha512filename, "", true) != PM3_SUCCESS) ||
+            (loadFile_safeEx(sha512path, "", (void **)&hashstring, &sha512_size, false) != PM3_SUCCESS)) {
         err = "SHA-512 file not found or locked.";
         res = PM3_EFILE;
     } else if (sha512_size < 128) {
@@ -2030,6 +2033,7 @@ int checkFileSHA512(const char *sha512filename, uint8_t *data, size_t datalen) {
             res = PM3_SUCCESS;
         }
     }
+    free(sha512path);
     free(hashstring);
 
     if (res == PM3_SUCCESS) {
