@@ -675,25 +675,23 @@ static void print_debug_level(void) {
     Dbprintf("  Debug log level..... %d ( " _YELLOW_("%s")" )", g_dbglevel, dbglvlstr);
 }
 
-// measure the Connection Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
-// Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the PacketCommandNG structure included.
+// Measure connection speed with NG replies, including framing overhead in the elapsed time.
 static void printConnSpeed(uint32_t wait) {
     DbpString(_CYAN_("Transfer Speed"));
     Dbprintf("  Sending packets to client...");
 
     uint8_t *test_data = BigBuf_get_addr();
+    const uint16_t payload_len = reply_ng_max_data_size();
     uint32_t start_time = GetTickCount();
     uint32_t delta_time = 0;
-    uint32_t bytes_transferred = 0;
     uint32_t frames_sent = 0;
 
     LED_B_ON();
 
     while (delta_time < wait) {
-        uint16_t st_len = reply_ng_max_data_size();
-        reply_ng(CMD_DOWNLOADED_BIGBUF, PM3_SUCCESS, test_data, st_len);
-        bytes_transferred += st_len;
-        frames_sent++;
+        if (reply_ng(CMD_DOWNLOADED_BIGBUF, PM3_SUCCESS, test_data, payload_len) == PM3_SUCCESS) {
+            frames_sent++;
+        }
         delta_time = GetTickCountDelta(start_time);
     }
     LED_B_OFF();
@@ -702,14 +700,21 @@ static void printConnSpeed(uint32_t wait) {
     // that is ceil(wire_len / 64) bulk packets, and the packet rate is what the link
     // caps - so frames/s and this length are what explain a bytes/s result, not the
     // byte count on its own.
-    uint32_t wire_len = sizeof(PacketResponseNGPreamble) + PM3_CMD_DATA_SIZE + sizeof(PacketResponseNGPostamble);
+    uint32_t wire_len = sizeof(PacketResponseNGPreamble) + payload_len + sizeof(PacketResponseNGPostamble);
+    uint32_t bytes_transferred = frames_sent * payload_len;
 
-    Dbprintf("  Time elapsed................... %dms", delta_time);
-    Dbprintf("  Bytes transferred.............. %d", bytes_transferred);
-    Dbprintf("  Frames sent.................... %d ( %d bytes )", frames_sent, wire_len);
+    Dbprintf("  Time elapsed................... %ums", delta_time);
+    Dbprintf("  Bytes transferred.............. %u", bytes_transferred);
+    Dbprintf("  Frames sent.................... %u ( %u bytes )", frames_sent, wire_len);
     if (delta_time) {
         char rate[SPRINT_BYTES_LEN];
-        Dbprintf("  Transfer Speed PM3 -> Client... " _YELLOW_("%s/s"), sprint_bytes(rate, (uint32_t)(1000 * (uint64_t)bytes_transferred / delta_time)));
+        const char *target = "Client";
+#ifdef WITH_BWM_FORWARD
+        if (g_reply_via_fpc) {
+            target = "BWM";
+        }
+#endif
+        Dbprintf("  Transfer Speed PM3 -> %s... " _YELLOW_("%s/s"), target, sprint_bytes(rate, (uint32_t)(1000 * (uint64_t)bytes_transferred / delta_time)));
         Dbprintf("  Frame rate..................... " _YELLOW_("%llu") " frames/s", 1000 * (uint64_t)frames_sent / delta_time);
     }
 }
