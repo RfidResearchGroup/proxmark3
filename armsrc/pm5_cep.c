@@ -43,6 +43,7 @@
 #define CEP_CC_CONTROLLER_ADDR   0x47
 #define CEP_CC_STATUS_REG        0x09
 #define CEP_ATTACH_POLL_MS       50      // CC-controller I2C poll interval
+#define CEP_DETACH_DEBOUNCE_READS  5
 
 // TUSB320 status register bits 7:6 - attach role as seen by the PM5 port.
 #define CEP_ATTACH_UNATTACHED    0x00
@@ -78,6 +79,7 @@ static volatile bool s_handshake_pending;
 static bool s_usb_host_mode = false;   // OTGFS1 host CDC owns PA9/PA11/PA12
 static bool s_usb_host_forced = false; // user explicitly requested host CDC mode (hw pm5 icsd init)
 static bool s_usart1_active = false; // USART1 half-duplex owns PA9
+static uint8_t s_detach_count = 0;
 
 bool cep_is_active(void) {
     return s_cep_active;
@@ -374,6 +376,7 @@ void cep_attach_poll(void) {
     s_cep_attached = (attach != CEP_ATTACH_UNATTACHED);
 
     if (attach == CEP_ATTACH_SRC) {
+        s_detach_count = 0;
         // PM5 sources VBUS: ICS/ICSD device - USB host CDC mode
         if (s_usb_host_mode) {
             pm5_usb_host_cdc_poll();
@@ -382,12 +385,13 @@ void cep_attach_poll(void) {
         s_handshake_pending = false;
         s_cep_active = false;
     } else if (attach == CEP_ATTACH_SNK || attach == CEP_ATTACH_PEER) {
+        s_detach_count = 0;
         // Partner sources VBUS: Flipper Zero - USART1 handshake + SPI.
         if (s_usb_host_mode && !s_usb_host_forced) {
             pm5_usb_host_cdc_deinit();
             s_usb_host_mode = false;
         }
-        if (!s_usart1_active) {
+        if (!s_usart1_active && !s_usb_host_forced) {
             cep_usart1_restore();
             s_usart1_active = true;
         }
@@ -409,19 +413,24 @@ void cep_attach_poll(void) {
         }
     } else {
         // Unattached: release the shared lines and reset state.
-        if (s_usb_host_mode && !s_usb_host_forced) {
-            pm5_usb_host_cdc_deinit();
-            s_usb_host_mode = false;
+        if (s_detach_count < CEP_DETACH_DEBOUNCE_READS) {
+            if (++s_detach_count >= CEP_DETACH_DEBOUNCE_READS) {
+                s_usb_host_forced = false;
+                if (s_usb_host_mode) {
+                    pm5_usb_host_cdc_deinit();
+                    s_usb_host_mode = false;
+                }
+                s_handshake_pending = false;
+                if (s_usart1_active) {
+                    usart_enable(USART1, FALSE);
+                    usart_interrupt_enable(USART1, USART_RDBF_INT, FALSE);
+                    nvic_irq_disable(USART1_IRQn);
+                    s_usart1_active = false;
+                }
+                s_cep_active = false;
+                cep_lines_float();
+            }
         }
-        s_handshake_pending = false;
-        if (s_usart1_active) {
-            usart_enable(USART1, FALSE);
-            usart_interrupt_enable(USART1, USART_RDBF_INT, FALSE);
-            nvic_irq_disable(USART1_IRQn);
-            s_usart1_active = false;
-        }
-        s_cep_active = false;
-        cep_lines_float();
     }
 
     uint8_t int_state = cc_ctrl_data >> 4 & 0x01;
