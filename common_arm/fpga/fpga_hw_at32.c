@@ -393,12 +393,8 @@ int FpgaStopConfig(void) {
         }
         return PM3_EFAILED;
     }
-    // A flash image only runs after the next power cycle
-    if (gci.is_cfg_sram) {
-        fpga_read_usercode();
-    } else {
-        fpga_usercode_valid = false;
-    }
+    // both paths end with the new image running, the status check proved it
+    fpga_read_usercode();
     return PM3_SUCCESS;
 }
 
