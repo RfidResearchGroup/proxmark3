@@ -575,13 +575,17 @@ static int CmdEM410xBrute(const char *Cmd) {
 
         em410x_construct_emul_graph(testuid, clk, gap);
 
-        lfsim_upload_gb();
+        res = lfsim_upload_gb();
+        if (res != PM3_SUCCESS) {
+            free(uidblock);
+            return res;
+        }
 
         struct p {
             uint16_t len;
             uint16_t gap;
         } PACKED payload;
-        payload.len = g_GraphTraceLen;
+        payload.len = (uint16_t)g_GraphTraceLen;
         payload.gap = 0;
 
         clearCommandBuffer();
