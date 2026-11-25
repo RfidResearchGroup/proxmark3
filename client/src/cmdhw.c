@@ -1613,17 +1613,28 @@ static int CmdPing(const char *Cmd) {
     SendCommandNG(CMD_PING, data, len);
     if (WaitForResponseTimeout(CMD_PING, &resp, 1000)) {
         tms = msclock() - tms;
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Ping failed (status %d)", resp.status);
+            return resp.status;
+        }
+        if (resp.length != len) {
+            PrintAndLogEx(ERR, "Ping response length %u, expected %u", resp.length, len);
+            return PM3_EIO;
+        }
         if (len) {
             bool error = (memcmp(data, resp.data.asBytes, len) != 0);
             PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received")
                           " in " _YELLOW_("%" PRIu64) " ms and content ( %s )",
                           tms, error ? _RED_("fail") : _GREEN_("ok"));
+            return error ? PM3_EIO : PM3_SUCCESS;
         } else {
             PrintAndLogEx(SUCCESS, "Ping response " _GREEN_("received")
                           " in " _YELLOW_("%" PRIu64) " ms", tms);
         }
-    } else
+    } else {
         PrintAndLogEx(WARNING, "Ping response " _RED_("timeout"));
+        return PM3_ETIMEOUT;
+    }
     return PM3_SUCCESS;
 }
 

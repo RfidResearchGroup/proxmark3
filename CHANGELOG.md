@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hw ping` - return errors for timeouts, device errors, wrong response lengths and mismatched echoes
 - Fixed `lf search` - stop on acquisition or sample download errors instead of decoding an earlier capture
 - Fixed sample downloads - bound offset reads to remaining device memory and use heap buffers for large PM5 captures
 - Fixed `hw timeout` on macOS and Linux - keep POSIX timeouts valid at 1000 ms and above
