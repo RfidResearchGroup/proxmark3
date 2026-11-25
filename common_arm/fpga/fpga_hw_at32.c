@@ -111,13 +111,14 @@ static void spi_ssc_gpio_setup(void) {
 }
 
 // Enabled close to a frame pulse, SPI_SSC can start one bit off and stays so.
-// hi_reader sends a pulse every 4.7us: enable right behind one.
-#define SSC_FRAME_WAIT 250 /* loops, about two frame periods */
-static bool s_ssc_wait_frame = false;
+// hi_reader sends a pulse every 4.7us; hi_flite sends one every 37.8us (212k).
+#define SSC_FRAME_WAIT_READER   250  /* loops, about two 4.7us frame periods */
+#define SSC_FRAME_WAIT_ISO18092 8000 /* loops, covers >2 37.8us frame periods */
+static uint16_t s_ssc_wait_loops = 0;
 
 static void ssc_enable(void) {
-    if (s_ssc_wait_frame) {
-        uint32_t n = SSC_FRAME_WAIT;
+    if (s_ssc_wait_loops) {
+        uint32_t n = s_ssc_wait_loops;
         while (n && Gpio_SSC_FRAME_Read() == false) n--;
         while (n && Gpio_SSC_FRAME_Read()) n--;
     }
@@ -290,7 +291,18 @@ void FpgaSendCommand(uint16_t cmd, uint16_t v) {
     gpio_bits_set(AT32_GPIO_SPI_CS, AT32_GPIO_SPI_CS_PIN); // CS HIGH
 
     if (cmd == FPGA_CMD_SET_CONFREG) {
-        s_ssc_wait_frame = (FpgaGetCurrent() != FPGA_BITSTREAM_LF) && ((v & FPGA_MAJOR_MODE_MASK) == FPGA_MAJOR_MODE_HF_READER);
+        if (FpgaGetCurrent() == FPGA_BITSTREAM_LF) {
+            s_ssc_wait_loops = 0;
+        } else {
+            uint16_t major = v & FPGA_MAJOR_MODE_MASK;
+            if (major == FPGA_MAJOR_MODE_HF_READER) {
+                s_ssc_wait_loops = SSC_FRAME_WAIT_READER;
+            } else if (major == FPGA_MAJOR_MODE_HF_ISO18092) {
+                s_ssc_wait_loops = SSC_FRAME_WAIT_ISO18092;
+            } else {
+                s_ssc_wait_loops = 0;
+            }
+        }
     }
 
     // Re-enable SPI_SSC after sending the command
