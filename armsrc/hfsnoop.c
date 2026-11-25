@@ -224,7 +224,17 @@ void HfPlotDownload(void) {
         download_chunk_t *this_chunk = chunk[idx];
         idx ^= 1;
 
-        while (!FPGA_SSC_DMA_RX_Done()) {};
+        // the whole trace takes ~30 ms, an unconfigured FPGA never sends it
+        uint32_t t0 = GetTickCount();
+        while (FPGA_SSC_DMA_RX_Done() == false) {
+            if (GetTickCountDelta(t0) > 1000) {
+                FPGA_SSC_DMA_RX_Disable();
+                FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+                reply_ng(CMD_FPGAMEM_DOWNLOAD, PM3_ETIMEOUT, NULL, 0);
+                LED_B_OFF();
+                return;
+            }
+        }
 
         // The main buf has stopped receiving, so arm the other one first
         size_t next = i + dl_chunk;

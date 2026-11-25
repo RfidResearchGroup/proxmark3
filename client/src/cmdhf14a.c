@@ -3771,7 +3771,7 @@ int infoHF14A4Applications(bool verbose) {
 
     // e.g. DESFire EV2 answers 9000 to any SELECT with Le
     if (sw == ISO7816_OK) {
-        PrintAndLogEx(HINT, "Hint: Card answers to all AID. It maybe the latest revision of plus/desfire/ultralight card.");
+        PrintAndLogEx(HINT, "Hint: Card answers to all AID.");
         DropField();
         return 0;
     }
