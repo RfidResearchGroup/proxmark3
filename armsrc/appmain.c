@@ -4499,8 +4499,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint16_t mv = (packet->length >= 2)
                           ? (uint16_t)(packet->data.asBytes[0] | (packet->data.asBytes[1] << 8))
                           : BWM_DEFAULT_VCHG_MV;
-            StartTicks();
-            I2C_init(true);
             uint16_t applied = bwm_charger_set_vchg(mv);
             reply_ng(CMD_PM5_BWM_SET_VCHG, applied ? PM3_SUCCESS : PM3_EFAILED, (uint8_t *)&applied, sizeof(applied));
             break;
@@ -4511,8 +4509,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint16_t cap = (packet->length >= 2)
                            ? (uint16_t)(packet->data.asBytes[0] | (packet->data.asBytes[1] << 8))
                            : BWM_DEFAULT_DESIGN_CAP_MAH;
-            StartTicks();
-            I2C_init(true);
             bool ok = bwm_gauge_provision_capacity(cap);
             reply_ng(CMD_PM5_BWM_SET_CAP, ok ? PM3_SUCCESS : PM3_EFAILED, (uint8_t *)&cap, sizeof(cap));
             break;
@@ -4522,8 +4518,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             // Payload: 1 byte, non-zero = enable (default), zero = disable.
             // One-shot: reverts on the charger watchdog timeout (~160 s).
             bool enable = (packet->length >= 1) ? (packet->data.asBytes[0] != 0) : true;
-            StartTicks();
-            I2C_init(true);
             bool ok = bwm_charger_set_charge(enable);
             reply_ng(CMD_PM5_BWM_CHARGE_EN, ok ? PM3_SUCCESS : PM3_EFAILED, NULL, 0);
             break;
