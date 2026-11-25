@@ -5,8 +5,26 @@
 #include "cmdfpga.h"
 #include "ui.h"
 #include "util_posix.h" // msclock
+#include "util.h"       // str_endswith
 
 static int CmdHelp(const char *Cmd);
+
+// <name>.sha512.txt next to the image
+static bool fpga_sha512_path(const char *filename, char *sha512filename, size_t len) {
+
+    char *path = NULL;
+    if (searchFile(&path, RESOURCES_SUBDIR, filename, ".bin", true) != PM3_SUCCESS) {
+        return false;
+    }
+
+    size_t baselen = strlen(path);
+    if (str_endswith(path, ".bin") || str_endswith(path, ".BIN")) {
+        baselen -= strlen(".bin");
+    }
+    snprintf(sha512filename, len, "%.*s.sha512.txt", (int)baselen, path);
+    free(path);
+    return true;
+}
 
 static int CmdConfigFpga(const char *Cmd) {
     CLIParserContext *ctx;
@@ -45,6 +63,8 @@ static int CmdConfigFpga(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    PrintAndLogEx(INFO, "firmware file       " _YELLOW_("%s"), filename);
+
     // Load the file content into data buffer
     uint8_t *data = NULL;
     size_t datalen = 0;
@@ -52,6 +72,18 @@ static int CmdConfigFpga(const char *Cmd) {
     if (res != PM3_SUCCESS) {
         free(data);
         return PM3_EFILE;
+    }
+
+    char sha512filename[FILE_PATH_SIZE] = {'\0'};
+    if (fpga_sha512_path(filename, sha512filename, sizeof(sha512filename)) == false) {
+        free(data);
+        return PM3_EFILE;
+    }
+
+    res = checkFileSHA512(sha512filename, data, datalen);
+    if (res != PM3_SUCCESS) {
+        free(data);
+        return res;
     }
 
     struct {

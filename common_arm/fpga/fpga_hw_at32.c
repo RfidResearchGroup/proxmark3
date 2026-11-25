@@ -385,14 +385,16 @@ int FpgaConfigWrite(uint8_t *data, uint32_t data_length) {
 int FpgaStopConfig(void) {
     gowin_jtag_stop_config(&gci);
     if (gci.status != GOWIN_JTAG_OK) {
+        // a failed SRAM load falls back to the flash image
+        if (gci.is_cfg_sram) {
+            fpga_read_usercode();
+        } else {
+            fpga_usercode_valid = false;
+        }
         return PM3_EFAILED;
     }
-    // A flash image only runs after the next power cycle
-    if (gci.is_cfg_sram) {
-        fpga_read_usercode();
-    } else {
-        fpga_usercode_valid = false;
-    }
+    // both paths end with the new image running, the status check proved it
+    fpga_read_usercode();
     return PM3_SUCCESS;
 }
 

@@ -26,7 +26,6 @@
 #include "proxmark3.h"
 #include "comms.h"              // getfromdevice
 #include "emv/emvcore.h"        // decodeTVL
-#include "crypto/libpcrypto.h"  // sha512hash
 #include "ui.h"
 #include "util.h"
 #include "fileutils.h"
@@ -653,7 +652,6 @@ static int CmdSmartUpgrade(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "firmware file       " _YELLOW_("%s"), filename);
-    PrintAndLogEx(INFO, "Checking integrity  " _YELLOW_("%s"), sha512filename);
 
     // load firmware file
     size_t firmware_size = 0;
@@ -663,47 +661,11 @@ static int CmdSmartUpgrade(const char *Cmd) {
         return PM3_EFILE;
     }
 
-    // load sha512 file
-    size_t sha512_size = 0;
-    char *hashstring = NULL;
-    if (loadFile_safe(sha512filename, "", (void **)&hashstring, &sha512_size) != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "SHA-512 file not found or locked.");
+    int res = checkFileSHA512(sha512filename, firmware, firmware_size);
+    if (res != PM3_SUCCESS) {
         free(firmware);
-        return PM3_EFILE;
+        return res;
     }
-
-    if (sha512_size < 128) {
-        PrintAndLogEx(FAILED, "SHA-512 file wrong size");
-        free(hashstring);
-        free(firmware);
-        return PM3_ESOFT;
-    }
-    hashstring[128] = '\0';
-
-    int hash1n = 0;
-    uint8_t hash_1[64];
-    if (param_gethex_ex(hashstring, 0, hash_1, &hash1n) && hash1n != 128) {
-        PrintAndLogEx(FAILED, "Couldn't read SHA-512 file. expect 128 hex bytes, got ( "_RED_("%d") " )", hash1n);
-        free(hashstring);
-        free(firmware);
-        return PM3_ESOFT;
-    }
-
-    uint8_t hash_2[64];
-    if (sha512hash(firmware, firmware_size, hash_2)) {
-        PrintAndLogEx(FAILED, "Couldn't calculate SHA-512 of firmware");
-        free(hashstring);
-        free(firmware);
-        return PM3_ESOFT;
-    }
-
-    if (memcmp(hash_1, hash_2, 64)) {
-        PrintAndLogEx(FAILED, "Couldn't verify integrity of firmware file " _RED_("(wrong SHA-512 hash)"));
-        free(hashstring);
-        free(firmware);
-        return PM3_ESOFT;
-    }
-    free(hashstring);
 
     PrintAndLogEx(INFO, _GREEN_("Don\'t turn off your PM3!"));
     PrintAndLogEx(SUCCESS, "Sim module firmware uploading to PM3...");
@@ -1629,7 +1591,7 @@ static command_t CommandTable[] = {
     {"pps",        CmdSmartPPS,           IfPm3Smartcard,  "Run an ISO 7816-3 PPS exchange"},
     {"reader",     CmdSmartReader,        IfPm3Smartcard,  "Act like an IS07816 reader"},
     {"raw",        CmdSmartRaw,           IfPm3Smartcard,  "Send raw hex data to tag"},
-    {"upgrade",    CmdSmartUpgrade,       AlwaysAvailable, "Upgrade sim module firmware"},
+    {"upgrade",    CmdSmartUpgrade,       IfPm3,           "Upgrade sim module firmware"},
     {"setclock",   CmdSmartSetClock,      IfPm3Smartcard,  "Set clock speed"},
     {NULL, NULL, NULL, NULL}
 };

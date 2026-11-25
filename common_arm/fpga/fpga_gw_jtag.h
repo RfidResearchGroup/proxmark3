@@ -39,9 +39,9 @@
 #define set_jtagsel_high()  (AT32_GPIO_FPGA_JTAG_SEL->scr = AT32_GPIO_FPGA_JTAG_SEL_PIN)
 #define set_jtagsel_low()   (AT32_GPIO_FPGA_JTAG_SEL->clr = AT32_GPIO_FPGA_JTAG_SEL_PIN)
 
-// Debug print, controlled by the DEBUG_GW_JTAG compile switch; runtime toggling is no longer supported
+// Debug print, needs the DEBUG_GW_JTAG compile switch and `hw dbg -3` (DBG_DEBUG) at runtime
 #if DEBUG_GW_JTAG
-#define dbg_printf(...) Dbprintf(__VA_ARGS__)
+#define dbg_printf(...) do { if (g_dbglevel >= DBG_DEBUG) Dbprintf(__VA_ARGS__); } while (0)
 #else
 #define dbg_printf(...) ((void)0)
 #endif
@@ -91,6 +91,7 @@ typedef enum {
     GOWIN_JTAG_ERROR_VLD_STATUS,
     GOWIN_JTAG_ERROR_ERASE_FAIL,
     GOWIN_JTAG_ERROR_ENABLE_CFG,
+    GOWIN_JTAG_ERROR_CONFIG_FAIL,
 } gowin_jtag_status_t;
 
 typedef enum {
