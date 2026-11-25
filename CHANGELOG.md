@@ -27,6 +27,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed PM5 CEP - a long PM5 command could make the Flipper lose its connection even while it was still polling (@adrian-stepien)
 - Fixed PM5 CEP handshakes - receive Flipper bytes even while the attach check is waiting for its next poll (@adrian-stepien)
 - Fixed PM5 CEP - receive Flipper commands during attach checks and reject bad frame lengths without losing the next command (@adrian-stepien)
+- Fixed PM5 CEP - accept Flipper commands whose length starts with 0x55 (@adrian-stepien)
 - Fixed PM5 power save - keep the CEP and BWM UARTs and the timing counter at their configured rates when the core changes speed (@adrian-stepien)
 - Fixed `hw ping` - return errors for timeouts, device errors, wrong response lengths and mismatched echoes
 - Fixed `lf search` - stop on acquisition or sample download errors instead of decoding an earlier capture

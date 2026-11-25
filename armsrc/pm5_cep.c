@@ -57,9 +57,7 @@
 #define CEP_SPI_RESPONSE_TIMEOUT_TICKS  1500000  // 1s at 1.5 MHz
 #define CEP_HANDSHAKE_REPLY_MAX_RETRIES 3  // bound the stall-recovery loop below - still-attached isn't still-working forever
 
-// 0x55 filler the Flipper sends while its own SPI poll finds nothing new -
-// discard it so the real length header is recognized as soon as it starts,
-// instead of ever reading a 0x55 byte as (part of) a frame length.
+// The Flipper prefixes commands with 0x55 sync bytes.
 #define CEP_SYNC_BYTE            0x55
 #define CEP_SYNC_MAX_DISCARD     600
 
@@ -432,6 +430,22 @@ static bool cep_spi_read_byte(uint8_t *out) {
     return true;
 }
 
+static bool cep_spi_rewind_ng_magic(uint8_t first) {
+    uint32_t magic = COMMANDNG_PREAMBLE_MAGIC;
+    if (first != (uint8_t)magic) {
+        return false;
+    }
+    for (size_t i = 1; i < sizeof(magic); i++) {
+        uint8_t byte;
+        magic >>= 8;
+        if (!cep_spi_read_byte(&byte) || byte != (uint8_t)magic) {
+            return false;
+        }
+    }
+    s_spi_rx_tail -= sizeof(magic);
+    return true;
+}
+
 bool cep_spi_rx_pending(void) {
     if (!s_cep_active) {
         return false;
@@ -473,12 +487,13 @@ bool cep_spi_data_available(void) {
         if (len_header[0] != CEP_SYNC_BYTE) {
             break;
         }
-        if (++discarded > CEP_SYNC_MAX_DISCARD) {
+        if (++discarded > CEP_SYNC_MAX_DISCARD + 1) {
             // More sync bytes than the FAP's real preamble (500) can only
             // mean a desynced read (AT32 errata ES0003, see
             // cep_spi_resync()) or bus noise - resync now rather than
             // leaving SPI1 in that state until a later CRC/length check
             // catches it, which may be a full frame away.
+            // The last 0x55 may be the low byte of the length.
             cep_spi_resync();
             return false;
         }
@@ -487,14 +502,25 @@ bool cep_spi_data_available(void) {
         return false;
     }
     uint16_t data_len = (len_header[1] << 8) | len_header[0];
-    if (data_len == 0xFFFF) {
+    const size_t max_len = MAX(sizeof(PacketCommandNGRaw), sizeof(PacketCommandOLD));
+
+    // If we skipped the low length byte, len_header[1] starts the NG magic.
+    uint16_t sync_len = (len_header[0] << 8) | CEP_SYNC_BYTE;
+    if (discarded > 0 && data_len > max_len && sync_len <= sizeof(PacketCommandNGRaw)
+            && cep_spi_rewind_ng_magic(len_header[1])) {
+        data_len = sync_len;
+        discarded--;
+    }
+
+    if (data_len == 0xFFFF && discarded <= CEP_SYNC_MAX_DISCARD) {
         // FAP's reply-poll drives 0xFF dummy bytes when it has nothing to
         // send (furi_hal_spi_bus_trx with a NULL tx buffer) - not a desync,
         // same treatment as a CEP_SYNC_BYTE run, no resync needed.
         return false;
     }
-    if (data_len < sizeof(PacketCommandNGPreamble) + sizeof(PacketCommandNGPostamble)
-            || data_len > MAX(sizeof(PacketCommandNGRaw), sizeof(PacketCommandOLD))) {
+    if (discarded > CEP_SYNC_MAX_DISCARD
+            || data_len < sizeof(PacketCommandNGPreamble) + sizeof(PacketCommandNGPostamble)
+            || data_len > max_len) {
         // Same reasoning: an implausible length is itself evidence of a
         // desynced read, not just "no frame yet."
         cep_spi_resync();
