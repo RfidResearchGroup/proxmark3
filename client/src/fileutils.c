@@ -2000,14 +2000,12 @@ int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata,
 
 int checkFileSHA512(const char *sha512filename, uint8_t *data, size_t datalen) {
 
-    PrintAndLogEx(INPLACE, "Checking integrity  " _YELLOW_("%s"), sha512filename);
-
     const char *err = NULL;
     int res = PM3_ESOFT;
     char *hashstring = NULL;
     size_t sha512_size = 0;
 
-    // silent search, a missing file must not break the inplace line
+    // silent search, the status line below reports a missing file
     char *sha512path = NULL;
     if ((searchFile(&sha512path, RESOURCES_SUBDIR, sha512filename, "", true) != PM3_SUCCESS) ||
             (loadFile_safeEx(sha512path, "", (void **)&hashstring, &sha512_size, false) != PM3_SUCCESS)) {
@@ -2035,13 +2033,11 @@ int checkFileSHA512(const char *sha512filename, uint8_t *data, size_t datalen) {
     free(hashstring);
 
     if (res == PM3_SUCCESS) {
-        PrintAndLogEx(INPLACE, "Checking integrity  " _YELLOW_("%s") " ( " _GREEN_("ok") " )", sha512filename);
-        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "Checking integrity  " _YELLOW_("%s") " ( " _GREEN_("ok") " )", sha512filename);
         return PM3_SUCCESS;
     }
 
-    PrintAndLogEx(INPLACE, "Checking integrity  " _YELLOW_("%s") " ( " _RED_("fail") " )", sha512filename);
-    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Checking integrity  " _YELLOW_("%s") " ( " _RED_("fail") " )", sha512filename);
     // a hash mismatch needs no reason, the fail says it
     if (err) {
         PrintAndLogEx(FAILED, "%s", err);
