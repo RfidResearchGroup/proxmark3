@@ -1074,7 +1074,8 @@ static void lf_chk_bitstream(void) {
 }
 
 // Uploads g_GraphBuffer to device, in order to be used for LF SIM.
-int lfsim_upload_gb(void) {
+// Capped to device memory, *samples gets the uploaded count.
+int lfsim_upload_gb(uint16_t *samples) {
     PrintAndLogEx(DEBUG, "DEBUG: Uploading %zu bytes", g_GraphTraceLen);
 
     struct pupload {
@@ -1094,12 +1095,15 @@ int lfsim_upload_gb(void) {
     // leaked by a previous run.
     g_conn.block_after_ACK = false;
 
+    size_t n = g_GraphTraceLen;
     size_t max_samples = MIN((size_t)UINT16_MAX, (size_t)g_pm3_capabilities.bigbuf_size);
-    if (g_GraphTraceLen > max_samples) {
-        PrintAndLogEx(ERR, "Graphbuffer too long for LF simulation (%zu > %zu samples)", g_GraphTraceLen, max_samples);
-        return PM3_EOVFLOW;
+    if (n > max_samples) {
+        PrintAndLogEx(WARNING, "Graphbuffer too long, simulating first " _YELLOW_("%zu") " of %zu samples", max_samples, n);
+        n = max_samples;
     }
+
     if (g_conn.max_cmd_data_size <= 3) {
+        PrintAndLogEx(ERR, "Device frame size too small for LF samples");
         return PM3_EINVARG;
     }
 
@@ -1107,9 +1111,9 @@ int lfsim_upload_gb(void) {
 
     //can send only 512 bits at a time (1 byte sent per bit...)
     PrintAndLogEx(INFO, "." NOLF);
-    for (size_t i = 0; i < g_GraphTraceLen; i += g_conn.max_cmd_data_size - 3) {
+    for (size_t i = 0; i < n; i += g_conn.max_cmd_data_size - 3) {
 
-        size_t len = MIN((g_GraphTraceLen - i), (size_t)(g_conn.max_cmd_data_size - 3));
+        size_t len = MIN((n - i), (size_t)(g_conn.max_cmd_data_size - 3));
         clearCommandBuffer();
         payload_up.offset = i;
 
@@ -1118,10 +1122,12 @@ int lfsim_upload_gb(void) {
 
         SendCommandNG(CMD_LF_UPLOAD_SIM_SAMPLES, (uint8_t *)&payload_up, 3 + len);  // header (flag+offset) + actual samples, not the padded struct
         if (WaitForResponse(CMD_LF_UPLOAD_SIM_SAMPLES, &resp) == false) {
+            PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "No response while uploading LF samples");
             return PM3_EIO;
         }
         if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(ERR, "LF sample upload failed (status %d)", resp.status);
             return resp.status;
         }
@@ -1133,6 +1139,7 @@ int lfsim_upload_gb(void) {
 
     // Disable fast mode before last command
     g_conn.block_after_ACK = false;
+    *samples = (uint16_t)n;
     return PM3_SUCCESS;
 }
 
@@ -1170,7 +1177,8 @@ int CmdLFSim(const char *Cmd) {
     // convert to bitstream if necessary
     lf_chk_bitstream();
 
-    int res = lfsim_upload_gb();
+    uint16_t samples = 0;
+    int res = lfsim_upload_gb(&samples);
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -1179,7 +1187,7 @@ int CmdLFSim(const char *Cmd) {
         uint16_t len;
         uint16_t gap;
     } PACKED payload;
-    payload.len = (uint16_t)g_GraphTraceLen;
+    payload.len = samples;
     payload.gap = gap;
 
     clearCommandBuffer();
@@ -1866,7 +1874,8 @@ static int lf_relay_rdr(const char *ip, uint16_t port) {
 
         g_GraphTraceLen = incoming_len;
         lf_chk_bitstream();
-        int res = lfsim_upload_gb();
+        uint16_t samples = 0;
+        int res = lfsim_upload_gb(&samples);
         if (res != PM3_SUCCESS) {
             relay_close(sock);
             return res;
@@ -1876,7 +1885,7 @@ static int lf_relay_rdr(const char *ip, uint16_t port) {
             uint16_t len;
             uint16_t gap;
         } PACKED payload;
-        payload.len = (uint16_t)g_GraphTraceLen;
+        payload.len = samples;
         payload.gap = 0;
 
         clearCommandBuffer();

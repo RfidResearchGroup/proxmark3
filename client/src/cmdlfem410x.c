@@ -575,7 +575,8 @@ static int CmdEM410xBrute(const char *Cmd) {
 
         em410x_construct_emul_graph(testuid, clk, gap);
 
-        res = lfsim_upload_gb();
+        uint16_t samples = 0;
+        res = lfsim_upload_gb(&samples);
         if (res != PM3_SUCCESS) {
             free(uidblock);
             return res;
@@ -585,7 +586,7 @@ static int CmdEM410xBrute(const char *Cmd) {
             uint16_t len;
             uint16_t gap;
         } PACKED payload;
-        payload.len = (uint16_t)g_GraphTraceLen;
+        payload.len = samples;
         payload.gap = 0;
 
         clearCommandBuffer();
