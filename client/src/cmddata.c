@@ -1970,8 +1970,7 @@ static int CmdHexsamples(const char *Cmd) {
         PrintAndLogEx(INFO, "n is larger than big buffer size, will use %u", requested);
     }
 
-    uint8_t got[g_pm3_capabilities.bigbuf_size];
-    if (offset + requested > sizeof(got)) {
+    if (offset > g_pm3_capabilities.bigbuf_size || requested > g_pm3_capabilities.bigbuf_size - offset) {
         PrintAndLogEx(NORMAL, "Tried to read past end of buffer, <bytes %u> + <offset %u> > %d"
                       , requested
                       , offset
@@ -1980,12 +1979,19 @@ static int CmdHexsamples(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    uint8_t *got = calloc(requested ? requested : 1, sizeof(uint8_t));
+    if (got == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     if (!GetFromDevice(BIG_BUF, got, requested, offset, NULL, 0, NULL, 2500, false)) {
         PrintAndLogEx(WARNING, "command execution time out");
+        free(got);
         return PM3_ESOFT;
     }
 
     print_hex_break(got, requested, breaks);
+    free(got);
     return PM3_SUCCESS;
 }
 
@@ -2061,17 +2067,26 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose, bool ignore_lf_conf
         return PM3_EINVARG;
     }
 
+    if (g_pm3_capabilities.bigbuf_size <= 1 || start >= g_pm3_capabilities.bigbuf_size - 1) {
+        PrintAndLogEx(WARNING, "Sample start is outside the device buffer");
+        return PM3_EINVARG;
+    }
+
     // If we get all but the last byte in bigbuf,
     // we don't have to worry about remaining trash
     // in the last byte in case the bits-per-sample
     // does not line up on byte boundaries
-    uint8_t got[g_pm3_capabilities.bigbuf_size - 1];
-    memset(got, 0x00, sizeof(got));
-
+    uint32_t max_bytes = g_pm3_capabilities.bigbuf_size - 1 - start;
     uint32_t n = end - start;
 
-    if (n == 0 || n > g_pm3_capabilities.bigbuf_size - 1) {
-        n = g_pm3_capabilities.bigbuf_size - 1;
+    if (n == 0 || n > max_bytes) {
+        n = max_bytes;
+    }
+
+    uint8_t *got = calloc(n, sizeof(uint8_t));
+    if (got == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
     }
 
     if (verbose) {
@@ -2081,6 +2096,7 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose, bool ignore_lf_conf
     PacketResponseNG resp;
     if (GetFromDevice(BIG_BUF, got, n, start, NULL, 0, &resp, 10000, true) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        free(got);
         return PM3_ETIMEOUT;
     }
 
@@ -2092,14 +2108,20 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose, bool ignore_lf_conf
 
     if (IfPm3Lf() && ignore_lf_config == false) {
         sample_config sc;
-        lf_getconfig(&sc);
+        int res = lf_getconfig(&sc);
+        if (res != PM3_SUCCESS) {
+            free(got);
+            return res;
+        }
         if (verbose) {
             PrintAndLogEx(INFO, "Samples @ " _YELLOW_("%d") " bits/smpl, decimation 1:%d ", sc.bits_per_sample, sc.decimation);
         }
         bits_per_sample = sc.bits_per_sample;
     }
 
-    return getSamplesFromBufEx(got, n, bits_per_sample, verbose);;
+    int res = getSamplesFromBufEx(got, n, bits_per_sample, verbose);
+    free(got);
+    return res;
 }
 
 int getSamplesFromBufEx(uint8_t *data, size_t sample_num, uint8_t bits_per_sample, bool verbose) {

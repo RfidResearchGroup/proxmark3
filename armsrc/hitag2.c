@@ -4020,7 +4020,13 @@ static void ht2_send(bool turn_on, uint32_t *cmd_start
         FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
 
         // Wait with field on to be in "Wait for START_AUTH" timeframe
-        lf_wait_periods(HITAG_T_WAIT_POWERUP + HITAG_T_WAIT_START_AUTH_MAX / 4);
+        // lf_sample_mean() takes the last 32 periods of it
+        lf_wait_periods(HITAG_T_WAIT_POWERUP + HITAG_T_WAIT_START_AUTH_MAX / 4 - 32);
+
+        // Re-take the edge reference on the field the answer rides on.  The one
+        // from lf_init() is taken 3 ms after an FPGA load, while the LF envelope
+        // is still ~20 ms from settled, and no edges are seen against it.
+        lf_sample_mean();
         *cmd_start += HITAG_T_WAIT_POWERUP + HITAG_T_WAIT_START_AUTH_MAX / 4;
 
     } else {
