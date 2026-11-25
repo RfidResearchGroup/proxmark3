@@ -9,7 +9,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-// <name>.sha512.txt next to the image; false if there is none
+// <name>.sha512.txt next to the image
 static bool fpga_sha512_path(const char *filename, char *sha512filename, size_t len) {
 
     char *path = NULL;
@@ -23,12 +23,6 @@ static bool fpga_sha512_path(const char *filename, char *sha512filename, size_t 
     }
     snprintf(sha512filename, len, "%.*s.sha512.txt", (int)baselen, path);
     free(path);
-
-    char *sha512path = NULL;
-    if (searchFile(&sha512path, RESOURCES_SUBDIR, sha512filename, "", true) != PM3_SUCCESS) {
-        return false;
-    }
-    free(sha512path);
     return true;
 }
 
@@ -81,14 +75,15 @@ static int CmdConfigFpga(const char *Cmd) {
     }
 
     char sha512filename[FILE_PATH_SIZE] = {'\0'};
-    if (fpga_sha512_path(filename, sha512filename, sizeof(sha512filename))) {
-        res = checkFileSHA512(sha512filename, data, datalen);
-        if (res != PM3_SUCCESS) {
-            free(data);
-            return res;
-        }
-    } else {
-        PrintAndLogEx(WARNING, "No SHA-512 file, integrity not checked");
+    if (fpga_sha512_path(filename, sha512filename, sizeof(sha512filename)) == false) {
+        free(data);
+        return PM3_EFILE;
+    }
+
+    res = checkFileSHA512(sha512filename, data, datalen);
+    if (res != PM3_SUCCESS) {
+        free(data);
+        return res;
     }
 
     struct {
