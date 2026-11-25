@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed PM5 BWM settings - charge, voltage and capacity commands could hang if a preceding RF operation stopped the timing counter (@adrian-stepien)
 - Fixed `lf hitag reader` on PM5 - the first UID read could miss the tag after `hw tune` (@adrian-stepien)
 - Fixed `hw bwm upgrade` - send the final reply before rebooting the BWM so the client can request the PM5 reset over BLE or Wi-Fi (@adrian-stepien)
 - Fixed `hw bwm upgrade` - report an unknown update result when the final reply times out (@adrian-stepien)
