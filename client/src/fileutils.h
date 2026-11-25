@@ -388,6 +388,15 @@ int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, s
 int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata, size_t *datalen, bool verbose);
 
 /**
+ * @brief Check data against the hash in a sha512sum style file, prints the integrity status
+ * @param sha512filename the .sha512.txt file
+ * @param data the data to check
+ * @param datalen length of the data
+ * @return PM3_SUCCESS if the hash matches
+ */
+int checkFileSHA512(const char *sha512filename, uint8_t *data, size_t datalen);
+
+/**
  * @brief Utility function to load a text file. This method takes a preferred name.
  * E.g. dumpdata-15.json,  tries to search for it,  and allocated memory.
  *
