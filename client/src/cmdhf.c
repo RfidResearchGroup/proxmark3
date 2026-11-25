@@ -21,6 +21,7 @@
 #include "cmdparser.h"      // command_t
 #include "cliparser.h"      // parse
 #include "comms.h"          // clearCommandBuffer
+#include "cmdmain.h"        // CommandReceived
 #include "util.h"           // set_rgb
 #include "lfdemod.h"        // computeSignalProperties
 #include "cmdhf14a.h"       // ISO14443-A
@@ -258,6 +259,32 @@ int CmdHFSearch(const char *Cmd) {
         return res;
     }
 
+    // PM5: a single found tag gets its info command run
+    const char *info_cmd = NULL;
+    if (IfPm5()) {
+        int found = 0;
+        for (int i = 0; i < COUNT_OF_PROTOCOLS; i++) {
+            found += success[i] ? 1 : 0;
+        }
+
+        if (found == 1) {
+            int types = hf14a_last_info_types();
+            if (success[ISO_14443A] && types == MTCLASSIC) {
+                info_cmd = "hf mf info";
+            } else if (success[ISO_14443A] && types == MTULTRALIGHT) {
+                info_cmd = "hf mfu info";
+            } else if (success[ISO_14443A] && types == MTDESFIRE) {
+                info_cmd = "hf mfdes info";
+            } else if (success[ISO_14443B]) {
+                info_cmd = "hf 14b info";
+            } else if (success[ISO_15693]) {
+                info_cmd = "hf 15 info";
+            } else if (success[ICLASS]) {
+                info_cmd = "hf iclass info";
+            }
+        }
+    }
+
     // no need to print 14A hints,  since it will print itself
 
     if (success[THINFILM]) {
@@ -284,15 +311,15 @@ int CmdHFSearch(const char *Cmd) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf xerox") "` commands\n");
     }
 
-    if (success[ISO_14443B]) {
+    if (success[ISO_14443B] && info_cmd == NULL) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 14b") "` commands\n");
     }
 
-    if (success[ISO_15693]) {
+    if (success[ISO_15693] && info_cmd == NULL) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 15") "` commands\n");
     }
 
-    if (success[ICLASS]) {
+    if (success[ICLASS] && info_cmd == NULL) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass") "` commands\n");
     }
 
@@ -302,6 +329,10 @@ int CmdHFSearch(const char *Cmd) {
 
     if (success[PROTO_CRYPTORF]) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf cryptorf") "` commands\n");
+    }
+
+    if (info_cmd) {
+        CommandReceived(info_cmd);
     }
 
     return res;

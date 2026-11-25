@@ -255,6 +255,7 @@ static const hintAIDList_t hintAIDList[] = {
 static uint16_t gs_frame_len = 0;
 static uint8_t gs_frames_num = 0;
 static uint16_t atsFSC[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
+static int gs_info_types = MTNONE;  // MTCLASSIC / MTULTRALIGHT / MTDESFIRE of the last infoHF14A card
 
 int hf14a_getversion_data(iso14a_card_select_t *card, uint64_t select_status, version_hw_t *hw) {
 
@@ -3072,7 +3073,13 @@ int hf14a_aid_search(bool verbose, bool *emv_found) {
     return found;
 }
 
+int hf14a_last_info_types(void) {
+    return gs_info_types;
+}
+
 int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
+
+    gs_info_types = MTNONE;
 
     uint8_t dbg_curr = DBG_NONE;
     if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
@@ -3738,6 +3745,17 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         }
     }
 
+    if (isMifareClassic || isMifareMini) {
+        gs_info_types |= MTCLASSIC;
+    }
+
+    if (isMifareUltralight) {
+        gs_info_types |= MTULTRALIGHT;
+    }
+
+    if (mfdes_hint) {
+        gs_info_types |= MTDESFIRE;
+    }
 
     PrintAndLogEx(NORMAL, "");
     DropField();
