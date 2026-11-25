@@ -675,7 +675,8 @@ static void print_debug_level(void) {
     Dbprintf("  Debug log level..... %d ( " _YELLOW_("%s")" )", g_dbglevel, dbglvlstr);
 }
 
-// Measure connection speed with NG replies, including framing overhead in the elapsed time.
+// measure the Connection Speed by sending NG reply frames to client and measuring the elapsed time.
+// Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the PacketCommandNG structure included.
 static void printConnSpeed(uint32_t wait) {
     DbpString(_CYAN_("Transfer Speed"));
     Dbprintf("  Sending packets to client...");
@@ -708,13 +709,13 @@ static void printConnSpeed(uint32_t wait) {
     Dbprintf("  Frames sent.................... %u ( %u bytes )", frames_sent, wire_len);
     if (delta_time) {
         char rate[SPRINT_BYTES_LEN];
-        const char *target = "Client";
+        const char *target = "Client...";
 #ifdef WITH_BWM_FORWARD
         if (g_reply_via_fpc) {
-            target = "BWM";
+            target = "BWM......";
         }
 #endif
-        Dbprintf("  Transfer Speed PM3 -> %s... " _YELLOW_("%s/s"), target, sprint_bytes(rate, (uint32_t)(1000 * (uint64_t)bytes_transferred / delta_time)));
+        Dbprintf("  Transfer Speed PM3 -> %s " _YELLOW_("%s/s"), target, sprint_bytes(rate, (uint32_t)(1000 * (uint64_t)bytes_transferred / delta_time)));
         Dbprintf("  Frame rate..................... " _YELLOW_("%llu") " frames/s", 1000 * (uint64_t)frames_sent / delta_time);
     }
 }
