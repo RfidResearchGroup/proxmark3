@@ -246,11 +246,11 @@ void bwm_print_battery_status(void) {
         if (info.current_ma > 5) {
             p += sprintf(p, "  " _GREEN_("%s") " %d mA", (cstat == 1) ? "pre-charge" : "charging", info.current_ma);
         } else if (info.current_ma < -5) {
-        // Measured drain / projected runtime: when running on battery the gauge
-        // Current is negative (discharging); |cur| is the real system draw, so
-        // remaining runtime ~= RemainingCapacity / draw. Only meaningful while
-        // discharging - on charge or idle there is no drain figure to report.
-        // (Projection is only as good as RemCap - provision Design Capacity first.)
+            // Measured drain / projected runtime: when running on battery the gauge
+            // Current is negative (discharging); |cur| is the real system draw, so
+            // remaining runtime ~= RemainingCapacity / draw. Only meaningful while
+            // discharging - on charge or idle there is no drain figure to report.
+            // (Projection is only as good as RemCap - provision Design Capacity first.)
             uint16_t draw = (uint16_t)(-info.current_ma);              // mA drawn from the battery
             uint32_t mins = ((uint32_t)info.remaining_mah * 60) / draw; // RemCap/draw -> hours, *60 -> mins
             p += sprintf(p, "  " _YELLOW_("discharging") " %u mA, ~%u h %u min left", draw, (unsigned)(mins / 60), (unsigned)(mins % 60));
@@ -424,6 +424,8 @@ static bool bq_read_terminate(uint16_t *mv) {
 // reverts to its default on watchdog expiry (~160 s) unless the watchdog is
 // serviced (REG02[6]=1) or disabled (REG05[6:5]=00), so treat it as a one-shot.
 bool bwm_charger_set_charge(bool enable) {
+    StartTicks();
+    I2C_init(true);
     uint8_t reg01 = 0;
     if (I2C_BufferRead(&reg01, 1, 0x01, BWM_CHG_ADDR) <= 0) {
         return false;
@@ -442,6 +444,8 @@ bool bwm_charger_set_charge(bool enable) {
 // 15 mV step, and preserves REG04[1:0] (VBAT_PRE / VRECH). Read-modify-write.
 // Returns the mV actually applied, or 0 on I2C failure.
 uint16_t bwm_charger_set_vchg(uint16_t mv) {
+    StartTicks();
+    I2C_init(true);
     if (mv < BWM_CHG_VCHG_MIN_MV) {
         mv = BWM_CHG_VCHG_MIN_MV;
     }
@@ -467,6 +471,8 @@ uint16_t bwm_charger_set_vchg(uint16_t mv) {
 // select the 4.2 V chemistry profile. Idempotent: returns true without a
 // config-update cycle if all are already correct.
 bool bwm_gauge_provision_capacity(uint16_t cap_mah) {
+    StartTicks();
+    I2C_init(true);
 
     uint16_t cur = 0, chem = 0, term = 0;
     bool cap_ok = bq_read_design_cap(&cur) && (cur == cap_mah);

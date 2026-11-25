@@ -449,6 +449,29 @@ static bool iso15_is_cmd_not_supported(const uint8_t *d, uint16_t n) {
             (d[1] == ISO15_ERROR_CMD_NOT_SUP));
 }
 
+// true when the tag answered with ISO15693 error 0x03 (option not supported)
+static bool iso15_is_option_not_supported(const uint8_t *d, uint16_t n) {
+    return (n >= 4 &&
+            CheckCrc15(d, n) &&
+            ((d[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) &&
+            (d[1] == ISO15_ERROR_CMD_OPTION));
+}
+
+// sends a READ again without OPTION, packet->rawlen includes the crc
+static int iso15_resend_without_option(iso15_raw_cmd_t *packet, PacketResponseNG *resp) {
+    PrintAndLogEx(INFO, "Tag does not support OPTION flag, reading without it");
+    packet->raw[0] &= ~ISO15_REQ_OPTION;
+    AddCrc15(packet->raw, packet->rawlen - 2);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
+    if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, resp, 2000) == false) {
+        PrintAndLogEx(DEBUG, "iso15693 timeout");
+        return PM3_ETIMEOUT;
+    }
+    return PM3_SUCCESS;
+}
+
 // fast method to just read the UID of a tag (collision detection not supported)
 //  *buf should be large enough to fit the 64bit uid
 //  *dsfid receives DSFID when non-NULL
@@ -2158,24 +2181,29 @@ static int CmdHF15Sim(const char *Cmd) {
     SendCommandNG(CMD_HF_ISO15693_SIMULATE, (uint8_t *)&payload, sizeof(payload));
 
     uint64_t t0 = msclock();
-    uint64_t t_break = 0;
     for (;;) {
-        bool expired = (timeout != (size_t) - 1) && (msclock() - t0 >= timeout);
-        if (t_break == 0 && (expired || kbd_enter_pressed())) {
-            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            t_break = msclock();
+        if (WaitForResponseTimeout(CMD_HF_ISO15693_SIMULATE, &resp, 100)) {
+            PrintAndLogEx(INFO, "Done!");
+            return PM3_SUCCESS;
         }
 
-        if (WaitForResponseTimeout(CMD_HF_ISO15693_SIMULATE, &resp, 500)) {
-            break;
+        if (IsCommunicationThreadDead()) {
+            return PM3_EIO;
         }
 
-        // older firmware only stops on the button while a reader field is on
-        if (t_break && (msclock() - t_break > 3000)) {
-            PrintAndLogEx(WARNING, "pm3 did not stop, press the " _GREEN_("pm3 button"));
+        if (kbd_enter_pressed() || ((timeout != (size_t) - 1) && (msclock() - t0 >= timeout))) {
             break;
         }
     }
+
+    SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+
+    // older firmware only stops on the button while a reader field is on
+    if (WaitForResponseTimeout(CMD_HF_ISO15693_SIMULATE, &resp, 3000) == false) {
+        PrintAndLogEx(WARNING, "pm3 did not stop, press the " _GREEN_("pm3 button"));
+        return PM3_ETIMEOUT;
+    }
+
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
@@ -2451,6 +2479,66 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// GET_MULTIPLE_BLOCK_SECURITY_STATUS, for tags that leave the lock status out of READ
+// uid in wire order, NULL for unaddressed. Silent, callers report a failure
+static int hf_15_read_secstatus(uint8_t pm3flags, uint8_t flags, const uint8_t *uid, uint8_t blockno, uint16_t blockcnt, uint8_t *locks) {
+
+    if ((blockcnt < 1) || ((blockno + blockcnt) > 256)) {
+        return PM3_EINVARG;
+    }
+
+    // flags, cmd, uid, first block, count, crc
+    uint16_t approxlen = 2 + ISO15693_UID_LENGTH + 2 + 2;
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
+    if (packet == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    packet->raw[packet->rawlen++] = (flags & ~ISO15_REQ_OPTION);
+    packet->raw[packet->rawlen++] = ISO15693_READ_MULTI_SECSTATUS;
+
+    if (uid) {
+        memcpy(packet->raw + packet->rawlen, uid, ISO15693_UID_LENGTH);
+        packet->rawlen += ISO15693_UID_LENGTH;
+    }
+
+    packet->raw[packet->rawlen++] = blockno;
+    // 0 means 1 block
+    packet->raw[packet->rawlen++] = (uint8_t)(blockcnt - 1);
+
+    AddCrc15(packet->raw, packet->rawlen);
+    packet->rawlen += 2;
+    packet->flags = pm3flags;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
+    free(packet);
+
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
+        PrintAndLogEx(DEBUG, "iso15693 timeout");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        return resp.status;
+    }
+
+    // flags, one status byte per block, crc
+    uint8_t *d = resp.data.asBytes;
+    if ((resp.length != (1 + blockcnt + 2)) || (CheckCrc15(d, resp.length) == false)) {
+        return PM3_EWRONGANSWER;
+    }
+
+    if ((d[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) {
+        return PM3_EWRONGANSWER;
+    }
+
+    memcpy(locks, d + 1, blockcnt);
+    return PM3_SUCCESS;
+}
+
 // Reads all memory pages
 // need to write to file
 static int CmdHF15Dump(const char *Cmd) {
@@ -2674,6 +2762,7 @@ static int CmdHF15Dump(const char *Cmd) {
 
     int blocknum = 0;
     bool end_of_memory = false;
+    bool no_lock = false;
 
     for (int retry = 0; (retry < 2 && blocknum < tag->pagesCount); retry++) {
         packet->raw[1] = use_read_multi ? ISO15693_READ_MULTI_BLOCK : ISO15693_READBLOCK;
@@ -2714,6 +2803,14 @@ static int CmdHF15Dump(const char *Cmd) {
                     continue;
                 }
 
+                // option not supported, read without lock status
+                if (blocknum == 0 && (packet->raw[0] & ISO15_REQ_OPTION) && iso15_is_option_not_supported(d, resp.length)) {
+                    PrintAndLogEx(INFO, "Tag does not support OPTION flag, reading without it");
+                    packet->raw[0] &= ~ISO15_REQ_OPTION;
+                    retry = -1;
+                    continue;
+                }
+
                 // heuristic determine end of available memory
                 if (d[1] == 0x0F || d[1] == 0x10) {
                     end_of_memory = true;
@@ -2726,7 +2823,9 @@ static int CmdHF15Dump(const char *Cmd) {
             }
 
             // flags, lock status, block data, CRC
-            if (resp.length != (2 + tag->bytesPerPage + 2)) {
+            // some tags ignore OPTION and leave out the lock status
+            bool has_lock = (resp.length == (2 + tag->bytesPerPage + 2));
+            if ((has_lock == false) && (resp.length != (1 + tag->bytesPerPage + 2))) {
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(FAILED, "block %d answer is %d bytes, expected %d for a %u byte block",
                               blocknum, resp.length, 2 + tag->bytesPerPage + 2, tag->bytesPerPage);
@@ -2738,15 +2837,40 @@ static int CmdHF15Dump(const char *Cmd) {
                 continue;
             }
 
-            tag->locks[blocknum] = d[1];
+            if (has_lock) {
+                tag->locks[blocknum] = d[1];
+            } else {
+                tag->locks[blocknum] = 0;
+                no_lock = true;
+            }
 
             // copy read data
-            memcpy(&tag->data[blocknum * tag->bytesPerPage], d + 2, tag->bytesPerPage);
+            memcpy(&tag->data[blocknum * tag->bytesPerPage], d + ((has_lock) ? 2 : 1), tag->bytesPerPage);
 
             retry = -1;
             blocknum++;
 
             PrintAndLogEx(INPLACE, "blk %3d", blocknum);
+        }
+    }
+
+    // ask separately for the lock status READ left out, in chunks
+    if (no_lock && (blocknum > 0)) {
+        uint8_t pm3flags = (ISO15_READ_RESPONSE | ISO15_NO_DISCONNECT);
+        if (fast) {
+            pm3flags |= ISO15_HIGH_SPEED;
+        }
+
+        bool lock_ok = true;
+        for (int i = 0; lock_ok && (i < blocknum); i += 64) {
+            int n = MIN(64, blocknum - i);
+            lock_ok = (hf_15_read_secstatus(pm3flags, packet->raw[0], (used_uid) ? uid : NULL, i, n, &tag->locks[i]) == PM3_SUCCESS);
+        }
+
+        if (lock_ok) {
+            no_lock = false;
+        } else {
+            memset(tag->locks, 0, sizeof(tag->locks));
         }
     }
 
@@ -2775,6 +2899,10 @@ static int CmdHF15Dump(const char *Cmd) {
     }
 
     print_tag_15693(tag, dense_output, verbose);
+
+    if (no_lock) {
+        PrintAndLogEx(INFO, "Tag sent no lock status and has no security status command, lock status not read");
+    }
 
     if (incomplete) {
         PrintAndLogEx(WARNING, "Dump " _RED_("incomplete") ", read %d of %u blocks, not saved", blocknum, expected);
@@ -3100,12 +3228,22 @@ static int CmdHF15Readmulti(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
-    free(packet);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
+        free(packet);
         PrintAndLogEx(FAILED, "iso15693 card timeout");
         return PM3_ETIMEOUT;
     }
+
+    if (iso15_is_option_not_supported(resp.data.asBytes, resp.length)) {
+        if (iso15_resend_without_option(packet, &resp) != PM3_SUCCESS) {
+            free(packet);
+            return PM3_ETIMEOUT;
+        }
+    }
+
+    bool sent_option = ((packet->raw[0] & ISO15_REQ_OPTION) == ISO15_REQ_OPTION);
+    free(packet);
 
     ISO15_ERROR_HANDLING_RESPONSE
 
@@ -3116,15 +3254,20 @@ static int CmdHF15Readmulti(const char *Cmd) {
         return res;
     }
 
+    // some tags ignore OPTION and leave out the lock bytes
+    bool has_lock = sent_option && ((resp.length - 3) != ((blockcnt + 1) * blocksize));
+    int lcklen = (has_lock) ? 1 : 0;
+    int stride = blocksize + lcklen;
+
     // 1 byte cmd,  1 lock byte,  4 / 8 bytes block size,  2 crc
-    if (resp.length > (1 + ((blockcnt + 1) * (blocksize + 1)) + 2)) {
+    if (resp.length > (1 + ((blockcnt + 1) * stride) + 2)) {
         PrintAndLogEx(WARNING, "got longer response. Check block size!");
     }
 
     // print only the blocks the tag sent
-    int got = (resp.length - 3) / (blocksize + 1);
+    int got = (resp.length - 3) / stride;
     if (got < (blockcnt + 1)) {
-        if (((resp.length - 3) % (blocksize + 1)) != 0) {
+        if (((resp.length - 3) % stride) != 0) {
             PrintAndLogEx(WARNING, "got shorter response. Check block size!");
         } else {
             PrintAndLogEx(WARNING, "got shorter response, %d of %d pages", got, blockcnt + 1);
@@ -3136,25 +3279,47 @@ static int CmdHF15Readmulti(const char *Cmd) {
         blockcnt = got - 1;
     }
 
+    uint8_t locks[6] = {0};
+    bool lock_ok = has_lock;
+    if (has_lock == false) {
+        uint8_t pm3flags = (ISO15_CONNECT | ISO15_READ_RESPONSE);
+        if (fast) {
+            pm3flags |= ISO15_HIGH_SPEED;
+        }
+        uint8_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
+        lock_ok = (hf_15_read_secstatus(pm3flags, flags, (unaddressed) ? NULL : uid, blockno, blockcnt + 1, locks) == PM3_SUCCESS);
+    }
+
     // skip status byte
     int start = 1;
-    int stop = ((blockcnt + 1) * (blocksize + 1));
+    int stop = ((blockcnt + 1) * stride);
     int currblock = blockno;
 
     PrintAndLogEx(NORMAL, "");
+
+    if (lock_ok == false) {
+        PrintAndLogEx(INFO, "Tag sent no lock status and has no security status command");
+    } else if ((has_lock == false) && verbose) {
+        PrintAndLogEx(INFO, "Tag sent no lock status, read it with security status command");
+    }
+
     PrintAndLogEx(INFO, " #       | data         |lck| ascii");
     PrintAndLogEx(INFO, "---------+--------------+---+----------");
 
-    for (int i = start; i < stop; i += (blocksize + 1)) {
+    for (int i = start; i < stop; i += stride) {
+
+        uint8_t lock = (has_lock) ? d[i] : locks[currblock - blockno];
 
         char lck[16] = {0};
-        if (d[i]) {
-            snprintf(lck, sizeof(lck), _RED_("%d"), d[i]);
+        if (lock_ok == false) {
+            snprintf(lck, sizeof(lck), "-");
+        } else if (lock) {
+            snprintf(lck, sizeof(lck), _RED_("%d"), lock);
         } else {
-            snprintf(lck, sizeof(lck), "%d", d[i]);
+            snprintf(lck, sizeof(lck), "%d", lock);
         }
 
-        PrintAndLogEx(INFO, "%3d/0x%02X | %s | %s | %s", currblock, currblock, sprint_hex(d + i + 1, blocksize), lck, sprint_ascii(d + i + 1, blocksize));
+        PrintAndLogEx(INFO, "%3d/0x%02X | %s | %s | %s", currblock, currblock, sprint_hex(d + i + lcklen, blocksize), lck, sprint_ascii(d + i + lcklen, blocksize));
 
         currblock++;
     }
@@ -3307,6 +3472,15 @@ static int CmdHF15Readblock(const char *Cmd) {
             return PM3_ETIMEOUT;
         }
     }
+
+    if (iso15_is_option_not_supported(resp.data.asBytes, resp.length)) {
+        if (iso15_resend_without_option(packet, &resp) != PM3_SUCCESS) {
+            free(packet);
+            return PM3_ETIMEOUT;
+        }
+    }
+
+    bool sent_option = ((packet->raw[0] & ISO15_REQ_OPTION) == ISO15_REQ_OPTION);
     free(packet);
 
     ISO15_ERROR_HANDLING_RESPONSE
@@ -3319,23 +3493,43 @@ static int CmdHF15Readblock(const char *Cmd) {
     }
 
     // flags, lock status, data, CRC
-    int datalen = resp.length - 4;
+    // some tags ignore OPTION and leave out the lock status
+    bool has_lock = sent_option && ((resp.length - 3) != blocksize);
+    uint8_t offset = (has_lock) ? 2 : 1;
+    int datalen = resp.length - offset - 2;
     if (datalen < 1) {
         PrintAndLogEx(FAILED, "iso15693 block answer too short ( %d bytes )", resp.length);
         return PM3_EWRONGANSWER;
     }
 
+    uint8_t lock = (has_lock) ? d[1] : 0;
+    bool lock_ok = has_lock;
+    if (has_lock == false) {
+        uint8_t pm3flags = (ISO15_CONNECT | ISO15_READ_RESPONSE);
+        if (fast) {
+            pm3flags |= ISO15_HIGH_SPEED;
+        }
+        uint8_t flags = arg_get_raw_flag(uidlen, unaddressed, scan, add_option);
+        lock_ok = (hf_15_read_secstatus(pm3flags, flags, (unaddressed) ? NULL : uid, blockno, 1, &lock) == PM3_SUCCESS);
+    }
+
     // print response
     char lck[16] = {0};
-    if (d[1]) {
-        snprintf(lck, sizeof(lck), _RED_("%d"), d[1]);
+    if (lock_ok == false) {
+        snprintf(lck, sizeof(lck), "-");
+    } else if (lock) {
+        snprintf(lck, sizeof(lck), _RED_("%d"), lock);
     } else {
-        snprintf(lck, sizeof(lck), "%d", d[1]);
+        snprintf(lck, sizeof(lck), "%d", lock);
     }
 
     PrintAndLogEx(NORMAL, "");
 
-    uint8_t offset = 2;
+    if (lock_ok == false) {
+        PrintAndLogEx(INFO, "Tag sent no lock status and has no security status command");
+    } else if ((has_lock == false) && verbose) {
+        PrintAndLogEx(INFO, "Tag sent no lock status, read it with security status command");
+    }
 
     PrintAndLogEx(INFO, "#%3d        |lck| ascii", blockno);
     PrintAndLogEx(INFO, "------------+---+------");

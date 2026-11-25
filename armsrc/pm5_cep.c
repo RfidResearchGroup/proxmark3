@@ -30,6 +30,7 @@
 #include "at32f435_437.h"
 #include "at32f435_437_crm.h"
 #include "at32f435_437_gpio.h"
+#include "at32f435_437_misc.h"
 #include "at32f435_437_usart.h"
 #include "at32f435_437_spi.h"
 #include "gpio_apis.h"
@@ -37,7 +38,6 @@
 #include "ticks_apis.h"
 #include "dbprint.h"
 #include "pm3_cmd.h"
-#include "string.h"
 
 #define CEP_CC_CONTROLLER_ADDR   0x47
 #define CEP_CC_STATUS_REG        0x09
@@ -53,8 +53,7 @@
 // clocking continuously, so every later byte stays on the short timeout.
 // Took measured CEP reply success from ~22% to ~100% in testing.
 #define CEP_SPI_HEADER_BYTE_TIMEOUT  2000000
-#define CEP_SPI_RESPONSE_TIMEOUT_US  (1000 * 1000)  // 1s, matches source
-#define CEP_HANDSHAKE_RX_TIMEOUT_MS  2000  // bail out of the receive loop rather than ever hang the main loop
+#define CEP_SPI_RESPONSE_TIMEOUT_TICKS  1500000  // 1s at 1.5 MHz
 #define CEP_HANDSHAKE_REPLY_MAX_RETRIES 3  // bound the stall-recovery loop below - still-attached isn't still-working forever
 
 // 0x55 filler the Flipper sends while its own SPI poll finds nothing new -
@@ -71,6 +70,7 @@
 static bool s_cep_active = false;   // handshake completed, SPI transport live
 static bool s_cep_attached = false; // CC controller reports a physical attach
 static uint32_t s_last_spi_activity_tick = 0; // last time a real SPI poll was seen
+static volatile bool s_handshake_pending;
 
 bool cep_is_active(void) {
     return s_cep_active;
@@ -83,6 +83,14 @@ bool cep_is_attached(void) {
 // ---------------------------------------------------------------------------
 // One-time peripheral bring-up
 // ---------------------------------------------------------------------------
+
+void cep_usart_clock_update(void) {
+    // USART_BAUDR is set with the USART disabled (AT32F435 manual 12.6.2).
+    confirm_state enabled = USART1->ctrl1_bit.uen ? TRUE : FALSE;
+    usart_enable(USART1, FALSE);
+    usart_init(USART1, 2400, USART_DATA_8BITS, USART_STOP_1_BIT);
+    usart_enable(USART1, enabled);
+}
 
 static void cep_usart_init(void) {
     crm_periph_clock_enable(CRM_USART1_PERIPH_CLOCK, TRUE);
@@ -98,11 +106,13 @@ static void cep_usart_init(void) {
     gpio_init(GPIOA, &gpio_init_struct);
     gpio_pin_mux_config(GPIOA, GPIO_PINS_SOURCE9, GPIO_MUX_7);
 
-    usart_init(USART1, 2400, USART_DATA_8BITS, USART_STOP_1_BIT);
+    cep_usart_clock_update();
     usart_parity_selection_config(USART1, USART_PARITY_NONE);
     usart_transmitter_enable(USART1, FALSE);   // RX only - the reply goes over SPI, not this UART
     usart_receiver_enable(USART1, TRUE);
     usart_single_line_halfduplex_select(USART1, TRUE);
+    usart_interrupt_enable(USART1, USART_RDBF_INT, TRUE);
+    nvic_irq_enable(USART1_IRQn, 1, 0);
     usart_enable(USART1, TRUE);
 
     // PA10 (USB1_ID): read once to pick master/slave role for the SPI pin mux.
@@ -207,50 +217,36 @@ void cep_init(void) {
 // Handshake
 // ---------------------------------------------------------------------------
 
-// Blocking (bounded by the Flipper's own ~1.1s handshake timeout budget):
-// waits for STX then the literal ASCII string, replies "yes" over SPI on a
-// match. Only called once, right after cep_attach_poll() sees a fresh attach.
-static bool cep_do_handshake(void) {
-    uint8_t data[sizeof(CEP_HANDSHAKE_STRING) - 1];
-    uint8_t rx_len = 0;
-    uint32_t start_tick = GetTickCount();
-
-    while (1) {
-        if (GetTickCountDelta(start_tick) > CEP_HANDSHAKE_RX_TIMEOUT_MS) {
-            return false;
-        }
-
-        if (usart_flag_get(USART1, USART_RDBF_FLAG) != RESET) {
-            uint8_t rx_data = usart_data_receive(USART1);
-            if (rx_data == CEP_HANDSHAKE_STX) {
-                // STX: restart the frame. Unlike the original unit-test code,
-                // do NOT discard an extra byte here - the FAP protocol has no
-                // byte between STX and the literal string, and doing an
-                // unconditional second usart_data_receive() without
-                // re-checking RDBF risked reading stale data and ate what
-                // should have been the string's first byte.
-                rx_len = 0;
-                continue;
-            }
-            if (rx_len < sizeof(data)) {
-                data[rx_len++] = rx_data;
-            }
-        }
-
-        if (rx_len == sizeof(data)) {
-            if (memcmp(CEP_HANDSHAKE_STRING, data, sizeof(data)) == 0) {
-                break;
-            }
-            rx_len = 0;   // no match, resync on the next STX
-        }
+// Drain USART1 between CC polls. STX starts a new request.
+void USART1_IRQHandler(void) {
+    static uint8_t match;
+    const uint32_t errors = USART_FERR_FLAG | USART_NERR_FLAG | USART_ROERR_FLAG;
+    uint32_t status = USART1->sts;
+    if ((status & (USART_RDBF_FLAG | errors)) == 0) {
+        return;
     }
 
+    // Reading status then data clears receive errors.
+    uint8_t byte = usart_data_receive(USART1);
+    if (status & errors) {
+        match = 0;
+    } else if (byte == CEP_HANDSHAKE_STX) {
+        match = 1;
+    } else if (match == 0 || byte != CEP_HANDSHAKE_STRING[match - 1]) {
+        match = 0;
+    } else if (++match == sizeof(CEP_HANDSHAKE_STRING)) {
+        match = 0;
+        s_handshake_pending = true;
+    }
+}
+
+static bool cep_reply_handshake(void) {
     uint8_t response[] = {0x04, 0x00, 'y', 'e', 's', 0x00};
     for (size_t i = 0; i < sizeof(response); i++) {
         uint32_t wait_start = GetTicks();
         int recovery_attempts = 0;
         while (spi_i2s_flag_get(SPI1, SPI_I2S_TDBE_FLAG) == RESET) {
-            if (GetTicks() - wait_start > CEP_SPI_RESPONSE_TIMEOUT_US) {
+            if (GetTicks() - wait_start >= CEP_SPI_RESPONSE_TIMEOUT_TICKS) {
                 // Bound this: "still attached" isn't "still working" forever,
                 // and I2C_BufferRead() needs the ticks timer running like
                 // every other call site (see cep_attach_poll()'s comment).
@@ -283,6 +279,10 @@ void cep_attach_poll(void) {
     if ((last_tick != 0) && (GetTickCountDelta(last_tick) < CEP_ATTACH_POLL_MS)) {
         return;
     }
+    // A long command kept the main loop from seeing the Flipper's polls.
+    if ((last_tick != 0) && (GetTickCountDelta(last_tick) > CEP_ACTIVITY_TIMEOUT_MS)) {
+        s_last_spi_activity_tick = GetTickCount();
+    }
     last_tick = GetTickCount();
 
     // I2C_init() must be preceded by StartTicks(), like everywhere else -
@@ -302,6 +302,7 @@ void cep_attach_poll(void) {
 
     if (!attached) {
         s_cep_active = false;
+        s_handshake_pending = false;
     } else {
         // The FAP re-runs its handshake on every app launch, not just on a
         // fresh physical attach - the CC controller's attach bits don't
@@ -309,11 +310,10 @@ void cep_attach_poll(void) {
         // they do, sometimes they don't), so gating the handshake listener on
         // that edge alone missed real handshake attempts and required a
         // physical unplug/replug to recover (GH #3667). Instead, watch for a
-        // fresh incoming byte any time we're attached, regardless of edge.
-        // cep_do_handshake() itself is timeout-bounded so a spurious byte
-        // can't hang the main loop.
-        if (usart_flag_get(USART1, USART_RDBF_FLAG) != RESET) {
-            s_cep_active = cep_do_handshake();
+        // complete request any time we're attached, regardless of edge.
+        if (s_handshake_pending) {
+            s_handshake_pending = false;
+            s_cep_active = cep_reply_handshake();
             if (s_cep_active) {
                 s_last_spi_activity_tick = GetTickCount();
             }

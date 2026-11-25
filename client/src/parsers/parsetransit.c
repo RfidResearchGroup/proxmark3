@@ -207,9 +207,20 @@ void transit_money_str(char *out, size_t outlen, int64_t minor, uint8_t decimals
 // Printing
 //-----------------------------------------------------------------------------
 
+#define TRANSIT_BANNER_WIDTH    60
+
+void transit_print_section(const char *title) {
+    static const char dashes[] = "------------------------------------------------------------";
+    int pad = TRANSIT_BANNER_WIDTH - 5 - (int)strlen(title);
+    if (pad < 3) {
+        pad = 3;
+    }
+    PrintAndLogEx(INFO, "--- " _CYAN_("%s") " %.*s", title, pad, dashes);
+}
+
 void transit_print_header(const char *title) {
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("%s") " ---------------------------", title);
+    transit_print_section(title);
 }
 
 void transit_print_kv(const char *label, const char *fmt, ...) {

@@ -163,7 +163,7 @@ int bwm_esp_set_power_save(bool on, uint8_t *state);
 int bwm_esp_get_version(uint8_t *buf, uint16_t *buflen, uint32_t timeout_ms);
 int bwm_esp_get_ble_name(uint8_t *buf, uint16_t *buflen);
 int bwm_esp_set_ble_name(const uint8_t *name, uint16_t len);
-int bwm_esp_ota_begin(uint32_t total_size);
+int bwm_esp_ota_begin(uint32_t total_size, bool stop_ble);
 int bwm_esp_ota_write(const uint8_t *data, uint16_t len);
 int bwm_esp_ota_end(void);
 int bwm_esp_reboot(void);

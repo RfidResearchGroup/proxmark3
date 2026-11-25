@@ -3309,7 +3309,7 @@ int HFMFSENRecover(bool keep_nonces, bool no_oob, bool reader_mode, bool offline
         fm11_sen_progress_footer();
         fm11_print_key_table(keys_found, found_key);
         retval = fm11_save_recovery_outputs(&card, &nonces, keys_found, found_key, no_oob, collected_with_data, suffix, no_save);
-        PrintAndLogEx(SUCCESS, "time in sen " _YELLOW_("%.0f") " seconds", (float)(msclock() - t1) / 1000.0);
+        PrintAndLogEx(SUCCESS, "time in sen " _YELLOW_("%s"), sprint_duration(msclock() - t1));
         goto out;
     }
 
@@ -3543,7 +3543,7 @@ int HFMFSENRecover(bool keep_nonces, bool no_oob, bool reader_mode, bool offline
     fm11_sen_progress_footer();
     fm11_print_key_table(keys_found, found_key);
     retval = fm11_save_recovery_outputs(&card, &nonces, keys_found, found_key, no_oob, collected_with_data, suffix, no_save);
-    PrintAndLogEx(SUCCESS, "time in sen " _YELLOW_("%.0f") " seconds", (float)(msclock() - t1) / 1000.0);
+    PrintAndLogEx(SUCCESS, "time in sen " _YELLOW_("%s"), sprint_duration(msclock() - t1));
 
 out:
     // stopped by Enter, a timeout or the card,  close the progress table

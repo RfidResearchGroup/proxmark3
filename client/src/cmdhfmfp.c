@@ -1844,7 +1844,7 @@ static int CmdHFMFPChk(const char *Cmd) {
     res = plus_key_check(startSector, endSector, startKeyAB, endKeyAB, key_block, keycnt, foundKeys, verbose, true, &untested);
     if (res == PM3_EOPABORTED) {
         t1 = msclock() - t1;
-        PrintAndLogEx(INFO, "\ntime in checkkeys " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+        PrintAndLogEx(INFO, "\ntime in checkkeys " _YELLOW_("%s") "\n", sprint_duration(t1));
         return res;
     }
 
@@ -1867,7 +1867,7 @@ static int CmdHFMFPChk(const char *Cmd) {
     }
 
     t1 = msclock() - t1;
-    PrintAndLogEx(INFO, "\ntime in checkkeys " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+    PrintAndLogEx(INFO, "\ntime in checkkeys " _YELLOW_("%s") "\n", sprint_duration(t1));
 
     // print result
     char strA[46 + 1] = {0};
@@ -2587,7 +2587,7 @@ chunkCycleClean2:
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mf chk") "` to find more keys");
     }
 
-    PrintAndLogEx(INFO, "\ntime in dump " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+    PrintAndLogEx(INFO, "\ntime in dump " _YELLOW_("%s") "\n", sprint_duration(t1));
     free(carddata);
     return PM3_SUCCESS;
 }

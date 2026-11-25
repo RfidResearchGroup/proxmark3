@@ -150,3 +150,6 @@ _codeql*
 venv/
 #Claude AI files
 CLAUDE.md
+
+# local work folder
+WORK/

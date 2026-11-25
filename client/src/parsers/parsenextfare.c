@@ -112,6 +112,11 @@ static bool nf_date_str(const uint8_t *p, char *out, size_t outlen) {
     return true;
 }
 
+// Packed date reordered year, month, day, minute so it sorts by time
+static uint32_t nf_ts_key(uint32_t ts) {
+    return (((ts >> 9) & 0x7F) << 20) | (((ts >> 5) & 0x0F) << 16) | ((ts & 0x1F) << 11) | ((ts >> 16) & 0x7FF);
+}
+
 typedef struct {
     uint8_t version;
     int32_t balance;
@@ -194,6 +199,21 @@ static const char *nf_seqgo_ticket(uint16_t t) {
     }
 }
 
+// card side amount padded to width, red when negative, green when positive
+static void nf_money_col(char *out, size_t outlen, int32_t minor, const char *cur, bool plus, int width) {
+    char m[32], p[40];
+    transit_money_str(m, sizeof(m), minor, 2, cur);
+    snprintf(p, sizeof(p), "%s%s", (plus && minor > 0) ? "+" : "", m);
+
+    if (minor < 0) {
+        snprintf(out, outlen, _RED_("%*s"), width, p);
+    } else if (minor > 0) {
+        snprintf(out, outlen, _GREEN_("%*s"), width, p);
+    } else {
+        snprintf(out, outlen, "%*s", width, p);
+    }
+}
+
 int nextfare_parser_parse(const uint8_t *dump, size_t dumplen) {
     if (is_valid_nextfare_card(dump, dumplen) == false) {
         return PM3_EINVARG;
@@ -232,8 +252,8 @@ int nextfare_parser_parse(const uint8_t *dump, size_t dumplen) {
     const nf_balance_t *hi = (b1.version > b0.version) ? &b1 : &b0;
     const nf_balance_t *lo = (hi == &b0) ? &b1 : &b0;
     const nf_balance_t *bal = (hi->version >= 240 && lo->version <= 10) ? lo : hi;
-    transit_money_str(s, sizeof(s), bal->balance, 2, cur);
-    transit_print_kv("Balance", _GREEN_("%s"), s);
+    nf_money_col(s, sizeof(s), bal->balance, cur, false, 0);
+    transit_print_kv("Balance", "%s", s);
     if (bal->travel_pass) {
         transit_print_kv("Travel pass", "available");
     }
@@ -241,24 +261,41 @@ int nextfare_parser_parse(const uint8_t *dump, size_t dumplen) {
     const uint8_t *cfg = dump + NF_BLK(1, 2);
     uint16_t ticket = MemLeToUint2byte(cfg + 8);
     if (sys == NF_SEQGO) {
-        transit_print_kv("Ticket type", "0x%04X ( %s )", ticket, nf_seqgo_ticket(ticket));
+        transit_print_kv("Ticket type", "0x%04X ( " _YELLOW_("%s") " )", ticket, nf_seqgo_ticket(ticket));
     } else {
         transit_print_kv("Ticket type", "0x%04X", ticket);
     }
     nf_date_str(cfg + 4, s, sizeof(s));
     transit_print_kv("Expiry", "%s", s);
 
-    PrintAndLogEx(INFO, "");
-    PrintAndLogEx(INFO, "Top ups, times local");
+    // top ups, sector 2, newest first
+    const uint8_t *tops[3];
+    uint8_t ntop = 0;
     for (uint8_t i = 0; i < 3; i++) {
         const uint8_t *b = dump + NF_BLK(2, i);
-        if (transit_is_zero(b + 2, 6)) {
-            continue;
+        if (transit_is_zero(b + 2, 6) == false) {
+            tops[ntop++] = b;
         }
-        char amt[32];
+    }
+    for (uint8_t i = 1; i < ntop; i++) {
+        for (uint8_t j = i; j > 0; j--) {
+            if (nf_ts_key(MemLeToUint4byte(tops[j] + 2)) <= nf_ts_key(MemLeToUint4byte(tops[j - 1] + 2))) {
+                break;
+            }
+            const uint8_t *tmp = tops[j];
+            tops[j] = tops[j - 1];
+            tops[j - 1] = tmp;
+        }
+    }
+
+    PrintAndLogEx(INFO, "");
+    transit_print_section("Top ups, times local");
+    for (uint8_t i = 0; i < ntop; i++) {
+        const uint8_t *b = tops[i];
+        char amt[64];
         nf_date_str(b + 2, s, sizeof(s));
-        transit_money_str(amt, sizeof(amt), MemLeToUint2byte(b + 6) & 0x7FFF, 2, cur);
-        PrintAndLogEx(INFO, "  %s  +%-12s  station %5u%s", s, amt, MemLeToUint2byte(b + 12),
+        nf_money_col(amt, sizeof(amt), MemLeToUint2byte(b + 6) & 0x7FFF, cur, true, -13);
+        PrintAndLogEx(INFO, " %s  %s  station %5u%s", s, amt, MemLeToUint2byte(b + 12),
                       (b[0] == 0x31) ? "  automatic" : "");
     }
 
@@ -271,7 +308,7 @@ int nextfare_parser_parse(const uint8_t *dump, size_t dumplen) {
         PrintAndLogEx(INFO, "Travel pass, version %u, %s", b[13], s);
     }
 
-    // taps, sectors 5..8, sorted by journey then time, newest first
+    // taps, sectors 5..8, newest first
     nf_tap_t taps[NF_MAX_TAPS];
     uint8_t n = 0;
     for (uint8_t sec = 5; sec <= 8; sec++) {
@@ -283,9 +320,7 @@ int nextfare_parser_parse(const uint8_t *dump, size_t dumplen) {
     }
     for (uint8_t i = 1; i < n; i++) {
         for (uint8_t j = i; j > 0; j--) {
-            const nf_tap_t *a = &taps[j - 1], *c = &taps[j];
-            bool newer = (c->journey != a->journey) ? (c->journey > a->journey) : (c->ts > a->ts);
-            if (newer == false) {
+            if (nf_ts_key(taps[j].ts) <= nf_ts_key(taps[j - 1].ts)) {
                 break;
             }
             nf_tap_t tmp = taps[j];
@@ -295,13 +330,21 @@ int nextfare_parser_parse(const uint8_t *dump, size_t dumplen) {
     }
 
     PrintAndLogEx(INFO, "");
-    PrintAndLogEx(INFO, "Taps, times local");
+    transit_print_section("Taps, times local");
     for (uint8_t i = 0; i < n; i++) {
-        char amt[32];
+        char amt[64];
+        char jny[16];
         nf_date_str(taps[i].raw + 2, s, sizeof(s));
-        transit_money_str(amt, sizeof(amt), -taps[i].value, 2, cur);
-        PrintAndLogEx(INFO, "  %s  journey %4u%s  mode %3u  station %5u  %12s  %s", s,
-                      taps[i].journey, taps[i].continuation ? "+" : " ", taps[i].mode,
+        // tap on holds back the default fare, tap off refunds the rest
+        nf_money_col(amt, sizeof(amt), taps[i].value, cur, true, 12);
+        // Go card journey id is the tap on minute of day
+        if (sys == NF_SEQGO && taps[i].journey < 1440) {
+            snprintf(jny, sizeof(jny), "%02u:%02u", taps[i].journey / 60, taps[i].journey % 60);
+        } else {
+            snprintf(jny, sizeof(jny), "%5u", taps[i].journey);
+        }
+        PrintAndLogEx(INFO, " %s  journey %s%s  mode %3u  station %5u  %s  %s", s,
+                      jny, taps[i].continuation ? "+" : " ", taps[i].mode,
                       taps[i].station, amt, nf_tap_type(taps[i].type));
     }
     return PM3_SUCCESS;
@@ -328,6 +371,14 @@ int nextfare_selftest(void) {
         nf_date_str(cfg[i] + 4, s, sizeof(s));
         ok &= transit_check_str("config expiry", s, expiry[i]);
     }
+
+    // later day with an earlier minute, and a year boundary
+    uint32_t d13_1650 = 13 | (11 << 5) | (23 << 9) | (1010u << 16);
+    uint32_t d29_1637 = 29 | (11 << 5) | (23 << 9) | (997u << 16);
+    uint32_t y22_1128 = 28 | (11 << 5) | (22 << 9) | (569u << 16);
+    uint32_t y23_0418 = 18 | (4 << 5) | (23 << 9) | (566u << 16);
+    ok &= transit_check("date order by day", nf_ts_key(d29_1637) > nf_ts_key(d13_1650), true);
+    ok &= transit_check("date order by year", nf_ts_key(y23_0418) > nf_ts_key(y22_1128), true);
 
     static const uint8_t bal[3][16] = {
         {0x01, 0x28, 0xD2, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x12, 0xFF, 0xFF},

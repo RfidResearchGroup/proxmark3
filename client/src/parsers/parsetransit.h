@@ -79,6 +79,9 @@ void transit_money_str(char *out, size_t outlen, int64_t minor, uint8_t decimals
 // Blank line and a cyan section banner
 void transit_print_header(const char *title);
 
+// Cyan banner padded with dashes to the header width
+void transit_print_section(const char *title);
+
 // "Label........... value", value formatted printf style
 void transit_print_kv(const char *label, const char *fmt, ...) __attribute__((format(PM3_PRINTF_FORMAT, 2, 3)));
 

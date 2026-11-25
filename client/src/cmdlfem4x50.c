@@ -598,7 +598,7 @@ static int CmdEM4x50Chk(const char *Cmd) {
     }
 
     t1 = msclock() - t1;
-    PrintAndLogEx(SUCCESS, "\ntime in check pwd " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+    PrintAndLogEx(SUCCESS, "\ntime in check pwd " _YELLOW_("%s") "\n", sprint_duration(t1));
     return PM3_SUCCESS;
 }
 

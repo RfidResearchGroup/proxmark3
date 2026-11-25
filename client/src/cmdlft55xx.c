@@ -523,6 +523,11 @@ bool t55xxVerifyWrite(uint8_t block, bool page1, bool usepwd, uint8_t override, 
 
 int t55xxWrite(uint8_t block, bool page1, bool usepwd, bool testMode, uint32_t password, uint8_t downlink_mode, uint32_t data) {
 
+    // a new block 0 can change the PWD bit, so the next read with the password runs the safety check
+    if (block == T55x7_CONFIGURATION_BLOCK && page1 == false) {
+        config.pwd_known = false;
+    }
+
     uint8_t flags;
     flags  = (usepwd)   ? 0x1 : 0;
     flags |= (page1)    ? 0x2 : 0;
@@ -782,6 +787,8 @@ static int CmdT55xxSetConfig(const char *Cmd) {
 
     config.block0Status = USERSET;
     if (gotconf) {
+        // the user's block 0 replaces the PWD bit detect found, so the next read with the password runs the safety check
+        config.pwd_known = false;
         SetConfigWithBlock0Ex(block0, config.offset, config.Q5);
     }
 
@@ -800,7 +807,7 @@ int T55xxReadBlockEx(uint8_t block, bool page1, bool usepwd, uint8_t override, u
         // override = 2 (override and no display)
         if (override == 0) {
             // A live detect (lf t55xx detect -p) that recovered this password already confirmed the PWD bit is set.
-            bool detect_confirmed_pwd = (config.pwd_known && config.usepwd && config.pwd == password);
+            bool detect_confirmed_pwd = (config.pwd_known && config.pwd_bit && config.pwd == password);
 
             if (detect_confirmed_pwd == false) {
                 if (AcquireData(T55x7_PAGE0, T55x7_CONFIGURATION_BLOCK, false, 0, downlink_mode) == false)
@@ -808,7 +815,12 @@ int T55xxReadBlockEx(uint8_t block, bool page1, bool usepwd, uint8_t override, u
 
                 if (t55xxTryDetectModulationEx(downlink_mode, false, 0, password) == false) {
                     PrintAndLogEx(WARNING, "Safety check: Could not detect if PWD bit is set in config block. Exits.");
-                    PrintAndLogEx(HINT, "Hint: Consider using the override parameter to force read.");
+                    // the read above, without the password, cleared pwd_known. Ask what the last detect found instead
+                    if (config.pwd_bit && config.pwd == password) {
+                        PrintAndLogEx(HINT, "Hint: run " _YELLOW_("lf t55xx detect -p %08X -o") " to confirm this password, or use the override parameter", password);
+                    } else {
+                        PrintAndLogEx(HINT, "Hint: Consider using the override parameter to force read.");
+                    }
                     return PM3_EWRONGANSWER;
                 } else {
                     PrintAndLogEx(WARNING, "Safety check: PWD bit is NOT set in config block. Reading without password...");
@@ -842,6 +854,13 @@ int T55xxReadBlockEx(uint8_t block, bool page1, bool usepwd, uint8_t override, u
     }
 
     return PM3_SUCCESS;
+}
+
+static void t55xx_warn_no_pwd(void) {
+    if (config.pwd_known && config.pwd_bit) {
+        PrintAndLogEx(WARNING, _YELLOW_("lf t55xx detect") " found the PWD bit set. In PWD mode no blocks are returned");
+        PrintAndLogEx(HINT, "Hint: to read the blocks, run " _YELLOW_("lf t55xx detect -p %08X -o") ", then this command with " _YELLOW_("-p %08X"), config.pwd, config.pwd);
+    }
 }
 
 static int CmdT55xxReadBlock(const char *Cmd) {
@@ -910,6 +929,10 @@ static int CmdT55xxReadBlock(const char *Cmd) {
     if (block > 7 && block != REGULAR_READ_MODE_BLOCK) {
         PrintAndLogEx(NORMAL, "Block must be between 0 and 7");
         return PM3_ESOFT;
+    }
+
+    if (usepwd == false && block != REGULAR_READ_MODE_BLOCK) {
+        t55xx_warn_no_pwd();
     }
 
     printT5xxHeader(page1);
@@ -1231,6 +1254,7 @@ static int CmdT55xxDetect(const char *Cmd) {
     // password mode gates direct access, so a live detect tells us which mode
     // the tag is in.  set before the narrowing below, which uses it
     config.pwd_known = (found && use_gb == false);
+    config.pwd_bit = config.usepwd;
 
     uint8_t nblk = 0;
     bool psk2_out = false, favoured = false;
@@ -1287,6 +1311,9 @@ static int CmdT55xxDetect(const char *Cmd) {
             rerotated = t55xx_resolve_block0_rotation(nblk);
         }
     }
+
+    // a re-anchored word can disagree with the mode detect read in. Then the PWD bit is unknown
+    if (rerotated && config.usepwd != config.pwd_bit) { config.pwd_known = false; }
 
     if (found) {
 
@@ -1998,6 +2025,12 @@ static void t55xx_ask_sweep(t55xx_conf_block_t *tests, uint8_t *hits, uint8_t do
 
 bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32_t wanted_conf, uint64_t pwd) {
 
+    // A hit replaces config.pwd, so the safety check skip could apply to a password lf t55xx detect never confirmed.
+    // CmdT55xxDetect sets pwd_known again after its own search.
+    if (pwd != -1) {
+        config.pwd_known = false;
+    }
+
     t55xx_conf_block_t tests[15] = {0};
     int bitRate = 0, clk = 0, firstClockEdge = 0;
     uint8_t hits = 0, fc1 = 0, fc2 = 0, ans = 0;
@@ -2495,7 +2528,7 @@ static size_t t55xx_psk3_resolve(uint8_t nblk, uint32_t *only) {
         }
 
         // and the password bit has to match the mode the detect succeeded in
-        if (config.pwd_known && ((((cand[i] >> 4) & 1) != 0) != config.usepwd)) {
+        if (config.pwd_known && ((((cand[i] >> 4) & 1) != 0) != config.pwd_bit)) {
             continue;
         }
         if (mb != 0 && (mb % nblk) == 0) {
@@ -3134,7 +3167,7 @@ int printConfiguration(t55xx_conf_block_t b) {
         if (b.pwd_known) {
             size_t kept = 0;
             for (size_t i = 0; i < ncand; i++) {
-                if ((((cand[i] >> 4) & 1) != 0) == b.usepwd) {
+                if ((((cand[i] >> 4) & 1) != 0) == b.pwd_bit) {
                     cand[kept++] = cand[i];
                 }
             }
@@ -3208,8 +3241,10 @@ int printConfiguration(t55xx_conf_block_t b) {
     }
 
     PrintAndLogEx(INFO, " Downlink mode..... %s", GetDownlinkModeStr(b.downlink_mode));
-    PrintAndLogEx(INFO, " Password set...... %s", (b.usepwd) ? _RED_("Yes") : _GREEN_("No"));
-    if (b.usepwd) {
+    // prefer the PWD bit a live detect found. usepwd follows the last read
+    bool pwd_set = (b.pwd_known) ? b.pwd_bit : b.usepwd;
+    PrintAndLogEx(INFO, " Password set...... %s", (pwd_set) ? _RED_("Yes") : _GREEN_("No"));
+    if (pwd_set) {
         PrintAndLogEx(INFO, " Password.......... %08X", b.pwd);
     }
     PrintAndLogEx(NORMAL, "");
@@ -3963,6 +3998,10 @@ static int CmdT55xxDump(const char *Cmd) {
 
     bool success = true;
 
+    if (usepwd == false) {
+        t55xx_warn_no_pwd();
+    }
+
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "------------------------- " _CYAN_("T55xx tag memory") " -----------------------------");
 
@@ -4197,6 +4236,12 @@ static int CmdT55xxRestore(const char *Cmd) {
 }
 */
 bool AcquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password, uint8_t downlink_mode) {
+    // A read without the password ends detect's confirmation of the PWD bit, because the tag may have changed.
+    // If pwd_bit is clear, pwd_known stays. Detect's psk3 narrowing reads pwd_known after reads like this one.
+    if (pwdmode == false && config.pwd_bit) {
+        config.pwd_known = false;
+    }
+
     // arg0 bitmodes:
     //  b0 = pwdmode
     //  b1 = page to read from
@@ -4226,7 +4271,9 @@ bool AcquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password, u
         return false;
     }
 
-    getSamples(12000, false);
+    if (getSamplesEx(0, 12000, false, true) != PM3_SUCCESS) {
+        return false;
+    }
     bool ok = !getSignalProperties()->isnoise;
 
     config.usepwd = pwdmode;
@@ -4571,29 +4618,51 @@ static int CmdResetRead(const char *Cmd) {
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_LF_T55XX_RESET_READ, &flags, sizeof(flags));
-    if (WaitForResponseTimeout(CMD_LF_T55XX_RESET_READ, &resp, 2500) == false) {
+    // At 125 kHz each raw sample takes 8 us, plus setup time.
+    uint32_t timeout = MAX(2500u, 1000 + ((uint64_t)g_pm3_capabilities.bigbuf_size * 8 + 999) / 1000);
+    if (WaitForResponseTimeout(CMD_LF_T55XX_RESET_READ, &resp, timeout) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
-    if (resp.status == PM3_SUCCESS) {
-
-        uint16_t gotsize = g_pm3_capabilities.bigbuf_size - 1;
-        uint8_t *got = calloc(gotsize, sizeof(uint8_t));
-        if (got == NULL) {
-            PrintAndLogEx(WARNING, "Failed to allocate memory");
-            return PM3_EMALLOC;
-        }
-
-        PrintAndLogEx(INFO, "Downloading samples...");
-        if (!GetFromDevice(BIG_BUF, got, gotsize, 0, NULL, 0, NULL, 2500, false)) {
-            PrintAndLogEx(WARNING, "command execution time out");
-            free(got);
-            return PM3_ETIMEOUT;
-        }
-        setGraphBuffer(got, gotsize);
-        free(got);
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Reset capture failed (status %d)", resp.status);
+        return resp.status;
     }
+
+    uint32_t size = g_pm3_capabilities.bigbuf_size;
+    if (size == 0) {
+        PrintAndLogEx(WARNING, "Device did not report its sample buffer size");
+        return PM3_ESOFT;
+    }
+    uint32_t count;
+    if (resp.length == sizeof(count)) {
+        count = resp.data.asDwords[0];
+    } else if (resp.length == 0) {
+        // Older firmware did not report a sample count.
+        count = size - 1;
+    } else {
+        PrintAndLogEx(WARNING, "Unexpected reset capture response length: %u", resp.length);
+        return PM3_ESOFT;
+    }
+    if (count == 0 || count > size) {
+        PrintAndLogEx(WARNING, "Invalid reset capture sample count: %" PRIu32, count);
+        return PM3_ESOFT;
+    }
+
+    uint8_t *samples = calloc(count, sizeof(uint8_t));
+    if (samples == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+    PrintAndLogEx(INFO, "Downloading samples...");
+    if (!GetFromDevice(BIG_BUF, samples, count, 0, NULL, 0, NULL, 10000, false)) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        free(samples);
+        return PM3_ETIMEOUT;
+    }
+    setGraphBuffer(samples, count);
+    free(samples);
 
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
@@ -4930,7 +4999,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
 
 out:
     t1 = msclock() - t1;
-    PrintAndLogEx(SUCCESS, "\ntime in check pwd " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+    PrintAndLogEx(SUCCESS, "\ntime in check pwd " _YELLOW_("%s") "\n", sprint_duration(t1));
     return PM3_SUCCESS;
 }
 
@@ -5036,7 +5105,7 @@ static int CmdT55xxBruteForce(const char *Cmd) {
         PrintAndLogEx(WARNING, "Bruteforce failed, last tried: [ " _YELLOW_("%08X") " ]", curr);
 
     t1 = msclock() - t1;
-    PrintAndLogEx(SUCCESS, "\ntime in bruteforce " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+    PrintAndLogEx(SUCCESS, "\ntime in bruteforce " _YELLOW_("%s") "\n", sprint_duration(t1));
     return PM3_SUCCESS;
 }
 

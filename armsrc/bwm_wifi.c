@@ -524,7 +524,9 @@ int bwm_esp_set_ble_name(const uint8_t *name, uint16_t len) {
     return bwm_cmd(BWM_CMD_SET_BLE_DEVICE_NAME, name, len, NULL, NULL, 3000);
 }
 
-int bwm_esp_ota_begin(uint32_t total_size) {
+static bool s_ota_restart_ble;
+
+int bwm_esp_ota_begin(uint32_t total_size, bool stop_ble) {
     // SILENCE ESP log forwarding for the OTA. With it on, the ESP's background
     // log broadcasts (WiFi/coex/BLE) interleave with the per-chunk acks across
     // the thousands of round-trips; one landing in an ack window drops that
@@ -533,10 +535,11 @@ int bwm_esp_ota_begin(uint32_t total_size) {
     uint8_t off = 0;
     (void)bwm_cmd(BWM_CMD_LOG_FORWARD_ENABLE, &off, 1, NULL, NULL, 500);
 
-    // Stop BLE so NimBLE is not hitting flash (NVS / auto-suspend) while we
-    // erase and program the OTA slot. WiFi stays as-is: tearing it down here
-    // is slow and the USB OTA path does not need it off.
-    (void)bwm_cmd(BWM_CMD_STOP_BLE_SPP, NULL, 0, NULL, NULL, 2000);
+    // Stop background BLE during the flash erase only on a known non-BLE link.
+    if (stop_ble) {
+        s_ota_restart_ble = true;
+        (void)bwm_cmd(BWM_CMD_STOP_BLE_SPP, NULL, 0, NULL, NULL, 2000);
+    }
 
     // Do NOT retune the UART here. Version already proved the current baud
     // works; dropping 921600 -> 460800/460000 can leave the ESP on one rate
@@ -558,20 +561,25 @@ int bwm_esp_ota_write(const uint8_t *data, uint16_t len) {
     return bwm_cmd(BWM_CMD_OTA_WRITE, data, len, NULL, NULL, BWM_OTA_WRITE_TIMEOUT_MS);
 }
 
-int bwm_esp_ota_end(void) {
-    int r = bwm_cmd(BWM_CMD_OTA_END, NULL, 0, NULL, NULL, 20000);
+static void bwm_esp_ota_restore(void) {
     uint8_t on = 1;
     (void)bwm_cmd(BWM_CMD_LOG_FORWARD_ENABLE, &on, 1, NULL, NULL, 500);
-    (void)bwm_cmd(BWM_CMD_START_BLE_SPP, NULL, 0, NULL, NULL, 2000);
+    if (s_ota_restart_ble &&
+            bwm_cmd(BWM_CMD_START_BLE_SPP, NULL, 0, NULL, NULL, 2000) == PM3_SUCCESS) {
+        s_ota_restart_ble = false;
+    }
+}
+
+int bwm_esp_ota_end(void) {
+    int r = bwm_cmd(BWM_CMD_OTA_END, NULL, 0, NULL, NULL, 20000);
+    bwm_esp_ota_restore();
     return r;
 }
 
 int bwm_esp_ota_abort(void) {
     // Restore logs + BLE. Leave the UART baud alone (see begin). The ESP's
     // incomplete OTA state is discarded by the next BEGIN.
-    uint8_t on = 1;
-    (void)bwm_cmd(BWM_CMD_LOG_FORWARD_ENABLE, &on, 1, NULL, NULL, 500);
-    (void)bwm_cmd(BWM_CMD_START_BLE_SPP, NULL, 0, NULL, NULL, 2000);
+    bwm_esp_ota_restore();
     return PM3_SUCCESS;
 }
 

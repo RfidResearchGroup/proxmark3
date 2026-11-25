@@ -257,8 +257,6 @@ void SimulateSeos(seos_emulate_req_t *msg) {
     // Just to allow some checks
     int cmdsRecvd = 0;
 
-    bool odd_reply = true;
-
     clear_trace();
     set_tracing(true);
     LED_A_ON();
@@ -279,12 +277,8 @@ void SimulateSeos(seos_emulate_req_t *msg) {
             break;
         }
 
-        if (receivedCmd[0] == ISO14443A_CMD_REQA && len == 1) { // Received a REQUEST, but in HALTED, skip
-            odd_reply = !odd_reply;
-            if (odd_reply) {
-                p_response = &responses[RESP_INDEX_ATQA];
-            }
-
+        if (receivedCmd[0] == ISO14443A_CMD_REQA && len == 1) { // Received a REQUEST
+            p_response = &responses[RESP_INDEX_ATQA];
         } else if (receivedCmd[0] == ISO14443A_CMD_WUPA && len == 1) { // Received a WAKEUP
             p_response = &responses[RESP_INDEX_ATQA];
         } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 2) {    // Received request for UID (cascade 1)

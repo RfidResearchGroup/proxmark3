@@ -779,7 +779,7 @@ int bruteforceDump(uint8_t dump[], size_t dumpsize, uint16_t keytable[]) {
     if (res == PM3_SUCCESS) {
         PrintAndLogEx(NORMAL, "");
     }
-    PrintAndLogEx(SUCCESS, "time " _YELLOW_("%" PRIu64) " seconds", t1 / 1000);
+    PrintAndLogEx(SUCCESS, "time " _YELLOW_("%s"), sprint_duration(t1));
 
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "loclass key recovery( %s )", _RED_("fail"));
