@@ -593,9 +593,9 @@ static void __attribute__((noinline)) SendVersion(void) {
 #else
     uint32_t fpga_usercode;
     if (Fpga_get_usercode(&fpga_usercode)) {
-        sprintf(temp, "\n [ "_YELLOW_("FPGA")" ] \n Usercode... 0x%08X", (unsigned int)fpga_usercode);
+        sprintf(temp, "\n [ "_YELLOW_("FPGA")" ] \n  Usercode... 0x%08X", (unsigned int)fpga_usercode);
     } else {
-        sprintf(temp, "\n [ "_YELLOW_("FPGA")" ] \n Usercode... unknown");
+        sprintf(temp, "\n [ "_YELLOW_("FPGA")" ] \n  Usercode... unknown");
     }
     strncat(VersionString, temp, sizeof(VersionString) - strlen(VersionString) - 1);
 #endif

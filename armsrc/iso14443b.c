@@ -128,6 +128,9 @@
 # define FWT_TIMEOUT_14B (16384)
 #endif
 
+// first answer of a select: due within the activation FWT, not the card's FWT
+#define ISO14B_ACTIVATION_TIMEOUT   MIN(s_iso14b_timeout, FWT_TIMEOUT_14B)
+
 // ETU 14 * 9.4395 µS = 132 µS == 0.132ms
 // TR2,  counting from start of PICC EOF 14 ETU.
 #define DELAY_ISO14443B_PICC_TO_PCD_READER  HF14_ETU_TO_SSP(14)
@@ -1456,6 +1459,12 @@ static RAMFUNC int Handle14443bSamplesFromTag(int ci, int cq) {
                     uint16_t s = Demod.shiftReg;
 
                     if ((s & 0x200) && !(s & 0x001)) { // stop bit == '1', start bit == '0'
+                        // buffer full: stop, the caller sees len > max_len and reports PM3_EOVFLOW
+                        if (Demod.len >= Demod.max_len) {
+                            Demod.len++;
+                            LED_C_OFF();
+                            return true;
+                        }
                         Demod.output[Demod.len] = (s >> 1);
                         Demod.len++;
                         Demod.bitCount = 0;
@@ -1947,7 +1956,7 @@ static int iso14443b_select_cts_card(iso14b_cts_card_select_t *card) {
 
     eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
     uint16_t retlen = 0;
-    if (Get14443bAnswerFromTag(r, sizeof(r), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
+    if (Get14443bAnswerFromTag(r, sizeof(r), ISO14B_ACTIVATION_TIMEOUT, &eof_time, &retlen) != PM3_SUCCESS) {
         return PM3_ECARDEXCHANGE;
     }
 
@@ -2020,7 +2029,7 @@ int iso14443b_select_srx_card(iso14b_card_select_t *card) {
 
     eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
     uint16_t retlen = 0;
-    if (Get14443bAnswerFromTag(r_init, sizeof(r_init), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
+    if (Get14443bAnswerFromTag(r_init, sizeof(r_init), ISO14B_ACTIVATION_TIMEOUT, &eof_time, &retlen) != PM3_SUCCESS) {
         return PM3_ECARDEXCHANGE;
     }
 
@@ -2382,7 +2391,7 @@ int iso14443b_select_card(iso14b_card_select_t *card) {
 
     eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
     uint16_t retlen = 0;
-    if (Get14443bAnswerFromTag(r_pupid, sizeof(r_pupid), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
+    if (Get14443bAnswerFromTag(r_pupid, sizeof(r_pupid), ISO14B_ACTIVATION_TIMEOUT, &eof_time, &retlen) != PM3_SUCCESS) {
         return PM3_ECARDEXCHANGE;
     }
 
@@ -2480,7 +2489,7 @@ static int iso14443b_select_picopass_card(picopass_hdr_t *hdr) {
     eof_time += DELAY_ISO14443B_PCD_TO_PICC_READER;
 
     // expect a 10-byte response here, 8 byte anticollision-CSN and 2 byte CRC
-    if (Get14443bAnswerFromTag(resp, sizeof(resp), s_iso14b_timeout, &eof_time, &retlen) != PM3_SUCCESS) {
+    if (Get14443bAnswerFromTag(resp, sizeof(resp), ISO14B_ACTIVATION_TIMEOUT, &eof_time, &retlen) != PM3_SUCCESS) {
         return PM3_ECARDEXCHANGE;
     }
     if (retlen != 10) {
@@ -2618,7 +2627,8 @@ int iso14443b_setup(void) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD);
 #endif
 
-    SpinDelay(100);
+    // ISO 14443-3: a PICC accepts a command 5 ms after the field is on
+    SpinDelay(20);
 
     // Start the timer
     StartCountSspClk();
@@ -2864,7 +2874,7 @@ void SniffIso14443b(void) {
                                     - (32 * 16)             // time for SOF transfer
                                     - 0;                    // time for EOF transfer
 
-                LogTrace(Demod.output, Demod.len, (sof_time * 4), (eof_time * 4), NULL, false);
+                LogTrace(Demod.output, MIN(Demod.len, Demod.max_len), (sof_time * 4), (eof_time * 4), NULL, false);
                 // And ready to receive another response.
                 Uart14bReset();
                 Demod14bReset();

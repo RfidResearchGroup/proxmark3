@@ -21,6 +21,7 @@
 #include "dbprint.h"
 #include "pm3_cmd.h"
 #include "util.h" // nbytes
+#include "commonutil.h"  // sprint_bytes
 
 #define BIGBUF_ALIGN_BYTES (4)
 #define BIGBUF_ALIGN_MASK  (~(uint32_t)(BIGBUF_ALIGN_BYTES - 1))
@@ -207,11 +208,12 @@ void BigBuf_free_keep_EM(void) {
 }
 
 void BigBuf_print_status(void) {
+    char b[SPRINT_BYTES_LEN];
     DbpString(_CYAN_("Memory"));
-    Dbprintf("  BigBuf_size............. %d", s_bigbuf_size);
-    Dbprintf("  Available memory........ %d", s_bigbuf_hi);
-    Dbprintf("  Emulator memory......... %d ( %s )"
-             , CARD_MEMORY_SIZE
+    Dbprintf("  BigBuf_size............. %s", sprint_bytes(b, s_bigbuf_size));
+    Dbprintf("  Available memory........ %s", sprint_bytes(b, s_bigbuf_hi));
+    Dbprintf("  Emulator memory......... %s ( %s )"
+             , sprint_bytes(b, CARD_MEMORY_SIZE)
              , (s_emulator_memory != NULL) ? "in use" : "not allocated"
             );
     DbpString(_CYAN_("Tracing"));
