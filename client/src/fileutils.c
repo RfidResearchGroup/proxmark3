@@ -2027,9 +2027,7 @@ int checkFileSHA512(const char *sha512filename, uint8_t *data, size_t datalen) {
             err = "Couldn't read SHA-512 file, expected 128 hex chars";
         } else if (sha512hash(data, datalen, hash_2)) {
             err = "Couldn't calculate SHA-512 of firmware";
-        } else if (memcmp(hash_1, hash_2, sizeof(hash_2))) {
-            err = "Couldn't verify integrity of firmware file " _RED_("(wrong SHA-512 hash)");
-        } else {
+        } else if (memcmp(hash_1, hash_2, sizeof(hash_2)) == 0) {
             res = PM3_SUCCESS;
         }
     }
@@ -2044,7 +2042,10 @@ int checkFileSHA512(const char *sha512filename, uint8_t *data, size_t datalen) {
 
     PrintAndLogEx(INPLACE, "Checking integrity  " _YELLOW_("%s") " ( " _RED_("fail") " )", sha512filename);
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(FAILED, "%s", err);
+    // a hash mismatch needs no reason, the fail says it
+    if (err) {
+        PrintAndLogEx(FAILED, "%s", err);
+    }
     return res;
 }
 
