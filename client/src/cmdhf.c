@@ -196,24 +196,30 @@ int CmdHFSearch(const char *Cmd) {
 
     // OBS!  This triggers a swap to FPGA_BITSTREAM_HF_15 == 1.5sec delay
 
+    // ISO15693 keeps its field on for the iCLASS probe, saves a 250 ms tag power up
+    bool hf15_field = false;
+
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, "Searching for ISO15693 tag...");
     if (IfPm3Iso15693()) {
-        if (readHF15Uid(false, true)) {
+        if (readHF15Uid(false, true, true)) {
             PrintAndLogEx(SUCCESS, "Valid " _GREEN_("ISO 15693 tag") " found\n");
             success[ISO_15693] = true;
             res = PM3_SUCCESS;
         }
+        hf15_field = true;
     }
 
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, "Searching for iCLASS / PicoPass tag...");
     if (IfPm3Iclass()) {
-        if (read_iclass_csn(false, false, false) == PM3_SUCCESS) {
+        if (read_iclass_csn(false, false, false, (hf15_field == false)) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iCLASS tag / PicoPass tag") " found\n");
             success[ICLASS] = true;
             res = PM3_SUCCESS;
         }
+    } else if (hf15_field) {
+        DropField();
     }
 
     // OBS!  This triggers a swap to FPGA_BITSTREAM_HF_FELICA == 1.5sec delay
