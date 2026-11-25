@@ -116,6 +116,38 @@ reg [7:0] D_out1, D_out2;
 reg [7:0] ram1 [2047:0]; // 2048  u8
 reg [7:0] ram2 [1023:0]; // 1024  u8
 
+`ifdef PM5
+// Gowin BSRAM can't invert its clock, a negedge RAM gets a LUT clock with skew.
+// Register its inputs on negedge, run it on posedge; same data, half a cycle later.
+reg [10:0] ram_addr;
+reg [7:0] ram_din;
+reg ram_we1, ram_we2;
+always @(negedge ck_1356megb)
+begin
+    ram_addr <= addr[10:0];
+    ram_din <= adc_d;
+    ram_we1 <= write_enable1;
+    ram_we2 <= write_enable2;
+end
+
+always @(posedge ck_1356megb)
+begin
+    if (ram_we1)
+    begin
+        ram1[ram_addr] <= ram_din;
+        D_out1 <= ram_din;
+    end
+    else
+        D_out1 <= ram1[ram_addr];
+    if (ram_we2)
+    begin
+        ram2[ram_addr[9:0]] <= ram_din;
+        D_out2 <= ram_din;
+    end
+    else
+        D_out2 <= ram2[ram_addr[9:0]];
+end
+`else
 always @(negedge ck_1356megb)
 begin
     if (write_enable1)
@@ -133,6 +165,7 @@ begin
     else
         D_out2 <= ram2[addr[9:0]];
 end
+`endif
 
 reg [7:0] shift_out;
 

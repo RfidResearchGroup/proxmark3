@@ -41,6 +41,7 @@
 #include "cmdfpga.h"
 #include "cmddata.h"
 #include "commonutil.h"
+#include "fileutils.h"      // searchFile, loadFile_safeEx
 #include "preferences.h"
 #include "pm3_cmd.h"
 #include "pmflash.h"     // rdv40validation_t
@@ -1614,17 +1615,28 @@ static int CmdPing(const char *Cmd) {
     SendCommandNG(CMD_PING, data, len);
     if (WaitForResponseTimeout(CMD_PING, &resp, 1000)) {
         tms = msclock() - tms;
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Ping failed (status %d)", resp.status);
+            return resp.status;
+        }
+        if (resp.length != len) {
+            PrintAndLogEx(ERR, "Ping response length %u, expected %u", resp.length, len);
+            return PM3_EIO;
+        }
         if (len) {
             bool error = (memcmp(data, resp.data.asBytes, len) != 0);
             PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received")
                           " in " _YELLOW_("%" PRIu64) " ms and content ( %s )",
                           tms, error ? _RED_("fail") : _GREEN_("ok"));
+            return error ? PM3_EIO : PM3_SUCCESS;
         } else {
             PrintAndLogEx(SUCCESS, "Ping response " _GREEN_("received")
                           " in " _YELLOW_("%" PRIu64) " ms", tms);
         }
-    } else
+    } else {
         PrintAndLogEx(WARNING, "Ping response " _RED_("timeout"));
+        return PM3_ETIMEOUT;
+    }
     return PM3_SUCCESS;
 }
 
@@ -2292,6 +2304,44 @@ void pm3_version_short(void) {
     PrintAndLogEx(NORMAL, "");
 }
 
+// Usercode of the PM5 FPGA image in client/resources, from its last usercode (0x0A) command
+static bool fpga_pm5_image_usercode(uint32_t *usercode) {
+
+    char *path = NULL;
+    if (searchFile(&path, RESOURCES_SUBDIR, "fpga_pm5", ".bin", true) != PM3_SUCCESS) {
+        return false;
+    }
+
+    uint8_t *data = NULL;
+    size_t datalen = 0;
+    int res = loadFile_safeEx(path, "", (void **)&data, &datalen, false);
+    free(path);
+    if (res != PM3_SUCCESS) {
+        return false;
+    }
+
+    // it sits in the short trailer of the bitstream
+    bool found = false;
+    size_t start = (datalen > 64) ? datalen - 64 : 0;
+    for (size_t i = start; i + 8 <= datalen; i++) {
+        if (data[i] == 0x0A && data[i + 1] == 0x00 && data[i + 2] == 0x00 && data[i + 3] == 0x00) {
+            *usercode = (uint32_t)bytes_to_num(data + i + 4, 4);
+            found = true;
+        }
+    }
+    free(data);
+    return found;
+}
+
+static const char *fpga_pm5_usercode_tag(const char *running) {
+    uint32_t image = 0;
+    unsigned int uc = 0;
+    if ((fpga_pm5_image_usercode(&image) == false) || (sscanf(running, "0x%08X", &uc) != 1)) {
+        return " ( " _CYAN_("n/a") " )";
+    }
+    return (uc == image) ? " ( " _GREEN_("ok") " )" : " ( " _RED_("outdated") " )";
+}
+
 void pm3_version(bool verbose, bool oneliner) {
 
     char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
@@ -2423,7 +2473,15 @@ void pm3_version(bool verbose, bool oneliner) {
                     }
                 }
             }
-            PrintAndLogEx(NORMAL, "%s", payload->versionstr);
+            // PM5: tag the FPGA usercode against the image in client/resources
+            char *uc = IfPm5() ? strstr(payload->versionstr, "Usercode... ") : NULL;
+            if (uc != NULL) {
+                char *eol = strchr(uc, '\n');
+                int head = (int)((eol != NULL ? eol : uc + strlen(uc)) - payload->versionstr);
+                PrintAndLogEx(NORMAL, "%.*s%s%s", head, payload->versionstr, fpga_pm5_usercode_tag(uc + 12), (eol != NULL) ? eol : "");
+            } else {
+                PrintAndLogEx(NORMAL, "%s", payload->versionstr);
+            }
             // PM5 doesn't report a built-in FPGA version (Gowin bitstream is loaded
             // externally), so skip the Xilinx FPGA_TYPE match check for it.
             if (!IfPm5() && strstr(payload->versionstr, FPGA_TYPE) == NULL) {

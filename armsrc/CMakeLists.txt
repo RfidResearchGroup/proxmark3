@@ -48,6 +48,8 @@ set(INC_DIRS
         ../common_arm/flash_data
         ../common_arm/flash_code
         ../common_arm/gpio
+        ../common_arm/i2c
+        ../common_arm/smartcard
         ../common_arm/sys
         ../common_arm/fpga
         ../common_arm/wdt
@@ -68,6 +70,7 @@ if (PM5)
     set(SRC_FLASH_DATA ../common_arm/flash_data/flashmem_hw_at32.c)
     set(SRC_USB_CDC ../common_arm/usb/usb_cdc_at32.c)
     set(SRC_FPGA ../common_arm/fpga/fpga_hw_at32.c ../common_arm/fpga/fpga_gw_jtag.c)
+    set(SRC_SC_HW ../common_arm/smartcard/smartcard_hw_pm5.c)
     set(LDSCRIPT ${CMAKE_CURRENT_LIST_DIR}/ldscript.osimage.at32)
 else ()
     set(SRC_TICKS ../common_arm/ticks/ticks_hw_at91.c)
@@ -79,6 +82,7 @@ else ()
     set(SRC_FLASH_DATA ../common_arm/flash_data/flashmem_hw_at91.c)
     set(SRC_USB_CDC ../common_arm/usb/usb_cdc_at91.c)
     set(SRC_FPGA ../common_arm/fpga/fpga_hw_at91.c)
+    set(SRC_SC_HW ../common_arm/smartcard/smartcard_hw_rdv4.c)
     set(LDSCRIPT ${CMAKE_CURRENT_LIST_DIR}/ldscript.osimage.at91)
 endif ()
 
@@ -176,7 +180,7 @@ else ()
 endif ()
 
 if ("${APP_CFLAGS}" MATCHES "WITH_SMARTCARD")
-    set(SRC_SMARTCARD i2c.c i2c_direct.c emvsim.c)
+    set(SRC_SMARTCARD smartcard.c emvsim.c ${SRC_SC_HW} ../common_arm/smartcard/smartcard_rate.c ../common_arm/smartcard/smartcard_atr.c)
 else ()
     set(SRC_SMARTCARD)
 endif ()
@@ -323,6 +327,7 @@ set(THUMBSRC
         ${SRC_GPIO}
         ${SRC_WDT}
         ${SRC_SYS}
+        ../common_arm/i2c/i2c_core.c
         ../common_arm/rssi/rssi_core.c
         ../common_arm/ticks/ticks_core.c
         hfsnoop.c
@@ -333,7 +338,6 @@ set(THUMBSRC
 
 if (PM5)
     list(APPEND THUMBSRC startup_at32f435_437.s)
-    list(APPEND THUMBSRC i2c.c)
     list(APPEND THUMBSRC buzzer.c) # generic mainboard buzzer (QC self-test + BWM low-batt)
     list(APPEND THUMBSRC pm5_power.c) # low-power idle (core clock scaling + WFI)
     list(APPEND THUMBSRC at32_unit_test.c) # TODO DXL: AT32单元测试代码
@@ -548,7 +552,7 @@ add_custom_command(
 add_custom_command(
         OUTPUT ${DATA_BIN_Z}
         # COMMAND ${CMAKE_COMMAND} -E echo "[=] GEN(7) fullimage.data.bin.z"
-        COMMAND ${FPGA_COMPRESS_EXE} ${DATA_BIN} ${DATA_BIN_Z}
+        COMMAND ${FPGA_COMPRESS_EXE} -s ${DATA_BIN} ${DATA_BIN_Z}
         DEPENDS ${DATA_BIN}
         DEPENDS ${FPGA_COMPRESS_EXE} # Ensure host tool is built before running it.
         COMMENT "Call the 'fpga_compress' to compress '.data' section from 'fullimage.stage1.elf'"

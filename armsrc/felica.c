@@ -467,6 +467,13 @@ void TransmitFor18092_AsReaderEx(const uint8_t *frame, uint16_t len, const uint3
 
     while (!FPGA_SSC_TX_Ready()) {};
     FPGA_SSC_TX_Value(0x00); //spin
+
+#ifdef PM5
+    // Wait until the first trailing 0x00 has shifted out and the second is loaded,
+    // so hi_flite's 1-bit dlay pipeline finishes modulating the final CRC bit
+    // before WaitForFelicaReply() sets NOMOD (critical on fast 288 MHz AT32/PM5).
+    while (!FPGA_SSC_TX_Ready()) {};
+#endif
     /**/
 
     const uint32_t frame_start = felica_lasttime_prox2air_start + (FELICA_PREAMBLE_BYTES * FELICA_BITS_PER_BYTE);

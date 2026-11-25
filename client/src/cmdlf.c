@@ -822,18 +822,8 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples, bool 
         }
 
         SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
-        if (is_trigger_threshold_set) {
-            size_t first_receive_len = 32;
-            // Wait until a bunch of data arrives. Keep raw mode on across both
-            // calls so the comm thread doesn't briefly fall back to parsing
-            // framed packets out of the still-arriving sample stream.
-            first_receive_len = WaitForRawDataTimeout(realtimeBuf, first_receive_len, -1, false, true);
-            sample_bytes = WaitForRawDataTimeout(realtimeBuf + first_receive_len, sample_bytes - first_receive_len, 1000, true, false);
-            sample_bytes += first_receive_len;
-        } else {
-            sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true, false);
-        }
-        samples = sample_bytes * 8 / bits_per_sample;
+        sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true, is_trigger_threshold_set);
+        samples = MIN(samples, sample_bytes * 8 / bits_per_sample);
         // the inline "Received x / y bytes" counter already says the transfer is
         // done, so only repeat it in samples when asked
         if (verbose) {
@@ -868,7 +858,7 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples, bool 
         }
         // response is number of bits read
         uint32_t size = (resp.data.asDwords[0] / bits_per_sample);
-        getSamples(size, verbose);
+        return getSamples(size, verbose);
     }
 
     return PM3_SUCCESS;
@@ -980,18 +970,8 @@ int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
         }
 
         SendCommandNG(CMD_LF_SNIFF_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
-        if (is_trigger_threshold_set) {
-            size_t first_receive_len = 32;
-            // Wait until a bunch of data arrives. Keep raw mode on across both
-            // calls so the comm thread doesn't briefly fall back to parsing
-            // framed packets out of the still-arriving sample stream.
-            first_receive_len = WaitForRawDataTimeout(realtimeBuf, first_receive_len, -1, false, true);
-            sample_bytes = WaitForRawDataTimeout(realtimeBuf + first_receive_len, sample_bytes - first_receive_len, 1000, true, false);
-            sample_bytes += first_receive_len;
-        } else {
-            sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true, false);
-        }
-        samples = sample_bytes * 8 / bits_per_sample;
+        sample_bytes = WaitForRawDataTimeout(realtimeBuf, sample_bytes, 1000, true, is_trigger_threshold_set);
+        samples = MIN(samples, sample_bytes * 8 / bits_per_sample);
         // the inline "Received x / y bytes" counter already says the transfer is
         // done, so only repeat it in samples when asked
         if (verbose) {
@@ -1094,7 +1074,8 @@ static void lf_chk_bitstream(void) {
 }
 
 // Uploads g_GraphBuffer to device, in order to be used for LF SIM.
-int lfsim_upload_gb(void) {
+// Capped to device memory, *samples gets the uploaded count.
+int lfsim_upload_gb(uint16_t *samples) {
     PrintAndLogEx(DEBUG, "DEBUG: Uploading %zu bytes", g_GraphTraceLen);
 
     struct pupload {
@@ -1114,13 +1095,25 @@ int lfsim_upload_gb(void) {
     // leaked by a previous run.
     g_conn.block_after_ACK = false;
 
+    size_t n = g_GraphTraceLen;
+    size_t max_samples = MIN((size_t)UINT16_MAX, (size_t)g_pm3_capabilities.bigbuf_size);
+    if (n > max_samples) {
+        PrintAndLogEx(WARNING, "Graphbuffer too long, simulating first " _YELLOW_("%zu") " of %zu samples", max_samples, n);
+        n = max_samples;
+    }
+
+    if (g_conn.max_cmd_data_size <= 3) {
+        PrintAndLogEx(ERR, "Device frame size too small for LF samples");
+        return PM3_EINVARG;
+    }
+
     PacketResponseNG resp;
 
     //can send only 512 bits at a time (1 byte sent per bit...)
     PrintAndLogEx(INFO, "." NOLF);
-    for (size_t i = 0; i < g_GraphTraceLen; i += g_conn.max_cmd_data_size - 3) {
+    for (size_t i = 0; i < n; i += g_conn.max_cmd_data_size - 3) {
 
-        size_t len = MIN((g_GraphTraceLen - i), (size_t)(g_conn.max_cmd_data_size - 3));
+        size_t len = MIN((n - i), (size_t)(g_conn.max_cmd_data_size - 3));
         clearCommandBuffer();
         payload_up.offset = i;
 
@@ -1128,10 +1121,15 @@ int lfsim_upload_gb(void) {
             payload_up.data[j] = g_GraphBuffer[i + j];
 
         SendCommandNG(CMD_LF_UPLOAD_SIM_SAMPLES, (uint8_t *)&payload_up, 3 + len);  // header (flag+offset) + actual samples, not the padded struct
-        WaitForResponse(CMD_LF_UPLOAD_SIM_SAMPLES, &resp);
+        if (WaitForResponse(CMD_LF_UPLOAD_SIM_SAMPLES, &resp) == false) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(WARNING, "No response while uploading LF samples");
+            return PM3_EIO;
+        }
         if (resp.status != PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "Bigbuf is full");
-            break;
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(ERR, "LF sample upload failed (status %d)", resp.status);
+            return resp.status;
         }
         PrintAndLogEx(NORMAL, "." NOLF);
         fflush(stdout);
@@ -1141,6 +1139,7 @@ int lfsim_upload_gb(void) {
 
     // Disable fast mode before last command
     g_conn.block_after_ACK = false;
+    *samples = (uint16_t)n;
     return PM3_SUCCESS;
 }
 
@@ -1178,13 +1177,17 @@ int CmdLFSim(const char *Cmd) {
     // convert to bitstream if necessary
     lf_chk_bitstream();
 
-    lfsim_upload_gb();
+    uint16_t samples = 0;
+    int res = lfsim_upload_gb(&samples);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
 
     struct p {
         uint16_t len;
         uint16_t gap;
     } PACKED payload;
-    payload.len = g_GraphTraceLen;
+    payload.len = samples;
     payload.gap = gap;
 
     clearCommandBuffer();
@@ -1871,13 +1874,18 @@ static int lf_relay_rdr(const char *ip, uint16_t port) {
 
         g_GraphTraceLen = incoming_len;
         lf_chk_bitstream();
-        lfsim_upload_gb();
+        uint16_t samples = 0;
+        int res = lfsim_upload_gb(&samples);
+        if (res != PM3_SUCCESS) {
+            relay_close(sock);
+            return res;
+        }
 
         struct {
             uint16_t len;
             uint16_t gap;
         } PACKED payload;
-        payload.len = (g_GraphTraceLen > UINT16_MAX) ? UINT16_MAX : (uint16_t)g_GraphTraceLen;
+        payload.len = samples;
         payload.gap = 0;
 
         clearCommandBuffer();
@@ -1979,7 +1987,10 @@ int CmdLFfind(const char *Cmd) {
     int found = 0;
     bool is_online = (g_session.pm3_present && (use_gb == false));
     if (is_online) {
-        lf_read(false, 30000);
+        int res = lf_read(false, 30000);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
     }
 
     size_t min_length = 2000;
@@ -2031,34 +2042,37 @@ int CmdLFfind(const char *Cmd) {
         // The improved noise detection will find Cotag.
         if (getSignalProperties()->isnoise) {
 
-            PrintAndLogEx(INPLACE, "Searching for MOTOROLA tag...");
-            if (readMotorolaUid()) {
-                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Motorola FlexPass ID") " found!");
-                if (search_cont) {
-                    found++;
-                } else {
-                    return PM3_SUCCESS;
-                }
-            }
-
-            PrintAndLogEx(INPLACE, "Searching for COTAG tag...");
-            if (readCOTAGUid()) {
-                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("COTAG ID") " found!");
-                if (search_cont) {
-                    found++;
-                } else {
-                    return PM3_SUCCESS;
-                }
-            }
-
-            PrintAndLogEx(NORMAL, "");
-
-            // identify chipset
+            // identify chipset first, the Motorola and COTAG reads are slow
             bool lf_special_search = check_chiptype(is_online);
             if (lf_special_search) {
                 found++;
             } else {
                 PrintAndLogEx(DEBUG, "Automatic chip type detection " _RED_("failed"));
+            }
+
+            if ((lf_special_search == false) || search_cont) {
+
+                PrintAndLogEx(INPLACE, "Searching for MOTOROLA tag...");
+                if (readMotorolaUid()) {
+                    PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Motorola FlexPass ID") " found!");
+                    if (search_cont) {
+                        found++;
+                    } else {
+                        return PM3_SUCCESS;
+                    }
+                }
+
+                PrintAndLogEx(INPLACE, "Searching for COTAG tag...");
+                if (readCOTAGUid()) {
+                    PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("COTAG ID") " found!");
+                    if (search_cont) {
+                        found++;
+                    } else {
+                        return PM3_SUCCESS;
+                    }
+                }
+
+                PrintAndLogEx(NORMAL, "");
             }
 
             if (found == 0) {

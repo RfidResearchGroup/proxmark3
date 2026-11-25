@@ -88,7 +88,8 @@
 #include "sam_mfc.h"
 #include "sam_sc.h"
 #include "cmac_calc.h"
-#include "i2c.h"
+#include "smartcard.h"
+#include "i2c_apis.h"
 #include "bwm_charger.h"   // BWM charger / fuel-gauge + low-batt warning (WITH_BWM_*)
 #include "buzzer.h"        // PM5 mainboard buzzer API
 #include "rgb_indicator.h" // PM5 antenna-RGB power/battery indicator (WITH_PM5_PWR_LED)
@@ -97,6 +98,10 @@
 #include "pm5_usb_host_cdc.h" // PM5 USB host CDC (ICSD) driver
 #endif
 
+
+#ifdef WITH_BWM_FORWARD
+static bool s_bwm_ota_reboot_pending;
+#endif
 
 #ifdef WITH_PM5_AUTOOFF
 // Automatic power-off, through the same latch release as the long-press shutdown
@@ -288,7 +293,10 @@ static void pm5_autooff_sprint(char *dst) {
 #endif
 
 #ifdef WITH_SMARTCARD
-#include "i2c.h"
+#include "smartcard.h"
+#ifndef PM5
+#include "smartcard_hw_rdv4.h"
+#endif
 #endif
 
 #ifdef WITH_FPC_USART
@@ -670,25 +678,24 @@ static void print_debug_level(void) {
     Dbprintf("  Debug log level..... %d ( " _YELLOW_("%s")" )", g_dbglevel, dbglvlstr);
 }
 
-// measure the Connection Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
+// measure the Connection Speed by sending NG reply frames to client and measuring the elapsed time.
 // Note: this mimics GetFromBigbuf(), i.e. we have the overhead of the PacketCommandNG structure included.
 static void printConnSpeed(uint32_t wait) {
     DbpString(_CYAN_("Transfer Speed"));
     Dbprintf("  Sending packets to client...");
 
     uint8_t *test_data = BigBuf_get_addr();
+    const uint16_t payload_len = reply_ng_max_data_size();
     uint32_t start_time = GetTickCount();
     uint32_t delta_time = 0;
-    uint32_t bytes_transferred = 0;
     uint32_t frames_sent = 0;
 
     LED_B_ON();
 
     while (delta_time < wait) {
-        uint16_t st_len = reply_ng_max_data_size();
-        reply_ng(CMD_DOWNLOADED_BIGBUF, PM3_SUCCESS, test_data, st_len);
-        bytes_transferred += st_len;
-        frames_sent++;
+        if (reply_ng(CMD_DOWNLOADED_BIGBUF, PM3_SUCCESS, test_data, payload_len) == PM3_SUCCESS) {
+            frames_sent++;
+        }
         delta_time = GetTickCountDelta(start_time);
     }
     LED_B_OFF();
@@ -697,14 +704,21 @@ static void printConnSpeed(uint32_t wait) {
     // that is ceil(wire_len / 64) bulk packets, and the packet rate is what the link
     // caps - so frames/s and this length are what explain a bytes/s result, not the
     // byte count on its own.
-    uint32_t wire_len = sizeof(PacketResponseNGPreamble) + PM3_CMD_DATA_SIZE + sizeof(PacketResponseNGPostamble);
+    uint32_t wire_len = sizeof(PacketResponseNGPreamble) + payload_len + sizeof(PacketResponseNGPostamble);
+    uint32_t bytes_transferred = frames_sent * payload_len;
 
-    Dbprintf("  Time elapsed................... %dms", delta_time);
-    Dbprintf("  Bytes transferred.............. %d", bytes_transferred);
-    Dbprintf("  Frames sent.................... %d ( %d bytes )", frames_sent, wire_len);
+    Dbprintf("  Time elapsed................... %ums", delta_time);
+    Dbprintf("  Bytes transferred.............. %u", bytes_transferred);
+    Dbprintf("  Frames sent.................... %u ( %u bytes )", frames_sent, wire_len);
     if (delta_time) {
         char rate[SPRINT_BYTES_LEN];
-        Dbprintf("  Transfer Speed PM3 -> Client... " _YELLOW_("%s/s"), sprint_bytes(rate, (uint32_t)(1000 * (uint64_t)bytes_transferred / delta_time)));
+        const char *target = "Client...";
+#ifdef WITH_BWM_FORWARD
+        if (g_reply_via_fpc) {
+            target = "BWM......";
+        }
+#endif
+        Dbprintf("  Transfer Speed PM3 -> %s " _YELLOW_("%s/s"), target, sprint_bytes(rate, (uint32_t)(1000 * (uint64_t)bytes_transferred / delta_time)));
         Dbprintf("  Frame rate..................... " _YELLOW_("%llu") " frames/s", 1000 * (uint64_t)frames_sent / delta_time);
     }
 }
@@ -719,7 +733,7 @@ static void SendStatus(uint32_t wait) {
     Flashmem_print_status();
 #endif
 #ifdef WITH_SMARTCARD
-    I2C_print_status();
+    SmartCard_PrintStatus();
 #endif
 #ifdef WITH_LF
     printLFConfig();      // LF Sampling config
@@ -1008,7 +1022,7 @@ static void SendCapabilities(void) {
     // command then said it was not available in this mode.
     capabilities.hw_available_smartcard = false;
     for (uint8_t i = 0; i < 3; i++) {
-        if (I2C_get_version(&maj, &min) == PM3_SUCCESS) {
+        if (SmartCard_GetModuleInfo(&maj, &min, NULL) == PM3_SUCCESS) {
             capabilities.hw_available_smartcard = true;
             break;
         }
@@ -1353,7 +1367,7 @@ static bool QCTestPM5(uint8_t *failed_item, uint32_t timeout_ms) {
     bool data_u8_valid = false;
 
     // 读取天线当前MAP配置，如果读取不到，则认为天线的控制芯片可能有问题
-    isok = I2C_BufferReadRaw(&data_u8, 1, 0x02, addr_ant << 1);
+    isok = I2C_BufferRead(&data_u8, 1, 0x02, addr_ant << 1);
     if (!isok) {
         *failed_item = 0;
         result = false;
@@ -3265,7 +3279,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 
 #ifdef WITH_SMARTCARD
         case CMD_SMART_ATR: {
-            SmartCardAtr();
+            SmartCardATR();
             break;
         }
         case CMD_SMART_PPS: {
@@ -3316,6 +3330,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_SMART_UPGRADE: {
+#ifndef PM5
             struct p {
                 uint16_t fw_size;
                 uint16_t crc;
@@ -3330,10 +3345,15 @@ static void PacketReceived(PacketCommandNG *packet) {
                 Dbprintf("CRC Failed, 0x[%04x] != 0x[%02x%02x]", payload->crc, a, b);
                 reply_ng(CMD_SMART_UPGRADE, PM3_ESOFT, NULL, 0);
             } else {
-                SmartCardUpgrade(payload->fw_size);
+                SmartCardAdapterUpgrade(payload->fw_size);
             }
             fwdata = NULL;
             break;
+#else
+            // Only the RDV4 adapter has firmware to replace over the link.
+            reply_ng(CMD_SMART_UPGRADE, PM3_EDEVNOTSUPP, NULL, 0);
+            break;
+#endif
         }
 
         case CMD_HF_SAM_PICOPASS: {
@@ -3992,19 +4012,22 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             char *fn = (char *)packet->data.asBytes;
 
+            int changed = rdv40_spiffs_lazy_mount();
             uint32_t size = size_in_spiffs(fn);
-            if (size == 0) {
-                reply_ng(CMD_SPIFFS_ELOAD, PM3_SUCCESS, NULL, 0);
-                LED_B_OFF();
-                break;
+            int status = PM3_SUCCESS;
+            if (size > BigBuf_get_EM_size()) {
+                status = PM3_EOVFLOW;
+            } else if (size > 0) {
+                // a dump smaller than the emulator memory must not leave the tail of a
+                // previous one behind
+                BigBuf_Clear_EM();
+                rdv40_spiffs_read_as_filetype(fn, em, size, RDV40_SPIFFS_SAFETY_NORMAL);
+            } else if (!exists_in_spiffs(fn)) {
+                status = PM3_EFILE;
             }
 
-            // a dump smaller than the emulator memory must not leave the tail of a
-            // previous one behind
-            BigBuf_Clear_EM();
-
-            rdv40_spiffs_read_as_filetype(fn, em, size, RDV40_SPIFFS_SAFETY_SAFE);
-            reply_ng(CMD_SPIFFS_ELOAD, PM3_SUCCESS, NULL, 0);
+            rdv40_spiffs_lazy_mount_rollback(changed);
+            reply_ng(CMD_SPIFFS_ELOAD, status, NULL, 0);
             LED_B_OFF();
             break;
         }
@@ -4287,6 +4310,9 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_HARDWARE_RESET: {
 #ifdef WITH_BWM_FORWARD
             bwm_fwd_prepare_reset();
+            if (s_bwm_ota_reboot_pending) {
+                (void)bwm_esp_reboot();
+            }
 #endif
             usb_disable();
 
@@ -4376,7 +4402,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint8_t cmd = payload->reg_type == 0 ? 0x01 : 0x02;
             uint8_t data;
 
-            bool isok = I2C_BufferReadRaw(&data, 1, cmd, addr << 1);
+            bool isok = I2C_BufferRead(&data, 1, cmd, addr << 1);
             reply_ng(CMD_ANT_CONTROL_READ, isok ? PM3_SUCCESS : PM3_EFAILED, &data, sizeof(data));
             break;
         }
@@ -4386,7 +4412,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             uint8_t addr = 0x50; // TODO DXL define move to header?
             uint8_t data[256]; // 24c02: 256byte
-            bool isok = I2C_BufferReadRaw(data, sizeof(data), 0x00, addr << 1);
+            bool isok = I2C_BufferRead(data, sizeof(data), 0x00, addr << 1);
             reply_ng(CMD_EEPROM_FACTORY_INFO_READ, isok ? PM3_SUCCESS : PM3_EFAILED, data, sizeof(data));
             break;
         }
@@ -4482,7 +4508,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint16_t mv = (packet->length >= 2)
                           ? (uint16_t)(packet->data.asBytes[0] | (packet->data.asBytes[1] << 8))
                           : BWM_DEFAULT_VCHG_MV;
-            I2C_init(true);
             uint16_t applied = bwm_charger_set_vchg(mv);
             reply_ng(CMD_PM5_BWM_SET_VCHG, applied ? PM3_SUCCESS : PM3_EFAILED, (uint8_t *)&applied, sizeof(applied));
             break;
@@ -4493,7 +4518,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             uint16_t cap = (packet->length >= 2)
                            ? (uint16_t)(packet->data.asBytes[0] | (packet->data.asBytes[1] << 8))
                            : BWM_DEFAULT_DESIGN_CAP_MAH;
-            I2C_init(true);
             bool ok = bwm_gauge_provision_capacity(cap);
             reply_ng(CMD_PM5_BWM_SET_CAP, ok ? PM3_SUCCESS : PM3_EFAILED, (uint8_t *)&cap, sizeof(cap));
             break;
@@ -4503,7 +4527,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             // Payload: 1 byte, non-zero = enable (default), zero = disable.
             // One-shot: reverts on the charger watchdog timeout (~160 s).
             bool enable = (packet->length >= 1) ? (packet->data.asBytes[0] != 0) : true;
-            I2C_init(true);
             bool ok = bwm_charger_set_charge(enable);
             reply_ng(CMD_PM5_BWM_CHARGE_EN, ok ? PM3_SUCCESS : PM3_EFAILED, NULL, 0);
             break;
@@ -4561,11 +4584,17 @@ static void PacketReceived(PacketCommandNG *packet) {
                     break;
                 }
                 case BWM_OTA_ACTION_BEGIN: {
+                    if (s_bwm_ota_reboot_pending) {
+                        res = PM3_EFAILED;
+                        break;
+                    }
                     uint32_t total_size = 0;
                     if (packet->length >= 5) {
                         memcpy(&total_size, packet->data.asBytes + 1, sizeof(total_size));
                     }
-                    res = bwm_esp_ota_begin(total_size);
+                    // On older modules an untagged BWM request may be from BLE.
+                    bool stop_ble = !g_reply_via_fpc || bwm_fwd_reply_is_wifi();
+                    res = bwm_esp_ota_begin(total_size, stop_ble);
                     break;
                 }
                 case BWM_OTA_ACTION_WRITE:
@@ -4580,14 +4609,9 @@ static void PacketReceived(PacketCommandNG *packet) {
                     }
                     break;
                 case BWM_OTA_ACTION_END:
-                    res = bwm_esp_ota_end();
-                    if (res == PM3_SUCCESS) {
-                        // Finalize succeeded and the new partition is now marked
-                        // bootable; the ESP won't switch to it on its own, so
-                        // kick the reboot here (DEV.md 12.8). Best-effort: don't
-                        // fail the whole OTA over a lost reboot ack.
-                        (void)bwm_esp_reboot();
-                    }
+                    // Keep the reply link up until the client requests a reset.
+                    res = s_bwm_ota_reboot_pending ? PM3_SUCCESS : bwm_esp_ota_end();
+                    s_bwm_ota_reboot_pending = (res == PM3_SUCCESS);
                     break;
                 case BWM_OTA_ACTION_ABORT:
                     res = bwm_esp_ota_abort();

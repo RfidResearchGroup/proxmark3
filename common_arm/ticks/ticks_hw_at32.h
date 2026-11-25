@@ -21,6 +21,9 @@
 #define AT32_CRM_TMR_PERIPH_32B_TIMER_CLK   CRM_TMR5_PERIPH_CLOCK
 #define AT32_TMR_32B_TIMER                  TMR5
 
+// Reload a running TMR5 after a core clock change, with IRQs masked.
+void ticks_at32_clock_update(uint32_t previous_clock);
+
 // Input capture edge-event flags (single-bit masks in the TMR status register).
 // PWM input mode: CH1 = falling edge, CH2 = rising edge (see StartInputCapture).
 #define INPUT_CAPTURE_EVT_RISING_EDGE    TMR_C2_FLAG   // CH2 rising-edge capture event

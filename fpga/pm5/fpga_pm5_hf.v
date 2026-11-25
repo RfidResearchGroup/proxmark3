@@ -113,6 +113,19 @@ end
 // the output pins.
 //-----------------------------------------------------------------------------
 
+wire mux0_ssp_din, mux0_ssp_frame, mux0_ssp_clk, mux0_adc_clk;
+wire mux0_pwr_lo, mux0_pwr_hi, mux0_pwr_oe1, mux0_pwr_oe2, mux0_pwr_oe3, mux0_pwr_oe4, mux0_debug;
+wire mux1_ssp_din, mux1_ssp_frame, mux1_ssp_clk, mux1_adc_clk;
+wire mux1_pwr_lo, mux1_pwr_hi, mux1_pwr_oe1, mux1_pwr_oe2, mux1_pwr_oe3, mux1_pwr_oe4, mux1_debug;
+wire mux2_ssp_din, mux2_ssp_frame, mux2_ssp_clk, mux2_adc_clk;
+wire mux2_pwr_lo, mux2_pwr_hi, mux2_pwr_oe1, mux2_pwr_oe2, mux2_pwr_oe3, mux2_pwr_oe4, mux2_debug;
+wire mux3_ssp_din, mux3_ssp_frame, mux3_ssp_clk, mux3_adc_clk;
+wire mux3_pwr_lo, mux3_pwr_hi, mux3_pwr_oe1, mux3_pwr_oe2, mux3_pwr_oe3, mux3_pwr_oe4;
+wire mux4_ssp_din, mux4_ssp_frame, mux4_ssp_clk, mux4_adc_clk;
+wire mux4_pwr_lo, mux4_pwr_hi, mux4_pwr_oe1, mux4_pwr_oe2, mux4_pwr_oe3, mux4_pwr_oe4, mux4_debug;
+wire mux5_ssp_din, mux5_ssp_frame, mux5_ssp_clk;
+wire pwr_oe3;  // no pin on the PM5
+
 //   HF reader
 hi_reader hr(
     .ck_1356meg (ck_1356meg),

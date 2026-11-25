@@ -608,6 +608,27 @@ char *sprint_ascii(const uint8_t *data, const size_t len) {
     return sprint_ascii_ex(data, len, 0);
 }
 
+char *sprint_duration(uint64_t ms) {
+    static char buf[32] = {0};
+    uint64_t tenths = (ms + 50) / 100;
+    if (tenths < 600) {
+        snprintf(buf, sizeof(buf), "%" PRIu64 ".%" PRIu64 "s", tenths / 10, tenths % 10);
+        return buf;
+    }
+
+    uint64_t sec = (ms + 500) / 1000;
+    uint64_t h = sec / 3600;
+    uint64_t m = (sec / 60) % 60;
+    uint64_t s = sec % 60;
+
+    if (h) {
+        snprintf(buf, sizeof(buf), "%" PRIu64 "h %02" PRIu64 "m %02" PRIu64 "s", h, m, s);
+    } else {
+        snprintf(buf, sizeof(buf), "%" PRIu64 "m %02" PRIu64 "s", m, s);
+    }
+    return buf;
+}
+
 char *sprint_breakdown_bin(color_t color, const char *bs, int width, int padn, int bits, const char *msg) {
 
     if (bs == NULL || width > 32) {

@@ -148,6 +148,15 @@ uint32_t CRC8Cardx(uint8_t *buff, size_t size) {
     }
     return crc_finish(&crc);
 }
+// width=16  poly=0x8408, init=0xFFFF  refin=true  refout=true  xorout=0x0000  check=0x1DBA name="CRC-16/CARDX"
+uint32_t CRC16Cardx(uint8_t *buff, size_t size) {
+    crc_t crc;
+    crc_init_ref(&crc, 16, 0x8408, 0xFFFF, 0, true, true);
+    for (size_t i = 0; i < size; ++i) {
+        crc_update2(&crc, buff[i], 8);
+    }
+    return crc_finish(&crc);
+}
 
 uint32_t CRC8Hitag1(uint8_t *buff, size_t size) {
     crc_t crc;
