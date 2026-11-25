@@ -2587,7 +2587,7 @@ static bool get_seac_response_data(const PacketResponseNG *resp, uint8_t command
     return true;
 }
 
-static int poll_seac(uint8_t selector, uint8_t *idm, uint8_t *ctx) {
+static int poll_seac(uint8_t selector, uint8_t *idm, uint8_t *ctx, uint32_t retries) {
     uint8_t poll_frame[FELICA_SEAC_POLL_FRAME_LEN] = {
         FELICA_SEAC_POLL_FRAME_LEN, FELICA_SEAC_POLLING_CMD, 0x01, 0x01, selector, FELICA_SEAC_POLL_TIME_SLOT,
     };
@@ -2595,7 +2595,7 @@ static int poll_seac(uint8_t selector, uint8_t *idm, uint8_t *ctx) {
 
     PacketResponseNG resp;
     int ret = send_felica_payload_with_retries(seac_flags, sizeof(poll_frame), poll_frame, false,
-                                               -1, FELICA_SEAC_POLL_TIMEOUT_MS, FELICA_SEAC_POLL_RETRY_COUNT,
+                                               -1, FELICA_SEAC_POLL_TIMEOUT_MS, retries,
                                                0, false, &resp, NULL);
     if (ret != PM3_SUCCESS) {
         return ret;
@@ -2648,10 +2648,11 @@ static int auth1_seac(uint8_t selector, const uint8_t *idm, const uint8_t *chall
     return PM3_SUCCESS;
 }
 
-int info_felica_seac(void) {
+// retries: poll attempts after the first, each one restarts the field
+int info_felica_seac(uint32_t retries) {
     uint8_t idm[FELICA_SEAC_IDM_LEN] = {0};
     uint8_t ctx[FELICA_SEAC_CTX_LEN] = {0};
-    int ret = poll_seac(0x01, idm, ctx);
+    int ret = poll_seac(0x01, idm, ctx, retries);
     if (ret != PM3_SUCCESS) {
         return ret;
     }
@@ -3248,7 +3249,7 @@ static int CmdHFFelicaInfo(const char *Cmd) {
     bool no_ic_optimizations = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
     int ret = info_felica(verbose, no_ic_optimizations);
-    return ret == PM3_SUCCESS ? ret : info_felica_seac();
+    return ret == PM3_SUCCESS ? ret : info_felica_seac(FELICA_SEAC_POLL_RETRY_COUNT);
 }
 
 static int CmdHFFelicaSeacAuth1(const char *Cmd) {
@@ -3289,7 +3290,7 @@ static int CmdHFFelicaSeacAuth1(const char *Cmd) {
     const uint8_t selector = selector_len == 0 ? 0x01 : selector_data[0];
     uint8_t idm[FELICA_SEAC_IDM_LEN] = {0};
     uint8_t seac_ctx[FELICA_SEAC_CTX_LEN] = {0};
-    ret = poll_seac(selector, idm, seac_ctx);
+    ret = poll_seac(selector, idm, seac_ctx, FELICA_SEAC_POLL_RETRY_COUNT);
     if (ret != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "No SEAC card response for selector %02X", selector);
         return ret;
