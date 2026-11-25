@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed the PM5 HF reader field - it could show a short gap on an FPGA mode change, which a closely coupled LEGIC tag took for a pause. (@Msprg)
 - Fixed `lf t55xx resetread` on PM5 - wait for the full capture and download it without truncating its length to 16 bits (@adrian-stepien)
 - Fixed T55xx reads - packed LF sampling settings were applied to raw block captures, corrupting detection and reads (@adrian-stepien)
 - Fixed `hf felica` on PM5 - use shallow ASK modulation on `pwr_oe1`, sync TX timing to `ssp_cnt`, add post-TX RX blanking, and extend SSC frame sync (@ree-ce)
