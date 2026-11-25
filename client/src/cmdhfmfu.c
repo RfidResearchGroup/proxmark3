@@ -1140,15 +1140,15 @@ int ul_print_type(uint64_t tagtype, uint8_t spaces) {
     else if (tagtype & MFU_TT_NTAG_I2C_2K_PLUS)
         snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("NTAG I2C plus 1912bytes (NT3H2211FHK)"), spaces, "");
     else if (tagtype & MFU_TT_MY_D)
-        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("INFINEON my-d\x99 (SLE 66RxxS)"), spaces, "");
+        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("INFINEON my-d (SLE 66RxxS)"), spaces, "");
     else if (tagtype & MFU_TT_MY_D_NFC)
-        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("INFINEON my-d\x99 NFC (SLE 66RxxP)"), spaces, "");
+        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("INFINEON my-d NFC (SLE 66RxxP)"), spaces, "");
     else if (tagtype & MFU_TT_MY_D_MOVE)
-        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("INFINEON my-d\x99 move (SLE 66R01P)"), spaces, "");
+        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("INFINEON my-d move (SLE 66R01P)"), spaces, "");
     else if (tagtype & MFU_TT_MY_D_MOVE_NFC)
-        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("INFINEON my-d\x99 move NFC (SLE 66R01P)"), spaces, "");
+        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("INFINEON my-d move NFC (SLE 66R01P)"), spaces, "");
     else if (tagtype & MFU_TT_MY_D_MOVE_LEAN)
-        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("INFINEON my-d\x99 move lean (SLE 66R01L)"), spaces, "");
+        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("INFINEON my-d move lean (SLE 66R01L)"), spaces, "");
     else if (tagtype & MFU_TT_FUDAN_UL)
         snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("FUDAN Ultralight Compatible (or other compatible)"), spaces, "");
     else if (tagtype & MFU_TT_ST25TN512)
