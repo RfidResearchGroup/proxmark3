@@ -424,6 +424,8 @@ static bool bq_read_terminate(uint16_t *mv) {
 // reverts to its default on watchdog expiry (~160 s) unless the watchdog is
 // serviced (REG02[6]=1) or disabled (REG05[6:5]=00), so treat it as a one-shot.
 bool bwm_charger_set_charge(bool enable) {
+    StartTicks();
+    I2C_init(true);
     uint8_t reg01 = 0;
     if (I2C_BufferRead(&reg01, 1, 0x01, BWM_CHG_ADDR) <= 0) {
         return false;
@@ -442,6 +444,8 @@ bool bwm_charger_set_charge(bool enable) {
 // 15 mV step, and preserves REG04[1:0] (VBAT_PRE / VRECH). Read-modify-write.
 // Returns the mV actually applied, or 0 on I2C failure.
 uint16_t bwm_charger_set_vchg(uint16_t mv) {
+    StartTicks();
+    I2C_init(true);
     if (mv < BWM_CHG_VCHG_MIN_MV) {
         mv = BWM_CHG_VCHG_MIN_MV;
     }
@@ -467,6 +471,8 @@ uint16_t bwm_charger_set_vchg(uint16_t mv) {
 // select the 4.2 V chemistry profile. Idempotent: returns true without a
 // config-update cycle if all are already correct.
 bool bwm_gauge_provision_capacity(uint16_t cap_mah) {
+    StartTicks();
+    I2C_init(true);
 
     uint16_t cur = 0, chem = 0, term = 0;
     bool cap_ok = bq_read_design_cap(&cur) && (cur == cap_mah);
