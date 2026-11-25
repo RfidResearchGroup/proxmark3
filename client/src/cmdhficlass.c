@@ -595,7 +595,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
 
     // get header from card
     PrintAndLogEx(INFO, "trying to read a card..");
-    int res = read_iclass_csn(false, false, false);
+    int res = read_iclass_csn(false, false, false, true);
     if (res == PM3_SUCCESS) {
         cc = &iclass_last_known_card;
         // calc diversified key for selected card
@@ -1812,12 +1812,17 @@ static int CmdHFiClassInfo(const char *Cmd) {
     return info_iclass(shallow_mod);
 }
 
-int read_iclass_csn(bool loop, bool verbose, bool shallow_mod) {
+// init: false reuses a reader field left on by the caller
+int read_iclass_csn(bool loop, bool verbose, bool shallow_mod, bool init) {
 
     iclass_card_select_t payload = {
-        .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE),
+        .flags = FLAG_ICLASS_READER_CLEARTRACE,
         .page = 0 // no page selection support for reader mode yet
     };
+
+    if (init) {
+        payload.flags |= FLAG_ICLASS_READER_INIT;
+    }
 
     if (shallow_mod) {
         payload.flags |= FLAG_ICLASS_READER_SHALLOW_MOD;
@@ -1902,7 +1907,7 @@ static int CmdHFiClassReader(const char *Cmd) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
 
-    return read_iclass_csn(cm, false, shallow_mod);
+    return read_iclass_csn(cm, false, shallow_mod, true);
 }
 
 static int CmdHFiClassELoad(const char *Cmd) {
