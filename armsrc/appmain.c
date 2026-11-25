@@ -4986,14 +4986,32 @@ void __attribute__((noreturn)) AppMain(void) {
             }
         }
 
-        // Press button for one second to enter a possible standalone mode
+        // Press button for one second to enter a possible standalone mode.
+        // On PM5 the long hold is already taken (shutdown, see below), so
+        // BUTTON_CLICKED() is used there instead of BUTTON_HELD() to also
+        // get BUTTON_DOUBLE_CLICK as a distinct result; a quick single tap
+        // now costs an extra ~500ms to resolve, only on an actual press.
+#ifdef PM5
+        button_status = BUTTON_CLICKED(1000);
+#else
         button_status = BUTTON_HELD(1000);
+#endif
 #ifdef WITH_PM5_AUTOOFF
         if (button_status != BUTTON_NO_CLICK) {
             pm5_autooff_touch();   // any press is an interaction
         }
 #endif
+#ifdef PM5
+        if (button_status == BUTTON_DOUBLE_CLICK) {
+            // Hold is shutdown and boot-hold is DFU, so standalone mode gets
+            // its own gesture here.
+            allow_send_wtx = false;
+            RunMod();
+            allow_send_wtx = true;
+        } else if (button_status == BUTTON_HOLD) {
+#else
         if (button_status == BUTTON_HOLD) {
+#endif
             /*
             * So this is the trigger to execute a standalone mod.  Generic entrypoint by following the standalone/standalone.h headerfile
             * All standalone mod "main loop" should be the RunMod() function.
