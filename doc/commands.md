@@ -1049,12 +1049,12 @@ Check column "offline" for their availability.
 |`hw fpga                `|N       |`Fpga commands`
 |`hw fpgaoff             `|N       |`Turn off FPGA on device`
 |`hw ant_pm5             `|N       |`Control the antennal of pm5`
-|`hw qc_pm5              `|Y       |`Perform QC test (hardware or IO) for the PM5`
+|`hw qc_pm5              `|N       |`Perform QC test (hardware or IO) for the PM5`
 |`hw factorydata         `|N       |`Get/Set the factory data for Device`
 |`hw lcd                 `|N       |`Send command/data to LCD`
 |`hw lcdreset            `|N       |`Hardware reset LCD`
 |`hw ping                `|N       |`Test if the Proxmark3 is responsive`
-|`hw powersave           `|Y       |`Enable/disable the PM5 power-save idle`
+|`hw powersave           `|N       |`Enable/disable the PM5 power-save idle`
 |`hw readmem             `|N       |`Read from MCU flash`
 |`hw reset               `|N       |`Reset the device`
 |`hw setlfdivisor        `|N       |`Drive LF antenna at 12MHz / (divisor + 1)`
@@ -1079,7 +1079,7 @@ Check column "offline" for their availability.
 |`hw bwm powersave       `|N       |`Show/set the BWM power-save switch (DFS, light sleep, slow adv)`
 |`hw bwm setcap          `|N       |`Set fuel-gauge design capacity (run once after battery change)`
 |`hw bwm upgrade         `|N       |`Reflash BWM (ESP32) firmware over the BWM link, no header`
-|`hw bwm vchg            `|N       |`Set charger charge-voltage target (default 4100 mV)`
+|`hw bwm vchg            `|N       |`Set charger charge-voltage target (default 4200 mV)`
 |`hw bwm wifi            `|N       |`Bring up WiFi (STA + TCP server) for a tcp: connection`
 |`hw bwm wifipower       `|N       |`WiFi fully off, or the modem power-save type (none/min/max)`
 
@@ -1598,7 +1598,7 @@ Check column "offline" for their availability.
 |`lf t55xx deviceconfig  `|N       |`Set/Get T55XX device configuration`
 |`lf t55xx dump          `|N       |`Dump T55xx card Page 0 block 0-7`
 |`lf t55xx info          `|Y       |`Show T55x7 configuration data (page 0/ blk 0)`
-|`lf t55xx p1detect      `|N       |`Try detecting if this is a t55xx tag by reading page 1`
+|`lf t55xx p1detect      `|Y       |`Try detecting if this is a t55xx tag by reading page 1`
 |`lf t55xx read          `|N       |`Read T55xx block data`
 |`lf t55xx resetread     `|N       |`Send Reset Cmd then lf read the stream to attempt to identify the start`
 |`lf t55xx restore       `|N       |`Restore T55xx card Page 0 / Page 1 blocks`
