@@ -3757,15 +3757,32 @@ static bool hint_aid_match_select_response(const hintAIDList_t *entry, const uin
 }
 
 int infoHF14A4Applications(bool verbose) {
+    // unregistered proprietary AID, "F0 PM3DECOY"
+    static const uint8_t decoy_aid[] = { 0xF0, 0x50, 0x4D, 0x33, 0x44, 0x45, 0x43, 0x4F, 0x59 };
+
+    uint16_t sw = 0;
+    uint8_t result[1024] = {0};
+    size_t resultlen = 0;
+    int res = Iso7816Select(CC_CONTACTLESS, true, true, (uint8_t *)decoy_aid, sizeof(decoy_aid), result, sizeof(result), &resultlen, &sw);
+    if (res) {
+        DropField();
+        return 0;
+    }
+
+    // e.g. DESFire EV2 answers 9000 to any SELECT with Le
+    if (sw == ISO7816_OK) {
+        PrintAndLogEx(HINT, "Hint: Card answers to all AID. It maybe the latest revision of plus/desfire/ultralight card.");
+        DropField();
+        return 0;
+    }
+
     bool cardFound[ARRAYLEN(hintAIDList)] = {0};
-    bool ActivateField = true;
     int found = 0;
     for (int i = 0; i < ARRAYLEN(hintAIDList); i++) {
-        uint16_t sw = 0;
-        uint8_t result[1024] = {0};
-        size_t resultlen = 0;
-        int res = Iso7816Select(CC_CONTACTLESS, ActivateField, true, (uint8_t *)hintAIDList[i].aid, hintAIDList[i].aid_length, result, sizeof(result), &resultlen, &sw);
-        ActivateField = false;
+        sw = 0;
+        memset(result, 0, sizeof(result));
+        resultlen = 0;
+        res = Iso7816Select(CC_CONTACTLESS, false, true, (uint8_t *)hintAIDList[i].aid, hintAIDList[i].aid_length, result, sizeof(result), &resultlen, &sw);
         if (res)
             break;
 
@@ -3795,12 +3812,22 @@ int infoHF14A4Applications(bool verbose) {
             PrintAndLogEx(INFO, "---------------------------------------------------");
         }
 
-        if (found >= ARRAYLEN(hintAIDList) - 1) {
-            PrintAndLogEx(HINT, "Hint: Card answers to all AID. It maybe the latest revision of plus/desfire/ultralight card.");
-        } else {
-            for (int i = 0; i < ARRAYLEN(hintAIDList); i++) {
-                if (cardFound[i] && strlen(hintAIDList[i].hint))
-                    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("%s") "` commands", hintAIDList[i].hint);
+        for (int i = 0; i < ARRAYLEN(hintAIDList); i++) {
+            if ((cardFound[i] == false) || (strlen(hintAIDList[i].hint) == 0)) {
+                continue;
+            }
+
+            // several AIDs share a hint
+            bool printed = false;
+            for (int j = 0; j < i; j++) {
+                if (cardFound[j] && (strcmp(hintAIDList[j].hint, hintAIDList[i].hint) == 0)) {
+                    printed = true;
+                    break;
+                }
+            }
+
+            if (printed == false) {
+                PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("%s") "` commands", hintAIDList[i].hint);
             }
         }
     }

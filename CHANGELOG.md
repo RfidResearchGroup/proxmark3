@@ -5,6 +5,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 - Fixed `hf 14a sim -t 10` - a SELECT of an application the tag does not hold got `90 00`, it now gets file not found, `6A 82` (@matrix)
 - Fixed `hf 14a sim -t 10` - every block that is not one of the lock's three got `90 00`, R-blocks, chained I-blocks, S(DESELECT) and the CID are now handled as on the other types (@matrix)
+- Fixed `hf search` AID hints - a decoy SELECT detects cards answering any AID (DESFire EV2) and shared hints print once (@iceman1001)
 - Fixed `lf t55xx resetread` on PM5 - wait for the full capture and download it without truncating its length to 16 bits (@adrian-stepien)
 - Fixed T55xx reads - packed LF sampling settings were applied to raw block captures, corrupting detection and reads (@adrian-stepien)
 - Fixed `hf felica` on PM5 - use shallow ASK modulation on `pwr_oe1`, sync TX timing to `ssp_cnt`, add post-TX RX blanking, and extend SSC frame sync (@ree-ce)
