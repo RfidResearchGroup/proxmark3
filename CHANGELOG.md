@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Removed `sim011.bin` - `sim023.bin`, only the latest SIM module firmware `sim024.bin` is shipped. Older ones are in the git history (@iceman1001)
 - Fixed `hf search` AID hints - a decoy SELECT detects cards answering any AID (DESFire EV2) and shared hints print once (@iceman1001)
 - Fixed `lf t55xx resetread` on PM5 - wait for the full capture and download it without truncating its length to 16 bits (@adrian-stepien)
 - Fixed T55xx reads - packed LF sampling settings were applied to raw block captures, corrupting detection and reads (@adrian-stepien)
