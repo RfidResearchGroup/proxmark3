@@ -858,7 +858,7 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples, bool 
         }
         // response is number of bits read
         uint32_t size = (resp.data.asDwords[0] / bits_per_sample);
-        getSamples(size, verbose);
+        return getSamples(size, verbose);
     }
 
     return PM3_SUCCESS;
@@ -1959,7 +1959,10 @@ int CmdLFfind(const char *Cmd) {
     int found = 0;
     bool is_online = (g_session.pm3_present && (use_gb == false));
     if (is_online) {
-        lf_read(false, 30000);
+        int res = lf_read(false, 30000);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
     }
 
     size_t min_length = 2000;
