@@ -3216,6 +3216,8 @@ bool EmLogTrace(const uint8_t *reader_data, uint16_t reader_len, uint32_t reader
 //  If a response is captured return TRUE
 //  If it takes too long return FALSE
 //-----------------------------------------------------------------------------
+#define THINFILM_LISTEN_MS 100
+
 bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t rec_maxlen,  uint8_t *received_len) {
 
     if (g_hf_field_active == false) {
@@ -3236,7 +3238,6 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t rec_
     uint8_t b = (uint8_t)FPGA_SSC_RX_Value();
     (void)b;
 
-    uint32_t timeout = iso14a_get_timeout();
     uint32_t receive_timer = GetTickCount();
 
     for (;;) {
@@ -3251,7 +3252,8 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t rec_
             }
         }
 
-        if (GetTickCountDelta(receive_timer) > timeout + 100) {
+        // tag talks first and repeats its frame; iso14a_timeout is in 128/fc, not ms
+        if (GetTickCountDelta(receive_timer) > THINFILM_LISTEN_MS) {
             break;
         }
     }
