@@ -6171,7 +6171,7 @@ out:
     t1 = msclock() - t1;
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "time in iclass chk " _YELLOW_("%.1f") " seconds", (float)t1 / 1000.0);
+    PrintAndLogEx(SUCCESS, "time in iclass chk " _YELLOW_("%s"), sprint_duration(t1));
     DropField();
 
     if (found_key) {

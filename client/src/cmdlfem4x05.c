@@ -1773,7 +1773,7 @@ int CmdEM4x05Chk(const char *Cmd) {
     free(keyBlock);
 
     t1 = msclock() - t1;
-    PrintAndLogEx(SUCCESS, "\ntime in check pwd " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+    PrintAndLogEx(SUCCESS, "\ntime in check pwd " _YELLOW_("%s") "\n", sprint_duration(t1));
     return PM3_SUCCESS;
 }
 
@@ -2215,7 +2215,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
 
     PrintAndLogEx(INFO, "----------------------------- " _CYAN_("exit") " ----------------------------------\n");
     t1 = msclock() - t1;
-    PrintAndLogEx(SUCCESS, "\ntime in unlock " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+    PrintAndLogEx(SUCCESS, "\ntime in unlock " _YELLOW_("%s") "\n", sprint_duration(t1));
     if (success) {
         uint32_t bitflips = search_value ^ word14b;
         PrintAndLogEx(INFO, "Old protection word => " _YELLOW_("%08X"), search_value);

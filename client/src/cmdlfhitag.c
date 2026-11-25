@@ -1875,7 +1875,7 @@ static int CmdLFHitag2Dump(const char *Cmd) {
                 data = payload->data;
 
                 t1 = msclock() - t1;
-                PrintAndLogEx(SUCCESS, "\ntime " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+                PrintAndLogEx(SUCCESS, "\ntime " _YELLOW_("%s") "\n", sprint_duration(t1));
                 goto out;
             }
 
@@ -1912,7 +1912,7 @@ static int CmdLFHitag2Dump(const char *Cmd) {
         }
 
         t1 = msclock() - t1;
-        PrintAndLogEx(SUCCESS, "\ntime " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+        PrintAndLogEx(SUCCESS, "\ntime " _YELLOW_("%s") "\n", sprint_duration(t1));
 
         goto out;
 
@@ -2489,7 +2489,7 @@ static int CmdLFHitag2Chk(const char *Cmd) {
     }
 
     t1 = msclock() - t1;
-    PrintAndLogEx(SUCCESS, "\ntime in check " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+    PrintAndLogEx(SUCCESS, "\ntime in check " _YELLOW_("%s") "\n", sprint_duration(t1));
     return PM3_SUCCESS;
 }
 
@@ -2782,7 +2782,7 @@ static int CmdLFHitag2Crack2(const char *Cmd) {
     }
 
     t1 = msclock() - t1;
-    PrintAndLogEx(SUCCESS, "\ntime " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+    PrintAndLogEx(SUCCESS, "\ntime " _YELLOW_("%s") "\n", sprint_duration(t1));
     return PM3_SUCCESS;
 }
 

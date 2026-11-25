@@ -1189,15 +1189,17 @@ bool GetIso14443aCommandFromReader(uint8_t *received, uint16_t received_maxlen, 
     uint8_t b = (uint8_t)FPGA_SSC_RX_Value();
     (void)b;
 
-    uint8_t flip = 0;
-    uint16_t checker = 4000;
+    // kept across calls: a call ends at every reader frame, so local
+    // counters may never reach the client check
+    static uint8_t flip = 0;
+    static uint16_t checker = 4000;
     for (;;) {
 
         WDT_HIT();
 
         // ever 3 * 4000,  check if we got any data from client
-        // takes long time,  usually messes with simualtion
-        if (flip == 3) {
+        // takes long time,  usually messes with simualtion: only between frames
+        if (flip >= 3 && Uart.state == STATE_14A_UNSYNCD) {
             if (data_available()) {
                 return false;
             }
@@ -1207,12 +1209,13 @@ bool GetIso14443aCommandFromReader(uint8_t *received, uint16_t received_maxlen, 
 
         // button press, takes a bit time, might mess with simualtion
         if (checker-- == 0) {
+            // reloaded first: a return below leaves it ready for the next call
+            checker = 4000;
             if (BUTTON_PRESS()) {
                 return false;
             }
 
             flip++;
-            checker = 4000;
         }
 
         if (FPGA_SSC_RX_Ready()) {
@@ -1390,6 +1393,12 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
     static uint8_t rPPS[3] = { 0xD0 };
 
     static uint8_t rPACK[4] = { 0x00, 0x00, 0x00, 0x00 };
+
+    // rATQA and rATS are static: start from their initial values, or a
+    // previous simulation's bytes leak into this one
+    rATQA[0] = 0x00;
+    rATQA[1] = 0x00;
+    memcpy(rATS, "\x06\x75\x80\x60\x02\x00\x00\x00", 8);
 
     switch (tagType) {
         case 1: { // MIFARE Classic 1k
@@ -1698,6 +1707,14 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
         rATQA[1] = (uint8_t)(s_atqa_override & 0xFF);
     }
 
+    // the simulator only does 106 kbit/s: an ATS offering more makes the
+    // reader negotiate a rate it will never get. b8 of TA(1) is not a rate bit and stays
+    if ((rATS[1] & 0x10) && rATS_len > 4) {
+        if ((rATS[2] & 0x7F) && ((flags & FLAG_ATS_IN_DATA) == FLAG_ATS_IN_DATA)) {
+            Dbprintf("ATS TA(1) %02X offers bit rates above 106 kbit/s, which the simulation cannot do: sent as %02X", rATS[2], rATS[2] & 0x80);
+        }
+        rATS[2] &= 0x80;
+    }
     AddCrc14A(rATS, rATS_len - 2);
 
     AddCrc14A(rPPS, sizeof(rPPS) - 2);
@@ -1775,6 +1792,79 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
 
     *responses = responses_init;
     return true;
+}
+
+// ISO/IEC 14443-4 (ISO-DEP) block numbering of a simulated PICC that never chains its answers
+typedef struct {
+    uint8_t blocknum;       // the PICC's block number, 1 at activation (rule C)
+    bool last_ok;           // the dynamic answer still holds the last block sent
+    bool pps_ok;            // a PPS is taken as the first frame after the ATS only
+    bool iblock;            // an I-block came since the activation
+} iso14a_sim_dep_t;
+
+// ISO/IEC 14443-4 5.3: a PPS request with PPS0 as Figure 11, and PPS1 when PPS0
+// says it follows, that keeps 106 kbit/s both ways, the only rate simulated
+static bool iso14a_sim_pps_valid(const uint8_t *cmd, int len) {
+    if (len < 4 || (cmd[1] & 0xEF) != 0x01) {
+        return false;
+    }
+    if (cmd[1] & 0x10) {
+        return (len == 5) && (cmd[2] == 0x00);
+    }
+    return len == 4;
+}
+
+// ISO/IEC 14443-4 at the ATS: block number 1 (rule C), no block sent yet, a PPS may follow
+static void iso14a_sim_dep_init(iso14a_sim_dep_t *dep) {
+    dep->blocknum = 1;
+    dep->last_ok = false;
+    dep->pps_ok = true;
+    dep->iblock = false;
+}
+
+// An I-block came: the PICC takes its block number (rule D)
+static void iso14a_sim_dep_iblock(iso14a_sim_dep_t *dep, uint8_t pcb) {
+    dep->blocknum = pcb & 0x01;
+    dep->iblock = true;
+}
+
+// ISO/IEC 14443-4 R-block: rule 11 sends the last block again, still in *answer
+// when dep->last_ok, rule 12 an R(ACK) built in *answer. NULL for no answer
+static tag_response_info_t *iso14a_sim_rblock(iso14a_sim_dep_t *dep, const uint8_t *cmd, tag_response_info_t *answer, size_t mod_size) {
+    uint8_t pcb = cmd[0];
+    bool nak = (pcb & 0x10) == 0x10;
+    if ((pcb & 0x01) == dep->blocknum) {
+        // an R(NAK) with this number before any block gets an R(ACK) too (note to rule 6)
+        if (dep->last_ok || dep->iblock || nak == false) {
+            return dep->last_ok ? answer : NULL;
+        }
+    } else if (nak == false) {
+        // an R(ACK) with the other number goes on with a chain, and there is none
+        return NULL;
+    }
+
+    uint16_t n = 0;
+    answer->response[n++] = 0xA2 | (pcb & 0x08) | dep->blocknum;
+    if (pcb & 0x08) {
+        answer->response[n++] = cmd[1];
+    }
+    AddCrc14A(answer->response, n);
+    answer->response_n = n + 2;
+    dep->last_ok = prepare_tag_modulation(answer, mod_size);
+    return dep->last_ok ? answer : NULL;
+}
+
+// The answer of the ISO/IEC 14443-4 types to an APDU, in out, and its length.
+// They hold no application, so a SELECT by DF name (ISO/IEC 7816-4, CLA 00
+// INS A4 P1 04) gets the file not found of a real card. Any other APDU keeps 90 00
+static uint8_t iso14a_sim_generic_answer(const uint8_t *apdu, int len, uint8_t *out) {
+    uint16_t sw = ISO7816_OK;
+    if (len >= 5 && apdu[0] == 0x00 && apdu[1] == ISO7816_SELECT_FILE && apdu[2] == 0x04) {
+        sw = ISO7816_FILE_NOT_FOUND;
+    }
+    out[0] = sw >> 8;
+    out[1] = sw & 0xFF;
+    return 2;
 }
 
 //-----------------------------------------------------------------------------
@@ -1933,6 +2023,10 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
     uint8_t order = ORDER_NONE;
     int retval = PM3_SUCCESS;
 
+    // ISO/IEC 14443-4: block numbering, and whether RATS was answered
+    iso14a_sim_dep_t dep = {0};
+    bool iso4 = false;
+
     // Just to allow some checks
 //    int happened = 0;
 //    int happened2 = 0;
@@ -1941,8 +2035,6 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
 
     // compatible write block number
     uint8_t wrblock = 0;
-
-    bool odd_reply = true;
 
     set_tracing(true);
     LED_A_ON();
@@ -1960,6 +2052,17 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
             Dbprintf("Emulator stopped. Trace length: %d ", BigBuf_get_traceLen());
             retval = PM3_EOPABORTED;
             break;
+        }
+
+        // ISO/IEC 14443-4 5.6.2.2: any frame after the ATS closes the PPS window
+        bool pps_first = dep.pps_ok;
+        dep.pps_ok = false;
+
+        // ISO/IEC 14443-4 R-block. Only it can ask for the last block again:
+        // the answer to any other frame may overwrite the dynamic answer
+        bool rblock = iso4 && tagType != 10 && (receivedCmd[0] & 0xE6) == 0xA2;
+        if (rblock == false) {
+            dep.last_ok = false;
         }
 
         // we need to check "ordered" states before, because received data may be same to any command - is wrong!!!
@@ -2051,11 +2154,8 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
             order = ORDER_NONE; // back to work state
             p_response = NULL;
 
-        } else if (receivedCmd[0] == ISO14443A_CMD_REQA && len == 1) { // Received a REQUEST, but in HALTED, skip
-            odd_reply = !odd_reply;
-            if (odd_reply) {
-                p_response = &responses[RESP_INDEX_ATQA];
-            }
+        } else if (receivedCmd[0] == ISO14443A_CMD_REQA && len == 1) { // Received a REQUEST
+            p_response = &responses[RESP_INDEX_ATQA];
         } else if (receivedCmd[0] == ISO14443A_CMD_WUPA && len == 1) { // Received a WAKEUP
             p_response = &responses[RESP_INDEX_ATQA];
         } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 2) {    // Received request for UID (cascade 1)
@@ -2070,8 +2170,14 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
             p_response = &responses[RESP_INDEX_SAKC2];
         } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_3 && len == 9) {  // Received a SELECT (cascade 3)
             p_response = &responses[RESP_INDEX_SAKC3];
-        } else if (receivedCmd[0] == ISO14443A_CMD_PPS) {
-            p_response = &responses[RESP_INDEX_PPS];
+        } else if ((receivedCmd[0] & 0xF0) == ISO14443A_CMD_PPS && pps_first && iso14a_sim_pps_valid(receivedCmd, len) && CheckCrc14A(receivedCmd, len)) {
+            // answered with the start byte received, which carries the CID
+            dynamic_response_info.response[0] = receivedCmd[0];
+            dynamic_response_info.response_n = 1;
+            AddCrc14A(dynamic_response_info.response, dynamic_response_info.response_n);
+            dynamic_response_info.response_n += 2;
+            prepare_tag_modulation(&dynamic_response_info, dynamic_modulation_buffer_size);
+            p_response = &dynamic_response_info;
         } else if (receivedCmd[0] == ISO14443A_CMD_READBLOCK && len == 4) {    // Received a (plain) READ
             uint8_t block = receivedCmd[1];
             // if Ultralight or NTAG (4 byte blocks)
@@ -2257,6 +2363,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
             LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
             p_response = NULL;
             order = ORDER_HALTED;
+            iso4 = false;
         } else if (receivedCmd[0] == MIFARE_ULEV1_VERSION && len == 3 && (tagType == 2 || tagType == 7 || tagType == 14)) {
             p_response = &responses[RESP_INDEX_VERSION];
         } else if (receivedCmd[0] == MFDES_GET_VERSION && len == 4 && (tagType == 3)) {
@@ -2278,6 +2385,8 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
                 EmSend4bit(CARD_NACK_NA);
                 p_response = NULL;
             } else {
+                iso14a_sim_dep_init(&dep);
+                iso4 = true;
                 p_response = &responses[RESP_INDEX_ATS];
             }
 
@@ -2532,6 +2641,12 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
             }
             p_response = NULL;
 
+        } else if (rblock) {
+            // the dynamic answer may still hold the last block
+            p_response = iso14a_sim_rblock(&dep, receivedCmd, &dynamic_response_info, dynamic_modulation_buffer_size);
+            if (p_response == NULL) {
+                LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
+            }
         } else {
 
             // clear old dynamic responses
@@ -2583,49 +2698,34 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
                 // Check for ISO 14443A-4 compliant commands, look at left nibble
                 switch (receivedCmd[0]) {
                     case 0x02:
-                    case 0x03: {  // IBlock (command no CID)
-                        dynamic_response_info.response[0] = receivedCmd[0];
-                        dynamic_response_info.response[1] = 0x90;
-                        dynamic_response_info.response[2] = 0x00;
-                        dynamic_response_info.response_n = 3;
-                    }
-                    break;
+                    case 0x03:    // IBlock (command no CID)
                     case 0x0B:
-                    case 0x0A: { // IBlock (command CID)
+                    case 0x0A: {  // IBlock (command CID), the CID is copied below
+                        // the PICC's next block number (rule D)
+                        iso14a_sim_dep_iblock(&dep, receivedCmd[0]);
+                        uint8_t inf = (receivedCmd[0] & 0x08) ? 2 : 1;
                         dynamic_response_info.response[0] = receivedCmd[0];
-                        dynamic_response_info.response[1] = 0x00;
-                        dynamic_response_info.response[2] = 0x90;
-                        dynamic_response_info.response[3] = 0x00;
-                        dynamic_response_info.response_n = 4;
+                        dynamic_response_info.response_n = inf + iso14a_sim_generic_answer(receivedCmd + inf, len - 2 - inf, dynamic_response_info.response + inf);
                     }
                     break;
 
+                    case 0x12:
+                    case 0x13:
                     case 0x1A:
                     case 0x1B: { // Chaining command
-                        dynamic_response_info.response[0] = 0xaa | ((receivedCmd[0]) & 1);
-                        dynamic_response_info.response_n = 2;
-                    }
-                    break;
-
-                    case 0xAA:
-                    case 0xBB: {
-                        dynamic_response_info.response[0] = receivedCmd[0] ^ 0x11;
-                        dynamic_response_info.response_n = 2;
-                    }
-                    break;
-
-                    case 0xBA: { // ping / pong
-                        dynamic_response_info.response[0] = 0xAB;
-                        dynamic_response_info.response[1] = 0x00;
-                        dynamic_response_info.response_n = 2;
+                        // R(ACK), the CID is copied below
+                        iso14a_sim_dep_iblock(&dep, receivedCmd[0]);
+                        dynamic_response_info.response[0] = 0xA2 | (receivedCmd[0] & 0x09);
+                        dynamic_response_info.response_n = (receivedCmd[0] & 0x08) ? 2 : 1;
                     }
                     break;
 
                     case 0xCA:
                     case 0xC2: { // Readers sends deselect command
-                        dynamic_response_info.response[0] = 0xCA;
-                        dynamic_response_info.response[1] = 0x00;
-                        dynamic_response_info.response_n = 2;
+                        // answered with the same block, the CID is copied below
+                        dynamic_response_info.response[0] = receivedCmd[0];
+                        dynamic_response_info.response_n = (receivedCmd[0] & 0x08) ? 2 : 1;
+                        iso4 = false;
                     }
                     break;
 
@@ -2660,6 +2760,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
                     break;
                 }
                 p_response = &dynamic_response_info;
+                dep.last_ok = true;
             }
         }
 
@@ -5463,7 +5564,6 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
     int len = 0;
     int retval = PM3_SUCCESS;
     int sentCount = 0;
-    bool odd_reply = true;
 
     set_tracing(true);
     LED_A_ON();
@@ -5484,11 +5584,8 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
             break;
         }
 
-        if (receivedCmd[0] == ISO14443A_CMD_REQA && len == 1) { // Received a REQUEST, but in HALTED, skip
-            odd_reply = !odd_reply;
-            if (odd_reply) {
-                p_response = &responses[RESP_INDEX_ATQA];
-            }
+        if (receivedCmd[0] == ISO14443A_CMD_REQA && len == 1) { // Received a REQUEST
+            p_response = &responses[RESP_INDEX_ATQA];
         } else if (receivedCmd[0] == ISO14443A_CMD_WUPA && len == 1) { // Received a WAKEUP
             p_response = &responses[RESP_INDEX_ATQA];
         } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 2) {    // Received request for UID (cascade 1)
