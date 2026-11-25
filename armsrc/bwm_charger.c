@@ -246,11 +246,11 @@ void bwm_print_battery_status(void) {
         if (info.current_ma > 5) {
             p += sprintf(p, "  " _GREEN_("%s") " %d mA", (cstat == 1) ? "pre-charge" : "charging", info.current_ma);
         } else if (info.current_ma < -5) {
-        // Measured drain / projected runtime: when running on battery the gauge
-        // Current is negative (discharging); |cur| is the real system draw, so
-        // remaining runtime ~= RemainingCapacity / draw. Only meaningful while
-        // discharging - on charge or idle there is no drain figure to report.
-        // (Projection is only as good as RemCap - provision Design Capacity first.)
+            // Measured drain / projected runtime: when running on battery the gauge
+            // Current is negative (discharging); |cur| is the real system draw, so
+            // remaining runtime ~= RemainingCapacity / draw. Only meaningful while
+            // discharging - on charge or idle there is no drain figure to report.
+            // (Projection is only as good as RemCap - provision Design Capacity first.)
             uint16_t draw = (uint16_t)(-info.current_ma);              // mA drawn from the battery
             uint32_t mins = ((uint32_t)info.remaining_mah * 60) / draw; // RemCap/draw -> hours, *60 -> mins
             p += sprintf(p, "  " _YELLOW_("discharging") " %u mA, ~%u h %u min left", draw, (unsigned)(mins / 60), (unsigned)(mins % 60));
