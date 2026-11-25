@@ -1591,7 +1591,7 @@ static command_t CommandTable[] = {
     {"pps",        CmdSmartPPS,           IfPm3Smartcard,  "Run an ISO 7816-3 PPS exchange"},
     {"reader",     CmdSmartReader,        IfPm3Smartcard,  "Act like an IS07816 reader"},
     {"raw",        CmdSmartRaw,           IfPm3Smartcard,  "Send raw hex data to tag"},
-    {"upgrade",    CmdSmartUpgrade,       AlwaysAvailable, "Upgrade sim module firmware"},
+    {"upgrade",    CmdSmartUpgrade,       IfPm3,           "Upgrade sim module firmware"},
     {"setclock",   CmdSmartSetClock,      IfPm3Smartcard,  "Set clock speed"},
     {NULL, NULL, NULL, NULL}
 };

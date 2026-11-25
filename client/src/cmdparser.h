@@ -52,6 +52,7 @@ bool IfPm3FpcUsartHostFromUsb(void);
 bool IfPm3FpcUsartDevFromUsb(void);
 bool IfPm3FpcUsartFromUsb(void);
 bool IfPm5(void);
+bool IfPm3(void);
 bool IfPm5StdAnt(void);
 bool IfBwm(void);
 bool IfFpgaFlash(void);

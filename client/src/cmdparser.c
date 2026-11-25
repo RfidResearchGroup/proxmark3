@@ -132,6 +132,10 @@ bool IfPm5(void) {
     return g_pm3_capabilities.is_pm5;
 }
 
+bool IfPm3(void) {
+    return (IfPm5() == false);
+}
+
 bool IfPm5StdAnt(void) {
     if (IfPm3Present() == false)
         return false;
