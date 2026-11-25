@@ -153,10 +153,10 @@ void bwm_uart_clock_update(void) {
     if (s_inited == false) {
         return;
     }
-    // Recompute the baud divider for the new APB1 clock. usart_init() only
-    // rewrites the divider and the (unchanged) 8N1 frame bits; it does not
-    // touch the enable bits or the DMA request, so it is safe on a live port.
+    // USART_BAUDR is set with the USART disabled (AT32F435 manual 12.6.2).
+    usart_enable(BWM_UART, FALSE);
     usart_init(BWM_UART, s_cur_baud, USART_DATA_8BITS, USART_STOP_1_BIT);
+    usart_enable(BWM_UART, TRUE);
 }
 
 static void bwm_uart_write_raw(const uint8_t *data, size_t len) {

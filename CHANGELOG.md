@@ -4,6 +4,28 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Fixed `lf hitag reader` on PM5 - the first UID read could miss the tag after `hw tune` (@adrian-stepien)
+- Fixed `hw bwm upgrade` - send the final reply before rebooting the BWM so the client can request the PM5 reset over BLE or Wi-Fi (@adrian-stepien)
+- Fixed `hw bwm upgrade` - report an unknown update result when the final reply times out (@adrian-stepien)
+- Fixed `hw bwm upgrade` - keep the BLE connection open during the upload (@adrian-stepien)
+- Fixed PM5 CEP - a long PM5 command could make the Flipper lose its connection even while it was still polling (@adrian-stepien)
+- Fixed PM5 CEP handshakes - receive Flipper bytes even while the attach check is waiting for its next poll (@adrian-stepien)
+- Fixed PM5 power save - keep the CEP and BWM UARTs and the timing counter at their configured rates when the core changes speed (@adrian-stepien)
+- Fixed `hw ping` - return errors for timeouts, device errors, wrong response lengths and mismatched echoes
+- Fixed `lf search` - stop on acquisition or sample download errors instead of decoding an earlier capture
+- Fixed sample downloads - bound offset reads to remaining device memory and use heap buffers for large PM5 captures
+- Fixed `hw timeout` on macOS and Linux - keep POSIX timeouts valid at 1000 ms and above
+- Fixed `hf 14a sim` - a SELECT by AID got `90 00` whatever the AID, it now gets file not found, `6A 82` (@matrix)
+- Fixed `hf 14a sim` - an R-block without a CID got no answer and one with a CID a fixed one, they now follow rules 11 and 12 of ISO/IEC 14443-4 (@matrix)
+- Fixed `hf 14a sim` - a chained I-block without a CID got no answer, it now gets an R(ACK), as one with a CID does (@matrix)
+- Fixed `hf 14a sim` - S(DESELECT) was answered with `CA 00`, it is now answered with the block received (@matrix)
+- Fixed `hf 14a sim` - any frame starting with `D0` got the PPS answer, now only a PPS request right after the ATS gets it (@matrix)
+- Fixed `hf 14a sim` - a PPS request with a CID got no answer, it is now answered with the same CID (@matrix)
+- Fixed `hf 14a sim` and `hf 14a simaid` - the ATS of `-t 3` offered bit rates above 106 kbit/s, which the simulation cannot do, they are no longer offered (@matrix)
+- Fixed `hf 14a sim`, `hf 14a simaid` and `hf seos sim` - every second REQA got no answer, so a reader that repeats its REQA did not read the simulation (@matrix)
+- Fixed `hf 14a sim` and `hf 14a antifuzz` - a stop command was not seen while a reader kept polling (@matrix)
+- Fixed `hf 14a sim` - the ATQA and the ATS could keep bytes of the simulation run before (@matrix)
+- Fixed `hf 14a simaid` - `<Enter>` did not stop the simulation, only the button did (@matrix)
+- Fixed `hf mfu info` - my-d type names no longer print a stray byte for the trademark sign (@iceman1001)
 - Fixed Nextfare / Go card parser - taps and top ups sorted by date, newest first; Go card journey shown as its tap on time, which is what the field holds (@iceman1001)
 - Changed transit parsers - section headers padded to one width so the dashes line up (@iceman1001)
 - Changed Nextfare / Go card parser - money in red when negative, green when positive, ticket type in yellow, cyan section headers; tap amounts are shown from the card side, the held back fare negative and the refund positive (@iceman1001)
@@ -38,6 +60,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed triggered `lf read` and `lf sniff` - samples were discarded while switching between the first 32-byte read and the rest of the capture (@adrian-stepien)
 - Fixed packed LF sample streaming - reused packet buffers kept old bits and corrupted subsequent samples (@adrian-stepien)
 - Fixed `hf mfu dump` - a bad read CRC was ignored when debug logging was disabled (@adrian-stepien)
+- Fixed loading dumps from SPIFFS into emulator memory - mount SPIFFS before loading and reject files larger than the emulator buffer (@adrian-stepien)
 - Fixed NDEF TLV parsing - a TLV longer than the data was decoded past the buffer, and `ndefread -f` saved bytes past it (@matrix)
 - Fixed PM5 USB sample streaming - the buffer index became 255 after the first packet and wrote outside the two buffers (@adrian-stepien)
 - Changed the PM3, PM3 Ultimate and iCopy-X FPGA images - rebuilt from the current sources (@matrix)

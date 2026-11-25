@@ -119,6 +119,10 @@ bool bwm_fwd_tagged(void) {
     return s_tag_state == TAG_ON;
 }
 
+bool bwm_fwd_reply_is_wifi(void) {
+    return bwm_fwd_tagged() && s_reply_ep == BWM_EP_WIFI;
+}
+
 static void tag_retrigger(void) {
     if (s_tag_state != TAG_REFUSED) {
         s_tag_state = TAG_PENDING;
