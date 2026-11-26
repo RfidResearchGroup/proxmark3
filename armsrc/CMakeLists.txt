@@ -107,6 +107,7 @@ set(SRC_ISO14443a
         mifarecmd.c
         epa.c
         mifaresim.c
+        topazsim.c
         sam_common.c
         sam_mfc.c
         sam_seos.c
