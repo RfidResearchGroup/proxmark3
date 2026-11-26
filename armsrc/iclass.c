@@ -659,6 +659,10 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
             if (chip_state != SELECTED) {
                 goto send;
             }
+            // the CRC covers the block number: a damaged READ gets no answer
+            if (check_crc(CRC_ICLASS, receivedCmd + 1, 3) == false) {
+                goto send;
+            }
             if (simulationMode == ICLASS_SIM_MODE_EXIT_AFTER_MAC) {
                 // provide defaults for blocks 0 ... 5
 
@@ -845,6 +849,10 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
             if (chip_state != SELECTED) {
                 goto send;
             }
+            // the CRC covers the block number: a damaged READ4 gets no answer
+            if (check_crc(CRC_ICLASS, receivedCmd + 1, 3) == false) {
+                goto send;
+            }
             //Read block
             memcpy(data_generic_trace, emulator + (current_page * page_size) + (block * 8), 32);
             AddCrc(data_generic_trace, 32);
@@ -861,6 +869,10 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
             // We're expected to respond with the data+crc, exactly what's already in the receivedCmd
             // receivedCmd is now UPDATE 1b | ADDRESS 1b | DATA 8b | Signature 4b or CRC 2b
             if (chip_state != SELECTED) {
+                goto send;
+            }
+            // without a signature the CRC covers block number and data: a damaged UPDATE gets no answer
+            if (len == 12 && check_crc(CRC_ICLASS, receivedCmd + 1, 11) == false) {
                 goto send;
             }
             // is chip in ReadOnly (RO)
@@ -949,6 +961,10 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
             // Chips with a single page will not answer to this command
             // Otherwise, we should answer 8bytes (conf block 1) + 2bytes CRC
             if (chip_state != SELECTED) {
+                goto send;
+            }
+            // the CRC covers the page number: a damaged PAGESEL gets no answer
+            if (check_crc(CRC_ICLASS, receivedCmd + 1, 3) == false) {
                 goto send;
             }
 
@@ -1246,6 +1262,10 @@ int do_iclass_simulation_nonsec(void) {
             if (chip_state != SELECTED) {
                 goto send;
             }
+            // the CRC covers the block number: a damaged READ gets no answer
+            if (check_crc(CRC_ICLASS, receivedCmd + 1, 3) == false) {
+                goto send;
+            }
 
             switch (block) {
                 case 0: { // csn (0c 00)
@@ -1304,6 +1324,10 @@ int do_iclass_simulation_nonsec(void) {
             if (chip_state != SELECTED) {
                 goto send;
             }
+            // the CRC covers the block number: a damaged READ4 gets no answer
+            if (check_crc(CRC_ICLASS, receivedCmd + 1, 3) == false) {
+                goto send;
+            }
             //Read block
             memcpy(data_generic_trace, emulator + (current_page * page_size) + (block * 8), 8 * 4);
             AddCrc(data_generic_trace, 8 * 4);
@@ -1320,6 +1344,10 @@ int do_iclass_simulation_nonsec(void) {
             // We're expected to respond with the data+crc, exactly what's already in the receivedCmd
             // receivedCmd is now UPDATE 1b | ADDRESS 1b | DATA 8b | Signature 4b or CRC 2b
             if (chip_state != SELECTED) {
+                goto send;
+            }
+            // without a signature the CRC covers block number and data: a damaged UPDATE gets no answer
+            if (len == 12 && check_crc(CRC_ICLASS, receivedCmd + 1, 11) == false) {
                 goto send;
             }
 
@@ -1344,10 +1372,20 @@ int do_iclass_simulation_nonsec(void) {
             if (chip_state != SELECTED) {
                 goto send;
             }
+            // the CRC covers the page number: a damaged PAGESEL gets no answer
+            if (check_crc(CRC_ICLASS, receivedCmd + 1, 3) == false) {
+                goto send;
+            }
 
             if (max_page > 0) {
 
-                current_page = receivedCmd[1];
+                // if on 2k,  always ignore 3msb,  & 0x1F)
+                uint8_t page = receivedCmd[1] & 0x1F;
+                if (page > max_page) {
+                    goto send;
+                }
+
+                current_page = page;
 
                 memcpy(data_generic_trace, emulator + (current_page * page_size) + (8 * 1), 8);
                 AddCrc(data_generic_trace, 8);
