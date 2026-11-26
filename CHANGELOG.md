@@ -7,6 +7,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed the ISO14443-A simulations and sniffing - the Miller decoder did not find a start bit whose pause shows in one sample, split or a sample late, and did not take a 3 tick pause shifted right (@matrix)
 - Fixed the ISO14443-A simulations on the PM3 boards with an XC2S30 - a reader frame read late by the ARM got a start time 128 carrier periods late (@matrix)
 - Fixed the trace of the ISO14443-A simulations - a reader frame of 57 bytes and more got wrong times (@matrix)
+- Fixed `hf sniff` - keep the full capture length, download every sample and stop on host abort while waiting for a trigger (@adrian-stepien)
+- Fixed `hf sniff` sample reduction - correct min, max and average, default to one sample pair and reject invalid skip ratios (@adrian-stepien)
 - Fixed `hf 14a sim -t 10` - a SELECT of an application the tag does not hold got `90 00`, it now gets file not found, `6A 82` (@matrix)
 - Fixed `hf 14a sim -t 10` - every block that is not one of the lock's three got `90 00`, R-blocks, chained I-blocks, S(DESELECT) and the CID are now handled as on the other types (@matrix)
 - Removed `sim011.bin` - `sim023.bin`, only the latest SIM module firmware `sim024.bin` is shipped. Older ones are in the git history (@iceman1001)
