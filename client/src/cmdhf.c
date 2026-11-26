@@ -259,9 +259,9 @@ int CmdHFSearch(const char *Cmd) {
         return res;
     }
 
-    // PM5: a single found tag gets its info command run
+    // PM5 verbose: a single found tag gets its info command run
     const char *info_cmd = NULL;
-    if (IfPm5()) {
+    if (verbose && IfPm5()) {
         int found = 0;
         for (int i = 0; i < COUNT_OF_PROTOCOLS; i++) {
             found += success[i] ? 1 : 0;
