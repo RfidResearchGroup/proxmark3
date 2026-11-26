@@ -80,6 +80,8 @@ int mf_check_keys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk
 int mf_check_keys_fast_ex(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, uint8_t strategy,
                           uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory,
                           bool verbose, bool quiet, uint16_t singleSectorParams);
+int mf_check_keys_fast_skip(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, uint8_t strategy,
+                            uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool verbose, const uint8_t *skip_sectors);
 
 int mf_check_keys_file(uint8_t *destfn, uint64_t *key);
 

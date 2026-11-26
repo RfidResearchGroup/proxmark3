@@ -27,17 +27,17 @@
 #include "appmain.h"
 #include "cmd.h"
 
-static void RAMFUNC optimizedSniff(uint16_t *dest, uint16_t dsize) {
+static void RAMFUNC optimizedSniff(uint16_t *dest, uint32_t dsize) {
     while (dsize > 0) {
         if (FPGA_SSC_RX_Ready()) {
             *dest = (uint16_t)(FPGA_SSC_RX_Value());
             dest++;
-            dsize -= sizeof(dsize);
+            dsize -= sizeof(*dest);
         }
     }
 }
 
-static void RAMFUNC skipSniff(uint8_t *dest, uint16_t dsize, uint8_t skipMode, uint8_t skipRatio) {
+static void RAMFUNC skipSniff(uint8_t *dest, uint32_t dsize, uint8_t skipMode, uint8_t skipRatio) {
     uint32_t accum = (skipMode == HF_SNOOP_SKIP_MIN) ? 0xffffffff : 0;
     uint8_t ratioindx = 0;
     while (dsize > 0) {
@@ -57,7 +57,7 @@ static void RAMFUNC skipSniff(uint8_t *dest, uint16_t dsize, uint8_t skipMode, u
                         accum = val >> 8;
                     break;
                 case HF_SNOOP_SKIP_AVG:
-                    accum += (val & 0xff) + (val & 0xff);
+                    accum += (val & 0xff) + (val >> 8);
                     break;
                 default: { // HF_SNOOP_SKIP_DROP and the rest
                     if (ratioindx == 0)
@@ -86,7 +86,7 @@ static void RAMFUNC skipSniff(uint8_t *dest, uint16_t dsize, uint8_t skipMode, u
     }
 }
 
-int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len, uint8_t skipMode, uint8_t skipRatio) {
+int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint32_t *len, uint8_t skipMode, uint8_t skipRatio) {
     BigBuf_free();
     BigBuf_Clear_ext(false);
 
@@ -122,14 +122,16 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len, uint
     uint32_t trigger_cnt = 0;
     uint16_t r = 0, interval = 0;
 
-    bool pressed = false;
-    while (pressed == false) {
+    bool aborted = false;
+    while (aborted == false) {
         WDT_HIT();
 
         // cancel w usb command.
         if (interval == 2000) {
-            if (data_available())
+            if (data_available()) {
+                aborted = true;
                 break;
+            }
 
             interval = 0;
         } else {
@@ -151,10 +153,10 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len, uint
             }
         }
 
-        pressed = BUTTON_PRESS();
+        aborted = BUTTON_PRESS();
     }
 
-    if (pressed == false) {
+    if (aborted == false) {
 
         // skip samples loop
         while (samplesToSkip != 0) {
@@ -180,7 +182,10 @@ int HfSniff(uint32_t samplesToSkip, uint32_t triggersToSkip, uint16_t *len, uint
     LED_D_OFF();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     BigBuf_free();
-    return (pressed) ? PM3_EOPABORTED : PM3_SUCCESS;
+    if (aborted) {
+        *len = 0;
+    }
+    return (aborted) ? PM3_EOPABORTED : PM3_SUCCESS;
 }
 
 void HfPlotDownload(void) {

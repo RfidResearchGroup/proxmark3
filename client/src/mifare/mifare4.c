@@ -662,6 +662,134 @@ int mfpReadSector(uint8_t sectorNo, uint8_t keyType, const uint8_t *key, uint8_t
     return PM3_SUCCESS;
 }
 
+// state of a block by block AES sector read
+typedef struct {
+    uint8_t sector;
+    const uint8_t *keys[2];     // key A, key B, NULL when unknown
+    uint8_t bad_keys;           // bit per key the card refused
+    mf4Session_t session;
+    int kt;                     // key of the open session, -1 none
+    bool verbose;
+} mfp_rd_t;
+
+// one block with key kt. A session is opened when needed, any failure ends it, a failed
+// exchange is tried once more, a refusal is not
+static int mfp_rd_block(mfp_rd_t *st, uint8_t kt, uint8_t blockno, uint8_t *out) {
+
+    for (uint8_t tries = 0; tries < 2; tries++) {
+
+        if (st->kt != kt) {
+            uint16_t uKeyNum = 0x4000 + st->sector * 2 + kt;
+            uint8_t keyn[2] = { uKeyNum >> 8, uKeyNum & 0xff };
+            int res = MifareAuth4(&st->session, keyn, st->keys[kt], false, true, true, true, st->verbose, (st->verbose == false));
+            if (res == PM3_EWRONGANSWER) {
+                st->bad_keys |= (1 << kt);
+                st->kt = -1;
+                return res;
+            }
+            if (res != PM3_SUCCESS) {
+                st->kt = -1;
+                continue;
+            }
+            st->kt = kt;
+        }
+
+        uint8_t data[250] = {0};
+        int datalen = 0;
+        uint8_t mac[8] = {0};
+        int res = MFPReadBlock(&st->session, false, false, false, blockno, 1, false, true, data, sizeof(data), &datalen, mac);
+        if (res == 0 && datalen && data[0] != 0x90) {
+            // the card refused this block to this key
+            if (st->verbose) {
+                PrintAndLogEx(INFO, "Block %u key %c: %02x %s", blockno, kt ? 'B' : 'A', data[0], mfpGetErrorDescription(data[0]));
+            }
+            st->kt = -1;
+            return PM3_EWRONGANSWER;
+        }
+
+        if (res == 0 && datalen == 1 + 16 + 8 + 2 && memcmp(&data[1 + 16], mac, 8) == 0) {
+            mfp_data_crypt(&st->session, &data[1], &data[1], true, 1);
+            memcpy(out, &data[1], 16);
+            return PM3_SUCCESS;
+        }
+
+        st->kt = -1;
+    }
+    return PM3_ERFTRANS;
+}
+
+// AES read of a MIFARE Plus sector, trailer first. Its access bits pick the key for each
+// data block. keyA / keyB NULL when unknown, loaded gets a bit per block of the sector.
+// PM3_SUCCESS when every block was read, PM3_EPARTIAL when some were
+int mfpReadSectorKeys(uint8_t sectorNo, const uint8_t *keyA, const uint8_t *keyB, uint8_t *dataout, uint16_t *loaded, bool verbose) {
+
+    mfp_rd_t st = {
+        .sector = sectorNo,
+        .keys = { keyA, keyB },
+        .kt = -1,
+        .verbose = verbose,
+    };
+
+    *loaded = 0;
+    uint8_t first = mfFirstBlockOfSector(sectorNo);
+    uint8_t nblk = mfNumBlocksPerSector(sectorNo);
+
+    // trailer, key A first
+    uint8_t *trailer = dataout + ((nblk - 1) * MFBLOCK_SIZE);
+    bool have_trailer = false;
+    for (uint8_t kt = MF_KEY_A; kt <= MF_KEY_B && have_trailer == false; kt++) {
+        if (st.keys[kt] && mfp_rd_block(&st, kt, first + nblk - 1, trailer) == PM3_SUCCESS) {
+            have_trailer = true;
+            *loaded |= (1 << (nblk - 1));
+        }
+    }
+
+    for (uint8_t b = 0; b < nblk - 1; b++) {
+
+        // a 16 block sector shares the access bits in groups of five
+        uint8_t rights = 0x03;
+        if (have_trailer && mfValidateAccessConditions(&trailer[6])) {
+            switch (mf_get_accesscondition((nblk == 4) ? b : (b / 5), &trailer[6])) {
+                case 3:
+                case 5:
+                    rights = (1 << MF_KEY_B);
+                    break;
+                case 7:
+                    rights = 0;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        // the key of the open session first
+        uint8_t order[2] = { MF_KEY_A, MF_KEY_B };
+        if (st.kt == MF_KEY_B) {
+            order[0] = MF_KEY_B;
+            order[1] = MF_KEY_A;
+        }
+
+        for (uint8_t i = 0; i < 2; i++) {
+            uint8_t kt = order[i];
+            if (((rights >> kt) & 1) == 0 || st.keys[kt] == NULL || ((st.bad_keys >> kt) & 1)) {
+                continue;
+            }
+            if (mfp_rd_block(&st, kt, first + b, dataout + (b * MFBLOCK_SIZE)) == PM3_SUCCESS) {
+                *loaded |= (1 << b);
+                break;
+            }
+        }
+    }
+
+    DropField();
+
+    uint16_t all = (uint16_t)((1U << nblk) - 1);
+    if (*loaded == all) {
+        return PM3_SUCCESS;
+    }
+    return (*loaded) ? PM3_EPARTIAL : PM3_ESOFT;
+}
+
 int mfpWriteSector(uint8_t sectorNo, uint8_t keyType, const uint8_t *key, const uint8_t *datain, bool verbose) {
 
     uint16_t uKeyNum = 0x4000 + sectorNo * 2 + (keyType ? 1 : 0);

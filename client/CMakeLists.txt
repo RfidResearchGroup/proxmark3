@@ -311,6 +311,7 @@ add_subdirectory(${PM3_ROOT}/client/deps deps)
 
 set (TARGET_SOURCES
         ${PM3_ROOT}/common/commonutil.c
+        ${PM3_ROOT}/common/rtttl.c
         ${PM3_ROOT}/common/util_posix.c
         ${PM3_ROOT}/common/bucketsort.c
         ${PM3_ROOT}/common/crapto1/crapto1.c

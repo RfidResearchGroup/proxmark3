@@ -260,9 +260,9 @@ int mf_check_keys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t ke
 // 0 == ok all keys found
 // 1 ==
 // 2 == Time-out, aborting
-int mf_check_keys_fast_ex(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, uint8_t strategy,
-                          uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory,
-                          bool verbose, bool quiet, uint16_t singleSectorParams) {
+static int mf_check_keys_fast_impl(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, uint8_t strategy,
+                                   uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory,
+                                   bool verbose, bool quiet, uint16_t singleSectorParams, const uint8_t *skip_sectors) {
 
     uint64_t t2 = msclock();
 
@@ -280,6 +280,9 @@ int mf_check_keys_fast_ex(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastCh
     payload->use_flashmemory = use_flashmemory;
     payload->key_count = size;
     payload->singlesector_params = singleSectorParams;
+    if (skip_sectors) {
+        memcpy(payload->skip_sectors, skip_sectors, sizeof(payload->skip_sectors));
+    }
     memcpy(payload->keys, keyBlock, MIFARE_KEY_SIZE * size);
 
     // send keychunk
@@ -406,6 +409,18 @@ int mf_check_keys_fast_ex(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastCh
         }
     }
     return PM3_ESOFT;
+}
+
+int mf_check_keys_fast_ex(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, uint8_t strategy,
+                          uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory,
+                          bool verbose, bool quiet, uint16_t singleSectorParams) {
+    return mf_check_keys_fast_impl(sectorsCnt, firstChunk, lastChunk, strategy, size, keyBlock, e_sector, use_flashmemory, verbose, quiet, singleSectorParams, NULL);
+}
+
+// skip_sectors: 5 bytes, bit per sector the device leaves out
+int mf_check_keys_fast_skip(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, uint8_t strategy,
+                            uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool verbose, const uint8_t *skip_sectors) {
+    return mf_check_keys_fast_impl(sectorsCnt, firstChunk, lastChunk, strategy, size, keyBlock, e_sector, false, verbose, false, 0, skip_sectors);
 }
 
 int mf_check_keys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, uint8_t strategy

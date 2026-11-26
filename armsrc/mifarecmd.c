@@ -442,6 +442,8 @@ void MifareU3PassChkKeys(mful_3passchk_t *packet) {
         clear_trace();
         set_tracing(false);
 
+        foundkeys = 0;
+
         if (iso14443a_select_card(NULL, NULL, NULL, true, 0, true) == 0) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("ChkKeys_fast: Can't select card (ALL)");
             goto out;
@@ -2242,6 +2244,15 @@ void MifareChkKeys_fast(const mf_chkkeys_fast_t *payload) {
         memset(found, 0x00, sizeof(found));
         foundkeys = 0;
 
+        // 2 marks a skipped sector, every loop passes it, the reply only packs bit 0
+        for (uint8_t s = 0; s < MIN(sectorcnt, 40); s++) {
+            if ((payload->skip_sectors[s / 8] >> (s % 8)) & 1) {
+                found[(s * 2)] = 2;
+                found[(s * 2) + 1] = 2;
+                foundkeys += 2;
+            }
+        }
+
         iso14a_card_select_t card_info;
         if (iso14443a_select_card(uid, &card_info, &cuid, true, 0, true) == 0) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("ChkKeys_fast: Can't select card (ALL)");
@@ -2567,8 +2578,8 @@ OUT:
                 emlSetMem_xt(block, blockno, 1, sizeof(block));
             }
 
-            MifareECardLoad(sectorcnt, MF_KEY_A, NULL);
-            MifareECardLoad(sectorcnt, MF_KEY_B, NULL);
+            // picks key A or B per block from the access bits
+            MifareECardLoad(sectorcnt, MF_KEY_A, NULL, NULL, NULL);
         }
     } else {
         // partial/none keys found
@@ -2808,8 +2819,10 @@ void MifarePersonalizeUID(uint8_t keyType, uint8_t perso_option, uint64_t key) {
 //
 //-----------------------------------------------------------------------------
 int MifareECardLoadExt(uint8_t sectorcnt, uint8_t keytype, uint8_t *key) {
-    int retval = MifareECardLoad(sectorcnt, keytype, key);
-    reply_ng(CMD_HF_MIFARE_EML_LOAD, retval, NULL, 0);
+    mfc_eload_resp_t resp;
+    memset(&resp, 0, sizeof(resp));
+    int retval = MifareECardLoad(sectorcnt, keytype, key, resp.loaded, resp.denied);
+    reply_ng(CMD_HF_MIFARE_EML_LOAD, retval, (uint8_t *)&resp, sizeof(resp));
     return retval;
 }
 
@@ -2819,15 +2832,147 @@ static int mfec_reauth(struct Crypto1State *pcs, uint8_t *uid, uint8_t cascade_l
                        uint32_t cuid, uint8_t blockno, uint8_t keytype, uint64_t ui64Key) {
 
     if (iso14443a_fast_select_card(uid, cascade_levels) == 0) {
+        if (g_dbglevel >= DBG_EXTENDED) Dbprintf("reauth block %u key %c: select failed", blockno, keytype ? 'B' : 'A');
         return PM3_ERFTRANS;
     }
     if (mifare_classic_auth(pcs, cuid, blockno, keytype, ui64Key, AUTH_FIRST)) {
+        if (g_dbglevel >= DBG_EXTENDED) Dbprintf("reauth block %u key %c: auth failed", blockno, keytype ? 'B' : 'A');
         return PM3_EFAILED;
     }
     return PM3_SUCCESS;
 }
 
-int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key) {
+#define MFEC_MAX_RETRIES 2
+
+// key bit of MF_KEY_A / MF_KEY_B in read rights and bad key masks
+#define MFEC_KEY_BIT(kt) (1 << (kt))
+
+// access condition C1 C2 C3 of group n (0..3) in a sector trailer
+static uint8_t mfec_ac_cond(const uint8_t *trailer, uint8_t n) {
+    return (((trailer[7] >> (4 + n)) & 1) << 2) | (((trailer[8] >> n) & 1) << 1) | ((trailer[8] >> (4 + n)) & 1);
+}
+
+// keys that may read data block group n (0..2), as MFEC_KEY_BIT mask
+static uint8_t mfec_read_rights(const uint8_t *trailer, uint8_t n) {
+
+    // inverted copies don't match, trust nothing and try both keys
+    if ((((trailer[6] ^ (trailer[7] >> 4)) & 0x0F) != 0x0F) ||
+            ((((trailer[6] >> 4) ^ trailer[8]) & 0x0F) != 0x0F) ||
+            (((trailer[7] ^ (trailer[8] >> 4)) & 0x0F) != 0x0F)) {
+        return MFEC_KEY_BIT(MF_KEY_A) | MFEC_KEY_BIT(MF_KEY_B);
+    }
+
+    uint8_t rights;
+    switch (mfec_ac_cond(trailer, n)) {
+        case 3:
+        case 5:
+            rights = MFEC_KEY_BIT(MF_KEY_B);
+            break;
+        case 7:
+            rights = 0;
+            break;
+        default:
+            rights = MFEC_KEY_BIT(MF_KEY_A) | MFEC_KEY_BIT(MF_KEY_B);
+            break;
+    }
+
+    // a readable key B (trailer 000, 001, 010) can't authenticate data access
+    uint8_t ct = mfec_ac_cond(trailer, 3);
+    if (ct == 0 || ct == 1 || ct == 2) {
+        rights &= ~MFEC_KEY_BIT(MF_KEY_B);
+    }
+    return rights;
+}
+
+typedef struct {
+    struct Crypto1State *pcs;
+    uint8_t *uid;
+    uint8_t cascade_levels;
+    uint32_t cuid;
+    uint8_t sector;
+    uint64_t keys[2];       // key A, key B of this sector
+    uint8_t first_kt;       // key to try first
+    uint8_t bad_keys;       // keys that failed to authenticate this sector
+    bool session;           // authenticated crypto1 session open
+    uint8_t kt;             // key of that session
+} mfec_state_t;
+
+// read a block with a key the rights allow. Any failed read ends the crypto1
+// session, so the next attempt starts a new one; a NAK moves on to the other key
+static bool mfec_read_block(mfec_state_t *st, uint8_t blockno, uint8_t rights, uint8_t *data) {
+
+    uint8_t order[2];
+    order[0] = st->session ? st->kt : st->first_kt;
+    order[1] = (order[0] == MF_KEY_A) ? MF_KEY_B : MF_KEY_A;
+
+    for (uint8_t i = 0; i < ARRAYLEN(order); i++) {
+
+        uint8_t kt = order[i];
+        if (((rights & MFEC_KEY_BIT(kt)) == 0) || (st->bad_keys & MFEC_KEY_BIT(kt))) {
+            continue;
+        }
+
+        for (uint8_t r = 0; r < MFEC_MAX_RETRIES; r++) {
+
+            if ((st->session == false) || (st->kt != kt)) {
+                // end the open session cleanly, a halted card answers the WUPA at once
+                if (st->session) {
+                    mifare_classic_halt(st->pcs);
+                    st->session = false;
+                }
+                int res = mfec_reauth(st->pcs, st->uid, st->cascade_levels, st->cuid, FirstBlockOfSector(st->sector), kt, st->keys[kt]);
+                if (res == PM3_EFAILED) {
+                    st->bad_keys |= MFEC_KEY_BIT(kt);
+                    break;
+                }
+                if (res != PM3_SUCCESS) {
+                    continue;
+                }
+                st->session = true;
+                st->kt = kt;
+            }
+
+            int res = mifare_classic_readblock(st->pcs, blockno, data);
+            if (res == 0) {
+                return true;
+            }
+
+            st->session = false;
+
+            // NAK, the card refuses this key for this block
+            if (res == 1) {
+                break;
+            }
+        }
+    }
+    return false;
+}
+
+static void mfec_mark(uint8_t *bits, uint8_t blockno) {
+    if (bits) {
+        bits[blockno / 8] |= (1 << (blockno % 8));
+    }
+}
+
+static void mfec_store(uint8_t blockno, uint8_t *data, uint8_t *loaded) {
+
+    // No need to copy empty
+    if (memcmp(data, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", MIFARE_BLOCK_SIZE) != 0) {
+        if (IsSectorTrailer(blockno)) {
+            // sector trailer, keep the keys, set only the AC
+            uint8_t st[MIFARE_BLOCK_SIZE] = {0x00};
+            emlGetMem_xt(st, blockno, 1, MIFARE_BLOCK_SIZE);
+            memcpy(st + 6, data + 6, 4);
+            emlSetMem_xt(st, blockno, 1, MIFARE_BLOCK_SIZE);
+        } else {
+            emlSetMem_xt(data, blockno, 1, MIFARE_BLOCK_SIZE);
+        }
+    }
+    mfec_mark(loaded, blockno);
+}
+
+// loaded / denied: optional 32 byte block bitmaps, see mfc_eload_resp_t
+int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key, uint8_t *loaded, uint8_t *denied) {
 
     if ((keytype > MF_KEY_B) && (key == NULL)) {
 
@@ -2863,21 +3008,29 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key) {
 
     for (uint8_t s = 0; s < sectorcnt; s++) {
 
-        uint64_t ui64Key = emlGetKey(s, keytype);
+        uint8_t first = FirstBlockOfSector(s);
+        uint8_t nblk = NumBlocksPerSector(s);
 
-        // which key actually opened this sector. The auth fallback below and
-        // the read fallback further down can both move it to the other key
-        uint8_t auth_kt = keytype;
+        mfec_state_t st = {
+            .pcs = pcs,
+            .uid = uid,
+            .sector = s,
+            .keys = { emlGetKey(s, MF_KEY_A), emlGetKey(s, MF_KEY_B) },
+            .first_kt = keytype,
+        };
 
         // MIFARE Classic 1K Ev1  ,  MIFARE Classic MINI Ev1
         if (sectorcnt == 18) {
             // MFC 1K EV1, skip sector 16 since its lockdown
             if (s == 16) {
                 // unknown sector trailer, keep the keys, set only the AC
-                uint8_t st[MIFARE_BLOCK_SIZE] = {0x00};
-                emlGetMem_xt(st, FirstBlockOfSector(s) + 3, 1, MIFARE_BLOCK_SIZE);
-                memcpy(st + 6, "\x70\xF0\xF8\x69", 4);
-                emlSetMem_xt(st, FirstBlockOfSector(s) + 3, 1, MIFARE_BLOCK_SIZE);
+                uint8_t trailer[MIFARE_BLOCK_SIZE] = {0x00};
+                emlGetMem_xt(trailer, first + 3, 1, MIFARE_BLOCK_SIZE);
+                memcpy(trailer + 6, "\x70\xF0\xF8\x69", 4);
+                emlSetMem_xt(trailer, first + 3, 1, MIFARE_BLOCK_SIZE);
+                for (uint8_t b = 0; b < nblk; b++) {
+                    mfec_mark(loaded, first + b);
+                }
                 continue;
             }
 
@@ -2885,8 +3038,9 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key) {
             // MFC 1K EV1 sector 17 don't use key A.
             // not mention we don't save signatures in our MFC dump files.
             if (s == 17 && keytype == MF_KEY_A) {
-                ui64Key = 0x4B791BEA7BCC;
-                keytype = 1;
+                st.keys[MF_KEY_B] = 0x4B791BEA7BCC;
+                st.first_kt = MF_KEY_B;
+                st.bad_keys = MFEC_KEY_BIT(MF_KEY_A);
             }
         }
 
@@ -2902,6 +3056,7 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key) {
                     }
                     goto out;
                 }
+                retval = PM3_EPARTIAL;
                 continue;
             }
 
@@ -2923,15 +3078,21 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key) {
 
             if (bd_authenticated == false) { // no need to select if bd_authenticated with backdoor
                 if (iso14443a_fast_select_card(uid, cascade_levels) == 0) {
+                    retval = PM3_EPARTIAL;
                     continue;
                 }
             }
         }
 
-        // Auth
+        st.cascade_levels = cascade_levels;
+        st.cuid = cuid;
+
+        uint8_t data[MIFARE_BLOCK_SIZE] = {0x00};
+
+        // backdoor key, one auth opens every sector
         if (keytype > MF_KEY_B) {
             if (bd_authenticated == false) {
-                ui64Key = bytes_to_num(key, 6);
+                uint64_t ui64Key = bytes_to_num(key, 6);
                 if (mifare_classic_auth(pcs, cuid, 0, keytype, ui64Key, AUTH_FIRST)) {
                     retval = PM3_EFAILED;
                     if (g_dbglevel >= DBG_ERROR) {
@@ -2941,104 +3102,94 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key) {
                 }
                 bd_authenticated = true;
             }
-        } else if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(s), keytype, ui64Key, AUTH_FIRST)) {
 
-            ui64Key = emlGetKey(s, MF_KEY_B);
+            for (uint8_t b = 0; b < nblk; b++) {
 
-            if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(s), MF_KEY_B, ui64Key, AUTH_FIRST)) {
-                retval = PM3_EPARTIAL;
-                if (g_dbglevel >= DBG_ERROR) {
-                    Dbprintf("Sector %2d - Auth error", s);
-                }
-                continue;
-            }
-            auth_kt = MF_KEY_B;
-        }
-
-
-#define MAX_RETRIES 2
-
-        uint8_t data[MIFARE_BLOCK_SIZE] = {0x00};
-        for (uint8_t b = 0; b < NumBlocksPerSector(s); b++) {
-
-            memset(data, 0x00, sizeof(data));
-            uint8_t tb = FirstBlockOfSector(s) + b;
-            uint8_t r = 0;
-            for (; r < MAX_RETRIES; r++) {
-
-                int res = mifare_classic_readblock(pcs, tb, data);
-
-                // A NAK aborts the crypto1 session. The card leaves the
-                // authenticated state, so every later read in this sector comes
-                // back with len 0 and the retry loop just spins on it. That is
-                // what turned one unreadable block into a whole lost sector.
-                //
-                // Recover the session, and try the other key while we are here:
-                // the access conditions can deny a read with A and allow it with
-                // B, which is why the client side `hf mf dump` gets blocks this
-                // one does not. Only A/B can be swapped, a backdoor key has no
-                // counterpart.
-                if (res == 1 && keytype <= MF_KEY_B) {
-
-                    uint8_t other_kt = (auth_kt == MF_KEY_A) ? MF_KEY_B : MF_KEY_A;
-                    bool recovered = false;
-
-                    if (mfec_reauth(pcs, uid, cascade_levels, cuid, FirstBlockOfSector(s), other_kt, emlGetKey(s, other_kt)) == PM3_SUCCESS) {
-                        if (mifare_classic_readblock(pcs, tb, data) == 0) {
-                            // stay on it, the rest of the sector reads the same way
-                            auth_kt = other_kt;
-                            recovered = true;
-                        }
+                memset(data, 0x00, sizeof(data));
+                uint8_t tb = first + b;
+                bool ok = false;
+                for (uint8_t r = 0; r < MFEC_MAX_RETRIES; r++) {
+                    int res = mifare_classic_readblock(pcs, tb, data);
+                    if (res == 0) {
+                        ok = true;
+                        break;
                     }
-
-                    if (recovered == false) {
-                        retval |= PM3_EPARTIAL;
+                    // retry if wrong len, a NAK ends the session
+                    if (res == 1) {
                         if (g_dbglevel >= DBG_ERROR) {
                             Dbprintf("Error No rights reading sector %2d block %2d", s, b);
                         }
-                        // put the session back so the remaining blocks still read
-                        mfec_reauth(pcs, uid, cascade_levels, cuid, FirstBlockOfSector(s), auth_kt, emlGetKey(s, auth_kt));
                         break;
                     }
-
-                    res = 0;
                 }
 
-                if (res == 1) {
-                    retval |= PM3_EPARTIAL;
-                    if (g_dbglevel >= DBG_ERROR) {
-                        Dbprintf("Error No rights reading sector %2d block %2d", s, b);
-                    }
-                    // the backdoor session is dead too, make the next sector
-                    // re-select and re-auth instead of reading into the void
-                    bd_authenticated = false;
-                    break;
-                }
-                // retry if wrong len.
-                if (res != 0) {
+                if (ok) {
+                    mfec_store(tb, data, loaded);
                     continue;
                 }
 
-                // No need to copy empty
-                if (memcmp(data, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", sizeof(data)) == 0) {
-                    break;
-                }
-
-                if (IsSectorTrailer(tb)) {
-                    // sector trailer, keep the keys, set only the AC
-                    uint8_t st[MIFARE_BLOCK_SIZE] = {0x00};
-                    emlGetMem_xt(st, tb, 1, MIFARE_BLOCK_SIZE);
-                    memcpy(st + 6, data + 6, 4);
-                    emlSetMem_xt(st,  tb, 1, MIFARE_BLOCK_SIZE);
-                } else {
-                    emlSetMem_xt(data, tb, 1, MIFARE_BLOCK_SIZE);
-                }
+                retval = PM3_EPARTIAL;
+                // the backdoor session is dead too, make the next sector
+                // re-select and re-auth instead of reading into the void
+                bd_authenticated = false;
                 break;
             }
+            continue;
+        }
 
-            // if we failed all retries,  notify client
-            if (r == MAX_RETRIES) {
-                retval |= PM3_EPARTIAL;
+        // the card is selected, open the session with the preferred key
+        if (mifare_classic_auth(pcs, cuid, first, st.first_kt, st.keys[st.first_kt], AUTH_FIRST) == 0) {
+            st.session = true;
+            st.kt = st.first_kt;
+        } else {
+            st.bad_keys |= MFEC_KEY_BIT(st.first_kt);
+        }
+
+        // trailer first, its access bits tell which key may read each data block
+        uint8_t trailer_blk = first + nblk - 1;
+        uint8_t trailer[MIFARE_BLOCK_SIZE] = {0x00};
+        bool have_trailer = mfec_read_block(&st, trailer_blk, MFEC_KEY_BIT(MF_KEY_A) | MFEC_KEY_BIT(MF_KEY_B), trailer);
+        if (have_trailer) {
+            mfec_store(trailer_blk, trailer, loaded);
+        }
+
+        if (st.bad_keys == (MFEC_KEY_BIT(MF_KEY_A) | MFEC_KEY_BIT(MF_KEY_B))) {
+            retval = PM3_EPARTIAL;
+            if (g_dbglevel >= DBG_ERROR) {
+                Dbprintf("Sector %2d - Auth error", s);
+            }
+            continue;
+        }
+
+        if (have_trailer == false) {
+            retval = PM3_EPARTIAL;
+        }
+
+        for (uint8_t b = 0; b < (nblk - 1); b++) {
+
+            uint8_t tb = first + b;
+
+            // data blocks of a 16 block sector share access bits in groups of five
+            uint8_t rights = MFEC_KEY_BIT(MF_KEY_A) | MFEC_KEY_BIT(MF_KEY_B);
+            if (have_trailer) {
+                rights = mfec_read_rights(trailer, (nblk == 4) ? b : (b / 5));
+            }
+
+            if (rights == 0) {
+                mfec_mark(denied, tb);
+                retval = PM3_EPARTIAL;
+                continue;
+            }
+
+            memset(data, 0x00, sizeof(data));
+            if (mfec_read_block(&st, tb, rights, data)) {
+                mfec_store(tb, data, loaded);
+                continue;
+            }
+
+            retval = PM3_EPARTIAL;
+            if (g_dbglevel >= DBG_ERROR) {
+                Dbprintf("Error No rights reading sector %2d block %2d", s, b);
             }
         }
     }

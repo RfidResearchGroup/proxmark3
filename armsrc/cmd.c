@@ -234,8 +234,20 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
     rx->cmd = rx_raw.pre.cmd;
 
     uint16_t length = rx_raw.pre.length;
+    const bool ng_frame = rx->magic == COMMANDNG_PREAMBLE_MAGIC;
 
-    if (rx->magic == COMMANDNG_PREAMBLE_MAGIC) { // New style NG command
+#if defined(WITH_CEP)
+    if (cep) {
+        size_t remaining = ng_frame ? length + sizeof(rx_raw.foopost)
+                           : sizeof(PacketCommandOLD) - sizeof(rx_raw.pre);
+        int result = cep_spi_check_command_length(remaining);
+        if (result != PM3_SUCCESS) {
+            return result;
+        }
+    }
+#endif
+
+    if (ng_frame) { // New style NG command
         if (length > PM3_CMD_DATA_SIZE) {
             if (cep) cep_spi_resync();
             return PM3_EOVFLOW;
@@ -268,12 +280,7 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
             }
         }
 
-        // Zero the payload only once a packet is really coming in, and only
-        // after all wire reads: CEP's SPI receiver has no FIFO, so a stall
-        // between reads (this memset touches up to PM3_CMD_DATA_SIZE bytes)
-        // loses data. Both branches leave the tail of data untouched -- an
-        // NG command fills only its own length, an old style one only
-        // PM3_CMD_DATA_SIZE_OLD -- so what is not written has to start zero.
+        // Clear the unused part of the command payload.
         memset(&rx->data, 0, sizeof(rx->data));
 
         if (rx->ng) {
@@ -294,21 +301,15 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
             rx->length = length - sizeof(arg);
         }
 
-        g_reply_via_usb = usb;
-        g_reply_via_fpc = fpc;
-        g_reply_via_cep = cep;
-
     } else {                               // Old style command
         PacketCommandOLD rx_old;
         memcpy(&rx_old, &rx_raw.pre, sizeof(PacketCommandNGPreamble));
         bytes = read_ng(((uint8_t *)&rx_old) + sizeof(PacketCommandNGPreamble), sizeof(PacketCommandOLD) - sizeof(PacketCommandNGPreamble));
         if (bytes != sizeof(PacketCommandOLD) - sizeof(PacketCommandNGPreamble)) {
+            if (cep) cep_spi_resync();
             return PM3_EIO;
         }
 
-        g_reply_via_usb = usb;
-        g_reply_via_fpc = fpc;
-        g_reply_via_cep = cep;
         rx->ng = false;
         rx->magic = 0;
         rx->crc = 0;
@@ -320,6 +321,17 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
         memset(&rx->data, 0, sizeof(rx->data));
         memcpy(&rx->data, &rx_old.d.asBytes, rx->length);
     }
+
+#if defined(WITH_CEP)
+    if (cep && !cep_spi_finish_command()) {
+        cep_spi_resync();
+        return PM3_EIO;
+    }
+#endif
+
+    g_reply_via_usb = usb;
+    g_reply_via_fpc = fpc;
+    g_reply_via_cep = cep;
     return PM3_SUCCESS;
 }
 

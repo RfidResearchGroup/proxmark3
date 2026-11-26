@@ -55,6 +55,7 @@
 #include "mifare/mifarehost.h"
 #include "crypto/originality.h"
 #include "cmdhfmfsen.h"     // Mifare Classic Static Nonce
+#include "cmdhfmfp.h"       // MIFARE Plus AES sectors
 #include "cmdmad.h"
 
 // Defines for Saflok parsing
@@ -1643,64 +1644,156 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int FastDumpWithEcFill(uint8_t numsectors) {
+static bool mf_sector_in_mask(const uint8_t *mask, uint8_t sector) {
+    return (mask != NULL) && (sector < 40) && ((mask[sector / 8] >> (sector % 8)) & 1);
+}
 
-    uint8_t dbg_curr = DBG_NONE;
-    if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
-        return PM3_EFAILED;
+static void printKeyTableAes(size_t sectorscnt, sector_t *e_sector, const uint8_t *aes_sectors);
+
+// one line per sector the emulator fill left blocks out of, AES only sectors are not counted.
+// true when every counted block was loaded
+static bool mf_print_ecfill_result(const mfc_eload_resp_t *r, uint8_t numsectors, const uint8_t *aes_sectors) {
+
+    uint16_t total = 0;
+    uint16_t got = 0;
+    for (uint8_t s = 0; s < numsectors; s++) {
+        if (mf_sector_in_mask(aes_sectors, s)) {
+            continue;
+        }
+        for (uint8_t b = 0; b < mfNumBlocksPerSector(s); b++) {
+            uint8_t blk = mfFirstBlockOfSector(s) + b;
+            total++;
+            got += (r->loaded[blk / 8] >> (blk % 8)) & 1;
+        }
     }
 
-    /*
-    if (setDeviceDebugLevel(DBG_NONE, false) != PM3_SUCCESS) {
-        return PM3_EFAILED;
+    if (got == total) {
+        PrintAndLogEx(SUCCESS, "Dumped %u / %u blocks ( " _GREEN_("ok") " )", got, total);
+        return true;
     }
-    */
 
-    mfc_eload_t payload;
-    payload.sectorcnt = numsectors;
-    payload.keytype = MF_KEY_A;
+    PrintAndLogEx(WARNING, "Dumped %u / %u blocks", got, total);
 
-    // a fill that fails with both keys is reported to the caller
-    int eml_res = PM3_SUCCESS;
+    for (uint8_t s = 0; s < numsectors; s++) {
 
-    // ecfill key A
+        if (mf_sector_in_mask(aes_sectors, s)) {
+            continue;
+        }
+
+        char denied[100] = {0};
+        char failed[100] = {0};
+        uint8_t n_loaded = 0;
+        uint8_t n_denied = 0;
+        uint8_t n_failed = 0;
+
+        for (uint8_t b = 0; b < mfNumBlocksPerSector(s); b++) {
+            uint8_t blk = mfFirstBlockOfSector(s) + b;
+            char *dst = NULL;
+            if ((r->loaded[blk / 8] >> (blk % 8)) & 1) {
+                n_loaded++;
+            } else if ((r->denied[blk / 8] >> (blk % 8)) & 1) {
+                n_denied++;
+                dst = denied;
+            } else {
+                n_failed++;
+                dst = failed;
+            }
+
+            if (dst) {
+                size_t len = strlen(dst);
+                snprintf(dst + len, 100 - len, " %u", blk);
+            }
+        }
+
+        if (n_denied == 0 && n_failed == 0) {
+            continue;
+        }
+
+        if (n_loaded == 0 && n_denied == 0) {
+            PrintAndLogEx(FAILED, "Sector %2u... no working key", s);
+            continue;
+        }
+
+        if (n_denied) {
+            PrintAndLogEx(FAILED, "Sector %2u... block%s" _YELLOW_("%s") " denied by access bits", s, (n_denied > 1) ? "s" : "", denied);
+        }
+
+        if (n_failed) {
+            PrintAndLogEx(FAILED, "Sector %2u... block%s" _RED_("%s") " read failed", s, (n_failed > 1) ? "s" : "", failed);
+        }
+    }
+    return false;
+}
+
+// aes_sectors: optional sector bit mask, left out of the summary
+static int FastDumpWithEcFill(uint8_t numsectors, const uint8_t *aes_sectors) {
+
+    mfc_eload_t payload = {
+        .sectorcnt = numsectors,
+        .keytype = MF_KEY_A,
+    };
+
+    // the device picks key A or B per block from the access bits
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
 
     PacketResponseNG resp;
-    bool res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2500);
-    if (res == false) {
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2500) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
-    if (resp.status != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "fast dump reported back failure w KEY A. Swapping to KEY B");
-
-        // ecfill key B
-        payload.keytype = MF_KEY_B;
-
-        clearCommandBuffer();
-        SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
-        res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2500);
-        if (res == false) {
-            PrintAndLogEx(WARNING, "command execution time out");
-            setDeviceDebugLevel(dbg_curr, false);
-            return PM3_ETIMEOUT;
-        }
-
-        if (resp.status != PM3_SUCCESS) {
-            PrintAndLogEx(FAILED, "fast dump reported back failure w KEY B");
-            PrintAndLogEx(FAILED, "Dump file is " _RED_("PARTIAL") " complete");
-            eml_res = resp.status;
+    int res = resp.status;
+    if (resp.length >= sizeof(mfc_eload_resp_t)) {
+        if (mf_print_ecfill_result((const mfc_eload_resp_t *)resp.data.asBytes, numsectors, aes_sectors)) {
+            res = PM3_SUCCESS;
+        } else if (res == PM3_SUCCESS) {
+            res = PM3_EPARTIAL;
         }
     }
 
-    if (setDeviceDebugLevel(dbg_curr, false) != PM3_SUCCESS) {
-        return PM3_EFAILED;
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Dump file is " _RED_("PARTIAL") " complete");
     }
+    return res;
+}
 
-    return eml_res;
+// a Crypto1 auth on an AES only sector of a MIFARE Plus in SL1 gets no nonce back.
+// Probe each sector twice, a missed nonce from a weak field is no AES sector
+uint8_t mfp_find_aes_sectors(uint8_t sector_cnt, uint8_t *aes_sectors) {
+
+    uint8_t cnt = 0;
+    for (uint8_t s = 0; s < MIN(sector_cnt, 40); s++) {
+
+        bool nonce = false;
+        for (uint8_t tries = 0; tries < 2 && nonce == false; tries++) {
+
+            clearCommandBuffer();
+            SendIso14aReader(ISO14A_CONNECT | ISO14A_NO_DISCONNECT, NULL, 0);
+            PacketResponseNG resp;
+            uint8_t sel = 0;
+            if (WaitForIso14aReply(&resp, 1500, NULL, &sel) == false || sel == 0) {
+                // no select, no verdict on this sector
+                nonce = true;
+                break;
+            }
+
+            uint8_t cmd[] = { MIFARE_AUTH_KEYA, mfFirstBlockOfSector(s) };
+            clearCommandBuffer();
+            SendIso14aReader(ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, cmd, sizeof(cmd));
+            uint16_t len = 0;
+            if (WaitForIso14aReply(&resp, 1500, &len, NULL) && len == 4) {
+                nonce = true;
+            }
+        }
+
+        if (nonce == false) {
+            aes_sectors[s / 8] |= (1 << (s % 8));
+            cnt++;
+        }
+    }
+    DropField();
+    return cnt;
 }
 
 static int CmdHF14AMfDump(const char *Cmd) {
@@ -3038,6 +3131,8 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                   "This command automates the key recovery process on MIFARE Classic cards.\n"
                   "It uses the fchk, chk, darkside, nested, hardnested and staticnested to recover keys.\n"
                   "If all keys are found, it try dumping card content both to file and emulator memory.\n"
+                  "Without a card size option, the size is taken from the card's SAK.\n"
+                  "On a MIFARE Plus in SL1, AES only sectors get an AES key check and AES read instead.\n"
                   "\n"
                   "default file name template is `hf-mf-<uid>-<dump|key>.`\n"
                   "using suffix the template becomes `hf-mf-<uid>-<dump|key>-<suffix>.` \n",
@@ -3045,12 +3140,13 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                   "hf mf autopwn -s 0 -a -k FFFFFFFFFFFF     --> target MFC 1K card, Sector 0 with known key A 'FFFFFFFFFFFF'\n"
                   "hf mf autopwn --1k -f mfc_default_keys    --> target MFC 1K card, default dictionary\n"
                   "hf mf autopwn --1k -s 0 -a -k FFFFFFFFFFFF -f mfc_default_keys  --> combo of the two above samples\n"
-                  "hf mf autopwn --1k -s 0 -a -k FFFFFFFFFFFF -k a0a1a2a3a4a5      --> multiple user supplied keys"
+                  "hf mf autopwn --1k -s 0 -a -k FFFFFFFFFFFF -k a0a1a2a3a4a5      --> multiple user supplied keys\n"
+                  "hf mf autopwn -k 000102030405060708090A0B0C0D0E0F                --> MIFARE Plus, AES key for the AES only sectors"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("k", "key",    "<hex>",  "Known key, 12 hex bytes"),
+        arg_strx0("k", "key",    "<hex>",  "Known key, 6 hex bytes, or 16 for a MIFARE Plus AES sector"),
         arg_int0("s",  "sector", "<dec>",  "Input sector number"),
         arg_lit0("a",   NULL,              "Input key A (def)"),
         arg_lit0("b",   NULL,              "Input key B"),
@@ -3064,7 +3160,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         arg_lit0(NULL, "ns", "No save to file"),
 
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
-        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (default)"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (default when SAK says no other size)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
 
@@ -3088,9 +3184,43 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     int in_keys_len = 0;
     // 100 user keys, then the 8 keys added once the card is known
     uint8_t in_keys[(100 + 8) * MIFARE_KEY_SIZE] = {0};
-    if (CLIParamHexToBuf(arg_get_str(ctx, 1), in_keys, 100 * MIFARE_KEY_SIZE, &in_keys_len)) {
-        CLIParserFree(ctx);
-        return PM3_ESOFT;
+
+    // 16 byte keys are AES keys for the AES only sectors of a MIFARE Plus
+    int aes_in_len = 0;
+    uint8_t aes_in_keys[10 * AES_KEY_LEN] = {0};
+
+    struct arg_str *key_args = arg_get_str(ctx, 1);
+    for (int i = 0; i < key_args->count; i++) {
+
+        uint8_t k[100 * MIFARE_KEY_SIZE] = {0};
+        int klen = 0;
+        if (param_gethex_to_eol(key_args->sval[i], 0, k, sizeof(k), &klen)) {
+            PrintAndLogEx(ERR, "Key %d is not valid hex", i + 1);
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+
+        if ((klen % AES_KEY_LEN) == 0 && (klen % MIFARE_KEY_SIZE) != 0) {
+            if (aes_in_len + klen > (int)sizeof(aes_in_keys)) {
+                PrintAndLogEx(ERR, "Too many AES keys");
+                CLIParserFree(ctx);
+                return PM3_EINVARG;
+            }
+            memcpy(aes_in_keys + aes_in_len, k, klen);
+            aes_in_len += klen;
+        } else if (klen && (klen % MIFARE_KEY_SIZE) == 0) {
+            if (in_keys_len + klen > 100 * MIFARE_KEY_SIZE) {
+                PrintAndLogEx(ERR, "Too many keys");
+                CLIParserFree(ctx);
+                return PM3_EINVARG;
+            }
+            memcpy(in_keys + in_keys_len, k, klen);
+            in_keys_len += klen;
+        } else {
+            PrintAndLogEx(ERR, "Key %d must be 6 or 16 hex bytes, got %d", i + 1, klen);
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
     }
 
     uint8_t sectorno = arg_get_u32_def(ctx, 2, 0);
@@ -3141,10 +3271,11 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     CLIParserFree(ctx);
 
     //validations
+    bool size_given = ((m0 + m1 + m2 + m4) > 0);
     if ((m0 + m1 + m2 + m4) > 1) {
         PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
         return PM3_EINVARG;
-    } else if ((m0 + m1 + m2 + m4) == 0) {
+    } else if (size_given == false) {
         m1 = true;
     }
 
@@ -3307,13 +3438,63 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     bool isMifarePlus = ((nxptype & MTPLUS) == MTPLUS);
 
     if (isMifarePlus) {
-        PrintAndLogEx(INFO, "MIFARE Plus card detected.  Using limited set of attacks");
+        PrintAndLogEx(INFO, "MIFARE Plus card detected");
+    }
+
+    // no size given, a MIFARE Plus has it in GetVersion, its SAK can say 1K for a 2K
+    if (size_given == false && isMifarePlus && version_hw_available &&
+            (version_hw.storage_size == 0x16 || version_hw.storage_size == 0x18)) {
+        if (version_hw.storage_size == 0x16) {
+            sector_cnt = MIFARE_2K_MAXSECTOR;
+            block_cnt = MIFARE_2K_MAXBLOCK;
+        } else {
+            sector_cnt = MIFARE_4K_MAXSECTOR;
+            block_cnt = MIFARE_4K_MAXBLOCK;
+        }
+        PrintAndLogEx(INFO, "MIFARE Plus %s, using %u sectors", (version_hw.storage_size == 0x16) ? "2K" : "4K", sector_cnt);
+    } else if (size_given == false && ((card.sak & 0x1A) == 0x18)) {
+        // no size given, SAK b2=0 b4=1 b5=1 is 2K with b1 set, else 4K (same tree as detect_nxp_card)
+        if ((card.sak & 0x01) == 0x01) {
+            sector_cnt = MIFARE_2K_MAXSECTOR;
+            block_cnt = MIFARE_2K_MAXBLOCK;
+        } else {
+            sector_cnt = MIFARE_4K_MAXSECTOR;
+            block_cnt = MIFARE_4K_MAXBLOCK;
+        }
+        PrintAndLogEx(INFO, "SAK %02X, using %u sectors", card.sak, sector_cnt);
     }
 
     if (!isMifarePlus && isMifareMini && sector_cnt != MIFARE_MINI_MAXSECTOR) {
         PrintAndLogEx(WARNING, "MIFARE Mini S20 card detected. Changing sector count to %u", MIFARE_MINI_MAXSECTOR);
         sector_cnt = MIFARE_MINI_MAXSECTOR;
         block_cnt = MIFARE_MINI_MAXBLOCK;
+    }
+
+    // a MIFARE Plus in SL1 can have AES only sectors, the Crypto1 attacks leave them out
+    uint8_t aes_sectors[5] = {0};
+    uint8_t aes_cnt = 0;
+    if (isMifarePlus) {
+        aes_cnt = mfp_find_aes_sectors(sector_cnt, aes_sectors);
+        if (aes_cnt) {
+            char list[130] = {0};
+            for (uint8_t s = 0; s < sector_cnt; s++) {
+                if (mf_sector_in_mask(aes_sectors, s)) {
+                    size_t len = strlen(list);
+                    snprintf(list + len, sizeof(list) - len, "%s%u", (len) ? ", " : "", s);
+                }
+            }
+            PrintAndLogEx(INFO, "AES only sectors... " _YELLOW_("%s"), list);
+        }
+
+        // -s / -b on an AES sector meant the AES key, Crypto1 looks up sector 0
+        if (mf_sector_in_mask(aes_sectors, sectorno)) {
+            sectorno = 0;
+            keytype = MF_KEY_A;
+        }
+    }
+
+    if (aes_in_len && aes_cnt == 0) {
+        PrintAndLogEx(WARNING, "No AES only sectors, the AES key%s not used", (aes_in_len > AES_KEY_LEN) ? "s are" : " is");
     }
 
     bool known_key = (in_keys_len > 5);
@@ -3506,6 +3687,9 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         PrintAndLogEx(INFO, "." NOLF);
         // Check all the sectors
         for (int i = 0; i < sector_cnt; i++) {
+            if (mf_sector_in_mask(aes_sectors, i)) {
+                continue;
+            }
             for (int j = MF_KEY_A; j <= MF_KEY_B; j++) {
                 // Check if the key is known
                 if (e_sector[i].foundKey[j] == 0) {
@@ -3555,7 +3739,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                         lastChunk = true;
                     }
 
-                    res = mf_check_keys_fast(sector_cnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * MIFARE_KEY_SIZE), e_sector, false, verbose);
+                    res = mf_check_keys_fast_skip(sector_cnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * MIFARE_KEY_SIZE), e_sector, verbose, aes_sectors);
                     if (firstChunk) {
                         firstChunk = false;
                     }
@@ -3598,7 +3782,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         }
     }
 
-    if (num_found_keys == sector_cnt * 2) {
+    if (num_found_keys == (sector_cnt - aes_cnt) * 2) {
         free(keyBlock);
         goto all_found;
     }
@@ -3704,6 +3888,11 @@ noValidKeyFound:
 
         skipped_last = false;
 
+        // no Crypto1 on an AES only sector
+        if (mf_sector_in_mask(aes_sectors, current_sector_i)) {
+            continue;
+        }
+
         for (current_key_type_i = MF_KEY_A; current_key_type_i <= MF_KEY_B; current_key_type_i++) {
 
             // If the key is already known, just skip it
@@ -3720,7 +3909,7 @@ noValidKeyFound:
                     for (int i = 0; i < sector_cnt; i++) {
                         for (int j = MF_KEY_A; j <= MF_KEY_B; j++) {
                             // Check if the sector key is already broken
-                            if (e_sector[i].foundKey[j]) {
+                            if (e_sector[i].foundKey[j] || mf_sector_in_mask(aes_sectors, i)) {
                                 continue;
                             }
 
@@ -3882,12 +4071,6 @@ tryNested:
                     } else {
 tryHardnested: // If the nested attack fails then we try the hardnested attack
 
-                        // skip this
-                        if (isMifarePlus) {
-                            autopwn_res = PM3_ESOFT;
-                            goto attack_failed;
-                        }
-
                         PrintAndLogEx(NORMAL, "");
                         if (verbose) {
                             PrintAndLogEx(INFO, "--- " _CYAN_("Enter hardnested key recovery mode") " -------------------------");
@@ -4018,7 +4201,7 @@ attack_failed:
 all_found:
 
     // Show the results to the user
-    printKeyTable(sector_cnt, e_sector);
+    printKeyTableAes(sector_cnt, e_sector, aes_sectors);
 
     if (no_save == false) {
 
@@ -4028,6 +4211,43 @@ all_found:
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Failed to save keys to file");
             autopwn_res = res;
+        }
+    }
+
+    // AES only sectors, their keys are checked over ISO14443-4
+    uint8_t aes_keys[2][64][AES_KEY_LEN + 1];
+    memset(aes_keys, 0, sizeof(aes_keys));
+    if (aes_cnt) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "--- " _CYAN_("AES only sectors") " ----------------------------------");
+        mfp_check_aes_keys(card.uid, aes_in_keys, aes_in_len, aes_sectors, sector_cnt, aes_keys);
+
+        bool aes_found = false;
+        PrintAndLogEx(INFO, "-----+----------------------------------+----------------------------------");
+        PrintAndLogEx(INFO, " Sec | AES key A                        | AES key B");
+        PrintAndLogEx(INFO, "-----+----------------------------------+----------------------------------");
+        for (uint8_t s = 0; s < sector_cnt; s++) {
+            if (mf_sector_in_mask(aes_sectors, s) == false) {
+                continue;
+            }
+
+            char str[2][46 + 1] = {{0}};
+            for (uint8_t kt = MF_KEY_A; kt <= MF_KEY_B; kt++) {
+                if (aes_keys[kt][s][0]) {
+                    snprintf(str[kt], sizeof(str[kt]), _GREEN_("%s"), sprint_hex_inrow(&aes_keys[kt][s][1], AES_KEY_LEN));
+                    aes_found = true;
+                } else {
+                    snprintf(str[kt], sizeof(str[kt]), _RED_("%s"), "--------------------------------");
+                }
+            }
+            PrintAndLogEx(INFO, " " _YELLOW_("%03u") " | %s | %s", s, str[MF_KEY_A], str[MF_KEY_B]);
+        }
+        PrintAndLogEx(INFO, "-----+----------------------------------+----------------------------------");
+
+        if (aes_found && (no_save == false)) {
+            if (mfp_save_aes_keys(&card, aes_keys) != PM3_SUCCESS) {
+                PrintAndLogEx(ERR, "Failed to save AES keys to file");
+            }
         }
     }
 
@@ -4079,7 +4299,7 @@ all_found:
     PrintAndLogEx(INFO, "Dumping card content to emulator memory (Cmd Error: 04 can occur)");
 
     // use ecfill trick
-    res = FastDumpWithEcFill(sector_cnt);
+    res = FastDumpWithEcFill(sector_cnt, aes_sectors);
     if (res != PM3_SUCCESS) {
         autopwn_res = res;
     }
@@ -4111,13 +4331,52 @@ all_found:
 
     free(fptr);
 
+    // AES only sectors are read with their AES key, whole sector like hf mfp dump
+    for (uint8_t s = 0; s < sector_cnt; s++) {
+
+        if (mf_sector_in_mask(aes_sectors, s) == false) {
+            continue;
+        }
+
+        if ((aes_keys[MF_KEY_A][s][0] == 0) && (aes_keys[MF_KEY_B][s][0] == 0)) {
+            PrintAndLogEx(FAILED, "Sector %2u... AES key unknown", s);
+            autopwn_res = PM3_EPARTIAL;
+            continue;
+        }
+
+        // trailer first, its access bits pick key A or B per block
+        uint8_t sdata[16 * MFBLOCK_SIZE] = {0};
+        uint16_t loaded = 0;
+        int rres = mfpReadSectorKeys(s,
+                                     (aes_keys[MF_KEY_A][s][0]) ? &aes_keys[MF_KEY_A][s][1] : NULL,
+                                     (aes_keys[MF_KEY_B][s][0]) ? &aes_keys[MF_KEY_B][s][1] : NULL,
+                                     sdata, &loaded, false);
+
+        uint8_t nblk = mfNumBlocksPerSector(s);
+        uint8_t got = 0;
+        for (uint8_t b = 0; b < nblk; b++) {
+            if ((loaded >> b) & 1) {
+                memcpy(dump + ((mfFirstBlockOfSector(s) + b) * MFBLOCK_SIZE), sdata + (b * MFBLOCK_SIZE), MFBLOCK_SIZE);
+                got++;
+            }
+        }
+
+        if (rres == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "Sector %2u... read with AES ( " _GREEN_("ok") " )", s);
+        } else {
+            PrintAndLogEx(FAILED, "Sector %2u... read with AES ( " _RED_("%u / %u blocks") " )", s, got, nblk);
+            autopwn_res = PM3_EPARTIAL;
+        }
+    }
+
     if (outfnlen) {
         snprintf(suffix, sizeof(suffix), "-dump-%s", outfilename);
     } else {
         snprintf(suffix, sizeof(suffix), "-dump");
     }
 
-    fptr = GenerateFilenameByUID("hf-mf-", suffix, card.uid, card.uidlen);
+    // a MIFARE Plus dump is named like the one from hf mfp dump
+    fptr = GenerateFilenameByUID(isMifarePlus ? "hf-mfp-" : "hf-mf-", suffix, card.uid, card.uidlen);
     if (fptr == NULL) {
         free(dump);
         free(e_sector);
@@ -4406,7 +4665,7 @@ out:
                 PrintAndLogEx(SUCCESS, "Found keys have been transferred to the emulator memory");
 
                 if (found_keys == (sectorsCnt << 1)) {
-                    eml_res = FastDumpWithEcFill(sectorsCnt);
+                    eml_res = FastDumpWithEcFill(sectorsCnt, NULL);
                 }
             } else {
                 PrintAndLogEx(FAILED, "Found keys have not been transferred to the emulator memory");
@@ -4668,7 +4927,7 @@ out:
                 PrintAndLogEx(SUCCESS, "Found keys have been transferred to the emulator memory");
 
                 if (found_keys == (sectorsCnt << 1)) {
-                    eml_res = FastDumpWithEcFill(sectorsCnt);
+                    eml_res = FastDumpWithEcFill(sectorsCnt, NULL);
                 }
             } else {
                 PrintAndLogEx(FAILED, "Found keys have not been transferred to the emulator memory");
@@ -5357,7 +5616,8 @@ void printKeyTable(size_t sectorscnt, sector_t *e_sector) {
     printKeyTableEx(sectorscnt, e_sector, 0);
 }
 
-void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector) {
+// aes_sectors: optional bit per sector, AES only sectors of a MIFARE Plus show res P
+static void print_key_table(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector, const uint8_t *aes_sectors) {
     char strA[26 + 1] = {0};
     char strB[26 + 1] = {0};
     char resA[20 + 1] = {0};
@@ -5366,6 +5626,7 @@ void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector
     uint64_t ndef_key = 0xD3F7D3F7D3F7;
     bool has_ndef_key = false;
     bool extended_legend = false;
+    bool has_aes = false;
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "-----+-----+--------------+---+--------------+----");
@@ -5413,6 +5674,14 @@ void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector
             s = i;
         }
 
+        if (mf_sector_in_mask(aes_sectors, s)) {
+            snprintf(strA, sizeof(strA), "%s", "------------");
+            snprintf(strB, sizeof(strB), "%s", "------------");
+            snprintf(resA, sizeof(resA), _YELLOW_("P"));
+            snprintf(resB, sizeof(resB), _YELLOW_("P"));
+            has_aes = true;
+        }
+
         char extra[24] = {0x00};
         if (sectorscnt == 18 && i > 15) {
             strcat(extra, "( " _MAGENTA_("*") " )");
@@ -5430,23 +5699,32 @@ void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector
     PrintAndLogEx(SUCCESS, "-----+-----+--------------+---+--------------+----");
 
     if (extended_legend) {
-        PrintAndLogEx(INFO, "( "
+        // second line padded to the first, so the closing borders line up
+        int w1 = strlen("D:Dictionary / S:darkSide / U:User / R:Reused / N:Nested");
+        int w2 = strlen("H:Hardnested / C:statiCnested / A:keyA") + ((has_aes) ? strlen(" / P:Plus AES") : 0);
+
+        PrintAndLogEx(INFO, "--  "
                       _YELLOW_("D") ":Dictionary / "
                       _YELLOW_("S") ":darkSide / "
                       _YELLOW_("U") ":User / "
                       _YELLOW_("R") ":Reused / "
-                      _YELLOW_("N") ":Nested / "
+                      _YELLOW_("N") ":Nested"
+                      "  --"
+                     );
+        PrintAndLogEx(INFO, "--  "
                       _YELLOW_("H") ":Hardnested / "
                       _YELLOW_("C") ":statiCnested / "
-                      _YELLOW_("A") ":keyA "
-                      " )"
+                      _YELLOW_("A") ":keyA"
+                      "%s%*s  --",
+                      (has_aes) ? " / " _YELLOW_("P") ":Plus AES" : "",
+                      w1 - w2, ""
                      );
         if (sectorscnt == 18) {
             PrintAndLogEx(INFO, "( " _MAGENTA_("*") " ) These sectors used for signature. Lays outside of user memory");
         }
 
     } else {
-        PrintAndLogEx(SUCCESS, "( " _RED_("0") ":Failed / " _GREEN_("1") ":Success )");
+        PrintAndLogEx(SUCCESS, "( " _RED_("0") ":Failed / " _GREEN_("1") ":Success%s )", (has_aes) ? " / " _YELLOW_("P") ":Plus AES" : "");
     }
 
     // MAD detection
@@ -5458,6 +5736,14 @@ void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector
         PrintAndLogEx(HINT, "Hint: NDEF key detected. Try " _YELLOW_("`hf mf ndefread`") " for more details");
     }
     PrintAndLogEx(NORMAL, "");
+}
+
+void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector) {
+    print_key_table(sectorscnt, e_sector, start_sector, NULL);
+}
+
+static void printKeyTableAes(size_t sectorscnt, sector_t *e_sector, const uint8_t *aes_sectors) {
+    print_key_table(sectorscnt, e_sector, 0, aes_sectors);
 }
 
 

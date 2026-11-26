@@ -1049,13 +1049,14 @@ Check column "offline" for their availability.
 |`hw fpga                `|N       |`Fpga commands`
 |`hw fpgaoff             `|N       |`Turn off FPGA on device`
 |`hw ant_pm5             `|N       |`Control the antennal of pm5`
-|`hw qc_pm5              `|N       |`Perform QC test (hardware or IO) for the PM5`
+|`hw qc_pm5              `|Y       |`Perform QC test (hardware or IO) for the PM5`
 |`hw factorydata         `|N       |`Get/Set the factory data for Device`
 |`hw lcd                 `|N       |`Send command/data to LCD`
 |`hw lcdreset            `|N       |`Hardware reset LCD`
 |`hw ping                `|N       |`Test if the Proxmark3 is responsive`
-|`hw powersave           `|N       |`Enable/disable the PM5 power-save idle`
+|`hw powersave           `|Y       |`Enable/disable the PM5 power-save idle`
 |`hw readmem             `|N       |`Read from MCU flash`
+|`hw rtttl               `|Y       |`Play an RTTTL string or file on the PM5 buzzer`
 |`hw reset               `|N       |`Reset the device`
 |`hw setlfdivisor        `|N       |`Drive LF antenna at 12MHz / (divisor + 1)`
 |`hw sethfthresh         `|N       |`Set thresholds in HF/14a mode`
@@ -1842,7 +1843,7 @@ Check column "offline" for their availability.
 |`smart pps              `|N       |`Run an ISO 7816-3 PPS exchange`
 |`smart reader           `|N       |`Act like an IS07816 reader`
 |`smart raw              `|N       |`Send raw hex data to tag`
-|`smart upgrade          `|Y       |`Upgrade sim module firmware`
+|`smart upgrade          `|N       |`Upgrade sim module firmware`
 |`smart setclock         `|N       |`Set clock speed`
 
 

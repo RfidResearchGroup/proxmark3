@@ -51,6 +51,7 @@
 #include "iso14443b.h"
 #include "iso15693.h"
 #include "thinfilm.h"
+#include "topazsim.h"
 #include "felica.h"
 #include "felicasim.h"
 #include "hitag2.h"
@@ -2658,6 +2659,14 @@ static void PacketReceived(PacketCommandNG *packet) {
             SimulateHIDConfigCard((const hid_sim_payload_t *) packet->data.asBytes);
             break;
         }
+        case CMD_HF_TOPAZ_SIMULATE: {
+            if (packet->length < sizeof(topaz_sim_t)) {
+                reply_ng(CMD_HF_TOPAZ_SIMULATE, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            SimulateTopazTag((const topaz_sim_t *) packet->data.asBytes);
+            break;
+        }
         case CMD_HF_ISO14443A_ANTIFUZZ: {
             struct p {
                 uint8_t flag;
@@ -3259,11 +3268,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
 
-            uint16_t len = 0;
+            uint32_t len = 0;
             int res = HfSniff(payload->samplesToSkip, payload->triggersToSkip, &len, payload->skipMode, payload->skipRatio);
 
             struct {
-                uint16_t len;
+                uint32_t len;
             } PACKED retval;
             retval.len = len;
             reply_ng(CMD_HF_SNIFF, res, (uint8_t *)&retval, sizeof(retval));
@@ -4290,6 +4299,27 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_ng(CMD_CEP_STATUS, PM3_SUCCESS, (uint8_t *)&status, sizeof(status));
             break;
         }
+#ifdef PM5
+        case CMD_PM5_RTTTL: {
+            // The packet's RAM payload remains alive throughout blocking playback.
+            rtttl_status_t status = RTTTL_ERROR_SIZE;
+            if (packet->length >= 2U && packet->length <= RTTTL_MAX_TEXT_SIZE + 1U) {
+                status = RTTTL_ERROR_SYNTAX;
+                if (packet->data.asBytes[packet->length - 1U] == 0U) {
+                    status = BuzzerPlayRtttl((const char *)packet->data.asBytes, packet->length - 1U);
+                }
+            }
+            uint8_t parser_status = (uint8_t)status;
+            int8_t command_status = PM3_EINVARG;
+            if (status == RTTTL_OK) {
+                command_status = PM3_SUCCESS;
+            } else if (status == RTTTL_ABORTED) {
+                command_status = PM3_EOPABORTED;
+            }
+            reply_ng(CMD_PM5_RTTTL, command_status, &parser_status, sizeof(parser_status));
+            break;
+        }
+#endif // PM5
         case CMD_PING: {
             reply_ng(CMD_PING, PM3_SUCCESS, packet->data.asBytes, packet->length);
             break;

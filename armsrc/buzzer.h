@@ -51,4 +51,15 @@ void BuzzerBeep(uint16_t on_ms);
 // Force the buzzer enable line low (silence). No-op if never set up.
 void BuzzerOff(void);
 
+#ifdef PM5
+#include "rtttl.h"
+
+// Validate and play synchronously; call only from a context that may block.
+// length excludes NUL; keep input alive and unchanged until return.
+// A new button press or incoming host data stops playback early with RTTTL_ABORTED;
+// a button already held at the start is ignored until released.
+// Returns an RTTTL status and leaves silence.
+rtttl_status_t BuzzerPlayRtttl(const char *text, size_t length);
+#endif // PM5
+
 #endif // __BUZZER_H

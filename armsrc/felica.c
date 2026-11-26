@@ -64,8 +64,8 @@ static bool felica_probe_mode = false;
 
 felica_frame_t FelicaFrame;
 
-// 15 ms in received bytes at 212 kbps (8 * 64 / fc = 37.8 us per byte)
-#define FELICA_POLL_TIMEOUT 397
+// last slot start + 2 ms, in received bytes at 212 kbps (8 * 64 / fc = 37.8 us per byte)
+#define FELICA_POLL_TIMEOUT(tsn) ((2417 + (1208 * (tsn)) + 2000) * 10 / 378)
 
 static void iso18092_set_timeout(uint32_t timeout) {
     felica_timeout = timeout + (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / (FELICA_212K_CARRIER_PERIODS_PER_BIT * FELICA_BITS_PER_BYTE) + 2;
@@ -277,13 +277,13 @@ static uint8_t felica_select_card(felica_card_select_t *card, uint16_t system_co
 
     // a polling answer is due 2.417 ms + 1.208 ms per slot, <= 12.1 ms for 8 slots
     uint32_t saved_timeout = iso18092_get_timeout();
-    iso18092_set_timeout(FELICA_POLL_TIMEOUT);
 
     // We try 24 times, or stop early once an answer was received.
     int len = 24;
     do {
         poll[7] = timeslots[(unsigned int)len % ARRAYLEN(timeslots)];
         AddCrc(poll + 2, 6);
+        iso18092_set_timeout(FELICA_POLL_TIMEOUT(poll[7]));
 
         // end-of-reception response packet data, wait approx. 501µs
         // end-of-transmission command packet data, wait approx. 197µs

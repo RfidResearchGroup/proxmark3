@@ -158,6 +158,11 @@ int SniffThinFilm(void) {
                 data = dma->buf;
             }
             rx_samples += dataLen;
+            // AT32: a full buffer stops the DMA, re-arm it here or it stays stopped
+            if (FPGA_SSC_DMA_RX_Secondary_Done()) {
+                FPGA_SSC_DMA_RX_Refresh_Secondary(dma->buf, DMA_BUFFER_SIZE);
+            }
+
             Demod14aReset();
             overrun_skips++;
             continue;

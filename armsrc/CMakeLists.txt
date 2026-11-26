@@ -107,6 +107,7 @@ set(SRC_ISO14443a
         mifarecmd.c
         epa.c
         mifaresim.c
+        topazsim.c
         sam_common.c
         sam_mfc.c
         sam_seos.c
@@ -339,6 +340,7 @@ set(THUMBSRC
 if (PM5)
     list(APPEND THUMBSRC startup_at32f435_437.s)
     list(APPEND THUMBSRC buzzer.c) # generic mainboard buzzer (QC self-test + BWM low-batt)
+    list(APPEND THUMBSRC ../common/rtttl.c) # rtttl parser
     list(APPEND THUMBSRC pm5_power.c) # low-power idle (core clock scaling + WFI)
     list(APPEND THUMBSRC at32_unit_test.c) # TODO DXL: AT32单元测试代码
 endif ()

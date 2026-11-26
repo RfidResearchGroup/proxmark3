@@ -139,7 +139,7 @@ static int CmdHFCipurseInfo(const char *Cmd) {
     CLIParserFree(ctx);
 
     // info about 14a part
-    infoHF14A(false, false, false);
+    infoHF14A(false, false, false, true);
 
     // CIPURSE info
     PrintAndLogEx(INFO, "------------------- " _CYAN_("CIPURSE Info") " --------------------");

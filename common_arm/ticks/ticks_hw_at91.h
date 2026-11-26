@@ -26,4 +26,10 @@
 #define INPUT_CAPTURE_EVT_RISING_EDGE    AT91C_TC_LDRAS   // rising-edge load (RA) event
 #define INPUT_CAPTURE_EVT_FALLING_EDGE   AT91C_TC_LDRBS   // falling-edge load (RB) event
 
+// ssp clock tick an FPGA byte is complete at, measured in 14a tag mode on XC2S30 (RDV2).
+// iCopy-X and Ultimate not measured, they keep 0
+#if !defined ICOPYX && !defined XC2S50
+#define SSP_CLK_RX_READY_TICK 4
+#endif
+
 #endif // TICKS_HW_AT91_H

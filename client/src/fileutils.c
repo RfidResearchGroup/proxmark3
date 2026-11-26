@@ -4442,11 +4442,17 @@ int convert_15_dump_format(uint8_t **dump, size_t *dumplen, bool verbose) {
 #define TOPAZ_TAG_BIN_LEN64     152
 #define TOPAZ_TAG_BIN_LEN32     140
 
-int convert_topaz_dump_format(uint8_t **dump, size_t *dumplen, bool verbose) {
+int convert_topaz_dump_format(uint8_t **dump, size_t *dumplen, bool *has_hr, bool verbose) {
 
     if ((dump == NULL) || (*dump == NULL) || (dumplen == NULL)) {
         return PM3_EINVARG;
     }
+
+    bool hr_unused = false;
+    if (has_hr == NULL) {
+        has_hr = &hr_unused;
+    }
+    *has_hr = false;
 
     size_t len = *dumplen;
     const size_t head = offsetof(topaz_tag_t, dynamic_memory);
@@ -4461,6 +4467,7 @@ int convert_topaz_dump_format(uint8_t **dump, size_t *dumplen, bool verbose) {
     if (size_ok && (len == sizeof(topaz_tag_t) + size - TOPAZ_STATIC_MEMORY)) {
         // the pointers it was saved with mean nothing here
         memset(*dump + head, 0, sizeof(topaz_tag_t) - head);
+        *has_hr = true;
         if (verbose) {
             PrintAndLogEx(INFO, "Topaz dump, " _YELLOW_("%u") " bytes of memory", size);
         }
@@ -4476,6 +4483,7 @@ int convert_topaz_dump_format(uint8_t **dump, size_t *dumplen, bool verbose) {
         memcpy(hr01, *dump, sizeof(hr01));
         mem = *dump + offsetof(topaz_tag_t, data_blocks);
         memlen = TOPAZ_STATIC_MEMORY;
+        *has_hr = true;
     } else if ((len < TOPAZ_STATIC_MEMORY) || (len > TOPAZ_DUMP_MAX_SIZE) || (len % TOPAZ_BLOCK_SIZE)) {
         PrintAndLogEx(FAILED, "Unsupported Topaz dump length ( %zu bytes )", len);
         PrintAndLogEx(HINT, "Hint: A Topaz memory is %u to %u bytes, in steps of %u",

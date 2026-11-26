@@ -62,22 +62,23 @@ void cep_ensure_usb_host_mode(void);
 // True while CEP has OTGFS1 USB host CDC mode active.
 bool cep_is_usb_host_active(void);
 
-// Gate for receive_ng(): true once the length header of an inbound SPI frame
-// has been seen. Blocks (with an internal timeout) waiting for the 2-byte
-// length header - mirrors usart_rxdata_available()'s call shape, not a
-// simple non-blocking peek.
+// Check for a command on the SPI RX ring. If bytes are already queued, wait
+// briefly for the length header.
+
 bool cep_spi_data_available(void);
 
-// True if SPI1's receive-data register currently holds an unread byte - a
-// single flag check, zero wait. Gate for data_available() (armsrc/util.c),
-// which many LF/HF reader loops call every pass to notice an incoming
-// CMD_BREAK_LOOP - that call site needs to cost nothing when idle, unlike
-// cep_spi_data_available() above which waits (bounded) for a first byte.
+// Check for incoming command bytes without waiting. Used by reader loops to
+// notice CMD_BREAK_LOOP.
 bool cep_spi_rx_pending(void);
 
-// Read up to `len` raw NG bytes off SPI1. Returns the number of bytes
-// actually read before an internal per-byte timeout gave up early.
+// Read len NG bytes from the SPI RX ring, with a timeout for missing bytes.
 uint32_t cep_spi_read_ng(uint8_t *data, size_t len);
+
+// Check the remaining command length and discard a mismatched frame.
+int cep_spi_check_command_length(size_t remaining);
+
+// Consume the trailing zero at the end of the command.
+bool cep_spi_finish_command(void);
 
 // Write `len` raw NG bytes (a whole PacketResponseNG/OLD frame) out over
 // SPI1 as one length-prefixed packet. Returns PM3_EIO if the master isn't
