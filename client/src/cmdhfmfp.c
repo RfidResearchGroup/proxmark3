@@ -1518,13 +1518,29 @@ static int CmdHFMFPChConf(const char *Cmd) {
 //   'R'  retry after transient communication error
 //   'E'  exchange error, aborts the check
 // `untested` counts the candidates the card never gave a verdict on
+// key check progress over all key slots and keys of a check
+typedef struct {
+    uint32_t done;
+    uint32_t total;
+    uint8_t pct;    // last printed, 0xFF before the first line
+} mfp_chk_progress_t;
+
+static void mfp_chk_progress(mfp_chk_progress_t *p, uint32_t add) {
+    if ((p == NULL) || (p->total == 0)) {
+        return;
+    }
+
+    p->done += add;
+    uint8_t pct = (uint8_t)((MIN(p->done, p->total) * 100) / p->total);
+    if (pct != p->pct) {
+        p->pct = pct;
+        PrintAndLogEx(INPLACE, "Checking keys... " _YELLOW_("%3u") " %%", pct);
+    }
+}
+
 static int plus_key_check(uint8_t start_sector, uint8_t end_sector, uint8_t startKeyAB, uint8_t endKeyAB,
                           uint8_t *keys, size_t keycount, uint8_t foundKeys[2][64][AES_KEY_LEN + 1],
-                          bool verbose, bool newline, uint32_t *untested) {
-
-    if (newline) {
-        PrintAndLogEx(INFO, "." NOLF);
-    }
+                          bool verbose, mfp_chk_progress_t *prog, uint32_t *untested) {
 
     // sector number from 0
     for (uint8_t sector = start_sector; sector <= end_sector; sector++) {
@@ -1534,12 +1550,16 @@ static int plus_key_check(uint8_t start_sector, uint8_t end_sector, uint8_t star
 
             // skip already found keys
             if (foundKeys[keyAB][sector][0]) {
+                if (verbose == false) {
+                    mfp_chk_progress(prog, keycount);
+                }
                 continue;
             }
 
             int res;
             bool selectCard = true;
             uint8_t noverdict = 0;
+            uint32_t tried = 0;
 
             // reset current key pointer after each loop
             uint8_t *currkey = keys;
@@ -1554,10 +1574,9 @@ static int plus_key_check(uint8_t start_sector, uint8_t end_sector, uint8_t star
                     return PM3_EOPABORTED;
                 }
 
-                if (i % 10 == 0) {
-                    if (verbose == false) {
-                        PrintAndLogEx(NORMAL, "." NOLF);
-                    }
+                tried++;
+                if (verbose == false) {
+                    mfp_chk_progress(prog, 1);
                 }
 
                 uint16_t uKeyNum = 0x4000 + sector * 2 + keyAB;
@@ -1573,8 +1592,6 @@ static int plus_key_check(uint8_t start_sector, uint8_t end_sector, uint8_t star
 
                     if (verbose) {
                         PrintAndLogEx(WARNING, "\nretried[%d]...", retry);
-                    } else {
-                        PrintAndLogEx(NORMAL, "R" NOLF);
                     }
 
                     DropField();
@@ -1587,8 +1604,6 @@ static int plus_key_check(uint8_t start_sector, uint8_t end_sector, uint8_t star
 
                     if (verbose) {
                         PrintAndLogEx(INFO, "Found key for sector " _YELLOW_("%d") " key "_YELLOW_("%s") " [ " _GREEN_("%s") " ]", sector, (keyAB == 0) ? "A" : "B", sprint_hex_inrow(currkey, AES_KEY_LEN));
-                    } else {
-                        PrintAndLogEx(NORMAL, _GREEN_("+") NOLF);
                     }
 
                     foundKeys[keyAB][sector][0] = 0x01;
@@ -1600,7 +1615,7 @@ static int plus_key_check(uint8_t start_sector, uint8_t end_sector, uint8_t star
 
                     // recursive test of a successful key
                     if (keycount > 1) {
-                        plus_key_check(start_sector, end_sector, startKeyAB, endKeyAB, currkey, 1, foundKeys, verbose, false, untested);
+                        plus_key_check(start_sector, end_sector, startKeyAB, endKeyAB, currkey, 1, foundKeys, verbose, NULL, untested);
                     }
 
                     // break out from keylist check loop,
@@ -1618,8 +1633,6 @@ static int plus_key_check(uint8_t start_sector, uint8_t end_sector, uint8_t star
 
                     if (verbose) {
                         PrintAndLogEx(ERR, "\nExchange error, key not tested");
-                    } else {
-                        PrintAndLogEx(NORMAL, "E" NOLF);
                     }
 
                     // one failed exchange is no reason to drop every sector after it
@@ -1640,6 +1653,10 @@ static int plus_key_check(uint8_t start_sector, uint8_t end_sector, uint8_t star
 
                 // set pointer to next key
                 currkey += AES_KEY_LEN;
+            }
+
+            if (verbose == false) {
+                mfp_chk_progress(prog, keycount - tried);
             }
         }
     }
@@ -1692,16 +1709,21 @@ int mfp_check_aes_keys(uint8_t *uid, const uint8_t *sector_mask, uint8_t sector_
         return res;
     }
 
+    mfp_chk_progress_t prog = { .pct = 0xFF };
+    for (uint8_t s = 0; s < sector_cnt; s++) {
+        if ((sector_mask[s / 8] >> (s % 8)) & 1) {
+            prog.total += 2 * keycnt;
+        }
+    }
+
     uint32_t untested = 0;
-    bool first = true;
     for (uint8_t s = 0; s < sector_cnt; s++) {
 
         if (((sector_mask[s / 8] >> (s % 8)) & 1) == 0) {
             continue;
         }
 
-        res = plus_key_check(s, s, MF_KEY_A, MF_KEY_B, key_block, keycnt, foundKeys, false, first, &untested);
-        first = false;
+        res = plus_key_check(s, s, MF_KEY_A, MF_KEY_B, key_block, keycnt, foundKeys, false, &prog, &untested);
         if (res == PM3_EOPABORTED) {
             break;
         }
@@ -1908,7 +1930,9 @@ static int CmdHFMFPChk(const char *Cmd) {
     uint64_t t1 = msclock();
 
     uint32_t untested = 0;
-    res = plus_key_check(startSector, endSector, startKeyAB, endKeyAB, key_block, keycnt, foundKeys, verbose, true, &untested);
+    uint32_t slots = (endSector - startSector + 1) * (endKeyAB - startKeyAB + 1);
+    mfp_chk_progress_t prog = { .total = slots * keycnt, .pct = 0xFF };
+    res = plus_key_check(startSector, endSector, startKeyAB, endKeyAB, key_block, keycnt, foundKeys, verbose, &prog, &untested);
     if (res == PM3_EOPABORTED) {
         t1 = msclock() - t1;
         PrintAndLogEx(INFO, "\ntime in checkkeys " _YELLOW_("%s") "\n", sprint_duration(t1));
@@ -1919,7 +1943,8 @@ static int CmdHFMFPChk(const char *Cmd) {
     PrintAndLogEx(INFO, "Start check for pattern based keys...");
     while (keyListLen) {
 
-        res = plus_key_check(startSector, endSector, startKeyAB, endKeyAB, (uint8_t *)keyList, keyListLen, foundKeys, verbose, true, &untested);
+        mfp_chk_progress_t pprog = { .total = slots * keyListLen, .pct = 0xFF };
+        res = plus_key_check(startSector, endSector, startKeyAB, endKeyAB, (uint8_t *)keyList, keyListLen, foundKeys, verbose, &pprog, &untested);
         if (res == PM3_EOPABORTED) {
             break;
         }
