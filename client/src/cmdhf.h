@@ -24,6 +24,7 @@
 int CmdHF(const char *Cmd);
 int CmdHFTune(const char *Cmd);
 int CmdHFSearch(const char *Cmd);
+const char *hf_search_last_info_cmd(void);
 int CmdHFSniff(const char *Cmd);
 int CmdHFPlot(const char *Cmd);
 

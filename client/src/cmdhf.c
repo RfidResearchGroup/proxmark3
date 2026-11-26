@@ -72,7 +72,15 @@
 
 static int CmdHelp(const char *Cmd);
 
+static const char *gs_search_info_cmd = NULL;  // info command the last hf search ran, or NULL
+
+const char *hf_search_last_info_cmd(void) {
+    return gs_search_info_cmd;
+}
+
 int CmdHFSearch(const char *Cmd) {
+
+    gs_search_info_cmd = NULL;
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf search",
@@ -352,6 +360,7 @@ int CmdHFSearch(const char *Cmd) {
     if (info_cmd) {
         PrintAndLogEx(INFO, "Running `" _YELLOW_("%s") "`...", info_cmd);
         CommandReceived(info_cmd);
+        gs_search_info_cmd = info_cmd;
     }
 
     return res;
