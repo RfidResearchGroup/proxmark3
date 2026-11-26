@@ -4344,26 +4344,27 @@ all_found:
             continue;
         }
 
-        bool read_ok = false;
-        for (uint8_t kt = MF_KEY_A; kt <= MF_KEY_B && read_ok == false; kt++) {
+        // trailer first, its access bits pick key A or B per block
+        uint8_t sdata[16 * MFBLOCK_SIZE] = {0};
+        uint16_t loaded = 0;
+        int rres = mfpReadSectorKeys(s,
+                                     (aes_keys[MF_KEY_A][s][0]) ? &aes_keys[MF_KEY_A][s][1] : NULL,
+                                     (aes_keys[MF_KEY_B][s][0]) ? &aes_keys[MF_KEY_B][s][1] : NULL,
+                                     sdata, &loaded, false);
 
-            if (aes_keys[kt][s][0] == 0) {
-                continue;
+        uint8_t nblk = mfNumBlocksPerSector(s);
+        uint8_t got = 0;
+        for (uint8_t b = 0; b < nblk; b++) {
+            if ((loaded >> b) & 1) {
+                memcpy(dump + ((mfFirstBlockOfSector(s) + b) * MFBLOCK_SIZE), sdata + (b * MFBLOCK_SIZE), MFBLOCK_SIZE);
+                got++;
             }
-
-            uint8_t sdata[16 * MFBLOCK_SIZE] = {0};
-            read_ok = (mfpReadSector(s, kt, &aes_keys[kt][s][1], sdata, false) == PM3_SUCCESS);
-            if (read_ok) {
-                memcpy(dump + (mfFirstBlockOfSector(s) * MFBLOCK_SIZE), sdata, mfNumBlocksPerSector(s) * MFBLOCK_SIZE);
-            }
-            PrintAndLogEx(read_ok ? SUCCESS : FAILED, "Sector %2u... read with AES key %c ( %s )",
-                          s,
-                          (kt == MF_KEY_B) ? 'B' : 'A',
-                          read_ok ? _GREEN_("ok") : _RED_("fail")
-                         );
         }
 
-        if (read_ok == false) {
+        if (rres == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "Sector %2u... read with AES ( " _GREEN_("ok") " )", s);
+        } else {
+            PrintAndLogEx(FAILED, "Sector %2u... read with AES ( " _RED_("%u / %u blocks") " )", s, got, nblk);
             autopwn_res = PM3_EPARTIAL;
         }
     }

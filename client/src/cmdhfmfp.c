@@ -2509,22 +2509,27 @@ chunkCycleClean2:
 
             if (sectorSL[s] == MFP_SL_3) {
                 // --- Try SL3 (AES) ---
-                for (uint8_t kt = MF_KEY_A; kt <= MF_KEY_B && !readOK; kt++) {
-                    if (aesFoundKeys[kt][s][0] == 0) {
-                        continue;
-                    }
+                // trailer first, its access bits pick key A or B per block
+                uint8_t sector_data[16 * 16] = {0};
+                uint16_t loaded = 0;
+                res = mfpReadSectorKeys(s,
+                                        (aesFoundKeys[MF_KEY_A][s][0]) ? &aesFoundKeys[MF_KEY_A][s][1] : NULL,
+                                        (aesFoundKeys[MF_KEY_B][s][0]) ? &aesFoundKeys[MF_KEY_B][s][1] : NULL,
+                                        sector_data, &loaded, verbose);
 
-                    uint8_t sector_data[16 * 16] = {0};
-                    res = mfpReadSector(s, kt, &aesFoundKeys[kt][s][1], sector_data, verbose);
-                    if (res == PM3_SUCCESS) {
-                        memcpy(carddata + (blockOffset * MFBLOCK_SIZE), sector_data, blocksInSector * MFBLOCK_SIZE);
+                for (uint8_t b = 0; b < blocksInSector; b++) {
+                    if ((loaded >> b) & 1) {
+                        memcpy(carddata + ((blockOffset + b) * MFBLOCK_SIZE), sector_data + (b * MFBLOCK_SIZE), MFBLOCK_SIZE);
                         sectorRead[s] = 1;
-                        readOK = true;
-                        sectorsRead++;
-                        sl3Count++;
-                    } else if (verbose) {
-                        PrintAndLogEx(DEBUG, "Sector %u SL3 key%s failed: %d", s, (kt == MF_KEY_A) ? "A" : "B", res);
                     }
+                }
+
+                if (res == PM3_SUCCESS) {
+                    readOK = true;
+                    sectorsRead++;
+                    sl3Count++;
+                } else if (verbose) {
+                    PrintAndLogEx(DEBUG, "Sector %u SL3 read: %d, blocks %04x", s, res, loaded);
                 }
             } else if (sectorSL[s] == MFP_SL_1) {
                 // --- Try SL1 (CRYPTO1) ---
