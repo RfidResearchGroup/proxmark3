@@ -5807,18 +5807,19 @@
         },
         "hf mf autopwn": {
             "command": "hf mf autopwn",
-            "description": "This command automates the key recovery process on MIFARE Classic cards. It uses the fchk, chk, darkside, nested, hardnested and staticnested to recover keys. If all keys are found, it try dumping card content both to file and emulator memory. default file name template is `hf-mf-<uid>-<dump|key>.` using suffix the template becomes `hf-mf-<uid>-<dump|key>-<suffix>.`",
+            "description": "This command automates the key recovery process on MIFARE Classic cards. It uses the fchk, chk, darkside, nested, hardnested and staticnested to recover keys. If all keys are found, it try dumping card content both to file and emulator memory. Without a card size option, the size is taken from the card's SAK. On a MIFARE Plus in SL1, AES only sectors get an AES key check and AES read instead. default file name template is `hf-mf-<uid>-<dump|key>.` using suffix the template becomes `hf-mf-<uid>-<dump|key>-<suffix>.`",
             "notes": [
                 "hf mf autopwn",
                 "hf mf autopwn -s 0 -a -k FFFFFFFFFFFF -> target MFC 1K card, Sector 0 with known key A 'FFFFFFFFFFFF'",
                 "hf mf autopwn --1k -f mfc_default_keys -> target MFC 1K card, default dictionary",
                 "hf mf autopwn --1k -s 0 -a -k FFFFFFFFFFFF -f mfc_default_keys -> combo of the two above samples",
-                "hf mf autopwn --1k -s 0 -a -k FFFFFFFFFFFF -k a0a1a2a3a4a5 -> multiple user supplied keys"
+                "hf mf autopwn --1k -s 0 -a -k FFFFFFFFFFFF -k a0a1a2a3a4a5 -> multiple user supplied keys",
+                "hf mf autopwn -k 000102030405060708090A0B0C0D0E0F -> MIFARE Plus, AES key for the AES only sectors"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-k, --key <hex> Known key, 12 hex bytes",
+                "-k, --key <hex> Known key, 6 hex bytes, or 16 for a MIFARE Plus AES sector",
                 "-s, --sector <dec> Input sector number",
                 "-a Input key A (def)",
                 "-b Input key B",
@@ -5830,7 +5831,7 @@
                 "--mem Use dictionary from flashmemory",
                 "--ns No save to file",
                 "--mini MIFARE Classic Mini / S20",
-                "--1k MIFARE Classic 1k / S50 (default)",
+                "--1k MIFARE Classic 1k / S50 (default when SAK says no other size)",
                 "--2k MIFARE Classic/Plus 2k",
                 "--4k MIFARE Classic 4k / S70",
                 "--in None (use CPU regular instruction set)",
@@ -10904,15 +10905,18 @@
         },
         "hf topaz sim": {
             "command": "hf topaz sim",
-            "description": "Simulate a Topaz tag",
+            "description": "Simulate a Topaz 96 or Topaz 512 tag from a dump file. A json, and the bin of an older client, carry the header ROM; another bin or an eml is the memory alone and the header ROM is then 11 48 for 120 bytes (Topaz 96) or 12 4C for 512 (Topaz 512), unless `--hr` gives it. Writes from the reader go to the emulator memory",
             "notes": [
-                "hf topaz sim -> Not yet implemented"
+                "hf topaz sim -f hf-topaz-11223344556677-dump.json",
+                "hf topaz sim -f hf-topaz-11223344556677-dump.bin --hr 124C"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-f, --file <fn> Specify a filename for dump file",
+                "--hr <hex> Header ROM, HR0 HR1 (2 hex bytes)"
             ],
-            "usage": "hf topaz sim [-h]"
+            "usage": "hf topaz sim [-h] -f <fn> [--hr <hex>]"
         },
         "hf topaz sniff": {
             "command": "hf topaz sniff",
@@ -11489,7 +11493,7 @@
         },
         "hw fpga": {
             "command": "hw fpga",
-            "description": "help This help ------------- ----------------------- Operation ----------------------- --------------------------------------------------------------------------------------- hw fpgaoff available offline: no Turn of fpga and antenna field",
+            "description": "help This help ------------- ----------------------- Operation ----------------------- pwrpwm Adjust the input voltage of the driver through FPGA. --------------------------------------------------------------------------------------- hw fpgaoff available offline: no Turn of fpga and antenna field",
             "notes": [
                 "hw fpgaoff"
             ],
@@ -11501,7 +11505,7 @@
         },
         "hw help": {
             "command": "hw help",
-            "description": "help This help ------------- ----------------------- Operation ----------------------- timeout Set the communication timeout on the client side version Show version information about the client and Proxmark3 ------------- ----------------------- Hardware ----------------------- connect Connect to the device via serial port --------------------------------------------------------------------------------------- hw detectreader available offline: no Start to detect presences of reader field",
+            "description": "help This help ------------- ----------------------- Operation ----------------------- timeout Set the communication timeout on the client side version Show version information about the client and Proxmark3 ------------- ----------------------- Hardware ----------------------- connect Connect to the device via serial port qc_pm5 Perform QC test (hardware or IO) for the PM5 powersave Enable/disable the PM5 power-save idle --------------------------------------------------------------------------------------- hw detectreader available offline: no Start to detect presences of reader field",
             "notes": [
                 "hw detectreader",
                 "hw detectreader -L"
@@ -11561,7 +11565,7 @@
                 "hw powersave off -> stay at 288 MHz, no idle sleep",
                 "hw powersave on -> re-enable the power-save idle"
             ],
-            "offline": false,
+            "offline": true,
             "options": [
                 "-h, --help This help"
             ],
@@ -11577,7 +11581,7 @@
                 "hw qc_pm5 --iohigh <index> --pwd <hex> -> drive PM5 test IO <index> high",
                 "hw qc_pm5 --ioreset <index> --pwd <hex> -> reset PM5 test IO <index> to default"
             ],
-            "offline": false,
+            "offline": true,
             "options": [
                 "-h, --help This help",
                 "-t, --timeout <s> test sequence timeout in seconds (default 20)",
@@ -16750,7 +16754,7 @@
         },
         "smart help": {
             "command": "smart help",
-            "description": "help This help list List ISO 7816 history pcsc Turn pm3 into pcsc reader and relay to host OS via vpcd upgrade Upgrade sim module firmware --------------------------------------------------------------------------------------- smart list available offline: yes Alias of `trace list -t 7816` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "help This help list List ISO 7816 history pcsc Turn pm3 into pcsc reader and relay to host OS via vpcd --------------------------------------------------------------------------------------- smart list available offline: yes Alias of `trace list -t 7816` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "smart list --frame -> show frame delay times",
                 "smart list -1 -> use trace buffer"
@@ -17168,6 +17172,6 @@
     "metadata": {
         "commands_extracted": 952,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-11-25T12:52:36+00:00"
+        "extracted_on": "2026-11-26T07:01:35+00:00"
     }
 }
