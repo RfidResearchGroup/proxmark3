@@ -29,6 +29,7 @@
 
 #include "at32f435_437.h"
 #include "at32f435_437_crm.h"
+#include "at32f435_437_dma.h"
 #include "at32f435_437_gpio.h"
 #include "at32f435_437_misc.h"
 #include "at32f435_437_usart.h"
@@ -56,11 +57,17 @@
 #define CEP_SPI_RESPONSE_TIMEOUT_TICKS  1500000  // 1s at 1.5 MHz
 #define CEP_HANDSHAKE_REPLY_MAX_RETRIES 3  // bound the stall-recovery loop below - still-attached isn't still-working forever
 
-// 0x55 filler the Flipper sends while its own SPI poll finds nothing new -
-// discard it so the real length header is recognized as soon as it starts,
-// instead of ever reading a 0x55 byte as (part of) a frame length.
+// The Flipper prefixes commands with 0x55 sync bytes.
 #define CEP_SYNC_BYTE            0x55
 #define CEP_SYNC_MAX_DISCARD     600
+
+// DMA1 channels 1 and 2 serve SSC and BWM USART RX.
+#define CEP_RX_DMA               DMA1_CHANNEL3
+#define CEP_RX_DMA_MUX           DMA1MUX_CHANNEL3
+#define CEP_RX_DMA_DONE          DMA1_FDT3_FLAG
+// One complete Flipper command is at most 500 sync + 2 length + 600 data + 1 trailer.
+#define CEP_RX_RING_SIZE         2048u
+#define CEP_RX_RING_MASK         (CEP_RX_RING_SIZE - 1u)
 
 // How long cep_attach_poll() will go without seeing a real SPI poll from the
 // Flipper before deciding the FAP has quit (see the comment at its one use
@@ -123,6 +130,69 @@ static void cep_usart_init(void) {
 }
 
 static spi_master_slave_mode_type s_spi_mode;
+static volatile uint8_t s_spi_rx_ring[CEP_RX_RING_SIZE];
+static volatile uint32_t s_spi_rx_wraps;
+static uint32_t s_spi_rx_tail;
+static uint32_t s_spi_rx_produced;
+static uint32_t s_spi_rx_frame_end;
+
+void DMA1_Channel3_IRQHandler(void) {
+    if (dma_flag_get(CEP_RX_DMA_DONE) != RESET) {
+        dma_flag_clear(CEP_RX_DMA_DONE);
+        s_spi_rx_wraps++;
+    }
+}
+
+// Drain SPI1 even while the main loop is busy with I2C or USB.
+static void cep_spi_rx_init(void) {
+    crm_periph_clock_enable(CRM_DMA1_PERIPH_CLOCK, TRUE);
+    dma_reset(CEP_RX_DMA);
+
+    s_spi_rx_tail = 0;
+    s_spi_rx_produced = 0;
+    s_spi_rx_wraps = 0;
+    s_spi_rx_frame_end = 0;
+
+    dma_init_type config;
+    dma_default_para_init(&config);
+    config.buffer_size = CEP_RX_RING_SIZE;
+    config.direction = DMA_DIR_PERIPHERAL_TO_MEMORY;
+    config.peripheral_base_addr = (uint32_t)&SPI1->dt;
+    config.memory_base_addr = (uint32_t)s_spi_rx_ring;
+    config.memory_inc_enable = TRUE;
+    config.loop_mode_enable = TRUE;
+    config.priority = DMA_PRIORITY_MEDIUM;
+    dma_init(CEP_RX_DMA, &config);
+
+    dmamux_enable(DMA1, TRUE);
+    dmamux_init(CEP_RX_DMA_MUX, DMAMUX_DMAREQ_ID_SPI1_RX);
+    dma_interrupt_enable(CEP_RX_DMA, DMA_FDT_INT, TRUE);
+    nvic_irq_enable(DMA1_Channel3_IRQn, 1, 0);
+
+    dma_channel_enable(CEP_RX_DMA, TRUE);
+    spi_i2s_dma_receiver_enable(SPI1, TRUE);
+}
+
+static uint32_t cep_spi_rx_head(void) {
+    // The counter and IRQ flag can change while we sample DTCNT at wrap.
+    uint32_t wraps;
+    uint32_t pending;
+    uint32_t remaining;
+    do {
+        wraps = s_spi_rx_wraps;
+        pending = DMA1->sts & CEP_RX_DMA_DONE;
+        remaining = CEP_RX_DMA->dtcnt;
+    } while (wraps != s_spi_rx_wraps || pending != (DMA1->sts & CEP_RX_DMA_DONE));
+    // DTCNT can read as zero before it reloads and the wrap is counted.
+    if (remaining != 0) {
+        uint32_t head = (wraps + (pending != 0)) * CEP_RX_RING_SIZE
+                        + CEP_RX_RING_SIZE - remaining;
+        if ((int32_t)(head - s_spi_rx_produced) >= 0) {
+            s_spi_rx_produced = head;
+        }
+    }
+    return s_spi_rx_produced;
+}
 
 static void cep_spi_init(void) {
     bool is_slave_mode = GpioInputStatus(GPIOA, GPIO_PINS_10);
@@ -188,6 +258,7 @@ static void cep_spi_init(void) {
     spi_init_struct.clock_phase = SPI_CLOCK_PHASE_1EDGE;
     spi_init_struct.cs_mode_selection = (s_spi_mode == SPI_MODE_MASTER) ? SPI_CS_SOFTWARE_MODE : SPI_CS_HARDWARE_MODE;
     spi_init(SPI1, &spi_init_struct);
+    cep_spi_rx_init();
     spi_enable(SPI1, TRUE);
 }
 
@@ -199,6 +270,7 @@ static void cep_spi_init(void) {
 // a register re-init alone isn't enough, the peripheral needs resetting
 // through the clock/reset controller to actually clear that state.
 void cep_spi_resync(void) {
+    dma_channel_enable(CEP_RX_DMA, FALSE);
     spi_enable(SPI1, FALSE);
     crm_periph_reset(CRM_SPI1_PERIPH_RESET, TRUE);
     crm_periph_reset(CRM_SPI1_PERIPH_RESET, FALSE);
@@ -314,6 +386,7 @@ void cep_attach_poll(void) {
         if (s_handshake_pending) {
             s_handshake_pending = false;
             s_cep_active = cep_reply_handshake();
+            s_spi_rx_tail = cep_spi_rx_head();
             if (s_cep_active) {
                 s_last_spi_activity_tick = GetTickCount();
             }
@@ -337,37 +410,73 @@ void cep_attach_poll(void) {
 }
 
 // ---------------------------------------------------------------------------
-// SPI NG-frame transport (verbatim from the unit test - already correct)
+// SPI NG-frame transport
 // ---------------------------------------------------------------------------
 
 static bool cep_spi_read_byte(uint8_t *out) {
     uint64_t timeout = 0;
-    while (spi_i2s_flag_get(SPI1, SPI_I2S_RDBF_FLAG) == RESET) {
+    uint32_t head;
+    do {
+        head = cep_spi_rx_head();
         if (timeout++ > CEP_SPI_BYTE_TIMEOUT) {
             return false;
         }
+    } while (head == s_spi_rx_tail);
+    if (head - s_spi_rx_tail > CEP_RX_RING_SIZE) {
+        s_spi_rx_tail = head;
+        return false;
     }
-    *out = spi_i2s_data_receive(SPI1);
+    *out = s_spi_rx_ring[s_spi_rx_tail++ & CEP_RX_RING_MASK];
     return true;
 }
 
-// Genuinely non-blocking - a single flag read, no spin-wait at all. For
-// data_available()'s use (armsrc/util.c): a tight sampling loop calls that
-// every pass purely to notice an incoming CMD_BREAK_LOOP promptly, so it
-// needs to cost nothing when idle. cep_spi_data_available() isn't a fit
-// here - it waits (bounded, but non-zero) for a first byte to actually
-// arrive, which is fine for receive_ng()'s own cadence but would add that
-// wait to every iteration of every LF/HF reader loop in the codebase.
+static bool cep_spi_rewind_ng_magic(uint8_t first) {
+    uint32_t magic = COMMANDNG_PREAMBLE_MAGIC;
+    if (first != (uint8_t)magic) {
+        return false;
+    }
+    for (size_t i = 1; i < sizeof(magic); i++) {
+        uint8_t byte;
+        magic >>= 8;
+        if (!cep_spi_read_byte(&byte) || byte != (uint8_t)magic) {
+            return false;
+        }
+    }
+    s_spi_rx_tail -= sizeof(magic);
+    return true;
+}
+
 bool cep_spi_rx_pending(void) {
-    return spi_i2s_flag_get(SPI1, SPI_I2S_RDBF_FLAG) != RESET;
+    if (!s_cep_active) {
+        return false;
+    }
+    uint32_t head = cep_spi_rx_head();
+    if (head == s_spi_rx_tail) {
+        return false;
+    }
+    // Filler-only polls still keep CEP alive.
+    s_last_spi_activity_tick = GetTickCount();
+    if (head - s_spi_rx_tail > CEP_RX_RING_SIZE) {
+        s_spi_rx_tail = head;
+    }
+    // Empty Flipper polls and a command's trailing byte do not stop a reader.
+    while (s_spi_rx_tail != head) {
+        uint8_t byte = s_spi_rx_ring[s_spi_rx_tail & CEP_RX_RING_MASK];
+        if (byte != 0xffu && byte != 0x00u) {
+            return true;
+        }
+        s_spi_rx_tail++;
+    }
+    return false;
 }
 
 bool cep_spi_data_available(void) {
-    // SPI1 is full-duplex, no RX FIFO: a byte can freeze in SPI_DT during
-    // any main-loop gap (write, I2C poll, WDT_HIT) until read (RM ch
-    // 13.2.9). Clear it before it's misread as part of a length header.
     if (spi_i2s_flag_get(SPI1, SPI_I2S_ROERR_FLAG) != RESET) {
-        spi_i2s_flag_clear(SPI1, SPI_I2S_ROERR_FLAG);
+        cep_spi_resync();
+        return false;
+    }
+    if (!cep_spi_rx_pending()) {
+        return false;
     }
     uint8_t len_header[2] = {0x00};
     size_t discarded = 0;
@@ -378,12 +487,13 @@ bool cep_spi_data_available(void) {
         if (len_header[0] != CEP_SYNC_BYTE) {
             break;
         }
-        if (++discarded > CEP_SYNC_MAX_DISCARD) {
+        if (++discarded > CEP_SYNC_MAX_DISCARD + 1) {
             // More sync bytes than the FAP's real preamble (500) can only
             // mean a desynced read (AT32 errata ES0003, see
             // cep_spi_resync()) or bus noise - resync now rather than
             // leaving SPI1 in that state until a later CRC/length check
             // catches it, which may be a full frame away.
+            // The last 0x55 may be the low byte of the length.
             cep_spi_resync();
             return false;
         }
@@ -391,32 +501,69 @@ bool cep_spi_data_available(void) {
     if (!cep_spi_read_byte(&len_header[1])) {
         return false;
     }
-    s_last_spi_activity_tick = GetTickCount(); // FAP is still polling, valid frame or not
     uint16_t data_len = (len_header[1] << 8) | len_header[0];
-    if (data_len == 0xFFFF) {
+    const size_t max_len = MAX(sizeof(PacketCommandNGRaw), sizeof(PacketCommandOLD));
+
+    // If we skipped the low length byte, len_header[1] starts the NG magic.
+    uint16_t sync_len = (len_header[0] << 8) | CEP_SYNC_BYTE;
+    if (discarded > 0 && data_len > max_len && sync_len <= sizeof(PacketCommandNGRaw)
+            && cep_spi_rewind_ng_magic(len_header[1])) {
+        data_len = sync_len;
+        discarded--;
+    }
+
+    if (data_len == 0xFFFF && discarded <= CEP_SYNC_MAX_DISCARD) {
         // FAP's reply-poll drives 0xFF dummy bytes when it has nothing to
         // send (furi_hal_spi_bus_trx with a NULL tx buffer) - not a desync,
         // same treatment as a CEP_SYNC_BYTE run, no resync needed.
         return false;
     }
-    if (data_len > PM3_CMD_DATA_SIZE * 2) {
+    if (discarded > CEP_SYNC_MAX_DISCARD
+            || data_len < sizeof(PacketCommandNGPreamble) + sizeof(PacketCommandNGPostamble)
+            || data_len > max_len) {
         // Same reasoning: an implausible length is itself evidence of a
         // desynced read, not just "no frame yet."
         cep_spi_resync();
         return false;
     }
+    s_spi_rx_frame_end = s_spi_rx_tail + data_len;
     return true;
 }
 
-uint32_t cep_spi_read_ng(uint8_t *data, size_t len) {
-    for (size_t i = 0; i < len; ++i) {
-        uint64_t timeout = 0;
-        while (spi_i2s_flag_get(SPI1, SPI_I2S_RDBF_FLAG) == RESET) {
-            if (timeout++ > CEP_SPI_BYTE_TIMEOUT) {
-                return i;
-            }
+bool cep_spi_finish_command(void) {
+    uint8_t trailer;
+    return s_spi_rx_tail == s_spi_rx_frame_end
+           && cep_spi_read_byte(&trailer) && trailer == 0;
+}
+
+int cep_spi_check_command_length(size_t remaining) {
+    if (remaining == s_spi_rx_frame_end - s_spi_rx_tail) {
+        return PM3_SUCCESS;
+    }
+
+    // Discard only this frame if its outer length and trailer are intact.
+    uint8_t byte;
+    while (s_spi_rx_tail != s_spi_rx_frame_end) {
+        if (!cep_spi_read_byte(&byte)) {
+            cep_spi_resync();
+            return PM3_EIO;
         }
-        data[i] = spi_i2s_data_receive(SPI1);
+    }
+    if (!cep_spi_finish_command()) {
+        cep_spi_resync();
+        return PM3_EIO;
+    }
+    return PM3_ENODATA;
+}
+
+uint32_t cep_spi_read_ng(uint8_t *data, size_t len) {
+    if (len > s_spi_rx_frame_end - s_spi_rx_tail) {
+        return 0;
+    }
+    for (size_t i = 0; i < len; ++i) {
+        if (!cep_spi_read_byte(data + i)) {
+            return i;
+        }
     }
     return len;
 }
@@ -485,11 +632,7 @@ int cep_spi_write_sync(uint8_t *data, size_t len) {
     }
 
 cleanup:
-    // Same full-duplex freeze as cep_spi_data_available() - SPI1 shifted a
-    // byte in on MOSI for every byte clocked out above. Clear it here, once,
-    // outside the timed write, so the read path never inherits it.
-    if (spi_i2s_flag_get(SPI1, SPI_I2S_ROERR_FLAG) != RESET) {
-        spi_i2s_flag_clear(SPI1, SPI_I2S_ROERR_FLAG);
-    }
+    // MOSI carries poll padding during a reply.
+    s_spi_rx_tail = cep_spi_rx_head();
     return ret;
 }
