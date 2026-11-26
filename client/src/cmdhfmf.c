@@ -5698,19 +5698,25 @@ static void print_key_table(size_t sectorscnt, sector_t *e_sector, uint8_t start
     PrintAndLogEx(SUCCESS, "-----+-----+--------------+---+--------------+----");
 
     if (extended_legend) {
-        PrintAndLogEx(INFO, "  "
+        // second line padded to the first, so the closing borders line up
+        int w1 = strlen("D:Dictionary / S:darkSide / U:User / R:Reused / N:Nested");
+        int w2 = strlen("H:Hardnested / C:statiCnested / A:keyA") + ((has_aes) ? strlen(" / P:Plus AES") : 0);
+
+        PrintAndLogEx(INFO, "--  "
                       _YELLOW_("D") ":Dictionary / "
                       _YELLOW_("S") ":darkSide / "
                       _YELLOW_("U") ":User / "
                       _YELLOW_("R") ":Reused / "
                       _YELLOW_("N") ":Nested"
+                      "  --"
                      );
-        PrintAndLogEx(INFO, "  "
+        PrintAndLogEx(INFO, "--  "
                       _YELLOW_("H") ":Hardnested / "
                       _YELLOW_("C") ":statiCnested / "
                       _YELLOW_("A") ":keyA"
-                      "%s",
-                      (has_aes) ? " / " _YELLOW_("P") ":Plus AES" : ""
+                      "%s%*s  --",
+                      (has_aes) ? " / " _YELLOW_("P") ":Plus AES" : "",
+                      w1 - w2, ""
                      );
         if (sectorscnt == 18) {
             PrintAndLogEx(INFO, "( " _MAGENTA_("*") " ) These sectors used for signature. Lays outside of user memory");
