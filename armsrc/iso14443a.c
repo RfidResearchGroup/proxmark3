@@ -62,6 +62,12 @@ static uint8_t  s_sak_override  = 0;
 #define REQUEST_GUARD_TIME (7000/16 + 1)
 // minimum time between last modulation of tag and next start bit from reader to tag: 1172 carrier cycles
 #define FRAME_DELAY_TIME_PICC_TO_PCD (1172/16 + 1)
+// a tag answers n * 128 + 20 (or + 84) carrier cycles after the reader frame, this n
+#define ISO14A_FDT_N 9
+// the ssp clock tick a byte from the FPGA is complete at, 0 where not measured
+#ifndef SSP_CLK_RX_READY_TICK
+#define SSP_CLK_RX_READY_TICK 0
+#endif
 // bool LastCommandWasRequest = false;
 
 //
@@ -377,9 +383,10 @@ static tUart14a Uart;
 // 0011  -   a 2 tick wide pause, or a three tick wide pause shifted left
 // 0111  -   a 2 tick wide pause shifted left
 // 1001  -   a 2 tick wide pause shifted right
+// 1000  -   a 3 tick wide pause shifted right
 static const bool Mod_Miller_LUT[] = {
     false,  true, false, true,  false, false, false, true,
-    false,  true, false, false, false, false, false, false
+    true,   true, false, false, false, false, false, false
 };
 #define IsMillerModulationNibble1(b) (Mod_Miller_LUT[(b & 0x000000F0) >> 4])
 #define IsMillerModulationNibble2(b) (Mod_Miller_LUT[(b & 0x0000000F)])
@@ -427,10 +434,11 @@ RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time) {
 
         // The start bit is one ore more Sequence Y followed by a Sequence Z (... 11111111 00x11111). We need to distinguish from
         // Sequence X followed by Sequence Y followed by Sequence Z     (111100x1 11111111 00x11111)
-        // we therefore look for a ...xx1111 11111111 00x11111xxxxxx... pattern
-        // (12 '1's followed by 2 '0's, eventually followed by another '0', followed by 5 '1's)
-#define ISO14443A_STARTBIT_MASK       0x07FFEF80                            // mask is    00000111 11111111 11101111 10000000
-#define ISO14443A_STARTBIT_PATTERN    0x07FF8F80                            // pattern is 00000111 11111111 10001111 10000000
+        // we therefore look for a ...xx1111 11111111 0xx1111xxxxxxx... pattern
+        // (12 '1's, a '0', any two samples, 4 '1's): a pause can show in one
+        // sample, split as 010, or a sample late
+#define ISO14443A_STARTBIT_MASK       0x07FFCF00                            // mask is    00000111 11111111 11001111 00000000
+#define ISO14443A_STARTBIT_PATTERN    0x07FF8F00                            // pattern is 00000111 11111111 10001111 00000000
         if ((Uart.fourBits & (ISO14443A_STARTBIT_MASK >> 0)) == ISO14443A_STARTBIT_PATTERN >> 0) Uart.syncBit = 7;
         else if ((Uart.fourBits & (ISO14443A_STARTBIT_MASK >> 1)) == ISO14443A_STARTBIT_PATTERN >> 1) Uart.syncBit = 6;
         else if ((Uart.fourBits & (ISO14443A_STARTBIT_MASK >> 2)) == ISO14443A_STARTBIT_PATTERN >> 2) Uart.syncBit = 5;
@@ -441,7 +449,9 @@ RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time) {
         else if ((Uart.fourBits & (ISO14443A_STARTBIT_MASK >> 7)) == ISO14443A_STARTBIT_PATTERN >> 7) Uart.syncBit = 0;
 
         if (Uart.syncBit != 9999) {                                              // found a sync bit
-            Uart.startTime = (non_real_time) ? non_real_time : (GetCountSspClk() & 0xfffffff8);
+            // counted from the tick the byte was complete at, a byte read late
+            // still gets its own time, not the one of the byte after it
+            Uart.startTime = (non_real_time) ? non_real_time : ((GetCountSspClk() - SSP_CLK_RX_READY_TICK) & 0xfffffff8);
             Uart.startTime -= Uart.syncBit;
             Uart.endTime = Uart.startTime;
             Uart.state = STATE_14A_START_OF_COMMUNICATION;
@@ -930,6 +940,11 @@ int RAMFUNC SniffIso14443a(uint8_t param) {
                 data = dma->buf;
             }
             rx_samples += dataLen;
+            // AT32: a full buffer stops the DMA, re-arm it here or it stays stopped
+            if (FPGA_SSC_DMA_RX_Secondary_Done()) {
+                FPGA_SSC_DMA_RX_Refresh_Secondary(dma->buf, DMA_BUFFER_SIZE);
+            }
+
             Uart14aReset();
             Demod14aReset();
             overrun_skips++;
@@ -1273,6 +1288,28 @@ bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_
         return true;
     } else {
         return false;
+    }
+}
+
+// Put value at pos of an answer prepare_tag_modulation() coded, in its
+// modulation too: a few bytes of a long answer without coding all of it again
+void set_tag_modulation_byte(tag_response_info_t *response_info, uint16_t pos, uint8_t value) {
+
+    response_info->response[pos] = value;
+
+    // as CodeIso14443aAsTagPar() lays it out: the correction bit, the start bit,
+    // then for each byte its 8 data bits, LSB first, and its parity bit
+    uint8_t *mod = response_info->modulation + 2 + (9 * pos);
+    for (uint8_t j = 0; j < 8; j++) {
+        mod[j] = (value & 1) ? SEC_D : SEC_E;
+        value >>= 1;
+    }
+    uint8_t par = oddparity8(response_info->response[pos]);
+    mod[8] = (par) ? SEC_D : SEC_E;
+
+    // the answer lasts until its last parity bit
+    if (pos == (response_info->response_n - 1)) {
+        response_info->ProxToAirDuration = (8 * ((9 * response_info->response_n) + 1)) - ((par) ? 4 : 0);
     }
 }
 
@@ -1823,12 +1860,18 @@ static tag_response_info_t *iso14a_sim_rblock(iso14a_sim_dep_t *dep, const uint8
 }
 
 // The answer of the ISO/IEC 14443-4 types to an APDU, in out, and its length.
-// They hold no application, so a SELECT by DF name (ISO/IEC 7816-4, CLA 00
-// INS A4 P1 04) gets the file not found of a real card. Any other APDU keeps 90 00
-static uint8_t iso14a_sim_generic_answer(const uint8_t *apdu, int len, uint8_t *out) {
+// They hold no application, type 10 only its NDEF Tag Application: a SELECT by
+// DF name (ISO/IEC 7816-4, CLA 00 INS A4 P1 04) of any other gets the file not
+// found of a real card. Any other APDU keeps 90 00
+static uint8_t iso14a_sim_generic_answer(uint8_t tagType, const uint8_t *apdu, int len, uint8_t *out) {
     uint16_t sw = ISO7816_OK;
     if (len >= 5 && apdu[0] == 0x00 && apdu[1] == ISO7816_SELECT_FILE && apdu[2] == 0x04) {
-        sw = ISO7816_FILE_NOT_FOUND;
+        // ST25TA02KB (DS12365 Rev 2, 6.7.1): the NFC Forum Type 4 Tag AID, of
+        // version 2.0 or 1.0, the tag aligns to the reader's (Table 4 note 1)
+        static const uint8_t ndef_aid[] = {0xD2, 0x76, 0x00, 0x00, 0x85, 0x01};
+        if (tagType != 10 || len < 12 || apdu[4] != 7 || memcmp(apdu + 5, ndef_aid, sizeof(ndef_aid)) != 0 || apdu[11] > 0x01) {
+            sw = ISO7816_FILE_NOT_FOUND;
+        }
     }
     out[0] = sw >> 8;
     out[1] = sw & 0xFF;
@@ -2028,7 +2071,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
 
         // ISO/IEC 14443-4 R-block. Only it can ask for the last block again:
         // the answer to any other frame may overwrite the dynamic answer
-        bool rblock = iso4 && tagType != 10 && (receivedCmd[0] & 0xE6) == 0xA2;
+        bool rblock = iso4 && (receivedCmd[0] & 0xE6) == 0xA2;
         if (rblock == false) {
             dep.last_ok = false;
         }
@@ -2623,7 +2666,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
 
             // ST25TA512B  IKEA Rothult
             if (tagType == 10)  {
-                // we replay 90 00 for all commands but the read bin and we deny the verify cmd.
+                // the read bin and the two verify cmd of the lock. Any other block is answered as on the other types
 
                 static const uint8_t default_st25ta_ndef[] = {
                     0x00, 0x1b, 0xd1, 0x01, 0x17, 0x54, 0x02, 0x7a,
@@ -2655,12 +2698,12 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
                     dynamic_response_info.response[1] = 0x90;
                     dynamic_response_info.response[2] = 0x00;
                     dynamic_response_info.response_n = 3;
-                } else {
-                    dynamic_response_info.response[0] = receivedCmd[0];
-                    dynamic_response_info.response[1] = 0x90;
-                    dynamic_response_info.response[2] = 0x00;
-                    dynamic_response_info.response_n = 3;
                 }
+            }
+
+            if (dynamic_response_info.response_n > 0) {
+                // an I-block of the lock: the PICC's next block number (rule D)
+                iso14a_sim_dep_iblock(&dep, receivedCmd[0]);
             } else {
 
                 // Check for ISO 14443A-4 compliant commands, look at left nibble
@@ -2673,7 +2716,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
                         iso14a_sim_dep_iblock(&dep, receivedCmd[0]);
                         uint8_t inf = (receivedCmd[0] & 0x08) ? 2 : 1;
                         dynamic_response_info.response[0] = receivedCmd[0];
-                        dynamic_response_info.response_n = inf + iso14a_sim_generic_answer(receivedCmd + inf, len - 2 - inf, dynamic_response_info.response + inf);
+                        dynamic_response_info.response_n = inf + iso14a_sim_generic_answer(tagType, receivedCmd + inf, len - 2 - inf, dynamic_response_info.response + inf);
                     }
                     break;
 
@@ -2715,7 +2758,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
             if (dynamic_response_info.response_n > 0) {
 
                 // Copy the CID from the reader query (only when CID bit is set in PCB).
-                if (tagType != 10 && (receivedCmd[0] & 0x08))
+                if (receivedCmd[0] & 0x08)
                     dynamic_response_info.response[1] = receivedCmd[1];
 
                 // Add CRC bytes, always used in ISO 14443A-4 compliant cards
@@ -3050,7 +3093,9 @@ int EmGetCmd(uint8_t *received, uint16_t received_max_len, uint16_t *len, uint8_
     return EmGetCmdTimeout(received, received_max_len, len, par, 0);
 }
 
-int EmSendCmd14443aRaw(const uint8_t *resp, uint16_t respLen) {
+// Send an answer n * 128 + 20 (or + 84) carrier periods after the reader frame.
+// The FPGA holds an early answer until n = 9; a larger n is aimed by shifting within the SSC bytes
+static int EmSendCmd14443aRawFdt(const uint8_t *resp, uint16_t respLen, uint16_t fdt_n) {
     volatile uint8_t b;
     uint16_t i = 0;
     uint32_t ThisTransferTime = 0;
@@ -3063,6 +3108,10 @@ int EmSendCmd14443aRaw(const uint8_t *resp, uint16_t respLen) {
     if (Uart.bitCount == 7) {
         // Short tags (7 bits) don't have parity, determine the correct value from MSB
         correction_needed = Uart.output[0] & 0x40;
+    } else if (Uart.bitCount < 0) {
+        // 8 bits without parity, the way Topaz sends its operands. The decoder
+        // took the 0 of the end of communication for a parity bit
+        correction_needed = Uart.output[Uart.len - 1] & 0x80;
     } else {
         // The parity bits are left-aligned
         correction_needed = Uart.parity[(Uart.len - 1) / 8] & (0x80 >> ((Uart.len - 1) & 7));
@@ -3083,34 +3132,53 @@ int EmSendCmd14443aRaw(const uint8_t *resp, uint16_t respLen) {
         }
     }
 
-    while ((ThisTransferTime = GetCountSspClk()) & 0x00000007);
+    // ssp clocks the first symbol is shifted into the frame
+    uint8_t shift = 0;
+    if (fdt_n > ISO14A_FDT_N) {
+        // middle of the window, from DELAY_AIR2ARM_AS_TAG, the FPGA's FDT counter
+        // and DELAY_ARM2AIR_AS_TAG. A correction bit leads by half a bit
+        uint32_t aim = Uart.endTime + 49 + (8 * (fdt_n - ISO14A_FDT_N)) - (correction_needed ? 4 : 0);
+        shift = aim & 0x00000007;
+        while (((ThisTransferTime = GetCountSspClk()) & 0x00000007) || ((int32_t)(ThisTransferTime - (aim & 0xfffffff8)) < 0));
+    } else {
+        while ((ThisTransferTime = GetCountSspClk()) & 0x00000007);
+    }
 
     // Clear TXRDY:
     while (!FPGA_SSC_TX_Ready()) {}
     FPGA_SSC_TX_Value(SEC_F);
 
     // send cycle
+    uint8_t carry = SEC_F;
     for (; i < respLen;) {
         if (FPGA_SSC_TX_Ready()) {
-            FPGA_SSC_TX_Value(resp[i++]);
+            uint8_t symbols = resp[i++];
+            FPGA_SSC_TX_Value(carry | (symbols >> shift));
+            carry = (shift) ? (symbols << (8 - shift)) : SEC_F;
             FPGA_SSC_RX_READY_WAIT();
             FpgaSendQueueDelay = (uint8_t)FPGA_SSC_RX_Value();
         }
     }
 
-    // Ensure that the FPGA Delay Queue is empty before we switch to TAGSIM_LISTEN again:
+    // Ensure that the FPGA Delay Queue is empty before we switch to TAGSIM_LISTEN again,
+    // the first byte takes what the shift pushed out of the last one
     uint8_t fpga_queued_bits = FpgaSendQueueDelay >> 3;
     for (i = 0; i <= (fpga_queued_bits >> 3) + 1;) {
         if (FPGA_SSC_TX_Ready()) {
-            FPGA_SSC_TX_Value(SEC_F);
+            FPGA_SSC_TX_Value(carry);
+            carry = SEC_F;
             FPGA_SSC_RX_READY_WAIT();
             FpgaSendQueueDelay = (uint8_t)FPGA_SSC_RX_Value();
             i++;
         }
     }
-    LastTimeProxToAirStart = ThisTransferTime + (correction_needed ? 8 : 0);
+    LastTimeProxToAirStart = ThisTransferTime + shift + (correction_needed ? 8 : 0);
 
     return PM3_SUCCESS;
+}
+
+int EmSendCmd14443aRaw(const uint8_t *resp, uint16_t respLen) {
+    return EmSendCmd14443aRawFdt(resp, respLen, ISO14A_FDT_N);
 }
 
 int EmSend4bit(uint8_t resp) {
@@ -3135,10 +3203,10 @@ int EmSend4bit(uint8_t resp) {
 int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par) {
     return EmSendCmdParEx(resp, respLen, par, false);
 }
-int EmSendCmdParEx(uint8_t *resp, uint16_t respLen, uint8_t *par, bool collision) {
+static int EmSendCmdParFdt(uint8_t *resp, uint16_t respLen, uint8_t *par, bool collision, uint16_t fdt_n) {
     CodeIso14443aAsTagPar(resp, respLen, par, collision);
     const tosend_t *ts = get_tosend();
-    int res = EmSendCmd14443aRaw(ts->buf, ts->max);
+    int res = EmSendCmd14443aRawFdt(ts->buf, ts->max, fdt_n);
 
     // do the tracing for the previous reader request and this tag answer:
     EmLogTrace(Uart.output,
@@ -3153,12 +3221,20 @@ int EmSendCmdParEx(uint8_t *resp, uint16_t respLen, uint8_t *par, bool collision
                par);
     return res;
 }
+int EmSendCmdParEx(uint8_t *resp, uint16_t respLen, uint8_t *par, bool collision) {
+    return EmSendCmdParFdt(resp, respLen, par, collision, ISO14A_FDT_N);
+}
 int EmSendCmd(uint8_t *resp, uint16_t respLen) {
     return EmSendCmdEx(resp, respLen, false);
 }
 int EmSendCmdEx(uint8_t *resp, uint16_t respLen, bool collision) {
     GetParity(resp, respLen, parity_array);
     return EmSendCmdParEx(resp, respLen, parity_array, collision);
+}
+// EmSendCmd() for a tag that answers with an n above the 9 of ISO/IEC 14443-3
+int EmSendCmdFdt(uint8_t *resp, uint16_t respLen, uint16_t fdt_n) {
+    GetParity(resp, respLen, parity_array);
+    return EmSendCmdParFdt(resp, respLen, parity_array, false, fdt_n);
 }
 
 int EmSendPrecompiledCmd(tag_response_info_t *p_response) {
@@ -3183,6 +3259,11 @@ int EmSendPrecompiledCmd(tag_response_info_t *p_response) {
     return ret;
 }
 
+// The reader frame just received, traced as one the PICC does not answer
+void iso14a_sim_trace_rx(const uint8_t *frame) {
+    LogTrace(frame, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
+}
+
 bool EmLogTrace(const uint8_t *reader_data, uint16_t reader_len, uint32_t reader_StartTime,
                 uint32_t reader_EndTime, const uint8_t *reader_Parity, const uint8_t *tag_data,
                 uint16_t tag_len, uint32_t tag_StartTime, uint32_t tag_EndTime, const uint8_t *tag_Parity) {
@@ -3191,9 +3272,10 @@ bool EmLogTrace(const uint8_t *reader_data, uint16_t reader_len, uint32_t reader
     // end of the received command to start of the tag's (simulated by us) answer is n*128+20 or n*128+84 resp.
     // with n >= 9. The start of the tags answer can be measured and therefore the end of the received command be calculated:
 
-    uint16_t reader_modlen = reader_EndTime - reader_StartTime;
-    uint16_t approx_fdt = tag_StartTime - reader_EndTime;
-    uint16_t exact_fdt = (approx_fdt - 20 + 32) / 64 * 64 + 20;
+    // 32 bit: a frame of 57 bytes and more, or a Topaz WRITE-E FDT, exceeds 65535
+    uint32_t reader_modlen = reader_EndTime - reader_StartTime;
+    uint32_t approx_fdt = tag_StartTime - reader_EndTime;
+    uint32_t exact_fdt = (approx_fdt - 20 + 32) / 64 * 64 + 20;
     reader_EndTime = tag_StartTime - exact_fdt;
     reader_StartTime = reader_EndTime - reader_modlen;
 
@@ -3210,6 +3292,8 @@ bool EmLogTrace(const uint8_t *reader_data, uint16_t reader_len, uint32_t reader
 //  If a response is captured return TRUE
 //  If it takes too long return FALSE
 //-----------------------------------------------------------------------------
+#define THINFILM_LISTEN_MS 100
+
 bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t rec_maxlen,  uint8_t *received_len) {
 
     if (g_hf_field_active == false) {
@@ -3230,7 +3314,6 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t rec_
     uint8_t b = (uint8_t)FPGA_SSC_RX_Value();
     (void)b;
 
-    uint32_t timeout = iso14a_get_timeout();
     uint32_t receive_timer = GetTickCount();
 
     for (;;) {
@@ -3245,7 +3328,8 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t rec_
             }
         }
 
-        if (GetTickCountDelta(receive_timer) > timeout + 100) {
+        // tag talks first and repeats its frame; iso14a_timeout is in 128/fc, not ms
+        if (GetTickCountDelta(receive_timer) > THINFILM_LISTEN_MS) {
             break;
         }
     }

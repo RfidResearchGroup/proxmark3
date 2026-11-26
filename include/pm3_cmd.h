@@ -460,6 +460,12 @@ typedef struct {
     uint8_t key[6];
 } PACKED mfc_eload_t;
 
+// CMD_HF_MIFARE_EML_LOAD reply, one bit per block, block n is byte n / 8 bit n % 8
+typedef struct {
+    uint8_t loaded[32];     // read into emulator memory
+    uint8_t denied[32];     // access bits let no usable key read it
+} PACKED mfc_eload_resp_t;
+
 // CMD_HF_EPA_REPLAY payload.
 // apdu_num 0 runs the replay, otherwise it is a 1-based APDU index being uploaded.
 // Replaces oldargs: arg0 = apdu number, arg1 = offset, arg2 = length
@@ -622,6 +628,7 @@ typedef struct {
     uint8_t use_flashmemory;
     uint8_t key_count;
     uint16_t singlesector_params;
+    uint8_t skip_sectors[5];    // bit per sector, not checked, counted as found, reported as not found
     uint8_t keys[];             // key_count * MIFARE_KEY_SIZE
 } PACKED mf_chkkeys_fast_t;
 
@@ -764,6 +771,12 @@ typedef struct {
     bool on;
     bool off;
 } PACKED tearoff_params_t;
+
+// CMD_HF_TOPAZ_SIMULATE. The tag memory is in emulator memory, block 0 first
+typedef struct {
+    uint8_t hr[2];      // header ROM, HR0 HR1
+    uint16_t size;      // 120 for a Topaz 96 (static memory), 512 for a Topaz 512 (dynamic memory)
+} PACKED topaz_sim_t;
 
 // when writing to SPIFFS
 typedef struct {
@@ -1361,6 +1374,9 @@ typedef struct {
 
 // For Atmel CryptoRF
 #define CMD_HF_CRYPTORF_SIM 0x0820
+
+// For Topaz (NFC Forum Type 1 Tag)
+#define CMD_HF_TOPAZ_SIMULATE 0x0830
 
 // Gen 3 magic cards
 #define CMD_HF_MIFARE_GEN3UID 0x0850

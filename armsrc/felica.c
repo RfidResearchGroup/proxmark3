@@ -64,6 +64,9 @@ static bool felica_probe_mode = false;
 
 felica_frame_t FelicaFrame;
 
+// last slot start + 2 ms, in received bytes at 212 kbps (8 * 64 / fc = 37.8 us per byte)
+#define FELICA_POLL_TIMEOUT(tsn) ((2417 + (1208 * (tsn)) + 2000) * 10 / 378)
+
 static void iso18092_set_timeout(uint32_t timeout) {
     felica_timeout = timeout + (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / (FELICA_212K_CARRIER_PERIODS_PER_BIT * FELICA_BITS_PER_BYTE) + 2;
 }
@@ -272,11 +275,15 @@ static uint8_t felica_select_card(felica_card_select_t *card, uint16_t system_co
 
     bool got_reply = false;
 
+    // a polling answer is due 2.417 ms + 1.208 ms per slot, <= 12.1 ms for 8 slots
+    uint32_t saved_timeout = iso18092_get_timeout();
+
     // We try 24 times, or stop early once an answer was received.
     int len = 24;
     do {
         poll[7] = timeslots[(unsigned int)len % ARRAYLEN(timeslots)];
         AddCrc(poll + 2, 6);
+        iso18092_set_timeout(FELICA_POLL_TIMEOUT(poll[7]));
 
         // end-of-reception response packet data, wait approx. 501µs
         // end-of-transmission command packet data, wait approx. 197µs
@@ -294,6 +301,8 @@ static uint8_t felica_select_card(felica_card_select_t *card, uint16_t system_co
         WDT_HIT();
 
     } while (--len);
+
+    iso18092_set_timeout(saved_timeout);
 
     // 1. timed-out.  Never inspect FelicaFrame past this point without a reply,
     //    it still holds whatever a previous exchange left in it.
@@ -467,6 +476,13 @@ void TransmitFor18092_AsReaderEx(const uint8_t *frame, uint16_t len, const uint3
 
     while (!FPGA_SSC_TX_Ready()) {};
     FPGA_SSC_TX_Value(0x00); //spin
+
+#ifdef PM5
+    // Wait until the first trailing 0x00 has shifted out and the second is loaded,
+    // so hi_flite's 1-bit dlay pipeline finishes modulating the final CRC bit
+    // before WaitForFelicaReply() sets NOMOD (critical on fast 288 MHz AT32/PM5).
+    while (!FPGA_SSC_TX_Ready()) {};
+#endif
     /**/
 
     const uint32_t frame_start = felica_lasttime_prox2air_start + (FELICA_PREAMBLE_BYTES * FELICA_BITS_PER_BYTE);
@@ -641,7 +657,7 @@ bool iso18092_setup_ex(uint8_t fpga_minor_mode, uint32_t preserve_low_bytes) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO18092 | fpga_minor_mode);
 
     //20.4 ms generate field,  start sending polling command afterwars.
-    SpinDelay(100);
+    SpinDelay(21);
 
     if (g_dbglevel >= DBG_EXTENDED) {
         Dbprintf("FeliCa field: HF antenna %u mV", AdcRssiAvgToMilliVolt(ADC_RSSI_CH_HF));

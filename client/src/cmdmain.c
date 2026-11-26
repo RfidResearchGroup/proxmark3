@@ -159,8 +159,16 @@ static int CmdAuto(const char *Cmd) {
     if (ret == PM3_SUCCESS && exit_first)
         return ret;
 
-    PrintAndLogEx(INFO, "hf search");
-    ret = CmdHFSearch("");
+    PrintAndLogEx(INFO, "hf search -v");
+    ret = CmdHFSearch("-v");
+
+    // a MIFARE Classic that got hf mf info, try the default keys too
+    const char *info_cmd = hf_search_last_info_cmd();
+    if (info_cmd && strcmp(info_cmd, "hf mf info") == 0) {
+        PrintAndLogEx(INFO, "Running `" _YELLOW_("hf mf autopwn -f mfc_default_keys") "`...");
+        CommandReceived("hf mf autopwn -f mfc_default_keys");
+    }
+
     if (ret == PM3_SUCCESS && exit_first)
         return ret;
 

@@ -33,6 +33,7 @@ void showSectorTable(sector_t *k_sector, size_t k_sectors_cnt);
 void readerAttack(sector_t *k_sector, size_t k_sectors_cnt, nonces_t data, bool setEmulatorMem, bool verbose);
 void printKeyTable(size_t sectorscnt, sector_t *e_sector);
 void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector);
+uint8_t mfp_find_aes_sectors(uint8_t sector_cnt, uint8_t *aes_sectors);
 // void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector, bool singel_sector);
 
 

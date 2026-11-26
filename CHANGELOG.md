@@ -3,6 +3,22 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 14a sniff` and `hf thinfilm sniff` - PM5: a sniff that fell behind once no longer stays deaf, the AT32 DMA is re-armed (@cmac-chris)
+- Added `hf topaz sim` - simulates a Topaz 96 or a Topaz 512 from a dump file (@matrix)
+- Fixed the ISO14443-A simulations and sniffing - the Miller decoder did not find a start bit whose pause shows in one sample, split or a sample late, and did not take a 3 tick pause shifted right (@matrix)
+- Fixed the ISO14443-A simulations on the PM3 boards with an XC2S30 - a reader frame read late by the ARM got a start time 128 carrier periods late (@matrix)
+- Fixed the trace of the ISO14443-A simulations - a reader frame of 57 bytes and more got wrong times (@matrix)
+- Fixed `hf sniff` - keep the full capture length, download every sample and stop on host abort while waiting for a trigger (@adrian-stepien)
+- Fixed `hf sniff` sample reduction - correct min, max and average, default to one sample pair and reject invalid skip ratios (@adrian-stepien)
+- Fixed `hf 14a sim -t 10` - a SELECT of an application the tag does not hold got `90 00`, it now gets file not found, `6A 82` (@matrix)
+- Fixed `hf 14a sim -t 10` - every block that is not one of the lock's three got `90 00`, R-blocks, chained I-blocks, S(DESELECT) and the CID are now handled as on the other types (@matrix)
+- Removed `sim011.bin` - `sim023.bin`, only the latest SIM module firmware `sim024.bin` is shipped. Older ones are in the git history (@iceman1001)
+- Fixed `hf search` AID hints - a decoy SELECT detects cards answering any AID (DESFire EV2) and shared hints print once (@iceman1001)
+- Fixed `lf t55xx resetread` on PM5 - wait for the full capture and download it without truncating its length to 16 bits (@adrian-stepien)
+- Fixed T55xx reads - packed LF sampling settings were applied to raw block captures, corrupting detection and reads (@adrian-stepien)
+- Fixed `hf felica` on PM5 - use shallow ASK modulation on `pwr_oe1`, sync TX timing to `ssp_cnt`, add post-TX RX blanking, and extend SSC frame sync (@ree-ce)
+- Fixed `hw status` transfer rates - count successful sends and report the frame size for the active link (@adrian-stepien)
+- Fixed LF simulation uploads - lengths beyond device memory or the 16-bit wire format are capped with a warning, simulation stops on upload errors (@adrian-stepien)
 - Fixed PM5 BWM settings - charge, voltage and capacity commands could hang if a preceding RF operation stopped the timing counter (@adrian-stepien)
 - Fixed `lf hitag reader` on PM5 - the first UID read could miss the tag after `hw tune` (@adrian-stepien)
 - Fixed `hw bwm upgrade` - send the final reply before rebooting the BWM so the client can request the PM5 reset over BLE or Wi-Fi (@adrian-stepien)
@@ -10,6 +26,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed `hw bwm upgrade` - keep the BLE connection open during the upload (@adrian-stepien)
 - Fixed PM5 CEP - a long PM5 command could make the Flipper lose its connection even while it was still polling (@adrian-stepien)
 - Fixed PM5 CEP handshakes - receive Flipper bytes even while the attach check is waiting for its next poll (@adrian-stepien)
+- Fixed PM5 CEP - receive Flipper commands during attach checks and reject bad frame lengths without losing the next command (@adrian-stepien)
+- Fixed PM5 CEP - accept Flipper commands whose length starts with 0x55 (@adrian-stepien)
 - Fixed PM5 power save - keep the CEP and BWM UARTs and the timing counter at their configured rates when the core changes speed (@adrian-stepien)
 - Fixed `hw ping` - return errors for timeouts, device errors, wrong response lengths and mismatched echoes
 - Fixed `lf search` - stop on acquisition or sample download errors instead of decoding an earlier capture
@@ -64,6 +82,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed loading dumps from SPIFFS into emulator memory - mount SPIFFS before loading and reject files larger than the emulator buffer (@adrian-stepien)
 - Fixed NDEF TLV parsing - a TLV longer than the data was decoded past the buffer, and `ndefread -f` saved bytes past it (@matrix)
 - Fixed PM5 USB sample streaming - the buffer index became 255 after the first packet and wrote outside the two buffers (@adrian-stepien)
+- Fixed PM5 USB sample streaming - the stream was treated as finished while its final packet was still pending (@adrian-stepien)
 - Changed the PM3, PM3 Ultimate and iCopy-X FPGA images - rebuilt from the current sources (@matrix)
 - Fixed `hf legic sim` - a host abort stopped it only after up to 80 s(@Msprg)
 - Fixed `hf topaz dump` - the NDEF was decoded over 476 bytes from block 1, past the static memory, instead of over the data area of the tag (@matrix)

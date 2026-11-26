@@ -44,7 +44,7 @@ void MifareChkKeys(uint8_t *datain, uint8_t reserved_mem);
 void MifareChkKeys_fast(const mf_chkkeys_fast_t *payload);
 void MifareChkKeys_file(uint8_t *fn);
 
-int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key);
+int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key, uint8_t *loaded, uint8_t *denied);
 int MifareECardLoadExt(uint8_t sectorcnt, uint8_t keytype, uint8_t *key);
 
 // MFC GEN1a /1b

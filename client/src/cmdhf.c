@@ -21,6 +21,7 @@
 #include "cmdparser.h"      // command_t
 #include "cliparser.h"      // parse
 #include "comms.h"          // clearCommandBuffer
+#include "cmdmain.h"        // CommandReceived
 #include "util.h"           // set_rgb
 #include "lfdemod.h"        // computeSignalProperties
 #include "cmdhf14a.h"       // ISO14443-A
@@ -71,7 +72,15 @@
 
 static int CmdHelp(const char *Cmd);
 
+static const char *gs_search_info_cmd = NULL;  // info command the last hf search ran, or NULL
+
+const char *hf_search_last_info_cmd(void) {
+    return gs_search_info_cmd;
+}
+
 int CmdHFSearch(const char *Cmd) {
+
+    gs_search_info_cmd = NULL;
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf search",
@@ -91,6 +100,9 @@ int CmdHFSearch(const char *Cmd) {
     CLIParserFree(ctx);
 
     int res = PM3_ESOFT;
+
+    // PM5 verbose: a single found tag gets its info command run
+    bool pm5_info = (verbose && IfPm5());
 
     uint8_t success[COUNT_OF_PROTOCOLS] = {0};
 
@@ -127,7 +139,7 @@ int CmdHFSearch(const char *Cmd) {
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, "Searching for ISO14443-A tag...");
     if (IfPm3Iso14443a()) {
-        int sel_state = infoHF14A(false, false, false);
+        int sel_state = infoHF14A(false, false, false, (pm5_info == false));
         if (sel_state > 0) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 14443-A tag") " found\n");
             success[ISO_14443A] = true;
@@ -196,24 +208,30 @@ int CmdHFSearch(const char *Cmd) {
 
     // OBS!  This triggers a swap to FPGA_BITSTREAM_HF_15 == 1.5sec delay
 
+    // ISO15693 keeps its field on for the iCLASS probe, saves a 250 ms tag power up
+    bool hf15_field = false;
+
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, "Searching for ISO15693 tag...");
     if (IfPm3Iso15693()) {
-        if (readHF15Uid(false, true)) {
+        if (readHF15Uid(false, true, true)) {
             PrintAndLogEx(SUCCESS, "Valid " _GREEN_("ISO 15693 tag") " found\n");
             success[ISO_15693] = true;
             res = PM3_SUCCESS;
         }
+        hf15_field = true;
     }
 
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, "Searching for iCLASS / PicoPass tag...");
     if (IfPm3Iclass()) {
-        if (read_iclass_csn(false, false, false) == PM3_SUCCESS) {
+        if (read_iclass_csn(false, false, false, (hf15_field == false)) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iCLASS tag / PicoPass tag") " found\n");
             success[ICLASS] = true;
             res = PM3_SUCCESS;
         }
+    } else if (hf15_field) {
+        DropField();
     }
 
     // OBS!  This triggers a swap to FPGA_BITSTREAM_HF_FELICA == 1.5sec delay
@@ -225,7 +243,7 @@ int CmdHFSearch(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 18092 / FeliCa tag") " found\n");
             success[FELICA] = true;
             res = PM3_SUCCESS;
-        } else if (info_felica_seac() == PM3_SUCCESS) {
+        } else if (info_felica_seac(1) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "Valid " _GREEN_("FeliCa SEAC tag") " found\n");
             success[FELICA] = true;
             res = PM3_SUCCESS;
@@ -250,6 +268,47 @@ int CmdHFSearch(const char *Cmd) {
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, _RED_("No known/supported 13.56 MHz tags found"));
         return res;
+    }
+
+    const char *info_cmd = NULL;
+    if (pm5_info) {
+        int found = 0;
+        for (int i = 0; i < COUNT_OF_PROTOCOLS; i++) {
+            found += success[i] ? 1 : 0;
+        }
+
+        if (found == 1) {
+            int types = hf14a_last_info_types();
+            if (success[ISO_14443A] && types == MTCLASSIC) {
+                info_cmd = "hf mf info";
+            } else if (success[ISO_14443A] && types == MTULTRALIGHT) {
+                info_cmd = "hf mfu info";
+            } else if (success[ISO_14443A] && types == MTDESFIRE) {
+                info_cmd = "hf mfdes info";
+            } else if (success[ISO_14443B]) {
+                info_cmd = "hf 14b info";
+            } else if (success[ISO_15693]) {
+                info_cmd = "hf 15 info";
+            } else if (success[ICLASS]) {
+                info_cmd = "hf iclass info";
+            }
+        }
+    }
+
+    // 14A info hints held back for the info run
+    if (pm5_info && success[ISO_14443A] && info_cmd == NULL) {
+        int types = hf14a_last_info_types();
+        if ((types & MTULTRALIGHT) == MTULTRALIGHT) {
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu info") "`");
+        }
+
+        if ((types & MTDESFIRE) == MTDESFIRE) {
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfdes info") "`");
+        }
+
+        if ((types & MTCLASSIC) == MTCLASSIC) {
+            PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mf info`"));
+        }
     }
 
     // no need to print 14A hints,  since it will print itself
@@ -278,15 +337,15 @@ int CmdHFSearch(const char *Cmd) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf xerox") "` commands\n");
     }
 
-    if (success[ISO_14443B]) {
+    if (success[ISO_14443B] && info_cmd == NULL) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 14b") "` commands\n");
     }
 
-    if (success[ISO_15693]) {
+    if (success[ISO_15693] && info_cmd == NULL) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 15") "` commands\n");
     }
 
-    if (success[ICLASS]) {
+    if (success[ICLASS] && info_cmd == NULL) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass") "` commands\n");
     }
 
@@ -296,6 +355,12 @@ int CmdHFSearch(const char *Cmd) {
 
     if (success[PROTO_CRYPTORF]) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf cryptorf") "` commands\n");
+    }
+
+    if (info_cmd) {
+        PrintAndLogEx(INFO, "Running `" _YELLOW_("%s") "`...", info_cmd);
+        CommandReceived(info_cmd);
+        gs_search_info_cmd = info_cmd;
     }
 
     return res;
@@ -473,8 +538,8 @@ typedef enum {
 const CLIParserOption HFSnoopSkipModeOpts[] = {
     {HF_SNOOP_SKIP_NONE, "none"},
     {HF_SNOOP_SKIP_DROP, "drop"},
-    {HF_SNOOP_SKIP_MAX,  "min"},
-    {HF_SNOOP_SKIP_MIN,  "max"},
+    {HF_SNOOP_SKIP_MIN,  "min"},
+    {HF_SNOOP_SKIP_MAX,  "max"},
     {HF_SNOOP_SKIP_AVG,  "avg"},
     {0,    NULL},
 };
@@ -520,7 +585,13 @@ int CmdHFSniff(const char *Cmd) {
     }
 
     params.skipMode = smode;
-    params.skipRatio = arg_get_int_def(ctx, 4, 0);
+    int sratio = arg_get_int_def(ctx, 4, (smode == HF_SNOOP_SKIP_NONE) ? 0 : 1);
+    if (smode != HF_SNOOP_SKIP_NONE && (sratio < 1 || sratio > UINT8_MAX)) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Skip ratio must be between 1 and 255");
+        return PM3_EINVARG;
+    }
+    params.skipRatio = sratio;
 
     CLIParserFree(ctx);
 
@@ -550,31 +621,53 @@ int CmdHFSniff(const char *Cmd) {
                 break;
             }
 
-            if (resp.status == PM3_SUCCESS) {
-
-                struct r {
-                    uint16_t len;
-                } PACKED;
-                struct r *retval = (struct r *)resp.data.asBytes;
-
-                PrintAndLogEx(INFO, "HF sniff (%u samples)", retval->len);
-
-                PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("data hpf") "` to remove offset");
-                PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("data plot") "` to view");
-                PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("data save") "` to save");
-
-                // download bigbuf_calloc:d.
-                // it reserve memory from the higher end.
-                // At the moment, sniff takes all free memory in bigbuff. If this changes,
-                // we can't start from beginning idx 0 but from that hi-to-start-of-allocated.
-                uint32_t start = g_pm3_capabilities.bigbuf_size - retval->len;
-                int res = getSamplesEx(start, start, false, true);
-                if (res != PM3_SUCCESS) {
-                    PrintAndLogEx(WARNING, "failed to download samples to client");
-                    return res;
-                }
-                break;
+            if (resp.status != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "HF sniff failed (status %d)", resp.status);
+                return resp.status;
             }
+
+            uint32_t len;
+            if (resp.length == sizeof(uint16_t)) {
+                len = resp.data.asDwords[0] & 0xFFFF;
+            } else if (resp.length == sizeof(uint32_t)) {
+                len = resp.data.asDwords[0];
+            } else {
+                PrintAndLogEx(WARNING, "Invalid HF sniff response length");
+                return PM3_ESOFT;
+            }
+
+            if (len == 0 || len > g_pm3_capabilities.bigbuf_size) {
+                PrintAndLogEx(WARNING, "Invalid HF sniff sample count");
+                return PM3_ESOFT;
+            }
+
+            PrintAndLogEx(INFO, "HF sniff (%u samples)", len);
+
+            PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("data hpf") "` to remove offset");
+            PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("data plot") "` to view");
+            PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("data save") "` to save");
+
+            // download bigbuf_calloc:d.
+            // it reserve memory from the higher end.
+            // At the moment, sniff takes all free memory in bigbuff. If this changes,
+            // we can't start from beginning idx 0 but from that hi-to-start-of-allocated.
+            uint32_t start = g_pm3_capabilities.bigbuf_size - len;
+            uint8_t *samples = calloc(len, sizeof(uint8_t));
+            if (samples == NULL) {
+                return PM3_EMALLOC;
+            }
+
+            if (GetFromDevice(BIG_BUF, samples, len, start, NULL, 0, NULL, 10000, true) == false) {
+                PrintAndLogEx(WARNING, "failed to download samples to client");
+                free(samples);
+                return PM3_ETIMEOUT;
+            }
+            int res = getSamplesFromBufEx(samples, len, 8, false);
+            free(samples);
+            if (res != PM3_SUCCESS) {
+                return res;
+            }
+            break;
         }
     }
     PrintAndLogEx(INFO, "Done!");

@@ -420,6 +420,19 @@ gowin_jtag_status_t gowin_jtag_sram_config_write(uint8_t *data, uint32_t data_le
     return GOWIN_JTAG_OK;
 }
 
+// The FPGA runs the new bitstream: done_final set, no CRC error
+static gowin_jtag_status_t gowin_check_config_done(void) {
+    gowin_status_reg_t status_reg;
+    gowin_jtag_read_status_reg(&status_reg);
+    if (status_reg.bits.crc_error || (status_reg.bits.done_final == 0)) {
+        if (g_dbglevel >= DBG_ERROR) {
+            Dbprintf("FPGA config failed, status 0x%08X", status_reg.raw);
+        }
+        return GOWIN_JTAG_ERROR_CONFIG_FAIL;
+    }
+    return GOWIN_JTAG_OK;
+}
+
 gowin_jtag_status_t gowin_jtag_sram_config_finish(void) {
     jtag_shift_ir_safe(INST_CONFIG_DISABLE);
     jtag_shift_ir_safe(INST_NOOP);
@@ -430,7 +443,16 @@ gowin_jtag_status_t gowin_jtag_sram_config_finish(void) {
     // Remember to reset the state machine so the FPGA returns to Run-Test/Idle, otherwise the new firmware won't start
     gowin_jtag_reset();
 
-    return GOWIN_JTAG_OK;
+    gowin_jtag_status_t status = gowin_check_config_done();
+    if (status != GOWIN_JTAG_OK) {
+        // an unconfigured FPGA hangs the HF code, fall back to the image in flash
+        gowin_jtag_reprogram();
+        gowin_jtag_reset();
+        if (g_dbglevel >= DBG_ERROR) {
+            Dbprintf("Reloaded FPGA from flash, status 0x%08X", gowin_jtag_read_status());
+        }
+    }
+    return status;
 }
 
 gowin_jtag_status_t gowin_jtag_sram_erase(void) {
@@ -728,7 +750,7 @@ gowin_jtag_status_t gowin_jtag_flash_config_finish(void) {
     jtag_shift_ir_safe(INST_CONFIG_DISABLE); // Send the config-disable command 0x3A
     gowin_jtag_reprogram(); // Tested: after FLASH programming, executing reprogram is enough to start the program; no need to reset the JTAG port
 
-    return GOWIN_JTAG_OK;
+    return gowin_check_config_done();
 }
 
 void gowin_jtag_start_config(gowin_config_ctx_t *cctx) {

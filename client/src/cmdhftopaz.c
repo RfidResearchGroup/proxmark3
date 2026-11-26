@@ -33,6 +33,7 @@
 #include "nfc/ndef.h"
 #include "fileutils.h"     // saveFile
 #include "commonutil.h"    // ARRAYLEN
+#include "mifare/mifarehost.h"  // mf_eml_set_mem_xt
 
 
 #ifndef AddCrc14B
@@ -923,16 +924,133 @@ int CmdHFTopazInfo(const char *Cmd) {
 static int CmdHFTopazSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf topaz sim",
-                  "Simulate a Topaz tag",
-                  "hf topaz sim   -> Not yet implemented");
+                  "Simulate a Topaz 96 or Topaz 512 tag from a dump file.\n"
+                  "A json, and the bin of an older client, carry the header ROM; another bin or an\n"
+                  "eml is the memory alone and the header ROM is then 11 48 for 120 bytes (Topaz 96)\n"
+                  "or 12 4C for 512 (Topaz 512), unless `--hr` gives it. Writes from the reader go\n"
+                  "to the emulator memory",
+                  "hf topaz sim -f hf-topaz-11223344556677-dump.json\n"
+                  "hf topaz sim -f hf-topaz-11223344556677-dump.bin --hr 124C");
 
     void *argtable[] = {
         arg_param_begin,
+        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
+        arg_str0(NULL, "hr", "<hex>", "Header ROM, HR0 HR1 (2 hex bytes)"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    int hrlen = 0;
+    uint8_t hr[2] = {0};
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 2), hr, sizeof(hr), &hrlen);
     CLIParserFree(ctx);
-    PrintAndLogEx(INFO, "not yet implemented");
+
+    if (res || ((hrlen != 0) && (hrlen != sizeof(hr)))) {
+        PrintAndLogEx(FAILED, "Header ROM must be 2 hex bytes");
+        return PM3_EINVARG;
+    }
+
+    uint8_t *data = NULL;
+    size_t bytes_read = 0;
+    res = pm3_load_dump(filename, (void **)&data, &bytes_read, sizeof(topaz_tag_t) + TOPAZ_DUMP_MAX_SIZE);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    bool hr_known = false;
+    res = convert_topaz_dump_format(&data, &bytes_read, &hr_known, false);
+    if (res == PM3_SUCCESS) {
+        res = topaz_tag_from_dump(data);
+    }
+    free(data);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    uint16_t size = topaz_tag.size;
+    if ((size != TOPAZ_STATIC_MEMORY) && (size != TOPAZ_MAX_SIZE)) {
+        PrintAndLogEx(FAILED, "%u bytes of memory, a Topaz 96 has %u and a Topaz 512 %u", size, TOPAZ_STATIC_MEMORY, TOPAZ_MAX_SIZE);
+        free(topaz_tag.dynamic_memory);
+        topaz_tag.dynamic_memory = NULL;
+        return PM3_EINVARG;
+    }
+
+    // the memory in one piece, as the emulator holds it
+    uint8_t mem[TOPAZ_MAX_SIZE] = {0};
+    memcpy(mem, topaz_tag.data_blocks, TOPAZ_STATIC_MEMORY);
+    if (size > TOPAZ_STATIC_MEMORY) {
+        memcpy(mem + TOPAZ_STATIC_MEMORY, topaz_tag.dynamic_memory, size - TOPAZ_STATIC_MEMORY);
+    }
+    uint8_t hr01[2] = {0};
+    memcpy(hr01, topaz_tag.HR01, sizeof(hr01));
+    free(topaz_tag.dynamic_memory);
+    topaz_tag.dynamic_memory = NULL;
+
+    if (hrlen == sizeof(hr)) {
+        memcpy(hr01, hr, sizeof(hr));
+    } else if (hr_known == false) {
+        // the header ROM of the TPZ-201 data sheet example and of a BCM20203T512
+        hr01[0] = (size == TOPAZ_MAX_SIZE) ? 0x12 : 0x11;
+        hr01[1] = (size == TOPAZ_MAX_SIZE) ? 0x4C : 0x48;
+    }
+
+    PrintAndLogEx(INFO, "Simulating a " _YELLOW_("%s") ", UID " _GREEN_("%02X %02X %02X %02X %02X %02X %02X"),
+                  (size == TOPAZ_MAX_SIZE) ? "Topaz 512" : "Topaz 96",
+                  mem[6], mem[5], mem[4], mem[3], mem[2], mem[1], mem[0]);
+    PrintAndLogEx(INFO, "HR " _GREEN_("%02X %02X") "%s", hr01[0], hr01[1],
+                  ((hrlen == 0) && (hr_known == false)) ? ", not in the file" : "");
+
+    // the memory goes to the emulator memory
+    // 12 is the size of the struct the fct mf_eml_set_mem_xt uses to transfer to device
+    uint16_t max_blocks = (g_conn.max_cmd_data_size - 12) / TOPAZ_BLOCK_SIZE;
+    uint16_t blocks = size / TOPAZ_BLOCK_SIZE;
+    for (uint16_t blockno = 0; blockno < blocks;) {
+        uint16_t n = MIN(max_blocks, blocks - blockno);
+        // the first chunk zeroes the emulator memory, no tail of a bigger image is left
+        uint8_t flags = (blockno == 0) ? MFEMUL_MEMSET_CLEAR : 0;
+        res = mf_eml_set_mem_xt(mem + (blockno * TOPAZ_BLOCK_SIZE), blockno, n, TOPAZ_BLOCK_SIZE, flags);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Can't set emulator memory at block %u", blockno);
+            return res;
+        }
+        blockno += n;
+    }
+
+    topaz_sim_t payload = {0};
+    memcpy(payload.hr, hr01, sizeof(payload.hr));
+    payload.size = size;
+
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_TOPAZ_SIMULATE, (uint8_t *)&payload, sizeof(payload));
+
+    PacketResponseNG resp = {0};
+    bool keypress = kbd_enter_pressed();
+    while (keypress == false) {
+        keypress = kbd_enter_pressed();
+
+        if (WaitForResponseTimeout(CMD_HF_TOPAZ_SIMULATE, &resp, 1500) == false) {
+            continue;
+        }
+
+        if ((resp.status != PM3_SUCCESS) && (resp.status != PM3_EOPABORTED)) {
+            PrintAndLogEx(FAILED, "Simulation failed ( %d )", resp.status);
+            return resp.status;
+        }
+        break;
+    }
+
+    if (keypress) {
+        // inform device to break the sim loop since client has exited
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+    }
+
+    PrintAndLogEx(INFO, "Done!");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf topaz list") "` to view captured tracelog");
     return PM3_SUCCESS;
 }
 
@@ -1110,7 +1228,7 @@ static int CmdHFTopazView(const char *Cmd) {
         return res;
     }
 
-    res = convert_topaz_dump_format(&dump, &bytes_read, false);
+    res = convert_topaz_dump_format(&dump, &bytes_read, NULL, false);
 
     // the print functions work on topaz_tag
     if (res == PM3_SUCCESS) {

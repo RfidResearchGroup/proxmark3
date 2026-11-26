@@ -543,16 +543,9 @@ void RunMod(void) {
 
             int filled;
             partialEmulation = false;
-            DbpString("[=] Filling emulator memory using key A");
-            filled = MifareECardLoad(sectorsCnt, MF_KEY_A, NULL);
-            if (filled != PM3_SUCCESS) {
-                DbpString("[" _YELLOW_("-") "] " _YELLOW_("Only partially filled using key A, retry with key B!"));
-                DbpString("[=] Filling emulator memory using key B");
-                filled = MifareECardLoad(sectorsCnt, MF_KEY_B, NULL);
-                if (filled != PM3_SUCCESS) {
-                    DbpString("[" _YELLOW_("-") "] " _YELLOW_("Only partially filled using key B!"));
-                }
-            }
+            // the fill picks key A or B per block from the access bits
+            DbpString("[=] Filling emulator memory");
+            filled = MifareECardLoad(sectorsCnt, MF_KEY_A, NULL, NULL, NULL);
             if (filled != PM3_SUCCESS) {
                 DbpString("[" _RED_("!") "] " _RED_("Emulator memory could not be completely filled due to errors!"));
                 SpinErr(LED_D, 50, 8);

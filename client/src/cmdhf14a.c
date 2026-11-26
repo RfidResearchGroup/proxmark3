@@ -255,6 +255,7 @@ static const hintAIDList_t hintAIDList[] = {
 static uint16_t gs_frame_len = 0;
 static uint8_t gs_frames_num = 0;
 static uint16_t atsFSC[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
+static int gs_info_types = MTNONE;  // info commands the last infoHF14A card hints at, MTCLASSIC / MTULTRALIGHT / MTDESFIRE
 
 int hf14a_getversion_data(iso14a_card_select_t *card, uint64_t select_status, version_hw_t *hw) {
 
@@ -1010,7 +1011,7 @@ static int CmdHF14AInfo(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    infoHF14A(verbose, do_nack_test, do_aid_search);
+    infoHF14A(verbose, do_nack_test, do_aid_search, true);
     return PM3_SUCCESS;
 }
 
@@ -3072,7 +3073,14 @@ int hf14a_aid_search(bool verbose, bool *emv_found) {
     return found;
 }
 
-int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
+int hf14a_last_info_types(void) {
+    return gs_info_types;
+}
+
+// info_hints: false holds back the hf mf / mfu / mfdes info hints, see hf14a_last_info_types()
+int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search, bool info_hints) {
+
+    gs_info_types = MTNONE;
 
     uint8_t dbg_curr = DBG_NONE;
     if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
@@ -3651,7 +3659,10 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mfu *") "` magic commands");
         }
 
-        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu info") "`");
+        gs_info_types |= MTULTRALIGHT;
+        if (info_hints) {
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu info") "`");
+        }
     }
 
     if (isMifarePlus && (isMagic == MAGIC_FLAG_NONE)) {
@@ -3660,7 +3671,10 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     bool mfdes_hint = (isMifareDESFire && (isMagic == MAGIC_FLAG_NONE) && isEMV == false);
     if (mfdes_hint) {
-        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfdes info") "`");
+        gs_info_types |= MTDESFIRE;
+        if (info_hints) {
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfdes info") "`");
+        }
     }
 
     // transit cards known by their ATS alone, no card exchange
@@ -3734,10 +3748,12 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         if ((isMagic & MAGIC_FLAG_GEN_2) == MAGIC_FLAG_GEN_2) {
             PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf") "` commands");
         } else {
-            PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mf info`"));
+            gs_info_types |= MTCLASSIC;
+            if (info_hints) {
+                PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mf info`"));
+            }
         }
     }
-
 
     PrintAndLogEx(NORMAL, "");
     DropField();
@@ -3757,15 +3773,32 @@ static bool hint_aid_match_select_response(const hintAIDList_t *entry, const uin
 }
 
 int infoHF14A4Applications(bool verbose) {
+    // unregistered proprietary AID, "F0 PM3DECOY"
+    static const uint8_t decoy_aid[] = { 0xF0, 0x50, 0x4D, 0x33, 0x44, 0x45, 0x43, 0x4F, 0x59 };
+
+    uint16_t sw = 0;
+    uint8_t result[1024] = {0};
+    size_t resultlen = 0;
+    int res = Iso7816Select(CC_CONTACTLESS, true, true, (uint8_t *)decoy_aid, sizeof(decoy_aid), result, sizeof(result), &resultlen, &sw);
+    if (res) {
+        DropField();
+        return 0;
+    }
+
+    // e.g. DESFire EV2 answers 9000 to any SELECT with Le
+    if (sw == ISO7816_OK) {
+        PrintAndLogEx(HINT, "Hint: Card answers to all AID.");
+        DropField();
+        return 0;
+    }
+
     bool cardFound[ARRAYLEN(hintAIDList)] = {0};
-    bool ActivateField = true;
     int found = 0;
     for (int i = 0; i < ARRAYLEN(hintAIDList); i++) {
-        uint16_t sw = 0;
-        uint8_t result[1024] = {0};
-        size_t resultlen = 0;
-        int res = Iso7816Select(CC_CONTACTLESS, ActivateField, true, (uint8_t *)hintAIDList[i].aid, hintAIDList[i].aid_length, result, sizeof(result), &resultlen, &sw);
-        ActivateField = false;
+        sw = 0;
+        memset(result, 0, sizeof(result));
+        resultlen = 0;
+        res = Iso7816Select(CC_CONTACTLESS, false, true, (uint8_t *)hintAIDList[i].aid, hintAIDList[i].aid_length, result, sizeof(result), &resultlen, &sw);
         if (res)
             break;
 
@@ -3795,12 +3828,22 @@ int infoHF14A4Applications(bool verbose) {
             PrintAndLogEx(INFO, "---------------------------------------------------");
         }
 
-        if (found >= ARRAYLEN(hintAIDList) - 1) {
-            PrintAndLogEx(HINT, "Hint: Card answers to all AID. It maybe the latest revision of plus/desfire/ultralight card.");
-        } else {
-            for (int i = 0; i < ARRAYLEN(hintAIDList); i++) {
-                if (cardFound[i] && strlen(hintAIDList[i].hint))
-                    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("%s") "` commands", hintAIDList[i].hint);
+        for (int i = 0; i < ARRAYLEN(hintAIDList); i++) {
+            if ((cardFound[i] == false) || (strlen(hintAIDList[i].hint) == 0)) {
+                continue;
+            }
+
+            // several AIDs share a hint
+            bool printed = false;
+            for (int j = 0; j < i; j++) {
+                if (cardFound[j] && (strcmp(hintAIDList[j].hint, hintAIDList[i].hint) == 0)) {
+                    printed = true;
+                    break;
+                }
+            }
+
+            if (printed == false) {
+                PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("%s") "` commands", hintAIDList[i].hint);
             }
         }
     }

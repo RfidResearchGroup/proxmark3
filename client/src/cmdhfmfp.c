@@ -326,7 +326,7 @@ static int CmdHFMFPInfo(const char *Cmd) {
         }
     } else {
         // info about 14a part, historical bytes.
-        infoHF14A(false, false, false);
+        infoHF14A(false, false, false, true);
     }
 
     // Signature originality check
@@ -1518,13 +1518,29 @@ static int CmdHFMFPChConf(const char *Cmd) {
 //   'R'  retry after transient communication error
 //   'E'  exchange error, aborts the check
 // `untested` counts the candidates the card never gave a verdict on
+// key check progress over all key slots and keys of a check
+typedef struct {
+    uint32_t done;
+    uint32_t total;
+    uint8_t pct;    // last printed, 0xFF before the first line
+} mfp_chk_progress_t;
+
+static void mfp_chk_progress(mfp_chk_progress_t *p, uint32_t add) {
+    if ((p == NULL) || (p->total == 0)) {
+        return;
+    }
+
+    p->done += add;
+    uint8_t pct = (uint8_t)((MIN(p->done, p->total) * 100) / p->total);
+    if (pct != p->pct) {
+        p->pct = pct;
+        PrintAndLogEx(INPLACE, "Checking keys... " _YELLOW_("%3u") " %%", pct);
+    }
+}
+
 static int plus_key_check(uint8_t start_sector, uint8_t end_sector, uint8_t startKeyAB, uint8_t endKeyAB,
                           uint8_t *keys, size_t keycount, uint8_t foundKeys[2][64][AES_KEY_LEN + 1],
-                          bool verbose, bool newline, uint32_t *untested) {
-
-    if (newline) {
-        PrintAndLogEx(INFO, "." NOLF);
-    }
+                          bool verbose, mfp_chk_progress_t *prog, uint32_t *untested) {
 
     // sector number from 0
     for (uint8_t sector = start_sector; sector <= end_sector; sector++) {
@@ -1534,12 +1550,16 @@ static int plus_key_check(uint8_t start_sector, uint8_t end_sector, uint8_t star
 
             // skip already found keys
             if (foundKeys[keyAB][sector][0]) {
+                if (verbose == false) {
+                    mfp_chk_progress(prog, keycount);
+                }
                 continue;
             }
 
             int res;
             bool selectCard = true;
             uint8_t noverdict = 0;
+            uint32_t tried = 0;
 
             // reset current key pointer after each loop
             uint8_t *currkey = keys;
@@ -1554,10 +1574,9 @@ static int plus_key_check(uint8_t start_sector, uint8_t end_sector, uint8_t star
                     return PM3_EOPABORTED;
                 }
 
-                if (i % 10 == 0) {
-                    if (verbose == false) {
-                        PrintAndLogEx(NORMAL, "." NOLF);
-                    }
+                tried++;
+                if (verbose == false) {
+                    mfp_chk_progress(prog, 1);
                 }
 
                 uint16_t uKeyNum = 0x4000 + sector * 2 + keyAB;
@@ -1573,8 +1592,6 @@ static int plus_key_check(uint8_t start_sector, uint8_t end_sector, uint8_t star
 
                     if (verbose) {
                         PrintAndLogEx(WARNING, "\nretried[%d]...", retry);
-                    } else {
-                        PrintAndLogEx(NORMAL, "R" NOLF);
                     }
 
                     DropField();
@@ -1587,8 +1604,6 @@ static int plus_key_check(uint8_t start_sector, uint8_t end_sector, uint8_t star
 
                     if (verbose) {
                         PrintAndLogEx(INFO, "Found key for sector " _YELLOW_("%d") " key "_YELLOW_("%s") " [ " _GREEN_("%s") " ]", sector, (keyAB == 0) ? "A" : "B", sprint_hex_inrow(currkey, AES_KEY_LEN));
-                    } else {
-                        PrintAndLogEx(NORMAL, _GREEN_("+") NOLF);
                     }
 
                     foundKeys[keyAB][sector][0] = 0x01;
@@ -1600,7 +1615,7 @@ static int plus_key_check(uint8_t start_sector, uint8_t end_sector, uint8_t star
 
                     // recursive test of a successful key
                     if (keycount > 1) {
-                        plus_key_check(start_sector, end_sector, startKeyAB, endKeyAB, currkey, 1, foundKeys, verbose, false, untested);
+                        plus_key_check(start_sector, end_sector, startKeyAB, endKeyAB, currkey, 1, foundKeys, verbose, NULL, untested);
                     }
 
                     // break out from keylist check loop,
@@ -1618,8 +1633,6 @@ static int plus_key_check(uint8_t start_sector, uint8_t end_sector, uint8_t star
 
                     if (verbose) {
                         PrintAndLogEx(ERR, "\nExchange error, key not tested");
-                    } else {
-                        PrintAndLogEx(NORMAL, "E" NOLF);
                     }
 
                     // one failed exchange is no reason to drop every sector after it
@@ -1641,11 +1654,87 @@ static int plus_key_check(uint8_t start_sector, uint8_t end_sector, uint8_t star
                 // set pointer to next key
                 currkey += AES_KEY_LEN;
             }
+
+            if (verbose == false) {
+                mfp_chk_progress(prog, keycount - tried);
+            }
         }
     }
 
     DropField();
     return PM3_SUCCESS;
+}
+
+// save found AES keys as hf-mfp-<uid>-key.json, the file hf mfp dump loads
+int mfp_save_aes_keys(const iso14a_card_select_t *card, uint8_t foundKeys[2][64][AES_KEY_LEN + 1]) {
+
+    size_t keys_len = (2 * 64 * (AES_KEY_LEN + 1));
+
+    uint8_t data[10 + 1 + 2 + 1 + 256 + keys_len];
+    memset(data, 0, sizeof(data));
+
+    memcpy(data, card->uid, card->uidlen);
+    data[10] = card->sak;
+    data[11] = card->atqa[1];
+    data[12] = card->atqa[0];
+    data[13] = card->ats_len;
+    memcpy(&data[14], card->ats, card->ats_len);
+
+    char *fptr = calloc(sizeof(char) * (strlen("hf-mfp-") + strlen("-key")) + card->uidlen * 2 + 1,  sizeof(uint8_t));
+    if (fptr == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+    strcpy(fptr, "hf-mfp-");
+
+    FillFileNameByUID(fptr, card->uid, "-key", card->uidlen);
+
+    // length: UID(10b)+SAK(1b)+ATQA(2b)+ATSlen(1b)+ATS(atslen)+foundKeys[2][64][AES_KEY_LEN + 1]
+    memcpy(&data[14 + card->ats_len], foundKeys, keys_len);
+    // 64 here is for how many "rows" there is in the data array.  A bit confusing
+    int res = saveFileJSON(fptr, jsfMfPlusKeys, data, 64, NULL);
+    free(fptr);
+    return res;
+}
+
+// AES key check of the sectors set in sector_mask (bit per sector) with the user keys
+// first, then the hardcoded, UID derived and mfp_default_keys.dic keys. foundKeys as in hf mfp chk
+int mfp_check_aes_keys(uint8_t *uid, uint8_t *userkeys, int userkeylen, const uint8_t *sector_mask, uint8_t sector_cnt, uint8_t foundKeys[2][64][AES_KEY_LEN + 1]) {
+
+    const char *dict = "mfp_default_keys";
+    uint8_t *key_block = NULL;
+    uint32_t keycnt = 0;
+    int res = mfp_load_keys(&key_block, &keycnt, userkeys, userkeylen, dict, strlen(dict), uid, true);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    mfp_chk_progress_t prog = { .pct = 0xFF };
+    for (uint8_t s = 0; s < sector_cnt; s++) {
+        if ((sector_mask[s / 8] >> (s % 8)) & 1) {
+            prog.total += 2 * keycnt;
+        }
+    }
+
+    uint32_t untested = 0;
+    for (uint8_t s = 0; s < sector_cnt; s++) {
+
+        if (((sector_mask[s / 8] >> (s % 8)) & 1) == 0) {
+            continue;
+        }
+
+        res = plus_key_check(s, s, MF_KEY_A, MF_KEY_B, key_block, keycnt, foundKeys, false, &prog, &untested);
+        if (res == PM3_EOPABORTED) {
+            break;
+        }
+    }
+    PrintAndLogEx(NORMAL, "");
+    free(key_block);
+
+    if (res == PM3_EOPABORTED) {
+        return res;
+    }
+    return (untested) ? PM3_EPARTIAL : PM3_SUCCESS;
 }
 
 static void Fill2bPattern(uint8_t keyList[MAX_AES_KEYS_LIST_LEN][AES_KEY_LEN], uint32_t *n, uint32_t *startPattern) {
@@ -1841,7 +1930,9 @@ static int CmdHFMFPChk(const char *Cmd) {
     uint64_t t1 = msclock();
 
     uint32_t untested = 0;
-    res = plus_key_check(startSector, endSector, startKeyAB, endKeyAB, key_block, keycnt, foundKeys, verbose, true, &untested);
+    uint32_t slots = (endSector - startSector + 1) * (endKeyAB - startKeyAB + 1);
+    mfp_chk_progress_t prog = { .total = slots * keycnt, .pct = 0xFF };
+    res = plus_key_check(startSector, endSector, startKeyAB, endKeyAB, key_block, keycnt, foundKeys, verbose, &prog, &untested);
     if (res == PM3_EOPABORTED) {
         t1 = msclock() - t1;
         PrintAndLogEx(INFO, "\ntime in checkkeys " _YELLOW_("%s") "\n", sprint_duration(t1));
@@ -1852,7 +1943,8 @@ static int CmdHFMFPChk(const char *Cmd) {
     PrintAndLogEx(INFO, "Start check for pattern based keys...");
     while (keyListLen) {
 
-        res = plus_key_check(startSector, endSector, startKeyAB, endKeyAB, (uint8_t *)keyList, keyListLen, foundKeys, verbose, true, &untested);
+        mfp_chk_progress_t pprog = { .total = slots * keyListLen, .pct = 0xFF };
+        res = plus_key_check(startSector, endSector, startKeyAB, endKeyAB, (uint8_t *)keyList, keyListLen, foundKeys, verbose, &pprog, &untested);
         if (res == PM3_EOPABORTED) {
             break;
         }
@@ -1924,33 +2016,10 @@ static int CmdHFMFPChk(const char *Cmd) {
 
     // save keys to json
     if (create_dumpfile && printedHeader) {
-
-        size_t keys_len = (2 * 64 * (AES_KEY_LEN + 1));
-
-        uint8_t data[10 + 1 + 2 + 1 + 256 + keys_len];
-        memset(data, 0, sizeof(data));
-
-        memcpy(data, card.uid, card.uidlen);
-        data[10] = card.sak;
-        data[11] = card.atqa[1];
-        data[12] = card.atqa[0];
-        data[13] = card.ats_len;
-        memcpy(&data[14], card.ats, card.ats_len);
-
-        char *fptr = calloc(sizeof(char) * (strlen("hf-mfp-") + strlen("-key")) + card.uidlen * 2 + 1,  sizeof(uint8_t));
-        if (fptr == NULL) {
-            PrintAndLogEx(WARNING, "Failed to allocate memory");
-            return PM3_EMALLOC;
+        res = mfp_save_aes_keys(&card, foundKeys);
+        if (res != PM3_SUCCESS) {
+            return res;
         }
-        strcpy(fptr, "hf-mfp-");
-
-        FillFileNameByUID(fptr, card.uid, "-key", card.uidlen);
-
-        // length: UID(10b)+SAK(1b)+ATQA(2b)+ATSlen(1b)+ATS(atslen)+foundKeys[2][64][AES_KEY_LEN + 1]
-        memcpy(&data[14 + card.ats_len], foundKeys, keys_len);
-        // 64 here is for how many "rows" there is in the data array.  A bit confusing
-        saveFileJSON(fptr, jsfMfPlusKeys, data, 64, NULL);
-        free(fptr);
     }
 
     // MAD detection
@@ -2248,6 +2317,18 @@ static int CmdHFMFPDump(const char *Cmd) {
         }
     }
 
+    // a Crypto1 key file can hold placeholder keys for AES only sectors, the card tells which ones
+    if (quickread == false) {
+        uint8_t aes_only[5] = {0};
+        mfp_find_aes_sectors(numSectors, aes_only);
+        for (uint8_t s = 0; s < MIN(numSectors, 40); s++) {
+            if ((aes_only[s / 8] >> (s % 8)) & 1) {
+                bool have_aes = (aesFoundKeys[MF_KEY_A][s][0] || aesFoundKeys[MF_KEY_B][s][0]);
+                sectorSL[s] = (have_aes) ? MFP_SL_3 : MFP_SL_UNKNOWN;
+            }
+        }
+    }
+
     uint16_t totalBlocks = 0;
     for (uint8_t s = 0; s < numSectors; s++) {
         totalBlocks += mfNumBlocksPerSector(s);
@@ -2428,22 +2509,27 @@ chunkCycleClean2:
 
             if (sectorSL[s] == MFP_SL_3) {
                 // --- Try SL3 (AES) ---
-                for (uint8_t kt = MF_KEY_A; kt <= MF_KEY_B && !readOK; kt++) {
-                    if (aesFoundKeys[kt][s][0] == 0) {
-                        continue;
-                    }
+                // trailer first, its access bits pick key A or B per block
+                uint8_t sector_data[16 * 16] = {0};
+                uint16_t loaded = 0;
+                res = mfpReadSectorKeys(s,
+                                        (aesFoundKeys[MF_KEY_A][s][0]) ? &aesFoundKeys[MF_KEY_A][s][1] : NULL,
+                                        (aesFoundKeys[MF_KEY_B][s][0]) ? &aesFoundKeys[MF_KEY_B][s][1] : NULL,
+                                        sector_data, &loaded, verbose);
 
-                    uint8_t sector_data[16 * 16] = {0};
-                    res = mfpReadSector(s, kt, &aesFoundKeys[kt][s][1], sector_data, verbose);
-                    if (res == PM3_SUCCESS) {
-                        memcpy(carddata + (blockOffset * MFBLOCK_SIZE), sector_data, blocksInSector * MFBLOCK_SIZE);
+                for (uint8_t b = 0; b < blocksInSector; b++) {
+                    if ((loaded >> b) & 1) {
+                        memcpy(carddata + ((blockOffset + b) * MFBLOCK_SIZE), sector_data + (b * MFBLOCK_SIZE), MFBLOCK_SIZE);
                         sectorRead[s] = 1;
-                        readOK = true;
-                        sectorsRead++;
-                        sl3Count++;
-                    } else if (verbose) {
-                        PrintAndLogEx(DEBUG, "Sector %u SL3 key%s failed: %d", s, (kt == MF_KEY_A) ? "A" : "B", res);
                     }
+                }
+
+                if (res == PM3_SUCCESS) {
+                    readOK = true;
+                    sectorsRead++;
+                    sl3Count++;
+                } else if (verbose) {
+                    PrintAndLogEx(DEBUG, "Sector %u SL3 read: %d, blocks %04x", s, res, loaded);
                 }
             } else if (sectorSL[s] == MFP_SL_1) {
                 // --- Try SL1 (CRYPTO1) ---
@@ -2456,6 +2542,16 @@ chunkCycleClean2:
                     uint8_t sector_data[16 * 16] = {0};
                     res = mfp_read_sector_sl1(s, kt, &mfcFoundKeys[kt][s][1], sector_data, verbose);
                     if (res == PM3_SUCCESS) {
+
+                        // the known keys go in the trailer, like hf mf autopwn
+                        uint8_t *trailer = sector_data + ((blocksInSector - 1) * MFBLOCK_SIZE);
+                        if (mfcFoundKeys[MF_KEY_A][s][0]) {
+                            memcpy(trailer, &mfcFoundKeys[MF_KEY_A][s][1], MIFARE_KEY_SIZE);
+                        }
+                        if (mfcFoundKeys[MF_KEY_B][s][0]) {
+                            memcpy(trailer + 10, &mfcFoundKeys[MF_KEY_B][s][1], MIFARE_KEY_SIZE);
+                        }
+
                         memcpy(carddata + (blockOffset * MFBLOCK_SIZE), sector_data, blocksInSector * MFBLOCK_SIZE);
                         sectorRead[s] = 1;
                         readOK = true;

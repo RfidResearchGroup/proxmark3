@@ -2404,7 +2404,7 @@
                 "-2 use slower '1 out of 256' mode",
                 "-o, --opt set OPTION Flag (needed for TI)",
                 "-b, --blk <dec> page number (0-255)",
-                "-d, --data <hex> data, 4 bytes",
+                "-d, --data <hex> data, 4 or 8 bytes",
                 "-v, --verbose verbose output"
             ],
             "usage": "hf 15 wrbl [-h*2ov] [-u <hex>] [--ua] -b <dec> -d <hex>"
@@ -2413,7 +2413,7 @@
             "command": "hf 15 writeafi",
             "description": "Write AFI on card",
             "notes": [
-                "hf 15 writeafi -* --afi 12",
+                "hf 15 writeafi --afi 12",
                 "hf 15 writeafi -u E011223344556677 --afi 12 -p 0F0F0F0F"
             ],
             "offline": false,
@@ -5403,7 +5403,7 @@
             "command": "hf legic clone",
             "description": "Rewrite a LEGIC dump for a new target tag or MCC. Use --mcc to rewrite only the dump obfuscation, or --write to clone to the current tag. Use --kgh with --write to recalculate UID-bound KGH payload CRCs.",
             "notes": [
-                "hf legic clone -f src.bin -c 39 -o clone.bin",
+                "hf legic clone -f src.bin --mcc 39 -o clone.bin",
                 "hf legic clone -f src.bin --write",
                 "hf legic clone -f src.bin --write --kgh",
                 "hf legic clone -f src.bin --write --kgh -o clone.bin"
@@ -5440,7 +5440,7 @@
             "description": "It decodes and displays emulator memory",
             "notes": [
                 "hf legic einfo",
-                "hf legic eview --22"
+                "hf legic einfo --22"
             ],
             "offline": false,
             "options": [
@@ -5807,18 +5807,19 @@
         },
         "hf mf autopwn": {
             "command": "hf mf autopwn",
-            "description": "This command automates the key recovery process on MIFARE Classic cards. It uses the fchk, chk, darkside, nested, hardnested and staticnested to recover keys. If all keys are found, it try dumping card content both to file and emulator memory. default file name template is `hf-mf-<uid>-<dump|key>.` using suffix the template becomes `hf-mf-<uid>-<dump|key>-<suffix>.`",
+            "description": "This command automates the key recovery process on MIFARE Classic cards. It uses the fchk, chk, darkside, nested, hardnested and staticnested to recover keys. If all keys are found, it try dumping card content both to file and emulator memory. Without a card size option, the size is taken from the card's SAK. On a MIFARE Plus in SL1, AES only sectors get an AES key check and AES read instead. default file name template is `hf-mf-<uid>-<dump|key>.` using suffix the template becomes `hf-mf-<uid>-<dump|key>-<suffix>.`",
             "notes": [
                 "hf mf autopwn",
                 "hf mf autopwn -s 0 -a -k FFFFFFFFFFFF -> target MFC 1K card, Sector 0 with known key A 'FFFFFFFFFFFF'",
                 "hf mf autopwn --1k -f mfc_default_keys -> target MFC 1K card, default dictionary",
                 "hf mf autopwn --1k -s 0 -a -k FFFFFFFFFFFF -f mfc_default_keys -> combo of the two above samples",
-                "hf mf autopwn --1k -s 0 -a -k FFFFFFFFFFFF -k a0a1a2a3a4a5 -> multiple user supplied keys"
+                "hf mf autopwn --1k -s 0 -a -k FFFFFFFFFFFF -k a0a1a2a3a4a5 -> multiple user supplied keys",
+                "hf mf autopwn -k 000102030405060708090A0B0C0D0E0F -> MIFARE Plus, AES key for the AES only sectors"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-k, --key <hex> Known key, 12 hex bytes",
+                "-k, --key <hex> Known key, 6 hex bytes, or 16 for a MIFARE Plus AES sector",
                 "-s, --sector <dec> Input sector number",
                 "-a Input key A (def)",
                 "-b Input key B",
@@ -5830,7 +5831,7 @@
                 "--mem Use dictionary from flashmemory",
                 "--ns No save to file",
                 "--mini MIFARE Classic Mini / S20",
-                "--1k MIFARE Classic 1k / S50 (default)",
+                "--1k MIFARE Classic 1k / S50 (default when SAK says no other size)",
                 "--2k MIFARE Classic/Plus 2k",
                 "--4k MIFARE Classic 4k / S70",
                 "--in None (use CPU regular instruction set)",
@@ -6828,9 +6829,10 @@
                 "--be (optional, BigEndian)",
                 "--dch decode Card Holder information",
                 "-f, --file <fn> load dump file and decode MAD",
-                "--force force decode (skip key check)"
+                "--force force decode (skip key check)",
+                "--override override failed crc check"
             ],
-            "usage": "hf mf mad [-hvb] [--aid <hex>] [-k <hex>] [--be] [--dch] [-f <fn>] [--force]"
+            "usage": "hf mf mad [-hvb] [--aid <hex>] [-k <hex>] [--be] [--dch] [-f <fn>] [--force] [--override]"
         },
         "hf mf madread": {
             "command": "hf mf madread",
@@ -6934,7 +6936,7 @@
         },
         "hf mf ndefread": {
             "command": "hf mf ndefread",
-            "description": "Prints NFC Data Exchange Format (NDEF)",
+            "description": "Prints NFC Data Exchange Format (NDEF) If the default MAD key fails, the MAD is read with the custom key (-k)",
             "notes": [
                 "hf mf ndefread -> shows NDEF parsed data",
                 "hf mf ndefread -vv -> shows NDEF parsed and raw data",
@@ -10852,16 +10854,14 @@
             "command": "hf topaz info",
             "description": "Get info from Topaz tags",
             "notes": [
-                "hf topaz info",
-                "hf topaz info -f myfilename -> save raw NDEF to file"
+                "hf topaz info"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> save raw NDEF to file",
                 "-v, --verbose verbose output"
             ],
-            "usage": "hf topaz info [-hv] [-f <fn>]"
+            "usage": "hf topaz info [-hv]"
         },
         "hf topaz raw": {
             "command": "hf topaz raw",
@@ -10905,15 +10905,18 @@
         },
         "hf topaz sim": {
             "command": "hf topaz sim",
-            "description": "Simulate a Topaz tag",
+            "description": "Simulate a Topaz 96 or Topaz 512 tag from a dump file. A json, and the bin of an older client, carry the header ROM; another bin or an eml is the memory alone and the header ROM is then 11 48 for 120 bytes (Topaz 96) or 12 4C for 512 (Topaz 512), unless `--hr` gives it. Writes from the reader go to the emulator memory",
             "notes": [
-                "hf topaz sim -> Not yet implemented"
+                "hf topaz sim -f hf-topaz-11223344556677-dump.json",
+                "hf topaz sim -f hf-topaz-11223344556677-dump.bin --hr 124C"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-f, --file <fn> Specify a filename for dump file",
+                "--hr <hex> Header ROM, HR0 HR1 (2 hex bytes)"
             ],
-            "usage": "hf topaz sim [-h]"
+            "usage": "hf topaz sim [-h] -f <fn> [--hr <hex>]"
         },
         "hf topaz sniff": {
             "command": "hf topaz sniff",
@@ -11250,17 +11253,19 @@
             "command": "hw bwm ble pairing",
             "description": "Require pairing before a BLE client can use the device. The module ships with pairing off: anyone in range can connect and run commands. With it on, a client must pair once with the 6-digit passkey (LE Secure Connections, MITM) and the data characteristic only works over the encrypted link; paired (bonded) devices reconnect without the key until you forget them. Both settings persist on the module. A change of on/off restarts the BLE stack, which drops a connected client - reconnect (and pair) afterwards. The factory passkey is 123456; set your own.",
             "notes": [
-                "hw bwm ble pairing on -> require pairing",
-                "hw bwm ble pairing on -k 482913 -> require pairing with this passkey",
+                "hw bwm ble pairing --on -> require pairing",
+                "hw bwm ble pairing --on -k 482913 -> require pairing with this passkey",
                 "hw bwm ble pairing -k 482913 -> change the passkey only",
-                "hw bwm ble pairing off -> open access again"
+                "hw bwm ble pairing --off -> open access again"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
+                "--on require pairing",
+                "--off don't require pairing",
                 "-k, --key <6 digits> passkey a client must enter"
             ],
-            "usage": "hw bwm ble pairing [-h] [-k <6 digits>]"
+            "usage": "hw bwm ble pairing [-h] [--on] [--off] [-k <6 digits>]"
         },
         "hw bwm ble txpower": {
             "command": "hw bwm ble txpower",
@@ -11281,22 +11286,24 @@
             "command": "hw bwm charge",
             "description": "Enable or disable BWM battery charging by clearing/setting the AW32001E charge-enable bit (CEB, REG01[3]). One-shot: The charger watchdog reverts this after ~160 s unless serviced. Charging may stop on its own. Use to nudge a top-up.",
             "notes": [
-                "hw bwm charge off -> disable charging",
-                "hw bwm charge on -> enable charging"
+                "hw bwm charge --off -> disable charging",
+                "hw bwm charge --on -> enable charging"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "--on enable charging",
+                "--off disable charging"
             ],
-            "usage": "hw bwm charge [-h]"
+            "usage": "hw bwm charge [-h] [--on] [--off]"
         },
         "hw bwm help": {
             "command": "hw bwm help",
             "description": "help This help --------------------------------------------------------------------------------------- hw bwm autooff available offline: no Show or set automatic power-off (PM5 only). Two triggers: - USB was present and the cable is pulled: off at once, so a BWM-equipped PM5 doesn't silently drain the battery; --unplug off only restarts the idle clock instead; - on battery with no command, button press or BLE/WiFi client for --idle seconds: off (0 = never, the default). Button power-on is unaffected. Stored on the BWM; without a module, defaults.",
             "notes": [
                 "hw bwm autooff -> show the current state",
-                "hw bwm autooff off -> disable both triggers",
-                "hw bwm autooff on -> re-enable",
+                "hw bwm autooff --off -> disable both triggers",
+                "hw bwm autooff --on -> re-enable",
                 "hw bwm autooff --idle 300 -> also off after 5 min idle on battery",
                 "hw bwm autooff --idle 0 -> USB-unplug trigger only (default)",
                 "hw bwm autooff --unplug off --idle 300 -> survive the unplug, off 5 min idle later"
@@ -11304,10 +11311,12 @@
             "offline": true,
             "options": [
                 "-h, --help This help",
+                "--on enable auto power-off",
+                "--off disable auto power-off",
                 "-i, --idle <sec> idle timeout on battery in seconds, 0 = never",
                 "-u, --unplug <on|off> power off when USB is pulled (default on)"
             ],
-            "usage": "hw bwm autooff [-h] [-i <sec>] [-u <on|off>]"
+            "usage": "hw bwm autooff [-h] [--on] [--off] [-i <sec>] [-u <on|off>]"
         },
         "hw bwm name": {
             "command": "hw bwm name",
@@ -11328,18 +11337,20 @@
             "description": "Show or set the BWM (ESP32) power-save switch, stored on the BWM in NVS. Default is on: the ESP scales its clock down, light-sleeps between link traffic, and after 30 s of fast advertising (boot, disconnect) advertises once a second. off pins it at full clock, no sleep, fast advertising throughout. Applies at once and survives reboots. PM5 only.",
             "notes": [
                 "hw bwm powersave -> show the current state",
-                "hw bwm powersave off -> stock always-on behaviour",
-                "hw bwm powersave on -> re-enable power saving"
+                "hw bwm powersave --off -> stock always-on behaviour",
+                "hw bwm powersave --on -> re-enable power saving"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "--on enable power saving",
+                "--off disable power saving"
             ],
-            "usage": "hw bwm powersave [-h]"
+            "usage": "hw bwm powersave [-h] [--on] [--off]"
         },
         "hw bwm setcap": {
             "command": "hw bwm setcap",
-            "description": "Program the BWM fuel gauge (BQ27427) Design Capacity for the fitted cell. Run ONCE after fitting or replacing the battery. This triggers a gauge config-update; do not run it repeatedly, as that disrupts the Impedance Track learning cycle. PM5 only.",
+            "description": "Program the BWM fuel gauge (BQ27427) Design Capacity for the fitted cell, select its 4.2 V chemistry profile and set 0 % to the 3300 mV shutdown floor (the firmware also does this at boot after a gauge reset). Run ONCE after fitting or replacing the battery. This triggers a gauge config-update; do not run it repeatedly, as that disrupts the Impedance Track learning cycle. PM5 only.",
             "notes": [
                 "hw bwm setcap -> set design capacity to default 500 mAh",
                 "hw bwm setcap --cap 500 -> set design capacity to 500 mAh"
@@ -11367,26 +11378,26 @@
         },
         "hw bwm vchg": {
             "command": "hw bwm vchg",
-            "description": "Set the BWM charger (AW32001E) charge-voltage regulation target. Lowering it below 4.2 V reduces top-of-charge stress and extends cell life. Snaps to the nearest 15 mV step; clamped to 3600..4200 mV. This is a runtime register write (reverts on the charger watchdog / POR); the firmware re-applies the 4100 mV default at every boot.",
+            "description": "Set the BWM charger (AW32001E) charge-voltage regulation target. Lowering it below 4.2 V reduces top-of-charge stress and extends cell life. Snaps to the nearest 15 mV step; clamped to 3600..4200 mV. This is a runtime register write (reverts on the charger watchdog / POR); the firmware re-applies the 4200 mV default at every boot.",
             "notes": [
-                "hw bwm vchg -> set charge voltage to default 4100 mV (->4.095 V)",
-                "hw bwm vchg --mv 4200 -> set charge voltage to 4200 mV"
+                "hw bwm vchg -> set charge voltage to default 4200 mV",
+                "hw bwm vchg --mv 4100 -> set charge voltage to 4100 mV (->4.095 V)"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--mv <mV> charge voltage in mV (default 4100, clamped 3600..4200)"
+                "--mv <mV> charge voltage in mV (default 4200, clamped 3600..4200)"
             ],
             "usage": "hw bwm vchg [-h] [--mv <mV>]"
         },
         "hw bwm wifi": {
             "command": "hw bwm wifi",
-            "description": "Bring up the BWM in STA + TCP-server mode: join a WiFi network and start a TCP server so the client can connect over WiFi. PM5 only. Sub-actions (no dashes): 'status' shows state, 'stop' tears WiFi down.",
+            "description": "Bring up the BWM in STA + TCP-server mode: join a WiFi network and start a TCP server so the client can connect over WiFi. PM5 only.",
             "notes": [
-                "hw bwm wifi status -> show connection state + IP",
-                "hw bwm wifi stop -> tear down WiFi, back to BLE-only",
+                "hw bwm wifi --status -> show connection state + IP",
+                "hw bwm wifi --stop -> tear down WiFi, back to BLE-only",
                 "hw bwm wifi --ssid Home --pwd secret -> bring up, port 18888",
-                "hw bwm wifi --ssid Home --pwd secret --port 9000"
+                "hw bwm wifi --ssid \"My Home\" --pwd secret --port 9000 -> quote an SSID with spaces, port 9000"
             ],
             "offline": false,
             "options": [
@@ -11394,25 +11405,28 @@
                 "--ssid <ssid> WiFi SSID to join",
                 "--pwd <pwd> WiFi password (omit for open network)",
                 "--port <dec> TCP server listen port (default 18888)",
-                "--hostname <name> DHCP hostname (default Proxmark5)"
+                "--hostname <name> DHCP hostname (default Proxmark5)",
+                "--status show connection state and IP",
+                "--stop tear down WiFi, back to BLE-only"
             ],
-            "usage": "hw bwm wifi [-h] [--ssid <ssid>] [--pwd <pwd>] [--port <dec>] [--hostname <name>]"
+            "usage": "hw bwm wifi [-h] [--ssid <ssid>] [--pwd <pwd>] [--port <dec>] [--hostname <name>] [--status] [--stop]"
         },
         "hw bwm wifipower": {
             "command": "hw bwm wifipower",
-            "description": "Show or set how much power the BWM (ESP32) spends on WiFi. off turns WiFi fully off (BLE-only, persisted; the default state, same as `hw bwm wifi stop`). Bring it back with hw bwm wifi --ssid <ssid> --pwd <pwd>. The other three set the modem power-save type while WiFi is up, stored on the BWM: min (default) sleeps between DTIM beacons, max for the whole listen interval, none never. Independent of hw bwm powersave. PM5 only.",
+            "description": "Show or set how much power the BWM (ESP32) spends on WiFi. off turns WiFi fully off (BLE-only, persisted; the default state, same as `hw bwm wifi --stop`). Bring it back with hw bwm wifi --ssid <ssid> --pwd <pwd>. The other three set the modem power-save type while WiFi is up, stored on the BWM: min (default) sleeps between DTIM beacons, max for the whole listen interval, none never. Independent of hw bwm powersave. PM5 only.",
             "notes": [
                 "hw bwm wifipower -> show whether WiFi is up and the power-save type",
-                "hw bwm wifipower off -> WiFi fully off, BLE-only",
-                "hw bwm wifipower none -> modem always on while WiFi is up",
-                "hw bwm wifipower min -> ESP-IDF default (DTIM sleep)",
-                "hw bwm wifipower max -> deepest modem sleep"
+                "hw bwm wifipower -m off -> WiFi fully off, BLE-only",
+                "hw bwm wifipower -m none -> modem always on while WiFi is up",
+                "hw bwm wifipower -m min -> ESP-IDF default (DTIM sleep)",
+                "hw bwm wifipower -m max -> deepest modem sleep"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-m, --mode <off|none|min|max> WiFi off, or the modem power-save type"
             ],
-            "usage": "hw bwm wifipower [-h]"
+            "usage": "hw bwm wifipower [-h] [-m <off|none|min|max>]"
         },
         "hw connect": {
             "command": "hw connect",
@@ -14951,7 +14965,7 @@
         },
         "lf t55xx help": {
             "command": "lf t55xx help",
-            "description": "----------- ------------------------------- notice --------------------------------- Always run `lf t55xx detect` first whenever a new card is placed on the Proxmark3 or the config block changed. help This help ----------- ----------------------------- operations ------------------------------- config Set/Get T55XX configuration (modulation, inverted, offset, rate) detect Try detecting the tag modulation from reading the configuration block info Show T55x7 configuration data (page 0/ blk 0) trace Show T55x7 traceability data (page 1/ blk 0-1) view Display content from tag dump file ----------- ------------------------------ recovery -------------------------------- sniff Attempt to recover T55xx commands from sample buffer --------------------------------------------------------------------------------------- lf t55xx clonehelp available offline: no Display a list of available commands for cloning specific techs on T5xx tags",
+            "description": "----------- ------------------------------- notice --------------------------------- Always run `lf t55xx detect` first whenever a new card is placed on the Proxmark3 or the config block changed. help This help ----------- ----------------------------- operations ------------------------------- config Set/Get T55XX configuration (modulation, inverted, offset, rate) detect Try detecting the tag modulation from reading the configuration block info Show T55x7 configuration data (page 0/ blk 0) p1detect Try detecting if this is a t55xx tag by reading page 1 trace Show T55x7 traceability data (page 1/ blk 0-1) view Display content from tag dump file ----------- ------------------------------ recovery -------------------------------- sniff Attempt to recover T55xx commands from sample buffer --------------------------------------------------------------------------------------- lf t55xx clonehelp available offline: no Display a list of available commands for cloning specific techs on T5xx tags",
             "notes": [
                 "lf t55xx clonehelp"
             ],
@@ -14993,7 +15007,7 @@
                 "lf t55xx p1detect -1",
                 "lf t55xx p1detect -p 11223344 --r3"
             ],
-            "offline": false,
+            "offline": true,
             "options": [
                 "-h, --help This help",
                 "-1 extract using data from graphbuffer",
@@ -16001,7 +16015,7 @@
         },
         "nfc mf cread": {
             "command": "nfc mf cread",
-            "description": "Prints NFC Data Exchange Format (NDEF)",
+            "description": "Prints NFC Data Exchange Format (NDEF) If the default MAD key fails, the MAD is read with the custom key (-k)",
             "notes": [
                 "hf mf ndefread -> shows NDEF parsed data",
                 "hf mf ndefread -vv -> shows NDEF parsed and raw data",
@@ -16103,16 +16117,14 @@
             "command": "nfc type1 read",
             "description": "Get info from Topaz tags",
             "notes": [
-                "hf topaz info",
-                "hf topaz info -f myfilename -> save raw NDEF to file"
+                "hf topaz info"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-f, --file <fn> save raw NDEF to file",
                 "-v, --verbose verbose output"
             ],
-            "usage": "hf topaz info [-hv] [-f <fn>]"
+            "usage": "hf topaz info [-hv]"
         },
         "nfc type2 help": {
             "command": "nfc type2 help",
@@ -16742,7 +16754,7 @@
         },
         "smart help": {
             "command": "smart help",
-            "description": "help This help list List ISO 7816 history pcsc Turn pm3 into pcsc reader and relay to host OS via vpcd upgrade Upgrade sim module firmware --------------------------------------------------------------------------------------- smart list available offline: yes Alias of `trace list -t 7816` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "help This help list List ISO 7816 history pcsc Turn pm3 into pcsc reader and relay to host OS via vpcd --------------------------------------------------------------------------------------- smart list available offline: yes Alias of `trace list -t 7816` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "smart list --frame -> show frame delay times",
                 "smart list -1 -> use trace buffer"
@@ -17160,6 +17172,6 @@
     "metadata": {
         "commands_extracted": 952,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-11-13T00:56:11+00:00"
+        "extracted_on": "2026-11-26T07:01:35+00:00"
     }
 }
