@@ -1648,6 +1648,8 @@ static bool mf_sector_in_mask(const uint8_t *mask, uint8_t sector) {
     return (mask != NULL) && (sector < 40) && ((mask[sector / 8] >> (sector % 8)) & 1);
 }
 
+static void printKeyTableAes(size_t sectorscnt, sector_t *e_sector, const uint8_t *aes_sectors);
+
 // one line per sector the emulator fill left blocks out of, AES only sectors are not counted.
 // true when every counted block was loaded
 static bool mf_print_ecfill_result(const mfc_eload_resp_t *r, uint8_t numsectors, const uint8_t *aes_sectors) {
@@ -4199,7 +4201,7 @@ attack_failed:
 all_found:
 
     // Show the results to the user
-    printKeyTable(sector_cnt, e_sector);
+    printKeyTableAes(sector_cnt, e_sector, aes_sectors);
 
     if (no_save == false) {
 
@@ -5599,7 +5601,8 @@ void printKeyTable(size_t sectorscnt, sector_t *e_sector) {
     printKeyTableEx(sectorscnt, e_sector, 0);
 }
 
-void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector) {
+// aes_sectors: optional bit per sector, AES only sectors of a MIFARE Plus show res P
+static void print_key_table(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector, const uint8_t *aes_sectors) {
     char strA[26 + 1] = {0};
     char strB[26 + 1] = {0};
     char resA[20 + 1] = {0};
@@ -5608,6 +5611,7 @@ void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector
     uint64_t ndef_key = 0xD3F7D3F7D3F7;
     bool has_ndef_key = false;
     bool extended_legend = false;
+    bool has_aes = false;
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "-----+-----+--------------+---+--------------+----");
@@ -5655,6 +5659,14 @@ void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector
             s = i;
         }
 
+        if (mf_sector_in_mask(aes_sectors, s)) {
+            snprintf(strA, sizeof(strA), "%s", "------------");
+            snprintf(strB, sizeof(strB), "%s", "------------");
+            snprintf(resA, sizeof(resA), _YELLOW_("P"));
+            snprintf(resB, sizeof(resB), _YELLOW_("P"));
+            has_aes = true;
+        }
+
         char extra[24] = {0x00};
         if (sectorscnt == 18 && i > 15) {
             strcat(extra, "( " _MAGENTA_("*") " )");
@@ -5681,14 +5693,15 @@ void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector
                       _YELLOW_("H") ":Hardnested / "
                       _YELLOW_("C") ":statiCnested / "
                       _YELLOW_("A") ":keyA "
-                      " )"
+                      "%s )",
+                      (has_aes) ? "/ " _YELLOW_("P") ":Plus AES " : ""
                      );
         if (sectorscnt == 18) {
             PrintAndLogEx(INFO, "( " _MAGENTA_("*") " ) These sectors used for signature. Lays outside of user memory");
         }
 
     } else {
-        PrintAndLogEx(SUCCESS, "( " _RED_("0") ":Failed / " _GREEN_("1") ":Success )");
+        PrintAndLogEx(SUCCESS, "( " _RED_("0") ":Failed / " _GREEN_("1") ":Success%s )", (has_aes) ? " / " _YELLOW_("P") ":Plus AES" : "");
     }
 
     // MAD detection
@@ -5700,6 +5713,14 @@ void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector
         PrintAndLogEx(HINT, "Hint: NDEF key detected. Try " _YELLOW_("`hf mf ndefread`") " for more details");
     }
     PrintAndLogEx(NORMAL, "");
+}
+
+void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector) {
+    print_key_table(sectorscnt, e_sector, start_sector, NULL);
+}
+
+static void printKeyTableAes(size_t sectorscnt, sector_t *e_sector, const uint8_t *aes_sectors) {
+    print_key_table(sectorscnt, e_sector, 0, aes_sectors);
 }
 
 
