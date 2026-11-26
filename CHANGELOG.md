@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf sniff` - keep the full capture length, download every sample and stop on host abort while waiting for a trigger (@adrian-stepien)
+- Fixed `hf sniff` sample reduction - correct min, max and average, default to one sample pair and reject invalid skip ratios (@adrian-stepien)
 - Fixed `hf 14a sim -t 10` - a SELECT of an application the tag does not hold got `90 00`, it now gets file not found, `6A 82` (@matrix)
 - Fixed `hf 14a sim -t 10` - every block that is not one of the lock's three got `90 00`, R-blocks, chained I-blocks, S(DESELECT) and the CID are now handled as on the other types (@matrix)
 - Removed `sim011.bin` - `sim023.bin`, only the latest SIM module firmware `sim024.bin` is shipped. Older ones are in the git history (@iceman1001)

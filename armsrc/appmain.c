@@ -3255,11 +3255,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
 
-            uint16_t len = 0;
+            uint32_t len = 0;
             int res = HfSniff(payload->samplesToSkip, payload->triggersToSkip, &len, payload->skipMode, payload->skipRatio);
 
             struct {
-                uint16_t len;
+                uint32_t len;
             } PACKED retval;
             retval.len = len;
             reply_ng(CMD_HF_SNIFF, res, (uint8_t *)&retval, sizeof(retval));

@@ -529,8 +529,8 @@ typedef enum {
 const CLIParserOption HFSnoopSkipModeOpts[] = {
     {HF_SNOOP_SKIP_NONE, "none"},
     {HF_SNOOP_SKIP_DROP, "drop"},
-    {HF_SNOOP_SKIP_MAX,  "min"},
-    {HF_SNOOP_SKIP_MIN,  "max"},
+    {HF_SNOOP_SKIP_MIN,  "min"},
+    {HF_SNOOP_SKIP_MAX,  "max"},
     {HF_SNOOP_SKIP_AVG,  "avg"},
     {0,    NULL},
 };
@@ -576,7 +576,13 @@ int CmdHFSniff(const char *Cmd) {
     }
 
     params.skipMode = smode;
-    params.skipRatio = arg_get_int_def(ctx, 4, 0);
+    int sratio = arg_get_int_def(ctx, 4, (smode == HF_SNOOP_SKIP_NONE) ? 0 : 1);
+    if (smode != HF_SNOOP_SKIP_NONE && (sratio < 1 || sratio > UINT8_MAX)) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Skip ratio must be between 1 and 255");
+        return PM3_EINVARG;
+    }
+    params.skipRatio = sratio;
 
     CLIParserFree(ctx);
 
@@ -606,31 +612,53 @@ int CmdHFSniff(const char *Cmd) {
                 break;
             }
 
-            if (resp.status == PM3_SUCCESS) {
-
-                struct r {
-                    uint16_t len;
-                } PACKED;
-                struct r *retval = (struct r *)resp.data.asBytes;
-
-                PrintAndLogEx(INFO, "HF sniff (%u samples)", retval->len);
-
-                PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("data hpf") "` to remove offset");
-                PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("data plot") "` to view");
-                PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("data save") "` to save");
-
-                // download bigbuf_calloc:d.
-                // it reserve memory from the higher end.
-                // At the moment, sniff takes all free memory in bigbuff. If this changes,
-                // we can't start from beginning idx 0 but from that hi-to-start-of-allocated.
-                uint32_t start = g_pm3_capabilities.bigbuf_size - retval->len;
-                int res = getSamplesEx(start, start, false, true);
-                if (res != PM3_SUCCESS) {
-                    PrintAndLogEx(WARNING, "failed to download samples to client");
-                    return res;
-                }
-                break;
+            if (resp.status != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "HF sniff failed (status %d)", resp.status);
+                return resp.status;
             }
+
+            uint32_t len;
+            if (resp.length == sizeof(uint16_t)) {
+                len = resp.data.asDwords[0] & 0xFFFF;
+            } else if (resp.length == sizeof(uint32_t)) {
+                len = resp.data.asDwords[0];
+            } else {
+                PrintAndLogEx(WARNING, "Invalid HF sniff response length");
+                return PM3_ESOFT;
+            }
+
+            if (len == 0 || len > g_pm3_capabilities.bigbuf_size) {
+                PrintAndLogEx(WARNING, "Invalid HF sniff sample count");
+                return PM3_ESOFT;
+            }
+
+            PrintAndLogEx(INFO, "HF sniff (%u samples)", len);
+
+            PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("data hpf") "` to remove offset");
+            PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("data plot") "` to view");
+            PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("data save") "` to save");
+
+            // download bigbuf_calloc:d.
+            // it reserve memory from the higher end.
+            // At the moment, sniff takes all free memory in bigbuff. If this changes,
+            // we can't start from beginning idx 0 but from that hi-to-start-of-allocated.
+            uint32_t start = g_pm3_capabilities.bigbuf_size - len;
+            uint8_t *samples = calloc(len, sizeof(uint8_t));
+            if (samples == NULL) {
+                return PM3_EMALLOC;
+            }
+
+            if (GetFromDevice(BIG_BUF, samples, len, start, NULL, 0, NULL, 10000, true) == false) {
+                PrintAndLogEx(WARNING, "failed to download samples to client");
+                free(samples);
+                return PM3_ETIMEOUT;
+            }
+            int res = getSamplesFromBufEx(samples, len, 8, false);
+            free(samples);
+            if (res != PM3_SUCCESS) {
+                return res;
+            }
+            break;
         }
     }
     PrintAndLogEx(INFO, "Done!");
