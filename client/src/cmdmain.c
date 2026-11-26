@@ -159,8 +159,8 @@ static int CmdAuto(const char *Cmd) {
     if (ret == PM3_SUCCESS && exit_first)
         return ret;
 
-    PrintAndLogEx(INFO, "hf search");
-    ret = CmdHFSearch("");
+    PrintAndLogEx(INFO, "hf search -v");
+    ret = CmdHFSearch("-v");
     if (ret == PM3_SUCCESS && exit_first)
         return ret;
 
