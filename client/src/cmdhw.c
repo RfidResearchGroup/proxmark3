@@ -2063,6 +2063,8 @@ static const char *rtttl_error_string(rtttl_status_t status) {
             return "value out of range";
         case RTTTL_ERROR_OVERFLOW:
             return "numeric overflow";
+        case RTTTL_ABORTED:
+            return "playback stopped";
         default:
             return "unexpected parser status";
     }
@@ -2110,7 +2112,7 @@ static int CmdRtttl(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw rtttl",
                   "Play an RTTTL melody on the PM5 buzzer. Maximum 2047 text bytes.\n"
-                  "Playback blocks the device until completion.",
+                  "Playback blocks the device until completion, press the pm5 button or <Enter> to abort it.",
                   "hw rtttl --data \"Cancan:d=16,o=5,b=200:c6,8g,8g,a,g,f,e,8d,8d,8e,8f,g,g,8c6,8a,g,f,e,8d,8c\"\n"
                   "hw rtttl --file melody.rtttl");
     void *argtable[] = {
@@ -2142,19 +2144,48 @@ static int CmdRtttl(const char *Cmd) {
     PrintAndLogEx(INFO, "Playing %u notes/pauses, %u ms (%zu text bytes)",
                   (unsigned int)parser.event_count,
                   (unsigned int)parser.total_duration_ms, length);
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm5 button") " or " _GREEN_("<Enter>") " to abort playback");
     clearCommandBuffer();
     SendCommandNG(CMD_PM5_RTTTL, text, length + 1U);
+
+    // The firmware answers once the melody has finished or has been stopped.
     PacketResponseNG response;
-    // The firmware answers only after the entire validated melody has finished.
-    size_t timeout_ms = (size_t)parser.total_duration_ms + 5000U;
-    if (!WaitForResponseTimeoutW(CMD_PM5_RTTTL, &response, timeout_ms, false)) {
-        PrintAndLogEx(WARNING, "RTTTL completion timeout; playback may still be running");
-        return PM3_ETIMEOUT;
+    uint64_t deadline = msclock() + parser.total_duration_ms + 5000U;
+    bool got_reply = false;
+    bool keypress = kbd_enter_pressed();
+    while (keypress == false) {
+        if (WaitForResponseTimeoutW(CMD_PM5_RTTTL, &response, 500, false)) {
+            got_reply = true;
+            break;
+        }
+
+        if (msclock() > deadline) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(WARNING, "RTTTL completion timeout, stop request sent");
+            return PM3_ETIMEOUT;
+        }
+
+        keypress = kbd_enter_pressed();
     }
+
+    if (got_reply == false) {
+        // inform device to stop playback, it then sends its reply
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+        if (WaitForResponseTimeoutW(CMD_PM5_RTTTL, &response, 2000, false) == false) {
+            PrintAndLogEx(WARNING, "No reply from the device after the stop request");
+            return PM3_ETIMEOUT;
+        }
+    }
+
     if (response.length != 1U) {
         PrintAndLogEx(FAILED, "Invalid RTTTL firmware reply");
         return PM3_EIO;
     }
+    if (response.status == PM3_EOPABORTED) {
+        PrintAndLogEx(INFO, "RTTTL playback stopped");
+        return PM3_SUCCESS;
+    }
+
     if (response.status != PM3_SUCCESS || response.data.asBytes[0] != RTTTL_OK) {
         PrintAndLogEx(FAILED, "RTTTL firmware rejected playback: %s",
                       rtttl_error_string((rtttl_status_t)response.data.asBytes[0]));

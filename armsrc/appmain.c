@@ -4309,6 +4309,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             int8_t command_status = PM3_EINVARG;
             if (status == RTTTL_OK) {
                 command_status = PM3_SUCCESS;
+            } else if (status == RTTTL_ABORTED) {
+                command_status = PM3_EOPABORTED;
             }
             reply_ng(CMD_PM5_RTTTL, command_status, &parser_status, sizeof(parser_status));
             break;

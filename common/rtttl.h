@@ -31,7 +31,8 @@ typedef enum {
     RTTTL_ERROR_SIZE,
     RTTTL_ERROR_SYNTAX,
     RTTTL_ERROR_RANGE,
-    RTTTL_ERROR_OVERFLOW
+    RTTTL_ERROR_OVERFLOW,
+    RTTTL_ABORTED          // playback stopped by the button or host data, never from the parser
 } rtttl_status_t;
 
 typedef struct {

@@ -28,6 +28,8 @@
 #include "ticks_apis.h"   // SpinDelay
 #include "wdt_apis.h"
 #include "pm5_power.h"
+#include "proxmark3_arm.h"
+#include "util.h"
 
 // Buzzer wiring on the PM5 mainboard.
 #define BUZZER_EN_GPIO      GPIOB
@@ -107,17 +109,30 @@ void BuzzerOff(void) {
 }
 
 // Keep the PWM running during long notes while feeding the watchdog regularly.
-static void buzzer_wait(uint32_t duration_ms) {
+// Returns true when the button or incoming host data (e.g. CMD_BREAK_LOOP) stops playback.
+// A button already held when playback starts only counts once released and pressed again.
+static bool buzzer_wait(uint32_t duration_ms, bool *button_armed) {
     while (duration_ms > 0U) {
+        WDT_HIT();
+
+        bool pressed = BUTTON_PRESS();
+        if (pressed == false) {
+            *button_armed = true;
+        }
+
+        if ((*button_armed && pressed) || data_available()) {
+            return true;
+        }
+
         uint32_t step_ms = duration_ms;
         if (step_ms > 20U) {
             step_ms = 20U;
         }
-        WDT_HIT();
         SpinDelay((int)step_ms);
         duration_ms -= step_ms;
     }
     WDT_HIT();
+    return false;
 }
 
 rtttl_status_t BuzzerPlayRtttl(const char *text, size_t length) {
@@ -138,6 +153,7 @@ rtttl_status_t BuzzerPlayRtttl(const char *text, size_t length) {
         timer_clock_hz *= 2U;
     }
     uint32_t timer_tick_hz = timer_clock_hz / (BUZZER_TIMER_PRESCALER + 1U);
+    bool button_armed = (BUTTON_PRESS() == false);
     rtttl_event_t event;
     while ((status = rtttl_next(&parser, &event)) == RTTTL_OK) {
         if (event.frequency_hz != 0U) {
@@ -148,8 +164,13 @@ rtttl_status_t BuzzerPlayRtttl(const char *text, size_t length) {
             }
             buzzer_tone_start((uint16_t)(counts - 1U), (uint16_t)(counts / 2U));
         }
-        buzzer_wait(event.duration_ms);
+        bool aborted = buzzer_wait(event.duration_ms, &button_armed);
         BuzzerOff();
+
+        if (aborted) {
+            status = RTTTL_ABORTED;
+            break;
+        }
     }
     BuzzerOff();
     pm5_power_unboost();

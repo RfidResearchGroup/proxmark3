@@ -26,8 +26,8 @@ See `hw rtttl --help` for command options.
 
 - Maximum **2047 text bytes**, including the name, BOM and whitespace.
   Oversized or invalid input is rejected without truncation.
-- Playback blocks the device until completion, with **no button or USB stop
-  command**. A client timeout does not stop playback.
+- Playback blocks the device until completion. Press the **pm5 button** or
+  **<Enter>** in the client to abort it.
 - Melodies are temporary: nothing is saved to flash or SPIFFS.
 
 ## RTTTL format
@@ -58,6 +58,7 @@ rtttl_status_t status = BuzzerPlayRtttl(melody, sizeof(melody) - 1);
 ```
 
 The length excludes the final NUL. Keep the text alive and unchanged until
-return. The call blocks, returns `RTTTL_OK` or an RTTTL error, and leaves the
+return. The call blocks, returns `RTTTL_OK`, `RTTTL_ABORTED` when a new button
+press or incoming host data stops it, or an RTTTL error, and leaves the
 buzzer silent. Do not call concurrently or from an ISR/time-critical handler.
 Existing alerts are unchanged.
