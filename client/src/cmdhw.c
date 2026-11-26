@@ -2070,30 +2070,27 @@ static const char *rtttl_error_string(rtttl_status_t status) {
     }
 }
 
-static int read_rtttl_input(const struct arg_str *file, const struct arg_str *data, uint8_t *text, size_t *length) {
-    bool use_file = file->count != 0;
-    bool use_data = data->count != 0;
+static int read_rtttl_input(const char *filename, const struct arg_str *data, uint8_t *text, size_t *length) {
+    bool use_file = (filename[0] != '\0');
+    bool use_data = (data->count != 0);
 
     if (use_file == use_data) {
         PrintAndLogEx(WARNING, "Specify exactly one of --file or --data");
         return PM3_EINVARG;
     }
     if (use_file) {
-        FILE *stream = fopen(file->sval[0], "rb");
-        if (stream == NULL) {
-            PrintAndLogEx(FAILED, "Cannot open RTTTL file: %s", file->sval[0]);
-            return PM3_EFILE;
+        uint8_t *file_data = NULL;
+        size_t file_len = 0;
+        int res = loadFile_safe(filename, "", (void **)&file_data, &file_len);
+        if (res != PM3_SUCCESS) {
+            return res;
         }
-        // Read one extra byte to reject oversized files without loading them all.
-        *length = fread(text, 1, RTTTL_MAX_TEXT_SIZE + 1U, stream);
-        bool read_error = ferror(stream) != 0;
-        if (fclose(stream) != 0) {
-            read_error = true;
+
+        *length = file_len;
+        if (file_len <= RTTTL_MAX_TEXT_SIZE) {
+            memcpy(text, file_data, file_len);
         }
-        if (read_error) {
-            PrintAndLogEx(FAILED, "Cannot read RTTTL file: %s", file->sval[0]);
-            return PM3_EFILE;
-        }
+        free(file_data);
     } else {
         *length = strlen(data->sval[0]);
         if (*length <= RTTTL_MAX_TEXT_SIZE) {
@@ -2123,9 +2120,16 @@ static int CmdRtttl(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
+    char filename[FILE_PATH_SIZE] = {0};
+    int fnlen = 0;
+    if (CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen)) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
     uint8_t text[RTTTL_MAX_TEXT_SIZE + 1U];
     size_t length = 0;
-    int result = read_rtttl_input(arg_get_str(ctx, 1), arg_get_str(ctx, 2), text, &length);
+    int result = read_rtttl_input(filename, arg_get_str(ctx, 2), text, &length);
     CLIParserFree(ctx);
     if (result != PM3_SUCCESS) {
         return result;
