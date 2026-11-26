@@ -1643,64 +1643,97 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// one line per sector the emulator fill left blocks out of
+static void mf_print_ecfill_result(const mfc_eload_resp_t *r, uint8_t numsectors) {
+
+    uint16_t total = 0;
+    uint16_t got = 0;
+    for (uint8_t s = 0; s < numsectors; s++) {
+        for (uint8_t b = 0; b < mfNumBlocksPerSector(s); b++) {
+            uint8_t blk = mfFirstBlockOfSector(s) + b;
+            total++;
+            got += (r->loaded[blk / 8] >> (blk % 8)) & 1;
+        }
+    }
+
+    if (got == total) {
+        PrintAndLogEx(SUCCESS, "Dumped %u / %u blocks ( " _GREEN_("ok") " )", got, total);
+        return;
+    }
+
+    PrintAndLogEx(WARNING, "Dumped %u / %u blocks", got, total);
+
+    for (uint8_t s = 0; s < numsectors; s++) {
+
+        char denied[100] = {0};
+        char failed[100] = {0};
+        uint8_t n_loaded = 0;
+        uint8_t n_denied = 0;
+        uint8_t n_failed = 0;
+
+        for (uint8_t b = 0; b < mfNumBlocksPerSector(s); b++) {
+            uint8_t blk = mfFirstBlockOfSector(s) + b;
+            char *dst = NULL;
+            if ((r->loaded[blk / 8] >> (blk % 8)) & 1) {
+                n_loaded++;
+            } else if ((r->denied[blk / 8] >> (blk % 8)) & 1) {
+                n_denied++;
+                dst = denied;
+            } else {
+                n_failed++;
+                dst = failed;
+            }
+
+            if (dst) {
+                size_t len = strlen(dst);
+                snprintf(dst + len, 100 - len, " %u", blk);
+            }
+        }
+
+        if (n_denied == 0 && n_failed == 0) {
+            continue;
+        }
+
+        if (n_loaded == 0 && n_denied == 0) {
+            PrintAndLogEx(FAILED, "Sector %2u... no working key", s);
+            continue;
+        }
+
+        if (n_denied) {
+            PrintAndLogEx(FAILED, "Sector %2u... block%s" _YELLOW_("%s") " denied by access bits", s, (n_denied > 1) ? "s" : "", denied);
+        }
+
+        if (n_failed) {
+            PrintAndLogEx(FAILED, "Sector %2u... block%s" _RED_("%s") " read failed", s, (n_failed > 1) ? "s" : "", failed);
+        }
+    }
+}
+
 static int FastDumpWithEcFill(uint8_t numsectors) {
 
-    uint8_t dbg_curr = DBG_NONE;
-    if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
-        return PM3_EFAILED;
-    }
+    mfc_eload_t payload = {
+        .sectorcnt = numsectors,
+        .keytype = MF_KEY_A,
+    };
 
-    /*
-    if (setDeviceDebugLevel(DBG_NONE, false) != PM3_SUCCESS) {
-        return PM3_EFAILED;
-    }
-    */
-
-    mfc_eload_t payload;
-    payload.sectorcnt = numsectors;
-    payload.keytype = MF_KEY_A;
-
-    // a fill that fails with both keys is reported to the caller
-    int eml_res = PM3_SUCCESS;
-
-    // ecfill key A
+    // the device picks key A or B per block from the access bits
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
 
     PacketResponseNG resp;
-    bool res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2500);
-    if (res == false) {
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2500) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
+    if (resp.length >= sizeof(mfc_eload_resp_t)) {
+        mf_print_ecfill_result((const mfc_eload_resp_t *)resp.data.asBytes, numsectors);
+    }
+
     if (resp.status != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "fast dump reported back failure w KEY A. Swapping to KEY B");
-
-        // ecfill key B
-        payload.keytype = MF_KEY_B;
-
-        clearCommandBuffer();
-        SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
-        res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2500);
-        if (res == false) {
-            PrintAndLogEx(WARNING, "command execution time out");
-            setDeviceDebugLevel(dbg_curr, false);
-            return PM3_ETIMEOUT;
-        }
-
-        if (resp.status != PM3_SUCCESS) {
-            PrintAndLogEx(FAILED, "fast dump reported back failure w KEY B");
-            PrintAndLogEx(FAILED, "Dump file is " _RED_("PARTIAL") " complete");
-            eml_res = resp.status;
-        }
+        PrintAndLogEx(FAILED, "Dump file is " _RED_("PARTIAL") " complete");
     }
-
-    if (setDeviceDebugLevel(dbg_curr, false) != PM3_SUCCESS) {
-        return PM3_EFAILED;
-    }
-
-    return eml_res;
+    return resp.status;
 }
 
 static int CmdHF14AMfDump(const char *Cmd) {

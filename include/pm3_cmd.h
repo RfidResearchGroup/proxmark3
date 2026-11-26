@@ -460,6 +460,12 @@ typedef struct {
     uint8_t key[6];
 } PACKED mfc_eload_t;
 
+// CMD_HF_MIFARE_EML_LOAD reply, one bit per block, block n is byte n / 8 bit n % 8
+typedef struct {
+    uint8_t loaded[32];     // read into emulator memory
+    uint8_t denied[32];     // access bits let no usable key read it
+} PACKED mfc_eload_resp_t;
+
 // CMD_HF_EPA_REPLAY payload.
 // apdu_num 0 runs the replay, otherwise it is a 1-based APDU index being uploaded.
 // Replaces oldargs: arg0 = apdu number, arg1 = offset, arg2 = length
