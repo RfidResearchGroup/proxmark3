@@ -62,10 +62,14 @@ ARMLIBSRC = \
 	../armlib/at32_usb/usb_drivers/src/usbd_int.c \
 	../armlib/at32_usb/usb_drivers/src/usbd_sdr.c \
 	../armlib/at32_usb/usbd_class/cdc/cdc_class.c \
-	../armlib/at32_i2c/at32f435_437_i2c_app.c \
+	../armlib/at32_i2c/at32f435_437_i2c_app.c
+
+ifeq ($(SKIP_CEP),)
+ARMLIBSRC += \
 	../armlib/at32_usb/usb_drivers/src/usbh_core.c \
 	../armlib/at32_usb/usb_drivers/src/usbh_ctrl.c \
 	../armlib/at32_usb/usb_drivers/src/usbh_int.c
+endif
 
 ARMLIB = $(OBJDIR)/$(ARMLIB_EXPORT_LIBNAME)
 ARMLIB_OBJ_FROM_SRC = $(OBJDIR)/armlib_$(subst /,_,$(patsubst ../armlib/%.c,%,$(1))).o

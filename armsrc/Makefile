@@ -159,7 +159,7 @@ else
 endif
 
 # PM5 USB host CDC (OTGFS1) driver
-ifeq ($(PLATFORM),PM5)
+ifneq (,$(findstring WITH_CEP,$(APP_CFLAGS)))
     SRC_PM5_USB_HOST_CDC = pm5_usb_host_cdc.c
 else
     SRC_PM5_USB_HOST_CDC =

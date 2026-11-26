@@ -51,6 +51,10 @@ static void pm5_icsd_print(const PacketResponseNG *resp) {
 
 // Send an arbitrary command line via CMD_PM5_ICSD_RAW and print the reply.
 static int pm5_icsd_send_raw(const char *cmdline) {
+    if (cmdline == NULL || strlen(cmdline) > 61) {
+        PrintAndLogEx(FAILED, "ICSD command too long (max 61 bytes)");
+        return PM3_EINVARG;
+    }
     clearCommandBuffer();
     SendCommandNG(CMD_PM5_ICSD_RAW, (uint8_t *)cmdline, (uint16_t)strlen(cmdline));
     PacketResponseNG resp;
@@ -97,7 +101,7 @@ static int pm5_icsd_noarg(const char *Cmd, const char *name, const char *cmdline
 }
 
 static int CmdPm5IcsdWho(const char *Cmd) {
-    return pm5_icsd_noarg(Cmd, "pm5 icsd who", "Who\r\n");
+    return pm5_icsd_noarg(Cmd, "hw pm5 icsd who", "Who\r\n");
 }
 
 static int CmdPm5IcsdStatus(const char *Cmd) {
@@ -122,6 +126,17 @@ static int CmdPm5IcsdStatus(const char *Cmd) {
     };
 
     (void)Cmd;
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw pm5 icsd status",
+                  "Display local USB host CDC telemetry for the ICSD port.",
+                  "hw pm5 icsd status");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
     clearCommandBuffer();
     SendCommandNG(CMD_PM5_ICSD_STATUS, NULL, 0);
     PacketResponseNG resp;
@@ -158,22 +173,22 @@ static int CmdPm5IcsdStatus(const char *Cmd) {
 }
 
 static int CmdPm5IcsdClear(const char *Cmd) {
-    return pm5_icsd_noarg(Cmd, "pm5 icsd clear", "CLEAR\r\n");
+    return pm5_icsd_noarg(Cmd, "hw pm5 icsd clear", "CLEAR\r\n");
 }
 
 static int CmdPm5IcsdBits(const char *Cmd) {
-    return pm5_icsd_noarg(Cmd, "pm5 icsd bits", "BITS\r\n");
+    return pm5_icsd_noarg(Cmd, "hw pm5 icsd bits", "BITS\r\n");
 }
 
 static int CmdPm5IcsdBrute(const char *Cmd) {
-    return pm5_icsd_noarg(Cmd, "pm5 icsd brute", "BRUTE\r\n");
+    return pm5_icsd_noarg(Cmd, "hw pm5 icsd brute", "BRUTE\r\n");
 }
 
 static int CmdPm5IcsdRd(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "pm5 icsd rd",
+    CLIParserInit(&ctx, "hw pm5 icsd rd",
                   "Read a card frame from the ICSD device (sends \"RD\").",
-                  "pm5 icsd rd");
+                  "hw pm5 icsd rd");
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
@@ -185,9 +200,9 @@ static int CmdPm5IcsdRd(const char *Cmd) {
 
 static int CmdPm5IcsdDump(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "pm5 icsd dump",
+    CLIParserInit(&ctx, "hw pm5 icsd dump",
                   "Dump a slot from the ICSD device (sends \"DUMP <slot>\").",
-                  "pm5 icsd dump 1");
+                  "hw pm5 icsd dump 1");
     void *argtable[] = {
         arg_param_begin,
         arg_str0(NULL, NULL, "<slot>", "slot number to dump (0-7)"),
@@ -208,9 +223,9 @@ static int CmdPm5IcsdDump(const char *Cmd) {
 
 static int CmdPm5IcsdMode(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "pm5 icsd mode",
+    CLIParserInit(&ctx, "hw pm5 icsd mode",
                   "Set the ICSD device mode (sends \"MODE <bridge|sniff>\").",
-                  "pm5 icsd mode --mode bridge");
+                  "hw pm5 icsd mode --mode bridge");
     void *argtable[] = {
         arg_param_begin,
         arg_str1("m", "mode", "<bridge|sniff>", "operating mode"),
@@ -227,9 +242,9 @@ static int CmdPm5IcsdMode(const char *Cmd) {
 
 static int CmdPm5IcsdTimeout(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "pm5 icsd timeout",
+    CLIParserInit(&ctx, "hw pm5 icsd timeout",
                   "Set the ICSD device response timeout (sends \"TIMEOUT <ms>\").",
-                  "pm5 icsd timeout --ms 500");
+                  "hw pm5 icsd timeout --ms 500");
     void *argtable[] = {
         arg_param_begin,
         arg_str1("t", "ms", "<ms>", "timeout in milliseconds"),
@@ -246,9 +261,9 @@ static int CmdPm5IcsdTimeout(const char *Cmd) {
 
 static int CmdPm5IcsdInit(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "pm5 icsd init",
-                  "Force CEP into USB host CDC mode for ICSD (no CC auto-detect wait).",
-                  "pm5 icsd init");
+    CLIParserInit(&ctx, "hw pm5 icsd init",
+                  "Force CEP into USB host CDC mode for an attached ICSD device (command-initiated on SRC attach).",
+                  "hw pm5 icsd init");
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
@@ -273,12 +288,13 @@ static int CmdPm5IcsdInit(const char *Cmd) {
 
 static int CmdPm5IcsdRaw(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "pm5 icsd raw",
+    CLIParserInit(&ctx, "hw pm5 icsd raw",
                   "Send an arbitrary command string to the ICSD device.",
-                  "pm5 icsd raw \"Who\\r\\n\"");
+                  "hw pm5 icsd raw \"Who\"");
+
     void *argtable[] = {
         arg_param_begin,
-        arg_str1(NULL, NULL, "<cmd>", "raw command string (e.g. \"Who\\r\\n\")"),
+        arg_str1(NULL, NULL, "<cmd>", "raw command string (e.g. \"Who\")"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

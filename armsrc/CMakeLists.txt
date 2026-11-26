@@ -204,7 +204,7 @@ else ()
 endif ()
 
 # PM5 USB host CDC (OTGFS1) driver
-if (PM5)
+if (PM5 AND "${APP_CFLAGS}" MATCHES "WITH_CEP")
     set(SRC_PM5_USB_HOST_CDC pm5_usb_host_cdc.c)
 else ()
     set(SRC_PM5_USB_HOST_CDC)

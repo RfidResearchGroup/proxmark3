@@ -18,6 +18,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed `hw bwm upgrade` - report an unknown update result when the final reply times out (@adrian-stepien)
 - Fixed `hw bwm upgrade` - keep the BLE connection open during the upload (@adrian-stepien)
 - Fixed PM5 CEP - a long PM5 command could make the Flipper lose its connection even while it was still polling (@adrian-stepien)
+- Added PM5 CEP USB host CDC support for ICS/ICSD decoders (hw pm5 icsd) (@adrian-stepien)
 - Fixed PM5 CEP handshakes - receive Flipper bytes even while the attach check is waiting for its next poll (@adrian-stepien)
 - Fixed PM5 power save - keep the CEP and BWM UARTs and the timing counter at their configured rates when the core changes speed (@adrian-stepien)
 - Fixed `hw ping` - return errors for timeouts, device errors, wrong response lengths and mismatched echoes

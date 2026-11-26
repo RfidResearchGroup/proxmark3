@@ -33,6 +33,7 @@
 #include "at32f435_437_crm.h"
 #include "at32f435_437_gpio.h"
 #include "at32f435_437_misc.h"
+#include "at32f435_437_usb.h"
 
 // CDC-ACM class request not exposed by usb_std.h.
 #define CDC_SET_CONTROL_LINE_STATE 0x22
@@ -79,6 +80,7 @@ static bool g_connected = false;
 static uint8_t g_ch_in;
 static uint8_t g_ch_out;
 static bool g_channels_open = false;
+static uint8_t s_rx_staging[64] __attribute__((aligned(4)));
 
 static usbh_class_handler_type g_cdc_class_handler;
 static usbh_user_handler_type g_usbhost_user_handler;
@@ -357,8 +359,9 @@ static int cdc_bulk_in(usbh_core_type *uhost, uint8_t *buf, uint16_t len, uint32
     if (!cdc_ensure_channels(uhost)) {
         return -1;
     }
-    usbh_bulk_recv(uhost, g_ch_in, buf, len);
+    usbh_bulk_recv(uhost, g_ch_in, s_rx_staging, len);
     if (cdc_wait_channel(uhost, g_ch_in, timeout_ms) != 0) {
+        usbh_ch_disable(uhost, g_ch_in);
         return -1;
     }
 
@@ -366,20 +369,23 @@ static int cdc_bulk_in(usbh_core_type *uhost, uint8_t *buf, uint16_t len, uint32
     if (got > len) {
         got = len;
     }
+    usbh_ch_disable(uhost, g_ch_in);
+    if (got > 0 && buf != NULL) {
+        memcpy(buf, s_rx_staging, got);
+    }
     return (int)got;
 }
 
 // Discard stale bulk IN data so a previous, partially-read reply cannot leak
 // into the next command's response.
 static void cdc_drain_rx(usbh_core_type *uhost) {
-    uint8_t discard[USB_MAX_EP0_SIZE];
     int i;
 
     if (!g_connected || !g_channels_open) {
         return;
     }
-    for (i = 0; i < 16; i++) {
-        if (cdc_bulk_in(uhost, discard, sizeof(discard), CDC_DRAIN_TIMEOUT_MS) <= 0) {
+    for (i = 0; i < 8; i++) {
+        if (cdc_bulk_in(uhost, NULL, sizeof(s_rx_staging), CDC_DRAIN_TIMEOUT_MS) <= 0) {
             break;
         }
     }
@@ -435,11 +441,20 @@ void pm5_usb_host_cdc_deinit(void) {
     if (!g_initialized) {
         return;
     }
+    if (g_channels_open) {
+        usbh_ch_disable(&g_otg.host, g_ch_in);
+        usbh_ch_disable(&g_otg.host, g_ch_out);
+        usbh_free_channel(&g_otg.host, g_ch_in);
+        usbh_free_channel(&g_otg.host, g_ch_out);
+        g_channels_open = false;
+    }
     nvic_irq_disable(USB_HOST_IRQ);
     NVIC_ClearPendingIRQ(USB_HOST_IRQ);
+    g_otg.host.usb_reg->gintmsk &= ~USB_OTG_SOF_INT;
+    usb_port_power_on(g_otg.host.usb_reg, FALSE);
     g_connected = false;
-    g_channels_open = false;
     g_initialized = false;
+    crm_periph_clock_enable(CRM_OTGFS1_PERIPH_CLOCK, FALSE);
 }
 
 void pm5_usb_host_cdc_poll(void) {
@@ -486,7 +501,7 @@ int pm5_icsd_send_cmd(const char *cmd) {
         cep_ensure_usb_host_mode();
     }
     if (!g_connected) {
-        cdc_wait_connected(1500);
+        cdc_wait_connected(500);
     }
     if (!g_connected) {
         return -1;
@@ -529,15 +544,11 @@ int pm5_icsd_read_response(char *buf, size_t max_len, uint32_t timeout_ms) {
         cep_ensure_usb_host_mode();
     }
     if (!g_connected) {
-        cdc_wait_connected(1500);
+        cdc_wait_connected(500);
     }
     if (!g_connected) {
         return -1;
     }
-    if (timeout_ms < 1200) {
-        timeout_ms = 1200;
-    }
-
     // Keep one byte for the NUL terminator.
     while (total + 1 < max_len) {
         size_t room = max_len - 1 - total;
@@ -568,7 +579,6 @@ int pm5_icsd_read_response(char *buf, size_t max_len, uint32_t timeout_ms) {
 // OTGFS1 interrupt. Only usbh_irq_handler() clears port/channel/RX-FIFO
 // interrupts and drives URB_DONE; without this ISR the host core stalls in
 // USBH_IDLE. A pending pre-init interrupt is disabled to avoid re-entry.
-#if defined(PM5)
 void OTGFS1_IRQHandler(void) {
     if (g_initialized) {
         usbh_irq_handler(&g_otg);
@@ -576,7 +586,6 @@ void OTGFS1_IRQHandler(void) {
         nvic_irq_disable(USB_HOST_IRQ);
     }
 }
-#endif
 
 // ---------------------------------------------------------------------------
 // handler tables (referenced above; keep at end for readability)

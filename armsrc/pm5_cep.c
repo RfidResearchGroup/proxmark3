@@ -53,9 +53,13 @@
 #define CEP_HANDSHAKE_STRING     "iamf0rupm5"
 #define CEP_HANDSHAKE_STX        0x02
 #define CEP_SPI_BYTE_TIMEOUT     100000  // spin-wait iterations per byte (matches source)
-// First reply byte races the Flipper's ~120ms poll gap; this timeout spans it.
-// Later bytes clock continuously on the short timeout. Measured reply success
-// ~22% -> ~100% with this budget.
+// The Flipper master only clocks the bus in bursts roughly every ~120ms
+// (its own idle poll cadence) - CEP_SPI_BYTE_TIMEOUT alone (~3-10ms real
+// time) is far shorter than that gap, so the first reply byte - the one
+// racing against the master's next poll - needs a budget that actually
+// spans it. Once that byte clears, the master is mid-CS and keeps
+// clocking continuously, so every later byte stays on the short timeout.
+// Took measured CEP reply success from ~22% to ~100% in testing.
 #define CEP_SPI_HEADER_BYTE_TIMEOUT  2000000
 #define CEP_SPI_RESPONSE_TIMEOUT_TICKS  1500000  // 1s at 1.5 MHz
 #define CEP_HANDSHAKE_REPLY_MAX_RETRIES 3  // bound the stall-recovery loop below - still-attached isn't still-working forever
@@ -312,6 +316,7 @@ void cep_ensure_usb_host_mode(void) {
     s_usb_host_mode = true;
     s_usb_host_forced = true;
     s_usart1_active = false;
+    s_detach_count = 0;
 }
 
 bool cep_is_usb_host_active(void) {
@@ -395,6 +400,15 @@ void cep_attach_poll(void) {
             cep_usart1_restore();
             s_usart1_active = true;
         }
+        // The FAP re-runs its handshake on every app launch, not just on a
+        // fresh physical attach - the CC controller's attach bits don't
+        // reliably blip on every relaunch (confirmed on hardware: sometimes
+        // they do, sometimes they don't), so gating the handshake listener on
+        // that edge alone missed real handshake attempts and required a
+        // physical unplug/replug to recover (GH #3667). Instead, watch for a
+        // fresh incoming byte any time we're attached, regardless of edge.
+        // cep_do_handshake() itself is timeout-bounded so a spurious byte
+        // can't hang the main loop.
         // Interrupt-driven handshake (Adrian, 2026-11-24): the USART1 ISR
         // sets s_handshake_pending when a full request arrives; reply
         // over SPI here. Do NOT poll USART1 RX here - the ISR owns it now.

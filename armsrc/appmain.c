@@ -94,7 +94,7 @@
 #include "buzzer.h"        // PM5 mainboard buzzer API
 #include "rgb_indicator.h" // PM5 antenna-RGB power/battery indicator (WITH_PM5_PWR_LED)
 #include "pm5_power.h"     // PM5 power-save idle (clock scaling + WFI)
-#ifdef PM5
+#if defined(WITH_CEP)
 #include "pm5_usb_host_cdc.h" // PM5 USB host CDC (ICSD) driver
 #endif
 
@@ -4826,6 +4826,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_ng(CMD_PM5_POWERSAVE, PM3_SUCCESS, &state, 1);
             break;
         }
+#ifdef WITH_CEP
         case CMD_PM5_ICSD_INIT: {
             cep_ensure_usb_host_mode();
             reply_ng(CMD_PM5_ICSD_INIT, PM3_SUCCESS, NULL, 0);
@@ -4866,7 +4867,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             if (n > 0) {
                 reply_ng(CMD_PM5_ICSD_RD, PM3_SUCCESS, (const uint8_t *)rx_buf, (size_t)n);
             } else {
-                reply_ng(CMD_PM5_ICSD_RD, PM3_EIO, NULL, 0);
+                reply_ng(CMD_PM5_ICSD_RD, PM3_SUCCESS, NULL, 0);
             }
             break;
         }
@@ -4876,6 +4877,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_ng(CMD_PM5_ICSD_STATUS, PM3_SUCCESS, dbg, sizeof(dbg));
             break;
         }
+#endif // WITH_CEP
 #endif // PM5
         default: {
             Dbprintf("%s: 0x%04x", "unknown command:", packet->cmd);
@@ -4991,7 +4993,7 @@ void __attribute__((noreturn)) AppMain(void) {
         bwm_lowbatt_check();
 #endif
 #ifdef WITH_CEP
-    cep_attach_poll();
+        cep_attach_poll();
 #endif
 #ifdef WITH_BWM_FORWARD
         bwm_fwd_tag_poll();
@@ -5118,7 +5120,9 @@ void __attribute__((noreturn)) AppMain(void) {
 #ifdef PM5
     // Pump the USB host CDC (ICSD) state machine. Safe no-op when the host
     // port isn't up (pm5_usb_host_cdc_poll() returns early if so).
+#ifdef WITH_CEP
     pm5_usb_host_cdc_poll();
+#endif
     // WFI sleep adds ~40-50ms of latency before the main loop notices a
     // fresh byte on CEP's SPI1 - fine at idle, but it's what made the
     // original attach handshake miss bytes (see cep_attach_poll()'s own
