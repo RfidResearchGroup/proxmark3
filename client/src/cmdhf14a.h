@@ -86,7 +86,7 @@ int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status,
 
 int hf14a_getconfig(hf14a_config_t *config);
 int hf14a_setconfig(hf14a_config_t *config, bool verbose);
-int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search);
+int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search, bool info_hints);
 int infoHF14A4Applications(bool verbose);
 int hf14a_last_info_types(void);
 int hf14a_aid_search(bool verbose, bool *emv_found);

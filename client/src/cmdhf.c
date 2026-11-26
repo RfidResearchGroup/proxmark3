@@ -93,6 +93,9 @@ int CmdHFSearch(const char *Cmd) {
 
     int res = PM3_ESOFT;
 
+    // PM5 verbose: a single found tag gets its info command run
+    bool pm5_info = (verbose && IfPm5());
+
     uint8_t success[COUNT_OF_PROTOCOLS] = {0};
 
     PROMPT_CLEARLINE;
@@ -128,7 +131,7 @@ int CmdHFSearch(const char *Cmd) {
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, "Searching for ISO14443-A tag...");
     if (IfPm3Iso14443a()) {
-        int sel_state = infoHF14A(false, false, false);
+        int sel_state = infoHF14A(false, false, false, (pm5_info == false));
         if (sel_state > 0) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 14443-A tag") " found\n");
             success[ISO_14443A] = true;
@@ -259,9 +262,8 @@ int CmdHFSearch(const char *Cmd) {
         return res;
     }
 
-    // PM5 verbose: a single found tag gets its info command run
     const char *info_cmd = NULL;
-    if (verbose && IfPm5()) {
+    if (pm5_info) {
         int found = 0;
         for (int i = 0; i < COUNT_OF_PROTOCOLS; i++) {
             found += success[i] ? 1 : 0;
@@ -282,6 +284,22 @@ int CmdHFSearch(const char *Cmd) {
             } else if (success[ICLASS]) {
                 info_cmd = "hf iclass info";
             }
+        }
+    }
+
+    // 14A info hints held back for the info run
+    if (pm5_info && success[ISO_14443A] && info_cmd == NULL) {
+        int types = hf14a_last_info_types();
+        if ((types & MTULTRALIGHT) == MTULTRALIGHT) {
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu info") "`");
+        }
+
+        if ((types & MTDESFIRE) == MTDESFIRE) {
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfdes info") "`");
+        }
+
+        if ((types & MTCLASSIC) == MTCLASSIC) {
+            PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mf info`"));
         }
     }
 
@@ -332,6 +350,7 @@ int CmdHFSearch(const char *Cmd) {
     }
 
     if (info_cmd) {
+        PrintAndLogEx(INFO, "Running `" _YELLOW_("%s") "`...", info_cmd);
         CommandReceived(info_cmd);
     }
 

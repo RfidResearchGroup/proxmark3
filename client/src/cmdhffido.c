@@ -69,7 +69,7 @@ static int CmdHFFidoInfo(const char *Cmd) {
     CLIParserFree(ctx);
 
     // info about 14a part
-    infoHF14A(false, false, false);
+    infoHF14A(false, false, false, true);
 
     // FIDO info
     PrintAndLogEx(INFO, "-----------" _CYAN_("FIDO Info") "---------------------------------");
