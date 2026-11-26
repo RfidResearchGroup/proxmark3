@@ -21,6 +21,7 @@
 #include "cmdparser.h"      // command_t
 #include "cliparser.h"      // parse
 #include "comms.h"          // clearCommandBuffer
+#include "cmdmain.h"        // CommandReceived
 #include "util.h"           // set_rgb
 #include "lfdemod.h"        // computeSignalProperties
 #include "cmdhf14a.h"       // ISO14443-A
@@ -92,6 +93,9 @@ int CmdHFSearch(const char *Cmd) {
 
     int res = PM3_ESOFT;
 
+    // PM5 verbose: a single found tag gets its info command run
+    bool pm5_info = (verbose && IfPm5());
+
     uint8_t success[COUNT_OF_PROTOCOLS] = {0};
 
     PROMPT_CLEARLINE;
@@ -127,7 +131,7 @@ int CmdHFSearch(const char *Cmd) {
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, "Searching for ISO14443-A tag...");
     if (IfPm3Iso14443a()) {
-        int sel_state = infoHF14A(false, false, false);
+        int sel_state = infoHF14A(false, false, false, (pm5_info == false));
         if (sel_state > 0) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 14443-A tag") " found\n");
             success[ISO_14443A] = true;
@@ -196,24 +200,30 @@ int CmdHFSearch(const char *Cmd) {
 
     // OBS!  This triggers a swap to FPGA_BITSTREAM_HF_15 == 1.5sec delay
 
+    // ISO15693 keeps its field on for the iCLASS probe, saves a 250 ms tag power up
+    bool hf15_field = false;
+
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, "Searching for ISO15693 tag...");
     if (IfPm3Iso15693()) {
-        if (readHF15Uid(false, true)) {
+        if (readHF15Uid(false, true, true)) {
             PrintAndLogEx(SUCCESS, "Valid " _GREEN_("ISO 15693 tag") " found\n");
             success[ISO_15693] = true;
             res = PM3_SUCCESS;
         }
+        hf15_field = true;
     }
 
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, "Searching for iCLASS / PicoPass tag...");
     if (IfPm3Iclass()) {
-        if (read_iclass_csn(false, false, false) == PM3_SUCCESS) {
+        if (read_iclass_csn(false, false, false, (hf15_field == false)) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("iCLASS tag / PicoPass tag") " found\n");
             success[ICLASS] = true;
             res = PM3_SUCCESS;
         }
+    } else if (hf15_field) {
+        DropField();
     }
 
     // OBS!  This triggers a swap to FPGA_BITSTREAM_HF_FELICA == 1.5sec delay
@@ -225,7 +235,7 @@ int CmdHFSearch(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 18092 / FeliCa tag") " found\n");
             success[FELICA] = true;
             res = PM3_SUCCESS;
-        } else if (info_felica_seac() == PM3_SUCCESS) {
+        } else if (info_felica_seac(1) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "Valid " _GREEN_("FeliCa SEAC tag") " found\n");
             success[FELICA] = true;
             res = PM3_SUCCESS;
@@ -250,6 +260,47 @@ int CmdHFSearch(const char *Cmd) {
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, _RED_("No known/supported 13.56 MHz tags found"));
         return res;
+    }
+
+    const char *info_cmd = NULL;
+    if (pm5_info) {
+        int found = 0;
+        for (int i = 0; i < COUNT_OF_PROTOCOLS; i++) {
+            found += success[i] ? 1 : 0;
+        }
+
+        if (found == 1) {
+            int types = hf14a_last_info_types();
+            if (success[ISO_14443A] && types == MTCLASSIC) {
+                info_cmd = "hf mf info";
+            } else if (success[ISO_14443A] && types == MTULTRALIGHT) {
+                info_cmd = "hf mfu info";
+            } else if (success[ISO_14443A] && types == MTDESFIRE) {
+                info_cmd = "hf mfdes info";
+            } else if (success[ISO_14443B]) {
+                info_cmd = "hf 14b info";
+            } else if (success[ISO_15693]) {
+                info_cmd = "hf 15 info";
+            } else if (success[ICLASS]) {
+                info_cmd = "hf iclass info";
+            }
+        }
+    }
+
+    // 14A info hints held back for the info run
+    if (pm5_info && success[ISO_14443A] && info_cmd == NULL) {
+        int types = hf14a_last_info_types();
+        if ((types & MTULTRALIGHT) == MTULTRALIGHT) {
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu info") "`");
+        }
+
+        if ((types & MTDESFIRE) == MTDESFIRE) {
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfdes info") "`");
+        }
+
+        if ((types & MTCLASSIC) == MTCLASSIC) {
+            PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mf info`"));
+        }
     }
 
     // no need to print 14A hints,  since it will print itself
@@ -278,15 +329,15 @@ int CmdHFSearch(const char *Cmd) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf xerox") "` commands\n");
     }
 
-    if (success[ISO_14443B]) {
+    if (success[ISO_14443B] && info_cmd == NULL) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 14b") "` commands\n");
     }
 
-    if (success[ISO_15693]) {
+    if (success[ISO_15693] && info_cmd == NULL) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 15") "` commands\n");
     }
 
-    if (success[ICLASS]) {
+    if (success[ICLASS] && info_cmd == NULL) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass") "` commands\n");
     }
 
@@ -296,6 +347,11 @@ int CmdHFSearch(const char *Cmd) {
 
     if (success[PROTO_CRYPTORF]) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf cryptorf") "` commands\n");
+    }
+
+    if (info_cmd) {
+        PrintAndLogEx(INFO, "Running `" _YELLOW_("%s") "`...", info_cmd);
+        CommandReceived(info_cmd);
     }
 
     return res;

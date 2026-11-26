@@ -25,7 +25,7 @@
 int CmdHFiClass(const char *Cmd);
 
 int info_iclass(bool shallow_mod);
-int read_iclass_csn(bool loop, bool verbose, bool shallow_mod);
+int read_iclass_csn(bool loop, bool verbose, bool shallow_mod, bool init);
 void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t endblock, size_t filesize, bool dense_output);
 void HFiClassCalcDivKey(uint8_t *CSN, uint8_t *KEY, uint8_t *div_key, bool elite);
 

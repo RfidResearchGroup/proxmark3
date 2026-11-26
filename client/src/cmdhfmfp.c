@@ -326,7 +326,7 @@ static int CmdHFMFPInfo(const char *Cmd) {
         }
     } else {
         // info about 14a part, historical bytes.
-        infoHF14A(false, false, false);
+        infoHF14A(false, false, false, true);
     }
 
     // Signature originality check

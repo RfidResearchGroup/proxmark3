@@ -674,12 +674,34 @@ static int try_default_3des_keys(bool override, uint8_t **correct_key, bool use_
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(SUCCESS, "--- " _CYAN_("Known UL-C 3DES keys"));
 
-    for (uint8_t i = 0; i < ARRAYLEN(default_3des_keys); ++i) {
-        uint8_t *key = default_3des_keys[i];
-        if (ul3pass_authentication(key, MIFAREULC_KEY_INDEX, true, 0, NULL, NULL, false, true, true, use_fastread0, false, NULL, false, 0, NULL) == PM3_SUCCESS) {
-            *correct_key = key;
-            res = PM3_SUCCESS;
-            break;
+    // all keys in one device command, one field setup
+    mful_3passchk_t payload = {
+        .key_index = MIFAREULC_KEY_INDEX,
+        .firstchunk = 1,
+        .lastchunk = 1,
+        .segment = 4,
+        .check_answer = 1,
+        .use_fastread0 = use_fastread0,
+        .nkeys = ARRAYLEN(default_3des_keys),
+    };
+    memcpy(payload.data, default_3des_keys, sizeof(default_3des_keys));
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFAREU3P_CHKKEY, (uint8_t *)&payload, MIFAREU3P_CHKKEY_HEADER + sizeof(default_3des_keys));
+
+    // reply is auths, ticks, found key
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_MIFAREU3P_CHKKEY, &resp, 2500) &&
+            resp.status == PM3_SUCCESS &&
+            resp.length >= (sizeof(uint32_t) * 2) + MIFAREU3P_KEY_SIZE) {
+
+        const uint8_t *found = resp.data.asBytes + (sizeof(uint32_t) * 2);
+        for (uint8_t i = 0; i < ARRAYLEN(default_3des_keys); ++i) {
+            if (memcmp(default_3des_keys[i], found, MIFAREU3P_KEY_SIZE) == 0) {
+                *correct_key = default_3des_keys[i];
+                res = PM3_SUCCESS;
+                break;
+            }
         }
     }
 
@@ -2116,20 +2138,24 @@ static mfulc_prng_t mfulc_prng_test(uint32_t samples, uint32_t *got_out, uint32_
     uint8_t rndb[64][8];
     uint32_t got = 0;
 
-    for (uint32_t i = 0; i < samples; i++) {
-        iso14a_card_select_t card;
-        if (ul_select(&card) == false) {
-            continue;
+    // the device keeps the 8-byte ek(RndB) of each 1A 00 answer, field reset before each.
+    // A batch stops at its first failed attempt, which still counts as one.
+    uint8_t dummy_key[16] = {0};
+    uint32_t attempts = 0;
+    while (attempts < samples) {
+        uint32_t want = samples - attempts;
+        uint32_t n = 0;
+        int res = ul3pass_authentication(dummy_key, MIFAREULC_KEY_INDEX, true, want - 1, &n, NULL, false, false, false, false, true, rndb[got], true, 0, NULL);
+        if (res == PM3_ETIMEOUT) {
+            break;
         }
-        uint8_t nonce[11] = {0x00};
-        int rl = ulc_requestAuthentication(nonce, sizeof(nonce));
-        DropField();
-        // response is AF || ek(RndB)[8] || CRC[2]; compare the 8-byte ek(RndB)
-        if (rl < 9 || nonce[0] != 0xAF) {
-            continue;
+
+        n = MIN(n, want);
+        got += n;
+        attempts += n;
+        if (n < want) {
+            attempts++;
         }
-        memcpy(rndb[got], &nonce[1], 8);
-        got++;
     }
 
     *got_out = got;

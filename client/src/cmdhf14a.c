@@ -255,6 +255,7 @@ static const hintAIDList_t hintAIDList[] = {
 static uint16_t gs_frame_len = 0;
 static uint8_t gs_frames_num = 0;
 static uint16_t atsFSC[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
+static int gs_info_types = MTNONE;  // info commands the last infoHF14A card hints at, MTCLASSIC / MTULTRALIGHT / MTDESFIRE
 
 int hf14a_getversion_data(iso14a_card_select_t *card, uint64_t select_status, version_hw_t *hw) {
 
@@ -1010,7 +1011,7 @@ static int CmdHF14AInfo(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    infoHF14A(verbose, do_nack_test, do_aid_search);
+    infoHF14A(verbose, do_nack_test, do_aid_search, true);
     return PM3_SUCCESS;
 }
 
@@ -3072,7 +3073,14 @@ int hf14a_aid_search(bool verbose, bool *emv_found) {
     return found;
 }
 
-int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
+int hf14a_last_info_types(void) {
+    return gs_info_types;
+}
+
+// info_hints: false holds back the hf mf / mfu / mfdes info hints, see hf14a_last_info_types()
+int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search, bool info_hints) {
+
+    gs_info_types = MTNONE;
 
     uint8_t dbg_curr = DBG_NONE;
     if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
@@ -3651,7 +3659,10 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mfu *") "` magic commands");
         }
 
-        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu info") "`");
+        gs_info_types |= MTULTRALIGHT;
+        if (info_hints) {
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu info") "`");
+        }
     }
 
     if (isMifarePlus && (isMagic == MAGIC_FLAG_NONE)) {
@@ -3660,7 +3671,10 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     bool mfdes_hint = (isMifareDESFire && (isMagic == MAGIC_FLAG_NONE) && isEMV == false);
     if (mfdes_hint) {
-        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfdes info") "`");
+        gs_info_types |= MTDESFIRE;
+        if (info_hints) {
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfdes info") "`");
+        }
     }
 
     // transit cards known by their ATS alone, no card exchange
@@ -3734,10 +3748,12 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         if ((isMagic & MAGIC_FLAG_GEN_2) == MAGIC_FLAG_GEN_2) {
             PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf") "` commands");
         } else {
-            PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mf info`"));
+            gs_info_types |= MTCLASSIC;
+            if (info_hints) {
+                PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mf info`"));
+            }
         }
     }
-
 
     PrintAndLogEx(NORMAL, "");
     DropField();
@@ -3771,7 +3787,7 @@ int infoHF14A4Applications(bool verbose) {
 
     // e.g. DESFire EV2 answers 9000 to any SELECT with Le
     if (sw == ISO7816_OK) {
-        PrintAndLogEx(HINT, "Hint: Card answers to all AID. It maybe the latest revision of plus/desfire/ultralight card.");
+        PrintAndLogEx(HINT, "Hint: Card answers to all AID.");
         DropField();
         return 0;
     }

@@ -476,8 +476,9 @@ static int iso15_resend_without_option(iso15_raw_cmd_t *packet, PacketResponseNG
 //  *buf should be large enough to fit the 64bit uid
 //  *dsfid receives DSFID when non-NULL
 //  fast: true for high-speed (1 out of 4), false for low-speed (1 out of 256)
+//  keep_field: leave the reader field on afterwards
 // returns 1 if succeeded
-static int getUID_ex(bool fast, bool verbose, bool loop, uint8_t *buf, uint8_t *dsfid) {
+static int getUID_ex(bool fast, bool verbose, bool loop, bool keep_field, uint8_t *buf, uint8_t *dsfid) {
 
     uint8_t approxlen = 5;
     iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
@@ -497,6 +498,10 @@ static int getUID_ex(bool fast, bool verbose, bool loop, uint8_t *buf, uint8_t *
     packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE);
     if (fast) {
         packet->flags |= ISO15_HIGH_SPEED;
+    }
+
+    if (keep_field) {
+        packet->flags |= ISO15_NO_DISCONNECT;
     }
 
     int res = PM3_ESOFT;
@@ -537,13 +542,13 @@ static int getUID_ex(bool fast, bool verbose, bool loop, uint8_t *buf, uint8_t *
 }
 
 static int getUID(bool fast, bool verbose, bool loop, uint8_t *buf) {
-    return getUID_ex(fast, verbose, loop, buf, NULL);
+    return getUID_ex(fast, verbose, loop, false, buf, NULL);
 }
 
 // used with 'hf search'
-bool readHF15Uid(bool loop, bool verbose) {
+bool readHF15Uid(bool loop, bool verbose, bool keep_field) {
     uint8_t uid[ISO15693_UID_LENGTH] = {0};
-    if (getUID(true, verbose, loop, uid) != PM3_SUCCESS) {
+    if (getUID_ex(true, verbose, loop, keep_field, uid, NULL) != PM3_SUCCESS) {
         return false;
     }
     return true;
@@ -1276,7 +1281,7 @@ static int CmdHF15Info(const char *Cmd) {
     if (unaddressed == false) {
         if (scan) {
             PrintAndLogEx(INFO, "Using scan mode");
-            if (getUID_ex(fast, false, false, uid, &dsfid) != PM3_SUCCESS) {
+            if (getUID_ex(fast, false, false, false, uid, &dsfid) != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "no tag found");
                 free(packet);
                 return PM3_EINVARG;
@@ -1801,7 +1806,7 @@ static int CmdHF15Reader(const char *Cmd) {
         return reader_single_tag(fast, loop, afi_buf, afi_len);
     }
 
-    readHF15Uid(loop, true);
+    readHF15Uid(loop, true, false);
     return PM3_SUCCESS;
 }
 
@@ -2630,7 +2635,7 @@ static int CmdHF15Dump(const char *Cmd) {
         // default fallback to scan for tag. Overriding unaddress parameter
         if (scan) {
             PrintAndLogEx(INFO, "Using scan mode");
-            if (getUID_ex(fast, verbose, false, uid, &dsfid) != PM3_SUCCESS) {
+            if (getUID_ex(fast, verbose, false, false, uid, &dsfid) != PM3_SUCCESS) {
                 free(packet);
                 free(tag);
                 PrintAndLogEx(WARNING, "no tag found");

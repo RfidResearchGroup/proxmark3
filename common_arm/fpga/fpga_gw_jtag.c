@@ -425,7 +425,9 @@ static gowin_jtag_status_t gowin_check_config_done(void) {
     gowin_status_reg_t status_reg;
     gowin_jtag_read_status_reg(&status_reg);
     if (status_reg.bits.crc_error || (status_reg.bits.done_final == 0)) {
-        dbg_printf("FPGA config failed, status 0x%08X", status_reg.raw);
+        if (g_dbglevel >= DBG_ERROR) {
+            Dbprintf("FPGA config failed, status 0x%08X", status_reg.raw);
+        }
         return GOWIN_JTAG_ERROR_CONFIG_FAIL;
     }
     return GOWIN_JTAG_OK;
@@ -446,7 +448,9 @@ gowin_jtag_status_t gowin_jtag_sram_config_finish(void) {
         // an unconfigured FPGA hangs the HF code, fall back to the image in flash
         gowin_jtag_reprogram();
         gowin_jtag_reset();
-        dbg_printf("Reloaded FPGA from flash, status 0x%08X", gowin_jtag_read_status());
+        if (g_dbglevel >= DBG_ERROR) {
+            Dbprintf("Reloaded FPGA from flash, status 0x%08X", gowin_jtag_read_status());
+        }
     }
     return status;
 }

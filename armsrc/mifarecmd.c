@@ -442,6 +442,8 @@ void MifareU3PassChkKeys(mful_3passchk_t *packet) {
         clear_trace();
         set_tracing(false);
 
+        foundkeys = 0;
+
         if (iso14443a_select_card(NULL, NULL, NULL, true, 0, true) == 0) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("ChkKeys_fast: Can't select card (ALL)");
             goto out;

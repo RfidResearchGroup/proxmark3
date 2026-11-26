@@ -38,6 +38,6 @@
 #endif
 
 int CmdHF15(const char *Cmd);
-bool readHF15Uid(bool loop, bool verbose);
+bool readHF15Uid(bool loop, bool verbose, bool keep_field);
 
 #endif

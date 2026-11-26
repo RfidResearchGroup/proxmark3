@@ -1477,17 +1477,13 @@ static bool HF14B_ST_Info(bool verbose, bool do_aid_search) {
     return true;
 }
 
-int select_card_14443b_prime(bool disconnect, iso14b_prime_card_select_t *card, bool verbose) {
+static int select_card_14443b_prime_ex(uint32_t field, iso14b_prime_card_select_t *card, bool verbose) {
 
     iso14b_raw_cmd_t packet = {
-        .flags = (ISO14B_CONNECT | ISO14B_SELECT_PRIME | ISO14B_CLEARTRACE),
+        .flags = (field | ISO14B_SELECT_PRIME | ISO14B_CLEARTRACE),
         .timeout = 0,
         .rawlen = 0,
     };
-
-    if (disconnect) {
-        packet.flags |= ISO14B_DISCONNECT;
-    }
 
     clearCommandBuffer();
     PacketResponseNG resp;
@@ -1519,7 +1515,7 @@ int select_card_14443b_prime(bool disconnect, iso14b_prime_card_select_t *card, 
 
             prime_vt_addr = selected.vt_addr;
             prime_frame_seq = ISO14443B_PRIME_SEQUENCE_START;
-            SetISODEPState(disconnect ? ISODEP_INACTIVE : ISODEP_NFCB_PRIME);
+            SetISODEPState((field & ISO14B_DISCONNECT) ? ISODEP_INACTIVE : ISODEP_NFCB_PRIME);
             if (card) {
                 *card = selected;
             }
@@ -1540,6 +1536,10 @@ int select_card_14443b_prime(bool disconnect, iso14b_prime_card_select_t *card, 
     }
 
     return resp.status;
+}
+
+int select_card_14443b_prime(bool disconnect, iso14b_prime_card_select_t *card, bool verbose) {
+    return select_card_14443b_prime_ex(ISO14B_CONNECT | (disconnect ? ISO14B_DISCONNECT : 0), card, verbose);
 }
 
 // menu command to get and print all info known about any known 14b tag
@@ -1696,10 +1696,10 @@ static int write_sr_block(uint8_t blockno, uint8_t datalen, uint8_t *data) {
     return PM3_SUCCESS;
 }
 
-static bool HF14B_st_reader(bool verbose) {
+static bool HF14B_st_reader(bool verbose, uint32_t field) {
 
     iso14b_raw_cmd_t packet = {
-        .flags = (ISO14B_CONNECT | ISO14B_SELECT_SR | ISO14B_DISCONNECT),
+        .flags = (field | ISO14B_SELECT_SR),
         .timeout = 0,
         .rawlen = 0,
     };
@@ -1743,9 +1743,9 @@ static bool HF14B_st_reader(bool verbose) {
     return false;
 }
 
-static bool HF14B_std_reader(bool verbose) {
+static bool HF14B_std_reader(bool verbose, uint32_t field) {
     iso14b_raw_cmd_t packet = {
-        .flags = (ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_DISCONNECT),
+        .flags = (field | ISO14B_SELECT_STD),
         .timeout = 0,
         .rawlen = 0,
     };
@@ -1793,10 +1793,10 @@ static bool HF14B_std_reader(bool verbose) {
     return false;
 }
 
-static bool HF14B_ask_ct_reader(bool verbose) {
+static bool HF14B_ask_ct_reader(bool verbose, uint32_t field) {
 
     iso14b_raw_cmd_t packet = {
-        .flags = (ISO14B_CONNECT | ISO14B_SELECT_CTS | ISO14B_DISCONNECT),
+        .flags = (field | ISO14B_SELECT_CTS),
         .timeout = 0,
         .rawlen = 0,
     };
@@ -1832,10 +1832,10 @@ static bool HF14B_ask_ct_reader(bool verbose) {
     return false;
 }
 
-static bool HF14B_picopass_reader(bool verbose) {
+static bool HF14B_picopass_reader(bool verbose, uint32_t field) {
 
     iso14b_raw_cmd_t packet = {
-        .flags = (ISO14B_CONNECT | ISO14B_SELECT_PICOPASS | ISO14B_DISCONNECT),
+        .flags = (field | ISO14B_SELECT_PICOPASS),
         .timeout = 0,
         .rawlen = 0,
     };
@@ -1879,10 +1879,10 @@ static bool HF14B_picopass_reader(bool verbose) {
     return false;
 }
 
-static bool HF14B_prime_reader(bool verbose) {
+static bool HF14B_prime_reader(bool verbose, uint32_t field) {
 
     iso14b_prime_card_select_t card = {0};
-    if (select_card_14443b_prime(true, &card, verbose) != PM3_SUCCESS) {
+    if (select_card_14443b_prime_ex(field, &card, verbose) != PM3_SUCCESS) {
         return false;
     }
     print_prime_general_info(&card);
@@ -1891,14 +1891,14 @@ static bool HF14B_prime_reader(bool verbose) {
 }
 
 // test for other 14b type tags (mimic another reader - don't have tags to identify)
-static bool HF14B_other_reader(bool verbose) {
+static bool HF14B_other_reader(bool verbose, uint32_t field) {
 
     iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + 4);
     if (packet == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
         return false;
     }
-    packet->flags = (ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_RAW | ISO14B_APPEND_CRC);
+    packet->flags = (field | ISO14B_SELECT_STD | ISO14B_RAW | ISO14B_APPEND_CRC);
     packet->timeout = 0;
     packet->rawlen = 4;
     memcpy(packet->raw, "\x00\x0b\x3f\x80", 4);
@@ -1912,7 +1912,6 @@ static bool HF14B_other_reader(bool verbose) {
     if (wait_14b_response(false, NULL, NULL)) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
         PrintAndLogEx(SUCCESS, "unknown tag type answered to a " _YELLOW_("0x000b3f80") " command");
-        switch_off_field_14b();
         free(packet);
         return true;
     }
@@ -1925,7 +1924,6 @@ static bool HF14B_other_reader(bool verbose) {
     if (wait_14b_response(false, NULL, NULL)) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
         PrintAndLogEx(SUCCESS, "Unknown tag type answered to a " _YELLOW_("0x0A") " command");
-        switch_off_field_14b();
         free(packet);
         return true;
     }
@@ -1937,11 +1935,9 @@ static bool HF14B_other_reader(bool verbose) {
     if (wait_14b_response(false, NULL, NULL)) {
         PrintAndLogEx(SUCCESS, "\n14443-3b tag found:");
         PrintAndLogEx(SUCCESS, "Unknown tag type answered to a " _YELLOW_("0x0C") " command");
-        switch_off_field_14b();
         return true;
     }
 
-    switch_off_field_14b();
     return false;
 }
 
@@ -3690,11 +3686,11 @@ int infoHF14B(bool verbose, bool do_aid_search) {
         return PM3_SUCCESS;
 
     // try ASK CT 14b
-    if (HF14B_ask_ct_reader(verbose))
+    if (HF14B_ask_ct_reader(verbose, ISO14B_CONNECT | ISO14B_DISCONNECT))
         return PM3_SUCCESS;
 
     // try Type B' / Innovatron APGEN
-    if (HF14B_prime_reader(verbose))
+    if (HF14B_prime_reader(verbose, ISO14B_CONNECT | ISO14B_DISCONNECT))
         return PM3_SUCCESS;
 
     // try unknown 14b read commands (to be identified later)
@@ -3712,37 +3708,40 @@ int readHF14B(bool loop, bool verbose, bool read_plot) {
     do {
         found = false;
 
+        // all probes share one field: the first connects, it is dropped below
         // try std 14b (atqb)
-        found |= HF14B_std_reader(verbose);
+        found |= HF14B_std_reader(verbose, ISO14B_CONNECT);
         if (found)
             goto plot;
 
         // try ST Microelectronics 14b
-        found |= HF14B_st_reader(verbose);
+        found |= HF14B_st_reader(verbose, 0);
         if (found)
             goto plot;
 
         // Picopass
-        found |= HF14B_picopass_reader(verbose);
+        found |= HF14B_picopass_reader(verbose, 0);
         if (found)
             goto plot;
 
         // try ASK CT 14b
-        found |= HF14B_ask_ct_reader(verbose);
+        found |= HF14B_ask_ct_reader(verbose, 0);
         if (found)
             goto plot;
 
         // try Type B' / Innovatron APGEN
-        found |= HF14B_prime_reader(verbose);
+        found |= HF14B_prime_reader(verbose, 0);
         if (found)
             goto plot;
 
         // try unknown 14b read commands (to be identified later)
         // could be read of calypso, CEPAS, moneo, or pico pass.
-        found |= HF14B_other_reader(verbose);
+        found |= HF14B_other_reader(verbose, 0);
         if (found)
             goto plot;
 plot:
+        switch_off_field_14b();
+
         if (read_plot) {
             res = handle_hf_plot(verbose);
             if (res != PM3_SUCCESS) {
