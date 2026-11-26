@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hw rtttl` - play an RTTTL string or file on the PM5 buzzer, with a shared parser and a reusable firmware playback API (@cansacha)
 - Fixed `hf 14a sniff` and `hf thinfilm sniff` - PM5: a sniff that fell behind once no longer stays deaf, the AT32 DMA is re-armed (@cmac-chris)
 - Added `hf topaz sim` - simulates a Topaz 96 or a Topaz 512 from a dump file (@matrix)
 - Fixed the ISO14443-A simulations and sniffing - the Miller decoder did not find a start bit whose pause shows in one sample, split or a sample late, and did not take a 3 tick pause shifted right (@matrix)

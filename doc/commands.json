@@ -11505,7 +11505,7 @@
         },
         "hw help": {
             "command": "hw help",
-            "description": "help This help ------------- ----------------------- Operation ----------------------- timeout Set the communication timeout on the client side version Show version information about the client and Proxmark3 ------------- ----------------------- Hardware ----------------------- connect Connect to the device via serial port qc_pm5 Perform QC test (hardware or IO) for the PM5 powersave Enable/disable the PM5 power-save idle --------------------------------------------------------------------------------------- hw detectreader available offline: no Start to detect presences of reader field",
+            "description": "help This help ------------- ----------------------- Operation ----------------------- timeout Set the communication timeout on the client side version Show version information about the client and Proxmark3 ------------- ----------------------- Hardware ----------------------- connect Connect to the device via serial port qc_pm5 Perform QC test (hardware or IO) for the PM5 powersave Enable/disable the PM5 power-save idle rtttl Play an RTTTL string or file on the PM5 buzzer --------------------------------------------------------------------------------------- hw detectreader available offline: no Start to detect presences of reader field",
             "notes": [
                 "hw detectreader",
                 "hw detectreader -L"
@@ -11621,6 +11621,21 @@
                 "-h, --help This help"
             ],
             "usage": "hw reset [-h]"
+        },
+        "hw rtttl": {
+            "command": "hw rtttl",
+            "description": "Play an RTTTL melody on the PM5 buzzer. Maximum 2047 text bytes. Playback blocks the device until completion, press the pm5 button or <Enter> to abort it.",
+            "notes": [
+                "hw rtttl --data \"Cancan:d=16,o=5,b=200:c6,8g,8g,a,g,f,e,8d,8d,8e,8f,g,g,8c6,8a,g,f,e,8d,8c\"",
+                "hw rtttl --file melody.rtttl"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <path> RTTTL text file",
+                "-d, --data <text> RTTTL string (quote it)"
+            ],
+            "usage": "hw rtttl [-h] [-f <path>] [-d <text>]"
         },
         "hw sethfthresh": {
             "command": "hw sethfthresh",
@@ -17170,8 +17185,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 952,
+        "commands_extracted": 953,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-11-26T07:01:35+00:00"
+        "extracted_on": "2026-11-26T08:59:34+00:00"
     }
 }

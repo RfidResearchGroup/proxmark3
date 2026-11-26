@@ -1076,6 +1076,13 @@ typedef struct {
     // not yet merged): a cep_attached byte distinguishing "physically
     // present, handshake not yet complete" from "active".
 } PACKED cep_status_t;
+
+// PM5 RTTTL: request = 1..2047 text bytes plus a final NUL, RAM only.
+// Reply after blocking playback: one byte rtttl_status_t, PM3_SUCCESS on success,
+// PM3_EOPABORTED when the button or CMD_BREAK_LOOP stopped it, or PM3_EINVARG on
+// invalid input/playback error. No early success ACK.
+#define CMD_PM5_RTTTL 0x0186
+
 #define BWM_OTA_ACTION_BEGIN 0x00
 #define BWM_OTA_ACTION_WRITE 0x01
 #define BWM_OTA_ACTION_END   0x02

@@ -4295,6 +4295,27 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_ng(CMD_CEP_STATUS, PM3_SUCCESS, (uint8_t *)&status, sizeof(status));
             break;
         }
+#ifdef PM5
+        case CMD_PM5_RTTTL: {
+            // The packet's RAM payload remains alive throughout blocking playback.
+            rtttl_status_t status = RTTTL_ERROR_SIZE;
+            if (packet->length >= 2U && packet->length <= RTTTL_MAX_TEXT_SIZE + 1U) {
+                status = RTTTL_ERROR_SYNTAX;
+                if (packet->data.asBytes[packet->length - 1U] == 0U) {
+                    status = BuzzerPlayRtttl((const char *)packet->data.asBytes, packet->length - 1U);
+                }
+            }
+            uint8_t parser_status = (uint8_t)status;
+            int8_t command_status = PM3_EINVARG;
+            if (status == RTTTL_OK) {
+                command_status = PM3_SUCCESS;
+            } else if (status == RTTTL_ABORTED) {
+                command_status = PM3_EOPABORTED;
+            }
+            reply_ng(CMD_PM5_RTTTL, command_status, &parser_status, sizeof(parser_status));
+            break;
+        }
+#endif // PM5
         case CMD_PING: {
             reply_ng(CMD_PING, PM3_SUCCESS, packet->data.asBytes, packet->length);
             break;

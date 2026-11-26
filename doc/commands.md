@@ -1056,6 +1056,7 @@ Check column "offline" for their availability.
 |`hw ping                `|N       |`Test if the Proxmark3 is responsive`
 |`hw powersave           `|Y       |`Enable/disable the PM5 power-save idle`
 |`hw readmem             `|N       |`Read from MCU flash`
+|`hw rtttl               `|Y       |`Play an RTTTL string or file on the PM5 buzzer`
 |`hw reset               `|N       |`Reset the device`
 |`hw setlfdivisor        `|N       |`Drive LF antenna at 12MHz / (divisor + 1)`
 |`hw sethfthresh         `|N       |`Set thresholds in HF/14a mode`
