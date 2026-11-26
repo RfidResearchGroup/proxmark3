@@ -5698,18 +5698,18 @@ static void print_key_table(size_t sectorscnt, sector_t *e_sector, uint8_t start
     PrintAndLogEx(SUCCESS, "-----+-----+--------------+---+--------------+----");
 
     if (extended_legend) {
-        PrintAndLogEx(INFO, "( "
+        PrintAndLogEx(INFO, "  "
                       _YELLOW_("D") ":Dictionary / "
                       _YELLOW_("S") ":darkSide / "
                       _YELLOW_("U") ":User / "
                       _YELLOW_("R") ":Reused / "
-                      _YELLOW_("N") ":Nested /"
+                      _YELLOW_("N") ":Nested"
                      );
         PrintAndLogEx(INFO, "  "
                       _YELLOW_("H") ":Hardnested / "
                       _YELLOW_("C") ":statiCnested / "
                       _YELLOW_("A") ":keyA"
-                      "%s )",
+                      "%s",
                       (has_aes) ? " / " _YELLOW_("P") ":Plus AES" : ""
                      );
         if (sectorscnt == 18) {
