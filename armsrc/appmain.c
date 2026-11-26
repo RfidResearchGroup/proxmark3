@@ -4996,10 +4996,10 @@ void __attribute__((noreturn)) AppMain(void) {
         }
 
         // Press button for one second to enter a possible standalone mode.
-        // On PM5 the long hold is already taken (shutdown, see below), so
-        // BUTTON_CLICKED() is used there instead of BUTTON_HELD() to also
-        // get BUTTON_DOUBLE_CLICK as a distinct result; a quick single tap
-        // now costs an extra ~500ms to resolve, only on an actual press.
+        // Same trigger and timing as non-PM5. PM5 also needs BUTTON_CLICKED()
+        // here so BUTTON_DOUBLE_CLICK (used below for shutdown) is available;
+        // a quick single tap then costs an extra ~500ms to resolve, only on
+        // an actual press.
 #ifdef PM5
         button_status = BUTTON_CLICKED(1000);
 #else
@@ -5010,26 +5010,19 @@ void __attribute__((noreturn)) AppMain(void) {
             pm5_autooff_touch();   // any press is an interaction
         }
 #endif
-#ifdef PM5
-        if (button_status == BUTTON_DOUBLE_CLICK) {
-            // Hold is shutdown and boot-hold is DFU, so standalone mode gets
-            // its own gesture here.
-            allow_send_wtx = false;
-            RunMod();
-            allow_send_wtx = true;
-        } else if (button_status == BUTTON_HOLD) {
-#else
         if (button_status == BUTTON_HOLD) {
-#endif
             /*
             * So this is the trigger to execute a standalone mod.  Generic entrypoint by following the standalone/standalone.h headerfile
             * All standalone mod "main loop" should be the RunMod() function.
             */
-#ifndef PM5
             allow_send_wtx = false;
             RunMod();
             allow_send_wtx = true;
-#else // TODO DXL Test long press to device shutdown, temporarily blocking standalone mod
+        }
+#ifdef PM5
+        // Double-click: power off. Boot-hold is still DFU; a plain hold
+        // matches non-PM5 and enters standalone mode, same as above.
+        else if (button_status == BUTTON_DOUBLE_CLICK) {
 
             /*
             StartTicks();
@@ -5085,9 +5078,8 @@ void __attribute__((noreturn)) AppMain(void) {
                 Gpio_ARM_Power_ON_Low();
                 while (1); // Wait for system power off.
             }
-
-#endif
         }
+#endif
 
 #ifdef PM5
         // WFI sleep adds ~40-50ms of latency before the main loop notices a
