@@ -572,7 +572,7 @@ static uint8_t async_write_index = 0;
  * @return
  */
 static uint8_t is_write_completed(otg_eptin_type *ept_in) {
-    if (ept_in->dieptsiz_bit.xfersize != 0) {
+    if (ept_in->dieptsiz_bit.xfersize != 0 || ept_in->dieptsiz_bit.pktcnt != 0) {
         return FALSE;
     }
     return TRUE;
@@ -675,6 +675,7 @@ bool async_usb_write_requestWrite(void) {
  */
 void async_usb_write_discard(void) {
     usbd_ept_in_check_fifo(udev, USBD_CDC_BULK_IN_EPT & 0x7F);
+    USB_INEPT(udev->usb_reg, USBD_CDC_BULK_IN_EPT & 0x7F)->dieptsiz = 0;
     async_write_buf_select = 0;
     async_write_index = 0;
 }
