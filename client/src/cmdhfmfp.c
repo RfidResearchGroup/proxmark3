@@ -1697,14 +1697,14 @@ int mfp_save_aes_keys(const iso14a_card_select_t *card, uint8_t foundKeys[2][64]
     return res;
 }
 
-// AES key check of the sectors set in sector_mask (bit per sector) with the hardcoded,
-// UID derived and mfp_default_keys.dic keys. foundKeys as in hf mfp chk
-int mfp_check_aes_keys(uint8_t *uid, const uint8_t *sector_mask, uint8_t sector_cnt, uint8_t foundKeys[2][64][AES_KEY_LEN + 1]) {
+// AES key check of the sectors set in sector_mask (bit per sector) with the user keys
+// first, then the hardcoded, UID derived and mfp_default_keys.dic keys. foundKeys as in hf mfp chk
+int mfp_check_aes_keys(uint8_t *uid, uint8_t *userkeys, int userkeylen, const uint8_t *sector_mask, uint8_t sector_cnt, uint8_t foundKeys[2][64][AES_KEY_LEN + 1]) {
 
     const char *dict = "mfp_default_keys";
     uint8_t *key_block = NULL;
     uint32_t keycnt = 0;
-    int res = mfp_load_keys(&key_block, &keycnt, NULL, 0, dict, strlen(dict), uid, true);
+    int res = mfp_load_keys(&key_block, &keycnt, userkeys, userkeylen, dict, strlen(dict), uid, true);
     if (res != PM3_SUCCESS) {
         return res;
     }

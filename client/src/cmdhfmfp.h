@@ -37,5 +37,5 @@ int CmdHFMFP(const char *Cmd);
 int CmdHFMFPNDEFRead(const char *Cmd);
 int mfp_data_crypt(mf4Session_t *mf4session, uint8_t *dati, uint8_t *dato, bool rev, int bc);
 int mfp_save_aes_keys(const iso14a_card_select_t *card, uint8_t foundKeys[2][64][AES_KEY_LEN + 1]);
-int mfp_check_aes_keys(uint8_t *uid, const uint8_t *sector_mask, uint8_t sector_cnt, uint8_t foundKeys[2][64][AES_KEY_LEN + 1]);
+int mfp_check_aes_keys(uint8_t *uid, uint8_t *userkeys, int userkeylen, const uint8_t *sector_mask, uint8_t sector_cnt, uint8_t foundKeys[2][64][AES_KEY_LEN + 1]);
 #endif

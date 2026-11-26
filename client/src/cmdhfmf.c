@@ -3138,12 +3138,13 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                   "hf mf autopwn -s 0 -a -k FFFFFFFFFFFF     --> target MFC 1K card, Sector 0 with known key A 'FFFFFFFFFFFF'\n"
                   "hf mf autopwn --1k -f mfc_default_keys    --> target MFC 1K card, default dictionary\n"
                   "hf mf autopwn --1k -s 0 -a -k FFFFFFFFFFFF -f mfc_default_keys  --> combo of the two above samples\n"
-                  "hf mf autopwn --1k -s 0 -a -k FFFFFFFFFFFF -k a0a1a2a3a4a5      --> multiple user supplied keys"
+                  "hf mf autopwn --1k -s 0 -a -k FFFFFFFFFFFF -k a0a1a2a3a4a5      --> multiple user supplied keys\n"
+                  "hf mf autopwn -k 000102030405060708090A0B0C0D0E0F                --> MIFARE Plus, AES key for the AES only sectors"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("k", "key",    "<hex>",  "Known key, 12 hex bytes"),
+        arg_strx0("k", "key",    "<hex>",  "Known key, 6 hex bytes, or 16 for a MIFARE Plus AES sector"),
         arg_int0("s",  "sector", "<dec>",  "Input sector number"),
         arg_lit0("a",   NULL,              "Input key A (def)"),
         arg_lit0("b",   NULL,              "Input key B"),
@@ -3181,9 +3182,43 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     int in_keys_len = 0;
     // 100 user keys, then the 8 keys added once the card is known
     uint8_t in_keys[(100 + 8) * MIFARE_KEY_SIZE] = {0};
-    if (CLIParamHexToBuf(arg_get_str(ctx, 1), in_keys, 100 * MIFARE_KEY_SIZE, &in_keys_len)) {
-        CLIParserFree(ctx);
-        return PM3_ESOFT;
+
+    // 16 byte keys are AES keys for the AES only sectors of a MIFARE Plus
+    int aes_in_len = 0;
+    uint8_t aes_in_keys[10 * AES_KEY_LEN] = {0};
+
+    struct arg_str *key_args = arg_get_str(ctx, 1);
+    for (int i = 0; i < key_args->count; i++) {
+
+        uint8_t k[100 * MIFARE_KEY_SIZE] = {0};
+        int klen = 0;
+        if (param_gethex_to_eol(key_args->sval[i], 0, k, sizeof(k), &klen)) {
+            PrintAndLogEx(ERR, "Key %d is not valid hex", i + 1);
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+
+        if ((klen % AES_KEY_LEN) == 0 && (klen % MIFARE_KEY_SIZE) != 0) {
+            if (aes_in_len + klen > (int)sizeof(aes_in_keys)) {
+                PrintAndLogEx(ERR, "Too many AES keys");
+                CLIParserFree(ctx);
+                return PM3_EINVARG;
+            }
+            memcpy(aes_in_keys + aes_in_len, k, klen);
+            aes_in_len += klen;
+        } else if (klen && (klen % MIFARE_KEY_SIZE) == 0) {
+            if (in_keys_len + klen > 100 * MIFARE_KEY_SIZE) {
+                PrintAndLogEx(ERR, "Too many keys");
+                CLIParserFree(ctx);
+                return PM3_EINVARG;
+            }
+            memcpy(in_keys + in_keys_len, k, klen);
+            in_keys_len += klen;
+        } else {
+            PrintAndLogEx(ERR, "Key %d must be 6 or 16 hex bytes, got %d", i + 1, klen);
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
     }
 
     uint8_t sectorno = arg_get_u32_def(ctx, 2, 0);
@@ -3448,6 +3483,16 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             }
             PrintAndLogEx(INFO, "AES only sectors... " _YELLOW_("%s"), list);
         }
+
+        // -s / -b on an AES sector meant the AES key, Crypto1 looks up sector 0
+        if (mf_sector_in_mask(aes_sectors, sectorno)) {
+            sectorno = 0;
+            keytype = MF_KEY_A;
+        }
+    }
+
+    if (aes_in_len && aes_cnt == 0) {
+        PrintAndLogEx(WARNING, "No AES only sectors, the AES key%s not used", (aes_in_len > AES_KEY_LEN) ? "s are" : " is");
     }
 
     bool known_key = (in_keys_len > 5);
@@ -4173,7 +4218,7 @@ all_found:
     if (aes_cnt) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("AES only sectors") " ----------------------------------");
-        mfp_check_aes_keys(card.uid, aes_sectors, sector_cnt, aes_keys);
+        mfp_check_aes_keys(card.uid, aes_in_keys, aes_in_len, aes_sectors, sector_cnt, aes_keys);
 
         bool aes_found = false;
         PrintAndLogEx(INFO, "-----+----------------------------------+----------------------------------");
