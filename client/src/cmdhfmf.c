@@ -4331,26 +4331,39 @@ all_found:
 
     free(fptr);
 
-    // AES only sectors are read with their AES key, data blocks into the dump
+    // AES only sectors are read with their AES key, whole sector like hf mfp dump
     for (uint8_t s = 0; s < sector_cnt; s++) {
 
         if (mf_sector_in_mask(aes_sectors, s) == false) {
             continue;
         }
 
-        uint8_t kt = (aes_keys[MF_KEY_A][s][0]) ? MF_KEY_A : MF_KEY_B;
-        if (aes_keys[kt][s][0] == 0) {
+        if ((aes_keys[MF_KEY_A][s][0] == 0) && (aes_keys[MF_KEY_B][s][0] == 0)) {
             PrintAndLogEx(FAILED, "Sector %2u... AES key unknown", s);
             autopwn_res = PM3_EPARTIAL;
             continue;
         }
 
-        uint8_t sdata[16 * MFBLOCK_SIZE] = {0};
-        if (mfpReadSector(s, kt, &aes_keys[kt][s][1], sdata, false) == PM3_SUCCESS) {
-            memcpy(dump + (mfFirstBlockOfSector(s) * MFBLOCK_SIZE), sdata, (mfNumBlocksPerSector(s) - 1) * MFBLOCK_SIZE);
-            PrintAndLogEx(SUCCESS, "Sector %2u... read with AES key %c ( " _GREEN_("ok") " )", s, (kt == MF_KEY_B) ? 'B' : 'A');
-        } else {
-            PrintAndLogEx(FAILED, "Sector %2u... read with AES key %c ( " _RED_("fail") " )", s, (kt == MF_KEY_B) ? 'B' : 'A');
+        bool read_ok = false;
+        for (uint8_t kt = MF_KEY_A; kt <= MF_KEY_B && read_ok == false; kt++) {
+
+            if (aes_keys[kt][s][0] == 0) {
+                continue;
+            }
+
+            uint8_t sdata[16 * MFBLOCK_SIZE] = {0};
+            read_ok = (mfpReadSector(s, kt, &aes_keys[kt][s][1], sdata, false) == PM3_SUCCESS);
+            if (read_ok) {
+                memcpy(dump + (mfFirstBlockOfSector(s) * MFBLOCK_SIZE), sdata, mfNumBlocksPerSector(s) * MFBLOCK_SIZE);
+            }
+            PrintAndLogEx(read_ok ? SUCCESS : FAILED, "Sector %2u... read with AES key %c ( %s )",
+                          s,
+                          (kt == MF_KEY_B) ? 'B' : 'A',
+                          read_ok ? _GREEN_("ok") : _RED_("fail")
+                         );
+        }
+
+        if (read_ok == false) {
             autopwn_res = PM3_EPARTIAL;
         }
     }
@@ -4361,7 +4374,8 @@ all_found:
         snprintf(suffix, sizeof(suffix), "-dump");
     }
 
-    fptr = GenerateFilenameByUID("hf-mf-", suffix, card.uid, card.uidlen);
+    // a MIFARE Plus dump is named like the one from hf mfp dump
+    fptr = GenerateFilenameByUID(isMifarePlus ? "hf-mfp-" : "hf-mf-", suffix, card.uid, card.uidlen);
     if (fptr == NULL) {
         free(dump);
         free(e_sector);
