@@ -81,6 +81,7 @@ static uint8_t g_ch_in;
 static uint8_t g_ch_out;
 static bool g_channels_open = false;
 static uint8_t s_rx_staging[64] __attribute__((aligned(4)));
+static volatile uint32_t s_otgfs1_irq_count = 0;
 
 static usbh_class_handler_type g_cdc_class_handler;
 static usbh_user_handler_type g_usbhost_user_handler;
@@ -351,6 +352,36 @@ static int cdc_bulk_out(usbh_core_type *uhost, const uint8_t *buf, uint16_t len,
     return cdc_wait_channel(uhost, g_ch_out, timeout_ms);
 }
 
+static void cdc_force_channel_halt(otg_core_type *udev, uint8_t ch_num) {
+    otg_hchannel_type *usb_chh = USB_CHL(udev->usb_reg, ch_num);
+
+    nvic_irq_disable(OTGFS1_IRQn);
+
+    /* Force channel state out of HCH_NAK so the ISR cannot re-arm */
+    udev->host.hch[ch_num].state = HCH_IDLE;
+
+    /* Mask NAK and CHHLTD interrupts for this channel */
+    usb_chh->hcintmsk &= ~(USB_OTG_HC_NAKM_INT | USB_OTG_HC_CHHLTDM_INT);
+
+    /* Issue hardware halt request */
+    usb_hch_halt(udev->usb_reg, ch_num);
+
+    /* Bounded wait for CHENA bit to clear */
+    uint32_t timeout = 10000;
+    while ((usb_chh->hcchar & USB_OTG_HCCHAR_CHENA) && --timeout) {
+        __NOP();
+    }
+
+    /* Clear all pending channel interrupts */
+    usb_chh->hcint = 0xFFFFFFFF;
+
+    /* Restore interrupt masks */
+    usb_chh->hcintmsk |= (USB_OTG_HC_NAKM_INT | USB_OTG_HC_CHHLTDM_INT);
+
+    /* Restore OTGFS1 IRQ with original priority (5, 0) */
+    nvic_irq_enable(OTGFS1_IRQn, 5, 0);
+}
+
 // Received bytes are tracked by the RX-FIFO ISR in hch[].trans_count, the
 // authoritative count; HCTSIZ's remaining-size field can lag the FIFO drain.
 static int cdc_bulk_in(usbh_core_type *uhost, uint8_t *buf, uint16_t len, uint32_t timeout_ms) {
@@ -361,7 +392,7 @@ static int cdc_bulk_in(usbh_core_type *uhost, uint8_t *buf, uint16_t len, uint32
     }
     usbh_bulk_recv(uhost, g_ch_in, s_rx_staging, len);
     if (cdc_wait_channel(uhost, g_ch_in, timeout_ms) != 0) {
-        usbh_ch_disable(uhost, g_ch_in);
+        cdc_force_channel_halt(&g_otg, g_ch_in);
         return -1;
     }
 
@@ -369,7 +400,6 @@ static int cdc_bulk_in(usbh_core_type *uhost, uint8_t *buf, uint16_t len, uint32
     if (got > len) {
         got = len;
     }
-    usbh_ch_disable(uhost, g_ch_in);
     if (got > 0 && buf != NULL) {
         memcpy(buf, s_rx_staging, got);
     }
@@ -580,11 +610,16 @@ int pm5_icsd_read_response(char *buf, size_t max_len, uint32_t timeout_ms) {
 // interrupts and drives URB_DONE; without this ISR the host core stalls in
 // USBH_IDLE. A pending pre-init interrupt is disabled to avoid re-entry.
 void OTGFS1_IRQHandler(void) {
+    s_otgfs1_irq_count++;
     if (g_initialized) {
         usbh_irq_handler(&g_otg);
     } else {
         nvic_irq_disable(USB_HOST_IRQ);
     }
+}
+
+uint32_t pm5_usb_host_cdc_get_irq_count(void) {
+    return s_otgfs1_irq_count;
 }
 
 // ---------------------------------------------------------------------------

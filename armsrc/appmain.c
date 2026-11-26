@@ -96,6 +96,7 @@
 #include "pm5_power.h"     // PM5 power-save idle (clock scaling + WFI)
 #if defined(WITH_CEP)
 #include "pm5_usb_host_cdc.h" // PM5 USB host CDC (ICSD) driver
+extern uint32_t pm5_usb_host_cdc_get_irq_count(void);
 #endif
 
 
@@ -4872,8 +4873,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_PM5_ICSD_STATUS: {
-            uint8_t dbg[7];
+            uint8_t dbg[11];
             pm5_icsd_get_debug_state(&dbg[0], &dbg[1], &dbg[2], &dbg[3], &dbg[4], &dbg[5], &dbg[6]);
+            uint32_t irq_count = pm5_usb_host_cdc_get_irq_count();
+            dbg[7] = (uint8_t)(irq_count & 0xFF);
+            dbg[8] = (uint8_t)((irq_count >> 8) & 0xFF);
+            dbg[9] = (uint8_t)((irq_count >> 16) & 0xFF);
+            dbg[10] = (uint8_t)((irq_count >> 24) & 0xFF);
             reply_ng(CMD_PM5_ICSD_STATUS, PM3_SUCCESS, dbg, sizeof(dbg));
             break;
         }
@@ -5118,10 +5124,10 @@ void __attribute__((noreturn)) AppMain(void) {
         }
 
 #ifdef PM5
-    // Pump the USB host CDC (ICSD) state machine. Safe no-op when the host
-    // port isn't up (pm5_usb_host_cdc_poll() returns early if so).
+        // Pump the USB host CDC (ICSD) state machine. Safe no-op when the host
+        // port isn't up (pm5_usb_host_cdc_poll() returns early if so).
 #ifdef WITH_CEP
-    pm5_usb_host_cdc_poll();
+        pm5_usb_host_cdc_poll();
 #endif
     // WFI sleep adds ~40-50ms of latency before the main loop notices a
     // fresh byte on CEP's SPI1 - fine at idle, but it's what made the

@@ -125,7 +125,6 @@ static int CmdPm5IcsdStatus(const char *Cmd) {
         "CONTROL_STALL", "CONTROL_COMPLETE"
     };
 
-    (void)Cmd;
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw pm5 icsd status",
                   "Display local USB host CDC telemetry for the ICSD port.",
@@ -144,7 +143,7 @@ static int CmdPm5IcsdStatus(const char *Cmd) {
         PrintAndLogEx(WARNING, "timeout waiting for ICSD host telemetry (is one attached as USB host?)");
         return PM3_ETIMEOUT;
     }
-    if (resp.status != PM3_SUCCESS || resp.length < 7) {
+    if (resp.status != PM3_SUCCESS || resp.length < 11) {
         PrintAndLogEx(FAILED, "ICSD host telemetry unavailable");
         return resp.status;
     }
@@ -157,6 +156,7 @@ static int CmdPm5IcsdStatus(const char *Cmd) {
     uint8_t req_state    = d[4];
     uint8_t conn_sts     = d[5];
     uint8_t port_enable  = d[6];
+    uint32_t irq_count = (uint32_t)d[7] | ((uint32_t)d[8] << 8) | ((uint32_t)d[9] << 16) | ((uint32_t)d[10] << 24);
 
     PrintAndLogEx(SUCCESS, "ICSD USB host telemetry:");
     PrintAndLogEx(NORMAL, "  initialized : %s", initialized ? "yes" : "no");
@@ -169,6 +169,7 @@ static int CmdPm5IcsdStatus(const char *Cmd) {
                   req_state < 14 ? req_names[req_state] : "UNKNOWN", req_state);
     PrintAndLogEx(NORMAL, "  conn_sts    : %u", conn_sts);
     PrintAndLogEx(NORMAL, "  port_enable : %u", port_enable);
+    PrintAndLogEx(NORMAL, "  OTGFS1 IRQ count....... %u", (unsigned int)irq_count);
     return PM3_SUCCESS;
 }
 
