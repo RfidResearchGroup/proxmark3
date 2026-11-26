@@ -475,6 +475,7 @@ bool cep_spi_data_available(void) {
         cep_spi_resync();
         return false;
     }
+
     if (!cep_spi_rx_pending()) {
         return false;
     }
@@ -518,6 +519,7 @@ bool cep_spi_data_available(void) {
         // same treatment as a CEP_SYNC_BYTE run, no resync needed.
         return false;
     }
+
     if (discarded > CEP_SYNC_MAX_DISCARD
             || data_len < sizeof(PacketCommandNGPreamble) + sizeof(PacketCommandNGPostamble)
             || data_len > max_len) {
