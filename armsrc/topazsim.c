@@ -414,7 +414,6 @@ void SimulateTopazTag(const topaz_sim_t *params) {
     topaz_sim_state_t state = TOPAZ_SIM_IDLE;
     const tUart14a *uart = GetUart14a();
     bool field_on = true;
-    uint32_t idle_counter = 0;
     uint32_t cmdcount = 0;
     int retval = PM3_SUCCESS;
 
@@ -426,14 +425,9 @@ void SimulateTopazTag(const topaz_sim_t *params) {
         WDT_HIT();
 
         // with no field EmGetCmd() returns before its host stop check
-        if ((field_on == false) || (idle_counter >= 1000)) {
-            idle_counter = 0;
-            if (data_available()) {
-                retval = PM3_EOPABORTED;
-                break;
-            }
-        } else {
-            idle_counter++;
+        if ((field_on == false) && data_available()) {
+            retval = PM3_EOPABORTED;
+            break;
         }
 
         if (BUTTON_PRESS()) {

@@ -3088,10 +3088,8 @@ int EmGetCmd(uint8_t *received, uint16_t received_max_len, uint16_t *len, uint8_
     return EmGetCmdTimeout(received, received_max_len, len, par, 0);
 }
 
-// Send a modulated answer n * 128 + 20 (or + 84) carrier periods after the reader
-// frame. The FPGA holds an answer queued early until n = 9; for a larger n it starts
-// it on the next 128 period step, so the first symbol is aimed at the middle of the
-// step before, shifted within the SSC bytes
+// Send an answer n * 128 + 20 (or + 84) carrier periods after the reader frame.
+// The FPGA holds an early answer until n = 9; a larger n is aimed by shifting within the SSC bytes
 static int EmSendCmd14443aRawFdt(const uint8_t *resp, uint16_t respLen, uint16_t fdt_n) {
     volatile uint8_t b;
     uint16_t i = 0;

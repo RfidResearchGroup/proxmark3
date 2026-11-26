@@ -26,11 +26,8 @@
 #define INPUT_CAPTURE_EVT_RISING_EDGE    AT91C_TC_LDRAS   // rising-edge load (RA) event
 #define INPUT_CAPTURE_EVT_FALLING_EDGE   AT91C_TC_LDRBS   // falling-edge load (RB) event
 
-// StartCountSspClk() lines the counter up with the SSC frames: a byte from the
-// FPGA is complete at tick 4 or 5 of each 8. Measured in 14a tag mode on an
-// RDV2 (XC2S30, fpga_pm3_hf, the RDV4's FPGA and image too); the iCopy-X and
-// the Ultimate (XC2S50) have other FPGAs, not measured: they keep the 0 of
-// iso14443a.c
+// ssp clock tick an FPGA byte is complete at, measured in 14a tag mode on XC2S30 (RDV2).
+// iCopy-X and Ultimate not measured, they keep 0
 #if !defined ICOPYX && !defined XC2S50
 #define SSP_CLK_RX_READY_TICK 4
 #endif
