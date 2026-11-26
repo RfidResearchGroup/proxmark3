@@ -628,6 +628,7 @@ typedef struct {
     uint8_t use_flashmemory;
     uint8_t key_count;
     uint16_t singlesector_params;
+    uint8_t skip_sectors[5];    // bit per sector, not checked, counted as found, reported as not found
     uint8_t keys[];             // key_count * MIFARE_KEY_SIZE
 } PACKED mf_chkkeys_fast_t;
 

@@ -2244,6 +2244,15 @@ void MifareChkKeys_fast(const mf_chkkeys_fast_t *payload) {
         memset(found, 0x00, sizeof(found));
         foundkeys = 0;
 
+        // 2 marks a skipped sector, every loop passes it, the reply only packs bit 0
+        for (uint8_t s = 0; s < MIN(sectorcnt, 40); s++) {
+            if ((payload->skip_sectors[s / 8] >> (s % 8)) & 1) {
+                found[(s * 2)] = 2;
+                found[(s * 2) + 1] = 2;
+                foundkeys += 2;
+            }
+        }
+
         iso14a_card_select_t card_info;
         if (iso14443a_select_card(uid, &card_info, &cuid, true, 0, true) == 0) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("ChkKeys_fast: Can't select card (ALL)");

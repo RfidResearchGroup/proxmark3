@@ -1648,6 +1648,73 @@ static int plus_key_check(uint8_t start_sector, uint8_t end_sector, uint8_t star
     return PM3_SUCCESS;
 }
 
+// save found AES keys as hf-mfp-<uid>-key.json, the file hf mfp dump loads
+int mfp_save_aes_keys(const iso14a_card_select_t *card, uint8_t foundKeys[2][64][AES_KEY_LEN + 1]) {
+
+    size_t keys_len = (2 * 64 * (AES_KEY_LEN + 1));
+
+    uint8_t data[10 + 1 + 2 + 1 + 256 + keys_len];
+    memset(data, 0, sizeof(data));
+
+    memcpy(data, card->uid, card->uidlen);
+    data[10] = card->sak;
+    data[11] = card->atqa[1];
+    data[12] = card->atqa[0];
+    data[13] = card->ats_len;
+    memcpy(&data[14], card->ats, card->ats_len);
+
+    char *fptr = calloc(sizeof(char) * (strlen("hf-mfp-") + strlen("-key")) + card->uidlen * 2 + 1,  sizeof(uint8_t));
+    if (fptr == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+    strcpy(fptr, "hf-mfp-");
+
+    FillFileNameByUID(fptr, card->uid, "-key", card->uidlen);
+
+    // length: UID(10b)+SAK(1b)+ATQA(2b)+ATSlen(1b)+ATS(atslen)+foundKeys[2][64][AES_KEY_LEN + 1]
+    memcpy(&data[14 + card->ats_len], foundKeys, keys_len);
+    // 64 here is for how many "rows" there is in the data array.  A bit confusing
+    int res = saveFileJSON(fptr, jsfMfPlusKeys, data, 64, NULL);
+    free(fptr);
+    return res;
+}
+
+// AES key check of the sectors set in sector_mask (bit per sector) with the hardcoded,
+// UID derived and mfp_default_keys.dic keys. foundKeys as in hf mfp chk
+int mfp_check_aes_keys(uint8_t *uid, const uint8_t *sector_mask, uint8_t sector_cnt, uint8_t foundKeys[2][64][AES_KEY_LEN + 1]) {
+
+    const char *dict = "mfp_default_keys";
+    uint8_t *key_block = NULL;
+    uint32_t keycnt = 0;
+    int res = mfp_load_keys(&key_block, &keycnt, NULL, 0, dict, strlen(dict), uid, true);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    uint32_t untested = 0;
+    bool first = true;
+    for (uint8_t s = 0; s < sector_cnt; s++) {
+
+        if (((sector_mask[s / 8] >> (s % 8)) & 1) == 0) {
+            continue;
+        }
+
+        res = plus_key_check(s, s, MF_KEY_A, MF_KEY_B, key_block, keycnt, foundKeys, false, first, &untested);
+        first = false;
+        if (res == PM3_EOPABORTED) {
+            break;
+        }
+    }
+    PrintAndLogEx(NORMAL, "");
+    free(key_block);
+
+    if (res == PM3_EOPABORTED) {
+        return res;
+    }
+    return (untested) ? PM3_EPARTIAL : PM3_SUCCESS;
+}
+
 static void Fill2bPattern(uint8_t keyList[MAX_AES_KEYS_LIST_LEN][AES_KEY_LEN], uint32_t *n, uint32_t *startPattern) {
 
     uint32_t cnt = 0;
@@ -1924,33 +1991,10 @@ static int CmdHFMFPChk(const char *Cmd) {
 
     // save keys to json
     if (create_dumpfile && printedHeader) {
-
-        size_t keys_len = (2 * 64 * (AES_KEY_LEN + 1));
-
-        uint8_t data[10 + 1 + 2 + 1 + 256 + keys_len];
-        memset(data, 0, sizeof(data));
-
-        memcpy(data, card.uid, card.uidlen);
-        data[10] = card.sak;
-        data[11] = card.atqa[1];
-        data[12] = card.atqa[0];
-        data[13] = card.ats_len;
-        memcpy(&data[14], card.ats, card.ats_len);
-
-        char *fptr = calloc(sizeof(char) * (strlen("hf-mfp-") + strlen("-key")) + card.uidlen * 2 + 1,  sizeof(uint8_t));
-        if (fptr == NULL) {
-            PrintAndLogEx(WARNING, "Failed to allocate memory");
-            return PM3_EMALLOC;
+        res = mfp_save_aes_keys(&card, foundKeys);
+        if (res != PM3_SUCCESS) {
+            return res;
         }
-        strcpy(fptr, "hf-mfp-");
-
-        FillFileNameByUID(fptr, card.uid, "-key", card.uidlen);
-
-        // length: UID(10b)+SAK(1b)+ATQA(2b)+ATSlen(1b)+ATS(atslen)+foundKeys[2][64][AES_KEY_LEN + 1]
-        memcpy(&data[14 + card.ats_len], foundKeys, keys_len);
-        // 64 here is for how many "rows" there is in the data array.  A bit confusing
-        saveFileJSON(fptr, jsfMfPlusKeys, data, 64, NULL);
-        free(fptr);
     }
 
     // MAD detection
