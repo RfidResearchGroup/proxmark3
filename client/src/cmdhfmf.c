@@ -3038,6 +3038,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                   "This command automates the key recovery process on MIFARE Classic cards.\n"
                   "It uses the fchk, chk, darkside, nested, hardnested and staticnested to recover keys.\n"
                   "If all keys are found, it try dumping card content both to file and emulator memory.\n"
+                  "Without a card size option, the size is taken from the card's SAK.\n"
                   "\n"
                   "default file name template is `hf-mf-<uid>-<dump|key>.`\n"
                   "using suffix the template becomes `hf-mf-<uid>-<dump|key>-<suffix>.` \n",
@@ -3064,7 +3065,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         arg_lit0(NULL, "ns", "No save to file"),
 
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
-        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (default)"),
+        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (default when SAK says no other size)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
 
@@ -3141,10 +3142,11 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     CLIParserFree(ctx);
 
     //validations
+    bool size_given = ((m0 + m1 + m2 + m4) > 0);
     if ((m0 + m1 + m2 + m4) > 1) {
         PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
         return PM3_EINVARG;
-    } else if ((m0 + m1 + m2 + m4) == 0) {
+    } else if (size_given == false) {
         m1 = true;
     }
 
@@ -3308,6 +3310,18 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
     if (isMifarePlus) {
         PrintAndLogEx(INFO, "MIFARE Plus card detected.  Using limited set of attacks");
+    }
+
+    // no size given, SAK b2=0 b4=1 b5=1 is 2K with b1 set, else 4K (same tree as detect_nxp_card)
+    if (size_given == false && ((card.sak & 0x1A) == 0x18)) {
+        if ((card.sak & 0x01) == 0x01) {
+            sector_cnt = MIFARE_2K_MAXSECTOR;
+            block_cnt = MIFARE_2K_MAXBLOCK;
+        } else {
+            sector_cnt = MIFARE_4K_MAXSECTOR;
+            block_cnt = MIFARE_4K_MAXBLOCK;
+        }
+        PrintAndLogEx(INFO, "SAK %02X, using %u sectors", card.sak, sector_cnt);
     }
 
     if (!isMifarePlus && isMifareMini && sector_cnt != MIFARE_MINI_MAXSECTOR) {
