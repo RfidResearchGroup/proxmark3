@@ -54,7 +54,7 @@ static bool is_duration(uint32_t value) {
 
 static rtttl_status_t parse_number(rtttl_parser_t *parser, uint32_t *value) {
     *value = 0;
-    if (!is_digit(peek(parser))) {
+    if (is_digit(peek(parser)) == false) {
         return fail(parser, RTTTL_ERROR_SYNTAX);
     }
     while (is_digit(peek(parser))) {
@@ -101,6 +101,7 @@ static rtttl_status_t parse_defaults(rtttl_parser_t *parser) {
             default:
                 return fail(parser, RTTTL_ERROR_SYNTAX);
         }
+
         if ((seen & flag) != 0) {
             return fail(parser, RTTTL_ERROR_SYNTAX);
         }
@@ -125,6 +126,7 @@ static rtttl_status_t parse_defaults(rtttl_parser_t *parser) {
         if (peek(parser) == ':') {
             break;
         }
+
         if (peek(parser) != ',') {
             return fail(parser, RTTTL_ERROR_SYNTAX);
         }
@@ -196,14 +198,17 @@ static rtttl_status_t parse_pitch(rtttl_parser_t *parser, rtttl_event_t *event, 
         if (status != RTTTL_OK) {
             return status;
         }
+
         if (octave < 4 || octave > 7) {
             return fail(parser, RTTTL_ERROR_RANGE);
         }
     }
-    if (peek(parser) == '.' && !dotted) {
+
+    if (peek(parser) == '.' && dotted == false) {
         dotted = true;
         parser->position++;
     }
+
     if (semitone < 0) {
         event->frequency_hz = 0;
     } else {
@@ -232,7 +237,8 @@ static rtttl_status_t parse_event(rtttl_parser_t *parser, rtttl_event_t *event) 
         if (status != RTTTL_OK) {
             return status;
         }
-        if (!is_duration(duration)) {
+
+        if (is_duration(duration) == false) {
             return fail(parser, RTTTL_ERROR_RANGE);
         }
     }
@@ -270,6 +276,7 @@ static rtttl_status_t parse_header(rtttl_parser_t *parser) {
         }
         parser->position++;
     }
+
     if (parser->position == name_start || parser->position == parser->length) {
         return fail(parser, RTTTL_ERROR_SYNTAX);
     }
@@ -285,6 +292,7 @@ rtttl_status_t rtttl_init(rtttl_parser_t *parser, const char *text, size_t lengt
     if (text == NULL) {
         return RTTTL_ERROR_ARGUMENT;
     }
+
     if (length == 0 || length > RTTTL_MAX_TEXT_SIZE) {
         return RTTTL_ERROR_SIZE;
     }
@@ -319,9 +327,11 @@ rtttl_status_t rtttl_init(rtttl_parser_t *parser, const char *text, size_t lengt
         parser->total_duration_ms += event.duration_ms;
         parser->event_count++;
     }
+
     if (status != RTTTL_DONE) {
         return status;
     }
+
     if (parser->event_count == 0) {
         return fail(parser, RTTTL_ERROR_SYNTAX);
     }
@@ -335,7 +345,7 @@ rtttl_status_t rtttl_next(rtttl_parser_t *parser, rtttl_event_t *event) {
         return RTTTL_ERROR_ARGUMENT;
     }
     *event = (rtttl_event_t) {0};
-    if (parser == NULL || !parser->valid) {
+    if (parser == NULL || parser->valid == false) {
         return RTTTL_ERROR_ARGUMENT;
     }
     rtttl_status_t status = parse_event(parser, event);

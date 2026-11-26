@@ -2078,6 +2078,7 @@ static int read_rtttl_input(const char *filename, const struct arg_str *data, ui
         PrintAndLogEx(WARNING, "Specify exactly one of --file or --data");
         return PM3_EINVARG;
     }
+
     if (use_file) {
         uint8_t *file_data = NULL;
         size_t file_len = 0;
@@ -2097,6 +2098,7 @@ static int read_rtttl_input(const char *filename, const struct arg_str *data, ui
             memcpy(text, data->sval[0], *length);
         }
     }
+
     if (*length > RTTTL_MAX_TEXT_SIZE) {
         PrintAndLogEx(WARNING, "RTTTL text exceeds the 2047-byte limit, nothing sent");
         return PM3_EINVARG;
@@ -2141,6 +2143,7 @@ static int CmdRtttl(const char *Cmd) {
                       parser.error_offset, rtttl_error_string(status));
         return PM3_EINVARG;
     }
+
     if (length + 1U > g_conn.max_cmd_data_size) {
         PrintAndLogEx(WARNING, "RTTTL payload exceeds this link's negotiated limit; nothing sent");
         return PM3_EINVARG;
@@ -2185,6 +2188,7 @@ static int CmdRtttl(const char *Cmd) {
         PrintAndLogEx(FAILED, "Invalid RTTTL firmware reply");
         return PM3_EIO;
     }
+
     if (response.status == PM3_EOPABORTED) {
         PrintAndLogEx(INFO, "RTTTL playback stopped");
         return PM3_SUCCESS;
