@@ -210,7 +210,7 @@ static bool sim_module_at_least(uint8_t major, uint8_t minor, uint8_t want_major
 
 int SmartCard_HwAdapterInfo(uint8_t *major, uint8_t *minor, void *info) {
     uint8_t resp[] = {0, 0, 0, 0};
-    uint8_t len = I2C_AdaptiveRead(resp, sizeof(resp), I2C_DEVICE_CMD_GETVERSION, I2C_DEVICE_ADDRESS_MAIN);
+    int16_t len = I2C_AdaptiveRead(resp, sizeof(resp), I2C_DEVICE_CMD_GETVERSION, I2C_DEVICE_ADDRESS_MAIN);
     if (len <= 1) {
         return PM3_EDEVNOTSUPP;
     }
