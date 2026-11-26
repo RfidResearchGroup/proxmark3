@@ -1760,7 +1760,7 @@ static int FastDumpWithEcFill(uint8_t numsectors, const uint8_t *aes_sectors) {
 
 // a Crypto1 auth on an AES only sector of a MIFARE Plus in SL1 gets no nonce back.
 // Probe each sector twice, a missed nonce from a weak field is no AES sector
-static uint8_t mfp_find_aes_sectors(uint8_t sector_cnt, uint8_t *aes_sectors) {
+uint8_t mfp_find_aes_sectors(uint8_t sector_cnt, uint8_t *aes_sectors) {
 
     uint8_t cnt = 0;
     for (uint8_t s = 0; s < MIN(sector_cnt, 40); s++) {
@@ -5703,12 +5703,14 @@ static void print_key_table(size_t sectorscnt, sector_t *e_sector, uint8_t start
                       _YELLOW_("S") ":darkSide / "
                       _YELLOW_("U") ":User / "
                       _YELLOW_("R") ":Reused / "
-                      _YELLOW_("N") ":Nested / "
+                      _YELLOW_("N") ":Nested /"
+                     );
+        PrintAndLogEx(INFO, "  "
                       _YELLOW_("H") ":Hardnested / "
                       _YELLOW_("C") ":statiCnested / "
-                      _YELLOW_("A") ":keyA "
+                      _YELLOW_("A") ":keyA"
                       "%s )",
-                      (has_aes) ? "/ " _YELLOW_("P") ":Plus AES " : ""
+                      (has_aes) ? " / " _YELLOW_("P") ":Plus AES" : ""
                      );
         if (sectorscnt == 18) {
             PrintAndLogEx(INFO, "( " _MAGENTA_("*") " ) These sectors used for signature. Lays outside of user memory");

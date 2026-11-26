@@ -2317,6 +2317,18 @@ static int CmdHFMFPDump(const char *Cmd) {
         }
     }
 
+    // a Crypto1 key file can hold placeholder keys for AES only sectors, the card tells which ones
+    if (quickread == false) {
+        uint8_t aes_only[5] = {0};
+        mfp_find_aes_sectors(numSectors, aes_only);
+        for (uint8_t s = 0; s < MIN(numSectors, 40); s++) {
+            if ((aes_only[s / 8] >> (s % 8)) & 1) {
+                bool have_aes = (aesFoundKeys[MF_KEY_A][s][0] || aesFoundKeys[MF_KEY_B][s][0]);
+                sectorSL[s] = (have_aes) ? MFP_SL_3 : MFP_SL_UNKNOWN;
+            }
+        }
+    }
+
     uint16_t totalBlocks = 0;
     for (uint8_t s = 0; s < numSectors; s++) {
         totalBlocks += mfNumBlocksPerSector(s);
@@ -2525,6 +2537,16 @@ chunkCycleClean2:
                     uint8_t sector_data[16 * 16] = {0};
                     res = mfp_read_sector_sl1(s, kt, &mfcFoundKeys[kt][s][1], sector_data, verbose);
                     if (res == PM3_SUCCESS) {
+
+                        // the known keys go in the trailer, like hf mf autopwn
+                        uint8_t *trailer = sector_data + ((blocksInSector - 1) * MFBLOCK_SIZE);
+                        if (mfcFoundKeys[MF_KEY_A][s][0]) {
+                            memcpy(trailer, &mfcFoundKeys[MF_KEY_A][s][1], MIFARE_KEY_SIZE);
+                        }
+                        if (mfcFoundKeys[MF_KEY_B][s][0]) {
+                            memcpy(trailer + 10, &mfcFoundKeys[MF_KEY_B][s][1], MIFARE_KEY_SIZE);
+                        }
+
                         memcpy(carddata + (blockOffset * MFBLOCK_SIZE), sector_data, blocksInSector * MFBLOCK_SIZE);
                         sectorRead[s] = 1;
                         readOK = true;
