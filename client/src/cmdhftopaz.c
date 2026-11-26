@@ -60,20 +60,6 @@ static void topaz_clear_tag(void) {
     memset(&topaz_tag, 0, sizeof(topaz_tag));
 }
 
-// whether the dump holds HR0 HR1: the two layouts convert_topaz_dump_format() takes
-// them from, a topaz_tag_t (json) and the .bin of an older client (64 or 32 bit pointers)
-static bool topaz_dump_has_hr(const uint8_t *dump, size_t len) {
-    if (len < offsetof(topaz_tag_t, dynamic_memory)) {
-        return false;
-    }
-    uint16_t size = MemLeToUint2byte(dump + offsetof(topaz_tag_t, size));
-    bool size_ok = (size >= TOPAZ_STATIC_MEMORY) && (size <= TOPAZ_DUMP_MAX_SIZE) && ((size % TOPAZ_BLOCK_SIZE) == 0);
-    if (size_ok && (len == sizeof(topaz_tag_t) + size - TOPAZ_STATIC_MEMORY)) {
-        return true;
-    }
-    return (size == TOPAZ_STATIC_MEMORY) && ((len == 152) || (len == 140));
-}
-
 // fill topaz_tag from a dump convert_topaz_dump_format() gave: a topaz_tag_t
 // followed by its dynamic memory
 static int topaz_tag_from_dump(const uint8_t *dump) {
@@ -975,8 +961,8 @@ static int CmdHFTopazSim(const char *Cmd) {
         return res;
     }
 
-    bool hr_known = topaz_dump_has_hr(data, bytes_read);
-    res = convert_topaz_dump_format(&data, &bytes_read, false);
+    bool hr_known = false;
+    res = convert_topaz_dump_format(&data, &bytes_read, &hr_known, false);
     if (res == PM3_SUCCESS) {
         res = topaz_tag_from_dump(data);
     }
@@ -1043,34 +1029,24 @@ static int CmdHFTopazSim(const char *Cmd) {
     SendCommandNG(CMD_HF_TOPAZ_SIMULATE, (uint8_t *)&payload, sizeof(payload));
 
     PacketResponseNG resp = {0};
-    bool replied = false;
-    for (;;) {
-        if (WaitForResponseTimeout(CMD_HF_TOPAZ_SIMULATE, &resp, 100)) {
-            replied = true;
-            break;
+    bool keypress = kbd_enter_pressed();
+    while (keypress == false) {
+        keypress = kbd_enter_pressed();
+
+        if (WaitForResponseTimeout(CMD_HF_TOPAZ_SIMULATE, &resp, 1500) == false) {
+            continue;
         }
 
-        if (IsCommunicationThreadDead()) {
-            return PM3_EIO;
+        if ((resp.status != PM3_SUCCESS) && (resp.status != PM3_EOPABORTED)) {
+            PrintAndLogEx(FAILED, "Simulation failed ( %d )", resp.status);
+            return resp.status;
         }
-
-        if (kbd_enter_pressed()) {
-            break;
-        }
+        break;
     }
 
-    if (replied == false) {
+    if (keypress) {
+        // inform device to break the sim loop since client has exited
         SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-
-        if (WaitForResponseTimeout(CMD_HF_TOPAZ_SIMULATE, &resp, 3000) == false) {
-            PrintAndLogEx(WARNING, "pm3 did not stop, press the " _GREEN_("pm3 button"));
-            return PM3_ETIMEOUT;
-        }
-    }
-
-    if ((resp.status != PM3_SUCCESS) && (resp.status != PM3_EOPABORTED)) {
-        PrintAndLogEx(FAILED, "Simulation failed ( %d )", resp.status);
-        return resp.status;
     }
 
     PrintAndLogEx(INFO, "Done!");
@@ -1252,7 +1228,7 @@ static int CmdHFTopazView(const char *Cmd) {
         return res;
     }
 
-    res = convert_topaz_dump_format(&dump, &bytes_read, false);
+    res = convert_topaz_dump_format(&dump, &bytes_read, NULL, false);
 
     // the print functions work on topaz_tag
     if (res == PM3_SUCCESS) {
