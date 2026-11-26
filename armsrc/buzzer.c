@@ -26,6 +26,8 @@
 #include "at32f435_437_gpio.h"
 #include "at32f435_437_tmr.h"
 #include "ticks_apis.h"   // SpinDelay
+#include "wdt_apis.h"
+#include "pm5_power.h"
 
 // Buzzer wiring on the PM5 mainboard.
 #define BUZZER_EN_GPIO      GPIOB
@@ -36,6 +38,7 @@
 #define BUZZER_MOD_MUX      GPIO_MUX_3
 #define BUZZER_MOD_TMR      TMR8
 #define BUZZER_MOD_TMR_CH   TMR_SELECT_CHANNEL_4
+#define BUZZER_TIMER_PRESCALER 95U
 
 static bool s_buzzer_ready = false;
 
@@ -64,7 +67,7 @@ void BuzzerSetup(void) {
 
     tmr_internal_clock_set(BUZZER_MOD_TMR);
     tmr_reset(BUZZER_MOD_TMR);
-    tmr_base_init(BUZZER_MOD_TMR, BUZZER_DEFAULT_PERIOD, 95);   // ~2 kHz from 192 MHz
+    tmr_base_init(BUZZER_MOD_TMR, BUZZER_DEFAULT_PERIOD, BUZZER_TIMER_PRESCALER);   // ~2 kHz from 192 MHz
     tmr_output_config_type tmr_output_struct;
     tmr_output_default_para_init(&tmr_output_struct);
     tmr_output_struct.oc_mode = TMR_OUTPUT_CONTROL_PWM_MODE_A;
@@ -78,15 +81,19 @@ void BuzzerSetup(void) {
     s_buzzer_ready = true;
 }
 
-void BuzzerTone(uint16_t period, uint16_t duty, uint16_t on_ms) {
+static void buzzer_tone_start(uint16_t period, uint16_t duty) {
     if (s_buzzer_ready == false) {
         BuzzerSetup();
     }
     BUZZER_MOD_TMR->pr = period;
     tmr_channel_value_set(BUZZER_MOD_TMR, BUZZER_MOD_TMR_CH, duty);
     gpio_bits_write(BUZZER_EN_GPIO, BUZZER_EN_PIN, TRUE);
+}
+
+void BuzzerTone(uint16_t period, uint16_t duty, uint16_t on_ms) {
+    buzzer_tone_start(period, duty);
     SpinDelay(on_ms);
-    gpio_bits_write(BUZZER_EN_GPIO, BUZZER_EN_PIN, FALSE);
+    BuzzerOff();
 }
 
 void BuzzerBeep(uint16_t on_ms) {
@@ -97,4 +104,57 @@ void BuzzerOff(void) {
     if (s_buzzer_ready) {
         gpio_bits_write(BUZZER_EN_GPIO, BUZZER_EN_PIN, FALSE);
     }
+}
+
+// Keep the PWM running during long notes while feeding the watchdog regularly.
+static void buzzer_wait(uint32_t duration_ms) {
+    while (duration_ms > 0U) {
+        uint32_t step_ms = duration_ms;
+        if (step_ms > 20U) {
+            step_ms = 20U;
+        }
+        WDT_HIT();
+        SpinDelay((int)step_ms);
+        duration_ms -= step_ms;
+    }
+    WDT_HIT();
+}
+
+rtttl_status_t BuzzerPlayRtttl(const char *text, size_t length) {
+    BuzzerOff();
+    rtttl_parser_t parser;
+    rtttl_status_t status = rtttl_init(&parser, text, length);
+    if (status != RTTTL_OK) {
+        return status;
+    }
+
+    // Standalone/event callers also need the full-speed clock, not just USB.
+    pm5_power_boost();
+    crm_clocks_freq_type clocks;
+    crm_clocks_freq_get(&clocks);
+    uint32_t timer_clock_hz = clocks.apb2_freq;
+    if (clocks.apb2_freq != clocks.ahb_freq) {
+        // APB timers run at twice PCLK when the APB prescaler is not 1.
+        timer_clock_hz *= 2U;
+    }
+    uint32_t timer_tick_hz = timer_clock_hz / (BUZZER_TIMER_PRESCALER + 1U);
+    rtttl_event_t event;
+    while ((status = rtttl_next(&parser, &event)) == RTTTL_OK) {
+        if (event.frequency_hz != 0U) {
+            uint32_t counts = (timer_tick_hz + event.frequency_hz / 2U) / event.frequency_hz;
+            if (counts < 2U || counts > 65536U) {
+                status = RTTTL_ERROR_RANGE;
+                break;
+            }
+            buzzer_tone_start((uint16_t)(counts - 1U), (uint16_t)(counts / 2U));
+        }
+        buzzer_wait(event.duration_ms);
+        BuzzerOff();
+    }
+    BuzzerOff();
+    pm5_power_unboost();
+    if (status == RTTTL_DONE) {
+        return RTTTL_OK;
+    }
+    return status;
 }
