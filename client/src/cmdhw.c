@@ -51,6 +51,8 @@
 #include "proxgui.h"
 #include "graph.h" // for graph data
 
+#include "rtttl.h"
+
 #include "lua.h"
 
 static int CmdHelp(const char *Cmd);
@@ -2045,6 +2047,165 @@ static int CmdPM5QCTest(const char *Cmd) {
 }
 
 
+static const char *rtttl_error_string(rtttl_status_t status) {
+    switch (status) {
+        case RTTTL_OK:
+            return "success";
+        case RTTTL_DONE:
+            return "unexpected end of melody";
+        case RTTTL_ERROR_ARGUMENT:
+            return "invalid argument";
+        case RTTTL_ERROR_SIZE:
+            return "text must contain 1..2047 bytes";
+        case RTTTL_ERROR_SYNTAX:
+            return "invalid syntax";
+        case RTTTL_ERROR_RANGE:
+            return "value out of range";
+        case RTTTL_ERROR_OVERFLOW:
+            return "numeric overflow";
+        case RTTTL_ABORTED:
+            return "playback stopped";
+        default:
+            return "unexpected parser status";
+    }
+}
+
+static int read_rtttl_input(const char *filename, const struct arg_str *data, uint8_t *text, size_t *length) {
+    bool use_file = (filename[0] != '\0');
+    bool use_data = (data->count != 0);
+
+    if (use_file == use_data) {
+        PrintAndLogEx(WARNING, "Specify exactly one of --file or --data");
+        return PM3_EINVARG;
+    }
+
+    if (use_file) {
+        uint8_t *file_data = NULL;
+        size_t file_len = 0;
+        int res = loadFile_safe(filename, "", (void **)&file_data, &file_len);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+
+        *length = file_len;
+        if (file_len <= RTTTL_MAX_TEXT_SIZE) {
+            memcpy(text, file_data, file_len);
+        }
+        free(file_data);
+    } else {
+        *length = strlen(data->sval[0]);
+        if (*length <= RTTTL_MAX_TEXT_SIZE) {
+            memcpy(text, data->sval[0], *length);
+        }
+    }
+
+    if (*length > RTTTL_MAX_TEXT_SIZE) {
+        PrintAndLogEx(WARNING, "RTTTL text exceeds the 2047-byte limit, nothing sent");
+        return PM3_EINVARG;
+    }
+    text[*length] = 0U;
+    return PM3_SUCCESS;
+}
+
+static int CmdRtttl(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw rtttl",
+                  "Play an RTTTL melody on the PM5 buzzer. Maximum 2047 text bytes.\n"
+                  "Playback blocks the device until completion, press the pm5 button or <Enter> to abort it.",
+                  "hw rtttl --data \"Cancan:d=16,o=5,b=200:c6,8g,8g,a,g,f,e,8d,8d,8e,8f,g,g,8c6,8a,g,f,e,8d,8c\"\n"
+                  "hw rtttl --file melody.rtttl");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<path>", "RTTTL text file"),
+        arg_str0("d", "data", "<text>", "RTTTL string (quote it)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    char filename[FILE_PATH_SIZE] = {0};
+    int fnlen = 0;
+    if (CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen)) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t text[RTTTL_MAX_TEXT_SIZE + 1U];
+    size_t length = 0;
+    int result = read_rtttl_input(filename, arg_get_str(ctx, 2), text, &length);
+    CLIParserFree(ctx);
+    if (result != PM3_SUCCESS) {
+        return result;
+    }
+    rtttl_parser_t parser;
+    rtttl_status_t status = rtttl_init(&parser, (const char *)text, length);
+    if (status != RTTTL_OK) {
+        PrintAndLogEx(WARNING, "RTTTL at byte %zu: %s; nothing sent",
+                      parser.error_offset, rtttl_error_string(status));
+        return PM3_EINVARG;
+    }
+
+    if (length + 1U > g_conn.max_cmd_data_size) {
+        PrintAndLogEx(WARNING, "RTTTL payload exceeds this link's negotiated limit; nothing sent");
+        return PM3_EINVARG;
+    }
+    PrintAndLogEx(INFO, "Playing %u notes/pauses, %u ms (%zu text bytes)",
+                  (unsigned int)parser.event_count,
+                  (unsigned int)parser.total_duration_ms, length);
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm5 button") " or " _GREEN_("<Enter>") " to abort playback");
+    clearCommandBuffer();
+    SendCommandNG(CMD_PM5_RTTTL, text, length + 1U);
+
+    // The firmware answers once the melody has finished or has been stopped.
+    PacketResponseNG response;
+    uint64_t deadline = msclock() + parser.total_duration_ms + 5000U;
+    bool got_reply = false;
+    bool keypress = kbd_enter_pressed();
+    while (keypress == false) {
+        if (WaitForResponseTimeoutW(CMD_PM5_RTTTL, &response, 500, false)) {
+            got_reply = true;
+            break;
+        }
+
+        if (msclock() > deadline) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(WARNING, "RTTTL completion timeout, stop request sent");
+            return PM3_ETIMEOUT;
+        }
+
+        keypress = kbd_enter_pressed();
+    }
+
+    if (got_reply == false) {
+        // inform device to stop playback, it then sends its reply
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+        if (WaitForResponseTimeoutW(CMD_PM5_RTTTL, &response, 2000, false) == false) {
+            PrintAndLogEx(WARNING, "No reply from the device after the stop request");
+            return PM3_ETIMEOUT;
+        }
+    }
+
+    if (response.length != 1U) {
+        PrintAndLogEx(FAILED, "Invalid RTTTL firmware reply");
+        return PM3_EIO;
+    }
+
+    if (response.status == PM3_EOPABORTED) {
+        PrintAndLogEx(INFO, "RTTTL playback stopped");
+        return PM3_SUCCESS;
+    }
+
+    if (response.status != PM3_SUCCESS || response.data.asBytes[0] != RTTTL_OK) {
+        PrintAndLogEx(FAILED, "RTTTL firmware rejected playback: %s",
+                      rtttl_error_string((rtttl_status_t)response.data.asBytes[0]));
+        if (response.status != PM3_SUCCESS) {
+            return response.status;
+        }
+        return PM3_EIO;
+    }
+    PrintAndLogEx(SUCCESS, "RTTTL playback complete");
+    return PM3_SUCCESS;
+}
+
 static int CmdPowerSave(const char *Cmd) {
     // Positional sub-action (no dashes): hw powersave on | off
     char verb[16] = {0};
@@ -2112,6 +2273,7 @@ static command_t CommandTable[] = {
     {"ping", CmdPing, IfPm3Present, "Test if the Proxmark3 is responsive"},
     {"powersave", CmdPowerSave, IfPm5, "Enable/disable the PM5 power-save idle"},
     {"readmem", CmdReadmem, IfPm3Present, "Read from MCU flash"},
+    {"rtttl", CmdRtttl, IfPm5, "Play an RTTTL string or file on the PM5 buzzer"},
     {"reset", CmdReset, IfPm3Present, "Reset the device"},
     {"setlfdivisor", CmdSetDivisor, IfPm3Lf, "Drive LF antenna at 12MHz / (divisor + 1)"},
     {"sethfthresh", CmdSetHFThreshold, IfPm3Iso14443a, "Set thresholds in HF/14a mode"},
