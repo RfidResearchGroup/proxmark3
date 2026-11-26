@@ -940,6 +940,11 @@ int RAMFUNC SniffIso14443a(uint8_t param) {
                 data = dma->buf;
             }
             rx_samples += dataLen;
+            // AT32: a full buffer stops the DMA, re-arm it here or it stays stopped
+            if (FPGA_SSC_DMA_RX_Secondary_Done()) {
+                FPGA_SSC_DMA_RX_Refresh_Secondary(dma->buf, DMA_BUFFER_SIZE);
+            }
+
             Uart14aReset();
             Demod14aReset();
             overrun_skips++;

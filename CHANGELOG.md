@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 14a sniff` and `hf thinfilm sniff` - PM5: a sniff that fell behind once no longer stays deaf, the AT32 DMA is re-armed (@cmac-chris)
 - Added `hf topaz sim` - simulates a Topaz 96 or a Topaz 512 from a dump file (@matrix)
 - Fixed the ISO14443-A simulations and sniffing - the Miller decoder did not find a start bit whose pause shows in one sample, split or a sample late, and did not take a 3 tick pause shifted right (@matrix)
 - Fixed the ISO14443-A simulations on the PM3 boards with an XC2S30 - a reader frame read late by the ARM got a start time 128 carrier periods late (@matrix)
