@@ -540,6 +540,9 @@ void RunMod(void) {
     s_at32_ops.app_end = (GW_APP_BASE + (uint32_t)(uintptr_t)__os_size__ + GW_SECTOR - 1) & ~(GW_SECTOR - 1);
     gdb_reset(&s_at32_ops);
     LED_A_ON();
+    // Entered via a button gesture (hold/double-click), the triggering press
+    // is still down here; don't read it as the exit condition below.
+    WAIT_BUTTON_RELEASED();
     while (!s_exit && !BUTTON_PRESS()) {
         WDT_HIT();
         while (usb_read_ng_has_buffered_data() || usb_poll_validate_length()) {
