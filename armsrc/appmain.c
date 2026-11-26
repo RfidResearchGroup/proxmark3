@@ -993,7 +993,6 @@ static void SendCapabilities(void) {
 
 #ifdef PM5
     capabilities.is_pm5 = true;
-    capabilities.compiled_with_rtttl = true;
     capabilities.is_pm5_std_ant = true;
     capabilities.hw_available_fpga_flash = true;
     capabilities.hw_available_i2c_eeprom = true;

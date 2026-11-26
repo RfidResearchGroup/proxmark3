@@ -2047,10 +2047,6 @@ static int CmdPM5QCTest(const char *Cmd) {
 }
 
 
-static bool IfPm5Rtttl(void) {
-    return IfPm3Present() && IfPm5() && g_pm3_capabilities.compiled_with_rtttl;
-}
-
 static const char *rtttl_error_string(rtttl_status_t status) {
     switch (status) {
         case RTTTL_OK:
@@ -2138,10 +2134,6 @@ static int CmdRtttl(const char *Cmd) {
         PrintAndLogEx(WARNING, "RTTTL at byte %zu: %s; nothing sent",
                       parser.error_offset, rtttl_error_string(status));
         return PM3_EINVARG;
-    }
-    if (!IfPm5Rtttl()) {
-        PrintAndLogEx(WARNING, "Requires a connected PM5 with RTTTL firmware support");
-        return PM3_EDEVNOTSUPP;
     }
     if (length + 1U > g_conn.max_cmd_data_size) {
         PrintAndLogEx(WARNING, "RTTTL payload exceeds this link's negotiated limit; nothing sent");
@@ -2242,7 +2234,7 @@ static command_t CommandTable[] = {
     {"ping", CmdPing, IfPm3Present, "Test if the Proxmark3 is responsive"},
     {"powersave", CmdPowerSave, IfPm5, "Enable/disable the PM5 power-save idle"},
     {"readmem", CmdReadmem, IfPm3Present, "Read from MCU flash"},
-    {"rtttl", CmdRtttl, IfPm5Rtttl, "Play an RTTTL string or file on the PM5 buzzer"},
+    {"rtttl", CmdRtttl, IfPm5, "Play an RTTTL string or file on the PM5 buzzer"},
     {"reset", CmdReset, IfPm3Present, "Reset the device"},
     {"setlfdivisor", CmdSetDivisor, IfPm3Lf, "Drive LF antenna at 12MHz / (divisor + 1)"},
     {"sethfthresh", CmdSetHFThreshold, IfPm3Iso14443a, "Set thresholds in HF/14a mode"},
