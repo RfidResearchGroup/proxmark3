@@ -254,7 +254,13 @@ static void spi_cmd_gpio_setup(void) {
     gpio_bits_set(AT32_GPIO_SPI_CS, AT32_GPIO_SPI_CS_PIN); // default CS set to high for deselect
 }
 
+// SPI3 pins are also the FPGA JTAG pins: set up again only after the JTAG had them
+static bool s_spi_cmd_ready = false;
+
 static void spi_cmd_setup(void) {
+    if (s_spi_cmd_ready) {
+        return;
+    }
     spi_init_type spi_init_struct;
 
     // master spi initialization
@@ -273,6 +279,7 @@ static void spi_cmd_setup(void) {
     spi_init_struct.cs_mode_selection = SPI_CS_SOFTWARE_MODE;
     spi_init(SPI_CMD, &spi_init_struct);
     spi_enable(SPI_CMD, TRUE);
+    s_spi_cmd_ready = true;
 }
 
 void FpgaSendCommand(uint16_t cmd, uint16_t v) {
@@ -352,6 +359,7 @@ int FpgaStartConfig(bool configSram, uint32_t fileLength) {
     }
 
     // Init jtag hardware link.
+    s_spi_cmd_ready = false;
     gpio_fpga_download_setup();
 
     // Reset for restart a new transfer
@@ -405,6 +413,7 @@ uint32_t FpgaConfigPlatformStatus(void) {
 void FpgaResetComInterface(void) {
     spi_i2s_reset(SPI_SSC); // full reset spi
     spi_i2s_reset(SPI_CMD); // full reset spi
+    s_spi_cmd_ready = false;
     crm_periph_clock_enable(SPI_CRM_CLOCK_SSC, FALSE);
     crm_periph_clock_enable(SPI_CRM_CLOCK_CMD, FALSE);
     // Do not reset GPIO, or disable GPIO clock, as other functions may depend on GPIO.
