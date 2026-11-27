@@ -297,6 +297,13 @@ typedef struct {
 //   11: capabilities_t gained em_size / em_allocated
 //   12: capabilities_t gained compiled_with_bwm
 //   13: capabilities_t gained compiled_with_cep
+// PLATFORM_EXTRAS=CEPLOGIC deliberately does NOT get its own bit here: this
+// struct is shared by every PM5 build regardless of PLATFORM_EXTRAS, and
+// third parties (e.g. the Flipper FAP) pin an exact CAPABILITIES_VERSION -
+// bumping it for an opt-in extra breaks every build that doesn't use that
+// extra. CMD_CEP_LOGIC_CTRL/FETCH replying PM3_ENOTIMPL is how a client
+// tells CEPLOGIC isn't built in - cep_logic_ctrl() in cmdhwceplogic.c
+// reports that directly, instead of gating on a capability bit.
 #define CAPABILITIES_VERSION 13
 // what a pre-v9 device would have used, it could not tell us
 #define CAPABILITIES_LEGACY_CMD_DATA_SIZE 512
@@ -1093,6 +1100,51 @@ typedef struct {
 // PM3_EOPABORTED when the button or CMD_BREAK_LOOP stopped it, or PM3_EINVARG on
 // invalid input/playback error. No early success ACK.
 #define CMD_PM5_RTTTL 0x0186
+
+// PM5 CEP bus logic logger: timestamps every SPI1 MOSI/MISO byte and USART1
+// handshake byte pm5_cep.c already moves, for devs building a CEP peripheral
+// board to see what actually went over the wire. Byte/timestamp resolution
+// (DWT->CYCCNT, converted to a 1.5 MHz unit - see pm5_cep_logic.c), not
+// electrical edge capture.
+// req: cep_logic_ctrl_t. resp: cep_logic_status_t.
+#define CMD_CEP_LOGIC_CTRL 0x0187
+#define CEP_LOGIC_ACTION_START  0x00
+#define CEP_LOGIC_ACTION_STOP   0x01
+#define CEP_LOGIC_ACTION_CLEAR  0x02
+#define CEP_LOGIC_ACTION_STATUS 0x03
+typedef struct {
+    uint8_t action; // CEP_LOGIC_ACTION_*
+    uint8_t skip_idle; // START only: 1 = don't record MOSI 0xFF/0x00 idle-poll filler
+} PACKED cep_logic_ctrl_t;
+typedef struct {
+    uint8_t  running;
+    uint8_t  overflowed; // ring wrapped since the last START/CLEAR, oldest entries lost
+    uint32_t count;      // total entries recorded since the last START/CLEAR
+} PACKED cep_logic_status_t;
+
+#define CEP_LOGIC_CHAN_MOSI 0 // external master -> PM5 (SPI1 RX)
+#define CEP_LOGIC_CHAN_MISO 1 // PM5 -> external master (SPI1 TX)
+#define CEP_LOGIC_CHAN_UART 2 // USART1 handshake RX byte
+#define CEP_LOGIC_RING_SIZE 4096 // entries, must stay a power of two
+typedef struct {
+    uint32_t t_ticks; // monotonic, 1.5 MHz unit (see pm5_cep_logic.c)
+    uint8_t  chan;    // CEP_LOGIC_CHAN_*
+    uint8_t  data;
+} PACKED cep_logic_entry_t;
+
+// req: cep_logic_fetch_req_t. resp: cep_logic_fetch_resp_t, truncated to
+// offsetof(entries) + returned * sizeof(cep_logic_entry_t).
+#define CMD_CEP_LOGIC_FETCH 0x0188
+typedef struct {
+    uint32_t offset; // first entry index wanted (monotonic, not a ring position)
+} PACKED cep_logic_fetch_req_t;
+#define CEP_LOGIC_FETCH_MAX 500 // entries per reply, fits PM3_CMD_DATA_SIZE on PM5
+typedef struct {
+    uint32_t count;        // total entries recorded so far
+    uint32_t oldest_valid; // smallest entry index still in the ring
+    uint16_t returned;     // entries in this reply; 0 if offset not in [oldest_valid, count)
+    cep_logic_entry_t entries[CEP_LOGIC_FETCH_MAX];
+} PACKED cep_logic_fetch_resp_t;
 
 #define BWM_OTA_ACTION_BEGIN 0x00
 #define BWM_OTA_ACTION_WRITE 0x01

@@ -133,6 +133,9 @@ endif
 
 ifneq (,$(findstring WITH_CEP,$(APP_CFLAGS)))
     SRC_CEP = pm5_cep.c
+    ifneq (,$(findstring WITH_CEP_LOGIC,$(APP_CFLAGS)))
+        SRC_CEP += pm5_cep_logic.c
+    endif
 else
     SRC_CEP =
 endif

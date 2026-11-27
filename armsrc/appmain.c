@@ -29,6 +29,7 @@
 #endif
 #ifdef WITH_CEP
 #include "pm5_cep.h"
+#include "pm5_cep_logic.h"
 #endif
 #include "pm3_cmd.h"
 #include "proxmark3_arm.h"
@@ -4298,6 +4299,36 @@ static void PacketReceived(PacketCommandNG *packet) {
                 strncpy(status.fw_version, g_version_information.gitversion, sizeof(status.fw_version) - 1);
             }
             reply_ng(CMD_CEP_STATUS, PM3_SUCCESS, (uint8_t *)&status, sizeof(status));
+            break;
+        }
+        case CMD_CEP_LOGIC_CTRL: {
+#ifdef WITH_CEP_LOGIC
+            cep_logic_ctrl_t *req = (cep_logic_ctrl_t *)packet->data.asBytes;
+            cep_logic_status_t status = {0};
+            cep_logic_ctrl(req->action, req->skip_idle, &status);
+            reply_ng(CMD_CEP_LOGIC_CTRL, PM3_SUCCESS, (uint8_t *)&status, sizeof(status));
+#else
+            reply_ng(CMD_CEP_LOGIC_CTRL, PM3_ENOTIMPL, NULL, 0);
+#endif
+            break;
+        }
+        case CMD_CEP_LOGIC_FETCH: {
+#ifdef WITH_CEP_LOGIC
+            cep_logic_fetch_req_t *req = (cep_logic_fetch_req_t *)packet->data.asBytes;
+            // static: CEP_LOGIC_FETCH_MAX * sizeof(cep_logic_entry_t) (~3KB) is
+            // too much for PacketReceived's stack; only one fetch in flight at a time.
+            static cep_logic_fetch_resp_t resp;
+            uint32_t count, oldest_valid;
+            resp.returned = cep_logic_fetch(req->offset, resp.entries, CEP_LOGIC_FETCH_MAX,
+                                            &count, &oldest_valid);
+            resp.count = count;
+            resp.oldest_valid = oldest_valid;
+            size_t len = offsetof(cep_logic_fetch_resp_t, entries)
+                         + resp.returned * sizeof(cep_logic_entry_t);
+            reply_ng(CMD_CEP_LOGIC_FETCH, PM3_SUCCESS, (uint8_t *)&resp, len);
+#else
+            reply_ng(CMD_CEP_LOGIC_FETCH, PM3_ENOTIMPL, NULL, 0);
+#endif
             break;
         }
 #ifdef PM5
