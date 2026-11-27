@@ -31,6 +31,8 @@
 #include "commonutil.h"
 #include "pm3_cmd.h"
 #include "fileutils.h"
+#include "graph.h"
+#include "proxgui.h"
 
 // 1.5 MHz tick (see pm5_cep.c) -> nanoseconds, exact integer math.
 static uint64_t cep_ticks_to_ns(uint32_t ticks) {
@@ -563,4 +565,89 @@ void cep_logic_print_table(const cep_logic_entry_t *e, uint32_t n) {
         cep_print_row(i, &rows[i]);
     }
     free(rows);
+}
+
+// One marker per decoded command/response/handshake, at its starting byte's
+// capture-order position - same decode as cep_build_rows(), just placed on
+// the client's own graph window instead of a standalone image.
+static void cep_plot_add_markers(const cep_logic_entry_t *e, uint32_t n) {
+    cep_logic_entry_t *mosi, *miso, *uart;
+    uint32_t *mosi_g, *miso_g, *uart_g;
+    uint32_t n_mosi = cep_filter_channel(e, n, CEP_LOGIC_CHAN_MOSI, &mosi, &mosi_g);
+    uint32_t n_miso = cep_filter_channel(e, n, CEP_LOGIC_CHAN_MISO, &miso, &miso_g);
+    uint32_t n_uart = cep_filter_channel(e, n, CEP_LOGIC_CHAN_UART, &uart, &uart_g);
+
+    cep_ng_frame_t *cmds = NULL, *resps = NULL;
+    uint32_t n_cmds = cep_decode_ng(mosi, n_mosi, false, &cmds);
+    uint32_t n_resps = cep_decode_ng(miso, n_miso, true, &resps);
+    char label[32];
+    for (uint32_t k = 0; k < n_cmds; k++) {
+        const char *name = cep_cmd_name(cmds[k].cmd);
+        if (name) {
+            snprintf(label, sizeof(label), "C %s", name);
+        } else {
+            snprintf(label, sizeof(label), "C 0x%04x", cmds[k].cmd);
+        }
+        add_temporary_marker(mosi_g[cmds[k].start_idx], label);
+    }
+    for (uint32_t k = 0; k < n_resps; k++) {
+        const char *name = cep_cmd_name(resps[k].cmd);
+        char namebuf[16];
+        if (name == NULL) {
+            snprintf(namebuf, sizeof(namebuf), "0x%04x", resps[k].cmd);
+            name = namebuf;
+        }
+        if (resps[k].status) {
+            snprintf(label, sizeof(label), "R %s e%d", name, resps[k].status);
+        } else {
+            snprintf(label, sizeof(label), "R %s", name);
+        }
+        add_temporary_marker(miso_g[resps[k].start_idx], label);
+    }
+
+    cep_handshake_evt_t *hs = NULL;
+    uint32_t n_hs = cep_decode_handshake(uart, n_uart, &hs);
+    for (uint32_t k = 0; k < n_hs; k++) {
+        if (hs[k].ok) {
+            snprintf(label, sizeof(label), "HS OK");
+        } else {
+            snprintf(label, sizeof(label), "HS BAD (%s)", hs[k].reason);
+        }
+        add_temporary_marker(uart_g[hs[k].start_idx], label);
+    }
+
+    free(mosi);
+    free(miso);
+    free(uart);
+    free(mosi_g);
+    free(miso_g);
+    free(uart_g);
+    free(cmds);
+    free(resps);
+    free(hs);
+}
+
+// Loads the raw capture-order byte values (mixed channels) into the client's
+// graph window and marks each decoded command/response/handshake. Replaces
+// the old standalone SVG plot - same decode, shown in the existing graph
+// window (zoom/pan/markers) instead of a static image.
+void cep_logic_plot(const cep_logic_entry_t *e, uint32_t n) {
+    if (n == 0) {
+        PrintAndLogEx(WARNING, "nothing captured, nothing to plot");
+        return;
+    }
+    uint8_t *vals = calloc(n, sizeof(uint8_t));
+    if (vals == NULL) {
+        PrintAndLogEx(WARNING, "out of memory, can't build the plot");
+        return;
+    }
+    for (uint32_t i = 0; i < n; i++) {
+        vals[i] = e[i].data;
+    }
+    setGraphBuffer(vals, n);
+    free(vals);
+
+    cep_plot_add_markers(e, n);
+    ShowGraphWindow();
+    PrintAndLogEx(SUCCESS, "plotted " _YELLOW_("%u") " entries in the graph window", n);
 }
