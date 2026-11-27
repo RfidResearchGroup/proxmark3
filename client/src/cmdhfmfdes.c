@@ -10133,7 +10133,7 @@ static int CmdHF14ADesView(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "                  %s", mifare_prime_get_version_str(dump->versionhw[1], dump->versionhw[3], dump->versionhw[4]));
         }
         if (dump->versionhwlen >= 6) {
-            PrintAndLogEx(SUCCESS, "  Storage size... %s", mifare_prime_get_card_size_str(dump->versionhw[5]));
+            PrintAndLogEx(SUCCESS, "Storage size..... %s", mifare_prime_get_card_size_str(dump->versionhw[5]));
         }
     }
 
