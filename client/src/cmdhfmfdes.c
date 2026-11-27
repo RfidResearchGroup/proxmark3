@@ -5405,10 +5405,11 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes getkeyversions",
                   "Get key versions for card level or application level.",
-                  "--keynum parameter: App level: key number. PICC level: 00..0d - keys count, 21..23 vc keys, default 0x00.\n"\
+                  "--keynum parameter: App level: key number. PICC level: 00 - master key, 21..23 vc keys, default 0x00.\n"\
                   "hf mfdes getkeyversions --keynum 00    -> get picc master key version with default key/channel setup\n"\
-                  "hf mfdes getkeyversions --aid 123456 --keynum 0d    -> get app 123456 all key versions with default key/channel setup\n"
+                  "hf mfdes getkeyversions --aid 123456 --keynum 0d    -> get app 123456 key 0d version with default key/channel setup\n"
                   "hf mfdes getkeyversions --aid 123456 --keynum 0d --no-auth    -> get key version without authentication\n"\
+                  "hf mfdes getkeyversions --aid 123456 --keynum 00 --keyset 80 --no-auth -> get all app 123456 keyset versions\n"\
                   "hf mfdes getkeyversions --dfname D2760000850100 --keynum 00 -> select DF by name and get key versions");
 
     void *argtable[] = {
@@ -5426,8 +5427,8 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
         arg_str0(NULL, "aid",     "<hex>", "Application ID (3 hex bytes, big endian)"),
         arg_str0(NULL, "isoid",   "<hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)."),
         arg_str0(NULL, "dfname",  "<hex>", "Application ISO DF Name (5-16 hex bytes, big endian)"),
-        arg_str0(NULL, "keynum",  "<hex>", "Key number/count (1 hex byte). (def: 0x00)"),
-        arg_str0(NULL, "keyset",  "<hex>", "Keyset number (1 hex byte)"),
+        arg_str0(NULL, "keynum",  "<hex>", "Key number (1 hex byte). (def: 0x00)"),
+        arg_str0(NULL, "keyset",  "<hex>", "Keyset number (1 hex byte), 80 for all keyset versions with --keynum 00"),
         arg_lit0(NULL, "no-auth", "Execute without authentication"),
 
         arg_param_end
@@ -5495,19 +5496,24 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
     if (verbose)
         PrintAndLogEx(INFO, "GetKeyVersion[%zu]: %s", buflen, sprint_hex(buf, buflen));
 
-    if (buflen > 0) {
+    bool all_keysets = keysetpresent && keynum32 == 0x00 && keysetnum32 == 0x80;
+    if (buflen == 0) {
+        PrintAndLogEx(INFO, "No key versions returned.");
+    } else if (all_keysets) {
+        PrintAndLogEx(INFO, "---------------------- " _CYAN_("Keyset Versions") " ----------------------");
+        // Show response order without assuming a mapping to keyset numbers.
+        PrintAndLogEx(INFO, "Keyset versions: %s", sprint_hex(buf, buflen));
+    } else {
         PrintAndLogEx(INFO, "----------------------- " _CYAN_("Key Versions") " -----------------------");
         if (buflen == 1) {
-            PrintAndLogEx(INFO, "Key 0x%02x version 0x%02x", (uint8_t)keynum32, buf[0]);
-        } else {
-            // No key-number mapping is provided for a multi-byte response.
-            PrintAndLogEx(WARNING, "Multiple key versions returned; key numbers are unknown");
-            for (size_t i = 0; i < buflen; i++) {
-                PrintAndLogEx(INFO, "Response[%zu] version 0x%02x", i, buf[i]);
+            if (keysetpresent) {
+                PrintAndLogEx(INFO, "Keyset 0x%02x, key 0x%02x version 0x%02x", (uint8_t)keysetnum32, (uint8_t)keynum32, buf[0]);
+            } else {
+                PrintAndLogEx(INFO, "Key 0x%02x version 0x%02x", (uint8_t)keynum32, buf[0]);
             }
+        } else {
+            PrintAndLogEx(WARNING, "Unexpected multi-byte key version response: %s", sprint_hex(buf, buflen));
         }
-    } else {
-        PrintAndLogEx(INFO, "No key versions returned.");
     }
 
     DropField();
