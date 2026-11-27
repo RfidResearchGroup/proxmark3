@@ -212,6 +212,20 @@ bool prepare_tag_modulation(tag_response_info_t *response_info, size_t max_buffe
 void set_tag_modulation_byte(tag_response_info_t *response_info, uint16_t pos, uint8_t value);
 
 void iso14a_sim_trace_rx(const uint8_t *frame);
+
+// ISO/IEC 14443-4 (ISO-DEP) block numbering of a simulated PICC that never chains its answers
+typedef struct {
+    uint8_t blocknum;       // the PICC's block number, 1 at activation (rule C)
+    bool last_ok;           // the dynamic answer still holds the last block sent
+    bool pps_ok;            // a PPS is taken as the first frame after the ATS only
+    bool iblock;            // an I-block came since the activation
+} iso14a_sim_dep_t;
+
+bool iso14a_sim_pps_valid(const uint8_t *cmd, int len);
+void iso14a_sim_dep_init(iso14a_sim_dep_t *dep);
+void iso14a_sim_dep_iblock(iso14a_sim_dep_t *dep, uint8_t pcb);
+tag_response_info_t *iso14a_sim_rblock(iso14a_sim_dep_t *dep, const uint8_t *cmd, tag_response_info_t *answer, size_t mod_size);
+
 bool EmLogTrace(const uint8_t *reader_data, uint16_t reader_len, uint32_t reader_StartTime,
                 uint32_t reader_EndTime, const uint8_t *reader_Parity,  const uint8_t *tag_data,
                 uint16_t tag_len, uint32_t tag_StartTime, uint32_t tag_EndTime, const uint8_t *tag_Parity);
