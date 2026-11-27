@@ -323,6 +323,30 @@ int saveFileEx(const char *preferredName, const char *suffix, const void *data, 
  */
 int saveFileTXT(const char *preferredName, const char *suffix, const void *data, size_t datalen, savePaths_t e_save_path);
 
+// One 8-bit sample on one named signal of a VCD waveform.
+typedef struct {
+    uint64_t ns;   // timestamp, nanoseconds, non-decreasing across the array
+    uint8_t chan;  // index into chan_names[] passed to saveFileVCD()
+    uint8_t value; // 8-bit vector value
+} vcd_sample_t;
+
+/**
+ * @brief Utility function to save a set of timestamped 8-bit samples as a VCD
+ * file (PulseView, GTKWave, ...). This method takes a preferred name, but if
+ * that file already exists, it tries with another name until it finds
+ * something suitable. E.g. dumpdata-15.vcd
+ *
+ * @param preferredName
+ * @param scope the VCD $scope module name, e.g. "cep"
+ * @param chan_names signal names, one per channel index used in samples[].chan
+ * @param n_chan number of entries in chan_names (max 26)
+ * @param samples the samples, in non-decreasing timestamp order
+ * @param n number of entries in samples
+ * @return 0 for ok, 1 for failz
+ */
+int saveFileVCD(const char *preferredName, const char *scope, const char **chan_names, uint8_t n_chan,
+                const vcd_sample_t *samples, uint32_t n);
+
 /** STUB
  * @brief Utility function to save JSON data to a file. This method takes a preferred name, but if that
  * file already exists, it tries with another name until it finds something suitable.
