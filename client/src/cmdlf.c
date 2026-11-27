@@ -783,7 +783,7 @@ int CmdLFConfig(const char *Cmd) {
 }
 
 // 2.5 s margin plus the capture time, 0 samples fills the whole BigBuf
-static uint32_t lf_read_timeout_ms(const sample_config *config, uint32_t samples) {
+static uint32_t lf_capture_timeout_ms(const sample_config *config, uint32_t samples) {
     uint64_t bytes = samples;
     if (bytes == 0 || bytes > g_pm3_capabilities.bigbuf_size) {
         bytes = g_pm3_capabilities.bigbuf_size;
@@ -869,7 +869,7 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples, bool 
             WaitForResponse(CMD_LF_ACQ_RAW_ADC, &resp);
         } else {
 
-            if (WaitForResponseTimeout(CMD_LF_ACQ_RAW_ADC, &resp, lf_read_timeout_ms(&current_config, payload.samples)) == false) {
+            if (WaitForResponseTimeout(CMD_LF_ACQ_RAW_ADC, &resp, lf_capture_timeout_ms(&current_config, payload.samples)) == false) {
                 PrintAndLogEx(WARNING, "(lf_read) command execution time out");
                 return PM3_ETIMEOUT;
             }
@@ -1015,8 +1015,8 @@ int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
         if (is_trigger_threshold_set) {
             WaitForResponse(CMD_LF_SNIFF_RAW_ADC, &resp);
         } else {
-            if (WaitForResponseTimeout(CMD_LF_SNIFF_RAW_ADC, &resp, 2500) == false) {
-                PrintAndLogEx(WARNING, "(lf_read) command execution time out");
+            if (WaitForResponseTimeout(CMD_LF_SNIFF_RAW_ADC, &resp, lf_capture_timeout_ms(&current_config, payload.samples)) == false) {
+                PrintAndLogEx(WARNING, "(lf_sniff) command execution time out");
                 return PM3_ETIMEOUT;
             }
         }
