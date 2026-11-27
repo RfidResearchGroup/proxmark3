@@ -42,7 +42,8 @@ typedef lz4_stream_t *lz4_streamp_t;
 extern uint32_t _binary_obj_fpga_all_bit_z_start[], _binary_obj_fpga_all_bit_z_end[];
 
 static uint8_t *fpga_image_ptr = NULL;
-static uint32_t uncompressed_bytes_cnt;
+static uint32_t fpga_chunk_left;   // bytes left in the current chunk of the wanted bitstream
+static uint32_t fpga_skip_bytes;   // bytes of other bitstreams before its next chunk
 
 // remember which version of the bitstream we have already downloaded to the FPGA
 // For high-capacity FPGA chips, the FPGA firmware may have been merged,
@@ -70,8 +71,27 @@ static int get_from_fpga_combined_stream(lz4_streamp_t compressed_fpga_stream, u
         }
         compressed_fpga_stream->next_in += cmp_bytes;
     }
-    uncompressed_bytes_cnt++;
     return *fpga_image_ptr++;
+}
+
+// Skip n bytes of the combined stream, a whole decompressed block at a time
+static int skip_fpga_combined_stream(uint32_t n, lz4_streamp_t compressed_fpga_stream, uint8_t *output_buffer) {
+    while (n) {
+        uint32_t avail = output_buffer + FPGA_RING_BUFFER_BYTES - fpga_image_ptr;
+        if (avail == 0) {
+            // refills the ring buffer and takes its first byte
+            int res = get_from_fpga_combined_stream(compressed_fpga_stream, output_buffer);
+            if (res < 0) {
+                return res;
+            }
+            n--;
+            continue;
+        }
+        uint32_t step = MIN(n, avail);
+        fpga_image_ptr += step;
+        n -= step;
+    }
+    return 0;
 }
 
 static int bitstream_target_to_index(FPGA_config bitstream_target) {
@@ -95,14 +115,34 @@ static int bitstream_target_to_index(FPGA_config bitstream_target) {
 // are combined into one big file:
 // 288 bytes from FPGA file 1, followed by 288 bytes from FGPA file 2, etc.
 //----------------------------------------------------------------------------
-static int get_from_fpga_stream(int bitstream_target, lz4_streamp_t compressed_fpga_stream, uint8_t *output_buffer) {
-    int bitstream_index = bitstream_target_to_index(bitstream_target);
-    while ((uncompressed_bytes_cnt / FPGA_INTERLEAVE_SIZE) % g_fpga_bitstream_num != bitstream_index) {
+static int get_from_fpga_stream(lz4_streamp_t compressed_fpga_stream, uint8_t *output_buffer) {
+    if (fpga_chunk_left == 0) {
         // skip undesired data belonging to other bitstream_targets
-        get_from_fpga_combined_stream(compressed_fpga_stream, output_buffer);
+        int res = skip_fpga_combined_stream(fpga_skip_bytes, compressed_fpga_stream, output_buffer);
+        if (res < 0) {
+            return res;
+        }
+        fpga_skip_bytes = (g_fpga_bitstream_num - 1) * FPGA_INTERLEAVE_SIZE;
+        fpga_chunk_left = FPGA_INTERLEAVE_SIZE;
+    }
+    fpga_chunk_left--;
+    return get_from_fpga_combined_stream(compressed_fpga_stream, output_buffer);
+}
+
+// Next run of contiguous bytes of the wanted bitstream, at most max. Returns NULL on error
+static uint8_t *get_fpga_stream_run(uint32_t max, uint32_t *len, lz4_streamp_t compressed_fpga_stream, uint8_t *output_buffer) {
+    // refills / skips as needed and takes the first byte
+    if (get_from_fpga_stream(compressed_fpga_stream, output_buffer) < 0) {
+        return NULL;
     }
 
-    return get_from_fpga_combined_stream(compressed_fpga_stream, output_buffer);
+    uint8_t *run = fpga_image_ptr - 1;
+    uint32_t n = MIN(max, fpga_chunk_left + 1);
+    n = MIN(n, (uint32_t)(output_buffer + FPGA_RING_BUFFER_BYTES - run));
+    fpga_chunk_left -= n - 1;
+    fpga_image_ptr = run + n;
+    *len = n;
+    return run;
 }
 
 //----------------------------------------------------------------------------
@@ -111,7 +151,8 @@ static int get_from_fpga_stream(int bitstream_target, lz4_streamp_t compressed_f
 static bool reset_fpga_stream(int bitstream_target, lz4_streamp_t compressed_fpga_stream, uint8_t *output_buffer) {
     uint8_t header[FPGA_BITSTREAM_FIXED_HEADER_SIZE];
 
-    uncompressed_bytes_cnt = 0;
+    fpga_chunk_left = 0;
+    fpga_skip_bytes = bitstream_target_to_index(bitstream_target) * FPGA_INTERLEAVE_SIZE;
 
     // initialize z_stream structure for inflate:
     compressed_fpga_stream->next_in = (char *)_binary_obj_fpga_all_bit_z_start;
@@ -124,7 +165,7 @@ static bool reset_fpga_stream(int bitstream_target, lz4_streamp_t compressed_fpg
     fpga_image_ptr = output_buffer + FPGA_RING_BUFFER_BYTES;
 
     for (uint16_t i = 0; i < FPGA_BITSTREAM_FIXED_HEADER_SIZE; i++)
-        header[i] = get_from_fpga_stream(bitstream_target, compressed_fpga_stream, output_buffer);
+        header[i] = get_from_fpga_stream(compressed_fpga_stream, output_buffer);
 
     // Check for a valid .bit file (starts with bitparse_fixed_header)
     if (memcmp(bitparse_fixed_header, header, FPGA_BITSTREAM_FIXED_HEADER_SIZE) == 0)
@@ -133,29 +174,37 @@ static bool reset_fpga_stream(int bitstream_target, lz4_streamp_t compressed_fpg
     return false;
 }
 
-static void DownloadFPGA_byte(uint8_t w) {
+// runs from RAM, flash wait states would dominate the bit-bang
+static void RAMFUNC DownloadFPGA_run(const uint8_t *data, uint32_t len) {
 #define SEND_BIT(x) { if(w & (1<<x) ) Gpio_FPGA_DIN_High(); else Gpio_FPGA_DIN_Low(); Gpio_FPGA_CCLK_High(); Gpio_FPGA_CCLK_Low(); }
-    SEND_BIT(7);
-    SEND_BIT(6);
-    SEND_BIT(5);
-    SEND_BIT(4);
-    SEND_BIT(3);
-    SEND_BIT(2);
-    SEND_BIT(1);
-    SEND_BIT(0);
+    while (len--) {
+        uint8_t w = *data++;
+        SEND_BIT(7);
+        SEND_BIT(6);
+        SEND_BIT(5);
+        SEND_BIT(4);
+        SEND_BIT(3);
+        SEND_BIT(2);
+        SEND_BIT(1);
+        SEND_BIT(0);
+    }
 }
 
 // TODO DXL: Abstract this function
 // Download the fpga image starting at current stream position with length FpgaImageLen bytes
-static void DownloadFPGA(int bitstream_target, int FpgaImageLen, lz4_streamp_t compressed_fpga_stream, uint8_t *output_buffer) {
+static void DownloadFPGA(int FpgaImageLen, lz4_streamp_t compressed_fpga_stream, uint8_t *output_buffer) {
     int i = 0;
+    static bool fpga_powered = false;  // FPGA power is never switched off again
 
 #if !defined XC3 && !defined PM5
     gpio_fpga_on_setup();
     Gpio_FPGA_ON_High(); // ensure everything is powered on
 #endif
 
-    SpinDelay(50);
+    if (fpga_powered == false) {
+        SpinDelay(50);
+        fpga_powered = true;
+    }
 
     LED_D_ON();
 
@@ -175,7 +224,7 @@ static void DownloadFPGA(int bitstream_target, int FpgaImageLen, lz4_streamp_t c
 
     // enter FPGA configuration mode
     Gpio_FPGA_NPROGRAM_Low();
-    SpinDelay(50);
+    SpinDelay(1);
     Gpio_FPGA_NPROGRAM_High();
 
     i = 100000;
@@ -198,13 +247,15 @@ static void DownloadFPGA(int bitstream_target, int FpgaImageLen, lz4_streamp_t c
     AT91C_BASE_PIOA->PIO_PDR = GPIO_SPCK | GPIO_MOSI;
 #endif
 
-    for (i = 0; i < FpgaImageLen; i++) {
-        int b = get_from_fpga_stream(bitstream_target, compressed_fpga_stream, output_buffer);
-        if (b < 0) {
-            Dbprintf("Error %d during FpgaDownload", b);
+    while (FpgaImageLen > 0) {
+        uint32_t n = 0;
+        uint8_t *run = get_fpga_stream_run(FpgaImageLen, &n, compressed_fpga_stream, output_buffer);
+        if (run == NULL) {
+            Dbprintf("Error during FpgaDownload");
             break;
         }
-        DownloadFPGA_byte(b);
+        DownloadFPGA_run(run, n);
+        FpgaImageLen -= n;
     }
 
     // continue to clock FPGA until ready signal goes high
@@ -228,14 +279,14 @@ static void DownloadFPGA(int bitstream_target, int FpgaImageLen, lz4_streamp_t c
  * (big endian), <length> bytes content. Except for section 'e' which has 4 bytes
  * length.
  */
-static int bitparse_find_section(int bitstream_target, char section_name, uint32_t *section_length, lz4_streamp_t compressed_fpga_stream, uint8_t *output_buffer) {
+static int bitparse_find_section(char section_name, uint32_t *section_length, lz4_streamp_t compressed_fpga_stream, uint8_t *output_buffer) {
 
 #define MAX_FPGA_BIT_STREAM_HEADER_SEARCH 100  // maximum number of bytes to search for the requested section
 
     int result = 0;
     uint16_t numbytes = 0;
     while (numbytes < MAX_FPGA_BIT_STREAM_HEADER_SEARCH) {
-        char current_name = get_from_fpga_stream(bitstream_target, compressed_fpga_stream, output_buffer);
+        char current_name = get_from_fpga_stream(compressed_fpga_stream, output_buffer);
         numbytes++;
         uint32_t current_length = 0;
         if (current_name < 'a' || current_name > 'e') {
@@ -246,10 +297,10 @@ static int bitparse_find_section(int bitstream_target, char section_name, uint32
         switch (current_name) {
             case 'e':
                 /* Four byte length field */
-                current_length += get_from_fpga_stream(bitstream_target, compressed_fpga_stream, output_buffer) << 24;
-                current_length += get_from_fpga_stream(bitstream_target, compressed_fpga_stream, output_buffer) << 16;
-                current_length += get_from_fpga_stream(bitstream_target, compressed_fpga_stream, output_buffer) << 8;
-                current_length += get_from_fpga_stream(bitstream_target, compressed_fpga_stream, output_buffer) << 0;
+                current_length += get_from_fpga_stream(compressed_fpga_stream, output_buffer) << 24;
+                current_length += get_from_fpga_stream(compressed_fpga_stream, output_buffer) << 16;
+                current_length += get_from_fpga_stream(compressed_fpga_stream, output_buffer) << 8;
+                current_length += get_from_fpga_stream(compressed_fpga_stream, output_buffer) << 0;
                 numbytes += 4;
                 if (current_length > 300 * 1024) {
                     /* section e should never exceed about 300KB, if the length is too big limit it but still send the bitstream just in case */
@@ -257,8 +308,8 @@ static int bitparse_find_section(int bitstream_target, char section_name, uint32
                 }
                 break;
             default: /* Two byte length field */
-                current_length += get_from_fpga_stream(bitstream_target, compressed_fpga_stream, output_buffer) << 8;
-                current_length += get_from_fpga_stream(bitstream_target, compressed_fpga_stream, output_buffer) << 0;
+                current_length += get_from_fpga_stream(compressed_fpga_stream, output_buffer) << 8;
+                current_length += get_from_fpga_stream(compressed_fpga_stream, output_buffer) << 0;
                 numbytes += 2;
                 if (current_length > 64) {
                     /* if text field is too long, keep it but truncate it */
@@ -274,7 +325,7 @@ static int bitparse_find_section(int bitstream_target, char section_name, uint32
         }
 
         for (uint32_t i = 0; i < current_length && numbytes < MAX_FPGA_BIT_STREAM_HEADER_SEARCH; i++) {
-            get_from_fpga_stream(bitstream_target, compressed_fpga_stream, output_buffer);
+            get_from_fpga_stream(compressed_fpga_stream, output_buffer);
             numbytes++;
         }
     }
@@ -376,8 +427,8 @@ static void FpgaDownloadAndGoEx(int bitstream_target, bool keep_em) {
     }
 
     uint32_t bitstream_length = 0;
-    if (bitparse_find_section(bitstream_target, 'e', &bitstream_length, &compressed_fpga_stream, output_buffer)) {
-        DownloadFPGA(bitstream_target, bitstream_length, &compressed_fpga_stream, output_buffer);
+    if (bitparse_find_section('e', &bitstream_length, &compressed_fpga_stream, output_buffer)) {
+        DownloadFPGA(bitstream_length, &compressed_fpga_stream, output_buffer);
         downloaded_bitstream = bitstream_target;
     }
 
