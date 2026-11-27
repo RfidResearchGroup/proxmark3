@@ -190,13 +190,17 @@ static void DownloadFPGA_byte(uint8_t w) {
 // Download the fpga image starting at current stream position with length FpgaImageLen bytes
 static void DownloadFPGA(int FpgaImageLen, lz4_streamp_t compressed_fpga_stream, uint8_t *output_buffer) {
     int i = 0;
+    static bool fpga_powered = false;  // FPGA power is never switched off again
 
 #if !defined XC3 && !defined PM5
     gpio_fpga_on_setup();
     Gpio_FPGA_ON_High(); // ensure everything is powered on
 #endif
 
-    SpinDelay(50);
+    if (fpga_powered == false) {
+        SpinDelay(50);
+        fpga_powered = true;
+    }
 
     LED_D_ON();
 
@@ -216,7 +220,7 @@ static void DownloadFPGA(int FpgaImageLen, lz4_streamp_t compressed_fpga_stream,
 
     // enter FPGA configuration mode
     Gpio_FPGA_NPROGRAM_Low();
-    SpinDelay(50);
+    SpinDelay(1);
     Gpio_FPGA_NPROGRAM_High();
 
     i = 100000;
