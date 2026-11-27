@@ -3,6 +3,18 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 14a simaid` and `hf seos sim` - S(DESELECT) is answered with the same block and no longer ends the simulation (@matrix)
+- Fixed `hf 14a simaid` and `hf seos sim` - an I-block with a CID gets an answer again (@matrix)
+- Fixed `hf 14a simaid` and `hf seos sim` - an HLTA after RATS no longer ends the simulation (@matrix)
+- Fixed `hf seos sim` - the error answers to an I-block without CID no longer carry an extra 00 byte (@matrix)
+- Fixed `hf secc sim` - S(DESELECT) is answered (@matrix)
+- Fixed `hf mfdes sim` - after S(DESELECT) the card is halted and WUPA activates it again (@matrix)
+- Fixed `hf mfdes sim` - S(DESELECT) with a CID is answered with the same block (@matrix)
+- Fixed `hf mfdes sim` - the R(ACK) to an R(NAK) with a CID carries the CID (@matrix)
+- Fixed `hf 14a simaid`, `hf seos sim` and `hf secc sim` - ISO/IEC 14443-4 blocks are answered only after RATS and with a valid CRC (@matrix)
+- Fixed `hf 14a simaid`, `hf seos sim` and `hf secc sim` - R-blocks are answered (ISO/IEC 14443-4 rules 11 and 12), so a reader's R(NAK) presence check keeps the card (@matrix)
+- Fixed `hf 14a simaid` and `hf seos sim` - PPS is answered only when it is valid and the first frame after the ATS (@matrix)
+- Fixed `hf 14a simaid` and `hf seos sim` - the chained command warning is printed for chained I-blocks only (@matrix)
 - Fixed `trace list -t iclass` - `CHECK SUCCESS` was also put on the answer to a READ or READ4 after a CHECK the card did not answer, now only on the 4-byte card MAC that answers the CHECK (@matrix)
 - Fixed I2C reads - a bus timeout no longer counts as a good read (PM5 CEP, antenna and EEPROM chips, RDV4 SIM module) (@matrix)
 - Added `hw rtttl` - play an RTTTL string or file on the PM5 buzzer, with a shared parser and a reusable firmware playback API (@cansacha)

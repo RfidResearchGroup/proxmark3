@@ -4149,12 +4149,14 @@ void SimulateDesfireTag(PacketCommandNG *packet) {
 
         if ((receivedCmd[0] & PCB_TYPE_MASK) == PCB_TYPE_S) {
 
-            if (receivedCmd[0] == PCB_S_DESELECT) {
-                uint8_t r[3] = { PCB_S_DESELECT, 0, 0 };
-                AddCrc14A(r, 1);
-                EmSendCmd(r, sizeof(r));
+            if ((receivedCmd[0] & ~PCB_CID_FOLLOWS) == PCB_S_DESELECT) {
+                // answered with the same block, CID included when the reader sent one
+                uint8_t r[4] = { receivedCmd[0], receivedCmd[1], 0, 0 };
+                uint8_t n = (receivedCmd[0] & PCB_CID_FOLLOWS) ? 2 : 1;
+                AddCrc14A(r, n);
+                EmSendCmd(r, n + 2);
                 desfire_sim_reset();
-                pstate = DESF_ACTIVE;   // out of 14443-4, RATS would be needed again
+                pstate = DESF_HALTED;   // a deselected PICC only answers WUPA
                 expected_pcd_block = 0;
                 picc_block = 1;
                 last_answer_len = 0;
@@ -4172,9 +4174,11 @@ void SimulateDesfireTag(PacketCommandNG *packet) {
             // A nonmatching R(NAK) is answered with R(ACK). There is no
             // card-side chaining to continue for a nonmatching R(ACK).
             if (receivedCmd[0] & 0x10) {
-                uint8_t r[3] = { (uint8_t)(0xA2 | picc_block), 0, 0 };
-                AddCrc14A(r, 1);
-                EmSendCmd(r, sizeof(r));
+                // CID included when the reader sent one
+                uint8_t r[4] = { (uint8_t)(0xA2 | (receivedCmd[0] & PCB_CID_FOLLOWS) | picc_block), receivedCmd[1], 0, 0 };
+                uint8_t n = (receivedCmd[0] & PCB_CID_FOLLOWS) ? 2 : 1;
+                AddCrc14A(r, n);
+                EmSendCmd(r, n + 2);
             }
             continue;
 

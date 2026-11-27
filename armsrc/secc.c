@@ -558,6 +558,9 @@ void SimulateHIDConfigCard(const hid_sim_payload_t *payload) {
 
     uint8_t cardINTERACTIONS = 0;
     bool finished = false;
+    // ISO/IEC 14443-4: block numbering, and whether RATS was answered
+    iso14a_sim_dep_t dep = {0};
+    bool iso4 = false;
 
     while (finished == false) {
         WDT_HIT();
@@ -568,8 +571,12 @@ void SimulateHIDConfigCard(const hid_sim_payload_t *payload) {
             break;
         }
 
-        dynamic_response_info.response_n = 0;
-        dynamic_response_info.modulation_n = 0;
+        // ISO/IEC 14443-4 R-block. Only it can ask for the last block again:
+        // the answer to any other frame may overwrite the dynamic answer
+        bool rblock = iso4 && (receivedCmd[0] & 0xE6) == 0xA2;
+        if (rblock == false) {
+            dep.last_ok = false;
+        }
 
         if (receivedCmd[0] == ISO14443A_CMD_REQA && len == 1) {
             p_response = &responses[RESP_INDEX_ATQA];
@@ -581,16 +588,28 @@ void SimulateHIDConfigCard(const hid_sim_payload_t *payload) {
             p_response = &responses[RESP_INDEX_SAKC1];
         } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {
             p_response = &responses[RESP_INDEX_ATS];
+            iso14a_sim_dep_init(&dep);
+            iso4 = true;
         } else if (receivedCmd[0] == ISO14443A_CMD_HALT && len == 4) {
             p_response = NULL;
+            iso4 = false;
+        } else if (rblock) {
+            // the dynamic answer may still hold the last block
+            p_response = iso14a_sim_rblock(&dep, receivedCmd, &dynamic_response_info, HID_SIM_DYNAMIC_MODULATION_SIZE);
         } else {
+            dynamic_response_info.response_n = 0;
+            dynamic_response_info.modulation_n = 0;
+
             // ISO 14443-4 I-block dispatch — HID-specific handling
-            switch (receivedCmd[0]) {
+            // a block is taken after RATS only, a frame with a CRC error gets no answer (ISO/IEC 14443-4 7.5.6)
+            switch ((iso4 && CheckCrc14A(receivedCmd, len)) ? receivedCmd[0] : 0x00) {
                 case 0x02:
                 case 0x03:
                 case 0x0A:
                 case 0x0B: {
 
+                    // the PICC's next block number (rule D)
+                    iso14a_sim_dep_iblock(&dep, receivedCmd[0]);
                     hid_config_card_handle_iblock(receivedCmd, len, &dynamic_response_info);
 
                     if (dynamic_response_info.response_n > 0) {
@@ -604,6 +623,7 @@ void SimulateHIDConfigCard(const hid_sim_payload_t *payload) {
 
                         if (prepare_tag_modulation(&dynamic_response_info, HID_SIM_DYNAMIC_MODULATION_SIZE)) {
                             p_response = &dynamic_response_info;
+                            dep.last_ok = true;
                         }
                     }
 
@@ -612,6 +632,22 @@ void SimulateHIDConfigCard(const hid_sim_payload_t *payload) {
                     if (payload->exitAfter > 0 && cardINTERACTIONS >= payload->exitAfter) {
                         finished = true;
                     }
+                    break;
+                }
+                case 0xC2:
+                case 0xCA: {
+                    // S(DESELECT), answered with the same block and the CID it carries
+                    dynamic_response_info.response[0] = receivedCmd[0];
+                    dynamic_response_info.response[1] = receivedCmd[1];
+                    dynamic_response_info.response_n = (receivedCmd[0] & 0x08) ? 2 : 1;
+
+                    AddCrc14A(dynamic_response_info.response, dynamic_response_info.response_n);
+                    dynamic_response_info.response_n += 2;
+
+                    if (prepare_tag_modulation(&dynamic_response_info, HID_SIM_DYNAMIC_MODULATION_SIZE)) {
+                        p_response = &dynamic_response_info;
+                    }
+                    iso4 = false;
                     break;
                 }
                 default:
