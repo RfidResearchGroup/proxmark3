@@ -34,4 +34,8 @@ int cep_logic_fetch_all(cep_logic_entry_t **out, uint32_t *n_out);
 void cep_logic_print_table(const cep_logic_entry_t *e, uint32_t n);
 void cep_logic_write_vcd(const char *fn, const cep_logic_entry_t *e, uint32_t n);
 
+// Loads the raw byte values into the client's graph window and marks each
+// decoded command/response/handshake (add_temporary_marker()).
+void cep_logic_plot(const cep_logic_entry_t *e, uint32_t n);
+
 #endif

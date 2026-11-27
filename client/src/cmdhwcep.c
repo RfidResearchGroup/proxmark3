@@ -108,16 +108,20 @@ static int CmdCepLogicFetch(const char *Cmd) {
                   "Pull the recorded CEP bus trace (PM5 built with PLATFORM_EXTRAS=CEPLOGIC). Byte/timestamp resolution -\n"
                   "every SPI1 MOSI/MISO byte and USART1 handshake byte PM5 itself moved,\n"
                   "with a capture timestamp - not an electrical edge-level capture.\n"
-                  "Plain run just prints the count; add -a for the decoded data table\n"
-                  "and/or -f to save a VCD file for PulseView/GTKWave.",
+                  "Plain run just prints the count; add -a for the decoded data table,\n"
+                  "-f to save a VCD file for PulseView/GTKWave, and/or -g to load the\n"
+                  "trace into this client's own graph window (zoom/pan, decoded\n"
+                  "commands/responses/handshakes as markers).",
                   "hw cep logic fetch             --> just show how many entries\n"
                   "hw cep logic fetch -a          --> print the decoded data table\n"
                   "hw cep logic fetch -f trace     --> save for PulseView/GTKWave\n"
+                  "hw cep logic fetch -g          --> load into the graph window\n"
                   "hw cep logic fetch -a -f trace  --> both");
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<fn>", "save the trace as a VCD file"),
         arg_lit0("a", "ascii", "print the decoded data table"),
+        arg_lit0("g", "graph", "load into the graph window, with decoded markers"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -126,6 +130,7 @@ static int CmdCepLogicFetch(const char *Cmd) {
     char vcdfile[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)vcdfile, sizeof(vcdfile), &vcdlen);
     bool do_ascii = arg_get_lit(ctx, 2);
+    bool do_graph = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     cep_logic_entry_t *entries = NULL;
@@ -142,6 +147,9 @@ static int CmdCepLogicFetch(const char *Cmd) {
     }
     if (vcdlen > 0) {
         cep_logic_write_vcd(vcdfile, entries, n);
+    }
+    if (do_graph) {
+        cep_logic_plot(entries, n);
     }
 
     free(entries);
