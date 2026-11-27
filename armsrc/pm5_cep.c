@@ -39,6 +39,7 @@
 #include "ticks_apis.h"
 #include "dbprint.h"
 #include "pm3_cmd.h"
+#include "pm5_cep_logic.h"
 
 #define CEP_CC_CONTROLLER_ADDR   0x47
 #define CEP_CC_STATUS_REG        0x09
@@ -133,6 +134,7 @@ static spi_master_slave_mode_type s_spi_mode;
 static volatile uint8_t s_spi_rx_ring[CEP_RX_RING_SIZE];
 static volatile uint32_t s_spi_rx_wraps;
 static uint32_t s_spi_rx_tail;
+static uint32_t s_logic_hwm; // highest s_spi_rx_tail position already logged
 static uint32_t s_spi_rx_produced;
 static uint32_t s_spi_rx_frame_end;
 
@@ -149,6 +151,7 @@ static void cep_spi_rx_init(void) {
     dma_reset(CEP_RX_DMA);
 
     s_spi_rx_tail = 0;
+    s_logic_hwm = 0;
     s_spi_rx_produced = 0;
     s_spi_rx_wraps = 0;
     s_spi_rx_frame_end = 0;
@@ -300,6 +303,7 @@ void USART1_IRQHandler(void) {
 
     // Reading status then data clears receive errors.
     uint8_t byte = usart_data_receive(USART1);
+    cep_logic_record(CEP_LOGIC_CHAN_UART, byte);
     if (status & errors) {
         match = 0;
     } else if (byte == CEP_HANDSHAKE_STX) {
@@ -310,6 +314,13 @@ void USART1_IRQHandler(void) {
         match = 0;
         s_handshake_pending = true;
     }
+}
+
+// Logged wrapper for the direct SPI1 transmits below - the MISO side of the
+// bus, i.e. what PM5 itself sends back.
+static void cep_spi_tx_byte(uint8_t data) {
+    spi_i2s_data_transmit(SPI1, data);
+    cep_logic_record(CEP_LOGIC_CHAN_MISO, data);
 }
 
 static bool cep_reply_handshake(void) {
@@ -335,7 +346,7 @@ static bool cep_reply_handshake(void) {
                 wait_start = GetTicks();
             }
         }
-        spi_i2s_data_transmit(SPI1, response[i]);
+        cep_spi_tx_byte(response[i]);
     }
 
     return true;
@@ -426,11 +437,24 @@ static bool cep_spi_read_byte(uint8_t *out) {
         s_spi_rx_tail = head;
         return false;
     }
-    *out = s_spi_rx_ring[s_spi_rx_tail++ & CEP_RX_RING_MASK];
+    uint32_t pos = s_spi_rx_tail++;
+    *out = s_spi_rx_ring[pos & CEP_RX_RING_MASK];
+    // cep_spi_rewind_ng_magic() below re-reads bytes it already consumed -
+    // only log a position once, or a rewound magic shows up twice and
+    // throws off downstream frame decoding.
+    if (pos >= s_logic_hwm) {
+        cep_logic_record(CEP_LOGIC_CHAN_MOSI, *out);
+        s_logic_hwm = pos + 1;
+    }
     return true;
 }
 
-static bool cep_spi_rewind_ng_magic(uint8_t first) {
+static bool cep_spi_rewind_ng_magic(uint8_t first, uint16_t reinterpreted_len) {
+    // A length reinterpretation too short to hold a real NG frame is not a
+    // magic match, whatever the following bytes happen to be.
+    if (reinterpreted_len < sizeof(PacketCommandNGPreamble) + sizeof(PacketCommandNGPostamble)) {
+        return false;
+    }
     uint32_t magic = COMMANDNG_PREAMBLE_MAGIC;
     if (first != (uint8_t)magic) {
         return false;
@@ -465,7 +489,14 @@ bool cep_spi_rx_pending(void) {
         if (byte != 0xffu && byte != 0x00u) {
             return true;
         }
+        // Skipped here, not via cep_spi_read_byte() - log it directly so an
+        // idle poll still shows up in the logic capture. These positions are
+        // never rewound, but keep the high-water mark in step regardless.
+        cep_logic_record(CEP_LOGIC_CHAN_MOSI, byte);
         s_spi_rx_tail++;
+        if (s_spi_rx_tail > s_logic_hwm) {
+            s_logic_hwm = s_spi_rx_tail;
+        }
     }
     return false;
 }
@@ -508,7 +539,7 @@ bool cep_spi_data_available(void) {
     // If we skipped the low length byte, len_header[1] starts the NG magic.
     uint16_t sync_len = (len_header[0] << 8) | CEP_SYNC_BYTE;
     if (discarded > 0 && data_len > max_len && sync_len <= sizeof(PacketCommandNGRaw)
-            && cep_spi_rewind_ng_magic(len_header[1])) {
+            && cep_spi_rewind_ng_magic(len_header[1], sync_len)) {
         data_len = sync_len;
         discarded--;
     }
@@ -595,20 +626,20 @@ int cep_spi_write_sync(uint8_t *data, size_t len) {
         ret = PM3_EIO;
         goto cleanup;
     }
-    spi_i2s_data_transmit(SPI1, len & 0xFF);
+    cep_spi_tx_byte(len & 0xFF);
 
     if (!cep_spi_wait_tdbe(CEP_SPI_HEADER_BYTE_TIMEOUT)) {
         ret = PM3_EIO;
         goto cleanup;
     }
-    spi_i2s_data_transmit(SPI1, (len >> 8) & 0xFF);
+    cep_spi_tx_byte((len >> 8) & 0xFF);
 
     for (size_t i = 0; i < len; ++i) {
         if (!cep_spi_wait_tdbe(CEP_SPI_BYTE_TIMEOUT)) {
             ret = PM3_EIO;
             goto cleanup;
         }
-        spi_i2s_data_transmit(SPI1, data[i]);
+        cep_spi_tx_byte(data[i]);
     }
 
     // Two trailing zero bytes: the agreed "no more data" idle marker.
@@ -616,12 +647,12 @@ int cep_spi_write_sync(uint8_t *data, size_t len) {
         ret = PM3_EIO;
         goto cleanup;
     }
-    spi_i2s_data_transmit(SPI1, 0x00);
+    cep_spi_tx_byte(0x00);
     if (!cep_spi_wait_tdbe(CEP_SPI_BYTE_TIMEOUT)) {
         ret = PM3_EIO;
         goto cleanup;
     }
-    spi_i2s_data_transmit(SPI1, 0x00);
+    cep_spi_tx_byte(0x00);
 
     {
         uint64_t timeout = 0;

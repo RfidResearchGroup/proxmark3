@@ -747,6 +747,8 @@ SRCS =  mifare/aiddesfire.c \
         atrs.c \
         cmdanalyse.c \
         cmdbwm.c \
+        cmdhwcep.c \
+        cmdhwceplogic.c \
         cmdcrc.c \
         cmddata.c \
         cmdflashmem.c \
