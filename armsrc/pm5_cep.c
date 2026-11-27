@@ -50,8 +50,8 @@
 // (its own idle poll cadence) - CEP_SPI_BYTE_TIMEOUT alone (~3-10ms real
 // time) is far shorter than that gap, so the first reply byte - the one
 // racing against the master's next poll - needs a budget that actually
-// spans it. Once that byte clears, the master is mid-CS and keeps
-// clocking continuously, so every later byte stays on the short timeout.
+// spans it and the switch to payload DMA. Once payload transfer starts,
+// the master clocks continuously, so later bytes use the short timeout.
 // Took measured CEP reply success from ~22% to ~100% in testing.
 #define CEP_SPI_HEADER_BYTE_TIMEOUT  2000000
 #define CEP_SPI_RESPONSE_TIMEOUT_TICKS  1500000  // 1s at 1.5 MHz
@@ -312,9 +312,35 @@ void USART1_IRQHandler(void) {
     }
 }
 
+// Queue the first byte between CS assertions, never during an idle poll.
+static bool cep_spi_write_first(uint8_t byte) {
+    uint64_t timeout = 0;
+    while (timeout++ <= CEP_SPI_HEADER_BYTE_TIMEOUT) {
+        if (!GpioInputStatus(GPIOA, GPIO_PINS_4) ||
+                spi_i2s_flag_get(SPI1, SPI_I2S_TDBE_FLAG) == RESET) {
+            continue;
+        }
+        uint32_t primask = __get_PRIMASK();
+        __disable_irq();
+        bool idle = GpioInputStatus(GPIOA, GPIO_PINS_4) &&
+                    spi_i2s_flag_get(SPI1, SPI_I2S_TDBE_FLAG) != RESET;
+        if (idle) {
+            spi_i2s_data_transmit(SPI1, byte);
+        }
+        __set_PRIMASK(primask);
+        if (idle) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static bool cep_reply_handshake(void) {
     uint8_t response[] = {0x04, 0x00, 'y', 'e', 's', 0x00};
-    for (size_t i = 0; i < sizeof(response); i++) {
+    if (!cep_spi_write_first(response[0])) {
+        return false;
+    }
+    for (size_t i = 1; i < sizeof(response); i++) {
         uint32_t wait_start = GetTicks();
         int recovery_attempts = 0;
         while (spi_i2s_flag_get(SPI1, SPI_I2S_TDBE_FLAG) == RESET) {
@@ -591,11 +617,10 @@ int cep_spi_write_sync(uint8_t *data, size_t len) {
 
     // These two length-header bytes are the ones racing against the
     // master's next poll - see CEP_SPI_HEADER_BYTE_TIMEOUT's comment.
-    if (!cep_spi_wait_tdbe(CEP_SPI_HEADER_BYTE_TIMEOUT)) {
+    if (!cep_spi_write_first(len & 0xFF)) {
         ret = PM3_EIO;
         goto cleanup;
     }
-    spi_i2s_data_transmit(SPI1, len & 0xFF);
 
     if (!cep_spi_wait_tdbe(CEP_SPI_HEADER_BYTE_TIMEOUT)) {
         ret = PM3_EIO;
@@ -603,8 +628,10 @@ int cep_spi_write_sync(uint8_t *data, size_t len) {
     }
     spi_i2s_data_transmit(SPI1, (len >> 8) & 0xFF);
 
+    // The master prepares its DMA transfer after reading the length.
     for (size_t i = 0; i < len; ++i) {
-        if (!cep_spi_wait_tdbe(CEP_SPI_BYTE_TIMEOUT)) {
+        uint64_t timeout = i == 0 ? CEP_SPI_HEADER_BYTE_TIMEOUT : CEP_SPI_BYTE_TIMEOUT;
+        if (!cep_spi_wait_tdbe(timeout)) {
             ret = PM3_EIO;
             goto cleanup;
         }

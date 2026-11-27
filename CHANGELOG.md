@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed PM5 CEP replies starting during an idle poll or timing out before payload transfer (@adrian-stepien)
 - Fixed PM5 BWM commands timing out after idle - wait for the BWM to answer before sending the command (@adrian-stepien)
 - Fixed `hf iclass/seos/mf/mfdes sam -v` - a HID SAM with ATR `3B95978011FC47726163653D` is no longer refused (@matrix)
 - Fixed PM5 USB sample streaming - dropping a stream did not clear the pending packet count of the endpoint (@matrix)
