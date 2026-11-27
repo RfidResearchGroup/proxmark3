@@ -811,6 +811,7 @@ void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool
                 break;
             case ICLASS_CMD_READ4:
                 annotateCmdOperand(exp, size, "READ4", false, cmd, cmdsize);
+                curr_state = PICO_NONE;
                 break;
             case ICLASS_CMD_READ_OR_IDENTIFY: {
 
@@ -819,6 +820,7 @@ void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool
                 } else {
                     snprintf(exp, size, "IDENTIFY");
                 }
+                curr_state = PICO_NONE;
                 break;
             }
             case ICLASS_CMD_PAGESEL:
@@ -860,7 +862,10 @@ void annotateIclass(char *exp, size_t size, uint8_t *cmd, uint16_t cmdsize, bool
                 memcpy(epurse, cmd, 8);
             }
         } else if (curr_state == PICO_AUTH_MACS) {
-            snprintf(exp, size, _GREEN_("CHECK SUCCESS"));
+            // the card answers a good CHECK with its 4-byte MAC
+            if (cmdsize == 4) {
+                snprintf(exp, size, _GREEN_("CHECK SUCCESS"));
+            }
             curr_state = PICO_NONE;
         }
     }
