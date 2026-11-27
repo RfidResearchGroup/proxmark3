@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed I2C reads - a bus timeout no longer counts as a good read (PM5 CEP, antenna and EEPROM chips, RDV4 SIM module) (@matrix)
 - Added `hw rtttl` - play an RTTTL string or file on the PM5 buzzer, with a shared parser and a reusable firmware playback API (@cansacha)
 - Fixed `hf 14a sniff` and `hf thinfilm sniff` - PM5: a sniff that fell behind once no longer stays deaf, the AT32 DMA is re-armed (@cmac-chris)
 - Added `hf topaz sim` - simulates a Topaz 96 or a Topaz 512 from a dump file (@matrix)
