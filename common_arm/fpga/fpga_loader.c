@@ -174,16 +174,20 @@ static bool reset_fpga_stream(int bitstream_target, lz4_streamp_t compressed_fpg
     return false;
 }
 
-static void DownloadFPGA_byte(uint8_t w) {
+// runs from RAM, flash wait states would dominate the bit-bang
+static void RAMFUNC DownloadFPGA_run(const uint8_t *data, uint32_t len) {
 #define SEND_BIT(x) { if(w & (1<<x) ) Gpio_FPGA_DIN_High(); else Gpio_FPGA_DIN_Low(); Gpio_FPGA_CCLK_High(); Gpio_FPGA_CCLK_Low(); }
-    SEND_BIT(7);
-    SEND_BIT(6);
-    SEND_BIT(5);
-    SEND_BIT(4);
-    SEND_BIT(3);
-    SEND_BIT(2);
-    SEND_BIT(1);
-    SEND_BIT(0);
+    while (len--) {
+        uint8_t w = *data++;
+        SEND_BIT(7);
+        SEND_BIT(6);
+        SEND_BIT(5);
+        SEND_BIT(4);
+        SEND_BIT(3);
+        SEND_BIT(2);
+        SEND_BIT(1);
+        SEND_BIT(0);
+    }
 }
 
 // TODO DXL: Abstract this function
@@ -250,9 +254,7 @@ static void DownloadFPGA(int FpgaImageLen, lz4_streamp_t compressed_fpga_stream,
             Dbprintf("Error during FpgaDownload");
             break;
         }
-        for (uint32_t j = 0; j < n; j++) {
-            DownloadFPGA_byte(run[j]);
-        }
+        DownloadFPGA_run(run, n);
         FpgaImageLen -= n;
     }
 
