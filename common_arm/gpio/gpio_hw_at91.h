@@ -4,8 +4,8 @@
 #include "common.h"
 #include "config_gpio.h"
 
-#define LOW(x)      AT91C_BASE_PIOA->PIO_CODR |= (x)
-#define HIGH(x)     AT91C_BASE_PIOA->PIO_SODR |= (x)
+#define LOW(x)      AT91C_BASE_PIOA->PIO_CODR = (x)
+#define HIGH(x)     AT91C_BASE_PIOA->PIO_SODR = (x)
 
 #define GETBIT(x)   (AT91C_BASE_PIOA->PIO_ODSR & (x)) ? 1:0
 #define SETBIT(x, y) (y) ? (HIGH(x)):(LOW(x))
