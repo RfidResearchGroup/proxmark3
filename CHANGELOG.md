@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf iclass sim` - READ, READ4, UPDATE and PAGESEL with a wrong CRC are no longer answered (@matrix)
+- Fixed `hf iclass sim` - in non-secure mode PAGESEL takes only the pages the card has, reads and writes no longer go past the emulator memory (@matrix)
 - Fixed `hf 14a simaid` and `hf seos sim` - S(DESELECT) is answered with the same block and no longer ends the simulation (@matrix)
 - Fixed `hf 14a simaid` and `hf seos sim` - an I-block with a CID gets an answer again (@matrix)
 - Fixed `hf 14a simaid` and `hf seos sim` - an HLTA after RATS no longer ends the simulation (@matrix)
