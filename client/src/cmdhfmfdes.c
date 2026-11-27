@@ -4341,7 +4341,7 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
     PrintAndLogEx(INFO, "old key: %s [%d] %s", CLIGetOptionListStr(DesfireAlgoOpts, oldkeytype), desfire_get_key_length(oldkeytype), sprint_hex(oldkey, desfire_get_key_length(oldkeytype)));
     PrintAndLogEx(INFO, "new key: %s [%d] %s", CLIGetOptionListStr(DesfireAlgoOpts, newkeytype), desfire_get_key_length(newkeytype), sprint_hex(newkey, desfire_get_key_length(newkeytype)));
     if (newkeyver < 0x100 || newkeytype == T_AES)
-        PrintAndLogEx(INFO, "new key version: 0x%02x", newkeyver & 0x00);
+        PrintAndLogEx(INFO, "new key version: 0x%02x", newkeyver & 0xff);
 
     res = DesfireSelectAndAuthenticateAppW(&dctx, securechann, selectway, id, false, verbose);
     if (res != PM3_SUCCESS) {
