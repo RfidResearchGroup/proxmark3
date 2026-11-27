@@ -5497,8 +5497,15 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
 
     if (buflen > 0) {
         PrintAndLogEx(INFO, "----------------------- " _CYAN_("Key Versions") " -----------------------");
-        for (int i = 0; i < buflen; i++)
-            PrintAndLogEx(INFO, "Key 0x%02x version 0x%02x", i, buf[i]);
+        if (buflen == 1) {
+            PrintAndLogEx(INFO, "Key 0x%02x version 0x%02x", (uint8_t)keynum32, buf[0]);
+        } else {
+            // No key-number mapping is provided for a multi-byte response.
+            PrintAndLogEx(WARNING, "Multiple key versions returned; key numbers are unknown");
+            for (size_t i = 0; i < buflen; i++) {
+                PrintAndLogEx(INFO, "Response[%zu] version 0x%02x", i, buf[i]);
+            }
+        }
     } else {
         PrintAndLogEx(INFO, "No key versions returned.");
     }
