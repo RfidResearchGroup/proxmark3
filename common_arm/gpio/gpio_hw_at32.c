@@ -77,6 +77,8 @@ void gpio_i2c_sw_bus_setup(void) {
     gpio_init_struct.gpio_out_type = GPIO_OUTPUT_OPEN_DRAIN;
 
     crm_periph_clock_enable(AT32_GPIO_I2C_SW_CLK, TRUE);
+    // the output register resets to 0: release both lines before driving them
+    AT32_GPIO_I2C_SW->scr = AT32_GPIO_I2C_SCL_PIN | AT32_GPIO_I2C_SDA_PIN;
     gpio_output_init(&gpio_init_struct, AT32_GPIO_I2C_SW, AT32_GPIO_I2C_SCL_PIN | AT32_GPIO_I2C_SDA_PIN);
 }
 

@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed PM5 with `PLATFORM_EXTRAS=SMARTCARD` - hung at boot, the I2C lines were set up low (@matrix)
 - Fixed PM5 FPGA commands - no SPI setup before each one, the 14a reader listens and the 14a simulation answers 19 us sooner (@matrix)
 - Fixed `hf iclass/seos/mf/mfdes sam -v` - a HID SAM with ATR `3B95978011FC47726163653D` is no longer refused (@matrix)
 - Fixed PM5 USB sample streaming - dropping a stream did not clear the pending packet count of the endpoint (@matrix)
