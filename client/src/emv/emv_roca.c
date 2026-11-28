@@ -24,28 +24,26 @@
 #include "ui.h"  // Print...
 #include "bignum.h"
 
-static void rocacheck_init(mbedtls_mpi *prints) {
+static int rocacheck_init(mbedtls_mpi *prints) {
+    static const char *values[ROCA_PRINTS_LENGTH] = {
+        "1026", "5658", "107286", "199410", "67109890",
+        "5310023542746834", "1455791217086302986", "20052041432995567486",
+        "6041388139249378920330", "207530445072488465666",
+        "79228162521181866724264247298", "1760368345969468176824550810518",
+        "50079290986288516948354744811034", "473022961816146413042658758988474",
+        "144390480366845522447407333004847678774",
+        "1800793591454480341970779146165214289059119882",
+        "126304807362733370595828809000324029340048915994"
+    };
 
     for (int i = 0; i < ROCA_PRINTS_LENGTH; i++)
         mbedtls_mpi_init(&prints[i]);
-
-    mbedtls_mpi_read_string(&prints[0], 10, "1026");
-    mbedtls_mpi_read_string(&prints[1], 10, "5658");
-    mbedtls_mpi_read_string(&prints[2], 10, "107286");
-    mbedtls_mpi_read_string(&prints[3], 10, "199410");
-    mbedtls_mpi_read_string(&prints[4], 10, "67109890");
-    mbedtls_mpi_read_string(&prints[5], 10, "5310023542746834");
-    mbedtls_mpi_read_string(&prints[6], 10, "1455791217086302986");
-    mbedtls_mpi_read_string(&prints[7], 10, "20052041432995567486");
-    mbedtls_mpi_read_string(&prints[8], 10, "6041388139249378920330");
-    mbedtls_mpi_read_string(&prints[9], 10, "207530445072488465666");
-    mbedtls_mpi_read_string(&prints[10], 10, "79228162521181866724264247298");
-    mbedtls_mpi_read_string(&prints[11], 10, "1760368345969468176824550810518");
-    mbedtls_mpi_read_string(&prints[12], 10, "50079290986288516948354744811034");
-    mbedtls_mpi_read_string(&prints[13], 10, "473022961816146413042658758988474");
-    mbedtls_mpi_read_string(&prints[14], 10, "144390480366845522447407333004847678774");
-    mbedtls_mpi_read_string(&prints[15], 10, "1800793591454480341970779146165214289059119882");
-    mbedtls_mpi_read_string(&prints[16], 10, "126304807362733370595828809000324029340048915994");
+    for (int i = 0; i < ROCA_PRINTS_LENGTH; i++) {
+        int res = mbedtls_mpi_read_string(&prints[i], 10, values[i]);
+        if (res)
+            return res;
+    }
+    return 0;
 }
 
 static void rocacheck_cleanup(mbedtls_mpi *prints) {
@@ -53,92 +51,106 @@ static void rocacheck_cleanup(mbedtls_mpi *prints) {
         mbedtls_mpi_free(&prints[i]);
 }
 
-static int bitand_is_zero(mbedtls_mpi *a, mbedtls_mpi *b) {
-
-    for (int i = 0; i < mbedtls_mpi_bitlen(a); i++) {
-
-        if (mbedtls_mpi_get_bit(a, i) && mbedtls_mpi_get_bit(b, i))
-            return 0;
-    }
-    return 1;
-}
-
-
-static mbedtls_mpi_uint mpi_get_uint(const mbedtls_mpi *X) {
-
-    if (X->n == 1 && X->s > 0) {
-        return X->p[0];
-    }
-
-    PrintAndLogEx(WARNING, "ZERRRRO!!!\n");
-    return 0;
-}
-
-/*
-static void print_mpi(const char *msg, int radix, const mbedtls_mpi *X) {
-
-    char Xchar[400] = {0};
-    size_t len = 0;
-
-    mbedtls_mpi_write_string(X, radix, Xchar, sizeof(Xchar), &len);
-    PrintAndLogEx(INFO, "%s[%zu] %s\n", msg, len, Xchar);
-}
-*/
-bool emv_rocacheck(const unsigned char *buf, size_t buflen, bool verbose) {
+emv_roca_result_t emv_rocacheck_ex(const unsigned char *buf, size_t buflen, bool verbose) {
+    if (!buf || buflen == 0 || buflen > 4096)
+        return EMV_ROCA_ERROR;
 
     mbedtls_mpi t_modulus;
     mbedtls_mpi_init(&t_modulus);
 
-    bool ret = false;
+    emv_roca_result_t result = EMV_ROCA_ERROR;
     mbedtls_mpi prints[ROCA_PRINTS_LENGTH];
-    uint8_t primes[ROCA_PRINTS_LENGTH] = {
+    static const uint8_t primes[ROCA_PRINTS_LENGTH] = {
         11, 13, 17, 19, 37, 53, 61, 71, 73, 79, 97, 103, 107, 109, 127, 151, 157
     };
 
-    rocacheck_init(prints);
-
-    MBEDTLS_MPI_CHK(mbedtls_mpi_read_binary(&t_modulus, buf, buflen));
+    int res = rocacheck_init(prints);
+    if (res)
+        goto cleanup;
+    res = mbedtls_mpi_read_binary(&t_modulus, buf, buflen);
+    if (res || mbedtls_mpi_cmp_int(&t_modulus, 2) < 0)
+        goto cleanup;
 
     for (int i = 0; i < ROCA_PRINTS_LENGTH; i++) {
-
-        mbedtls_mpi t_temp;
-        mbedtls_mpi t_prime;
-        mbedtls_mpi g_one;
-
-        mbedtls_mpi_init(&t_temp);
-        mbedtls_mpi_init(&t_prime);
-        mbedtls_mpi_init(&g_one);
-
-        MBEDTLS_MPI_CHK(mbedtls_mpi_read_string(&g_one, 10, "1"));
-
-        MBEDTLS_MPI_CHK(mbedtls_mpi_add_int(&t_prime, &t_prime, primes[i]));
-
-        MBEDTLS_MPI_CHK(mbedtls_mpi_mod_mpi(&t_temp, &t_modulus, &t_prime));
-
-        MBEDTLS_MPI_CHK(mbedtls_mpi_shift_l(&g_one, mpi_get_uint(&t_temp)));
-
-        mbedtls_mpi_free(&t_temp);
-        mbedtls_mpi_free(&t_prime);
-
-        if (bitand_is_zero(&g_one, &prints[i])) {
-            if (verbose) {
-                PrintAndLogEx(FAILED, "No fingerprint found.\n");
-            }
-            mbedtls_mpi_free(&g_one);
+        mbedtls_mpi_uint remainder = 0;
+        res = mbedtls_mpi_mod_int(&remainder, &t_modulus, primes[i]);
+        if (res)
+            goto cleanup;
+        if (!mbedtls_mpi_get_bit(&prints[i], remainder)) {
+            result = EMV_ROCA_NOT_FOUND;
+            if (verbose)
+                PrintAndLogEx(INFO, "ROCA fingerprint not found");
             goto cleanup;
         }
-        mbedtls_mpi_free(&g_one);
     }
 
-    ret = true;
+    result = EMV_ROCA_FOUND;
     if (verbose)
-        PrintAndLogEx(SUCCESS, "Fingerprint found!\n");
+        PrintAndLogEx(FAILED, "ROCA fingerprint found");
 
 cleanup:
     mbedtls_mpi_free(&t_modulus);
-
     rocacheck_cleanup(prints);
-    return ret;
+    return result;
+}
+
+bool emv_rocacheck(const unsigned char *buf, size_t buflen, bool verbose) {
+    return emv_rocacheck_ex(buf, buflen, verbose) == EMV_ROCA_FOUND;
+}
+
+bool emv_rsa_has_small_factor(const unsigned char *buf, size_t buflen) {
+    static const uint8_t primes[] = {
+        3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47,
+        53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107,
+        109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167,
+        173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229,
+        233, 239, 241, 251
+    };
+    if (!buf || buflen == 0 || buflen > 4096)
+        return false;
+
+    mbedtls_mpi modulus;
+    mbedtls_mpi_init(&modulus);
+    bool found = false;
+    if (mbedtls_mpi_read_binary(&modulus, buf, buflen) || mbedtls_mpi_cmp_int(&modulus, 2) < 0)
+        goto cleanup;
+    for (size_t i = 0; i < sizeof(primes) / sizeof(primes[0]); i++) {
+        mbedtls_mpi_uint remainder = 0;
+        if (mbedtls_mpi_mod_int(&remainder, &modulus, primes[i]))
+            goto cleanup;
+        if (remainder == 0 && mbedtls_mpi_cmp_int(&modulus, primes[i]) != 0) {
+            found = true;
+            break;
+        }
+    }
+
+cleanup:
+    mbedtls_mpi_free(&modulus);
+    return found;
+}
+
+bool emv_rsa_has_shared_factor(const unsigned char *a, size_t alen,
+                               const unsigned char *b, size_t blen) {
+    if (!a || !b || alen == 0 || blen == 0 || alen > 4096 || blen > 4096)
+        return false;
+
+    mbedtls_mpi ma, mb, gcd;
+    mbedtls_mpi_init(&ma);
+    mbedtls_mpi_init(&mb);
+    mbedtls_mpi_init(&gcd);
+    bool found = false;
+    if (mbedtls_mpi_read_binary(&ma, a, alen) || mbedtls_mpi_read_binary(&mb, b, blen) ||
+            mbedtls_mpi_cmp_int(&ma, 2) < 0 || mbedtls_mpi_cmp_int(&mb, 2) < 0 ||
+            mbedtls_mpi_gcd(&gcd, &ma, &mb))
+        goto cleanup;
+    found = mbedtls_mpi_cmp_int(&gcd, 1) > 0 &&
+            mbedtls_mpi_cmp_mpi(&gcd, &ma) < 0 && mbedtls_mpi_cmp_mpi(&gcd, &mb) < 0;
+
+cleanup:
+    mbedtls_mpi_free(&gcd);
+    mbedtls_mpi_free(&mb);
+    mbedtls_mpi_free(&ma);
+    return found;
 }
 
 int roca_self_test(void) {
@@ -167,9 +179,28 @@ int roca_self_test(void) {
 
     if (emv_rocacheck(keyn, 64, false)) {
         ret++;
-        PrintAndLogEx(FAILED, "Strong modulus ( %s )", _RED_("fail"));
+        PrintAndLogEx(FAILED, "Non-ROCA key  ( %s )", _RED_("fail"));
     } else {
-        PrintAndLogEx(SUCCESS, "Strong modulus ( %s )", _GREEN_("ok"));
+        PrintAndLogEx(SUCCESS, "Non-ROCA key  ( %s )", _GREEN_("ok"));
+    }
+
+    if (emv_rocacheck_ex(NULL, 0, false) != EMV_ROCA_ERROR) {
+        ret++;
+        PrintAndLogEx(FAILED, "Invalid input  ( %s )", _RED_("fail"));
+    } else {
+        PrintAndLogEx(SUCCESS, "Invalid input  ( %s )", _GREEN_("ok"));
+    }
+
+    const uint8_t factor15[] = {15};
+    const uint8_t factor21[] = {21};
+    const uint8_t coprime77[] = {77};
+    if (!emv_rsa_has_small_factor(factor15, sizeof(factor15)) ||
+            !emv_rsa_has_shared_factor(factor15, sizeof(factor15), factor21, sizeof(factor21)) ||
+            emv_rsa_has_shared_factor(factor15, sizeof(factor15), coprime77, sizeof(coprime77))) {
+        ret++;
+        PrintAndLogEx(FAILED, "Factor checks  ( %s )", _RED_("fail"));
+    } else {
+        PrintAndLogEx(SUCCESS, "Factor checks  ( %s )", _GREEN_("ok"));
     }
     return ret;
 }

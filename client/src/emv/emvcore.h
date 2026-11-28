@@ -60,9 +60,15 @@ struct tlvdb *GetdCVVRawFromTrack2(const struct tlv *track2);
 
 // exchange
 int EMVExchange(Iso7816CommandChannel channel, bool LeaveFieldON, sAPDU_t apdu, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
+int EMVTransportSelfTests(void);
+int EMVChallengeSelfTests(void);
+int EMVCompletionSelfTests(void);
+int EMVCompleteTransaction(Iso7816CommandChannel channel, struct tlvdb *transaction,
+                           const struct tlvdb *issuer, uint16_t first_atc, bool unavailable, bool approve,
+                           uint8_t *response, size_t capacity, size_t *length, uint16_t *sw);
 
 // search application
-int EMVSearchPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t PSENum, bool decodeTLV, struct tlvdb *tlv, bool quiet);
+int EMVSearchPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t PSENum, bool decodeTLV, struct tlvdb *tlv);
 int EMVSearch(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, bool decodeTLV, struct tlvdb *tlv, bool verbose);
 int EMVSelectPSE(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t PSENum, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
 int EMVSelect(Iso7816CommandChannel channel, bool ActivateField, bool LeaveFieldON, uint8_t *AID, size_t AIDLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
@@ -74,6 +80,7 @@ int EMVReadRecord(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t SFI,
 
 // Emv override get data
 int EMVGetData(Iso7816CommandChannel channel, bool LeaveFieldON, uint16_t foo, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
+int EMVExternalAuthenticate(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t *IssuerAuthData, size_t IssuerAuthDataLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw);
 // AC
 int EMVGenerateChallenge(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
 int EMVAC(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t RefControl, uint8_t *CDOL, size_t CDOLLen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv);
