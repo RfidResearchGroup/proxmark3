@@ -169,7 +169,7 @@ static int CmdPm5IcsdStatus(const char *Cmd) {
                   req_state < 14 ? req_names[req_state] : "UNKNOWN", req_state);
     PrintAndLogEx(NORMAL, "  conn_sts    : %u", conn_sts);
     PrintAndLogEx(NORMAL, "  port_enable : %u", port_enable);
-    PrintAndLogEx(NORMAL, "  OTGFS1 IRQ count....... %u", (unsigned int)irq_count);
+    PrintAndLogEx(NORMAL, "  irq_count   : %u", (unsigned int)irq_count);
     return PM3_SUCCESS;
 }
 

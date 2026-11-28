@@ -472,9 +472,13 @@ void cep_attach_poll(void) {
             cep_usart1_restore();
             s_usart1_active = true;
         }
-        /* We don't care about the initial edge: watch for a complete request
-         * any time we're attached, regardless of edge. Continuous polling
-         * across FAP launches is handled below. */
+        // The FAP re-runs its handshake on every app launch, not just on a
+        // fresh physical attach - the CC controller's attach bits don't
+        // reliably blip on every relaunch (confirmed on hardware: sometimes
+        // they do, sometimes they don't), so gating the handshake listener on
+        // that edge alone missed real handshake attempts and required a
+        // physical unplug/replug to recover (GH #3667). Instead, watch for a
+        // complete request any time we're attached, regardless of edge.
         if (s_handshake_pending) {
             s_handshake_pending = false;
             s_cep_active = cep_reply_handshake();
@@ -483,13 +487,12 @@ void cep_attach_poll(void) {
                 s_last_spi_activity_tick = GetTickCount();
             }
         }
-        /* The FAP quitting doesn't touch the SPI bus - it just leaves the
-         * pins configured as inputs. The pull-ups hold them high, which
-         * looks like idle SPI. The FAP re-launching re-inits SPI and starts
-         * sending 0xAA again. So we can't detect a quit from pin states;
-         * we can only detect it from the absence of the ~100ms periodic
-         * poll. Once that cadence has been missing this long, we assume the
-         * FAP is gone and un-gate the rest of the system. */
+
+        // The FAP quitting doesn't touch the CC controller's attach bit - the
+        // cable stays connected, so `attached` alone can't tell us it's gone.
+        // Losing its SPI poll cadence (normally every 20-120ms) is what
+        // actually means it has - fall back to the slower/idle main loop
+        // once that cadence has been missing this long.
         if (s_cep_active && (GetTickCountDelta(s_last_spi_activity_tick) > CEP_ACTIVITY_TIMEOUT_MS)) {
             s_cep_active = false;
         }

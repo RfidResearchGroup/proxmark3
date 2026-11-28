@@ -97,7 +97,6 @@
 #include "pm5_power.h"     // PM5 power-save idle (clock scaling + WFI)
 #if defined(WITH_CEP)
 #include "pm5_usb_host_cdc.h" // PM5 USB host CDC (ICSD) driver
-extern uint32_t pm5_usb_host_cdc_get_irq_count(void);
 #endif
 
 
@@ -5159,18 +5158,18 @@ void __attribute__((noreturn)) AppMain(void) {
 #ifdef WITH_CEP
         pm5_usb_host_cdc_poll();
 #endif
-    // WFI sleep adds ~40-50ms of latency before the main loop notices a
-    // fresh byte on CEP's SPI1 - fine at idle, but it's what made the
-    // original attach handshake miss bytes (see cep_attach_poll()'s own
-    // comment on the attach-edge bug this caused, GH #3667). Skip the
-    // sleep entirely while a Flipper is attached so the loop polls as
-    // fast as the hardware allows; cep_is_attached() drops back to false
-    // within CEP_ACTIVITY_TIMEOUT_MS of the FAP going away, so this
-    // isn't a permanent always-on cost.
+        // WFI sleep adds ~40-50ms of latency before the main loop notices a
+        // fresh byte on CEP's SPI1 - fine at idle, but it's what made the
+        // original attach handshake miss bytes (see cep_attach_poll()'s own
+        // comment on the attach-edge bug this caused, GH #3667). Skip the
+        // sleep entirely while a Flipper is attached so the loop polls as
+        // fast as the hardware allows; cep_is_attached() drops back to false
+        // within CEP_ACTIVITY_TIMEOUT_MS of the FAP going away, so this
+        // isn't a permanent always-on cost.
 #ifdef WITH_CEP
-    if (!cep_is_attached())
+        if (!cep_is_attached())
 #endif
-        pm5_power_idle();
+            pm5_power_idle();
 #endif
     }
 }

@@ -44,6 +44,9 @@ void pm5_icsd_get_debug_state(uint8_t *initialized, uint8_t *connected,
                               uint8_t *global_state, uint8_t *enum_state, uint8_t *req_state,
                               uint8_t *conn_sts, uint8_t *port_enable);
 
+// OTGFS1 interrupts serviced since boot.
+uint32_t pm5_usb_host_cdc_get_irq_count(void);
+
 // Send a NUL-terminated command line (e.g. "Who\r\n", "RD\r\n") over the
 // bulk OUT endpoint. Returns 0 on success, negative on error.
 int pm5_icsd_send_cmd(const char *cmd);

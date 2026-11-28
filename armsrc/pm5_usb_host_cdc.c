@@ -355,31 +355,24 @@ static int cdc_bulk_out(usbh_core_type *uhost, const uint8_t *buf, uint16_t len,
 static void cdc_force_channel_halt(otg_core_type *udev, uint8_t ch_num) {
     otg_hchannel_type *usb_chh = USB_CHL(udev->usb_reg, ch_num);
 
-    nvic_irq_disable(OTGFS1_IRQn);
+    nvic_irq_disable(USB_HOST_IRQ);
 
-    /* Force channel state out of HCH_NAK so the ISR cannot re-arm */
+    // leave HCH_NAK unseen by the ISR, else its CHHLTD branch re-arms the channel
     udev->host.hch[ch_num].state = HCH_IDLE;
+    uint32_t msk = usb_chh->hcintmsk;
+    usb_chh->hcintmsk = msk & ~(USB_OTG_HC_NAKM_INT | USB_OTG_HC_CHHLTDM_INT);
 
-    /* Mask NAK and CHHLTD interrupts for this channel */
-    usb_chh->hcintmsk &= ~(USB_OTG_HC_NAKM_INT | USB_OTG_HC_CHHLTDM_INT);
-
-    /* Issue hardware halt request */
     usb_hch_halt(udev->usb_reg, ch_num);
 
-    /* Bounded wait for CHENA bit to clear */
     uint32_t timeout = 10000;
     while ((usb_chh->hcchar & USB_OTG_HCCHAR_CHENA) && --timeout) {
         __NOP();
     }
 
-    /* Clear all pending channel interrupts */
     usb_chh->hcint = 0xFFFFFFFF;
+    usb_chh->hcintmsk = msk;
 
-    /* Restore interrupt masks */
-    usb_chh->hcintmsk |= (USB_OTG_HC_NAKM_INT | USB_OTG_HC_CHHLTDM_INT);
-
-    /* Restore OTGFS1 IRQ with original priority (5, 0) */
-    nvic_irq_enable(OTGFS1_IRQn, 5, 0);
+    nvic_irq_enable(USB_HOST_IRQ, 5, 0);
 }
 
 // Received bytes are tracked by the RX-FIFO ISR in hch[].trans_count, the
