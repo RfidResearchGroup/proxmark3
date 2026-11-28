@@ -301,9 +301,6 @@ typedef struct {
 // struct is shared by every PM5 build regardless of PLATFORM_EXTRAS, and
 // third parties (e.g. the Flipper FAP) pin an exact CAPABILITIES_VERSION -
 // bumping it for an opt-in extra breaks every build that doesn't use that
-// extra. CMD_CEP_LOGIC_CTRL/FETCH replying PM3_ENOTIMPL is how a client
-// tells CEPLOGIC isn't built in - cep_logic_ctrl() in cmdhwceplogic.c
-// reports that directly, instead of gating on a capability bit.
 #define CAPABILITIES_VERSION 13
 // what a pre-v9 device would have used, it could not tell us
 #define CAPABILITIES_LEGACY_CMD_DATA_SIZE 512
