@@ -167,7 +167,7 @@ static void bwm_uart_write_raw(const uint8_t *data, size_t len) {
 }
 
 int bwm_uart_write(const uint8_t *data, size_t len) {
-    if (!s_tx_ever || GetTickCountDelta(s_last_traffic_tick) > BWM_UART_IDLE_WAKE_MS) {
+    if ((s_tx_ever == false) || (GetTickCountDelta(s_last_traffic_tick) > BWM_UART_IDLE_WAKE_MS)) {
         // 0x55 = five rising edges per byte; the ESP wakes after three.
         static const uint8_t wake[4] = { 0x55, 0x55, 0x55, 0x55 };
         bwm_uart_write_raw(wake, sizeof(wake));

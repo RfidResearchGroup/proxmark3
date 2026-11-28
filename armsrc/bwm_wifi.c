@@ -25,7 +25,6 @@ static uint16_t wifi_crc16(const uint8_t *d, size_t n, uint16_t crc) {
 #endif
 
 #define BWM_CMD_PAYLOAD_MAX 256
-#define BWM_CMD_GET_SYS_READY_STATUS 1018
 #define BWM_READY_PROBE_MS 50
 // Limit link acquisition even when the command has a long timeout.
 #define BWM_READY_MAX_MS 300
@@ -41,7 +40,7 @@ static void bwm_confirm_reply(uint32_t sent_at) {
 }
 
 static uint32_t bwm_send_command(uint16_t cmd, const uint8_t *req, uint16_t req_len,
-                             uint8_t *resp, uint16_t capacity) {
+                                 uint8_t *resp, uint16_t capacity) {
     uint8_t frame[8 + BWM_CMD_PAYLOAD_MAX];
     size_t idx = 0;
     frame[idx++] = BWM_HDR_HOST_CMD_1;
@@ -71,7 +70,7 @@ static uint32_t bwm_send_command(uint16_t cmd, const uint8_t *req, uint16_t req_
 
 static int bwm_wait_reply(uint16_t cmd, uint16_t *resp_len, uint32_t t0, uint32_t timeout_ms) {
     int res = PM3_ETIMEOUT;
-    while (GetTickCountDelta(t0) <= timeout_ms) {
+    while (GetTickCountDelta(t0) < timeout_ms) {
         bwm_fwd_pump();
         uint16_t rlen = 0;
         int32_t esp_err = 0;
@@ -83,6 +82,7 @@ static int bwm_wait_reply(uint16_t cmd, uint16_t *resp_len, uint32_t t0, uint32_
             res = PM3_SUCCESS;
             break;
         }
+
         if (st < 0) {
             // Expected in places (e.g. a status query while WiFi is
             // off): only worth seeing when debugging the link.
@@ -92,9 +92,7 @@ static int bwm_wait_reply(uint16_t cmd, uint16_t *resp_len, uint32_t t0, uint32_
             res = PM3_EFAILED;
             break;
         }
-        if (GetTickCountDelta(t0) >= timeout_ms) {
-            break;
-        }
+
         if (bwm_uart_rx_available() == 0) {
             SpinDelay(1);
         }
@@ -132,18 +130,18 @@ static int bwm_command(uint16_t cmd, const uint8_t *req, uint16_t req_len,
     if (sent) {
         *sent = false;
     }
+
     if (req_len > BWM_CMD_PAYLOAD_MAX) {
         return PM3_EOVFLOW;
     }
 
     uint32_t start = 0;
-    bool need_ready = cmd != BWM_CMD_GET_SYS_READY_STATUS &&
-                      (!s_link_confirmed || s_confirmed_baud != bwm_uart_get_baud() ||
-                       GetTickCountDelta(s_confirmed_request_tick) >= BWM_UART_IDLE_WAKE_MS);
+    bool need_ready = (s_link_confirmed == false) || (s_confirmed_baud != bwm_uart_get_baud()) ||
+                      (GetTickCountDelta(s_confirmed_request_tick) >= BWM_UART_IDLE_WAKE_MS);
     if (need_ready) {
         // UART wake can consume a whole frame. Send only READY until the ESP answers.
         start = GetTickCount();
-        if (!bwm_wait_ready(start, timeout_ms) || GetTickCountDelta(start) >= timeout_ms) {
+        if (bwm_wait_ready(start, timeout_ms) == false) {
             return PM3_ETIMEOUT;
         }
     }
@@ -155,7 +153,7 @@ static int bwm_command(uint16_t cmd, const uint8_t *req, uint16_t req_len,
     }
     int result = bwm_wait_reply(cmd, want ? resp_len : NULL, need_ready ? start : GetTickCount(),
                                 timeout_ms);
-    if (result == PM3_ETIMEOUT || cmd == BWM_CMD_REBOOT || cmd == BWM_CMD_GET_SYS_READY_STATUS) {
+    if ((result == PM3_ETIMEOUT) || (cmd == BWM_CMD_REBOOT)) {
         s_link_confirmed = false;
     } else {
         // A reply proves activity since this request, even if we drained it late.

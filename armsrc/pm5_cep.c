@@ -744,9 +744,10 @@ int cep_spi_write_sync(uint8_t *data, size_t len) {
     }
     spi_i2s_data_transmit(SPI1, (len >> 8) & 0xFF);
 
-    // The master prepares its DMA transfer after reading the length.
+    // The master prepares its DMA transfer after reading the length. TX buffer
+    // + shift register put that pause before data[1] or data[2].
     for (size_t i = 0; i < len; ++i) {
-        uint64_t timeout = i == 0 ? CEP_SPI_HEADER_BYTE_TIMEOUT : CEP_SPI_BYTE_TIMEOUT;
+        uint64_t timeout = (i < 3) ? CEP_SPI_HEADER_BYTE_TIMEOUT : CEP_SPI_BYTE_TIMEOUT;
         if (!cep_spi_wait_tdbe(timeout)) {
             ret = PM3_EIO;
             goto cleanup;

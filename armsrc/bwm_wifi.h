@@ -89,6 +89,7 @@ int bwm_wifi_forward_status(uint8_t *state, uint32_t *ip_out);
 #endif
 #define BWM_CMD_GET_VERSION_INFO   1000   // resp: running firmware version string
 #define BWM_CMD_GET_SYS_FREE_HEAP  1002   // resp: u32 free [+ u32 lowest since boot + u32 largest block]
+#define BWM_CMD_GET_SYS_READY_STATUS 1018 // resp: u8 1=ready; bwm_cmd() probes it after idle
 #define BWM_CMD_GET_SYS_CHIP_INFO  1023   // resp: bwm_chip_info_t. Newer ESP fw only
 #define BWM_CMD_GET_SYS_RUNTIME_STATS 1024 // resp: u32 uptime s, u8 reset reason, 4 x u16 uart rx errors, u8 n, n x {u8 len, name, u16 stack free}
 #define BWM_CMD_STOP_BLE_SPP       4022   // no payload: stop BLE during OTA (flash contention)
