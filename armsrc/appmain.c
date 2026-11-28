@@ -318,6 +318,14 @@ common_area_t g_common_area __attribute__((section(".commonarea")));
 static int button_status = BUTTON_NO_CLICK;
 static bool allow_send_wtx = false;
 static uint32_t g_hf_field_activity_timeout_ms = 0;
+#if defined(PM5) && defined(WITH_ISO14443a)
+// PM5 FPGA reset defaults. The legacy setter can also change the sniff value.
+#define PM5_14A_RX_DEFAULT 7
+#define PM5_14A_SNIFF_DEFAULT 20
+static uint8_t pm5_14a_rx_threshold = PM5_14A_RX_DEFAULT;
+static uint8_t pm5_14a_sniff_threshold = PM5_14A_SNIFF_DEFAULT;
+static bool pm5_fpga_config_sram = false;
+#endif
 uint16_t g_tearoff_delay_us = 0;
 bool g_tearoff_enabled = false;
 uint8_t g_tearoff_skip = 0;
@@ -2576,14 +2584,40 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t threshold_high;
                 uint8_t legic_threshold;
             } PACKED;
+            if (packet->length != sizeof(struct p)) {
+                break;
+            }
             struct p *payload = (struct p *) packet->data.asBytes;
             FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
             FpgaSendCommand(FPGA_CMD_SET_EDGE_DETECT_THRESHOLD, (payload->threshold & 0x3f) | ((payload->threshold_high & 0x3f) << 6));
+#ifdef PM5
+            pm5_14a_rx_threshold = payload->threshold & 0x3f;
+            pm5_14a_sniff_threshold = payload->threshold_high & 0x3f;
+#endif
 #ifdef WITH_LEGICRF
             LegicRfSetThreshold((uint32_t)payload->legic_threshold);
 #endif
             break;
         }
+#ifdef PM5
+        case CMD_HF_ISO14443A_RX_THRESHOLD: {
+            if (packet->length == 1) {
+                uint8_t threshold = packet->data.asBytes[0];
+                if (threshold < 1 || threshold > 63) {
+                    reply_ng(packet->cmd, PM3_EINVARG, NULL, 0);
+                    break;
+                }
+                FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+                FpgaSendCommand(FPGA_CMD_SET_EDGE_DETECT_THRESHOLD, threshold | (pm5_14a_sniff_threshold << 6));
+                pm5_14a_rx_threshold = threshold;
+            } else if (packet->length != 0) {
+                reply_ng(packet->cmd, PM3_EINVARG, NULL, 0);
+                break;
+            }
+            reply_ng(packet->cmd, PM3_SUCCESS, &pm5_14a_rx_threshold, sizeof(pm5_14a_rx_threshold));
+            break;
+        }
+#endif
         case CMD_HF_ISO14443A_SNIFF: {
             reply_ng(CMD_HF_ISO14443A_SNIFF, SniffIso14443a(packet->data.asBytes[0]), NULL, 0);
             break;
@@ -4389,10 +4423,23 @@ static void PacketReceived(PacketCommandNG *packet) {
                 } PACKED;
                 struct p *payload = (struct p *) packet->data.asBytes;
                 res = FpgaStartConfig(payload->sram_mode, payload->file_length);
+#if defined(PM5) && defined(WITH_ISO14443a)
+                if (res == PM3_SUCCESS) {
+                    pm5_fpga_config_sram = payload->sram_mode;
+                }
+#endif
             } else if (packet->cmd == CMD_FPGA_BITSTREAM_CONFIG_WRITE) {
                 res = FpgaConfigWrite(packet->data.asBytes, packet->length);
             } else {
                 res = FpgaStopConfig();
+#if defined(PM5) && defined(WITH_ISO14443a)
+                // A failed SRAM update also reloads the flash image.
+                if (res == PM3_SUCCESS || pm5_fpga_config_sram) {
+                    pm5_14a_rx_threshold = PM5_14A_RX_DEFAULT;
+                    pm5_14a_sniff_threshold = PM5_14A_SNIFF_DEFAULT;
+                }
+                pm5_fpga_config_sram = false;
+#endif
             }
             // Response
             if (res == PM3_EFAILED) {
