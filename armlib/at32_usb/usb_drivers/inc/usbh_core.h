@@ -286,6 +286,8 @@ typedef struct {
     uint32_t                               conn_sts;                       /*!< connect status */
     uint32_t                               port_enable;                    /*!< port enable status */
     uint32_t                               timer;                          /*!< sof timer */
+    uint32_t                               port_timer;                     /*!< timer at the last port reset step */
+    uint8_t                                port_state;                     /*!< port reset step, 0 when idle */
 
     uint32_t                               err_cnt[USB_HOST_CHANNEL_NUM];  /*!< error counter */
     uint32_t                               xfer_cnt[USB_HOST_CHANNEL_NUM]; /*!< xfer counter */

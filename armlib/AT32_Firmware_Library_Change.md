@@ -44,3 +44,25 @@ Such as, the UART related libraries may conflict with some function/variable nam
 - delete dir: `startup/gcc/linker`
 - delete dir: `startup/iar`
 - delete dir: `startup/mdk`
+
+## Change of the USB host drivers
+
+The host part of `at32_usb/usb_drivers` (`usbh_*`) is built only for a PM5 with `PLATFORM_EXTRAS=USB_HOST_CCID`, through
+`armsrc/pm5_cep_usbh_*.c`. The device part is not changed.
+
+- `usb_conf.h`
+  - the host configuration (`USE_OTG_HOST_MODE`, OTGFS1, no `USB_VBUS_IGNORE`) is selected by the sources that build
+    the host part, the default stays the device configuration on OTGFS2
+  - `USBH_DEBUG()` is defined empty for the host part when no source defines it
+- `usbh_core.c`, `usbh_core.h`
+  - the port reset runs in steps on the host timer (`port_state`, `port_timer`) instead of `usb_delay_ms()`
+  - a port reset left asserted by a disconnect is released
+  - the enumeration stops on an EP0 size that is not 8, 16, 32 or 64
+  - the enumeration stops when the configuration descriptor does not parse
+- `usbh_ctrl.c`
+  - `usbh_parse_configure_desc()` checks every length against the buffer and the interface and endpoint counts against
+    the tables, a malformed tail ends the parse
+  - `usbh_parse_string_desc()` ignores a `bLength` below 2
+- `usbh_int.c`
+  - a channel halted by a NAK or by a transfer error is restarted only while a device is connected
+  - a transfer that reached the error limit (`URB_ERROR`) is not restarted
