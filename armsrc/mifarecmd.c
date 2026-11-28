@@ -3478,10 +3478,11 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
     iso14a_set_timeout(timeout);
 }
 
+// field reset, 2x the ISO14443-3 minimums (5.1 ms off, 5 ms guard time)
 static void mf_reset_card(void) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-    SpinDelay(40);
-    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+    SpinDelay(10);
+    iso14443a_setup_ex(FPGA_HF_ISO14443A_READER_LISTEN, 10);
 }
 
 void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
@@ -3513,7 +3514,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
     uint32_t cuid = 0;
     int res = 0;
 
-    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+    iso14443a_setup_ex(FPGA_HF_ISO14443A_READER_LISTEN, 10);
 
     // Generation 1 test
     ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);

@@ -57,7 +57,12 @@ extern "C" {
 /**
   * @brief enable usb host mode
   */
-/* #define USE_OTG_HOST_MODE */
+/* Enable USB host mode on OTGFS1 (CEP port) exclusively for PM5.
+   Device mode stays active on OTGFS2 (client port) by default. */
+#if defined(CHIP_AT32F435_37) || defined(PM5) || defined(PLATFORM_PM5)
+#define USE_OTG_HOST_MODE
+#define OTG_HOST_USB_ID 0
+#endif
 
 /**
   * @brief select otgfs1 or otgfs2 define
@@ -68,6 +73,47 @@ extern "C" {
 
 /* use otgfs2 */
 #define OTG_USB_ID                         2 // USB2 仅UFP 只从机 默认5v输入 无输出
+
+/**
+  * @brief usb host mode select otgfs1 (CEP port, PM5 only)
+  */
+#ifdef USE_OTG_HOST_MODE
+
+/* Artery host driver references this debug hook; keep it a no-op to satisfy -Werror. */
+#ifndef USBH_DEBUG
+#define USBH_DEBUG(...) do {} while (0)
+#endif
+
+#define USB_HOST_ID                        0
+#define USB_HOST_CLOCK                     CRM_OTGFS1_PERIPH_CLOCK
+#define USB_HOST_IRQ                       OTGFS1_IRQn
+#define USB_HOST_IRQ_HANDLER               OTGFS1_IRQHandler
+#define USB_HOST_WKUP_IRQ                  OTGFS1_WKUP_IRQn
+#define USB_HOST_WKUP_HANDLER              OTGFS1_WKUP_IRQHandler
+#define USB_HOST_WKUP_EXINT_LINE           EXINT_LINE_18
+
+#define USB_HOST_PIN_GPIO                  GPIOA
+#define USB_HOST_PIN_GPIO_CLOCK            CRM_GPIOA_PERIPH_CLOCK
+
+#define USB_HOST_PIN_DP                    GPIO_PINS_12
+#define USB_HOST_PIN_DP_SOURCE             GPIO_PINS_SOURCE12
+
+#define USB_HOST_PIN_DM                    GPIO_PINS_11
+#define USB_HOST_PIN_DM_SOURCE             GPIO_PINS_SOURCE11
+
+#define USB_HOST_PIN_VBUS                  GPIO_PINS_9
+#define USB_HOST_PIN_VBUS_SOURCE           GPIO_PINS_SOURCE9
+
+#define USB_HOST_PIN_ID                    GPIO_PINS_10
+#define USB_HOST_PIN_ID_SOURCE             GPIO_PINS_SOURCE10
+
+#define USB_HOST_PIN_SOF_GPIO              GPIOA
+#define USB_HOST_PIN_SOF_GPIO_CLOCK        CRM_GPIOA_PERIPH_CLOCK
+#define USB_HOST_PIN_SOF                   GPIO_PINS_8
+#define USB_HOST_PIN_SOF_SOURCE            GPIO_PINS_SOURCE8
+
+#define USB_HOST_PIN_MUX                   GPIO_MUX_10
+#endif
 
 #if (OTG_USB_ID == 1)
 #define USB_ID                           0

@@ -4333,6 +4333,11 @@ int iso14443a_fast_select_card(const uint8_t *uid_ptr, uint8_t num_cascades) {
 }
 
 void iso14443a_setup(uint8_t fpga_minor_mode) {
+    iso14443a_setup_ex(fpga_minor_mode, 50);
+}
+
+// settle_ms: wait after the field comes on, ISO14443-3 guard time is >= 5 ms
+void iso14443a_setup_ex(uint8_t fpga_minor_mode, uint16_t settle_ms) {
     set_session_channel(false);
 
     // keep_EM: a bitstream download frees and clears BigBuf to get scratch space
@@ -4353,7 +4358,7 @@ void iso14443a_setup(uint8_t fpga_minor_mode) {
         LED_D_ON();
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | fpga_minor_mode);
-    SpinDelay(50);
+    SpinDelay(settle_ms);
 
     // Start the timer
     StartCountSspClk();

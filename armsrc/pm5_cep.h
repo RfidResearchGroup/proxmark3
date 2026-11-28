@@ -53,8 +53,18 @@ bool cep_is_attached(void);
 // while the CC controller reports a Flipper attached.
 void cep_attach_poll(void);
 
+// Force CEP lines into OTGFS1 USB host CDC mode (releases USART1/SPI role).
+void cep_usb_host_enter(void);
+
+// Ensure USB host CDC mode is active for ICSD access (idempotent).
+void cep_ensure_usb_host_mode(void);
+
+// True while CEP has OTGFS1 USB host CDC mode active.
+bool cep_is_usb_host_active(void);
+
 // Check for a command on the SPI RX ring. If bytes are already queued, wait
 // briefly for the length header.
+
 bool cep_spi_data_available(void);
 
 // Check for incoming command bytes without waiting. Used by reader loops to

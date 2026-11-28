@@ -5,6 +5,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 - Fixed PM5 CEP replies starting during an idle poll or timing out before payload transfer (@adrian-stepien)
 - Fixed PM5 BWM commands timing out after idle - wait for the BWM to answer before sending the command (@adrian-stepien)
+- Fixed PM5 FPGA commands - no SPI setup before each one, the 14a reader listens and the 14a simulation answers 19 us sooner (@matrix)
 - Fixed `hf iclass/seos/mf/mfdes sam -v` - a HID SAM with ATR `3B95978011FC47726163653D` is no longer refused (@matrix)
 - Fixed PM5 USB sample streaming - dropping a stream did not clear the pending packet count of the endpoint (@matrix)
 - Fixed `hf iclass sim` - READ, READ4, UPDATE and PAGESEL with a wrong CRC are no longer answered (@matrix)
@@ -46,6 +47,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed `hw bwm upgrade` - report an unknown update result when the final reply times out (@adrian-stepien)
 - Fixed `hw bwm upgrade` - keep the BLE connection open during the upload (@adrian-stepien)
 - Fixed PM5 CEP - a long PM5 command could make the Flipper lose its connection even while it was still polling (@adrian-stepien)
+- Added PM5 CEP USB host CDC support for ICS/ICSD decoders (hw pm5 icsd) (@Dysonian-Lab)
 - Fixed PM5 CEP handshakes - receive Flipper bytes even while the attach check is waiting for its next poll (@adrian-stepien)
 - Fixed PM5 CEP - receive Flipper commands during attach checks and reject bad frame lengths without losing the next command (@adrian-stepien)
 - Fixed PM5 CEP - accept Flipper commands whose length starts with 0x55 (@adrian-stepien)

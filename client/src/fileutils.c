@@ -610,6 +610,61 @@ int saveFileTXT(const char *preferredName, const char *suffix, const void *data,
     return PM3_SUCCESS;
 }
 
+int saveFileVCD(const char *preferredName, const char *scope, const char **chan_names, uint8_t n_chan,
+                const vcd_sample_t *samples, uint32_t n) {
+    if (samples == NULL || n == 0 || chan_names == NULL || n_chan == 0 || n_chan > 26) {
+        return PM3_EINVARG;
+    }
+
+    char *fileName = newfilenamemcopyEx(preferredName, ".vcd", spTrace);
+    if (fileName == NULL) {
+        return PM3_EMALLOC;
+    }
+
+    FILE *f = fopen(fileName, "w");
+    if (f == NULL) {
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", fileName);
+        free(fileName);
+        return PM3_EFILE;
+    }
+
+    fprintf(f, "$date today $end\n");
+    fprintf(f, "$timescale 1 ns $end\n");
+    fprintf(f, "$scope module %s $end\n", scope);
+    for (uint8_t i = 0; i < n_chan; i++) {
+        fprintf(f, "$var wire 8 %c %s $end\n", (char)('a' + i), chan_names[i]);
+    }
+    fprintf(f, "$upscope $end\n");
+    fprintf(f, "$enddefinitions $end\n");
+    fprintf(f, "$dumpvars\n");
+    for (uint8_t i = 0; i < n_chan; i++) {
+        fprintf(f, "bz %c\n", (char)('a' + i));
+    }
+    fprintf(f, "$end\n");
+
+    for (uint32_t i = 0; i < n; i++) {
+        if (samples[i].chan >= n_chan) {
+            continue;
+        }
+        fprintf(f, "#%" PRIu64 "\n", samples[i].ns);
+        // 8-bit vector, MSB first.
+        fputc('b', f);
+        for (int bit = 7; bit >= 0; bit--) {
+            fputc((samples[i].value >> bit) & 1 ? '1' : '0', f);
+        }
+        fprintf(f, " %c\n", (char)('a' + samples[i].chan));
+    }
+
+    if (fclose(f) != 0) {
+        PrintAndLogEx(FAILED, "error, can't save the file `" _YELLOW_("%s") "`", fileName);
+        free(fileName);
+        return PM3_EFILE;
+    }
+    PrintAndLogEx(SUCCESS, "Saved " _YELLOW_("%u") " samples to VCD file `" _YELLOW_("%s") "` (view in PulseView/GTKWave)", n, fileName);
+    free(fileName);
+    return PM3_SUCCESS;
+}
+
 // Writes the iso15_tag_t body of a `15693 v4` or `15693 v5` JSON.
 //
 // The two revisions differ in exactly one field: v4 stored pagesCount in a byte,
