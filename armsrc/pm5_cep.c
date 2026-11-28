@@ -26,6 +26,7 @@
 //-----------------------------------------------------------------------------
 
 #include "pm5_cep.h"
+#include "pm5_usb_host_cdc.h"
 
 #include "at32f435_437.h"
 #include "at32f435_437_crm.h"
@@ -43,6 +44,13 @@
 #define CEP_CC_CONTROLLER_ADDR   0x47
 #define CEP_CC_STATUS_REG        0x09
 #define CEP_ATTACH_POLL_MS       50      // CC-controller I2C poll interval
+#define CEP_DETACH_DEBOUNCE_READS  5
+
+// TUSB320 status register bits 7:6 - attach role as seen by the PM5 port.
+#define CEP_ATTACH_UNATTACHED    0x00
+#define CEP_ATTACH_SRC           0x01    // PM5 sources VBUS -> act as USB host (ICS/ICSD device)
+#define CEP_ATTACH_SNK           0x02    // partner sources VBUS -> Flipper Zero (USART1 handshake)
+#define CEP_ATTACH_PEER          0x03    // PD peer -> Flipper Zero
 #define CEP_HANDSHAKE_STRING     "iamf0rupm5"
 #define CEP_HANDSHAKE_STX        0x02
 #define CEP_SPI_BYTE_TIMEOUT     100000  // spin-wait iterations per byte (matches source)
@@ -50,8 +58,8 @@
 // (its own idle poll cadence) - CEP_SPI_BYTE_TIMEOUT alone (~3-10ms real
 // time) is far shorter than that gap, so the first reply byte - the one
 // racing against the master's next poll - needs a budget that actually
-// spans it. Once that byte clears, the master is mid-CS and keeps
-// clocking continuously, so every later byte stays on the short timeout.
+// spans it and the switch to payload DMA. Once payload transfer starts,
+// the master clocks continuously, so later bytes use the short timeout.
 // Took measured CEP reply success from ~22% to ~100% in testing.
 #define CEP_SPI_HEADER_BYTE_TIMEOUT  2000000
 #define CEP_SPI_RESPONSE_TIMEOUT_TICKS  1500000  // 1s at 1.5 MHz
@@ -78,6 +86,11 @@ static bool s_cep_active = false;   // handshake completed, SPI transport live
 static bool s_cep_attached = false; // CC controller reports a physical attach
 static uint32_t s_last_spi_activity_tick = 0; // last time a real SPI poll was seen
 static volatile bool s_handshake_pending;
+
+static bool s_usb_host_mode = false;   // OTGFS1 host CDC owns PA9/PA11/PA12
+static bool s_usb_host_forced = false; // user explicitly requested host CDC mode (hw pm5 icsd init)
+static bool s_usart1_active = false; // USART1 half-duplex owns PA9
+static uint8_t s_detach_count = 0;
 
 bool cep_is_active(void) {
     return s_cep_active;
@@ -279,6 +292,7 @@ void cep_spi_resync(void) {
 
 void cep_init(void) {
     cep_usart_init();
+    s_usart1_active = true;
     cep_spi_init();
     // I2C_init() must be preceded by StartTicks(), like everywhere else.
     StartTicks();
@@ -312,9 +326,35 @@ void USART1_IRQHandler(void) {
     }
 }
 
+// Queue the first byte between CS assertions, never during an idle poll.
+static bool cep_spi_write_first(uint8_t byte) {
+    uint64_t timeout = 0;
+    while (timeout++ <= CEP_SPI_HEADER_BYTE_TIMEOUT) {
+        if (!GpioInputStatus(GPIOA, GPIO_PINS_4) ||
+                spi_i2s_flag_get(SPI1, SPI_I2S_TDBE_FLAG) == RESET) {
+            continue;
+        }
+        uint32_t primask = __get_PRIMASK();
+        __disable_irq();
+        bool idle = GpioInputStatus(GPIOA, GPIO_PINS_4) &&
+                    spi_i2s_flag_get(SPI1, SPI_I2S_TDBE_FLAG) != RESET;
+        if (idle) {
+            spi_i2s_data_transmit(SPI1, byte);
+        }
+        __set_PRIMASK(primask);
+        if (idle) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static bool cep_reply_handshake(void) {
     uint8_t response[] = {0x04, 0x00, 'y', 'e', 's', 0x00};
-    for (size_t i = 0; i < sizeof(response); i++) {
+    if (!cep_spi_write_first(response[0])) {
+        return false;
+    }
+    for (size_t i = 1; i < sizeof(response); i++) {
         uint32_t wait_start = GetTicks();
         int recovery_attempts = 0;
         while (spi_i2s_flag_get(SPI1, SPI_I2S_TDBE_FLAG) == RESET) {
@@ -345,6 +385,72 @@ static bool cep_reply_handshake(void) {
 // Attach polling (non-blocking, rate-limited)
 // ---------------------------------------------------------------------------
 
+// Release USART1, hand PA9/PA11/PA12 to OTGFS1 (GPIO_MUX_10), then bring up
+// the USB host CDC stack. PA11/PA12 are OTGFS1 DM/DP; PA9 is the USART1 line
+// being repurposed.
+void cep_usb_host_enter(void) {
+    usart_enable(USART1, FALSE);
+    usart_interrupt_enable(USART1, USART_RDBF_INT, FALSE);
+    nvic_irq_disable(USART1_IRQn);
+
+    gpio_init_type gpio_init_struct;
+    gpio_default_para_init(&gpio_init_struct);
+    gpio_init_struct.gpio_drive_strength = GPIO_DRIVE_STRENGTH_STRONGER;
+    gpio_init_struct.gpio_mode = GPIO_MODE_MUX;
+    gpio_init_struct.gpio_pull = GPIO_PULL_NONE;
+    gpio_init_struct.gpio_pins = GPIO_PINS_9 | GPIO_PINS_11 | GPIO_PINS_12;
+    gpio_init(GPIOA, &gpio_init_struct);
+    gpio_pin_mux_config(GPIOA, GPIO_PINS_SOURCE9, GPIO_MUX_10);
+    gpio_pin_mux_config(GPIOA, GPIO_PINS_SOURCE11, GPIO_MUX_10);
+    gpio_pin_mux_config(GPIOA, GPIO_PINS_SOURCE12, GPIO_MUX_10);
+
+    pm5_usb_host_cdc_init();
+}
+
+void cep_ensure_usb_host_mode(void) {
+    if (!s_usb_host_mode) {
+        cep_usb_host_enter();
+    }
+    s_usb_host_mode = true;
+    s_usb_host_forced = true;
+    s_usart1_active = false;
+    s_detach_count = 0;
+}
+
+bool cep_is_usb_host_active(void) {
+    return s_usb_host_mode;
+}
+
+// Re-establish USART1 half-duplex on PA9 (2400 8N1). The USART1 peripheral
+// itself keeps its config across a host-mode stint - only the line and the
+// enable bit need restoring.
+static void cep_usart1_restore(void) {
+    gpio_init_type gpio_init_struct;
+    gpio_default_para_init(&gpio_init_struct);
+    gpio_init_struct.gpio_drive_strength = GPIO_DRIVE_STRENGTH_STRONGER;
+    gpio_init_struct.gpio_out_type = GPIO_OUTPUT_OPEN_DRAIN;
+    gpio_init_struct.gpio_mode = GPIO_MODE_MUX;
+    gpio_init_struct.gpio_pins = GPIO_PINS_9;
+    gpio_init_struct.gpio_pull = GPIO_PULL_UP;
+    gpio_init(GPIOA, &gpio_init_struct);
+    gpio_pin_mux_config(GPIOA, GPIO_PINS_SOURCE9, GPIO_MUX_7);
+
+    cep_usart_clock_update();
+    usart_interrupt_enable(USART1, USART_RDBF_INT, TRUE);
+    nvic_irq_enable(USART1_IRQn, 1, 0);
+    usart_enable(USART1, TRUE);
+}
+
+// Float the shared USB/USART lines to high-impedance inputs.
+static void cep_lines_float(void) {
+    gpio_init_type gpio_init_struct;
+    gpio_default_para_init(&gpio_init_struct);
+    gpio_init_struct.gpio_mode = GPIO_MODE_INPUT;
+    gpio_init_struct.gpio_pull = GPIO_PULL_NONE;
+    gpio_init_struct.gpio_pins = GPIO_PINS_9 | GPIO_PINS_11 | GPIO_PINS_12;
+    gpio_init(GPIOA, &gpio_init_struct);
+}
+
 void cep_attach_poll(void) {
     static uint32_t last_tick = 0;
 
@@ -369,13 +475,29 @@ void cep_attach_poll(void) {
         return;
     }
 
-    bool attached = ((cc_ctrl_data >> 6 & 0x03) != 0);
-    s_cep_attached = attached;
+    uint8_t attach = (cc_ctrl_data >> 6) & 0x03;
+    s_cep_attached = (attach != CEP_ATTACH_UNATTACHED);
 
-    if (!attached) {
-        s_cep_active = false;
+    if (attach == CEP_ATTACH_SRC) {
+        s_detach_count = 0;
+        // PM5 sources VBUS: ICS/ICSD device - USB host CDC mode
+        if (s_usb_host_mode) {
+            pm5_usb_host_cdc_poll();
+        }
+        // Clear any stale handshake state when in USB host mode
         s_handshake_pending = false;
-    } else {
+        s_cep_active = false;
+    } else if (attach == CEP_ATTACH_SNK || attach == CEP_ATTACH_PEER) {
+        s_detach_count = 0;
+        // Partner sources VBUS: Flipper Zero - USART1 handshake + SPI.
+        if (s_usb_host_mode && !s_usb_host_forced) {
+            pm5_usb_host_cdc_deinit();
+            s_usb_host_mode = false;
+        }
+        if (!s_usart1_active && !s_usb_host_forced) {
+            cep_usart1_restore();
+            s_usart1_active = true;
+        }
         // The FAP re-runs its handshake on every app launch, not just on a
         // fresh physical attach - the CC controller's attach bits don't
         // reliably blip on every relaunch (confirmed on hardware: sometimes
@@ -399,6 +521,26 @@ void cep_attach_poll(void) {
         // once that cadence has been missing this long.
         if (s_cep_active && (GetTickCountDelta(s_last_spi_activity_tick) > CEP_ACTIVITY_TIMEOUT_MS)) {
             s_cep_active = false;
+        }
+    } else {
+        // Unattached: release the shared lines and reset state.
+        if (s_detach_count < CEP_DETACH_DEBOUNCE_READS) {
+            if (++s_detach_count >= CEP_DETACH_DEBOUNCE_READS) {
+                s_usb_host_forced = false;
+                if (s_usb_host_mode) {
+                    pm5_usb_host_cdc_deinit();
+                    s_usb_host_mode = false;
+                }
+                s_handshake_pending = false;
+                if (s_usart1_active) {
+                    usart_enable(USART1, FALSE);
+                    usart_interrupt_enable(USART1, USART_RDBF_INT, FALSE);
+                    nvic_irq_disable(USART1_IRQn);
+                    s_usart1_active = false;
+                }
+                s_cep_active = false;
+                cep_lines_float();
+            }
         }
     }
 
@@ -591,11 +733,10 @@ int cep_spi_write_sync(uint8_t *data, size_t len) {
 
     // These two length-header bytes are the ones racing against the
     // master's next poll - see CEP_SPI_HEADER_BYTE_TIMEOUT's comment.
-    if (!cep_spi_wait_tdbe(CEP_SPI_HEADER_BYTE_TIMEOUT)) {
+    if (!cep_spi_write_first(len & 0xFF)) {
         ret = PM3_EIO;
         goto cleanup;
     }
-    spi_i2s_data_transmit(SPI1, len & 0xFF);
 
     if (!cep_spi_wait_tdbe(CEP_SPI_HEADER_BYTE_TIMEOUT)) {
         ret = PM3_EIO;
@@ -603,8 +744,10 @@ int cep_spi_write_sync(uint8_t *data, size_t len) {
     }
     spi_i2s_data_transmit(SPI1, (len >> 8) & 0xFF);
 
+    // The master prepares its DMA transfer after reading the length.
     for (size_t i = 0; i < len; ++i) {
-        if (!cep_spi_wait_tdbe(CEP_SPI_BYTE_TIMEOUT)) {
+        uint64_t timeout = i == 0 ? CEP_SPI_HEADER_BYTE_TIMEOUT : CEP_SPI_BYTE_TIMEOUT;
+        if (!cep_spi_wait_tdbe(timeout)) {
             ret = PM3_EIO;
             goto cleanup;
         }
