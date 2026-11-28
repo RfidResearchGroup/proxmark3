@@ -382,14 +382,13 @@ static int reader_dump_mode(void) {
                 Dbprintf(_RED_("failed AA1 auth") ", skipping ");
                 continue;
             }
-
-            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
         }
 
         uint16_t dumped = 0;
 
         // main read loop
         for (uint16_t i = start_block; i <= app1_limit; i++) {
+            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
             if (iclass_read_block(i, card_data + (8 * i), &start_time, &eof_time, false)) {
                 dumped++;
             }
@@ -413,9 +412,8 @@ static int reader_dump_mode(void) {
 
                 res = authenticate_iclass_tag(&auth, hdr, &start_time, &eof_time, NULL);
                 if (res) {
-                    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-
                     for (uint16_t i = app1_limit + 1; i <= app2_limit; i++) {
+                        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
                         if (iclass_read_block(i, card_data + (8 * i), &start_time, &eof_time, false)) {
                             dumped++;
                         }
@@ -524,14 +522,13 @@ static int dump_sim_mode(void) {
                 Dbprintf(_RED_("failed AA1 auth") ", skipping ");
                 continue;
             }
-
-            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
         }
 
         uint16_t dumped = 0;
 
         // main read loop
         for (uint16_t i = start_block; i <= app1_limit; i++) {
+            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
             if (iclass_read_block(i, card_data + (8 * i), &start_time, &eof_time, false)) {
                 dumped++;
             }
@@ -555,9 +552,8 @@ static int dump_sim_mode(void) {
 
                 res = authenticate_iclass_tag(&auth, hdr, &start_time, &eof_time, NULL);
                 if (res) {
-                    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-
                     for (uint16_t i = app1_limit + 1; i <= app2_limit; i++) {
+                        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
                         if (iclass_read_block(i, card_data + (8 * i), &start_time, &eof_time, false)) {
                             dumped++;
                         }
