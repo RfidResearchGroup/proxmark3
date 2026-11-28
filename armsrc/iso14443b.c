@@ -867,29 +867,91 @@ static bool sim14b_block_is_ours(const uint8_t *cmd, uint8_t cid) {
     return frame_cid == cid;
 }
 
-// time the client has to answer an APDU, inside the FWT of FWI 10 (309 ms)
+// time the client has per FWT of FWI 10 (309 ms), the rest is for an S(WTX)
 #define SIM14B_CLIENT_TIMEOUT_MS 250
 
-// the client's answer to a forwarded APDU; any other packet ends the simulation
-static int sim14b_client_answer(PacketCommandNG *rx) {
-    uint32_t t0 = GetTickCount();
-    while (GetTickCountDelta(t0) < SIM14B_CLIENT_TIMEOUT_MS) {
-        WDT_HIT();
+// S(WTX) multiplier: one more FWT a request
+#define SIM14B_WTXM 1
 
-        if (BUTTON_PRESS()) {
-            return PM3_EOPABORTED;
+// the client's answer to a forwarded APDU, asking the reader for more time with
+// S(WTX) while it waits. <buf> receives reader frames, <ref> follows their end.
+// Any other client packet, or a reader frame other than the S(WTX) answer or an
+// R-block, ends the simulation
+static int sim14b_client_answer(PacketCommandNG *rx, uint8_t *buf, bool with_cid, uint8_t cid, uint32_t *ref) {
+
+    const tosend_t *ts = get_tosend();
+
+    uint8_t wtx[5] = { (uint8_t)(0xF2 | (with_cid ? 0x08 : 0x00)), cid, 0x00, 0x00, 0x00 };
+    uint8_t n = with_cid ? 2 : 1;
+    wtx[n++] = SIM14B_WTXM;
+    AddCrc14B(wtx, n);
+    n += 2;
+
+    for (;;) {
+
+        uint32_t t0 = GetTickCount();
+        while (GetTickCountDelta(t0) < SIM14B_CLIENT_TIMEOUT_MS) {
+            WDT_HIT();
+
+            if (BUTTON_PRESS()) {
+                return PM3_EOPABORTED;
+            }
+
+            if (data_available() == false) {
+                continue;
+            }
+
+            if (receive_ng(rx) != PM3_SUCCESS || rx->cmd != CMD_HF_ISO14443B_SIM_APDU) {
+                return PM3_EOPABORTED;
+            }
+            return PM3_SUCCESS;
         }
 
-        if (data_available() == false) {
-            continue;
-        }
+        // S(WTX), sent again on an R-block, until the reader answers it
+        bool send = true;
+        uint32_t t_wtx = 0;
+        for (;;) {
 
-        if (receive_ng(rx) != PM3_SUCCESS || rx->cmd != CMD_HF_ISO14443B_SIM_APDU) {
-            return PM3_EOPABORTED;
+            if (send) {
+                CodeIso14443bAsTag(wtx, n);
+                sim14b_send(ts->buf, ts->max, wtx, n, *ref);
+                t_wtx = GetTickCount();
+                send = false;
+            }
+
+            uint16_t len = 0;
+            bool field_lost = false;
+            if (GetIso14443bCommandFromReader(buf, &len, &field_lost) == false) {
+                // a client answer waits for the reader's frame
+                if (field_lost || BUTTON_PRESS() || data_available() == false) {
+                    return PM3_EOPABORTED;
+                }
+
+                // these short calls miss a field loss: no reader frame for 1 s, it is gone
+                if (GetTickCountDelta(t_wtx) > 1000) {
+                    return PM3_EFAILED;
+                }
+                continue;
+            }
+
+            *ref = sim14b_log_reader(buf, len);
+
+            if (len < 3 || check_crc(CRC_14443_B, buf, len) == false || sim14b_block_is_ours(buf, cid) == false) {
+                continue;
+            }
+
+            // the S(WTX) answer: one more FWT
+            if ((buf[0] & 0xF7) == 0xF2 && len == n) {
+                break;
+            }
+
+            if ((buf[0] & 0xE6) == 0xA2 && len == n - 1) {
+                send = true;
+                continue;
+            }
+            return PM3_EFAILED;
         }
-        return PM3_SUCCESS;
     }
-    return PM3_ETIMEOUT;
 }
 
 //-----------------------------------------------------------------------------
@@ -947,7 +1009,7 @@ void SimulateIso14443bTag(const uint8_t *pupi, uint8_t flags) {
         AddCrc14B(respATQB, 12);
     }
 
-    // APDUs to the client: frames up to 256 bytes, FWI 10 (309 ms) for its answer
+    // APDUs to the client: frames up to 256 bytes, FWI 10 (309 ms) per wait for its answer
     bool apdu = (flags & ISO14B_SIM_FLAG_APDU) == ISO14B_SIM_FLAG_APDU;
     if (apdu) {
         respATQB[10] = 0x81;
@@ -1130,17 +1192,19 @@ void SimulateIso14443bTag(const uint8_t *pupi, uint8_t flags) {
         } else if (apdu && cardSTATE == SIM_ACTIVE && (receivedCmd[0] & 0xF2) == 0x02
                    && sim14b_block_is_ours(receivedCmd, cid)) {
             // I-block, no chaining: the APDU goes to the client, its answer back
-            uint8_t cidlen = (receivedCmd[0] & 0x08) ? 1 : 0;
+            bool with_cid = (receivedCmd[0] & 0x08) == 0x08;
+            uint8_t cidlen = with_cid ? 1 : 0;
             uint8_t hdr = 1 + cidlen + ((receivedCmd[0] & 0x04) ? 1 : 0);
             if (len >= hdr + 2) {
                 // rule D, the PICC block number is now the reader's
                 blk ^= 1;
                 reply_ng(CMD_HF_ISO14443B_SIM_APDU, PM3_SUCCESS, receivedCmd + hdr, len - hdr - 2);
 
+                // receivedCmd holds reader frames from here
                 PacketCommandNG rx;
-                res = sim14b_client_answer(&rx);
+                res = sim14b_client_answer(&rx, receivedCmd, with_cid, cid, &cmd_end);
                 if (res != PM3_SUCCESS) {
-                    if (res == PM3_ETIMEOUT && g_dbglevel >= DBG_ERROR) DbpString("14b sim: no APDU answer from the client in time");
+                    if (res == PM3_EFAILED && g_dbglevel >= DBG_ERROR) DbpString("14b sim: reader did not answer S(WTX)");
                     break;
                 }
 
@@ -1151,8 +1215,8 @@ void SimulateIso14443bTag(const uint8_t *pupi, uint8_t flags) {
                     break;
                 }
 
-                last[0] = 0x02 | blk | (receivedCmd[0] & 0x08);
-                last[1] = receivedCmd[1];
+                last[0] = 0x02 | blk | (with_cid ? 0x08 : 0x00);
+                last[1] = cid;
                 memcpy(last + 1 + cidlen, rx.data.asBytes, rx.length);
                 last_len = 1 + cidlen + rx.length + 2;
                 AddCrc14B(last, last_len - 2);
