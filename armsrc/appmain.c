@@ -5078,8 +5078,16 @@ void __attribute__((noreturn)) AppMain(void) {
             }
         }
 
-        // Press button for one second to enter a possible standalone mode
+        // Press button for one second to enter a possible standalone mode.
+        // Same trigger and timing as non-PM5. PM5 also needs BUTTON_CLICKED()
+        // here so BUTTON_DOUBLE_CLICK (used below for shutdown) is available;
+        // a quick single tap then costs an extra ~500ms to resolve, only on
+        // an actual press.
+#ifdef PM5
+        button_status = BUTTON_CLICKED(1000);
+#else
         button_status = BUTTON_HELD(1000);
+#endif
 #ifdef WITH_PM5_AUTOOFF
         if (button_status != BUTTON_NO_CLICK) {
             pm5_autooff_touch();   // any press is an interaction
@@ -5090,11 +5098,14 @@ void __attribute__((noreturn)) AppMain(void) {
             * So this is the trigger to execute a standalone mod.  Generic entrypoint by following the standalone/standalone.h headerfile
             * All standalone mod "main loop" should be the RunMod() function.
             */
-#ifndef PM5
             allow_send_wtx = false;
             RunMod();
             allow_send_wtx = true;
-#else // TODO DXL Test long press to device shutdown, temporarily blocking standalone mod
+        }
+#ifdef PM5
+        // Double-click: power off. Boot-hold is still DFU; a plain hold
+        // matches non-PM5 and enters standalone mode, same as above.
+        else if (button_status == BUTTON_DOUBLE_CLICK) {
 
             /*
             StartTicks();
@@ -5150,9 +5161,8 @@ void __attribute__((noreturn)) AppMain(void) {
                 Gpio_ARM_Power_ON_Low();
                 while (1); // Wait for system power off.
             }
-
-#endif
         }
+#endif
 
 #ifdef PM5
         // Pump the USB host CDC (ICSD) state machine. Safe no-op when the host
