@@ -867,11 +867,36 @@ static bool sim14b_block_is_ours(const uint8_t *cmd, uint8_t cid) {
     return frame_cid == cid;
 }
 
+// time the client has to answer an APDU, inside the FWT of FWI 10 (309 ms)
+#define SIM14B_CLIENT_TIMEOUT_MS 250
+
+// the client's answer to a forwarded APDU; any other packet ends the simulation
+static int sim14b_client_answer(PacketCommandNG *rx) {
+    uint32_t t0 = GetTickCount();
+    while (GetTickCountDelta(t0) < SIM14B_CLIENT_TIMEOUT_MS) {
+        WDT_HIT();
+
+        if (BUTTON_PRESS()) {
+            return PM3_EOPABORTED;
+        }
+
+        if (data_available() == false) {
+            continue;
+        }
+
+        if (receive_ng(rx) != PM3_SUCCESS || rx->cmd != CMD_HF_ISO14443B_SIM_APDU) {
+            return PM3_EOPABORTED;
+        }
+        return PM3_SUCCESS;
+    }
+    return PM3_ETIMEOUT;
+}
+
 //-----------------------------------------------------------------------------
 // Main loop of simulated tag: receive commands from reader, decide what
 // response to send, and send it.
 //-----------------------------------------------------------------------------
-void SimulateIso14443bTag(const uint8_t *pupi) {
+void SimulateIso14443bTag(const uint8_t *pupi, uint8_t flags) {
 
     /*
         // the only commands we understand is WUPB, AFI=0, Select All, N=1:
@@ -922,6 +947,14 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
         AddCrc14B(respATQB, 12);
     }
 
+    // APDUs to the client: frames up to 256 bytes, FWI 10 (309 ms) for its answer
+    bool apdu = (flags & ISO14B_SIM_FLAG_APDU) == ISO14B_SIM_FLAG_APDU;
+    if (apdu) {
+        respATQB[10] = 0x81;
+        respATQB[11] = 0xA5;
+        AddCrc14B(respATQB, 12);
+    }
+
     // response to HLTB
     static const uint8_t respOK[] = {0x00, 0x78, 0xF0};
 
@@ -933,12 +966,15 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
 
     uint8_t *receivedCmd = BigBuf_calloc(MAX_FRAME_SIZE);
 
+    // the last block sent, for rule 11
+    uint8_t *last = BigBuf_calloc(MAX_FRAME_SIZE);
+
     // prepare "ATQB" tag answer (encoded):
     CodeIso14443bAsTag(respATQB, sizeof(respATQB));
     uint8_t *encodedATQB = BigBuf_calloc(ts->max);
     uint16_t encodedATQBLen = ts->max;
 
-    if (receivedCmd == NULL || encodedATQB == NULL) {
+    if (receivedCmd == NULL || last == NULL || encodedATQB == NULL) {
         if (g_dbglevel >= DBG_ERROR) DbpString("14b sim: failed to allocate buffers");
         switch_off();
         reply_ng(CMD_HF_ISO14443B_SIMULATE, PM3_EMALLOC, NULL, 0);
@@ -965,9 +1001,12 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
     // the CRC table is built now, not while a reader waits for the first ATQB
     init_table(CRC_14443_B);
 
-    // the CID ATTRIB assigns, and an R(ACK) sent since: the last block for rule 11
+    // the CID and FSD ATTRIB assigns, the PICC block number and the last block's length
     uint8_t cid = 0;
-    bool rack_sent = false;
+    uint16_t fsd = 32;
+    uint8_t blk = 1;
+    uint16_t last_len = 0;
+    int res = PM3_SUCCESS;
 
     // Simulation loop
     while (BUTTON_PRESS() == false) {
@@ -1050,8 +1089,12 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
         } else if (len == 11 && receivedCmd[0] == ISO14443B_ATTRIB && memcmp(receivedCmd + 1, respATQB + 1, 4) == 0) {
             // ATTRIB for this PUPI, from READY, answered with the CID the reader assigns (MBLI 0)
             if (cardSTATE == SIM_READY) {
+                static const uint16_t fsdtbl[] = { 16, 24, 32, 40, 48, 64, 96, 128, 256 };
+                uint8_t fsdi = receivedCmd[6] & 0x0F;
+                fsd = (fsdi < ARRAYLEN(fsdtbl)) ? fsdtbl[fsdi] : 256;
                 cid = receivedCmd[8] & 0x0F;
-                rack_sent = false;
+                blk = 1;
+                last_len = 0;
                 uint8_t resp[3] = { cid, 0x00, 0x00 };
                 AddCrc14B(resp, 1);
                 CodeIso14443bAsTag(resp, sizeof(resp));
@@ -1068,17 +1111,53 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
             cardSTATE = SIM_HALT;
         } else if (cardSTATE == SIM_ACTIVE && (receivedCmd[0] & 0xE6) == 0xA2
                    && len == ((receivedCmd[0] & 0x08) ? 4 : 3) && sim14b_block_is_ours(receivedCmd, cid)) {
-            // ISO/IEC 14443-4 R-block. This PICC sends no I-block, its block number
-            // stays 1: an R(NAK) with the reader's number gets an R(ACK), the presence
-            // check (rule 12), one with the PICC's number the last R(ACK) again (rule 11)
-            // or, before any block, an R(ACK) all the same (note to rule 6)
-            bool own = (receivedCmd[0] & 0x01) == 0x01;
-            if ((receivedCmd[0] & 0x10) || (own && rack_sent)) {
-                uint8_t resp[4] = { (uint8_t)(0xA3 | (receivedCmd[0] & 0x08)), receivedCmd[1], 0x00, 0x00 };
-                AddCrc14B(resp, len - 2);
-                CodeIso14443bAsTag(resp, len);
-                sim14b_send(ts->buf, ts->max, resp, len, cmd_end);
-                rack_sent = true;
+            // ISO/IEC 14443-4 R-block. One with the PICC's block number gets the last
+            // block again (rule 11), an R(NAK) with the reader's number an R(ACK), the
+            // presence check (rule 12), or, before any block, an R(ACK) all the same
+            // (note to rule 6)
+            bool own = (receivedCmd[0] & 0x01) == blk;
+            if (own && last_len) {
+                CodeIso14443bAsTag(last, last_len);
+                sim14b_send(ts->buf, ts->max, last, last_len, cmd_end);
+            } else if (receivedCmd[0] & 0x10) {
+                last[0] = 0xA2 | blk | (receivedCmd[0] & 0x08);
+                last[1] = receivedCmd[1];
+                last_len = len;
+                AddCrc14B(last, last_len - 2);
+                CodeIso14443bAsTag(last, last_len);
+                sim14b_send(ts->buf, ts->max, last, last_len, cmd_end);
+            }
+        } else if (apdu && cardSTATE == SIM_ACTIVE && (receivedCmd[0] & 0xF2) == 0x02
+                   && sim14b_block_is_ours(receivedCmd, cid)) {
+            // I-block, no chaining: the APDU goes to the client, its answer back
+            uint8_t cidlen = (receivedCmd[0] & 0x08) ? 1 : 0;
+            uint8_t hdr = 1 + cidlen + ((receivedCmd[0] & 0x04) ? 1 : 0);
+            if (len >= hdr + 2) {
+                // rule D, the PICC block number is now the reader's
+                blk ^= 1;
+                reply_ng(CMD_HF_ISO14443B_SIM_APDU, PM3_SUCCESS, receivedCmd + hdr, len - hdr - 2);
+
+                PacketCommandNG rx;
+                res = sim14b_client_answer(&rx);
+                if (res != PM3_SUCCESS) {
+                    if (res == PM3_ETIMEOUT && g_dbglevel >= DBG_ERROR) DbpString("14b sim: no APDU answer from the client in time");
+                    break;
+                }
+
+                // no chaining, the answer has to fit the reader's frame
+                if (1 + cidlen + rx.length + 2 > fsd) {
+                    if (g_dbglevel >= DBG_ERROR) Dbprintf("14b sim: APDU answer of %u bytes exceeds FSD %u", rx.length, fsd);
+                    res = PM3_EOVFLOW;
+                    break;
+                }
+
+                last[0] = 0x02 | blk | (receivedCmd[0] & 0x08);
+                last[1] = receivedCmd[1];
+                memcpy(last + 1 + cidlen, rx.data.asBytes, rx.length);
+                last_len = 1 + cidlen + rx.length + 2;
+                AddCrc14B(last, last_len - 2);
+                CodeIso14443bAsTag(last, last_len);
+                sim14b_send(ts->buf, ts->max, last, last_len, cmd_end);
             }
         }
 
@@ -1091,7 +1170,7 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
     }
 
     // lets a client wait for the end of the simulation
-    reply_ng(CMD_HF_ISO14443B_SIMULATE, PM3_SUCCESS, NULL, 0);
+    reply_ng(CMD_HF_ISO14443B_SIMULATE, res, NULL, 0);
 }
 
 /*

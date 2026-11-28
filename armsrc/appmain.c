@@ -2467,7 +2467,9 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ISO14443B_SIMULATE: {
-            SimulateIso14443bTag(packet->data.asBytes);
+            // PUPI, then an optional flags byte
+            uint8_t flags = (packet->length > 4) ? packet->data.asBytes[4] : 0;
+            SimulateIso14443bTag(packet->data.asBytes, flags);
             break;
         }
         case CMD_HF_ISO14443B_COMMAND: {

@@ -43,7 +43,7 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
 
 int iso14443b_select_card(iso14b_card_select_t *card);
 
-void SimulateIso14443bTag(const uint8_t *pupi);
+void SimulateIso14443bTag(const uint8_t *pupi, uint8_t flags);
 void read_14b_st_block(uint8_t blocknr);
 int read_14b_srx_block(uint8_t blocknr, uint8_t *block);
 int iso14443b_select_srx_card(iso14b_card_select_t *card);

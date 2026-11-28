@@ -64,6 +64,9 @@ typedef enum ISO14B_COMMAND {
     ISO14B_SELECT_PRIME = (1 << 14),
 } iso14b_command_t;
 
+// hf 14b sim flags, the byte after the PUPI
+#define ISO14B_SIM_FLAG_APDU 0x01 // I-blocks go to the client
+
 typedef enum ISO14B_TYPE {
     ISO14B_NONE = 0,
     ISO14B_STANDARD = 1,
