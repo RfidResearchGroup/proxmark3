@@ -255,6 +255,10 @@ int sam_mfc_get_pacs(PacketCommandNG *c) {
     set_tracing(true);
     StartTicks();
 
+#ifdef WITH_USB_HOST_CCID
+    // T=1 when the SAM offers it, GetATR() runs the PPS
+    sc_request_sam_t1_profile();
+#endif
     smart_card_atr_t card;
     if (GetATR(&card, false) == false) {
         if (g_dbglevel >= DBG_ERROR) {

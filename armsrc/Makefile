@@ -52,6 +52,10 @@ ifeq ($(PLATFORM),PM5)
     SRC_USB_CDC    = ../common_arm/usb/usb_cdc_at32.c
     SRC_FLASH_DATA = ../common_arm/flash_data/flashmem_hw_at32.c
     SRC_SC_HW      = ../common_arm/smartcard/smartcard_hw_pm5.c
+    # the card is in a USB CCID reader on the CEP port instead
+    ifneq (,$(findstring WITH_USB_HOST_CCID,$(APP_CFLAGS)))
+        SRC_SC_HW  = ../common_arm/smartcard/smartcard_hw_ccid.c
+    endif
     APP_CFLAGS     += -mcpu=cortex-m4
     CROSS_LDFLAGS  += -mcpu=cortex-m4
     LD_SCRIPT      = ldscript.osimage.at32
@@ -135,6 +139,10 @@ ifneq (,$(findstring WITH_CEP,$(APP_CFLAGS)))
     SRC_CEP = pm5_cep.c
 else
     SRC_CEP =
+endif
+
+ifneq (,$(findstring WITH_USB_HOST_CCID,$(APP_CFLAGS)))
+    SRC_CEP += pm5_cep_usb_host.c ccid_reader.c pm5_cep_usbh_core.c pm5_cep_usbh_ctrl.c pm5_cep_usbh_int.c
 endif
 
 # BWM charger (AW32001) + fuel gauge (BQ27427), incl. the optional low-batt beep

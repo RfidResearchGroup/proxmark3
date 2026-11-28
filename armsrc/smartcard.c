@@ -23,6 +23,9 @@
 #ifndef PM5
 #include "smartcard_hw_rdv4.h"
 #endif
+#ifdef WITH_USB_HOST_CCID
+#include "pm5_cep_usb_host.h"
+#endif
 
 #include "smartcard_atr.h"
 #include "smartcard_rate.h"
@@ -45,6 +48,14 @@
 
 #define SC_PROTO_T0     (1 << 0)
 #define SC_PROTO_T1     (1 << 1)
+
+// TA1 of the PPS that switches a card to T=1 in SmartCardRaw(). 0 sends PPS0
+// alone, a CCID reader then picks the rate (SmartCard_HwPPS()).
+#ifdef WITH_USB_HOST_CCID
+#define SC_T1_SWITCH_TA1    0
+#else
+#define SC_T1_SWITCH_TA1    0x11
+#endif
 
 // protocols the last ATR offered, (1 << T). 0 = no ATR read since reset
 static uint8_t s_card_protocols = 0;
@@ -107,6 +118,26 @@ void SmartCard_ResetAdapter(void) {
 
 void SmartCard_PrintStatus(void) {
     DbpString(_CYAN_("Smart card module (ISO 7816)"));
+
+#ifdef WITH_USB_HOST_CCID
+    const char *usb_name = cep_usb_host_product();
+    if (cep_usb_host_ready()) {
+        Dbprintf("  reader.................. " _GREEN_("CCID reader") " %04x:%04x%s%s",
+                 cep_usb_host_vid(), cep_usb_host_pid(), usb_name[0] ? " " : "", usb_name);
+    } else if (cep_usb_host_failed()) {
+        Dbprintf("  reader.................. %04x:%04x%s%s " _RED_("not usable") " ( %s )",
+                 cep_usb_host_vid(), cep_usb_host_pid(), usb_name[0] ? " " : "", usb_name,
+                 cep_usb_host_failure());
+    } else if (cep_usb_host_connected()) {
+        DbpString("  reader.................. " _YELLOW_("enumerating"));
+    } else {
+        DbpString("  reader.................. " _YELLOW_("none"));
+    }
+    // the version is the release of the reader
+    if (cep_usb_host_ready() == false) {
+        return;
+    }
+#endif
 
     uint8_t major = 0, minor = 0;
     bool present;
@@ -246,14 +277,15 @@ static void sc_rate_restore(void) {
     }
 }
 
+// ta1 0: PPS0 alone, whatever TA1 the board puts in force
 static bool sc_pps(uint8_t proto, uint8_t ta1) {
     uint8_t req[2] = { (uint8_t)(proto & 0x0F), ta1 };
     uint8_t resp[3] = {0};
-    if (SmartCard_HwPPS(req, sizeof(req), resp, SIM_WAIT_DELAY) == false) {
+    if (SmartCard_HwPPS(req, (ta1 != 0) ? 2 : 1, resp, SIM_WAIT_DELAY) == false) {
         return false;
     }
     // resp is [ok][active protocol][ta1 in force]
-    if ((resp[0] != 1) || (resp[1] != (proto & 0x0F)) || (resp[2] != ta1)) {
+    if ((resp[0] != 1) || (resp[1] != (proto & 0x0F)) || ((ta1 != 0) && (resp[2] != ta1))) {
         return false;
     }
 
@@ -481,7 +513,7 @@ void SmartCardRaw(const smart_card_raw_t *p) {
         s_pps.reapply = true;
 
         if (got_atr && ((s_card_protocols & SC_PROTO_T1) == SC_PROTO_T1)) {
-            if ((sc_pps(1, 0x11) == false) && (g_dbglevel >= DBG_ERROR)) {
+            if ((sc_pps(1, SC_T1_SWITCH_TA1) == false) && (g_dbglevel >= DBG_ERROR)) {
                 DbpString("SC: " _YELLOW_("PPS to T=1 refused") ", sending it anyway");
             }
         }

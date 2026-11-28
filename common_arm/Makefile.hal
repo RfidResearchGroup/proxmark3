@@ -54,6 +54,8 @@ Known definitions:
 +--------------------------------------------+
 |NO_LOWBATT_SHUTDOWN| PM5 no low-batt cutoff |
 +--------------------------------------------+
+| USB_HOST_CCID   | PM5 CCID reader on CEP   |
++--------------------------------------------+
 
 endef
 
@@ -246,6 +248,17 @@ ifneq (,$(findstring NO_LOWBATT_BEEP,$(PLATFORM_EXTRAS_TMP)))
     # beep is the carrier for the shutdown poll, so dropping it drops shutdown too
     PLATFORM_DEFS := $(filter-out -DWITH_BWM_LOWBATT_BEEP -DWITH_PM5_LOWBATT_SHUTDOWN,$(PLATFORM_DEFS))
     PLATFORM_EXTRAS_TMP := $(strip $(filter-out NO_LOWBATT_BEEP,$(PLATFORM_EXTRAS_TMP)))
+endif
+ifneq (,$(findstring USB_HOST_CCID,$(PLATFORM_EXTRAS_TMP)))
+    ifneq ($(PLATFORM),PM5)
+        $(error PLATFORM_EXTRAS token USB_HOST_CCID is only valid on PLATFORM=PM5)
+    endif
+    # the reader is the smart card hardware of this build
+    PLATFORM_DEFS += -DWITH_USB_HOST_CCID
+    ifeq (,$(findstring WITH_SMARTCARD,$(PLATFORM_DEFS)))
+        PLATFORM_DEFS += -DWITH_SMARTCARD
+    endif
+    PLATFORM_EXTRAS_TMP := $(strip $(filter-out USB_HOST_CCID,$(PLATFORM_EXTRAS_TMP)))
 endif
 ifneq (,$(PLATFORM_EXTRAS_TMP))
     $(error Unknown PLATFORM_EXTRAS token(s): $(PLATFORM_EXTRAS_TMP))

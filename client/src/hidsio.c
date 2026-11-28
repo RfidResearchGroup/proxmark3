@@ -617,7 +617,8 @@ int hid_sam_iso14a_cmd(const char *Cmd, const char *name, uint16_t pm3_cmd, hid_
     CLIParserContext *ctx;
     CLIParserInit(&ctx, name,
                   "Extract PACS information via a HID SAM\n"
-                  "Make sure you got a SAM inserted in your sim module",
+                  "Make sure you got a SAM inserted in your sim module,\n"
+                  "or on a PM5 in the USB reader plugged into its CEP port",
                   examples
                  );
 

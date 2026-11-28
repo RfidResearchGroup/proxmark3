@@ -30,6 +30,9 @@
 #ifdef WITH_CEP
 #include "pm5_cep.h"
 #endif
+#ifdef WITH_USB_HOST_CCID
+#include "pm5_cep_usb_host.h"
+#endif
 #include "pm3_cmd.h"
 #include "proxmark3_arm.h"
 #include "dbprint.h"
@@ -1026,6 +1029,10 @@ static void SendCapabilities(void) {
         }
         SpinDelay(50);
     }
+#ifdef WITH_USB_HOST_CCID
+    // a USB reader comes and goes, the commands say when it is not there
+    capabilities.hw_available_smartcard = true;
+#endif
 #else
     capabilities.compiled_with_smartcard = false;
     capabilities.hw_available_smartcard = false;
@@ -3364,15 +3371,25 @@ static void PacketReceived(PacketCommandNG *packet) {
 
         case CMD_HF_SAM_PICOPASS: {
             sam_picopass_get_pacs(packet);
+#ifdef WITH_USB_HOST_CCID
+            // the SAM in the USB reader is powered only while a command needs it
+            SmartCard_HwClose();
+#endif
             break;
         }
         case CMD_HF_SAM_SEOS: {
             sam_seos_get_pacs(packet);
+#ifdef WITH_USB_HOST_CCID
+            SmartCard_HwClose();
+#endif
             break;
         }
 
         case CMD_HF_SAM_MFC: {
             sam_mfc_get_pacs(packet);
+#ifdef WITH_USB_HOST_CCID
+            SmartCard_HwClose();
+#endif
             break;
         }
 
@@ -4969,6 +4986,9 @@ void __attribute__((noreturn)) AppMain(void) {
 #endif
 #ifdef WITH_CEP
         cep_attach_poll();
+#endif
+#ifdef WITH_USB_HOST_CCID
+        cep_usb_host_poll();
 #endif
 #ifdef WITH_BWM_FORWARD
         bwm_fwd_tag_poll();

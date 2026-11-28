@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added PM5 `PLATFORM_EXTRAS=USB_HOST_CCID` - the `sam` commands use a HID SAM in a USB CCID reader on the side port (@matrix)
+- Changed `hw status` - a PM5 built with `USB_HOST_CCID` lists the reader on its side port under the smart card module (@matrix)
 - Changed `hf iclass sam --info` - also prints the ATR of the SAM (@matrix)
 - Changed `hf iclass sam --info` - prints the firmware version also when the SAM talks T=1, it was skipped (@matrix)
 - Fixed `hf mf sam` - the WUPA and the SELECT the SAM asks for after a failed authentication were not sent to the card (@matrix)

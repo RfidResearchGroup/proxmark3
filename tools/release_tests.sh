@@ -17,6 +17,7 @@ make -j PLATFORM=PM3RDV4 PLATFORM_EXTRAS=BTADDON STANDALONE=HF_REBLAY && if sudo
 make clean && make -j PLATFORM=PM5 PLATFORM_EXTRAS= STANDALONE=HF_ST25_TEAROFF || exit 1
 make clean && make -j PLATFORM=PM5 PLATFORM_EXTRAS=BWM STANDALONE=GDB_GATEWAY || exit 1
 make clean && make -j PLATFORM=PM5 PLATFORM_EXTRAS="NO_LOWBATT_SHUTDOWN NO_LOWBATT_BEEP" SKIP_CEP=1 STANDALONE= || exit 1
+make clean && make -j PLATFORM=PM5 PLATFORM_EXTRAS="USB_HOST_CCID BWM" || exit 1
 ( cd client; rm -rf build; mkdir build;cd build;cmake .. && make -j PLATFORM=PM3GENERIC PLATFORM_EXTRAS= STANDALONE=LF_SAMYRUN && cp -a ../*scripts ../*libs . && ../../tools/pm3_tests.sh --clientbin $(pwd)/proxmark3 client ) || exit 1
 ( cd client; rm -rf build; mkdir build;cd build;cmake .. && make -j PLATFORM=PM3RDV4 PLATFORM_EXTRAS= STANDALONE=HF_ST25_TEAROFF ) || exit 1
 ( cd client; rm -rf build; mkdir build;cd build;cmake .. && make -j PLATFORM=PM3RDV4 PLATFORM_EXTRAS=BTADDON STANDALONE=HF_REBLAY ) || exit 1

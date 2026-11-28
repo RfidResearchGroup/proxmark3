@@ -30,6 +30,10 @@ uint16_t SmartCard_RateReload(uint8_t ta1);
 // that sets a baud rate derives it from this instead of the 16x reload.
 uint16_t SmartCard_RateEtu(uint8_t ta1);
 
+// Bits per second for a TA1 at a clock in kHz (clock * Di / Fi), or 0 when the
+// pair is RFU. For a reader that runs the link itself, any pair goes.
+uint32_t SmartCard_RateBps(uint8_t ta1, uint32_t clk_khz);
+
 // The fastest rate worth proposing to a card, or 0 for none.
 uint8_t SmartCard_RateBestTa1(const uint8_t *atr, uint8_t len);
 

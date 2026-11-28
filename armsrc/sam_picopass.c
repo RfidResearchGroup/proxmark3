@@ -655,6 +655,10 @@ int sam_picopass_get_pacs(PacketCommandNG *c) {
     set_tracing(true);
     StartTicks();
 
+#ifdef WITH_USB_HOST_CCID
+    // T=1 when the SAM offers it, GetATR() runs the PPS
+    sc_request_sam_t1_profile();
+#endif
     // Resetting the module resets the card, which then sends an ATR nobody
     // asked for. Read it here rather than letting the first SAM APDU collide
     // with it, and take the chance to say plainly when the slot holds
