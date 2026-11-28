@@ -76,6 +76,7 @@ const struct tlv *tlvdb_get(const struct tlvdb *tlvdb, tlv_tag_t tag, const stru
 const struct tlv *tlvdb_get_inchild(const struct tlvdb *tlvdb, tlv_tag_t tag, const struct tlv *prev);
 const struct tlv *tlvdb_get_tlv(const struct tlvdb *tlvdb);
 
+tlv_tag_t tlv_parse_tag(const unsigned char **buf, size_t *len);
 bool tlv_parse_tl(const unsigned char **buf, size_t *len, struct tlv *tlv);
 unsigned char *tlv_encode(const struct tlv *tlv, size_t *len);
 bool tlv_is_constructed(const struct tlv *tlv);

@@ -22,12 +22,24 @@
 #ifndef EMV_ROCA_H__
 #define EMV_ROCA_H__
 
+#include <stdbool.h>
+#include <stddef.h>
+
 #include "common.h"
 
 #define ROCA_PRINTS_LENGTH 17
 
+typedef enum {
+    EMV_ROCA_ERROR = -1,
+    EMV_ROCA_NOT_FOUND = 0,
+    EMV_ROCA_FOUND = 1,
+} emv_roca_result_t;
+
+emv_roca_result_t emv_rocacheck_ex(const unsigned char *buf, size_t buflen, bool verbose);
 bool emv_rocacheck(const unsigned char *buf, size_t buflen, bool verbose);
+bool emv_rsa_has_small_factor(const unsigned char *buf, size_t buflen);
+bool emv_rsa_has_shared_factor(const unsigned char *a, size_t alen,
+                               const unsigned char *b, size_t blen);
 int roca_self_test(void);
 
 #endif
-

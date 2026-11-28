@@ -50,14 +50,19 @@ static unsigned char *emv_pki_decode_message(const struct emv_pk *enc_pk,
                                              ... /* A list of tlv pointers */
                                             ) {
     struct crypto_pk *kcp;
-    unsigned char *data;
-    size_t data_len;
+    unsigned char *data = NULL;
+    size_t data_len = 0;
     va_list vl;
 
-    if (!enc_pk)
+    if (!len)
+        return NULL;
+    *len = 0;
+
+    if (!enc_pk || !enc_pk->modulus || enc_pk->mlen == 0 ||
+            enc_pk->elen == 0 || enc_pk->elen > sizeof(enc_pk->exp) || tlv_count < 0)
         return NULL;
 
-    if (!cert_tlv) {
+    if (!cert_tlv || (cert_tlv->len && !cert_tlv->value)) {
         PrintAndLogEx(WARNING, "ERROR: Can't find certificate");
         return NULL;
     }
@@ -75,20 +80,19 @@ static unsigned char *emv_pki_decode_message(const struct emv_pk *enc_pk,
     data = crypto_pk_encrypt(kcp, cert_tlv->value, cert_tlv->len, &data_len);
     crypto_pk_close(kcp);
 
-    if (data == NULL || data_len < 3) {
-        PrintAndLogEx(WARNING, "ERROR: Certificate decrypt failed");
-        free(data);
-        return NULL;
-    }
+    /*  if (true){
+            PrintAndLogEx(SUCCESS, "Recovered data:\n");
+            print_buffer(data, data_len, 1);
+        }*/
 
-    if (data[data_len - 1] != 0xbc || data[0] != 0x6a || data[1] != msgtype) {
+    if (!data || data_len < 3 || data[data_len - 1] != 0xbc || data[0] != 0x6a || data[1] != msgtype) {
         PrintAndLogEx(WARNING, "ERROR: Certificate format");
         free(data);
         return NULL;
     }
 
     size_t hash_pos = emv_pki_hash_psn[msgtype];
-    if (hash_pos == 0 || hash_pos > data_len) {
+    if (hash_pos == 0 || hash_pos >= data_len) {
         PrintAndLogEx(WARNING, "ERROR: Cant get hash position in the certificate");
         free(data);
         return NULL;
@@ -103,21 +107,42 @@ static unsigned char *emv_pki_decode_message(const struct emv_pk *enc_pk,
     }
 
     size_t hash_len = crypto_hash_get_size(ch);
+    if (hash_len == 0 || hash_len > data_len - 2) {
+        PrintAndLogEx(WARNING, "ERROR: Invalid hash length");
+        crypto_hash_close(ch);
+        free(data);
+        return NULL;
+    }
     crypto_hash_write(ch, data + 1, data_len - 2 - hash_len);
 
+    bool invalid_additional_data = false;
     va_start(vl, tlv_count);
     for (int i = 0; i < tlv_count; i++) {
         const struct tlv *add_tlv = va_arg(vl, const struct tlv *);
         if (!add_tlv)
             continue;
 
-        crypto_hash_write(ch, add_tlv->value, add_tlv->len);
+        if (add_tlv->len && !add_tlv->value) {
+            invalid_additional_data = true;
+            break;
+        }
+
+        if (add_tlv->len)
+            crypto_hash_write(ch, add_tlv->value, add_tlv->len);
     }
     va_end(vl);
+    if (invalid_additional_data) {
+        crypto_hash_close(ch);
+        free(data);
+        return NULL;
+    }
 
-    uint8_t hash[hash_len];
-    memset(hash, 0, hash_len);
-    memcpy(hash, crypto_hash_read(ch), hash_len);
+    const uint8_t *hash = crypto_hash_read(ch);
+    if (!hash) {
+        crypto_hash_close(ch);
+        free(data);
+        return NULL;
+    }
     if (memcmp(data + data_len - 1 - hash_len, hash, hash_len)) {
         PrintAndLogEx(WARNING, "ERROR: Calculated wrong hash");
         PrintAndLogEx(WARNING, "decoded:    " _YELLOW_("%s"), sprint_hex(data + data_len - 1 - hash_len, hash_len));
@@ -136,7 +161,9 @@ static unsigned char *emv_pki_decode_message(const struct emv_pk *enc_pk,
 }
 
 static unsigned emv_cn_length(const struct tlv *tlv) {
-    for (int i = 0; i < tlv->len; i++) {
+    if (!tlv || (tlv->len && !tlv->value))
+        return 0;
+    for (size_t i = 0; i < tlv->len; i++) {
         unsigned char c = tlv->value[i];
 
         if (c >> 4 == 0xf)
@@ -149,7 +176,7 @@ static unsigned emv_cn_length(const struct tlv *tlv) {
 }
 
 static unsigned char emv_cn_get(const struct tlv *tlv, unsigned pos) {
-    if (pos > tlv->len * 2)
+    if (!tlv || !tlv->value || pos >= tlv->len * 2)
         return 0xf;
 
     unsigned char c = tlv->value[pos / 2];
@@ -175,7 +202,13 @@ static struct emv_pk *emv_pki_decode_key_ex(const struct emv_pk *enc_pk,
     size_t data_len;
     size_t pk_len;
 
-    if (!cert_tlv || !exp_tlv || !pan_tlv)
+    if (!cert_tlv || !exp_tlv || !pan_tlv ||
+            (cert_tlv->len && !cert_tlv->value) ||
+            (exp_tlv->len && !exp_tlv->value) ||
+            (pan_tlv->len && !pan_tlv->value) ||
+            (rem_tlv && rem_tlv->len && !rem_tlv->value) ||
+            pan_tlv->len == 0 || pan_tlv->len > 10 ||
+            exp_tlv->len == 0 || exp_tlv->len > 3)
         return NULL;
 
     if (!rem_tlv)
@@ -200,6 +233,7 @@ static struct emv_pk *emv_pki_decode_key_ex(const struct emv_pk *enc_pk,
                                   (uint8_t *)NULL);
     if (!data || data_len < 11 + pan_length) {
         PrintAndLogEx(WARNING, "ERROR: Can't decode message");
+        free(data);
         return NULL;
     }
 
@@ -238,7 +272,14 @@ static struct emv_pk *emv_pki_decode_key_ex(const struct emv_pk *enc_pk,
         }
 
     pk_len = data[9 + pan_length];
-    if (pk_len > data_len - 11 - pan_length + rem_tlv->len) {
+    if (pk_len == 0) {
+        free(data);
+        return NULL;
+    }
+    size_t certificate_part = data_len - 11 - pan_length;
+    size_t copied = pk_len < certificate_part ? pk_len : certificate_part;
+    size_t remainder_needed = pk_len - copied;
+    if (rem_tlv->len != remainder_needed) {
         PrintAndLogEx(WARNING, "ERROR: Invalid pk length");
         free(data);
         return NULL;
@@ -250,6 +291,10 @@ static struct emv_pk *emv_pki_decode_key_ex(const struct emv_pk *enc_pk,
     }
 
     struct emv_pk *pk = emv_pk_new(pk_len, exp_tlv->len);
+    if (!pk) {
+        free(data);
+        return NULL;
+    }
 
     memcpy(pk->rid, enc_pk->rid, 5);
     pk->index = enc_pk->index;
@@ -261,11 +306,10 @@ static struct emv_pk *emv_pki_decode_key_ex(const struct emv_pk *enc_pk,
     memcpy(pk->pan, data + 2, pan_length);
     memset(pk->pan + pan_length, 0xff, 10 - pan_length);
 
-    memcpy(pk->modulus, data + 11 + pan_length,
-           pk_len < data_len - (11 + pan_length) ?
-           pk_len :
-           data_len - (11 + pan_length));
-    memcpy(pk->modulus + data_len - (11 + pan_length), rem_tlv->value, rem_tlv->len);
+    if (copied)
+        memcpy(pk->modulus, data + 11 + pan_length, copied);
+    if (remainder_needed)
+        memcpy(pk->modulus + copied, rem_tlv->value, remainder_needed);
     memcpy(pk->exp, exp_tlv->value, exp_tlv->len);
 
     free(data);
@@ -326,36 +370,52 @@ struct emv_pk *emv_pki_recover_icc_pe_cert(const struct emv_pk *pk, struct tlvdb
 }
 
 unsigned char *emv_pki_sdatl_fill(const struct tlvdb *db, size_t *sdatl_len) {
-    uint8_t buf[2048] = {0};
-    size_t len = 0;
-
+    if (!sdatl_len)
+        return NULL;
     *sdatl_len = 0;
 
     const struct tlv *sda_tl = tlvdb_get(db, 0x9f4a, NULL);
-    if (!sda_tl || sda_tl->len == 0)
+    if (!sda_tl || sda_tl->len == 0 || !sda_tl->value)
         return NULL;
 
-    for (int i = 0; i < sda_tl->len; i++) {
-        uint32_t tag = sda_tl->value[i]; // here may be multibyte, but now not
+    const unsigned char *p = sda_tl->value;
+    size_t left = sda_tl->len;
+    size_t len = 0;
+    while (left) {
+        tlv_tag_t tag = tlv_parse_tag(&p, &left);
+        if (tag == 0)
+            return NULL;
         const struct tlv *elm = tlvdb_get(db, tag, NULL);
         if (elm) {
-            memcpy(&buf[len], elm->value, elm->len);
+            if ((elm->len && !elm->value) || elm->len > SIZE_MAX - len)
+                return NULL;
             len += elm->len;
         }
     }
 
-    if (len) {
-        *sdatl_len = len;
-        unsigned char *value = calloc(1, len);
-        if (value == NULL) {
-            PrintAndLogEx(WARNING, "Failed to allocate memory");
-            return NULL;
-        }
-        memcpy(value, buf, len);
-        return value;
+    if (!len)
+        return NULL;
+
+    unsigned char *value = malloc(len);
+    if (!value) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return NULL;
     }
 
-    return NULL;
+    p = sda_tl->value;
+    left = sda_tl->len;
+    size_t pos = 0;
+    while (left) {
+        tlv_tag_t tag = tlv_parse_tag(&p, &left);
+        const struct tlv *elm = tlvdb_get(db, tag, NULL);
+        if (elm && elm->len) {
+            memcpy(value + pos, elm->value, elm->len);
+            pos += elm->len;
+        }
+    }
+
+    *sdatl_len = len;
+    return value;
 }
 
 struct tlvdb *emv_pki_recover_dac_ex(const struct emv_pk *enc_pk, const struct tlvdb *db, const struct tlv *sda_tlv, bool showData) {
@@ -379,8 +439,10 @@ struct tlvdb *emv_pki_recover_dac_ex(const struct emv_pk *enc_pk, const struct t
 
     free(sdatl); // calloc here: emv_pki_sdatl_fill
 
-    if (!data || data_len < 5)
+    if (!data || data_len < 5) {
+        free(data);
         return NULL;
+    }
 
     if (showData) {
         PrintAndLogEx(SUCCESS, "Recovered data:");
@@ -408,10 +470,13 @@ struct tlvdb *emv_pki_recover_idn_ex(const struct emv_pk *enc_pk, const struct t
                                                  dyn_tlv,
                                                  (uint8_t *)NULL);
 
-    if (!data || data_len < 3)
+    if (!data || data_len < 5) {
+        free(data);
         return NULL;
+    }
 
-    if (data[3] < 2 || data[3] > data_len - 3) {
+    size_t dynamic_len = data[3];
+    if (dynamic_len < 2 || dynamic_len > data_len - 4) {
         free(data);
         return NULL;
     }
@@ -422,7 +487,7 @@ struct tlvdb *emv_pki_recover_idn_ex(const struct emv_pk *enc_pk, const struct t
     }
 
     size_t idn_len = data[4];
-    if (idn_len > data[3] - 1) {
+    if (idn_len > dynamic_len - 1) {
         free(data);
         return NULL;
     }
@@ -444,10 +509,13 @@ struct tlvdb *emv_pki_recover_atc_ex(const struct emv_pk *enc_pk, const struct t
                                                  tlvdb_get(db, 0x9f69, NULL),
                                                  (uint8_t *)NULL);
 
-    if (!data || data_len < 3)
+    if (!data || data_len < 5) {
+        free(data);
         return NULL;
+    }
 
-    if (data[3] < 2 || data[3] > data_len - 3) {
+    size_t dynamic_len = data[3];
+    if (dynamic_len < 2 || dynamic_len > data_len - 4) {
         free(data);
         return NULL;
     }
@@ -458,7 +526,7 @@ struct tlvdb *emv_pki_recover_atc_ex(const struct emv_pk *enc_pk, const struct t
     }
 
     size_t idn_len = data[4];
-    if (idn_len > data[3] - 1) {
+    if (idn_len > dynamic_len - 1) {
         free(data);
         return NULL;
     }
@@ -471,10 +539,20 @@ struct tlvdb *emv_pki_recover_atc_ex(const struct emv_pk *enc_pk, const struct t
     return atc_db;
 }
 
+typedef struct {
+    struct crypto_hash *ch;
+    bool valid;
+} emv_tlv_hash_ctx_t;
+
 static void tlv_hash(void *data, const struct tlv *tlv, int level, bool is_leaf) {
-    struct crypto_hash *ch = data;
+    (void)level;
+    (void)is_leaf;
+    emv_tlv_hash_ctx_t *ctx = data;
     size_t tag_len;
     unsigned char *tag;
+
+    if (!ctx->valid)
+        return;
 
     if (tlv_is_constructed(tlv))
         return;
@@ -483,7 +561,11 @@ static void tlv_hash(void *data, const struct tlv *tlv, int level, bool is_leaf)
         return;
 
     tag = tlv_encode(tlv, &tag_len);
-    crypto_hash_write(ch, tag, tag_len);
+    if (!tag) {
+        ctx->valid = false;
+        return;
+    }
+    crypto_hash_write(ctx->ch, tag, tag_len);
     free(tag);
 }
 
@@ -504,7 +586,8 @@ struct tlvdb *emv_pki_perform_cda_ex(const struct emv_pk *enc_pk, const struct t
     const struct tlv *un_tlv = tlvdb_get(db, 0x9f37, NULL);
     const struct tlv *cid_tlv = tlvdb_get(this_db, 0x9f27, NULL);
 
-    if (!un_tlv || !cid_tlv)
+    if (!un_tlv || !cid_tlv || (un_tlv->len && !un_tlv->value) ||
+            cid_tlv->len != 1 || !cid_tlv->value)
         return NULL;
 
     size_t data_len = 0;
@@ -513,8 +596,9 @@ struct tlvdb *emv_pki_perform_cda_ex(const struct emv_pk *enc_pk, const struct t
                                                  2,
                                                  un_tlv,
                                                  (uint8_t *)NULL);
-    if (!data || data_len < 3) {
+    if (!data || data_len < 5) {
         PrintAndLogEx(WARNING, "ERROR: can't decode message. [%zu bytes]", data_len);
+        free(data);
         return NULL;
     }
 
@@ -523,13 +607,17 @@ struct tlvdb *emv_pki_perform_cda_ex(const struct emv_pk *enc_pk, const struct t
         print_buffer(data, data_len, 1);
     }
 
-    if (data[3] < 30 || data[3] > data_len - 4) {
+    size_t dynamic_len = data[3];
+    size_t idn_len = data[4];
+    if (dynamic_len < 30 || dynamic_len > data_len - 4 ||
+            idn_len > dynamic_len - 1 || idn_len > SIZE_MAX - 30 ||
+            idn_len + 30 > dynamic_len) {
         PrintAndLogEx(WARNING, "ERROR: Invalid data length");
         free(data);
         return NULL;
     }
 
-    if (!cid_tlv || cid_tlv->len != 1 || cid_tlv->value[0] != data[5 + data[4]]) {
+    if (cid_tlv->value[0] != data[5 + idn_len]) {
         PrintAndLogEx(WARNING, "ERROR: CID mismatch");
         free(data);
         return NULL;
@@ -543,29 +631,32 @@ struct tlvdb *emv_pki_perform_cda_ex(const struct emv_pk *enc_pk, const struct t
         return NULL;
     }
 
-    if (pdol_data_tlv)
+    if ((pdol_data_tlv && pdol_data_tlv->len && !pdol_data_tlv->value) ||
+            (crm1_tlv && crm1_tlv->len && !crm1_tlv->value) ||
+            (crm2_tlv && crm2_tlv->len && !crm2_tlv->value)) {
+        crypto_hash_close(ch);
+        free(data);
+        return NULL;
+    }
+    if (pdol_data_tlv && pdol_data_tlv->len)
         crypto_hash_write(ch, pdol_data_tlv->value, pdol_data_tlv->len);
-    if (crm1_tlv)
+    if (crm1_tlv && crm1_tlv->len)
         crypto_hash_write(ch, crm1_tlv->value, crm1_tlv->len);
-    if (crm2_tlv)
+    if (crm2_tlv && crm2_tlv->len)
         crypto_hash_write(ch, crm2_tlv->value, crm2_tlv->len);
 
-    tlvdb_visit(this_db, tlv_hash, ch, 0);
+    emv_tlv_hash_ctx_t hash_ctx = {.ch = ch, .valid = true};
+    tlvdb_visit(this_db, tlv_hash, &hash_ctx, 0);
 
-    if (memcmp(data + 5 + data[4] + 1 + 8, crypto_hash_read(ch), 20)) {
+    const uint8_t *hash = crypto_hash_read(ch);
+    if (!hash_ctx.valid || crypto_hash_get_size(ch) != 20 || !hash ||
+            memcmp(data + 5 + idn_len + 1 + 8, hash, 20)) {
         PrintAndLogEx(WARNING, "ERROR: calculated hash error");
         crypto_hash_close(ch);
         free(data);
         return NULL;
     }
     crypto_hash_close(ch);
-
-    size_t idn_len = data[4];
-    if (idn_len > data[3] - 1) {
-        PrintAndLogEx(WARNING, "ERROR: Invalid IDN length");
-        free(data);
-        return NULL;
-    }
 
     struct tlvdb *idn_db = tlvdb_fixed(0x9f4c, idn_len, data + 5);
     free(data);

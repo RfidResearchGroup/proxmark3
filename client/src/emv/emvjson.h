@@ -45,7 +45,9 @@ int JsonSaveTLVTreeElm(json_t *elm, const char *path, struct tlvdb *tlvdbelm, bo
 
 int JsonSaveTLVTree(json_t *root, json_t *elm, const char *path, struct tlvdb *tlvdbelm);
 
-int JsonLoadStr(json_t *root, const char *path, char *value);
+int JsonLoadStrSized(json_t *root, const char *path, char *value, size_t value_size);
+// Array helper for legacy callers; use JsonLoadStrSized for pointers.
+#define JsonLoadStr(root, path, value) JsonLoadStrSized((root), (path), (value), sizeof(value))
 int JsonLoadBufAsHex(json_t *elm, const char *path, uint8_t *data, size_t maxbufferlen, size_t *datalen);
 
 bool ParamLoadFromJson(struct tlvdb *tlv);

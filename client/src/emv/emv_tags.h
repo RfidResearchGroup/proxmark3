@@ -39,6 +39,8 @@
 # define EMVCID_REASON_MASK  0x07
 
 bool emv_tag_dump(const struct tlv *tlv, int level);
+bool emv_tag_value_summary(const struct tlv *tlv, char *summary, size_t capacity);
+bool emv_tag_dump_visa_qualifiers(const struct tlv *tlv, int level);
 const char *emv_get_tag_name(const struct tlv *tlv);
 
 #endif

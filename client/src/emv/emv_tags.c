@@ -23,10 +23,12 @@
 #endif
 
 #include "emv_tags.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "commonutil.h"
 #include "ui.h"
+#include "dol.h"
 
 enum emv_tag_t {
     EMV_TAG_GENERIC,
@@ -39,6 +41,7 @@ enum emv_tag_t {
     EMV_TAG_YYMMDD,
     EMV_TAG_CVR,
     EMV_TAG_CID,
+    EMV_TAG_CVM_RESULTS,
 };
 
 struct emv_tag {
@@ -57,6 +60,7 @@ struct emv_tag_bit {
 #define EMV_BIT_FINISH { (~0), NULL }
 
 static const struct emv_tag_bit EMV_AIP[] = {
+    { EMV_BIT(1, 8), "XDA supported (Extended Dynamic Data Authentication)" },
     { EMV_BIT(1, 7), "SDA supported" },
     { EMV_BIT(1, 6), "DDA supported" },
     { EMV_BIT(1, 5), "Cardholder verification is supported" },
@@ -93,6 +97,7 @@ static const struct emv_tag_bit EMV_TVR[] = {
     { EMV_BIT(1, 4), "DDA failed" },
     { EMV_BIT(1, 3), "CDA failed" },
     { EMV_BIT(1, 2), "SDA selected" },
+    { EMV_BIT(1, 1), "XDA selected" },
     { EMV_BIT(2, 8), "ICC and terminal have different application versions" },
     { EMV_BIT(2, 7), "Expired application" },
     { EMV_BIT(2, 6), "Application not yet effective" },
@@ -109,6 +114,9 @@ static const struct emv_tag_bit EMV_TVR[] = {
     { EMV_BIT(4, 6), "Upper consecutive offline limit exceeded" },
     { EMV_BIT(4, 5), "Transaction selected randomly for online processing" },
     { EMV_BIT(4, 4), "Merchant forced transaction online" },
+    { EMV_BIT(4, 3), "Biometric Try Limit exceeded" },
+    { EMV_BIT(4, 2), "Selected Biometric Type not supported" },
+    { EMV_BIT(4, 1), "XDA signature verification failed" },
     { EMV_BIT(5, 8), "Default TDOL used" },
     { EMV_BIT(5, 7), "Issuer authentication failed" },
     { EMV_BIT(5, 6), "Script processing failed before final GENERATE AC" },
@@ -117,6 +125,16 @@ static const struct emv_tag_bit EMV_TVR[] = {
     { EMV_BIT(5, 3), "Reserved for use by the EMV Contactless Specifications" },
     { EMV_BIT(5, 2), "Reserved for use by the EMV Contactless Specifications" },
     { EMV_BIT(5, 1), "Reserved for use by the EMV Contactless Specifications" },
+    EMV_BIT_FINISH,
+};
+
+static const struct emv_tag_bit EMV_TSI[] = {
+    { EMV_BIT(1, 8), "Offline data authentication was performed" },
+    { EMV_BIT(1, 7), "Cardholder verification was performed" },
+    { EMV_BIT(1, 6), "Card risk management was performed" },
+    { EMV_BIT(1, 5), "Issuer authentication was performed" },
+    { EMV_BIT(1, 4), "Terminal risk management was performed" },
+    { EMV_BIT(1, 3), "Script processing was performed" },
     EMV_BIT_FINISH,
 };
 
@@ -235,12 +253,12 @@ static const struct emv_tag emv_tags[] = {
     { 0x92,     "Issuer Public Key Remainder",                                 EMV_TAG_GENERIC,  NULL },
     { 0x93,     "Signed Static Application Data",                              EMV_TAG_GENERIC,  NULL },
     { 0x94,     "Application File Locator (AFL)",                              EMV_TAG_AFL,      NULL },
-    { 0x95,     "Terminal Verification Results",                               EMV_TAG_GENERIC,  NULL },
+    { 0x95,     "Terminal Verification Results",                               EMV_TAG_BITMASK,  &EMV_TVR },
     { 0x97,     "Transaction Certificate Data Object List (TDOL)",             EMV_TAG_GENERIC,  NULL },
     { 0x98,     "Transaction Certificate (TC) Hash Value",                     EMV_TAG_GENERIC,  NULL },
     { 0x99,     "Transaction Personal Identification Number (PIN) Data",       EMV_TAG_GENERIC,  NULL },
     { 0x9a,     "Transaction Date",                                            EMV_TAG_YYMMDD,   NULL },
-    { 0x9b,     "Transaction Status Information",                              EMV_TAG_GENERIC,  NULL },
+    { 0x9b,     "Transaction Status Information",                              EMV_TAG_BITMASK,  &EMV_TSI },
     { 0x9c,     "Transaction Type",                                            EMV_TAG_NUMERIC,  NULL },
     { 0x9d,     "Directory Definition File (DDF) Name",                        EMV_TAG_GENERIC,  NULL },
 
@@ -287,7 +305,7 @@ static const struct emv_tag emv_tags[] = {
     { 0x9f2f,   "ICC PIN Encipherment Public Key Remainder",                   EMV_TAG_GENERIC,  NULL },
     { 0x9f32,   "Issuer Public Key Exponent",                                  EMV_TAG_GENERIC,  NULL },
     { 0x9f33,   "Terminal Capabilities",                                       EMV_TAG_GENERIC,  NULL },
-    { 0x9f34,   "Cardholder Verification Method (CVM) Results",                EMV_TAG_GENERIC,  NULL },
+    { 0x9f34,   "Cardholder Verification Method (CVM) Results",                EMV_TAG_CVM_RESULTS, NULL },
     { 0x9f35,   "Terminal Type",                                               EMV_TAG_GENERIC,  NULL },
     { 0x9f36,   "Application Transaction Counter (ATC)",                       EMV_TAG_GENERIC,  NULL },
     { 0x9f37,   "Unpredictable Number",                                        EMV_TAG_GENERIC,  NULL },
@@ -344,13 +362,13 @@ static const struct emv_tag emv_tags[] = {
     { 0x9f63,   "PUNATC (Track1)",                                             EMV_TAG_GENERIC,  NULL },
     { 0x9f64,   "NATC (Track1)",                                               EMV_TAG_GENERIC,  NULL },
     { 0x9f65,   "PCVC3 (Track2)",                                              EMV_TAG_GENERIC,  NULL },
-    { 0x9f66,   "PUNATC (Track2) / Terminal Transaction Qualifiers (TTQ)",     EMV_TAG_BITMASK,  &EMV_TTQ },
+    { 0x9f66,   "PUNATC (Track2) / Terminal Transaction Qualifiers (TTQ)",     EMV_TAG_GENERIC,  NULL },
     { 0x9f67,   "NATC (Track2) / MSD Offset",                                  EMV_TAG_GENERIC,  NULL },
     { 0x9f68,   "Cardholder verification method list (PayPass)",               EMV_TAG_GENERIC,  NULL },
-    { 0x9f69,   "Card Authentication Related Data (UDOL)",                     EMV_TAG_DOL,      NULL },
+    { 0x9f69,   "Card Authentication Related Data / UDOL (profile-specific)",  EMV_TAG_GENERIC,  NULL },
     { 0x9f6a,   "Unpredictable Number",                                        EMV_TAG_NUMERIC,  NULL },
     { 0x9f6b,   "Track 2 Data",                                                EMV_TAG_GENERIC,  NULL },
-    { 0x9f6c,   "Card Transaction Qualifiers (CTQ)",                           EMV_TAG_BITMASK,  &EMV_CTQ },
+    { 0x9f6c,   "Card Transaction Qualifiers / Mag-stripe Application Version", EMV_TAG_GENERIC, NULL },
     { 0x9f6d,   "Mag-stripe Application Version Number (Reader)",              EMV_TAG_GENERIC,  NULL },
     { 0x9f6e,   "Form Factor Indicator",                                       EMV_TAG_GENERIC,  NULL },
     { 0x9f6f,   "DS Slot Management Control",                                  EMV_TAG_GENERIC,  NULL },
@@ -372,6 +390,8 @@ static const struct emv_tag emv_tags[] = {
 
     { 0xa5,     "File Control Information (FCI) Proprietary Template",         EMV_TAG_GENERIC,  NULL },
     { 0xbf0c,   "File Control Information (FCI) Issuer Discretionary Data",    EMV_TAG_GENERIC,  NULL },
+    { 0xbf4c,   "Biometric Try Counters Template",                             EMV_TAG_GENERIC,  NULL },
+    { 0xbf4d,   "Preferred Attempts Template",                                 EMV_TAG_GENERIC,  NULL },
     { 0xdf20,   "Issuer Proprietary Bitmap (IPB)",                             EMV_TAG_GENERIC,  NULL },
     { 0xdf3e,   "?",                                                           EMV_TAG_BITMASK,  NULL },
     { 0xdf4b,   "POS Cardholder Interaction Information",                      EMV_TAG_GENERIC,  NULL },
@@ -491,9 +511,9 @@ static void emv_tag_dump_dol(const struct tlv *tlv, const struct emv_tag *tag, i
         struct tlv doltlv;
         const struct emv_tag *doltag;
 
-        if (!tlv_parse_tl(&buf, &left, &doltlv)) {
+        if (!dol_parse_tl(&buf, &left, &doltlv)) {
             PrintAndLogEx(INFO, "%*sInvalid Tag-Len", (level * 4), " ");
-            continue;
+            break;
         }
 
         doltag = emv_get_tag(&doltlv);
@@ -543,6 +563,10 @@ static void emv_tag_dump_numeric(const struct tlv *tlv, const struct emv_tag *ta
 }
 
 static void emv_tag_dump_yymmdd(const struct tlv *tlv, const struct emv_tag *tag, int level) {
+    if (tlv->len != 3) {
+        PrintAndLogEx(INFO, "%*s    INVALID length (expected 3)!", (level * 4), " ");
+        return;
+    }
     PrintAndLogEx(INFO, "%*s" NOLF, (level * 4), " ");
     PrintAndLogEx(NORMAL, "    Date: " _YELLOW_("20%02lu.%lu.%lu"),
                   emv_value_numeric(tlv, 0, 2),
@@ -557,7 +581,7 @@ static uint32_t emv_get_binary(const unsigned char *S) {
 
 // https://github.com/binaryfoo/emv-bertlv/blob/master/src/main/resources/fields/visa-cvr.txt
 static void emv_tag_dump_cvr(const struct tlv *tlv, const struct emv_tag *tag, int level) {
-    if (tlv == NULL || tlv->len < 1) {
+    if (tlv == NULL || tlv->len < 1 || tlv->len > 21) {
         PrintAndLogEx(INFO, "%*s    INVALID length!", (level * 4), " ");
         return;
     }
@@ -679,6 +703,10 @@ static void emv_tag_dump_cvm_list(const struct tlv *tlv, const struct emv_tag *t
     uint32_t X, Y;
     int i;
 
+    if (tlv->len == 0 || tlv->len == 8) {
+        PrintAndLogEx(INFO, "%*s    No CVM rules", (level * 4), " ");
+        return;
+    }
     if (tlv->len < 10 || tlv->len % 2) {
         PrintAndLogEx(INFO, "%*s    INVALID!", (level * 4), " ");
         return;
@@ -714,6 +742,36 @@ static void emv_tag_dump_cvm_list(const struct tlv *tlv, const struct emv_tag *t
                 break;
             case 0x5:
                 method = "Enciphered PIN verification performed by ICC and signature (paper)";
+                break;
+            case 0x6:
+                method = "Facial biometric verified offline (by ICC)";
+                break;
+            case 0x7:
+                method = "Facial biometric verified online";
+                break;
+            case 0x8:
+                method = "Finger biometric verified offline (by ICC)";
+                break;
+            case 0x9:
+                method = "Finger biometric verified online";
+                break;
+            case 0xa:
+                method = "Palm biometric verified offline (by ICC)";
+                break;
+            case 0xb:
+                method = "Palm biometric verified online";
+                break;
+            case 0xc:
+                method = "Iris biometric verified offline (by ICC)";
+                break;
+            case 0xd:
+                method = "Iris biometric verified online";
+                break;
+            case 0xe:
+                method = "Voice biometric verified offline (by ICC)";
+                break;
+            case 0xf:
+                method = "Voice biometric verified online";
                 break;
             case 0x1e:
                 method = "Signature (paper)";
@@ -776,6 +834,25 @@ static void emv_tag_dump_cvm_list(const struct tlv *tlv, const struct emv_tag *t
     }
 }
 
+static void emv_tag_dump_cvm_results(const struct tlv *tlv, const struct emv_tag *tag, int level) {
+    (void)tag;
+    if (tlv->len != 3) {
+        PrintAndLogEx(INFO, "%*s    INVALID length (expected 3)!", (level * 4), " ");
+        return;
+    }
+
+    const char *result = "RFU";
+    switch (tlv->value[2]) {
+        case 0x00: result = "Unknown"; break;
+        case 0x01: result = "Failed"; break;
+        case 0x02: result = "Successful"; break;
+        default: break;
+    }
+    PrintAndLogEx(INFO, "%*s    Method/condition: %02x %02x", (level * 4), " ",
+                  tlv->value[0], tlv->value[1]);
+    PrintAndLogEx(INFO, "%*s    Result: %s (%02x)", (level * 4), " ", result, tlv->value[2]);
+}
+
 static void emv_tag_dump_afl(const struct tlv *tlv, const struct emv_tag *tag, int level) {
     if (tlv->len < 4 || tlv->len % 4) {
         PrintAndLogEx(INFO, "%*s    INVALID!", (level * 4), " ");
@@ -788,6 +865,63 @@ static void emv_tag_dump_afl(const struct tlv *tlv, const struct emv_tag *tag, i
     }
 }
 
+bool emv_tag_dump_visa_qualifiers(const struct tlv *tlv, int level) {
+    static const struct emv_tag ttq = {0x9f66, "Visa TTQ", EMV_TAG_BITMASK, &EMV_TTQ};
+    static const struct emv_tag ctq = {0x9f6c, "Visa CTQ", EMV_TAG_BITMASK, &EMV_CTQ};
+    if (!tlv || !((tlv->tag == 0x9f66 && tlv->len == 4) || (tlv->tag == 0x9f6c && tlv->len == 2)))
+        return false;
+    const struct emv_tag *tag = tlv->tag == 0x9f66 ? &ttq : &ctq;
+    PrintAndLogEx(INFO, "%*s%s:", level * 4, " ", tag->name);
+    emv_tag_dump_bitmask(tlv, tag, level);
+    return true;
+}
+
+bool emv_tag_value_summary(const struct tlv *tlv, char *summary, size_t capacity) {
+    if (!tlv || !summary || capacity < 2 || (tlv->len && !tlv->value) || tlv_is_constructed(tlv))
+        return false;
+    summary[0] = 0;
+    if (tlv->len > 24) return false;
+    char raw[49];
+    for (size_t i = 0; i < tlv->len; i++)
+        snprintf(raw + i * 2, sizeof(raw) - i * 2, "%02X", tlv->value[i]);
+    raw[tlv->len * 2] = 0;
+    int written;
+    if (!tlv->len) {
+        written = snprintf(summary, capacity, "(empty)");
+    } else if (tlv->tag == 0x9f36 || tlv->tag == 0x9f13 || tlv->tag == 0x9f17) {
+        size_t expected = tlv->tag == 0x9f17 ? 1 : 2;
+        if (tlv->len != expected)
+            written = snprintf(summary, capacity, "invalid length; expected %zu byte(s), raw %s", expected, raw);
+        else {
+            unsigned value = 0;
+            for (size_t i = 0; i < tlv->len; i++) value = (value << 8) | tlv->value[i];
+            written = snprintf(summary, capacity, "%u (hex %s)", value, raw);
+        }
+    } else if (tlv->tag == 0x9f60 || tlv->tag == 0x9f61 || tlv->tag == 0x9f26) {
+        written = snprintf(summary, capacity, "%s (cryptographic value)", raw);
+    } else if (tlv->tag == 0x50 || tlv->tag == 0x5f20 || tlv->tag == 0x5f2d ||
+               tlv->tag == 0x9f12 || tlv->tag == 0x9f4e || tlv->tag == 0x8a) {
+        char string[25];
+        for (size_t i = 0; i < tlv->len; i++)
+            string[i] = tlv->value[i] >= 0x20 && tlv->value[i] <= 0x7e ? tlv->value[i] : '.';
+        string[tlv->len] = 0;
+        written = snprintf(summary, capacity, "\"%s\" (hex %s)", string, raw);
+    } else if (emv_get_tag(tlv)->type == EMV_TAG_NUMERIC || tlv->tag == 0x9f02 || tlv->tag == 0x9f03) {
+        bool bcd = true;
+        for (size_t i = 0; i < tlv->len; i++)
+            bcd &= (tlv->value[i] >> 4) <= 9 && (tlv->value[i] & 15) <= 9;
+        written = snprintf(summary, capacity, "%s (%s)", raw, bcd ?
+                            (tlv->tag == 0x9f02 || tlv->tag == 0x9f03 ? "BCD minor units" : "BCD digits") : "invalid BCD");
+    } else {
+        written = snprintf(summary, capacity, "%s", raw);
+    }
+    if (written < 0 || (size_t)written >= capacity) {
+        summary[0] = 0;
+        return false;
+    }
+    return true;
+}
+
 bool emv_tag_dump(const struct tlv *tlv, int level) {
     if (tlv == NULL) {
         PrintAndLogEx(WARNING, "tlv is NULL");
@@ -796,46 +930,45 @@ bool emv_tag_dump(const struct tlv *tlv, int level) {
 
     const struct emv_tag *tag = emv_get_tag(tlv);
 
-    PrintAndLogEx(INFO, "%*s--%2x[%02zx] '%s':" NOLF, (level * 4), " ", tlv->tag, tlv->len, tag->name);
+    char summary[192];
+    bool compact = emv_tag_value_summary(tlv, summary, sizeof(summary));
+    PrintAndLogEx(INFO, "%*s%s [%X, %zu byte%s]%s%s", (level * 4), " ", tag->name,
+                  tlv->tag, tlv->len, tlv->len == 1 ? "" : "s", compact ? ": " : "", compact ? summary : "");
+    if (compact && (tag->type == EMV_TAG_GENERIC || tag->type == EMV_TAG_STRING || tag->type == EMV_TAG_NUMERIC))
+        return true;
 
     switch (tag->type) {
         case EMV_TAG_GENERIC:
-            PrintAndLogEx(NORMAL, "");
             break;
         case EMV_TAG_BITMASK:
-            PrintAndLogEx(NORMAL, "");
             emv_tag_dump_bitmask(tlv, tag, level);
             break;
         case EMV_TAG_DOL:
-            PrintAndLogEx(NORMAL, "");
             emv_tag_dump_dol(tlv, tag, level);
             break;
         case EMV_TAG_CVM_LIST:
-            PrintAndLogEx(NORMAL, "");
             emv_tag_dump_cvm_list(tlv, tag, level);
             break;
         case EMV_TAG_AFL:
-            PrintAndLogEx(NORMAL, "");
             emv_tag_dump_afl(tlv, tag, level);
             break;
         case EMV_TAG_STRING:
             emv_tag_dump_string(tlv, tag, level);
             break;
         case EMV_TAG_NUMERIC:
-            PrintAndLogEx(NORMAL, "");
             emv_tag_dump_numeric(tlv, tag, level);
             break;
         case EMV_TAG_YYMMDD:
-            PrintAndLogEx(NORMAL, "");
             emv_tag_dump_yymmdd(tlv, tag, level);
             break;
         case EMV_TAG_CVR:
-            PrintAndLogEx(NORMAL, "");
             emv_tag_dump_cvr(tlv, tag, level);
             break;
         case EMV_TAG_CID:
-            PrintAndLogEx(NORMAL, "");
             emv_tag_dump_cid(tlv, tag, level);
+            break;
+        case EMV_TAG_CVM_RESULTS:
+            emv_tag_dump_cvm_results(tlv, tag, level);
             break;
     };
 
