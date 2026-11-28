@@ -1283,6 +1283,7 @@ typedef struct {
 #define CMD_HF_ISO14443A_SET_CONFIG 0x03B2
 
 #define CMD_HF_ISO14443A_SET_THRESHOLDS 0x03B8
+#define CMD_HF_ISO14443A_RX_THRESHOLD 0x03B9 // PM5: empty GET, one-byte SET, returns current reader threshold
 
 // For 14b config
 #define CMD_HF_ISO14443B_PRINT_CONFIG 0x03D0
