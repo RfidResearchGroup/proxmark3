@@ -26,6 +26,9 @@
 //-----------------------------------------------------------------------------
 
 #include "pm5_cep.h"
+#ifdef WITH_USB_HOST_CCID
+#include "pm5_cep_usb_host.h"
+#endif
 
 #include "at32f435_437.h"
 #include "at32f435_437_crm.h"
@@ -370,6 +373,10 @@ void cep_attach_poll(void) {
     }
 
     bool attached = ((cc_ctrl_data >> 6 & 0x03) != 0);
+#ifdef WITH_USB_HOST_CCID
+    // a USB device answers on the port: that is not a Flipper
+    attached = attached && !cep_usb_host_connected();
+#endif
     s_cep_attached = attached;
 
     if (!attached) {

@@ -428,6 +428,7 @@ out:
  */
 int sam_get_version(bool info) {
     int res = PM3_SUCCESS;
+    bool t1_done = false;
 
     if (g_dbglevel >= DBG_DEBUG) {
         DbpString("start sam_get_version");
@@ -464,10 +465,13 @@ int sam_get_version(bool info) {
     // bare 9000 (unlike the T=0 endpoint, it does not return the version TLV).
     // It is only a link-settling ping here, so a successful status is enough;
     // the following InitAuth exchange performs the actual authentication.
-    if ((SmartCard_ActiveMode() == SC_MODE_T1) &&
-            (response_len >= 2) &&
-            (response[response_len - 2] == 0x90) &&
-            (response[response_len - 1] == 0x00)) {
+    t1_done = (SmartCard_ActiveMode() == SC_MODE_T1) &&
+              (response_len >= 2) &&
+              (response[response_len - 2] == 0x90) &&
+              (response[response_len - 1] == 0x00);
+    // A SAM that does send the version in T=1 gets it shown when asked for.
+    if (t1_done && ((info == false && g_dbglevel < DBG_INFO) ||
+                    sam_bd_offset(response, response_len) == 0)) {
         goto out;
     }
 
@@ -516,7 +520,10 @@ int sam_get_version(bool info) {
     }
 
 error:
-    res = PM3_ESOFT;
+    // in T=1 the status alone already made it a success
+    if (t1_done == false) {
+        res = PM3_ESOFT;
+    }
 
 out:
     BigBuf_free_keep_EM();

@@ -52,12 +52,19 @@ extern "C" {
 /**
   * @brief enable usb device mode
   */
+#ifndef USE_OTG_HOST_MODE
 #define USE_OTG_DEVICE_MODE
+#endif
 
 /**
   * @brief enable usb host mode
   */
 /* #define USE_OTG_HOST_MODE */
+#ifdef USE_OTG_HOST_MODE
+#ifndef USBH_DEBUG
+#define USBH_DEBUG(...) ((void)0)
+#endif
+#endif
 
 /**
   * @brief select otgfs1 or otgfs2 define
@@ -67,7 +74,11 @@ extern "C" {
 // #define OTG_USB_ID                           1
 
 /* use otgfs2 */
+#ifdef USE_OTG_HOST_MODE
+#define OTG_USB_ID                         1
+#else
 #define OTG_USB_ID                         2 // USB2 仅UFP 只从机 默认5v输入 无输出
+#endif
 
 #if (OTG_USB_ID == 1)
 #define USB_ID                           0
@@ -200,7 +211,9 @@ extern "C" {
 /**
   * @brief usb vbus ignore, not use vbus pin
   */
+#ifndef USE_OTG_HOST_MODE
 #define USB_VBUS_IGNORE
+#endif
 
 /**
   * @brief usb low power wakeup handler enable

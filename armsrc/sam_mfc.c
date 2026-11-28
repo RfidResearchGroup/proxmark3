@@ -29,6 +29,7 @@
 #include "iso14443a.h"
 #include "BigBuf.h"
 #include "commonutil.h"
+#include "crc16.h"
 #include "ticks_apis.h"
 #include "dbprint.h"
 #include "smartcard.h"
@@ -44,6 +45,16 @@ static bool sam_mfc_format_plain(const uint8_t *f) {
 
 static bool sam_mfc_format_bits(const uint8_t *f) {
     return (f[0] == 0x00 && f[1] == 0x00 && (f[2] == 0x40 || f[2] == 0x24 || f[2] == 0x44));
+}
+
+// Short frame: the 7 bits of a WUPA or REQA, sent after a failed authentication
+static bool sam_mfc_format_short(const uint8_t *f) {
+    return (f[0] == 0x00 && f[1] == 0xC0 && f[2] == 0x07);
+}
+
+// CRC left to the reader: added to the request, checked and dropped from the answer
+static bool sam_mfc_format_crc(const uint8_t *f) {
+    return (f[0] == 0x06 && f[1] == 0xC0 && f[2] == 0x00);
 }
 
 /**
@@ -117,6 +128,27 @@ static int sam_send_request_mfc(const uint8_t *const request, const uint8_t requ
             answer_len = ReaderReceive(frame, MAX_FRAME_SIZE, par);
             answer = frame;
             rf_status = (answer_len) ? SAM_RF_STATUS_OK : SAM_RF_STATUS_TIMEOUT;
+
+        } else if (has_format && sam_mfc_format_short(format) && nfc_tx_len == 1) {
+
+            ReaderTransmitBitsPar(nfc_tx_buf, 7, NULL, NULL);
+            answer_len = ReaderReceive(frame, MAX_FRAME_SIZE, par);
+            answer = frame;
+            rf_status = (answer_len) ? SAM_RF_STATUS_OK : SAM_RF_STATUS_TIMEOUT;
+
+        } else if (has_format && sam_mfc_format_crc(format) && nfc_tx_len > 0 && nfc_tx_len <= MAX_FRAME_SIZE - 2) {
+
+            AddCrc14A(nfc_tx_buf, nfc_tx_len);
+            ReaderTransmit(nfc_tx_buf, nfc_tx_len + 2, NULL);
+
+            uint16_t len = ReaderReceive(frame, MAX_FRAME_SIZE, par);
+            if (len > 2 && CheckCrc14A(frame, len)) {
+                answer_len = len - 2;
+                answer = frame;
+                rf_status = SAM_RF_STATUS_OK;
+            } else if (len == 0) {
+                rf_status = SAM_RF_STATUS_TIMEOUT;
+            }
 
         } else if (has_format && sam_mfc_format_bits(format) && nfc_tx_len > 1 && nfc_tx_len <= MAX_FRAME_SIZE) {
 
@@ -223,6 +255,10 @@ int sam_mfc_get_pacs(PacketCommandNG *c) {
     set_tracing(true);
     StartTicks();
 
+#ifdef WITH_USB_HOST_CCID
+    // T=1 when the SAM offers it, GetATR() runs the PPS
+    sc_request_sam_t1_profile();
+#endif
     smart_card_atr_t card;
     if (GetATR(&card, false) == false) {
         if (g_dbglevel >= DBG_ERROR) {

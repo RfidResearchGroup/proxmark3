@@ -71,6 +71,10 @@ if (PM5)
     set(SRC_USB_CDC ../common_arm/usb/usb_cdc_at32.c)
     set(SRC_FPGA ../common_arm/fpga/fpga_hw_at32.c ../common_arm/fpga/fpga_gw_jtag.c)
     set(SRC_SC_HW ../common_arm/smartcard/smartcard_hw_pm5.c)
+    # the card is in a USB CCID reader on the CEP port instead
+    if ("${APP_CFLAGS}" MATCHES "WITH_USB_HOST_CCID")
+        set(SRC_SC_HW ../common_arm/smartcard/smartcard_hw_ccid.c)
+    endif ()
     set(LDSCRIPT ${CMAKE_CURRENT_LIST_DIR}/ldscript.osimage.at32)
 else ()
     set(SRC_TICKS ../common_arm/ticks/ticks_hw_at91.c)
@@ -202,6 +206,10 @@ if ("${APP_CFLAGS}" MATCHES "WITH_CEP")
     set(SRC_CEP pm5_cep.c)
 else ()
     set(SRC_CEP)
+endif ()
+
+if ("${APP_CFLAGS}" MATCHES "WITH_USB_HOST_CCID")
+    list(APPEND SRC_CEP pm5_cep_usb_host.c ccid_reader.c pm5_cep_usbh_core.c pm5_cep_usbh_ctrl.c pm5_cep_usbh_int.c)
 endif ()
 
 # BWM charger (AW32001) + fuel gauge (BQ27427), incl. the optional low-batt beep

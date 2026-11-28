@@ -26,9 +26,11 @@ set_property(CACHE PLATFORM PROPERTY STRINGS "PM3RDV4" "PM3GENERIC" "PM3ICOPYX" 
 +--------------------------------------------+
 |NO_LOWBATT_SHUTDOWN| PM5 no low-batt cutoff |
 +--------------------------------------------+
+| USB_HOST_CCID   | PM5 CCID reader on CEP   |
++--------------------------------------------+
 ]]
 set(PLATFORM_EXTRAS "" CACHE STRING "Default PLATFORM_EXTRAS is unset")
-set_property(CACHE PLATFORM_EXTRAS PROPERTY STRINGS "BTADDON" "BWM" "NO_LOWBATT_BEEP" "NO_LOWBATT_SHUTDOWN" "")
+set_property(CACHE PLATFORM_EXTRAS PROPERTY STRINGS "BTADDON" "BWM" "NO_LOWBATT_BEEP" "NO_LOWBATT_SHUTDOWN" "USB_HOST_CCID" "")
 
 # Skip fpga bit stream files pack to arm's fw?
 # Some platform is no download in arm side required.
@@ -137,6 +139,17 @@ if ("${PLATFORM_EXTRAS_TMP}" MATCHES "NO_LOWBATT_BEEP")
     # beep is the carrier for the shutdown poll, so dropping it drops shutdown too
     list(REMOVE_ITEM PLATFORM_DEFS -DWITH_BWM_LOWBATT_BEEP -DWITH_PM5_LOWBATT_SHUTDOWN)
     list(REMOVE_ITEM PLATFORM_EXTRAS_TMP "NO_LOWBATT_BEEP")
+endif ()
+if ("${PLATFORM_EXTRAS_TMP}" MATCHES "USB_HOST_CCID")
+    if (NOT PLATFORM STREQUAL "PM5")
+        message(FATAL_ERROR "PLATFORM_EXTRAS token USB_HOST_CCID is only valid on PLATFORM=PM5")
+    endif ()
+    # the reader is the smart card hardware of this build
+    list(APPEND PLATFORM_DEFS -DWITH_USB_HOST_CCID)
+    if (NOT "-DWITH_SMARTCARD" IN_LIST PLATFORM_DEFS)
+        list(APPEND PLATFORM_DEFS -DWITH_SMARTCARD)
+    endif ()
+    list(REMOVE_ITEM PLATFORM_EXTRAS_TMP "USB_HOST_CCID")
 endif ()
 if ("${PLATFORM_EXTRAS_TMP}" MATCHES "FPC_USART_DEV")
     list(APPEND PLATFORM_DEFS -DWITH_FPC_USART_DEV)

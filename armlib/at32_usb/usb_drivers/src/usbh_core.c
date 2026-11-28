@@ -359,11 +359,30 @@ usb_sts_type usbh_isoc_recv(usbh_core_type *uhost, uint8_t hc_num,
 }
 
 /**
+  * @brief  release a port reset left asserted by a disconnect, it would hide the next attach
+  * @param  uhost: to the structure of usbh_core_type
+  * @retval none
+  */
+static void usbh_port_reset_release(usbh_core_type *uhost) {
+    if (uhost->port_state == 2) {
+        otg_host_type *host = OTG_HOST(uhost->usb_reg);
+        uint32_t hprt = host->hprt;
+        hprt &= ~(USB_OTG_HPRT_PRTENA | USB_OTG_HPRT_PRTENCHNG |
+                  USB_OTG_HPRT_PRTOVRCACT | USB_OTG_HPRT_PRTCONDET |
+                  USB_OTG_HPRT_PRTRST);
+        host->hprt = hprt;
+        uhost->port_state = 0;
+    }
+}
+
+/**
   * @brief  usb host cfg default init
   * @param  uhost: to the structure of usbh_core_type
   * @retval status: usb_sts_type status
   */
 usb_sts_type usbh_cfg_default_init(usbh_core_type *uhost) {
+    usbh_port_reset_release(uhost);
+
     /* set global state to idle */
     uhost->global_state = USBH_IDLE;
 
@@ -386,6 +405,8 @@ usb_sts_type usbh_cfg_default_init(usbh_core_type *uhost) {
     uhost->dev.speed = USB_FULL_SPEED_CORE_ID;
 
     uhost->timer = 0;
+    uhost->port_timer = 0;
+    uhost->port_state = 0;
 
     uhost->ctrl.err_cnt = 0;
 
@@ -722,6 +743,13 @@ usb_sts_type usbh_enum_handler(usbh_core_type *uhost) {
             if (usbh_ctrl_result_check(uhost, CONTROL_IDLE, ENUM_GET_FULL_DESC) == USB_OK) {
                 usbh_parse_dev_desc(uhost, uhost->rx_buffer, 8);
 
+                // EP0 is 8, 16, 32 or 64 bytes, a larger packet overruns the receive buffers
+                uint8_t ept0_size = (uhost->dev).dev_desc.bMaxPacketSize0;
+                if (ept0_size < 8 || ept0_size > 64 || (ept0_size & (ept0_size - 1)) != 0) {
+                    uhost->global_state = USBH_ERROR_STATE;
+                    break;
+                }
+
                 /* set new control endpoint maxpacket size */
                 uhost->ctrl.ept0_size = (uhost->dev).dev_desc.bMaxPacketSize0;
 
@@ -780,7 +808,9 @@ usb_sts_type usbh_enum_handler(usbh_core_type *uhost) {
             }
 
             if (usbh_ctrl_result_check(uhost, CONTROL_IDLE, ENUM_GET_FULL_CFG) == USB_OK) {
-                usbh_parse_configure_desc(uhost, uhost->rx_buffer, 9);
+                if (usbh_parse_configure_desc(uhost, uhost->rx_buffer, 9) != USB_OK) {
+                    uhost->global_state = USBH_ERROR_STATE;
+                }
             }
             break;
 
@@ -791,7 +821,10 @@ usb_sts_type usbh_enum_handler(usbh_core_type *uhost) {
             }
 
             if (usbh_ctrl_result_check(uhost, CONTROL_IDLE, ENUM_GET_MFC_STRING) == USB_OK) {
-                usbh_parse_configure_desc(uhost, uhost->rx_buffer, uhost->dev.cfg_desc.cfg.wTotalLength);
+                if (usbh_parse_configure_desc(uhost, uhost->rx_buffer,
+                                              uhost->dev.cfg_desc.cfg.wTotalLength) != USB_OK) {
+                    uhost->global_state = USBH_ERROR_STATE;
+                }
             }
             break;
 
@@ -1046,6 +1079,7 @@ usb_sts_type usbh_loop_handler(usbh_core_type *uhost) {
     if (uhost->conn_sts == 0 &&
             uhost->global_state != USBH_IDLE &&
             uhost->global_state != USBH_DISCONNECT) {
+        usbh_port_reset_release(uhost);
         uhost->global_state  = USBH_IDLE;
     }
     switch (uhost->global_state) {
@@ -1054,20 +1088,40 @@ usb_sts_type usbh_loop_handler(usbh_core_type *uhost) {
                 uhost->global_state  = USBH_PORT_EN;
 
                 /* wait stable */
-                usb_delay_ms(200);
-
-                /* port reset */
-                usbh_reset_port(uhost);
-
-                /* user reset */
-                uhost->user_handler->user_reset();
+                uhost->port_state = 1;
+                uhost->port_timer = uhost->timer;
             }
             break;
 
         case USBH_PORT_EN:
-            if (uhost->port_enable) {
-                uhost->global_state  = USBH_ATTACHED;
-                usb_delay_ms(50);
+            if (uhost->port_state == 1 && uhost->timer - uhost->port_timer >= 200) {
+                /* port reset */
+                otg_host_type *host = OTG_HOST(uhost->usb_reg);
+                uint32_t hprt = host->hprt;
+                hprt &= ~(USB_OTG_HPRT_PRTENA | USB_OTG_HPRT_PRTENCHNG |
+                          USB_OTG_HPRT_PRTOVRCACT | USB_OTG_HPRT_PRTCONDET);
+                host->hprt = hprt | USB_OTG_HPRT_PRTRST;
+                uhost->port_state = 2;
+                uhost->port_timer = uhost->timer;
+            } else if (uhost->port_state == 2 && uhost->timer - uhost->port_timer >= 100) {
+                otg_host_type *host = OTG_HOST(uhost->usb_reg);
+                uint32_t hprt = host->hprt;
+                hprt &= ~(USB_OTG_HPRT_PRTENA | USB_OTG_HPRT_PRTENCHNG |
+                          USB_OTG_HPRT_PRTOVRCACT | USB_OTG_HPRT_PRTCONDET |
+                          USB_OTG_HPRT_PRTRST);
+                host->hprt = hprt;
+                uhost->port_state = 3;
+                uhost->port_timer = uhost->timer;
+            } else if (uhost->port_state == 3 && uhost->timer - uhost->port_timer >= 20) {
+                /* user reset */
+                uhost->user_handler->user_reset();
+                uhost->port_state = 4;
+            } else if (uhost->port_state == 4 && uhost->port_enable) {
+                uhost->port_state = 5;
+                uhost->port_timer = uhost->timer;
+            } else if (uhost->port_state == 5 && uhost->timer - uhost->port_timer >= 50) {
+                uhost->global_state = USBH_ATTACHED;
+                uhost->port_state = 0;
             }
             break;
 

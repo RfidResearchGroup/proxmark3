@@ -24,6 +24,7 @@
 #include "usbh_ctrl.h"
 #include "usbh_core.h"
 #include "usb_std.h"
+#include "string.h"
 
 /** @addtogroup AT32F435_437_middlewares_usbh_drivers
   * @{
@@ -568,44 +569,56 @@ void usbh_parse_endpoint_desc(usb_endpoint_desc_type *ept_desc, uint8_t *buf) {
 usb_sts_type usbh_parse_configure_desc(usbh_core_type *uhost,
                                        uint8_t *buffer, uint16_t length) {
     usb_cfg_desc_type *cfg_desc = &(uhost->dev.cfg_desc);
-    usb_interface_desc_type *intf_desc;
-    usb_endpoint_desc_type *ept_desc;
-    usb_header_desc_type *desc;
-    uint16_t index_len;
     uint8_t index_intf = 0;
     uint8_t index_ept = 0;
+    int8_t current_intf = -1;
+    uint16_t offset = USB_DEVICE_CFG_DESC_LEN;
 
-    desc = (usb_header_desc_type *)buffer;
-    cfg_desc->cfg.bLength                      = *(uint8_t *)buffer;
-    cfg_desc->cfg.bDescriptorType              = *(uint8_t *)(buffer + 1);
-    cfg_desc->cfg.wTotalLength                 = SWAPBYTE(buffer + 2);
-    cfg_desc->cfg.bNumInterfaces               = *(uint8_t *)(buffer + 4);
-    cfg_desc->cfg.bConfigurationValue          = *(uint8_t *)(buffer + 5);
-    cfg_desc->cfg.iConfiguration               = *(uint8_t *)(buffer + 6);
-    cfg_desc->cfg.bmAttributes                 = *(uint8_t *)(buffer + 7);
-    cfg_desc->cfg.bMaxPower                    = *(uint8_t *)(buffer + 8);
+    if (length < USB_DEVICE_CFG_DESC_LEN ||
+            buffer[0] < USB_DEVICE_CFG_DESC_LEN ||
+            buffer[1] != USB_DESCIPTOR_TYPE_CONFIGURATION) {
+        return USB_ERROR;
+    }
+    cfg_desc->cfg.bLength = buffer[0];
+    cfg_desc->cfg.bDescriptorType = buffer[1];
+    cfg_desc->cfg.wTotalLength = SWAPBYTE(buffer + 2);
+    cfg_desc->cfg.bNumInterfaces = buffer[4];
+    cfg_desc->cfg.bConfigurationValue = buffer[5];
+    cfg_desc->cfg.iConfiguration = buffer[6];
+    cfg_desc->cfg.bmAttributes = buffer[7];
+    cfg_desc->cfg.bMaxPower = buffer[8];
+    if (cfg_desc->cfg.wTotalLength < USB_DEVICE_CFG_DESC_LEN ||
+            cfg_desc->cfg.wTotalLength > USB_MAX_DATA_LENGTH ||
+            length > cfg_desc->cfg.wTotalLength) {
+        return USB_ERROR;
+    }
+    memset(cfg_desc->interface, 0, sizeof(cfg_desc->interface));
+    if (length == USB_DEVICE_CFG_DESC_LEN) {
+        return USB_OK;
+    }
 
-    if (length > USB_DEVICE_CFG_DESC_LEN) {
-        index_len = USB_DEVICE_CFG_DESC_LEN;
-
-        while ((index_intf < USBH_MAX_INTERFACE) && index_len < cfg_desc->cfg.wTotalLength) {
-            desc = usbh_get_next_header((uint8_t *)desc, &index_len);
-            if (desc->bDescriptorType == USB_DESCIPTOR_TYPE_INTERFACE) {
-                index_ept = 0;
-                intf_desc = &cfg_desc->interface[index_intf].interface;
-                usbh_parse_interface_desc(intf_desc, (uint8_t *)desc);
-
-                while (index_ept < intf_desc->bNumEndpoints && index_len < cfg_desc->cfg.wTotalLength) {
-                    desc = usbh_get_next_header((uint8_t *)desc, &index_len);
-                    if (desc->bDescriptorType == USB_DESCIPTOR_TYPE_ENDPOINT) {
-                        ept_desc = &(cfg_desc->interface[index_intf].endpoint[index_ept]);
-                        usbh_parse_endpoint_desc(ept_desc, (uint8_t *)desc);
-                        index_ept ++;
-                    }
-                }
-                index_intf ++;
-            }
+    // like Linux, a malformed tail ends the parse and extra interfaces or endpoints are left out
+    while (length - offset >= 2) {
+        uint8_t desc_length = buffer[offset];
+        uint8_t desc_type = buffer[offset + 1];
+        if (desc_length < 2 || desc_length > length - offset) {
+            break;
         }
+        if (desc_type == USB_DESCIPTOR_TYPE_INTERFACE) {
+            if (desc_length < 9 || index_intf >= USBH_MAX_INTERFACE) {
+                break;
+            }
+            usbh_parse_interface_desc(&cfg_desc->interface[index_intf].interface,
+                                      buffer + offset);
+            current_intf = (int8_t)index_intf++;
+            index_ept = 0;
+        } else if (desc_type == USB_DESCIPTOR_TYPE_ENDPOINT && current_intf >= 0 &&
+                   desc_length >= 7 && index_ept < USBH_MAX_ENDPOINT) {
+            usbh_parse_endpoint_desc(&cfg_desc->interface[current_intf].endpoint[index_ept],
+                                     buffer + offset);
+            index_ept++;
+        }
+        offset += desc_length;
     }
     return USB_OK;
 }
@@ -644,7 +657,8 @@ void usbh_parse_string_desc(uint8_t *src, uint8_t *dest, uint16_t length) {
     uint16_t len;
     uint16_t i_index;
 
-    if (src[1] == USB_DESCIPTOR_TYPE_STRING) {
+    // bLength 0 or 1 would wrap len
+    if (src[1] == USB_DESCIPTOR_TYPE_STRING && src[0] >= 2) {
         len = ((src[0] - 2) <= length ? (src[0] - 2) : length);
         src += 2;
         for (i_index = 0; i_index < len; i_index += 2) {

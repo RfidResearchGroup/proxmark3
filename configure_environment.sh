@@ -557,7 +557,7 @@ fi
 section "Device / platform"
 
 PLATFORM_KNOWN="PM3RDV4 PM3GENERIC PM3ICOPYX PM3ULTIMATE PM5"
-EXTRAS_KNOWN="SMARTCARD FLASH BTADDON FPC_USART_DEV BWM NO_LOWBATT_SHUTDOWN NO_LOWBATT_BEEP"
+EXTRAS_KNOWN="SMARTCARD FLASH BTADDON FPC_USART_DEV BWM NO_LOWBATT_SHUTDOWN NO_LOWBATT_BEEP USB_HOST_CCID"
 
 # mk_var FILE NAME - value of an uncommented NAME= assignment, last one wins
 mk_var() {
@@ -635,7 +635,7 @@ if [ -n "$EXTRAS_VAL" ]; then
         fi
 
         case "$tok" in
-            BWM|NO_LOWBATT_SHUTDOWN|NO_LOWBATT_BEEP)
+            BWM|NO_LOWBATT_SHUTDOWN|NO_LOWBATT_BEEP|USB_HOST_CCID)
                 if [ "$PLATFORM_VAL" != "PM5" ]; then
                     res_fail "PLATFORM_EXTRAS=$tok is PM5 only, but PLATFORM=$PLATFORM_VAL"
                     EXTRAS_BAD="yes"
