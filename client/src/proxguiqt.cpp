@@ -1116,7 +1116,7 @@ void Plot::paintEvent(QPaintEvent *event) {
 
     //Draw the markers
     if (g_TempMarkerSize > 0) {
-        for (int i = 0; i < g_TempMarkerSize; i++) {
+        for (uint32_t i = 0; i < g_TempMarkerSize; i++) {
             draw_marker(g_TempMarkers[i], plotRect, GRAY100, &painter);
         }
     }

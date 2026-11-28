@@ -263,7 +263,9 @@ void SimulateSeos(seos_emulate_req_t *msg) {
 
     // main loop
     bool finished = false;
-    bool got_rats = false;
+    // ISO/IEC 14443-4: block numbering, and whether RATS was answered
+    iso14a_sim_dep_t dep = {0};
+    bool iso4 = false;
     while (finished == false) {
         // BUTTON_PRESS check done in GetIso14443aCommandFromReader
         WDT_HIT();
@@ -275,6 +277,17 @@ void SimulateSeos(seos_emulate_req_t *msg) {
             Dbprintf("Emulator stopped. Trace length: %d ", BigBuf_get_traceLen());
             retval = PM3_EOPABORTED;
             break;
+        }
+
+        // ISO/IEC 14443-4 5.6.2.2: any frame after the ATS closes the PPS window
+        bool pps_first = dep.pps_ok;
+        dep.pps_ok = false;
+
+        // ISO/IEC 14443-4 R-block. Only it can ask for the last block again:
+        // the answer to any other frame may overwrite the dynamic answer
+        bool rblock = iso4 && (receivedCmd[0] & 0xE6) == 0xA2;
+        if (rblock == false) {
+            dep.last_ok = false;
         }
 
         if (receivedCmd[0] == ISO14443A_CMD_REQA && len == 1) { // Received a REQUEST
@@ -293,16 +306,24 @@ void SimulateSeos(seos_emulate_req_t *msg) {
             p_response = &responses[RESP_INDEX_SAKC2];
         } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_3 && len == 9) {  // Received a SELECT (cascade 3)
             p_response = &responses[RESP_INDEX_SAKC3];
-        } else if (receivedCmd[0] == ISO14443A_CMD_PPS) {
-            p_response = &responses[RESP_INDEX_PPS];
+        } else if ((receivedCmd[0] & 0xF0) == ISO14443A_CMD_PPS && pps_first && iso14a_sim_pps_valid(receivedCmd, len) && CheckCrc14A(receivedCmd, len)) {
+            // answered with the start byte received, which carries the CID
+            dynamic_response_info.response[0] = receivedCmd[0];
+            dynamic_response_info.response_n = 1;
+            AddCrc14A(dynamic_response_info.response, dynamic_response_info.response_n);
+            dynamic_response_info.response_n += 2;
+            prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
+            p_response = &dynamic_response_info;
         } else if (receivedCmd[0] == ISO14443A_CMD_HALT && len == 4) {    // Received a HALT
             p_response = NULL;
-            if (got_rats) {
-                finished = true;
-            }
+            iso4 = false;
         } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {    // Received a RATS request
             p_response = &responses[RESP_INDEX_ATS];
-            got_rats = true;
+            iso14a_sim_dep_init(&dep);
+            iso4 = true;
+        } else if (rblock) {
+            // the dynamic answer may still hold the last block
+            p_response = iso14a_sim_rblock(&dep, receivedCmd, &dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
         } else {
 
             // clear old dynamic responses
@@ -310,18 +331,19 @@ void SimulateSeos(seos_emulate_req_t *msg) {
             dynamic_response_info.modulation_n = 0;
 
             // Check for ISO 14443A-4 compliant commands, look at left byte (PCB)
-            uint8_t offset = 0;
-            switch (receivedCmd[0]) {
+            // 1 when a CID follows the PCB
+            uint8_t offset = (receivedCmd[0] & 0x08) ? 1 : 0;
+            // a block is taken after RATS only, a frame with a CRC error gets no answer (ISO/IEC 14443-4 7.5.6)
+            switch ((iso4 && CheckCrc14A(receivedCmd, len)) ? receivedCmd[0] : 0x00) {
                 case 0x0B: // IBlock with CID
-                case 0x0A: {
-                    offset = 1;
-                    break;
-                }
+                case 0x0A:
                 case 0x02: // IBlock without CID
                 case 0x03: {
+                    // the PICC's next block number (rule D)
+                    iso14a_sim_dep_iblock(&dep, receivedCmd[0]);
                     dynamic_response_info.response[0] = receivedCmd[0];
                     dynamic_response_info.response[1] = 0x00;
-                    dynamic_response_info.response_n = 2;
+                    dynamic_response_info.response_n = 1 + offset;
 
                     uint8_t apdu_status[2] = {0x6A, 0x82}; // Default: Not Found
 
@@ -850,10 +872,10 @@ void SimulateSeos(seos_emulate_req_t *msg) {
 
                 case 0xCA:   // S-Block Deselect with CID
                 case 0xC2: { // S-Block Deselect without CID
+                    // answered with the same block (CID copied below), the simulation goes on
                     dynamic_response_info.response[0] = receivedCmd[0];
-                    dynamic_response_info.response[1] = 0x00;
-                    dynamic_response_info.response_n = 2;
-                    finished = true;
+                    dynamic_response_info.response_n = 1 + offset;
+                    iso4 = false;
                 }
                 break;
 
@@ -863,7 +885,8 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                         Dbprintf("Received unknown command (len=%d):", len);
                         Dbhexdump(len, receivedCmd, false);
                     }
-                    if ((receivedCmd[0] & 0x10) == 0x10) {
+                    // an I-block with the chaining bit (ISO/IEC 14443-4 Figure 15)
+                    if ((receivedCmd[0] & 0xF2) == 0x12) {
                         Dbprintf("Warning, reader sent a chained command but we lack support for it. Ignoring command.");
                     }
                     // Do not respond
@@ -887,6 +910,7 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                     break;
                 }
                 p_response = &dynamic_response_info;
+                dep.last_ok = true;
             }
         }
 

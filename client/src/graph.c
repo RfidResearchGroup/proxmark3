@@ -34,7 +34,7 @@ size_t  g_GraphTraceLen;
 buffer_savestate_t g_saveState_gb;
 marker_t g_MarkerA, g_MarkerB, g_MarkerC, g_MarkerD;
 marker_t *g_TempMarkers;
-uint8_t g_TempMarkerSize = 0;
+uint32_t g_TempMarkerSize = 0;
 
 /* write a manchester bit to the graph
 */
@@ -491,23 +491,16 @@ void add_temporary_marker(uint32_t position, const char *label) {
 
     g_TempMarkers[g_TempMarkerSize].pos = position;
 
-    char *markerLabel = (char *)calloc(1, strlen(label) + 1);
-    if (markerLabel == NULL) {
-        PrintAndLogEx(WARNING, "Failed to allocate memory");
-        return;
-    }
-    strcpy(markerLabel, label);
-
-    if (strlen(markerLabel) > 30) {
+    // keep room for the terminating NUL
+    size_t len = strlen(label);
+    if (len >= sizeof(g_TempMarkers[0].label)) {
         PrintAndLogEx(WARNING, "Label for temporary marker too long! Trunicating...");
-        markerLabel[30] = '\0';
+        len = sizeof(g_TempMarkers[0].label) - 1;
     }
 
-    strncpy(g_TempMarkers[g_TempMarkerSize].label, markerLabel, 30);
+    memcpy(g_TempMarkers[g_TempMarkerSize].label, label, len);
+    g_TempMarkers[g_TempMarkerSize].label[len] = '\0';
     g_TempMarkerSize++;
-
-    memset(markerLabel, 0x00, strlen(label));
-    free(markerLabel);
 }
 
 void remove_temporary_markers(void) {

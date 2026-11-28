@@ -3343,6 +3343,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search, bool info_hin
                         break;
                     }
                     case 0x20: {
+                        // SAK bit 3 clear, no MIFARE Classic
+                        isMifareClassic = false;
                         printTag("JCOP 31/41");
                         break;
                     }

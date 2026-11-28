@@ -498,6 +498,7 @@ while true; do
       if ! CheckExecute "trace list 14b slot nack"     "$CLIENTBIN -c 'trace load -f traces/hf_14b_xerox_info.trace; trace list -1 -t 14b;'" "Rdr [|]A7 +[|] +[|] Slot 3 NACK"; then break; fi
       if ! CheckExecute "trace list seos pps crc"      "$CLIENTBIN -c 'trace load -f traces/hf_seos_sniff_fc54_cn64001.trace; trace list -1 -t seos;'" "D0  11  00  52  A6 +[|]  ok [|] PPS"; then break; fi
       if ! CheckExecute "trace list ht2 long frames"   "$CLIENTBIN -c 'trace load -f traces/hf_visa_apple_normal.trace; trace list -1 -t ht2;'" "131146992 [|] +131147472 [|] Rdr [|] 07 +[|] +8 [|]"; then break; fi
+      if ! CheckExecute "trace list iclass check success" "$CLIENTBIN -c 'trace load -f traces/hf_iclass_sniff.trace; trace list -1 -t iclass;'" "Tag [|]50  47  EF  4A +[|] +[|] CHECK SUCCESS"; then break; fi
       if ! CheckExecute "smart pps help"            "$CLIENTBIN -c 'smart pps -h'" "select protocol T=1"; then break; fi
       if ! CheckExecute "smart raw help t1"         "$CLIENTBIN -c 'smart raw -h'" "use protocol T=1"; then break; fi
       if ! CheckExecute "nfc decode test oob"             "$CLIENTBIN -c 'nfc decode -d DA2010016170706C69636174696F6E2F766E642E626C7565746F6F74682E65702E6F6F62301000649201B96DFB0709466C65782032'" "Flex 2"; then break; fi

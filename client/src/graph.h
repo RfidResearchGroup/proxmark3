@@ -83,7 +83,7 @@ extern size_t  g_GraphTraceLen;
 
 extern marker_t g_MarkerA, g_MarkerB, g_MarkerC, g_MarkerD;
 extern marker_t *g_TempMarkers;
-extern uint8_t g_TempMarkerSize;
+extern uint32_t g_TempMarkerSize;
 
 extern double g_GridOffset;
 
