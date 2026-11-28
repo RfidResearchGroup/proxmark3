@@ -1107,7 +1107,7 @@ typedef struct {
 // (DWT->CYCCNT, converted to a 1.5 MHz unit - see pm5_cep_logic.c), not
 // electrical edge capture.
 // req: cep_logic_ctrl_t. resp: cep_logic_status_t.
-#define CMD_CEP_LOGIC_CTRL 0x0187
+#define CMD_CEP_LOGIC_CTRL 0x018B
 #define CEP_LOGIC_ACTION_START  0x00
 #define CEP_LOGIC_ACTION_STOP   0x01
 #define CEP_LOGIC_ACTION_CLEAR  0x02
@@ -1134,7 +1134,7 @@ typedef struct {
 
 // req: cep_logic_fetch_req_t. resp: cep_logic_fetch_resp_t, truncated to
 // offsetof(entries) + returned * sizeof(cep_logic_entry_t).
-#define CMD_CEP_LOGIC_FETCH 0x0188
+#define CMD_CEP_LOGIC_FETCH 0x018C
 typedef struct {
     uint32_t offset; // first entry index wanted (monotonic, not a ring position)
 } PACKED cep_logic_fetch_req_t;
