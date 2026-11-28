@@ -330,6 +330,8 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/atrs.c
         ${PM3_ROOT}/client/src/cmdanalyse.c
         ${PM3_ROOT}/client/src/cmdbwm.c
+        ${PM3_ROOT}/client/src/cmdhwcep.c
+        ${PM3_ROOT}/client/src/cmdhwceplogic.c
         ${PM3_ROOT}/client/src/cmdcrc.c
         ${PM3_ROOT}/client/src/cmddata.c
         ${PM3_ROOT}/client/src/cmdflashmem.c

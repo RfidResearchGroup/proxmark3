@@ -36,6 +36,7 @@
 #include "ui.h"
 #include "fpga.h"
 #include "cmdhw.h"
+#include "cmdhwcep.h"
 #include "cmdbwm.h"
 #include "cmdpm5.h"
 #include "cmdfpga.h"
@@ -2283,6 +2284,7 @@ static command_t CommandTable[] = {
     {"tia", CmdTia, IfPm3Present, "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"},
     {"bwm", CmdBwm, IfBwm, "{ BWM (battery/wireless module) commands... }"},
     {"pm5", CmdPm5, IfPm5, "{ PM5 (ICSD USB host CDC) commands... }"},
+    {"cep", CmdCep, IfCep, "{ CEP (Type-C Extended Port) commands... }"},
     {"tune", CmdTune, IfPm3Lf, "Measure tuning of device antenna"},
     {"decay", CmdDecay, IfPm3Present, "Measure HF antenna decay after field-off"},
     {NULL, NULL, NULL, NULL}

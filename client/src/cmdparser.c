@@ -148,6 +148,12 @@ bool IfBwm(void) {
     return g_pm3_capabilities.compiled_with_bwm;
 }
 
+bool IfCep(void) {
+    if (IfPm3Present() == false)
+        return false;
+    return g_pm3_capabilities.compiled_with_cep;
+}
+
 bool IfFpgaFlash(void) {
     if (IfPm3Present() == false)
         return false;

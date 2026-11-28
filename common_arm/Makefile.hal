@@ -50,6 +50,8 @@ Known definitions:
 +--------------------------------------------+
 | BWM             | PM5 Battery Wireless Mod |
 +--------------------------------------------+
+| CEPLOGIC        | PM5 CEP bus logic logger |
++--------------------------------------------+
 | NO_LOWBATT_BEEP | PM5 disable low-batt beep|
 +--------------------------------------------+
 |NO_LOWBATT_SHUTDOWN| PM5 no low-batt cutoff |
@@ -231,6 +233,19 @@ ifneq (,$(findstring BWM,$(PLATFORM_EXTRAS_TMP)))
     endif
     PLATFORM_DEFS += -DWITH_BWM_FORWARD -DWITH_BWM_STATUS -DWITH_PM5_PWR_LED -DWITH_PM5_AUTOOFF -DWITH_BWM_LOWBATT_BEEP -DWITH_PM5_LOWBATT_SHUTDOWN
     PLATFORM_EXTRAS_TMP := $(strip $(filter-out BWM,$(PLATFORM_EXTRAS_TMP)))
+endif
+ifneq (,$(findstring CEPLOGIC,$(PLATFORM_EXTRAS_TMP)))
+    ifneq ($(PLATFORM),PM5)
+        $(error PLATFORM_EXTRAS token CEPLOGIC is only valid on PLATFORM=PM5)
+    endif
+    ifeq ($(SKIP_CEP),1)
+        $(error PLATFORM_EXTRAS token CEPLOGIC needs CEP itself - drop SKIP_CEP=1)
+    endif
+    # hw cep logic: the CEP bus byte/timestamp logger (see doc/cep_logic_notes.md).
+    # Opt-in - it adds a 4096-entry ring buffer (24KB, 6 bytes/entry) plus a
+    # fetch staging buffer (~3KB), ~27KB total, on top of plain WITH_CEP.
+    PLATFORM_DEFS += -DWITH_CEP_LOGIC
+    PLATFORM_EXTRAS_TMP := $(strip $(filter-out CEPLOGIC,$(PLATFORM_EXTRAS_TMP)))
 endif
 ifneq (,$(findstring NO_LOWBATT_SHUTDOWN,$(PLATFORM_EXTRAS_TMP)))
     ifneq ($(PLATFORM),PM5)

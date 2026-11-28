@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hw cep logic` - PM5 CEP bus byte/timestamp logger, opt-in via `PLATFORM_EXTRAS=CEPLOGIC`, fetch as a VCD file or a decoded data table (@NielDK)
 - Added `hf 14b sim` APDU forwarding to the client for ISO 14443-4 emulation, S(WTX) while the client works, example `script run hf_14b_simapdu` (@iceman1001)
 - Fixed `hf iclass dump` and `HF_ICECLASS` - on a PM5 READs left too early and were sent twice, they now wait 300 us (@matrix)
 - Fixed PM5 CEP replies starting during an idle poll or timing out before payload transfer (@adrian-stepien)
