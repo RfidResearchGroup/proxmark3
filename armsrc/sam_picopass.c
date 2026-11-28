@@ -672,6 +672,8 @@ int sam_picopass_get_pacs(PacketCommandNG *c) {
     sam_get_version(info);
 
     if (info) {
+        Dbprintf(_YELLOW_("ATR: "));
+        Dbhexdump(card.atr_len, card.atr, false);
         sam_get_serial_number();
         goto out;
     }

@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf iclass sam --info` - also prints the ATR of the SAM (@matrix)
+- Changed `hf iclass sam --info` - prints the firmware version also when the SAM talks T=1, it was skipped (@matrix)
 - Fixed `hf mf sam` - the WUPA and the SELECT the SAM asks for after a failed authentication were not sent to the card (@matrix)
 - Fixed PM5 with `PLATFORM_EXTRAS=SMARTCARD` - hung at boot, the I2C lines were set up low (@matrix)
 - Fixed PM5 FPGA commands - no SPI setup before each one, the 14a reader listens and the 14a simulation answers 19 us sooner (@matrix)
