@@ -1993,8 +1993,6 @@ void iClass_Dump(uint8_t *msg) {
         }
     }
 
-    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-
     bool dumpsuccess = true;
 
     // main read loop
@@ -2005,6 +2003,8 @@ void iClass_Dump(uint8_t *msg) {
         uint8_t c[] = {ICLASS_CMD_READ_OR_IDENTIFY, i, 0x00, 0x00};
         AddCrc(c + 1, 1);
 
+        // the tag listens again 300 us after its answer, PicoPass 2KS datasheet 10.1.2
+        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
         res = iclass_send_cmd_with_retries(c, sizeof(c), resp, sizeof(resp), 10, 3, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time, shallow_mod);
         if (res) {
             memcpy(dataout + (8 * i), resp, 8);

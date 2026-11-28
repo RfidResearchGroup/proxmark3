@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf iclass dump` and `HF_ICECLASS` - on a PM5 READs left too early and were sent twice, they now wait 300 us (@matrix)
 - Fixed PM5 CEP replies starting during an idle poll or timing out before payload transfer (@adrian-stepien)
 - Fixed PM5 BWM commands timing out after idle - wait for the BWM to answer before sending the command (@adrian-stepien)
 - Fixed PM5 FPGA commands - no SPI setup before each one, the 14a reader listens and the 14a simulation answers 19 us sooner (@matrix)
