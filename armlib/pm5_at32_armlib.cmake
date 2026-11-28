@@ -37,6 +37,14 @@ if (PM5 AND NOT TARGET pm5_at32_armlib)
         ${CMAKE_CURRENT_LIST_DIR}/at32_i2c/at32f435_437_i2c_app.c
     )
 
+    if(NOT SKIP_CEP)
+        list(APPEND PM5_AT32_SOURCES
+            ${CMAKE_CURRENT_LIST_DIR}/at32_usb/usb_drivers/src/usbh_core.c
+            ${CMAKE_CURRENT_LIST_DIR}/at32_usb/usb_drivers/src/usbh_ctrl.c
+            ${CMAKE_CURRENT_LIST_DIR}/at32_usb/usb_drivers/src/usbh_int.c
+        )
+    endif()
+
     target_compile_options(pm5_at32_armlib
         PRIVATE ${CROSS_CFLAGS}
         PUBLIC -mcpu=cortex-m4 -Wno-missing-prototypes -Wno-missing-declarations
