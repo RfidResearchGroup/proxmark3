@@ -2761,16 +2761,16 @@ static int CmdHFJavaCardInfo(const char *Cmd) {
     }
 
     static gp_info_object_t objects[GP_OBJ_COUNT] = {
-        [GP_OBJ_CPLC] = { 0x9F, 0x7F, "CPLC (9F7F)" },
-        [GP_OBJ_CRD]  = { 0x00, 0x66, "Card Recognition Data (66)" },
-        [GP_OBJ_KEYS] = { 0x00, 0xE0, "Key Information (E0)" },
-        [GP_OBJ_CAPS] = { 0x00, 0x67, "Card Capabilities (67)" },
-        [GP_OBJ_IIN]  = { 0x00, 0x42, "IIN (42)" },
-        [GP_OBJ_CIN]  = { 0x00, 0x45, "CIN (45)" },
-        [GP_OBJ_KDD]  = { 0x00, 0xCF, "Key Derivation Data (CF)" },
-        [GP_OBJ_SEQ]  = { 0x00, 0xC1, "Sequence Counter (C1)" },
-        [GP_OBJ_CONF] = { 0x00, 0xC2, "Confirmation Counter (C2)" },
-        [GP_OBJ_RES]  = { 0xFF, 0x21, "Card Resources (FF21)" },
+        [GP_OBJ_CPLC] = { .p1 = 0x9F, .p2 = 0x7F, .name = "CPLC (9F7F)" },
+        [GP_OBJ_CRD]  = { .p1 = 0x00, .p2 = 0x66, .name = "Card Recognition Data (66)" },
+        [GP_OBJ_KEYS] = { .p1 = 0x00, .p2 = 0xE0, .name = "Key Information (E0)" },
+        [GP_OBJ_CAPS] = { .p1 = 0x00, .p2 = 0x67, .name = "Card Capabilities (67)" },
+        [GP_OBJ_IIN]  = { .p1 = 0x00, .p2 = 0x42, .name = "IIN (42)" },
+        [GP_OBJ_CIN]  = { .p1 = 0x00, .p2 = 0x45, .name = "CIN (45)" },
+        [GP_OBJ_KDD]  = { .p1 = 0x00, .p2 = 0xCF, .name = "Key Derivation Data (CF)" },
+        [GP_OBJ_SEQ]  = { .p1 = 0x00, .p2 = 0xC1, .name = "Sequence Counter (C1)" },
+        [GP_OBJ_CONF] = { .p1 = 0x00, .p2 = 0xC2, .name = "Confirmation Counter (C2)" },
+        [GP_OBJ_RES]  = { .p1 = 0xFF, .p2 = 0x21, .name = "Card Resources (FF21)" },
     };
     for (size_t i = 0; i < GP_OBJ_COUNT; i++)
         objects[i].ok = gp_get_data_plain(objects[i].p1, objects[i].p2, objects[i].data,
