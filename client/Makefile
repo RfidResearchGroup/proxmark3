@@ -774,6 +774,7 @@ SRCS =  mifare/aiddesfire.c \
         cmdhfsecc.c \
         cmdhficlass.c \
         cmdhfict.c \
+        cmdhfjavacard.c \
         cmdhflegic.c \
         cmdhfjooki.c \
         cmdhflist.c \

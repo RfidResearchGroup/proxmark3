@@ -43,6 +43,7 @@
 #include "cmdhfgst.h"       // Google Smart Tap
 #include "cmdhficlass.h"    // ICLASS
 #include "cmdhfict.h"       // ICT MFC / DESfire cards
+#include "cmdhfjavacard.h"  // JavaCard / GlobalPlatform
 #include "cmdhfjooki.h"     // MFU based Jooki
 #include "cmdhfksx6924.h"   // KS X 6924
 #include "cmdhflegic.h"     // LEGIC
@@ -748,6 +749,7 @@ static command_t CommandTable[] = {
     {"secc",        CmdHFHIDConfig,   AlwaysAvailable, "{ iClass SE Config Card Emulator...   }"},
     {"iclass",      CmdHFiClass,      AlwaysAvailable, "{ ICLASS RFIDs...                     }"},
     {"ict",         CmdHFICT,         AlwaysAvailable, "{ ICT MFC/DESfire RFIDs...            }"},
+    {"javacard",    CmdHFJavaCard,    AlwaysAvailable, "{ ISO14443-A JavaCard / GP mgmt...    }"},
     {"jooki",       CmdHF_Jooki,      AlwaysAvailable, "{ Jooki RFIDs...                      }"},
     {"ksx6924",     CmdHFKSX6924,     AlwaysAvailable, "{ KS X 6924 (T-Money, Snapper+) RFIDs }"},
     {"legic",       CmdHFLegic,       AlwaysAvailable, "{ LEGIC RFIDs...                      }"},

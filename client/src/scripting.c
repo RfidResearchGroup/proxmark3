@@ -48,6 +48,7 @@
 #include "cmdlfem4x50.h"  // read 4350
 #include "em4x50.h"       // 4x50 structs
 #include "iso7816/iso7816core.h"  // ISODEPSTATE
+#include "cmdhfjavacard.h"       // GP Lua primitives
 
 static int returnToLuaWithError(lua_State *L, const char *fmt, ...) {
     char buffer[1024];
@@ -1428,6 +1429,9 @@ int set_pm3_libraries(lua_State *L) {
         {"em4x50_read",                 l_em4x50_read},
         {"ul_read_uid",                 l_ul_read_uid},
         {"set_isodepstate",             l_set_iso_dep_state},
+        {"gp_send",                     CmdHFJavaCard_lua_send},
+        {"gp_auth",                     CmdHFJavaCard_lua_auth},
+        {"gp_session",                  CmdHFJavaCard_lua_session},
         {NULL, NULL}
     };
 

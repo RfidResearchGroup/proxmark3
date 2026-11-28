@@ -428,6 +428,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhfgst.c
         ${PM3_ROOT}/client/src/cmdhficlass.c
         ${PM3_ROOT}/client/src/cmdhfict.c
+        ${PM3_ROOT}/client/src/cmdhfjavacard.c
         ${PM3_ROOT}/client/src/cmdhfjooki.c
         ${PM3_ROOT}/client/src/cmdhfksx6924.c
         ${PM3_ROOT}/client/src/cmdhflegic.c

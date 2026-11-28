@@ -803,6 +803,12 @@ while true; do
                                                                 "valid key AEA684A6DAB23278"; then break; fi
       if ! CheckExecute "hf iclass loclass test"         "$CLIENTBIN -c 'hf iclass loclass --test'" "Key diversification \( ok \)"; then break; fi
       if ! CheckExecute "emv test"                       "$CLIENTBIN -c 'emv test'" "Tests \( ok"; then break; fi
+      if ! CheckExecute "javacard commands"              "$CLIENTBIN -c 'hf javacard help'" "autoinstall"; then break; fi
+      if ! CheckExecute "javacard selftests"             "$CLIENTBIN -c 'hf javacard test'" "JavaCard tests: .* cases, 0 failures"; then break; fi
+      if ! CheckExecute "javacard invalid hex option"    "$CLIENTBIN -c 'hf javacard auth --sl GG' 2>&1" "requires a hexadecimal byte"; then break; fi
+      if ! CheckExecute "javacard AES KCV"               "$CLIENTBIN -c 'hf javacard kcv -k 404142434445464748494A4B4C4D4E4F --aes'" "AES-KCV=504A77"; then break; fi
+      if ! CheckExecute "javacard TDEA KCV"              "$CLIENTBIN -c 'hf javacard kcv -k 404142434445464748494A4B4C4D4E4F --tdea'" "TDEA-KCV=8BAF47"; then break; fi
+      if ! CheckExecute "javacard Lua integration"       "$CLIENTBIN -c 'script run tests/hf_javacard'" "JavaCard Lua integration tests \( ok \)"; then break; fi
       if ! CheckExecute "hf cipurse test"                "$CLIENTBIN -c 'hf cipurse test'" "Tests \( ok"; then break; fi
       if ! CheckExecute "hf mfdes test"                  "$CLIENTBIN -c 'hf mfdes test'"   "Tests \( ok"; then break; fi
       if ! CheckExecute "hf gst test"                    "$CLIENTBIN -c 'hf gst test'"     "Tests \( ok"; then break; fi
